@@ -4785,9 +4785,16 @@ int m_svskill(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	 char  *comment = (parc > 2 && parv[2]) ? parv[2] : "SVS Killed";
 
 	 if(!IsULine(sptr)) return -1;
-	 if (hunt_server(cptr,sptr,":%s SVSKILL %s :%s",1,parc,parv) != HUNTED_ISME) return 0;
-	 if(parc < 1 || (!(acptr = find_client(parv[1], NULL)))) return 0;
-	 return exit_client(cptr, acptr, sptr, comment);
+         if ((acptr = find_client(parv[1], NULL))) {
+           if (!MyClient(acptr))
+             sendto_serv_butone(cptr, ":%s SVSKILL %s :%s", parv[0], parv[1], comment);
+           else {
+             acptr->flags |= FLAGS_KILLED;
+             sendto_serv_butone(NULL, ":%s QUIT :%s", acptr->name, comment);
+  	     return exit_client(cptr, acptr, sptr, comment);
+           }
+         }
+	 return 0;
 }
 	 
 /* m_akill -
