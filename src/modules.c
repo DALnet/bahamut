@@ -16,6 +16,9 @@
 
 #define MODULESINI "modules.conf"
 
+/* opaque inifile reference.. */
+void *inifile_opaque = NULL;
+
 #ifndef USE_HOOKMODULES
 int m_module(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
@@ -678,6 +681,11 @@ void list_hooks(aClient *sptr)
    }
 }
 
+void *bircmodule_getini()
+{
+   return inifile_opaque;
+}
+
 int init_modules()
 {
    void *mini = ini_open(MODULESINI);
@@ -693,11 +701,11 @@ int init_modules()
    else
       m_autoload[0] = '\0';
 
-   ini_close(mini);
-
    for (p = NULL, s = strtoken(&p, m_autoload, ", "); s;
            s = strtoken(&p, NULL, ", "))
       load_module(NULL, s);
+
+   inifile_opaque = mini;
 
    return 0;
 }
