@@ -307,7 +307,8 @@ int hunt_server(aClient *cptr, aClient *sptr, char *command, int server,
     if (acptr) 
     {
 #ifdef NO_USER_OPERTARGETED_COMMANDS
-	if (!IsServer(acptr) && IsUmodeI(acptr) && !IsAnOper(sptr))
+	if (!(IsAnOper(sptr) || IsULine(sptr) || IsServer(sptr)) &&
+            !IsServer(acptr) && IsUmodeI(acptr))
         {
 	    sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name, parv[0]);
 	    return (HUNTED_NOSUCH);
@@ -1452,7 +1453,7 @@ static inline int m_message(aClient *cptr, aClient *sptr, int parc,
 	 */
 	if (ismine && i++ > 10)
 #ifdef NO_OPER_FLOOD
-	    if (!IsAnOper(sptr) && !IsULine(sptr))	
+	    if (!IsAnOper(sptr))	
 #endif
 		sptr->since += 4;		
 
