@@ -1871,11 +1871,19 @@ count_channels(aClient *sptr)
 void send_topic_burst(aClient *cptr)
 {
    aChannel *chptr;
+   aClient *acptr;
    for (chptr = channel; chptr; chptr = chptr->nextch)
    {
       if(chptr->topic[0] != '\0')
          sendto_one(cptr, ":%s TOPIC %s %s %ld :%s", me.name, chptr->chname,
 		    chptr->topic_nick, chptr->topic_time, chptr->topic);
+   }
+   for (acptr = client; acptr; acptr = acptr->next)
+   {
+      if(!IsPerson(acptr))
+         continue;
+      if(acptr->user->away)
+         sendto_one(cptr, ":%s AWAY :%s", acptr->name, acptr->user->away);
    }
 }
 
