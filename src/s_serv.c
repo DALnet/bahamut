@@ -4593,10 +4593,16 @@ m_capab(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
    for (i = 1; i < parc; i++) 
    {
-      if (strcmp(parv[i], "TS3") == 0)
-	 SetTS3(cptr);
-      if (strcmp(parv[i], "NOQUIT") == 0)
-	 SetNoQuit(cptr);
+      if (IsServer(sptr))
+      {
+      	if (strcmp(parv[i], "TS3") == 0)
+	 	SetTS3(cptr);
+      	if (strcmp(parv[i], "NOQUIT") == 0)
+	 	SetNoQuit(cptr);
+      }
+      else 
+        if (strcmp(parv[i], "SPLIT") == 0)
+          	SetSplit(cptr);
    }
 	return 0;
 }

@@ -199,19 +199,24 @@ typedef struct MotdItem aMotd;
 #define FLAGS_CONNECTION_TIMEDOUT 0x800000
 #define FLAGS_ULINE 			0x2000000
 
-/* Capabilities of the ircd (part of FLAGS, above) */
+/* Capabilities of the ircd  */
 
-#define CAPAB_TS3     0x4000000	/* Supports the TS3 Protocal */
-#define CAPAB_NOQUIT  0x8000000 /* Supports NOQUIT */
+#define CAPAB_TS3     0x0000001	/* Supports the TS3 Protocal */
+#define CAPAB_NOQUIT  0x0000002 /* Supports NOQUIT */
+#define CAPAB_SPLIT   0x0000004 /* client supports SPLIT command */
 
-/* flags macros. */
+#define SetTS3(x)   do{if ((x)->serv) (x)->capabilities |= CAPAB_TS3;}while(0)
+#define IsTS3       ((x)->serv && (x)->capabilities & CAPAB_TS3)
 
-#define SetTS3(x)   ((x)->flags |= CAPAB_TS3)
-#define IsTS3       ((x)->flags & CAPAB_TS3)
+#define SetNoQuit(x) do{if ((x)->serv) (x)->capabilities |= CAPAB_NOQUIT;}while(0)
+#define IsNoQuit(x) ((x)->serv && (x)->capabilities & CAPAB_NOQUIT)
+
+#define SetSplit(x) do{if ((x)->user) (x)->capabilities |= CAPAB_SPLIT;}while(0)
+#define IsSplit(x)  ((x)->user && (x)->capabilities & CAPAB_SPLIT)
+
+/* flag macros. */
 #define IsULine(x) ((x)->flags & FLAGS_ULINE)
 
-#define SetNoQuit(x) ((x)->flags |= CAPAB_NOQUIT)
-#define IsNoQuit(x) ((x)->flags & CAPAB_NOQUIT)
 
 /* User Modes */
 #define UMODE_o     0x00001	/* umode +o - Oper */
@@ -550,7 +555,6 @@ struct Server {
    anUser     *user;		/* who activated this connection */
    char       *up;		  /* Pointer to scache name */
    char        by[NICKLEN + 1];
-   int        *capabilities;	/* What does this server support */
    aConfItem  *nline;		/* N-line pointer for this server */
 };
 
@@ -635,6 +639,7 @@ struct Client {
 	Link *watch; /* user's watch list */
 	int watches; /* how many watches this user has set */
 #endif
+        int capabilities; /* what this server/client supports */
 };
 
 #define	CLIENT_LOCAL_SIZE sizeof(aClient)
