@@ -969,12 +969,20 @@ int completed_connection(aClient * cptr)
     /* pass on our capabilities to the server we /connect'd */
 #ifdef HAVE_ENCRYPTION_ON
     if(!(aconn->flags & CONN_DKEY))
-    sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURST UNCONNECT ZIP NICKIP TSMODE");
+        sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURST UNCONNECT ZIP"
+                         " NICKIP TSMODE");
     else
-    sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURST UNCONNECT DKEY ZIP NICKIP TSMODE");
+    {
+        sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURST UNCONNECT DKEY"
+                         " ZIP NICKIP TSMODE");
+        cptr->capabilities |= CAPAB_DODKEY;
+    }
 #else
     sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURST UNCONNECT ZIP NICKIP TSMODE");
 #endif
+
+    if(aconn->flags & CONN_ZIP)
+        cptr->capabilities |= CAPAB_DOZIP;
 
     sendto_one(cptr, "SERVER %s 1 :%s",
            my_name_for_link(me.name, aconn), me.info);
