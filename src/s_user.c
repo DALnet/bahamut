@@ -2498,9 +2498,9 @@ int build_searchopts(aClient *sptr, int parc, char *parv[]) {
 			break;
 		 case 'a':
 			if(change)
-			  wsopts.away_plus=0; /* they want here people */
+			  wsopts.away_plus=1; /* they want here people */
 			else
-			  wsopts.away_plus=1;
+			  wsopts.away_plus=0;
 			wsopts.check_away=1;
 			break;
                  case 'C':
