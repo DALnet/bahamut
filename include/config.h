@@ -678,7 +678,7 @@
  * For all of these options below, #define NETWORK_PARANOIA
  * and leave the individual ones alone.
  */
-#define NETWORK_PARANOIA
+#undef NETWORK_PARANOIA
 
 /*
  * NO_USER_SERVERNOTICES
@@ -728,7 +728,7 @@
 /* #undef HIDE_NUMERIC_SOURCE */
 /* #undef HIDE_KILL_ORIGINS */
 /* #undef HIDE_SPLIT_SERVERS */
-/* #undef HIDE_LINKS */
+#define HIDE_LINKS */
 /* #undef HIDE_SERVERMODE_ORIGINS */
 
 /***********************/
@@ -742,7 +742,7 @@
  * If not defined, everything below in the oper hiding section must be 
  * undefined.
  */
-#define ALLOW_HIDDEN_OPERS
+#undef ALLOW_HIDDEN_OPERS
 
 /*
  * DEFAULT_MASKED_HIDDEN
@@ -750,7 +750,7 @@
  * Makes all your opers that hostmasked +I (hidden) by default
  * ALLOW_HIDDEN_OPERS must be defined with this enabled.
  */
-#define DEFAULT_MASKED_HIDDEN
+#undef DEFAULT_MASKED_HIDDEN
 
 /*
  * ALL_OPERS_HIDDEN
