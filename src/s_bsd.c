@@ -754,7 +754,6 @@ int check_server_init(aClient * cptr)
         cptr->flags |= FLAGS_ULINE;
     make_server(cptr);
     cptr->serv->aconn = aconn;
-    aconn->class->links++;
     aconn->acpt = cptr;
     set_effective_class(cptr);
 

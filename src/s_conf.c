@@ -200,6 +200,27 @@ free_class(aClass *ptr)
     return;
 }
 
+void expire_class(aClass *cl)
+{
+    aClass *ccl, *pcl = NULL;
+    if (cl->refs == 0 && cl->maxlinks == -1)
+    {
+        for (ccl = classes; ccl; ccl = ccl->next)
+        {
+            if (ccl == cl)
+            {
+                if (pcl)
+                    pcl->next = ccl->next;
+                else
+                    classes = ccl->next;
+                free_class(ccl);
+                break;
+            }
+            pcl = ccl;
+        }
+    }
+}
+
 /* clear_conflinks()
  * remove associated confs from this client
  * and free the conf if it is scheduled to be deleted
@@ -209,12 +230,17 @@ free_class(aClass *ptr)
 void
 clear_conflinks(aClient *cptr)
 {
+    if (cptr->class)
+    {
+        cptr->class->links--;
+        cptr->class->refs--;
+        expire_class(cptr->class);
+    }
     if(IsServer(cptr))
     {
         aConnect *x;
         if((x = cptr->serv->aconn))
         {
-            x->class->links--;
             x->acpt = NULL;
             if (x->legal == -1)     /* scheduled for removal? */
             {
@@ -224,12 +250,18 @@ clear_conflinks(aClient *cptr)
                     connects = x->next;
                 else
                 {
-                    for (aconn = connects; aconn != NULL && aconn->next != x; aconn = aconn->next);
+                    for (aconn = connects;
+                         aconn != NULL && aconn->next != x;
+                         aconn = aconn->next);
                     if (aconn != NULL)
                         aconn->next = x->next;
                     else
-                        sendto_realops_lev(DEBUG_LEV, "Deleting scheduled connect, but it isn't in the list?? [%s]", x->name);
+                        sendto_realops_lev(DEBUG_LEV, "Deleting scheduled "
+                                           "connect, but it isn't in the "
+                                           "list?? [%s]", x->name);
                 }
+                x->class->refs--;
+                expire_class(x->class);
                 free_connect(x);
             }
             cptr->serv->aconn = NULL;
@@ -241,7 +273,6 @@ clear_conflinks(aClient *cptr)
         aOper *y;
         if((x = cptr->user->allow))
         {
-            x->class->links--;
             x->clients--;
             if(x->clients <= 0 && x->legal == -1)
             {
@@ -251,19 +282,24 @@ clear_conflinks(aClient *cptr)
                     allows = x->next;
                 else
                 {
-                    for (allow = allows; allow != NULL && allow->next != x; allow = allow->next);
+                    for (allow = allows;
+                         allow != NULL && allow->next != x;
+                         allow = allow->next);
                     if (allow != NULL)
                         allow->next = x->next;
                     else
-                        sendto_realops_lev(DEBUG_LEV, "Deleting scheduled allow, but it isn't in the list?? [%s / %s]", x->ipmask, x->hostmask);
+                        sendto_realops_lev(DEBUG_LEV, "Deleting scheduled "
+                                           "allow, but it isn't in the list?? "
+                                           "[%s / %s]", x->ipmask,x->hostmask);
                 }
+                x->class->refs--;
+                expire_class(x->class);
                 free_allow(x);
             }
             cptr->user->allow = NULL;
         }
         if((y = cptr->user->oper))
         {
-            y->class->links--;
             y->opers--;
             if(y->legal == -1 && y->opers <= 0)
             {
@@ -272,12 +308,18 @@ clear_conflinks(aClient *cptr)
                     opers = y->next;
                 else
                 {
-                    for (oper = opers; oper != NULL && oper->next != y; oper = oper->next);
+                    for (oper = opers;
+                         oper != NULL && oper->next != y;
+                         oper = oper->next);
                     if (oper != NULL)
                         oper->next = y->next;
                     else
-                        sendto_realops_lev(DEBUG_LEV, "Deleting scheduled oper, but it isn't in the list?? [%s]", y->nick);
+                        sendto_realops_lev(DEBUG_LEV, "Deleting scheduled "
+                                           "oper, but it isn't in the list?? "
+                                           "[%s]", y->nick);
                 }
+                y->class->refs--;
+                expire_class(y->class);
                 free_oper(y);
             }
             cptr->user->oper = NULL;
@@ -401,6 +443,12 @@ find_class(char *name)
 void
 set_effective_class(aClient *cptr)
 {
+    if (cptr->class)
+    {
+        cptr->class->links--;
+        cptr->class->refs--;
+        expire_class(cptr->class);
+    }
     if(IsServer(cptr))
     {
         if(cptr->serv->aconn->class)
@@ -417,6 +465,8 @@ set_effective_class(aClient *cptr)
         else
             cptr->class = find_class("default");
     }
+    cptr->class->refs++;
+    cptr->class->links++;
     return;
 }
     
@@ -514,7 +564,6 @@ attach_iline(aClient *cptr, aAllow *allow, char *uhost, int doid)
     
     cptr->user->allow = allow;
     allow->clients++;
-    allow->class->links++;
 
     return 0;
 }
@@ -1694,58 +1743,46 @@ merge_connects()
     for(old_aconn = connects; old_aconn; old_aconn = old_aconn->next)
         old_aconn->legal = -1;
     /* update or add new */
-    aconn = new_connects;
-    while(aconn)
-        if((old_aconn = find_aConnect(aconn->name)))
+    for (aconn = new_connects; aconn; aconn = ptrn)
+    {
+        ptrn = aconn->next;
+        if ((old_aconn = find_aConnect(aconn->name)))
         {
-            /* update the old entry */
             MyFree(old_aconn->host);
             MyFree(old_aconn->apasswd);
             MyFree(old_aconn->cpasswd);
             MyFree(old_aconn->source);
-            DupString(old_aconn->host, aconn->host);
-            DupString(old_aconn->apasswd, aconn->apasswd);
-            DupString(old_aconn->cpasswd, aconn->cpasswd);
-            if(aconn->source)
-                DupString(old_aconn->source, aconn->source);
+            MyFree(old_aconn->class_name);
+            old_aconn->class->refs--;
+            expire_class(old_aconn->class);
+
+            old_aconn->host = aconn->host;
+            old_aconn->apasswd = aconn->apasswd;
+            old_aconn->cpasswd = aconn->cpasswd;
+            old_aconn->source = aconn->source;
+            old_aconn->class_name = aconn->class_name;
             old_aconn->port = aconn->port;
             old_aconn->flags = aconn->flags;
             old_aconn->class = find_class(aconn->class_name);
-            old_aconn->legal = 1;       /* the old entry is ok now */
+            old_aconn->class->refs++;
+            old_aconn->legal = 1;
             lookup_confhost(old_aconn);
-            aconn->legal = -1;          /* new new entry is not */
-            aconn = aconn->next;
+
+            MyFree(aconn->name);
+            MyFree(aconn);
         }
         else
-        {   
+        {
             aconn->class = find_class(aconn->class_name);
-            lookup_confhost(aconn);
-            /* tag the new entry onto the begining of the list */
-            ptr = aconn->next;
+            aconn->class->refs++;
             aconn->legal = 1;
+            lookup_confhost(aconn);
             aconn->next = connects;
             connects = aconn;
-            aconn = ptr;
         }
-    /* and prune old list */
-    ptr = NULL;
-    aconn = new_connects;
-    while(aconn)
-    {
-        ptrn = aconn->next;
-        if(aconn->legal == -1)
-        {
-            if(ptr)
-                ptr->next = aconn->next;
-            else
-                new_connects = aconn->next;
-            free_connect(aconn);
-        }
-        else
-            ptr = aconn;
-        aconn = ptrn;
     }
     new_connects = NULL;
+
     ptr = NULL;
     /* and prune the active list */
     aconn = connects;
@@ -1758,6 +1795,8 @@ merge_connects()
                 ptr->next = aconn->next;
             else
                 connects = aconn->next;
+            aconn->class->refs--;
+            expire_class(aconn->class);
             free_connect(aconn);
         }
         else
@@ -1778,6 +1817,7 @@ merge_allows()
     while(allow)
     {
         allow->class = find_class(allow->class_name);
+        allow->class->refs++;
         /* we dont really have to merge anything here.. */
         /* ..but we should avoid duplicates anyway */
         for (ptr = allows; ptr; ptr = ptr->next)
@@ -1811,6 +1851,7 @@ merge_allows()
         allow = ptr;
     }
     new_allows = NULL;
+    ptr = NULL;
     allow = allows;
     while(allow)
     {
@@ -1821,6 +1862,8 @@ merge_allows()
                 ptr->next = allow->next;
             else
                 allows = allow->next;
+            allow->class->refs--;
+            expire_class(allow->class);
             free_allow(allow);
         }
         else
@@ -1837,61 +1880,48 @@ merge_opers()
 
     for(old_oper = opers; old_oper; old_oper = old_oper->next)
         old_oper->legal = -1;
-    aoper = new_opers;
-    while(aoper)
-        if((old_oper = find_oper_byname(aoper->nick)))
+
+    /* add or merge and del new ones */
+    for (aoper = new_opers; aoper; aoper = ptrn)
+    {
+        ptrn = aoper->next;
+        if ((old_oper = find_oper_byname(aoper->nick)))
         {
-            int i = 0;
-            while(old_oper->hosts[i])
-            {
+            int i;
+
+            for (i = 0; old_oper->hosts[i]; i++)
                 MyFree(old_oper->hosts[i]);
-                i++;
-            }
             MyFree(old_oper->passwd);
-            i = 0;
-            while(aoper->hosts[i])
-            {
-                DupString(old_oper->hosts[i], aoper->hosts[i]);
-                i++;
-            }
-            aoper->hosts[i] = NULL;
-            DupString(old_oper->passwd, aoper->passwd);
-            old_oper->flags = aoper->flags;
+            MyFree(old_oper->class_name);
+            old_oper->class->refs--;
+            expire_class(old_oper->class);
+
+            for (i = 0; aoper->hosts[i]; i++)
+                old_oper->hosts[i] = aoper->hosts[i];
+            old_oper->hosts[i] = NULL;
+            old_oper->passwd = aoper->passwd;
+            old_oper->class_name = aoper->class_name;
             old_oper->class = find_class(aoper->class_name);
+            old_oper->class->refs++;
+            old_oper->flags = aoper->flags;
             old_oper->legal = 1;
-            aoper->legal = -1;
-            aoper = aoper->next;
+
+            MyFree(aoper->nick);
+            MyFree(aoper);
         }
         else
         {
             aoper->class = find_class(aoper->class_name);
-            ptr = aoper->next;
+            aoper->class->refs++;
             aoper->legal = 1;
             aoper->next = opers;
             opers = aoper;
-            aoper = ptr;
         }
-    ptr = NULL;     /* reusing this pointer */
-    aoper = new_opers;
-    while(aoper)
-    {
-        ptrn = aoper->next;
-        if((aoper->legal == -1) && (aoper->opers <= 0))
-        {
-            if(ptr)
-                ptr->next = aoper->next;
-            else
-                new_opers = aoper->next;
-            free_oper(aoper);
-            aoper = NULL;
-        }
-        else
-            ptr = aoper;
-        aoper = ptrn;
     }
-
     new_opers = NULL;
-    ptr = NULL;     /* and again */
+
+    /* del old ones */
+    ptr = NULL;
     aoper = opers;
     while(aoper)
     {
@@ -1914,47 +1944,31 @@ merge_opers()
 static void
 merge_ports()
 {
-    aPort *aport, *old_port, *ptr = NULL, *ptrn;
+    aPort *aport, *old_port, *ptrn;
     
     if(forked)
         close_listeners();      /* marks ports for deletion */
-    aport = new_ports;
-    while(aport)
-        if((old_port = find_port(aport->port, aport->address)))
-        {
-            MyFree(old_port->allow);
-            if(aport->allow)
-                DupString(old_port->allow, aport->allow);
-            old_port->legal = 1;
-            aport->legal = -1;
-            aport = aport->next;
-        }
-        else
-        {
-            ptr = aport->next;
-            aport->legal = 1;
-            aport->next = ports;
-            ports = aport;
-            aport = ptr;
-        }
-    ptr = NULL;
-    aport = new_ports;
-    while(aport)
+
+    /* add or merge and del new ones */
+    for (aport = new_ports; aport; aport = ptrn)
     {
         ptrn = aport->next;
-        if(aport && (aport->legal == -1))
+        if ((old_port = find_port(aport->port, aport->address)))
         {
-            if(ptr)
-                ptr->next = aport->next;
-            else
-                new_ports = aport->next;
-            free_port(aport);
+            MyFree(old_port->allow);
+            old_port->allow = aport->allow;
+            old_port->legal = 1;
+            MyFree(aport->address);
+            MyFree(aport);
         }
         else
-            ptr = aport;
-        aport = ptrn;
+        {
+            aport->next = ports;
+            ports = aport;
+        }
     }
     new_ports = NULL;
+
     if(forked)
         open_listeners();
     return;
@@ -1994,20 +2008,11 @@ merge_classes()
     }
     new_classes = NULL;
 
-    /* now remove any classes from the list marked and w/o links */
-    ptr = NULL;
-    for (class = classes; class; class = old_class)
+    /* now remove any classes from the list marked and w/o refs */
+    for (class = classes; class; class = ptr)
     {
-        old_class = class->next;
-        if (class->maxlinks == -1 && class->links <= 0)
-        {
-            if (ptr)
-                ptr->next = class->next;
-            else
-                classes = class->next;
-            free_class(class);
-        }
-        else ptr = class;
+        ptr = class->next;
+        expire_class(class);
     }
     return;
 }

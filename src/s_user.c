@@ -2688,7 +2688,6 @@ int m_oper(aClient *cptr, aClient *sptr, int parc, char *parv[])
         int old = (sptr->umode & ALL_UMODES);
         /* attach our conf */
         sptr->user->oper = aoper;
-        aoper->class->links++;
         aoper->opers++;
         if (!(aoper->flags & OFLAG_ISGLOBAL))
             SetLocOp(sptr);
@@ -3029,7 +3028,6 @@ m_umode(aClient *cptr, aClient *sptr, int parc, char *parv[])
              * them back to the appropriate Y:class -srd
              */
             sptr->user->oper->opers--;
-            sptr->user->oper->class->links--;
             sptr->user->oper = NULL;
             set_effective_class(sptr);
         }

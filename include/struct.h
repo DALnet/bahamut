@@ -731,6 +731,7 @@ struct Conf_Class
     int          maxlinks;
     long         maxsendq;
     int          links;
+    int          refs;
     aClass      *next;
 };
 
