@@ -4397,6 +4397,74 @@ void send_svsmode_out(aClient *cptr, aClient *sptr, aClient *bsptr, int old) {
 	sendto_serv_butone(cptr, ":%s SVSMODE %s :%s", bsptr->name, 
 							 sptr->name, buf);
 }
+
+/* channel_svsmode:
+ * parv[0] sender
+ * parv[1] channel
+ * parv[2] modes
+ * parv[3] nick
+ * parv[4] nickts
+ * currently, only a mode of -b is supported. 
+ * services should use MODE for regular channel modes.
+ * 2/5/00 lucas
+ * preconditions: parc >= 3, sptr is ulined
+ */
+int channel_svsmode(aClient *cptr, aClient *sptr, int parc, char *parv[])
+{
+   aChannel *chptr;
+   aClient *acptr = NULL;
+   char *m, *nick = NULL;
+   char change = '+';
+   ts_val nickts = 0;
+   int sendmsg = 1;
+
+   if(!(chptr = find_channel(parv[1], NULL)))
+      return 0;
+
+   if(parc >= 4)
+   {
+      nick = parv[3];
+      if(parc > 4)
+         nickts = atol(parv[4]);
+   }
+
+   if(nick)
+   {
+      acptr = find_person(nick, NULL);
+      if(!acptr || (nickts && acptr->tsinfo != nickts))
+         return 0;
+   }
+
+   for(m = parv[2]; *m; m++)
+      switch(*m)
+      {
+         case '+':
+         case '-':
+            change = *m;
+            break;
+
+         case 'b':
+            if(nick && MyClient(acptr) && change == '-')
+            {
+               remove_matching_bans(chptr, acptr, &me);
+               sendmsg--;
+            }
+            break;
+
+         default:
+            sendmsg++;
+            break;
+      }
+
+   if(!sendmsg) return 0;
+
+   if(nick)
+      sendto_serv_butone(cptr, ":%s SVSMODE %s %s %s %ld", parv[0], parv[1], parv[2], nick, acptr->tsinfo); 
+   else
+      sendto_serv_butone(cptr, ":%s SVSMODE %s %s", parv[0], parv[1], parv[2]); 
+
+   return 0;
+}
 	 
 /* m_svsmode - df function integrated
  *  - Raistlin
@@ -4415,6 +4483,9 @@ int m_svsmode(aClient *cptr, aClient *sptr, int parc, char *parv[]) {
 
 	 if (!IsULine(sptr) || (parc < 3))
 	    	return 0;
+
+	 if (parv[1][0] == '#')
+	    return channel_svsmode(cptr, sptr, parc, parv);
 
 	 if ((parc >= 4) && ((parv[3][0] == '+') || (parv[3][0] == '-')))
 	 {
@@ -4479,10 +4550,10 @@ int m_svsmode(aClient *cptr, aClient *sptr, int parc, char *parv[]) {
 	 }
 
 	 if (optarg)
-		sendto_serv_butone(cptr, ":%s SVSMODE %s %s %s %s",
+		sendto_serv_butone(cptr, ":%s SVSMODE %s %ld %s %s",
 			parv[0], parv[1], acptr->tsinfo, modes, optarg);
 	 else
-		sendto_serv_butone(cptr, ":%s SVSMODE %s %s %s", 
+		sendto_serv_butone(cptr, ":%s SVSMODE %s %ld %s", 
 			parv[0], parv[1], acptr->tsinfo, modes);
 
 	 return 0;

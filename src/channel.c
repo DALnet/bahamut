@@ -308,6 +308,34 @@ aBan *nick_is_banned(aChannel *chptr, char *nick, aClient *cptr) {
   return (tmp);
 }
 
+void remove_matching_bans(aChannel *chptr, aClient *cptr, aClient *from) 
+{
+  aBan *ban, *bnext;
+  char targhost[NICKLEN+USERLEN+HOSTLEN+6];
+  char targip[NICKLEN+USERLEN+HOSTLEN+6];
+
+  if (!IsPerson(cptr)) return;
+
+  strcpy(targhost, make_nick_user_host(cptr->name, cptr->user->username, cptr->user->host));
+  strcpy(targip, make_nick_user_host(cptr->name, cptr->user->username, cptr->hostip));
+
+  ban = chptr->banlist;
+
+  while(ban)
+  {
+     bnext = ban->next;
+     if((match(ban->banstr, targhost) == 0) || (match(ban->banstr, targip) == 0))
+     {
+        sendto_channel_butserv(chptr, from, ":%s MODE %s -b %s", from->name, chptr->chname, ban->banstr);
+        sendto_serv_butone(from, ":%s MODE %s -b %s", from->name, chptr->chname, ban->banstr);
+        del_banid(chptr, ban->banstr);
+     }
+     ban = bnext;
+  }
+
+  return;
+}
+
 /*
  * adds a user to a channel by adding another link to the channels
  * member chain.
