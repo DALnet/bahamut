@@ -1067,8 +1067,9 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr, int level, in
              * any manner they like, we're not picky */
             if(change=='+') 
             {
-               strncpy(chptr->mode.key,parv[args],KEYLEN);
-               ADD_PARA(parv[args])
+	      parv[args][KEYLEN]='\0';
+	      strncpy(chptr->mode.key,parv[args],KEYLEN);
+	      ADD_PARA(parv[args])
             }
             else 
             {
