@@ -4930,16 +4930,16 @@ int m_akill(aClient *cptr, aClient *sptr, int parc, char *parv[]) {
 	
 	if(length) {  
 #ifndef K_COMMENT_ONLY
-		ircsprintf(buffer, "Temporary AKill time %d min, for %s (%s)",
-					  length/60, reason, current_date);
+		ircsprintf(buffer, "Temporary AKill for %s (%s)",
+					  reason, current_date);
 #else
-		ircsprintf(buffer, "Temporary AKill time %d min, for %s (%s)",
-					  length/60, reason, current_date);
+		ircsprintf(buffer, "Temporary AKill for %s (%s)",
+					  reason, current_date);
 #endif   
 	}
 	else {
 #ifndef K_COMMENT_ONLY
-		ircsprintf(buffer, "%s (%s)", reason, current_date);
+		ircsprintf(buffer, "%s (%s)", reason, current_date);
 #else
 		ircsprintf(buffer, "%s (%s)", reason, current_date);
 #endif   
