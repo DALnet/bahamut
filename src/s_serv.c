@@ -4804,7 +4804,6 @@ int m_rakill(aClient *cptr, aClient *sptr, int parc, char *parv[])
 }
 
 	
-#ifdef USE_WATCH
 /*
  * RPL_NOWON   - Online at the moment (Succesfully added to WATCH-list)
  * RPL_NOWOFF  - Offline at the moement (Succesfully added to WATCH-list)
@@ -4976,7 +4975,6 @@ int   m_watch(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	
 	return 0;
 }
-#endif
 
 int m_sqline(aClient *cptr, aClient *sptr, int parc, char *parv[]) 
 {

@@ -384,7 +384,6 @@ m_hash(aClient *cptr, aClient *sptr, int parc, char *parv[])
    return 0;
 }
 
-#ifdef USE_WATCH
 /*
  * Rough figure of the datastructures for notify:
  *
@@ -687,7 +686,6 @@ aClient  *cptr;
 	
 	return 0;
 }
-#endif
 
 aChannel *hash_get_chan_bucket(hashv)
 int   hashv;

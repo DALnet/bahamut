@@ -359,7 +359,6 @@ void        free_fludees();
 #endif
 
 #define MAXKILLS 20
-#ifdef USE_WATCH
 extern void count_watch_memory(int *, u_long *);
 extern      void    clear_watch_hash_table(void);
 extern      int     add_to_watch_hash_table(char *, aClient *);
@@ -367,5 +366,4 @@ extern      int     del_from_watch_hash_table(char *, aClient *);
 extern      int     hash_check_watch(aClient *, int);
 extern      int     hash_del_watch_list(aClient  *);
 extern      aWatch *hash_get_watch(char *);
-# define MAXWATCH       128
-#endif
+#define MAXWATCH       128

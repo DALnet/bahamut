@@ -101,9 +101,7 @@
 #define MSG_AKILL    "AKILL"     /* AKILL */
 #define MSG_RAKILL   "RAKILL"    /* RAKILL */
 #define MSG_SILENCE  "SILENCE"   /* SILENCE */
-#ifdef USE_WATCH
 #define MSG_WATCH    "WATCH"     /* WATCH */
-#endif
 #define MSG_SQLINE   "SQLINE" /* SQLINE */
 #define MSG_UNSQLINE "UNSQLINE" /* UNSQLINE */
 #define MAXPARA      15
@@ -185,9 +183,7 @@ extern int  m_htm(aClient *, aClient *, int, char **);
 extern int  m_set(aClient *, aClient *, int, char **);
 extern int  m_capab(aClient *, aClient *, int, char **);
 extern int  m_silence(aClient *, aClient *, int, char **);
-#ifdef USE_WATCH
 extern int m_watch(aClient *, aClient *, int, char **);
-#endif
 extern int m_sqline(aClient *, aClient *, int, char **);
 extern int m_unsqline(aClient *, aClient *, int, char **);
 
@@ -268,9 +264,7 @@ struct Message msgtab[] = {
    {MSG_AKILL,    m_akill,    0, MAXPARA, 1, 0, 0, 0L},
    {MSG_RAKILL,   m_rakill,   0, MAXPARA, 1, 0, 0, 0L}, 
    {MSG_SILENCE,  m_silence,  0, MAXPARA, 1, 0, 0, 0L },
-#ifdef USE_WATCH
    {MSG_WATCH, m_watch, 0, 1, 1, 0, 0, 0L },
-#endif
    {MSG_SQLINE, m_sqline, 0, MAXPARA, 1, 0, 0, 0L},
    {MSG_UNSQLINE, m_unsqline, 0, MAXPARA, 1, 0, 0, 0L },
    {MSG_CAPAB, m_capab, 0, MAXPARA, 1, 1, 0, 0L},

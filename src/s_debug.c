@@ -439,15 +439,11 @@ void count_memory(aClient *cptr, char *nick)
 					 * no more away memory to count 
 					 */
 
-#ifdef USE_WATCH
    count_watch_memory(&wlh, &wlhm);
-#endif
    for (acptr = client; acptr; acptr = acptr->next) {
       if (MyConnect(acptr)) {
 	 lc++;
-#ifdef USE_WATCH
 	 wle += acptr->watches;
-#endif
 	 for (link = acptr->confs; link; link = link->next)
 	    lcc++;
       }

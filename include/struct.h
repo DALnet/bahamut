@@ -72,9 +72,7 @@ typedef struct User anUser;
 typedef struct Server aServer;
 typedef struct SLink Link;
 typedef struct SMode Mode;
-#ifdef USE_WATCH
 typedef struct Watch aWatch;
-#endif
 typedef struct Ban aBan;
 typedef struct ListOptions LOpts;
 typedef long ts_val;
@@ -635,10 +633,8 @@ struct Client {
 	char        passwd[PASSWDLEN + 1];
 	/* try moving this down here to prevent weird problems... ? */
 	int         oflag;    /* Operator Flags */
-#ifdef USE_WATCH
 	Link *watch; /* user's watch list */
 	int watches; /* how many watches this user has set */
-#endif
         int capabilities; /* what this server/client supports */
 };
 
@@ -741,9 +737,7 @@ struct SLink {
 		aChannel   *chptr;
 		aConfItem  *aconf;
 		aBan       *banptr;
-#ifdef USE_WATCH
 		aWatch *wptr;
-#endif
 		char       *cp;
 	} value;
 	int         flags;
@@ -929,14 +923,12 @@ struct fludbot {
 
 #endif /* FLUD */
 
-#ifdef USE_WATCH
 struct Watch {
 	   aWatch  *hnext;
 	   time_t   lasttime;
 	   Link  *watch;
 	   char  nick[1];
 };
-#endif
 
 struct ListOptions {
 	   LOpts *next;

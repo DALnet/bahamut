@@ -981,9 +981,7 @@ register_user(aClient *cptr,
       ubuf[0] = '+';
       ubuf[1] = '\0';
    }
-#ifdef USE_WATCH
-	hash_check_watch(sptr, RPL_LOGON);
-#endif
+   hash_check_watch(sptr, RPL_LOGON);
    sendto_serv_butone(cptr, "NICK %s %d %ld %s %s %s %s %lu :%s",
 							 nick, sptr->hopcount + 1, sptr->tsinfo, ubuf,
 							 user->username, user->host, user->server, sptr->user->servicestamp,
@@ -1571,17 +1569,13 @@ m_nick(aClient *cptr,
    if (sptr->name[0])
    {
       (void) del_from_client_hash_table(sptr->name, sptr);
-#ifdef USE_WATCH
       if (IsPerson(sptr))
          hash_check_watch(sptr, RPL_LOGOFF);
-#endif
    }
    (void) strcpy(sptr->name, nick);
    (void) add_to_client_hash_table(nick, sptr);
-#ifdef USE_WATCH
    if (IsPerson(sptr))
       hash_check_watch(sptr, RPL_LOGON);
-#endif
    return 0;
 
 }

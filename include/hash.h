@@ -72,9 +72,7 @@ typedef struct hashentry {
 #define WW_MAX_INITIAL_MASK (WW_MAX_INITIAL-1)
 #define WW_MAX (WW_MAX_INITIAL*MAX_SUB)
 
-#ifdef USE_WATCH
 #define WATCHHASHSIZE   10007
-#endif
 
 #endif /*
         * __hash_include__ 

@@ -317,12 +317,6 @@
 #define TS_WARN_DELTA 15	/* seconds */
 
 /*
- * USE_WATCH: Install compatibility with df's watch, keep this
- * for now, may disappear soon anyways
- */
-#define USE_WATCH
-
-/*
  * DEFAULT_KLINE_TIME
  *
  * Define this to the default time for a kline (in minutes) for klines with
