@@ -46,6 +46,8 @@ extern void sendto_channelops_butone(aClient *one, aClient *from, aChannel *chpt
 extern void sendto_channelvoice_butone(aClient *one, aClient *from, aChannel *chptr, char *pattern, ...);
 extern void sendto_channelvoiceops_butone(aClient *one, aClient *from, aChannel *chptr, char *patern, ...);
 extern void sendto_common_channels(aClient *user, char *pattern, ...);
+extern void send_quit_to_common_channels(aClient *from, char *reason);
+extern void send_part_to_common_channels(aClient *from);
 extern void sendto_fdlist(fdlist *listp, char *pattern, ...);
 extern void sendto_locops(char *pattern, ...);
 extern void sendto_match_butone(aClient *one, aClient *from, char *mask, int what, char *pattern, ...);

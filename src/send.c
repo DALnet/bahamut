@@ -529,6 +529,90 @@ void sendto_common_channels(aClient *from, char *pattern, ...)
    va_end(vl);
    return;
 }
+
+/*
+ * send_quit_to_common_channels()
+ * 
+ * Sends a message to all people (inclusing user) on local server who are
+ * in same channel with user if the user can send to this channel.
+ */
+void send_quit_to_common_channels(aClient *from, char *reason)
+{
+    Link *channels;
+    chanMember *users;
+    aClient *cptr;
+    int msglen;
+    INC_SERIAL
+	
+    msglen=sprintf(sendbuf,":%s!%s@%s QUIT :%s", from->name,
+		   from->user->username,from->user->host, reason);	
+
+    if(from->fd >= 0)
+       sentalong[from->fd] = sent_serial;    
+    for (channels = from->user->channel; channels; 
+	 channels = channels->next)
+    {
+	if (!can_send(from, channels->value.chptr)) {
+	    for (users = channels->value.chptr->members; 
+		 users; users = users->next) 
+	    {
+		cptr = users->cptr;
+		
+		if (!MyConnect(cptr) || sentalong[cptr->fd] == sent_serial)
+		    continue;
+		
+		sentalong[cptr->fd] = sent_serial;
+		if(check_fake_direction(from, cptr))
+		    continue;
+		send_message(cptr, sendbuf, msglen);
+	    }
+	}
+    }
+    return;
+}
+
+/*
+ * send_part_to_common_channels()
+ * 
+ * Sends a message to all people (inclusing user) on local server who are
+ * in same channel with user if the user cannot send to the channel.
+ */
+void send_part_to_common_channels(aClient *from)
+{
+    Link *channels;
+    chanMember *users;
+    aClient *cptr;
+    int msglen = 0;
+    
+    INC_SERIAL
+	
+    if(from->fd >= 0)
+       sentalong[from->fd] = sent_serial;
+    
+    for (channels = from->user->channel; channels;
+	 channels = channels->next)
+    {
+	if (can_send(from, channels->value.chptr)) {
+	    msglen=sprintf(sendbuf,":%s!%s@%s PART %s",
+			   from->name,from->user->username,from->user->host,
+			   channels->value.chptr->chname);
+	    for (users = channels->value.chptr->members;
+		 users; users = users->next) 
+	    {
+		cptr = users->cptr;
+		
+		if (!MyConnect(cptr) || sentalong[cptr->fd] == sent_serial)
+		    continue;
+		
+		sentalong[cptr->fd] = sent_serial;
+		if(check_fake_direction(from, cptr))
+		    continue;
+		send_message(cptr, sendbuf, msglen);
+	    }
+	}
+    }
+    return;
+}
 #ifdef FLUD
 void sendto_channel_butlocal(aClient *one, aClient *from, aChannel *chptr, char *pattern, ...)
 {

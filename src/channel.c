@@ -1765,11 +1765,11 @@ m_part(aClient *cptr,
        * *  Remove user from the old channel (if any)
        */
 
-      if (parc < 3)
+      if (parc < 3 || can_send(sptr,chptr))
 	 sendto_match_servs(chptr, cptr, PartFmt, parv[0], name);
       else
 	 sendto_match_servs(chptr, cptr, PartFmt2, parv[0], name, reason);
-      if (parc < 3)
+      if (parc < 3 || can_send(sptr,chptr))
 	 sendto_channel_butserv(chptr, sptr, PartFmt, parv[0], name);
       else
 	 sendto_channel_butserv(chptr, sptr, PartFmt2, parv[0], name, reason);
