@@ -93,4 +93,32 @@ extern int ac_sockerr(aClient *);
 extern int ac_capabilities(aClient *);
 extern int ac_pingval(aClient *);
 extern int ac_sendqlen(aClient *);
-
+/********************************
+ * These are channel access functions
+ ********************************/
+extern aChannel *ch_next(aChannel *);
+extern aChannel *ch_prev(aChannel *);
+extern aChannel *ch_hnext(aChannel *);
+extern int ch_hashv(aChannel *);
+extern Mode ch_mode(aChannel *);
+extern char ch_topic(aChannel *);
+extern char ch_topic_nick(aChannel *);
+extern time_t ch_topic_time(aChannel *);
+extern int ch_users(aChannel *);
+extern chanMember ch_members(aChannel *);
+extern Link *ch_invites(aChannel *);
+extern aBan *ch_banlist(aChannel *);
+#ifdef INVITE_LISTS
+extern anInvite *ch_invite_list(aChannel *);
+#endif
+#ifdef EXEMPT_LISTS
+extern aBanExempt *ch_banexempt_list(aChannel *);
+#endif
+extern ts_val ch_channelts(aChannel *);
+#ifdef FLUD
+extern time_t ch_fludblock(aChannel *);
+extern struct fludbot *ch_fluders(aChannel *);
+#endif
+extern char ch_chname(aChannel *);
+extern int ch_join_start(aChannel *);
+extern int ch_join_count(aChannel *);

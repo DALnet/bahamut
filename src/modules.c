@@ -384,6 +384,8 @@ static DLink *preaccess_hooks = NULL;
 static DLink *postaccess_hooks = NULL;
 static DLink *postmotd_hooks = NULL;
 static DLink *msg_hooks = NULL;
+static DLink *chanmsg_hooks = NULL;
+static DLink *usermsg_hooks = NULL;
 static DLink *mymsg_hooks = NULL;
 static DLink *every10_hooks = NULL;
 static DLink *signoff_hooks = NULL;
@@ -412,6 +414,12 @@ char *get_texthooktype(enum c_hooktype hooktype)
 
       case CHOOK_MSG:
          return "Message";
+
+      case CHOOK_CHANMSG:
+         return "Channel Message";
+
+      case CHOOK_USERMSG:
+         return "User targeted Message";
 
       case CHOOK_MYMSG:
          return "Message to me";
@@ -455,6 +463,14 @@ DLink **get_hooklist(enum c_hooktype hooktype)
 
       case CHOOK_MSG:
          hooklist = &msg_hooks;
+         break;
+
+      case CHOOK_CHANMSG:
+         hooklist = &chanmsg_hooks;
+         break;
+
+      case CHOOK_USERMSG:
+         hooklist = &usermsg_hooks;
          break;
 
       case CHOOK_MYMSG:
@@ -554,117 +570,175 @@ void bircmodule_del_hook(void *opaque)
 
 int call_hooks(enum c_hooktype hooktype, ...)
 {
-   va_list vl;
-   int ret = 0;
-   aClient *acptr;
-   char *txtptr;
-   int aint;
-   DLink *lp;
-   void *avoid;
+    va_list vl;
+    int ret = 0;
+    DLink *lp;
 
-   va_start(vl, hooktype);
+    va_start(vl, hooktype);
 
-   switch(hooktype)
-   {
-      case CHOOK_10SEC:
-         for(lp = every10_hooks; lp; lp = lp->next)
-         {
-            void (*rfunc) () = ((aHook *)lp->value.cp)->funcptr;
-            (*rfunc)();
-         }
-         break;
+    switch(hooktype)
+    {
+        case CHOOK_10SEC:
+            for(lp = every10_hooks; lp; lp = lp->next)
+            {
+                void (*rfunc) () = ((aHook *)lp->value.cp)->funcptr;
+                (*rfunc)();
+            }
+            break;
 
-      case CHOOK_PREACCESS:
-         acptr = va_arg(vl, aClient *);
-         for(lp = preaccess_hooks; lp; lp = lp->next)
-         {
-            int (*rfunc) (aClient *) = ((aHook *)lp->value.cp)->funcptr;
-            if((ret = (*rfunc)(acptr)) == FLUSH_BUFFER)
-               break;
-         }
-         break;
+        case CHOOK_PREACCESS:
+            {
+                aClient *acptr = va_arg(vl, aClient *);
 
-      case CHOOK_POSTACCESS:
-         acptr = va_arg(vl, aClient *);
-         for(lp = postaccess_hooks; lp; lp = lp->next)
-         {
-            int (*rfunc) (aClient *) = ((aHook *)lp->value.cp)->funcptr;
-            if((ret = (*rfunc)(acptr)) == FLUSH_BUFFER)
-               break;
-         }
-         break;
+                for(lp = preaccess_hooks; lp; lp = lp->next)
+                {
+                    int (*rfunc) (aClient *) = ((aHook *)lp->value.cp)->funcptr;
+                    if((ret = (*rfunc)(acptr)) == FLUSH_BUFFER)
+                        break;
+                }
+                break;
+            }
 
-      case CHOOK_POSTMOTD:
-         acptr = va_arg(vl, aClient *);
-         for(lp = postmotd_hooks; lp; lp = lp->next)
-         {
-            int (*rfunc) (aClient *) = ((aHook *)lp->value.cp)->funcptr;
-            if((ret = (*rfunc)(acptr)) == FLUSH_BUFFER)
-               break;
-         }
-         break;
+        case CHOOK_POSTACCESS:
+            {
+                aClient *acptr = va_arg(vl, aClient *);
 
-      case CHOOK_MSG:
-         acptr = va_arg(vl, aClient *);
-         aint = va_arg(vl, int);
-         txtptr = va_arg(vl, char *);
-         for(lp = msg_hooks; lp; lp = lp->next)
-         {
-            int (*rfunc) (aClient *, int, char *) = ((aHook *)lp->value.cp)->funcptr;
-            if((ret = (*rfunc)(acptr, aint, txtptr)) == FLUSH_BUFFER)
-               break;
-         }
-         break;
+                for(lp = postaccess_hooks; lp; lp = lp->next)
+                {
+                    int (*rfunc) (aClient *) = ((aHook *)lp->value.cp)->funcptr;
+                    if((ret = (*rfunc)(acptr)) == FLUSH_BUFFER)
+                        break;
+                }
+                break;
+            }
 
-      case CHOOK_MYMSG:
-         acptr = va_arg(vl, aClient *);
-         aint = va_arg(vl, int);
-         txtptr = va_arg(vl, char *);
-         for(lp = mymsg_hooks; lp; lp = lp->next)
-         {
-            int (*rfunc) (aClient *, int, char *) = ((aHook *)lp->value.cp)->funcptr;
-            if((ret = (*rfunc)(acptr, aint, txtptr)) == FLUSH_BUFFER)
-               break;
-         }
-         break;
+        case CHOOK_POSTMOTD:
+            {
+                aClient *acptr = va_arg(vl, aClient *);
 
-      case CHOOK_SIGNOFF:
-         acptr = va_arg(vl, aClient *);
-         for(lp = signoff_hooks; lp; lp = lp->next)
-         {
-            void (*rfunc) (aClient *) = ((aHook *)lp->value.cp)->funcptr;
-            (*rfunc)(acptr);
-         }
-         break;
+                for(lp = postmotd_hooks; lp; lp = lp->next)
+                {
+                    int (*rfunc) (aClient *) = ((aHook *)lp->value.cp)->funcptr;
+                    if((ret = (*rfunc)(acptr)) == FLUSH_BUFFER)
+                        break;
+                }
+                break;
+            }
 
-      case MHOOK_LOAD:
-         txtptr = va_arg(vl, char *);
-         avoid = va_arg(vl, void *);
-         for(lp = mload_hooks; lp; lp = lp->next)
-         {
-            int (*rfunc) (char *, void *) = ((aHook *)lp->value.cp)->funcptr;
-            (*rfunc)(txtptr, avoid);
-         }
-         break;
+        case CHOOK_MSG:
+            {
+                aClient *acptr = va_arg(vl, aClient *);
+                int aint = va_arg(vl, int);
+                char *txtptr = va_arg(vl, char *);
 
-      case MHOOK_UNLOAD:
-         txtptr = va_arg(vl, char *);
-         avoid = va_arg(vl, void *);
-         for(lp = munload_hooks; lp; lp = lp->next)
-         {
-            int (*rfunc) (char *, void *) = ((aHook *)lp->value.cp)->funcptr;
-            (*rfunc)(txtptr, avoid);
-         }
-         break;
+                for(lp = msg_hooks; lp; lp = lp->next)
+                {
+                    int (*rfunc) (aClient *, int, char *) = 
+                                    ((aHook *)lp->value.cp)->funcptr;
+                    if((ret = (*rfunc)(acptr, aint, txtptr)) == FLUSH_BUFFER)
+                        break;
+                }
+                break;
+            }
 
+        case CHOOK_CHANMSG:
+            {
+                aClient *acptr = va_arg(vl, aClient *);
+                aChannel *chptr = va_arg(vl, aChannel *);
+                int aint = va_arg(vl, int);
+                char *txtptr = va_arg(vl, char *);
+
+                for(lp = chanmsg_hooks; lp; lp = lp->next)
+                {
+                    int (*rfunc) (aClient *, aChannel *, int, char *) =
+                                  ((aHook *)lp->value.cp)->funcptr;
+                    if((ret = (*rfunc)(acptr, chptr, aint, txtptr)) 
+                                    == FLUSH_BUFFER)
+                        break;
+                }
+                break;
+            }
+
+        case CHOOK_USERMSG:
+            {
+                aClient *acptr = va_arg(vl, aClient *);
+                aClient *dcptr = va_arg(vl, aClient *);
+                int aint = va_arg(vl, int);
+                char *txtptr = va_arg(vl, char *);
+
+                for(lp = usermsg_hooks; lp; lp = lp->next)
+                {
+                    int (*rfunc) (aClient *, aClient *, int, char *) =
+                                 ((aHook *)lp->value.cp)->funcptr;
+                    if((ret = (*rfunc)(acptr, dcptr, aint, txtptr))
+                                    == FLUSH_BUFFER)
+                        break;
+                }
+                break;
+            }
+
+        case CHOOK_MYMSG:
+            {
+                aClient *acptr = va_arg(vl, aClient *);
+                int aint = va_arg(vl, int);
+                char *txtptr = va_arg(vl, char *);
+    
+                for(lp = mymsg_hooks; lp; lp = lp->next)
+                {  
+                    int (*rfunc) (aClient *, int, char *) = 
+                                 ((aHook *)lp->value.cp)->funcptr;
+                    if((ret = (*rfunc)(acptr, aint, txtptr)) == FLUSH_BUFFER)
+                        break;
+                }
+                break;
+            }
+
+        case CHOOK_SIGNOFF:
+            {
+                aClient *acptr = va_arg(vl, aClient *);
+                for(lp = signoff_hooks; lp; lp = lp->next)
+                {
+                    void (*rfunc) (aClient *) = 
+                                    ((aHook *)lp->value.cp)->funcptr;
+                    (*rfunc)(acptr);
+                }
+                break;
+            }
+
+        case MHOOK_LOAD:
+            {
+                char *txtptr = va_arg(vl, char *);
+                void *avoid = va_arg(vl, void *);
+
+                for(lp = mload_hooks; lp; lp = lp->next)
+                {
+                    int (*rfunc) (char *, void *) = 
+                                ((aHook *)lp->value.cp)->funcptr;
+                    (*rfunc)(txtptr, avoid);
+                }
+                break;
+            }
+
+        case MHOOK_UNLOAD:
+            {
+                char *txtptr = va_arg(vl, char *);
+                void *avoid = va_arg(vl, void *);
+                for(lp = munload_hooks; lp; lp = lp->next)
+                {
+                    int (*rfunc) (char *, void *) = 
+                                  ((aHook *)lp->value.cp)->funcptr;
+                    (*rfunc)(txtptr, avoid);
+                }
+                break;
+            }
       
-      default:
-         sendto_realops_lev(DEBUG_LEV, "Call for unknown hook type %d", hooktype);
-         break;
-   }   
-
-   va_end(vl);
-   return ret;
+        default:
+            sendto_realops_lev(DEBUG_LEV, "Call for unknown hook type %d", 
+                hooktype);
+            break;
+    }   
+    va_end(vl);
+    return ret;
 }
 
 void list_hooks(aClient *sptr)

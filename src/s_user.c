@@ -1490,6 +1490,10 @@ m_message(aClient *cptr, aClient *sptr, int parc, char *parv[], int notice)
         ischan = IsChannelName(nick);
         if (ischan && (chptr = find_channel(nick,NullChn))) 
         {
+            if(ismine && call_hooks(CHOOK_CHANMSG, sptr, chptr, 
+                        notice, parv[2]) == FLUSH_BUFFER)
+                return FLUSH_BUFFER;
+
             if (!notice)
                 switch(check_for_ctcp(parv[2], NULL))
                 {
@@ -1537,6 +1541,10 @@ m_message(aClient *cptr, aClient *sptr, int parc, char *parv[], int notice)
                         return FLUSH_BUFFER;
                     continue;
                 }
+                if(ismine && call_hooks(CHOOK_USERMSG, sptr, acptr, notice, 
+                               parv[2]) == FLUSH_BUFFER)
+                    return FLUSH_BUFFER;
+
 
                 if (!IsClient(acptr))
                     acptr = NULL;

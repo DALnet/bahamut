@@ -1088,7 +1088,10 @@ confadd_global(cVar *vars[], int lnum)
      */
 
     if(!x)
+    {
         x = make_me();
+        new_MeLine = x;
+    }
 
     for(tmp = vars[c]; tmp; tmp = vars[++c])
     {
@@ -1143,7 +1146,6 @@ confadd_global(cVar *vars[], int lnum)
         confparse_error("Lacking info definition in global block", lnum);
         return -1;
     }
-    new_MeLine = x;
     return lnum;
 }
 
@@ -1155,12 +1157,14 @@ confadd_admin(cVar *vars[], int lnum)
     int c = 0;
 
     if(!x)
+    {
         x = make_me();
+        new_MeLine = x;
+    }
 
     for(tmp = vars[c]; tmp && (c != 3); tmp = vars[++c])
         DupString(x->admin[c], tmp->value);
 
-    new_MeLine = x;
     return lnum;
 }
 

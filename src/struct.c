@@ -384,3 +384,111 @@ int ac_capabilities(aClient *cptr)
                 abort();
         return cptr->capabilities;
 }
+
+/* channel functions */
+
+aChannel *ch_next(aChannel *chptr)
+{
+    return chptr->nextch;
+}
+
+aChannel *ch_prev(aChannel *chptr)
+{
+    return chptr->prevch;
+}
+
+aChannel *ch_hnext(aChannel *chptr)
+{
+    return chptr->hnextch;
+}
+
+int ch_hashv(aChannel *chptr)
+{
+    return chptr->hashv;
+}
+
+Mode ch_mode(aChannel *chptr)
+{
+    return chptr->mode;
+}
+
+char *ch_topic(aChannel *chptr)
+{
+    return chptr->topic;
+}
+
+char *ch_topic_nick(aChannel *chptr)
+{
+    return chptr->topic_nick;
+}
+
+time_t ch_topic_time(aChannel *chptr)
+{
+    return chptr->topic_time;
+}
+
+int ch_users(aChannel *chptr)
+{
+    return chptr->users;
+}
+
+chanMember *ch_members(aChannel *chptr)
+{
+    return chptr->members;
+}
+
+Link *ch_invites(aChannel *chptr)
+{
+    return chptr->invites;
+}
+
+aBan *ch_banlist(aChannel *chptr)
+{
+    return chptr->banlist;
+}
+
+#ifdef INVITE_LISTS
+anInvite *ch_invite_list(aChannel *chptr)
+{
+    return chptr->invite_list;
+}
+#endif
+
+#ifdef EXEMPT_LISTS
+aBanExempt *ch_banexempt_list(aChannel *chptr)
+{
+    return chptr->banexempt_list;
+}
+#endif
+
+ts_val ch_channelts(aChannel *chptr)
+{
+    return chptr->channelts;
+}
+
+#ifdef FLUD
+time_t ch_fludblock(aChannel *chptr)
+{
+    return chptr->fludblock;
+}
+
+struct fludbot *ch_fluders(aChannel *chptr)
+{
+    return chptr->fluders;
+}
+#endif
+
+char *ch_chname(aChannel *chptr)
+{
+    return chptr->chname;
+}
+
+int ch_join_start(aChannel *chptr)
+{
+    return chptr->join_start;
+}
+
+int ch_join_count(aChannel *chptr)
+{
+    return chptr->join_count;
+}
