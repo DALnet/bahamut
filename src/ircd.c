@@ -1101,7 +1101,7 @@ time_t      lasttimeofday;
 	    if (noisy_htm) {
 	       (void) sprintf(to_send,
 		   "Still in happy-traffic mode %d%s (%d delay): %dk/s",
-			  lifesux, (lifesux & 0x04) ? " (TURBO)" : "",
+			  lifesux, (lifesux > 9) ? " (TURBO)" : "",
 			      (int) LCF, currlife);
 	       sendto_ops(to_send);
 	    }
@@ -1178,7 +1178,7 @@ time_t      lasttimeofday;
       we want to pause up to one second if no "busy" clients have anything to say? what?! */
    if (lifesux) {
       (void) read_message(1, &serv_fdlist);
-      if (lifesux & 0x4) {	/*
+      if (lifesux > 9) {	/*
 				 * life really sucks 
 				 */
 	 (void) read_message(1, &busycli_fdlist);
