@@ -416,6 +416,11 @@ int build_searchopts(aClient *sptr, int parc, char *parv[])
 	  wsopts.user_plus=change;
 	  args++;
 	  break;
+      default:
+	  sendto_one(sptr, getreply(ERR_WHOSYNTAX), me.name,
+		     sptr->name);
+	  return 0;
+
       }
       flags++;
   }
