@@ -1731,6 +1731,7 @@ static int can_join(aClient *sptr, aChannel *chptr, char *key)
 {
     Link   *lp;
     int invited = 0;
+    int error = 0;
 
     for(lp = sptr->user->invited; lp; lp = lp->next) 
     {
@@ -1740,33 +1741,50 @@ static int can_join(aClient *sptr, aChannel *chptr, char *key)
             break;
         }
     }
-#ifdef INVITE_LISTS
-    /* Check +I list if this user was not explicitly invited */
-    if (!invited && is_invited(sptr, chptr) != NULL)
-        invited = 1;
-#endif
 
     if (invited || IsULine(sptr))
         return 0;
 
     if (chptr->mode.mode & MODE_INVITEONLY)
-        return (ERR_INVITEONLYCHAN);
+        error = ERR_INVITEONLYCHAN;
     if (chptr->mode.mode & MODE_REGONLY && !IsRegNick(sptr))
-        return (ERR_NEEDREGGEDNICK);
+        error = ERR_NEEDREGGEDNICK;
     if (chptr->mode.mode & MODE_OPERONLY && !IsOper(sptr))
-        return (ERR_NOPRIVILEGES);
+        error = ERR_NOPRIVILEGES;
     if (*chptr->mode.key && (BadPtr(key) || mycmp(chptr->mode.key, key)))
-        return (ERR_BADCHANNELKEY);
+        error = ERR_BADCHANNELKEY;
     if (chptr->mode.limit && chptr->users >= chptr->mode.limit) 
-        return (ERR_CHANNELISFULL);
+        error = ERR_CHANNELISFULL;
     if (check_joinrate(chptr, NOW, 1, sptr) == 0)
-        return (ERR_CHANNELISFULL);
+        error = ERR_CHANNELISFULL;
+    
+    /* We have to check bans in two places here as an optimization. You 
+    ** can *check* just once, but then you check the bans even if error != 0.
+    */
+    
+#ifdef INVITE_LISTS
+    if (error != 0)
+    {
+        if (!is_invited(sptr, chptr)) return error;
 #ifdef EXEMPT_LISTS
-    if (!is_exempt(sptr, chptr) && is_banned(sptr, chptr))
+        if (!is_exempt(sptr, chptr) && is_banned(sptr, chptr))
 #else
-    if (is_banned(sptr, chptr))
+        if (is_banned(sptr, chptr))
 #endif
-        return (ERR_BANNEDFROMCHAN);
+            return ERR_BANNEDFROMCHAN;
+    }
+    else
+    {
+#endif /* INVITE_LISTS */        
+#ifdef EXEMPT_LISTS
+        if (!is_exempt(sptr, chptr) && is_banned(sptr, chptr))
+#else
+        if (is_banned(sptr, chptr))
+#endif
+            return ERR_BANNEDFROMCHAN;
+#ifdef INVITE_LISTS            
+    }
+#endif
     return 0;
 }
 
@@ -1790,11 +1808,6 @@ can_join_whynot(aClient *sptr, aChannel *chptr, char *key, char *reasonbuf)
             break;
         }
     }
-#ifdef INVITE_LISTS
-    /* Check +I list if this user was not explicitly invited */
-    if (!invited && is_invited(sptr, chptr) != NULL)
-        invited = 1;
-#endif
 
     if (invited || IsULine(sptr))
         return 0;
@@ -1811,12 +1824,31 @@ can_join_whynot(aClient *sptr, aChannel *chptr, char *key, char *reasonbuf)
         reasonbuf[rbufpos++] = 'l';
     if (check_joinrate(chptr, NOW, 1, sptr) == 0)
         reasonbuf[rbufpos++] = 'j';
+        
+    /* see comment in same location of can_join for explanation */
+#ifdef INVITE_LISTS    
+    if (rbufpos != 0 && is_invited(sptr, chptr))
+    {       
+        rbufpos = 0; /* reset reasonbuf, is_invited takes care of the previous modes */
 #ifdef EXEMPT_LISTS
-    if (!is_exempt(sptr, chptr) && is_banned(sptr, chptr))
+        if (!is_exempt(sptr, chptr) && is_banned(sptr, chptr))
 #else
-    if (is_banned(sptr, chptr))
+        if (is_banned(sptr, chptr))
 #endif
-        reasonbuf[rbufpos++] = 'b';
+            reasonbuf[rbufpos++] = 'b';
+    }
+    else
+    {
+#endif /* INVITE_LISTS */
+#ifdef EXEMPT_LISTS
+        if (!is_exempt(sptr, chptr) && is_banned(sptr, chptr))
+#else
+        if (is_banned(sptr, chptr))
+#endif
+            reasonbuf[rbufpos++] = 'b';
+#ifdef INVITE_LISTS            
+    }
+#endif
 
     reasonbuf[rbufpos] = '\0';
     return rbufpos;
