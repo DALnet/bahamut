@@ -446,7 +446,7 @@ static void send_ban_list(aClient *cptr, aChannel *chptr)
 	 send = 1;
 
       if (send) {
-         sendto_one(cptr, ":%s MODE %s %s %s", me.name, chptr->name, modebuf, parabuf);
+         sendto_one(cptr, ":%s MODE %s %s %s", me.name, chptr->chname, modebuf, parabuf);
 	 send = 0;
 	 *parabuf = '\0';
 	 cp = modebuf;
