@@ -48,7 +48,16 @@ void init_send()
  * be unique from anything in sentalong, no need for a memset
  * except for every MAXINT calls - lucas
  */
-#define INC_SERIAL if(sent_serial == INT_MAX) \
+
+/* This should work on any OS where an int is 32 bit, I hope.. */
+
+#ifndef INT_MAX
+# define HIGHEST_SERIAL 2147483647
+#else
+# define HIGHEST_SERIAL INT_MAX
+#endif
+
+#define INC_SERIAL if(sent_serial == HIGHEST_SERIAL) \
    { memset(sentalong, 0, sizeof(sentalong)); sent_serial = 0; } \
    sent_serial++;
 
