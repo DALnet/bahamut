@@ -1241,9 +1241,9 @@ m_info(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
 
 #ifdef SEPARATE_QUOTE_KLINES_BY_DATE
-	 strcpy(outstr, " SEPARATE_QUOTE_KLINES_BY_DATE=1");
+	 strcpy(outstr, "SEPARATE_QUOTE_KLINES_BY_DATE=1");
 #else
-	 strcpy(outstr, " SEPARATE_QUOTE_KLINES_BY_DATE=0");
+	 strcpy(outstr, "SEPARATE_QUOTE_KLINES_BY_DATE=0");
 #endif
 #ifdef SHORT_MOTD
 	 strcat(outstr, " SHORT_MOTD=1");

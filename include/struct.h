@@ -998,7 +998,9 @@ typedef struct SearchOptions {
 	char away_plus:1;
 	char check_away:1;
 	char check_umode:1;
-	char spare:6; /* spare space for more stuff(?) */
+        char show_chan:1;
+        char search_chan:1;
+	char spare:4; /* spare space for more stuff(?) */
 } SOpts;
 
 #define IsSendable(x)      (DBufLength(&x->sendQ) < 16384)

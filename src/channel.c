@@ -397,14 +397,18 @@ int can_send(aClient *cptr, aChannel *chptr) {
        (!cm || !(cm->flags & (CHFL_CHANOP | CHFL_VOICE))))
       return (MODE_MODERATED);
 
-   if (chptr->mode.mode & MODE_NOPRIVMSGS && !member)
-      return (MODE_NOPRIVMSGS);
-
-   if(cm && cm->bans && !(cm->flags & (CHFL_CHANOP | CHFL_VOICE)))
-      return (MODE_BAN);
-
-   if (!member && !(chptr->mode.mode & MODE_NOPRIVMSGS) && MyClient(cptr) && is_banned(cptr, chptr))
-      return (MODE_BAN); /* channel is -n and user is not there; we need to bquiet them if we can */
+   if(!member)
+   {
+      if(chptr->mode.mode & MODE_NOPRIVMSGS)
+         return (MODE_NOPRIVMSGS);
+      if (MyClient(cptr) && is_banned(cptr, chptr))
+         return (MODE_BAN); /* channel is -n and user is not there; we need to bquiet them if we can */
+   }
+   else
+   {
+      if(cm->bans && !(cm->flags & (CHFL_CHANOP | CHFL_VOICE)))
+         return (MODE_BAN);
+   }
 
    return 0;
 }
