@@ -342,7 +342,7 @@ find_oper(char *name, char *username, char *sockhost, char *hostip)
     aOper *aoper;
     char userhost[USERLEN + HOSTLEN + 3];
     char userip[USERLEN + HOSTLEN + 3];
-    int i, t = 0;
+    int i;
 
     /* sockhost OR hostip must match our host field */
 
@@ -354,17 +354,12 @@ find_oper(char *name, char *username, char *sockhost, char *hostip)
     {
         for(i = 0; aoper->hosts[i]; i++)
         {
-            if(!(mycmp(name, aoper->nick) && (!match(userhost, aoper->hosts[i]) 
-                    || !match(userip, aoper->hosts[i]))))
-            {
-                t = 1;
-                break;
-            }
+            if(mycmp(name, aoper->nick) && (!match(userhost, aoper->hosts[i]) 
+                    || !match(userip, aoper->hosts[i])))
+                return aoper;
         }
-        if(t == 1)
-            break;
     }
-    return aoper;
+    return NULL;
 }
 
 static inline aOper *
