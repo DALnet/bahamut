@@ -606,6 +606,9 @@ exit_client(
 			syslog(LOG_NOTICE, "%s was connected for %lu seconds.  %lu/%lu sendK/recvK.", sptr->name, timeofday - sptr->firsttime, sptr->sendK, sptr->receiveK);
 #endif
 			close_connection(sptr);
+
+			sptr->flags |= FLAGS_DEADSOCKET;
+
 			/*
 			 * * First QUIT all NON-servers which are behind this link *
 			 * 
@@ -634,11 +637,14 @@ exit_client(
 			for (acptr = client; acptr; acptr = next) {
 				next = acptr->next;
 				if (IsServer(acptr) && acptr->from == sptr)
-				  exit_one_client(NULL, acptr, &me, me.name);
+				  exit_one_client(sptr, acptr, &me, me.name);
 			}
       }
       else
+      {
 		  close_connection(sptr);
+		  sptr->flags |= FLAGS_DEADSOCKET;
+      }
 		
    }
    exit_one_client(cptr, sptr, from, comment);
