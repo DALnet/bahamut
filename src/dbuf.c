@@ -223,7 +223,7 @@ int dbuf_put(struct DBuf* dyn, const char* buf, size_t length)
 }
 
 
-const char* dbuf_map(struct DBuf* dyn, size_t* length)
+char* dbuf_map(struct DBuf* dyn, size_t* length)
 {
   if (0 == dyn->length) {
     *length   = 0;

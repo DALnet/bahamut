@@ -26,7 +26,7 @@
 #define __struct_include__
 
 #include "config.h"
-#if !defined(CONFIG_H_LEVEL_DFH_1_1)
+#if !defined(CONFIG_H_LEVEL_12)
 #error Incorrect config.h for this revision of ircd.
 #endif
 

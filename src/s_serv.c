@@ -1110,11 +1110,6 @@ m_info(aClient *cptr, aClient *sptr, int parc, char *parv[])
 #else
 	 strcat(outstr, " KPATH=0");
 #endif
-	 sendto_one(sptr, rpl_str(RPL_INFO),
-		    me.name, parv[0], outstr);
-
-
-
 #ifdef LITTLE_I_LINES
 	 strcat(outstr, " LITTLE_I_LINES=1");
 #else
@@ -1205,11 +1200,6 @@ m_info(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
 
 
-#ifdef RK_NOTICES
-	 strcpy(outstr, " RK_NOTICES=1");
-#else
-	 strcpy(outstr, " RK_NOTICES=0");
-#endif
 #ifdef SEPARATE_QUOTE_KLINES_BY_DATE
 	 strcat(outstr, " SEPARATE_QUOTE_KLINES_BY_DATE=1");
 #else
@@ -1312,6 +1302,9 @@ m_info(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		    me.name, parv[0], outstr);
 	 ircsprintf(outstr, " NICKNAMEHISTORYLENGTH=%d NOISY_HTM=%d", NICKNAMEHISTORYLENGTH, NOISY_HTM);
 	 sendto_one(sptr, rpl_str(RPL_INFO),
+		    me.name, parv[0], outstr);
+	 ircsprintf(outstr, " MAXSENDQLENGTH=%d BUFFERPOOL=%s INIT_MAXCLIENTS=%d", MAXSENDQLENGTH, BUFFERPOOL, INIT_MAXCLIENTS);
+	 sendto_one(sptr, rpl_str(RPL_INFO), 
 		    me.name, parv[0], outstr);
 	 ircsprintf(outstr, " TS_MAX_DELTA=%d TS_WARN_DELTA=%d", TS_MAX_DELTA, TS_WARN_DELTA);
 	 sendto_one(sptr, rpl_str(RPL_INFO),

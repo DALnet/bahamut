@@ -313,7 +313,7 @@
  * implementation.  Once pre-hybrid5.2 servers are eradicated, we can
  * drop this down to 90 seconds or so. --Rodder
  */
-#define TS_MAX_DELTA 1800	/* seconds */
+#define TS_MAX_DELTA 120	/* seconds */
 #define TS_WARN_DELTA 15	/* seconds */
 
 /*
@@ -700,7 +700,7 @@
  * will be preallocated for the entire whowas array when ircd is
  * started.
  */
-#define NICKNAMEHISTORYLENGTH 1000
+#define NICKNAMEHISTORYLENGTH 2048
 
 /*
  * TIMESEC - Time interval to wait and if no messages have been
@@ -933,6 +933,10 @@ error CLIENT_FLOOD needs redefining.
 error CLIENT_FLOOD undefined.
 #endif
 
+#if (defined(OPTIONS_H) && !defined(OPTIONS_H_12))
+error Using outdated include/options.h - run config
+#endif
+
 #if defined(DEBUGMODE) || defined(DNS_DEBUG)
 extern void debug(int level, char *pattern, ...);
 # define Debug(x) debug x
@@ -942,5 +946,5 @@ extern void debug(int level, char *pattern, ...);
 # define LOGFILE "/dev/null"
 #endif
 
-#define CONFIG_H_LEVEL_DFH_1_1
+#define CONFIG_H_LEVEL_12
 #endif				/* __config_include__ */
