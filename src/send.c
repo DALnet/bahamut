@@ -169,6 +169,15 @@ static int send_message(aClient *to, char *msg, int len) {
     * Well, let's try every 4k for clients, and immediately for servers
     * -Taner
     */
+
+#ifdef ALWAYS_SEND_DURING_SPLIT
+   if (currently_processing_netsplit && !(to->flags & FLAGS_BLOCKED))
+   {
+      send_queued(to);
+      return 0;
+   }
+#endif
+
    SQinK = (DBufLength(&to->sendQ) >> 10);
    if (IsServer(to)) {
       if (SQinK > to->lastsq)
@@ -178,12 +187,6 @@ static int send_message(aClient *to, char *msg, int len) {
       if (SQinK > (to->lastsq + 4))
 	send_queued(to);
    }
-#ifdef ALWAYS_SEND_DURING_SPLIT
-   else {
-      if (currently_processing_netsplit && !(to->flags & FLAGS_BLOCKED))
-	send_queued(to);
-   }
-#endif
    return 0;
 }
 

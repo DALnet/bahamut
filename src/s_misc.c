@@ -356,7 +356,7 @@ void exit_one_client_in_split(aClient *cptr, aClient *dead, char *reason)
       cptr->from == NULL, but not when they're from established servers. */
 
    if(dead->from == NULL)
-      sendto_noquit_servs_butone(0, dead, ":%s QUIT :%s", cptr->name, reason)
+      sendto_noquit_servs_butone(0, dead, ":%s QUIT :%s", cptr->name, reason);
 
    sendto_common_channels(cptr, ":%s QUIT :%s", cptr->name, reason);
 
