@@ -605,6 +605,9 @@ confadd_port(int port, char *allow, char *address)
     aPort *x;
     int    new;
 
+    if(!(port > 0))
+        return;
+
     if((x = find_port(port)))
     {
         MyFree(x->allow);
