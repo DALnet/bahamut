@@ -17,8 +17,25 @@
 #*   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #*/
 
+RM=@RM@
+MV=@MV@
+
+INSTALL=@INSTALL@
+INSTALL_DATA=@INSTALL_DATA@
+INSTALL_DIR=@INSTALL_DIR@
+
+FILES=opers.txt example.conf example.modules.conf
+
 all:
 
 install: all
-	@echo "Please do make install from the top level"
-
+	@for i in $(FILES); do \
+		if test -f $(INSTALL_DIR)/$$i; then \
+			echo $(MV) $(INSTALL_DIR)/$$i $(INSTALL_DIR)/$$i.old; \
+			$(MV) $(INSTALL_DIR)/$$i $(INSTALL_DIR)/$$i.old; \
+		fi; \
+		echo $(INSTALL_DATA) $$i $(INSTALL_DIR); \
+		$(INSTALL_DATA) $$i $(INSTALL_DIR); \
+	done
+	@touch $(INSTALL_DIR)/ircd.motd
+	@echo "This is the default Bahamut MOTD" >> $(INSTALL_DIR)/ircd.motd

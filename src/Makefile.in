@@ -1,10 +1,14 @@
 CC=@CC@
 RM=@RM@
+MV=@MV@
 IRCDLIBS=@LIBS@ ../zlib/libz.a
 INCLUDEDIR=-I../include
 OPENSSLINC=@SSL_INCLUDES@
 ENGINE=@SENGINE@
 CRYPTO=@ENCRYPT_SRC@
+INSTALL=@INSTALL@
+INSTALL_BIN=@INSTALL_PROGRAM@
+INSTALL_DIR=@INSTALL_DIR@
 CFLAGS=-Wall @CFLAGS@
 
 RES_SRC =
@@ -46,8 +50,13 @@ ircd: $(OBJECTS)
 	$(CC) ${LDFLAGS} -o ircd $(OBJECTS) $(IRCDLIBS)
 	mv version.c version.c.last
 
-install: build
-	@echo "Please do a make install from the top level directory"
+install:
+	@if test -f $(INSTALL_DIR)/ircd; then \
+		echo $(MV) $(INSTALL_DIR)/ircd $(INSTALL_DIR)/ircd.old; \
+		$(MV) $(INSTALL_DIR)/ircd $(INSTALL_DIR)/ircd.old; \
+	fi
+	@echo $(INSTALL_BIN) ircd $(INSTALL_DIR);
+	$(INSTALL_BIN) ircd $(INSTALL_DIR)
 
 version.c: version.c.SH
 	/bin/sh ./version.c.SH

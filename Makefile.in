@@ -18,17 +18,21 @@
 # $Id$
 
 RM=@RM@
+MV=@MV@
 
 ENGINE=@SENGINE@
 FDSETSIZE=@FDSETSIZE@
 
 SHELL=/bin/sh
 SUBDIRS=zlib src tools
+INSTDIRS=src doc tools
 CLEANSUBDIRS=src tools
 
 CC=@CC@
 CFLAGS=@CFLAGS@
 LIBS=@LIBS@ 
+
+INSTALL_DIR=@INSTALL_DIR@
 
 all:	build
 
@@ -97,5 +101,18 @@ depend:
 	done
 
 install: all
-	@./tools/install_ircd
-
+	@if test ! -d $(INSTALL_DIR); then \
+		echo "Creating directory $(INSTALL_DIR)"; \
+		mkdir $(INSTALL_DIR); \
+	fi
+	@for i in $(INSTDIRS); do \
+		cd $$i; \
+		$(MAKE) install; \
+		cd ..; \
+	done
+	@echo ""
+	@echo "Now edit $(INSTALL_DIR)/example.conf"
+	@echo "and move it to ircd.conf - and you'll be all set."
+	@echo "See the doc/ directory and the INSTALL file for more assistance"
+	@echo "Thank you for choosing Bahamut!"
+	@echo ""

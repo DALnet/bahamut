@@ -53,6 +53,7 @@ AC_ISC_POSIX
 AC_PROG_MAKE_SET
 AC_PATH_PROG(RM, rm)
 AC_PATH_PROG(CP, cp)
+AC_PATH_PROG(MV, mv)
 AC_PROG_INSTALL
 AC_C_INLINE
 
@@ -419,7 +420,7 @@ AC_SUBST(SENGINE)
 AC_SUBST(FDSETSIZE)
 AC_SUBST(INSTALL_DIR)
 
-AC_OUTPUT(Makefile src/Makefile tools/Makefile)
+AC_OUTPUT(Makefile src/Makefile tools/Makefile doc/Makefile)
 
 echo configuring zlib...
 (
