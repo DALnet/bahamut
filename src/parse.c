@@ -267,7 +267,15 @@ int parse(aClient *cptr, char *buffer, char *bufend)
 	    }
 	    para[i++] = s;
 	    if (i >= paramcount)
+            {
+                if(paramcount == MAXPARA && strchr(s, ' '))
+                {
+                   sendto_realops_lev(DEBUG_LEV, "Overflowed MAXPARA on %s from %s",
+			   mptr ? mptr->cmd : "numeric",
+			   get_client_name(cptr, (IsServer(cptr) ? HIDEME : TRUE)));
+                }
 		break;
+            }
 	    
 	    while(*s && *s != ' ')
 		s++;
