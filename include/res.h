@@ -46,11 +46,14 @@ typedef struct reslist
     time_t      timeout;
     struct in_addr addr;
     char       *name;
-    struct reslist *next;
     Link        cinfo;
     struct hent he;
     int         has_rev;                /* is he_rev valid? */
     struct hent he_rev;
+
+    struct reslist *next;
+    struct reslist *id_hashnext;
+    struct reslist *cp_hashnext;
 } ResRQ;
 
 typedef struct cache 
@@ -67,7 +70,14 @@ typedef struct cachetable
     aCache     *name_list;
 } CacheTable;
 
+typedef struct reshash
+{
+    ResRQ *id_list;
+    ResRQ *cp_list;
+} ResHash;
+
 #define ARES_CACSIZE	307
+#define ARES_IDCACSIZE  2099
 
 #define	IRC_MAXCACHED	281
 

@@ -65,6 +65,7 @@ extern aClient *local[];
 static char hostbuf[HOSTLEN + 1];
 static int  incache = 0;
 static CacheTable hashtable[ARES_CACSIZE];
+static ResHash idcphashtable[ARES_IDCACSIZE];
 static aCache *cachetop = NULL;
 static ResRQ *last, *first;
 
@@ -83,6 +84,8 @@ static ResRQ *make_request(Link *);
 static int  send_res_msg(char *, int, int);
 static ResRQ *find_id(int);
 static int  hash_number(unsigned char *);
+static unsigned int hash_id(unsigned int);
+static unsigned int hash_cp(char *);
 static void update_list(ResRQ *, aCache *);
 #ifdef ALLOW_CACHE_NAMES
 static int  hash_name(char *);
@@ -152,6 +155,7 @@ int init_resolver(int op)
     {
 	memset((char *) &cainfo, '\0', sizeof(cainfo));
 	memset((char *) hashtable, '\0', sizeof(hashtable));
+	memset((char *) idcphashtable, '\0', sizeof(idcphashtable));
     }
     if (op == 0)
 	ret = resfd;
@@ -173,6 +177,86 @@ static int add_request(ResRQ * new)
     return 0;
 }
 
+static void rem_request_id(ResRQ *req)
+{
+   unsigned int hv = hash_id(req->id);
+   ResRQ *rptr, *r2ptr = NULL;
+
+   for(rptr = idcphashtable[hv].id_list; rptr; r2ptr = rptr, rptr = rptr->id_hashnext)
+   {
+      if(rptr != req)
+         continue;
+
+      if(r2ptr != NULL)
+         r2ptr->id_hashnext = req->id_hashnext;
+      else
+         idcphashtable[hv].id_list = req->id_hashnext;
+      break;
+   }
+}
+
+static void add_request_id(ResRQ *req)
+{
+   unsigned int hv = hash_id(req->id);
+
+   req->id_hashnext = idcphashtable[hv].id_list;
+   idcphashtable[hv].id_list = req;
+}
+
+static ResRQ *find_request_id(int id)
+{
+   unsigned int hv = hash_id(id);
+   ResRQ *res = idcphashtable[hv].id_list;
+   
+   while(res)
+   {
+      if(res->id == id)
+         return res;
+      res = res->id_hashnext;
+   }
+   return NULL;
+}
+
+static void rem_request_cp(ResRQ *req)
+{
+   unsigned int hv = hash_cp(req->cinfo.value.cp);
+   ResRQ *rptr, *r2ptr = NULL;
+
+   for(rptr = idcphashtable[hv].cp_list; rptr; r2ptr = rptr, rptr = rptr->cp_hashnext)
+   {
+      if(rptr != req)
+         continue;
+
+      if(r2ptr != NULL)
+         r2ptr->cp_hashnext = req->cp_hashnext;
+      else
+         idcphashtable[hv].cp_list = req->cp_hashnext;
+      break;
+   }
+}
+
+static void add_request_cp(ResRQ *req)
+{
+   unsigned int hv = hash_cp(req->cinfo.value.cp);
+
+   req->cp_hashnext = idcphashtable[hv].cp_list;
+   idcphashtable[hv].cp_list = req;
+}
+
+static ResRQ *find_request_cp(char *cp)
+{
+   unsigned int hv = hash_cp(cp);
+   ResRQ *res = idcphashtable[hv].cp_list;
+   
+   while(res)
+   {
+      if(res->cinfo.value.cp == cp)
+         return res;
+      res = res->cp_hashnext;
+   }
+   return NULL;
+}
+
 /*
  * remove a request from the list. This must also free any memory that
  * has been allocated for temporary storage of DNS results.
@@ -185,6 +269,16 @@ static void rem_request(ResRQ * old)
     
     if (!old)
 	return;
+
+    if(old->id != -1)
+    {
+        rem_request_id(old);
+        old->id = -1;
+    }
+
+    if(old->cinfo.value.cp != NULL)
+       rem_request_cp(old);
+
     for (rptr = &first; *rptr; r2ptr = *rptr, rptr = &(*rptr)->next)
 	if (*rptr == old)
 	{
@@ -230,8 +324,12 @@ static ResRQ *make_request(Link *lp)
     nreq->retries = 3;
     nreq->resend = 1;
     nreq->srch = -1;
+    nreq->id = -1;
     if (lp)
+    {
 	memcpy((char *) &nreq->cinfo, (char *) lp, sizeof(Link));
+        add_request_cp(nreq);
+    }
     else
 	memset((char *) &nreq->cinfo, '\0', sizeof(Link));
     
@@ -310,14 +408,24 @@ time_t timeout_query_list(time_t now)
  */
 void del_queries(char *cp)
 {
+    ResRQ  *Trptr = find_request_cp(cp);
+    ResRQ  *ret = NULL; 
+
     ResRQ  *rptr, *r2ptr;
 
     for (rptr = first; rptr; rptr = r2ptr)
     {
 	r2ptr = rptr->next;
 	if (cp == rptr->cinfo.value.cp)
-	    rem_request(rptr);
+	{
+	    ret = rptr;
+	}
     }
+
+    if(ret != Trptr) abort();
+
+    if(ret)
+       rem_request(ret);
 }
 
 /*
@@ -362,12 +470,16 @@ static int send_res_msg(char *msg, int len, int rcount)
 /* find a dns request id (id is determined by dn_mkquery) */
 static ResRQ *find_id(int id)
 {
-    ResRQ  *rptr;
+    ResRQ  *Trptr = find_request_id(id);
+    ResRQ  *rptr, *ret = NULL;
 
     for (rptr = first; rptr; rptr = rptr->next)
 	if (rptr->id == id)
-	    return rptr;
-    return ((ResRQ *) NULL);
+	    ret = rptr;
+
+    if(ret != Trptr) abort();
+
+    return ret;
 }
 
 struct hostent *gethost_byname(char *name, Link *lp)
@@ -473,6 +585,10 @@ static int query_name(char *name, int class, int type, ResRQ * rptr)
 	h_errno = NO_RECOVERY;
 	return r;
     }
+
+    if(rptr->id != -1)
+        rem_request_id(rptr);
+
     hptr = (HEADER *) buf;
 #ifdef LRAND48
     do
@@ -491,6 +607,7 @@ static int query_name(char *name, int class, int type, ResRQ * rptr)
 	k++;
     } while (find_id(ntohs(hptr->id)));
     rptr->id = ntohs(hptr->id);
+    add_request_id(rptr);
     rptr->sends++;
     s = send_res_msg(buf, r, rptr->sends);
     if (s == -1)
@@ -1331,6 +1448,16 @@ static int hash_name(char *name)
     return (hashv);
 }
 #endif
+
+static unsigned int hash_id(unsigned int id)
+{
+   return id % ARES_IDCACSIZE;
+}
+
+static unsigned int hash_cp(char *cp)
+{
+   return ((int) cp) % ARES_IDCACSIZE;
+}
 
 /* Add a new cache item to the queue and hash table. */
 static aCache *add_to_cache(aCache * ocp)
