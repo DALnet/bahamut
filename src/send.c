@@ -33,8 +33,10 @@
 /*
  * STOP_SENDING_ON_SHORT_SEND:
  * Treat a short send as a blocked socket
+ * Might not always be a good idea, esp. if using something that's
+ * Edge triggered (ie, kqueue, epoll, etc)
  */
-#define STOP_SENDING_ON_SHORT_SEND
+#undef STOP_SENDING_ON_SHORT_SEND
 
 #ifdef ALWAYS_SEND_DURING_SPLIT
 extern int currently_processing_netsplit;
@@ -1267,6 +1269,41 @@ void sendto_ops_lev(int lev, char *pattern, ...)
     int     i;
     char        nbuf[1024];
     va_list vl;
+    char *tmsg;
+
+#ifdef NICER_UMODENOTICE_SEPARATION
+    switch(lev)
+    {
+       case CCONN_LEV:
+          tmsg = "Client";
+          break;
+
+       case DEBUG_LEV:
+          tmsg = "Debug";
+          break;
+
+       case SPY_LEV:
+          tmsg = "Spy";
+          break;
+
+       case SPAM_LEV:
+          tmsg = "Spam";
+          break;
+
+       case FLOOD_LEV:
+          tmsg = "Flood";
+          break;
+
+       case DCCSEND_LEV:
+          tmsg = "DCCAllow";
+          break;
+
+       default:
+          tmsg = "Notice";
+    }
+#else
+    tmsg = "Notice";
+#endif
 	
     va_start(vl,pattern);
     for (i = 0; i <= highest_fd; i++)
@@ -1315,10 +1352,9 @@ void sendto_ops_lev(int lev, char *pattern, ...)
 		if (!SendServNotice(cptr))
 		    continue;
 	    }
-	    (void) ircsprintf(nbuf, ":%s NOTICE %s :*** Notice -- ",
-			      me.name, cptr->name);
-	    (void) strncat(nbuf, pattern,
-			   sizeof(nbuf) - strlen(nbuf));
+	    ircsprintf(nbuf, ":%s NOTICE %s :*** %s -- ",
+			      me.name, cptr->name, tmsg);
+	    strncat(nbuf, pattern, sizeof(nbuf) - strlen(nbuf));
 	    vsendto_one(cptr, nbuf, vl);
 	}
     va_end(vl);
@@ -1748,8 +1784,43 @@ void sendto_realops_lev(int lev, char *pattern, ...)
     char nbuf[1024];
     va_list vl;
     DLink *lp;
+    char *tmsg;
 
     va_start(vl, pattern);
+
+#ifdef NICER_UMODENOTICE_SEPARATION
+    switch(lev)
+    {
+       case CCONN_LEV:
+          tmsg = "Client";
+          break;
+
+       case DEBUG_LEV:
+          tmsg = "Debug";
+          break;
+
+       case SPY_LEV:
+          tmsg = "Spy";
+          break;
+
+       case SPAM_LEV:
+          tmsg = "Spam";
+          break;
+
+       case FLOOD_LEV:
+          tmsg = "Flood";
+          break;
+
+       case DCCSEND_LEV:
+          tmsg = "DCCAllow";
+          break;
+
+       default:
+          tmsg = "Notice";
+    }
+#else
+    tmsg = "Notice";
+#endif
 
     for (lp = oper_list; lp; lp = lp->next)
     {
@@ -1793,8 +1864,8 @@ void sendto_realops_lev(int lev, char *pattern, ...)
 		continue;
 	    break;
 	}
-	ircsprintf(nbuf, ":%s NOTICE %s :*** Notice -- %s",
-		   me.name, cptr->name, pattern);
+	ircsnprintf(nbuf, 1024, ":%s NOTICE %s :*** %s -- %s",
+		    me.name, cptr->name, tmsg, pattern);
 	vsendto_one(cptr, nbuf, vl);
     }
     va_end(vl);

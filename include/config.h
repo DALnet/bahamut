@@ -474,6 +474,14 @@
 #define DEFAULT_HELP_MODE
 
 /*
+ * NICER_UMODENOTICE_SEPARATION
+ * By default, all usermode notices (+d, for instance) come as
+ * :servername NOTICE nick :*** Notice -- blah blah
+ * This makes them come as *** Debug, or *** Spy, etc.
+ */
+#define NICER_UMODENOTICE_SEPARATION
+
+/*
  * MAXIMUM LINKS - max links for class 0 if no Y: line configured
  * 
  * This define is useful for leaf nodes and gateways. It keeps you from
