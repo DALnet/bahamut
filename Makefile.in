@@ -100,6 +100,10 @@ build:
 	@echo "* directions there. If you don't follow those simple instructions, your      *"
 	@echo "* requests will most likely be ignored.                                      *"
 	@echo "******************************************************************************"
+	@echo ""
+	@echo "WARNING: THIS IS BETA SOFTWARE AND IT MAY NOT WORK AS ADVERTISED"
+	@echo "FOR THIS REASON, DO NOT RUN THIS ON THE MAIN NETWORK WITHOUT THE"
+	@echo "PRIOR APPROVAL OF THE CODING TEAM. YOU HAVE BEEN WARNED!"
 
 clean:
 	${RM} -f *~ core
