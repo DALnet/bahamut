@@ -2,6 +2,10 @@ Outstanding bugs
 - "Sux mode," where a server<->server connection can take a long time to
   establish if one or both sides filters ident connections
 - Source address support on /connect may not work under some conditions
+- Squelching needs finished - Release was too important
+
+Changes for 1.4.33
+- Only ops can invite on channels
 
 Changes for 1.4.32
 - Throttling modified to be more friendly and punish repeat offenders
