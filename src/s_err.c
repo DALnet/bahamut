@@ -528,9 +528,13 @@ static char *replies[] =
                                         "(+b)",
     /* 475 ERR_BADCHANNELKEY */	":%s 475 %s %s :Cannot join channel (+k)",
     /* 476 ERR_BADCHANMASK */	":%s 476 %s %s :Bad Channel Mask",
-    /* 477 ERR_NEEDREGGEDNICK */	":%s 477 %s %s :You need to identify "
-                                        "to a registered nick to %s that "
-                                        "channel.",
+    /* 477 ERR_NEEDREGGEDNICK */       ":%s 477 %s %s :You need to identify "
+                                       "to a registered nick to %s that "
+                                       "channel. For help with registering "
+                                       "your nickname, type /msg "
+                                       "nickserv@services.dal.net help "
+                                       "register or see "
+                                       "http://docs.dal.net/docs/nsemail.html",
     /* 478 ERR_BANLISTFULL */	":%s 478 %s %s %s :Channel ban list is full",
     /* 479 ERR_BADCHANNAME */   ":%s 479 %s %s :Channel name contains illegal "
                                 "characters",
