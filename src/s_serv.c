@@ -792,6 +792,43 @@ int do_server_estab(aClient *cptr)
     cptr->pingval = get_client_ping(cptr);
     cptr->sendqlen = get_sendq(cptr);
 
+    /* Check one more time for good measure... is it there? */
+    if ((acptr = find_name(cptr->name, NULL))) 
+    {
+	char        nbuf[HOSTLEN * 2 + USERLEN + 5]; /* same size as in s_misc.c */
+	aClient *bcptr;
+
+	/*
+	 * While negotiating stuff, another copy of this server appeared.
+	 * 
+	 * Rather than KILL the link which introduced it, KILL the 
+	 * youngest of the two links. -avalon
+	 */
+
+	bcptr = (cptr->firsttime > acptr->from->firsttime) ? cptr :
+	    acptr->from;
+	sendto_one(bcptr, "ERROR :Server %s already exists", cptr->name);
+	if (bcptr == cptr) 
+	{
+	    sendto_gnotice("from %s: Link %s cancelled, server %s already "
+			   "exists (final phase)", me.name, get_client_name(bcptr, HIDEME),
+			   cptr->name);
+	    sendto_serv_butone(bcptr, ":%s GNOTICE :Link %s cancelled, "
+			       "server %s already exists (final phase)", me.name,
+			       get_client_name(bcptr, HIDEME), cptr->name);
+	    return exit_client(bcptr, bcptr, &me, "Server Exists (final phase)");
+	}
+	/* inform all those who care (set +n) -epi */
+	strcpy(nbuf, get_client_name(bcptr, HIDEME));
+	sendto_gnotice("from %s: Link %s cancelled, server %s reintroduced "
+		       "by %s (final phase)", me.name, nbuf, cptr->name,
+		       get_client_name(cptr, HIDEME));
+	sendto_serv_butone(bcptr, ":%s GNOTICE :Link %s cancelled, server %s "
+			   "reintroduced by %s (final phase)", me.name, nbuf, cptr->name,
+			   get_client_name(cptr, HIDEME));
+	(void) exit_client(bcptr, bcptr, &me, "Server Exists (final phase)");
+    }
+
     /* error, error, error! if a server is U:'d, and it connects to us, 
      * we need to figure that out! So, do it here. - lucas 
      */ 
