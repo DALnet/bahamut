@@ -724,6 +724,7 @@ struct Ban {
 	char       *banstr;
 	char       *who;
 	time_t      when;
+	u_char	    type;
 	aBan 	   *next;
 };
 
@@ -783,6 +784,12 @@ struct Channel {
 #define	CHFL_VOICE      0x0002	/* the power to speak */
 #define	CHFL_DEOPPED 	  0x0004	/* deopped by us, modes need to be bounced */
 #define	CHFL_BAN	      0x0008	/* ban channel flag */
+
+/* ban mask types */
+
+#define MTYP_FULL      0x01    /* mask is nick!user@host */
+#define MTYP_USERHOST  0x02    /* mask is user@host */
+#define MTYP_HOST      0x04    /* mask is host only */
 
 /* Channel Visibility macros */
 

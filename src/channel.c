@@ -163,11 +163,8 @@ static int add_banid(aClient *cptr, aChannel *chptr, char *banid) {
    aBan   	*ban;
    int     	 cnt = 0;
    chanMember 	*cm;
-   char 	*s, nickuhost[NICKLEN+USERLEN+HOSTLEN+3];
+   char 	*s, nickuhost[NICKLEN+USERLEN+HOSTLEN+6];
 
-   if (MyClient(cptr))
-	  (void) collapse(banid);
-	
    for (ban = chptr->banlist; ban; ban = ban->next) {
       if (MyClient(cptr) && (++cnt >= MAXBANS)) {
 			sendto_one(cptr, getreply(ERR_BANLISTFULL), me.name, cptr->name,
@@ -190,7 +187,7 @@ static int add_banid(aClient *cptr, aChannel *chptr, char *banid) {
       ban->who = (char *) MyMalloc(strlen(cptr->name) +
 			   strlen(cptr->user->username) +
 			   strlen(cptr->user->host) + 3);
-      (void) sprintf(ban->who, "%s!%s@%s",
+      (void) ircsprintf(ban->who, "%s!%s@%s",
 		  cptr->name, cptr->user->username, cptr->user->host);
    }
    else {
@@ -198,16 +195,30 @@ static int add_banid(aClient *cptr, aChannel *chptr, char *banid) {
       (void) strcpy(ban->who, cptr->name);
    }
 
-   ban->when = timeofday;
+   /* determine what 'type' of mask this is, for less matching later */
+   
+   if(banid[0] == '*' && banid[1] == '!')
+   {
+      if(banid[2] == '*' && banid[3] == '@')
+         ban->type = MTYP_HOST;
+      else
+         ban->type = MTYP_USERHOST;
+   }
+   else
+      ban->type = MTYP_FULL;
 
+   ban->when = timeofday;
    chptr->banlist = ban;
 
    for (cm = chptr->members; cm; cm = cm->next) 
    {
+     if(!MyConnect(cm->cptr))
+        continue;
+
+     strcpy(nickuhost, make_nick_user_host(cm->cptr->name, cm->cptr->user->username,
+                cm->cptr->hostip));
      s = make_nick_user_host(cm->cptr->name, cm->cptr->user->username,
-                cm->cptr->hostip);
-     ircsprintf(nickuhost, "%s!%s@s", cm->cptr->name, cm->cptr->user->username,
-		cm->cptr->user->host);
+                cm->cptr->user->host);
      if (match(banid, nickuhost) == 0 || match(banid, s) == 0) 
         cm->bans++;
    }
@@ -224,7 +235,7 @@ del_banid(aChannel *chptr, char *banid)
    aBan        **ban;
    aBan   	*tmp;
    chanMember 	*cm;
-   char 	*s, nickuhost[NICKLEN+USERLEN+HOSTLEN+3];
+   char 	*s, nickuhost[NICKLEN+USERLEN+HOSTLEN+6];
 
    if (!banid)
       return -1;
@@ -239,13 +250,15 @@ del_banid(aChannel *chptr, char *banid)
 
          for (cm = chptr->members; cm; cm = cm->next) 
 	 {
+           if(!MyConnect(cm->cptr) || cm->bans == 0) 
+	      continue;
+
+           strcpy(nickuhost, make_nick_user_host(cm->cptr->name, cm->cptr->user->username,
+		      cm->cptr->hostip));
            s = make_nick_user_host(cm->cptr->name, cm->cptr->user->username,
-		      cm->cptr->hostip);
-	   ircsprintf(nickuhost, "%s!%s@%s", cm->cptr->name,
-		      cm->cptr->user->username, cm->cptr->user->host);
+		      cm->cptr->user->host);
 	   if (match(banid, nickuhost) == 0 || match(banid, s) == 0) 
               cm->bans--;
-	   if (cm->bans < 0) cm->bans = 0;
 	  }
 	 break;
       }
@@ -280,16 +293,17 @@ static aBan *is_banned(aClient *cptr, aChannel *chptr) {
 
 aBan *nick_is_banned(aChannel *chptr, char *nick, aClient *cptr) {
   aBan *tmp;
-  char *s, s2[NICKLEN+USERLEN+HOSTLEN+3];
+  char *s, s2[NICKLEN+USERLEN+HOSTLEN+6];
 
   if (!IsPerson(cptr)) return NULL;
 
-  ircsprintf(s2, "%s!%s@%s", nick, cptr->user->username, cptr->user->host);
+  strcpy(s2, make_nick_user_host(nick, cptr->user->username, cptr->user->host));
   s = make_nick_user_host(nick, cptr->user->username, cptr->hostip);
 
   for (tmp = chptr->banlist; tmp; tmp = tmp->next)
-     if ((match(tmp->banstr, s2) == 0) ||    /* check host before IP */
-	 (match(tmp->banstr, s) == 0))
+     if (tmp->flags & MTYP_FULL &&           /* only check applicable bans */
+        ((match(tmp->banstr, s2) == 0) ||    /* check host before IP */
+	 (match(tmp->banstr, s) == 0)))
         break;
   return (tmp);
 }
@@ -386,6 +400,9 @@ int can_send(aClient *cptr, aChannel *chptr) {
 
    if (chptr->mode.mode & MODE_NOPRIVMSGS && !member)
       return (MODE_NOPRIVMSGS);
+
+   if(cm && cm->bans && !(cm->flags & (CHFL_CHANOP | CHFL_VOICE)))
+      return (MODE_BAN);
 
    return 0;
 }
@@ -651,7 +668,7 @@ set_mode(aClient *cptr, aClient *sptr, aChannel *chptr, int level, int parc,
 	chanMember *cm; /* for walking channel member lists */
 	aBan *bp; /* for walking banlists */
 	char *modes=parv[0]; /* user's idea of mode changes */
-   int args; /* counter for what argument we're on */
+        int args; /* counter for what argument we're on */
 	int banlsent = 0; /* Only list bans once in a command. */
 	char change='+'; /* by default we + things... */
 	int errors=0; /* errors returned, set with bitflags so we only 
@@ -669,6 +686,7 @@ set_mode(aClient *cptr, aClient *sptr, aChannel *chptr, int level, int parc,
 	int chasing = 0;
 	int len=0, i=0; /* so we don't overrun pbuf */
 	char moreparmsstr[]="MODE   ";
+	char nuhbuf[NICKLEN + USERLEN + HOSTLEN + 6]; /* for bans */
 	
 	args=1;
 	
@@ -798,7 +816,12 @@ set_mode(aClient *cptr, aClient *sptr, aChannel *chptr, int level, int parc,
 				break;
 			}
 			/* make a 'pretty' ban mask here, then try and set it */
-			parv[args]=collapse(pretty_mask(parv[args]));
+                        /* okay kids, let's do this again.
+			 * the buffer returned by pretty_mask is from 
+			 * make_nick_user_host. This buffer is eaten by add/del banid.
+			 * Thus, some poor schmuck gets himself on the banlist. Fixed. - lucas */
+			strcpy(nuhbuf, collapse(pretty_mask(parv[args]));
+			parv[args] = nuhbuf;
 			/* if we're going to overflow our mode buffer,
 			 * drop the change instead */
 			i=strlen(parv[args]);

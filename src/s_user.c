@@ -1481,6 +1481,29 @@ m_nick(aClient *cptr,
        if (MyConnect(sptr))
        {
           if (IsRegisteredUser(sptr)) {
+
+	       /* before we change their nick, make sure they're not banned
+		* on any channels, and!! make sure they're not changing to
+		* a banned nick -sed */
+               /* a little cleaner - lucas */
+
+ 	        for (lp = sptr->user->channel; lp; lp = lp->next) 
+                {
+                  if (can_send(sptr, lp->value.chptr)) 
+		  { 
+		    sendto_one(sptr, err_str(ERR_BANNICKCHANGE), me.name,
+			       sptr->name, lp->value.chptr->chname);
+		    return 0;
+		  }
+		  if (nick_is_banned(lp->value.chptr, nick, sptr) != NULL) 
+		  {
+		    sendto_one(sptr, err_str(ERR_BANONCHAN), me.name,
+			       sptr->name, nick, lp->value.chptr->chname);
+		    return 0;
+		  }
+		}
+			       
+
 #ifdef ANTI_NICK_FLOOD
              if ((sptr->last_nick_change + MAX_NICK_TIME) < NOW)
                 sptr->number_of_nick_changes = 0;
@@ -1490,24 +1513,6 @@ m_nick(aClient *cptr,
              if (sptr->number_of_nick_changes <= MAX_NICK_CHANGES)
              {
 #endif
-	       /* before we change their nick, make sure they're not banned
-		* on any channels, and!! make sure they're not changing to
-		* a banned nick --sed */
-
- 	        for (lp = sptr->user->channel; lp; lp = lp->next) {
-		  cm = find_user_member(lp->value.chptr->members, sptr);
-                  if (cm->bans) { /* user banned  */
-		    sendto_one(sptr, err_str(ERR_BANNICKCHANGE), me.name,
-			       sptr->name, lp->value.chptr->chname);
-		    return 0;
-		  }
-		  if (nick_is_banned(lp->value.chptr, nick, sptr) != NULL) {
-		    sendto_one(sptr, err_str(ERR_BANONCHAN), me.name,
-			       sptr->name, nick, lp->value.chptr->chname);
-		    return 0;
-		  }
-		}
-			       
                 sendto_common_channels(sptr, ":%s NICK :%s", parv[0], nick);
                 if (sptr->user)
                 {
@@ -1770,8 +1775,7 @@ m_message(aClient *cptr,
 
 			cm = find_user_member(chptr->members, sptr);
 			
-			if ((!(cm->flags & CHFL_CHANOP) && !(cm->flags & CHFL_VOICE) && !cm->bans) && 
-			   (can_send(sptr, chptr) == 0 || IsULine(sptr)))
+			if (can_send(sptr, chptr) == 0 || IsULine(sptr))
 			  sendto_channel_butone(cptr, sptr, chptr,
 											":%s %s %s :%s",
 											parv[0], cmd, nick,

@@ -463,7 +463,7 @@ static char *replies[] = {
 	/* 434 */	NULL,
 	/* 435 ERR_BANONCHAN */	        ":%s 435 %s %s %s :Cannot change to a banned nickname",
 	/* 436 ERR_NICKCOLLISION */	":%s 436 %s %s :Nickname collision KILL",
-	/* 437 ERR_BANNICKCHANGE */	":%s 437 %s %s :Cannot change nickname while banned on channel",
+	/* 437 ERR_BANNICKCHANGE */	":%s 437 %s %s :Cannot change nickname while banned or moderated on channel",
 	/* 438 */	NULL,	/* In use by Undernet - ERR_NICKTOOFAST */
 	/* 439 */	NULL,	/* In use by Undernet - ERR_TARGETTOOFAST */
 	/* 440 ERR_SERVICESDOWN */	":%s 440 %s %s :Services is currently down. Please wait a few moments, and then try again.",
