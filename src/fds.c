@@ -94,8 +94,11 @@ void report_fds(aClient *cptr)
       if(fd_list[i].type == FDT_CLIENT ||
          fd_list[i].type == FDT_AUTH)
       {
-         name = get_client_name((aClient *) fd_list[i].value, 0);
-         blocking = ((aClient *) fd_list[i].value)->flags & FLAGS_BLOCKED ?
+         aClient *cptr = (aClient *) fd_list[i].value;
+         int hide = (IsConnecting(cptr) || IsHandshake(cptr) || IsServer(cptr)) ? HIDEME : 0;
+
+         name = get_client_name(cptr, hide);
+         blocking = (cptr->flags & FLAGS_BLOCKED) ?
                     "BLOCKED" : "_";
       }
       else
