@@ -1631,6 +1631,25 @@ int         i;
    return s;
 }
 
+/* check to see if the message has any color chars in it. */
+int msg_has_colors(char *msg)
+{
+   char *c = msg;
+
+   while(*c)
+   {
+      if(*c == '\003' || *c == '\033')
+         break;
+      else
+         c++;
+   }
+
+   if(*c)
+      return 1;
+
+   return 0;
+}
+
 /*
  * * m_message (used in m_private() and m_notice()) * the general
  * function to deliver MSG's between users/channels *
@@ -1650,9 +1669,8 @@ m_message(aClient *cptr,
 	  int notice)
 {
    Reg aClient *acptr;
-   Reg chanMember *cm;
    Reg char   *s;
-   Reg int     i;
+   Reg int     i, ret;
    aChannel   *chptr;
    char       *nick, *server, *p, *cmd;
 
@@ -1771,17 +1789,26 @@ m_message(aClient *cptr,
 #endif /*
 			* FLUD 
         */
+			(void) msg_has_colors(parv[2]);
 
-			cm = find_user_member(chptr->members, sptr);
-			
-			if (can_send(sptr, chptr) == 0 || IsULine(sptr))
-			  sendto_channel_butone(cptr, sptr, chptr,
-											":%s %s %s :%s",
-											parv[0], cmd, nick,
-											parv[2]);
-			else if (!notice)
-			  sendto_one(sptr, err_str(ERR_CANNOTSENDTOCHAN),
-							 me.name, parv[0], nick);
+			ret = IsULine(sptr) ? 0 : can_send(sptr, chptr);
+
+			switch(ret)
+			{
+			   case 0:
+				sendto_channel_butone(cptr, sptr, chptr, ":%s %s %s :%s",
+						      parv[0], cmd, nick, parv[2]);
+				break;
+
+			   /* case MSG_COLORED:  -- not yet */
+
+			   default:
+				if(!notice)
+				   sendto_one(sptr, err_str(ERR_CANNOTSENDTOCHAN),
+					      me.name, parv[0], nick);
+				break;
+			}
+
 			continue;
       }
 		
