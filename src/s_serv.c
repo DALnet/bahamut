@@ -595,20 +595,9 @@ m_server(aClient *cptr, aClient *sptr, int parc, char *parv[])
       /*
        * * See if the newly found server is behind a guaranteed leaf
        * (L-line). If so, close the link.
+       *
+       * Depreciated.  Kinda redundant with Hlines. -epi
        */
-      if ((aconf = find_conf_host(cptr->confs, host, CONF_LEAF)) &&
-			 (!aconf->port || (hop > aconf->port))) 
-      {
-	  sendto_gnotice("from %s: Leaf-only link %s->%s - Closing", 
-		me.name, get_client_name(cptr, HIDEME),
-		aconf->host ? aconf->host : "*");
-	  sendto_serv_butone(cptr, ":%s GNOTICE :Leaf-only link %s->%s - Closing",
-		me.name, get_client_name(cptr, HIDEME),
-		aconf->host ? aconf->host : "*");
-	  sendto_one(cptr, "ERROR :Leaf-only link, sorry.");
-	  return exit_client(cptr, cptr, cptr, "Leaf Only");
-      }
-
       if (!(aconf = find_conf_host(cptr->confs, host, CONF_HUB)) ||
 			 (aconf->port && (hop > aconf->port))) 
       {
@@ -1037,7 +1026,7 @@ m_server_estab(aClient *cptr)
     * now in two places.. up above and in s_bsd.c. - lucas
     * This is to make sure we pass on our capabilities before we establish a server connection */
 
-   det_confs_butmask(cptr, CONF_LEAF | CONF_HUB | CONF_NOCONNECT_SERVER | CONF_ULINE);
+   det_confs_butmask(cptr, CONF_HUB | CONF_NOCONNECT_SERVER | CONF_ULINE);
    /*
     * * *WARNING* 
     *   In the following code in place of plain
@@ -1573,10 +1562,10 @@ m_links(aClient *cptr, aClient *sptr, int parc, char *parv[])
 }
 
 #ifdef LITTLE_I_LINES
-static int  report_array[12][3] =
+static int  report_array[11][3] =
 {
 #else
-static int  report_array[12][3] =
+static int  report_array[11][3] =
 {
 #endif
    {CONF_CONNECT_SERVER, RPL_STATSCLINE, 'C'},
@@ -1587,7 +1576,6 @@ static int  report_array[12][3] =
    {CONF_CLIENT, RPL_STATSILINE, 'i'},
 #endif
    {CONF_KILL, RPL_STATSKLINE, 'K'},
-   {CONF_LEAF, RPL_STATSLLINE, 'L'},
    {CONF_OPERATOR, RPL_STATSOLINE, 'O'},
    {CONF_HUB, RPL_STATSHLINE, 'H'},
    {CONF_LOCOP, RPL_STATSOLINE, 'o'},
@@ -1853,7 +1841,7 @@ m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		    sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name,  parv[0]);
 		else
 #endif
-		report_configured_links(sptr, CONF_HUB | CONF_LEAF);
+		report_configured_links(sptr, CONF_HUB);
 		break;
 		
 	 case 'I':

@@ -582,7 +582,7 @@ struct ConfItem {
 #define	CONF_ADMIN		0x0100
 #define	CONF_CLASS		0x0200
 #define	CONF_SERVICE		0x0400
-#define	CONF_LEAF		0x0800
+/* #define	CONF_LEAF		0x0800   Depreciated.  -epi */
 #define	CONF_LISTEN_PORT	0x1000
 #define	CONF_HUB		0x2000
 #define CONF_ELINE		0x4000

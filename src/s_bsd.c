@@ -766,7 +766,7 @@ int check_server(aClient * cptr,
    /* attach the C and N lines to the client structure for later use. */
    (void) attach_conf(cptr, n_conf);
    (void) attach_conf(cptr, c_conf);
-   (void) attach_confs(cptr, name, CONF_HUB | CONF_LEAF | CONF_ULINE);
+   (void) attach_confs(cptr, name, CONF_HUB | CONF_ULINE);
    /* this may give cptr a new sendq length.. */
    cptr->sendqlen = get_sendq(cptr);
 

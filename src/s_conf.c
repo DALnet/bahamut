@@ -1310,11 +1310,6 @@ initconf(int opt, int fd)
 	    aconf->status = CONF_KILL;
 	    break;
 
-	 case 'L':		/* guaranteed leaf server */
-	 case 'l':
-	    aconf->status = CONF_LEAF;
-	    break;
-
 	    /*
 	     * Me. Host field is name used for this host 
 	     * and port number is the number of the port 
