@@ -42,6 +42,8 @@
 #include "h.h"
 #include "fdlist.h"
 
+extern float curSendK, curRecvK;
+
 #ifdef NO_CHANOPS_WHEN_SPLIT
 extern int  server_was_split;
 extern time_t server_split_time;
@@ -1091,13 +1093,13 @@ void serv_info(aClient *cptr, char *name)
 	       _GMKs(receiveK));
     
     uptime = (timeofday - me.since);
-    sendto_one(cptr, ":%s %d %s :Server send: %7.2f %s (%4.1f K/s)",
+    sendto_one(cptr, ":%s %d %s :Server send: %7.2f %s (%4.1f K/s total, %4.1f K/s current)",
 	       me.name, RPL_STATSDEBUG, name, _GMKv(me.sendK), _GMKs(me.sendK),
-	       (float) ((float) me.sendK / (float) uptime));
-    sendto_one(cptr, ":%s %d %s :Server recv: %7.2f %s (%4.1f K/s)",
+	       (float) ((float) me.sendK / (float) uptime), curSendK);
+    sendto_one(cptr, ":%s %d %s :Server recv: %7.2f %s (%4.1f K/s total, %4.1f K/s current)",
 	       me.name, RPL_STATSDEBUG, name, _GMKv(me.receiveK),
 	       _GMKs(me.receiveK), 
-	       (float) ((float) me.receiveK / (float) uptime));
+	       (float) ((float) me.receiveK / (float) uptime), curRecvK);
 }
 
 void show_opers(aClient *cptr, char *name)

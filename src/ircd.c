@@ -84,6 +84,9 @@ time_t      	 NOW;
 time_t		 last_stat_save;
 aClient     	 me;		/* That's me */
 aClient    	*client = &me;	/* Pointer to beginning of Client list */
+
+float curSendK = 0, curRecvK = 0;
+
 #ifdef  LOCKFILE
 extern time_t 	 pending_kline_time;
 extern struct pkl *pending_klines;
@@ -1032,6 +1035,8 @@ void io_loop()
     long lastrecvK = 0;
     int  lrv = 0;
 #endif
+    time_t	lastbwcalc = 0;
+    long	lastbwSK = 0, lastbwRK = 0;
     time_t      lasttimeofday;
     int delay = 0;
 
@@ -1056,6 +1061,25 @@ void io_loop()
 	}
 
 	NOW = timeofday;
+
+	/*
+	 * Calculate a moving average of our total traffic.	
+	 * Traffic is a 4 second average, 'sampled' every 2 seconds.
+	 */
+
+	if((timeofday - lastbwcalc) >= 2)
+	{
+            long ilength = timeofday - lastbwcalc;
+
+	    curSendK += (float) (me.sendK - lastbwSK) / (float) ilength;
+	    curRecvK += (float) (me.receiveK - lastbwRK) / (float) ilength;
+	    curSendK /= 2;
+	    curRecvK /= 2;
+
+	    lastbwSK = me.sendK;
+	    lastbwRK = me.receiveK;
+	    lastbwcalc = timeofday;
+	}
 
 	/*
 	 * This chunk of code determines whether or not "life sucks", that
