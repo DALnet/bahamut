@@ -31,6 +31,9 @@ CFLAGS= -Wall -g -O2 ${FDLIMIT} ${XFLAGS}
 # to match the kernel config --JRL
 #CFLAGS= -g -D"FD_SETSIZE=4096" -O2
 #
+# To compile on IRIX (tested 2/24/2000 on IRIX 6.4)
+#CFLAGS=-D_USE_BSD
+#IRCDLIBS=-lbsd
 #
 # NOTE: The rest of these definitions may or may not work, I haven't tested them --JRL
 #
