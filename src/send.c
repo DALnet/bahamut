@@ -107,7 +107,25 @@ static int send_message(aClient *to, char *msg, int len) {
 #ifdef DUMP_DEBUG
    fprintf(dumpfp, "-> %s: %s"\n, (to->name ? to->name : "*"), msg);
 #endif
-   if(len>509) {
+   if(IsServer(sptr))
+   {
+      if(len>510) 
+        {
+		msg[511]='\n';
+		msg[512]='\0';
+		len=512;
+	}
+	else 
+        {
+		msg[len] = '\n';
+		msg[len+1] = '\0';
+		len++;
+	}   
+   }
+   else
+   {
+      if(len>509) 
+        {
 		msg[510]='\r';
 		msg[511]='\n';
 		msg[512]='\0';
@@ -119,6 +137,7 @@ static int send_message(aClient *to, char *msg, int len) {
 		msg[len+2] = '\0';
 		len+=2;
 	}   
+   }
    if (to->from)
      to = to->from;   /* shouldn't be necessary */
    
