@@ -985,10 +985,11 @@ void sendto_prefix_one(aClient *to, aClient *from, char *pattern, ...)
    char *idx;
    char *par;
    int flag = 0, sidx = 0;
-   va_list vl;
+   va_list vl, vl2;
 
    va_start(vl, pattern);
-	
+   vl2 = vl;
+
    par = va_arg(vl, char *);
    /*
     * Optimize by checking if (from && to) before everything 
@@ -1000,7 +1001,7 @@ void sendto_prefix_one(aClient *to, aClient *from, char *pattern, ...)
       {
          if (IsServer(from)) 
          {
-            ircvsprintf(temp, pattern, vl);
+            ircvsprintf(temp, pattern, vl2);
 	    sendto_ops("Send message (%s) to %s[%s] dropped from %s(Fake Dir)", temp,
                       to->name, to->from->name, from->name);
             va_end(vl);
