@@ -210,7 +210,7 @@
 /* Define to 1 if you have the <sys/types.h> header file. */
 #undef HAVE_SYS_TYPES_H
 
-/* Define to 1 if you have the `times */
+/* Define to 1 if you have the `times' function. */
 #undef HAVE_TIMES
 
 /* Define to 1 if you have the <unistd.h> header file. */
@@ -227,6 +227,9 @@
 
 /* Maximum Connections we allow */
 #undef MAXCONNECTIONS
+
+/* epoll behavior */
+#undef NEED_EPOLL_DEFS
 
 /* If we're running on Solaris */
 #undef OS_SOLARIS2

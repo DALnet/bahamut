@@ -23,6 +23,7 @@ AH_TEMPLATE([USE_HOOKMODULES],[Do we support loadable modules])
 AH_TEMPLATE([MAXCONNECTIONS],[Maximum Connections we allow])
 AH_TEMPLATE([DPATH],[Location of our installation])
 AH_TEMPLATE([SPATH],[Location of our binary])
+AH_TEMPLATE([NEED_EPOLL_DEFS],[epoll behavior])
 
 dnl Put our options of here for ease of reading.
 
@@ -221,6 +222,32 @@ if test "$check_sengine" = "yes"; then
         engine="poll"
     elif test "$linux" = "yes"; then
         AC_CHECK_FUNC(poll, [ engine="poll" ], )
+        AC_CHECK_HEADER(sys/epoll.h, HAVE_EPOLL_H=yes, HAVE_EPOLL_H=no)
+        AC_CHECK_LIB(epoll, epoll_create, 
+            [LIBS="$LIBS -lepoll"; have_epoll_lib="yes"; engine="epoll"], 
+            have_epoll_lib="no")
+        if test "$HAVE_EPOLL_H $have_epoll_lib" = "yes no"; then
+            AC_MSG_CHECKING(for epoll_create [without -lepoll])
+            AC_TRY_RUN([
+                    #include <stdint.h>
+                    #include <sys/epoll.h>
+                    #include <errno.h>
+                    
+                    #include <asm/unistd.h>
+                    
+                    _syscall1(int, epoll_create, int, size)
+                    
+                    int main(int argc, char **argv) { return epoll_create(5) < 1; }
+                    ], 
+                    have_epoll_lib="yes", have_epoll_lib="no")
+            AC_MSG_RESULT($have_epoll_lib)
+            if test "$have_epoll_lib" = "yes"; then
+                AC_DEFINE(NEED_EPOLL_DEFS)
+            fi
+        fi
+        if test "$HAVE_EPOLL_H $have_epoll_lib" = "yes yes"; then
+            engine="epoll";
+        fi
     else
         AC_CHECK_FUNC(poll, [ engine="poll"], )
     fi
@@ -240,6 +267,37 @@ elif test "$check_sengine" = "poll"; then
         AC_MSG_ERROR()
     fi
     AC_MSG_NOTICE(setting socketengine type to poll)
+elif test "$check_sengine" = "epoll"; then
+    AC_CHECK_HEADER(sys/epoll.h, HAVE_EPOLL_H=yes, HAVE_EPOLL_H=no)
+    AC_CHECK_LIB(epoll, epoll_create, 
+        [LIBS="$LIBS -lepoll"; have_epoll_lib="yes"; engine="epoll"], 
+        have_epoll_lib="no")
+    if test "$HAVE_EPOLL_H $have_epoll_lib" = "yes no"; then
+        AC_MSG_CHECKING(for epoll_create [without -lepoll])
+        AC_TRY_RUN([
+                #include <stdint.h>
+                #include <sys/epoll.h>
+                #include <errno.h>
+                 
+                #include <asm/unistd.h>
+                 
+                _syscall1(int, epoll_create, int, size)
+                
+                int main(int argc, char **argv) { return epoll_create(5) < 1; }
+                ], 
+                have_epoll_lib="yes", have_epoll_lib="no")
+        AC_MSG_RESULT($have_epoll_lib)
+        if test "$have_epoll_lib" = "yes"; then
+            AC_DEFINE(NEED_EPOLL_DEFS)
+        fi
+    fi
+    if test "$HAVE_EPOLL_H $have_epoll_lib" != "yes yes"; then
+        AC_MSG_NOTICE()
+        AC_MSG_ERROR(epoll is not supported on this machine)
+        AC_MSG_ERROR()
+    fi
+    AC_MSG_NOTICE(setting socketengine type to epoll)
+    engine="epoll";
 elif test "$check_sengine" = "select"; then
     AC_MSG_NOTICE(setting socketengine type to select.. for some stupid reason)
     engine = "select"
