@@ -1303,7 +1303,7 @@ m_info(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	 ircsprintf(outstr, " NICKNAMEHISTORYLENGTH=%d NOISY_HTM=%d", NICKNAMEHISTORYLENGTH, NOISY_HTM);
 	 sendto_one(sptr, rpl_str(RPL_INFO),
 		    me.name, parv[0], outstr);
-	 ircsprintf(outstr, " MAXSENDQLENGTH=%d BUFFERPOOL=%s INIT_MAXCLIENTS=%d", MAXSENDQLENGTH, BUFFERPOOL, INIT_MAXCLIENTS);
+	 ircsprintf(outstr, " MAXSENDQLENGTH=%d BUFFERPOOL=%d INIT_MAXCLIENTS=%d", MAXSENDQLENGTH, BUFFERPOOL, INIT_MAXCLIENTS);
 	 sendto_one(sptr, rpl_str(RPL_INFO), 
 		    me.name, parv[0], outstr);
 	 ircsprintf(outstr, " TS_MAX_DELTA=%d TS_WARN_DELTA=%d", TS_MAX_DELTA, TS_WARN_DELTA);
