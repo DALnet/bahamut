@@ -507,7 +507,7 @@ static char *replies[] = {
 	/* 478 ERR_BANLISTFULL */	":%s 478 %s %s %s :Channel ban list is full",
 	/* 479 ERR_BADCHANNAME */ ":%s 479 %s %s :Channel name contains illegal characters",
 	/* 480 */	NULL,
-	/* 481 ERR_NOPRIVILEGES */	":%s 481 %s :Permission Denied, You're not an IRC operator",
+	/* 481 ERR_NOPRIVILEGES */	":%s 481 %s :Permission Denied, You do not have the correct irc operator privileges",
 	/* 482 ERR_CHANOPRIVSNEEDED */	":%s 482 %s %s :You're not channel operator",
 	/* 483 ERR_CANTKILLSERVER */	":%s 483 %s :You cant kill a server!",
 	/* 484 */	NULL,	/* In use by Undernet */

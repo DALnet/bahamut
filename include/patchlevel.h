@@ -27,7 +27,7 @@
 #define STABLE  3
 #define BETA    4
 
-#define BRANCHSTATUS BETA
+#define BRANCHSTATUS RELEASE
 
 #define BASENAME "bahamut"
 #define BRANCH "pelennor"
@@ -87,7 +87,7 @@
 \
 \
 \
-"pre4"
+""
 
 #define PATCHES PATCH1 PATCH2 PATCH3 PATCH4 PATCH5 PATCH6 PATCH7 PATCH8 PATCH9
 
