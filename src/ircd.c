@@ -44,6 +44,7 @@
 #include "dich_conf.h"
 #include "throttle.h"
 #include "userban.h"
+#include "fds.h"
 
 aConfList   EList1 = {0, NULL};			/* ordered */
 aConfList   EList2 = {0, NULL};			/* ordered, reversed */
@@ -440,7 +441,8 @@ static time_t check_pings(time_t currenttime)
 		{
 		    if (cptr->authfd >= 0) 
 		    {
-			(void) close(cptr->authfd);
+			del_fd(cptr->authfd);
+			close(cptr->authfd);
 			cptr->authfd = -1;
 			cptr->count = 0;
 			*cptr->buffer = '\0';
@@ -457,6 +459,7 @@ static time_t check_pings(time_t currenttime)
 		    ClearAuth(cptr);
 		    ClearDNS(cptr);
 		    cptr->since = currenttime;
+		    check_client_fd(cptr);
 		    continue;
 		}
 		
@@ -793,8 +796,13 @@ int main(int argc, char *argv[])
     /* init the throttle system -wd */
     throttle_init();
 
+    /* init the file descriptor tracking system */
+    init_fds();
+
+    /* init the kline/akill system */
     init_userban();
 
+    /* init/load the drone module */
     drone_init();
 
     initlists();
@@ -906,7 +914,9 @@ int main(int argc, char *argv[])
     }
 	
     set_non_blocking(me.fd, &me);
-    (void) get_my_name(&me, me.sockhost, sizeof(me.sockhost) - 1);
+    add_fd(me.fd, FDT_LISTENER, &me);
+    set_fd_flags(me.fd, FDF_WANTREAD);
+    get_my_name(&me, me.sockhost, sizeof(me.sockhost) - 1);
     if (me.name[0] == '\0')
 	strncpyzt(me.name, me.sockhost, sizeof(me.name));
     me.hopcount = 0;

@@ -13,6 +13,7 @@
 #include "res.h"
 #include "numeric.h"
 #include "h.h"
+#include "fds.h"
 
 #include <signal.h>
 #include <sys/time.h>
@@ -373,6 +374,7 @@ time_t timeout_query_list(time_t now)
 		    sendto_one(cptr, REPORT_FAIL_DNS);
 #endif
 		    ClearDNS(cptr);
+                    check_client_fd(cptr);
 		    break;
 
 		case ASYNC_CONNECT:

@@ -24,6 +24,7 @@
 #include "common.h"
 #include "sys.h"
 #include "h.h"
+#include "fds.h"
 #include <signal.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -100,11 +101,16 @@ int deliver_it(aClient *cptr, char *str, int len)
     {
 	retval = 0;
 	cptr->flags |= FLAGS_BLOCKED;
+	set_fd_flags(cptr->fd, FDF_WANTWRITE);
 	return (retval);		/* Just get out now... */
     }
     else if (retval > 0)
     {
-	cptr->flags &= ~FLAGS_BLOCKED;
+	if(cptr->flags & FLAGS_BLOCKED)
+	{
+	    cptr->flags &= ~FLAGS_BLOCKED;
+	    unset_fd_flags(cptr->fd, FDF_WANTWRITE);
+	}
     }
     
 #ifdef DEBUGMODE

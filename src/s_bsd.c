@@ -69,6 +69,8 @@
 
 #include "h.h"
 #include "fdlist.h"
+#include "fds.h"
+
 extern fdlist default_fdlist;
 
 #ifndef IN_LOOPBACKNET
@@ -359,6 +361,9 @@ int add_listener(aConfItem * aconf)
 	cptr->confs->next = NULL;
 	cptr->confs->value.aconf = aconf;
 	set_non_blocking(cptr->fd, cptr);
+
+        add_fd(cptr->fd, FDT_LISTENER, cptr);
+        set_fd_flags(cptr->fd, FDF_WANTREAD);
     } else
 	free_client(cptr);
     return 0;
@@ -469,6 +474,8 @@ void init_sys()
     {
 	/* debugging is going to a tty */
 	resfd = init_resolver(0x1f);
+	add_fd(resfd, FDT_RESOLVER, NULL);
+        set_fd_flags(resfd, FDF_WANTREAD);
 	return;
     }
     (void) close(1);
@@ -505,6 +512,8 @@ void init_sys()
     }
 
     resfd = init_resolver(0x1f);
+    add_fd(resfd, FDT_RESOLVER, NULL);
+    set_fd_flags(resfd, FDF_WANTREAD);
     return;
 }
 
@@ -842,6 +851,9 @@ static int completed_connection(aClient * cptr)
     aConfItem *aconf;
     aConfItem *nconf;
 
+    if(!(cptr->flags & FLAGS_BLOCKED))
+       unset_fd_flags(cptr->fd, FDF_WANTWRITE);
+
     SetHandshake(cptr);
 
     aconf = find_conf(cptr->confs, cptr->name, CONF_CONNECT_SERVER);
@@ -878,6 +890,7 @@ static int completed_connection(aClient * cptr)
 	start_auth(cptr);
 #endif
 
+    check_client_fd(cptr);
     return (IsDead(cptr)) ? -1 : 0;
 }
 
@@ -955,13 +968,18 @@ void close_connection(aClient * cptr)
     }
 
     if (cptr->authfd >= 0)
-	(void) close(cptr->authfd);
+    {
+	del_fd(cptr->authfd);
+	close(cptr->authfd);
+	cptr->authfd = -1;
+    }
 
     if (cptr->fd >= 0)
     {
 	dump_connections(cptr->fd);
 	local[cptr->fd] = NULL;
-	(void) close(cptr->fd);
+	del_fd(cptr->fd);
+	close(cptr->fd);
 	cptr->fd = -2;
 	DBufClear(&cptr->sendQ);
 	DBufClear(&cptr->recvQ);
@@ -993,6 +1011,8 @@ void close_connection(aClient * cptr)
 	    local[i] = local[j];
 	    local[i]->fd = i;
 	    local[j] = NULL;
+
+	    remap_fd(j, i);
 
 	    close(j);
 	    while (!local[highest_fd])
@@ -1272,6 +1292,8 @@ aClient *add_connection(aClient * cptr, int fd)
 	return NULL;
     }
 
+    add_fd(fd, FDT_CLIENT, acptr);
+
     if (aconf)
 	aconf->clients++;
     acptr->fd = fd;
@@ -1330,6 +1352,7 @@ aClient *add_connection(aClient * cptr, int fd)
 #ifdef DO_IDENTD
     start_auth(acptr);
 #endif
+    check_client_fd(acptr);
     return acptr;
 }
 
@@ -1502,7 +1525,9 @@ static void read_error_exit(aClient *cptr, int length, int err)
 	}
 	else 
 	{
-	    char *errtxt = "Read error from %s, closing link (%s)";
+	    char *errtxt = (IsConnecting(cptr) || IsHandshake(cptr)) ? 
+		"Connect error to %s (%s)" : 
+		"Read error from %s, closing link (%s)";
 
 	    ircsprintf(fbuf, "from %s: %s", me.name, errtxt);
 	    sendto_gnotice(fbuf, get_client_name(cptr, HIDEME), strerror(err));
@@ -1877,262 +1902,7 @@ int read_message(time_t delay, fdlist * listp)
 
 #elif defined(USE_POLL)   /* USE_POLL */
 
-#ifdef AIX
-#define POLLREADFLAGS (POLLIN|POLLMSG)
-#endif
-#if defined(POLLMSG) && defined(POLLIN) && defined(POLLRDNORM)
-#define POLLREADFLAGS (POLLMSG|POLLIN|POLLRDNORM)
-#endif
-#if defined(POLLIN) && defined(POLLRDNORM) && !defined(POLLMSG)
-#define POLLREADFLAGS (POLLIN|POLLRDNORM)
-#endif
-#if defined(POLLIN) && !defined(POLLRDNORM) && !defined(POLLMSG)
-#define POLLREADFLAGS POLLIN
-#endif
-#if defined(POLLRDNORM) && !defined(POLLIN) && !defined(POLLMSG)
-#define POLLREADFLAGS POLLRDNORM
-#endif
-
-#if defined(POLLOUT) && defined(POLLWRNORM)
-#define POLLWRITEFLAGS (POLLOUT|POLLWRNORM)
-#else
-#if defined(POLLOUT)
-#define POLLWRITEFLAGS POLLOUT
-#else
-#if defined(POLLWRNORM)
-#define POLLWRITEFLAGS POLLWRNORM
-#endif
-#endif
-#endif
-
-#if defined(POLLERR) && defined(POLLHUP)
-#define POLLERRORS (POLLERR|POLLHUP)
-#else
-#define POLLERRORS POLLERR
-#endif
-
-#define PFD_SETR(thisfd) { CHECK_PFD(thisfd); pfd->events |= POLLREADFLAGS; }
-#define PFD_SETW(thisfd) { CHECK_PFD(thisfd); pfd->events |= POLLWRITEFLAGS; }
-#define CHECK_PFD( thisfd ) if ( pfd->fd != thisfd ) { \
-                            pfd = &poll_fdarray[nbr_pfds++];\
-                            pfd->fd     = thisfd;\
-                            pfd->events = 0;\
-                            }
-
-int read_message(time_t delay, fdlist * listp)
-{
-    aClient *cptr;
-    int nfds;
-    static struct pollfd poll_fdarray[MAXCONNECTIONS];
-    struct pollfd *pfd = poll_fdarray;
-    struct pollfd *res_pfd = NULL;
-    int nbr_pfds = 0;
-    u_long waittime;
-    time_t delay2 = delay;
-    int res, length, fd;
-    int auth, rr, rw;
-    int i, j;
-    static char errmsg[512];
-    static aClient *authclnts[MAXCONNECTIONS];
-    
-    /* if it is called with NULL we check all active fd's */
-    if (!listp) 
-    {
-	listp = &default_fdlist;
-	listp->last_entry = highest_fd + 1;
-    }
-    
-    for (res = 0;;) 
-    {
-	nbr_pfds = 0;
-	pfd = poll_fdarray;
-	pfd->fd = -1;
-	res_pfd = NULL;
-	auth = 0;
-	
-	for (i = listp->entry[j = 1]; j <= listp->last_entry;
-	     i = listp->entry[++j]) 
-	{
-	    if (!(cptr = local[i]))
-		continue;
-	    if (IsLog(cptr))
-		continue;
-	    if (DoingAuth(cptr)) 
-	    {
-		if (auth == 0)
-		    memset((char *) &authclnts, '\0', sizeof(authclnts));
-		auth++;
-		Debug((DEBUG_NOTICE, "auth on %x %d", cptr, i));
-		PFD_SETR(cptr->authfd);
-		if (cptr->flags & FLAGS_WRAUTH)
-		    PFD_SETW(cptr->authfd);
-		authclnts[cptr->authfd] = cptr;
-		continue;
-	    }
-	    if (DoingDNS(cptr) || DoingAuth(cptr))
-		continue;
-	    if (IsMe(cptr) && IsListening(cptr)) 
-	    {
-# if defined(SOL20) || defined(AIX)
-#  define CONNECTFAST
-# endif
-		
-# ifdef CONNECTFAST
-		/* 
-		 * This is VERY bad if someone tries to send a lot of
-		 * clones to the server though, as mbuf's can't be
-		 * allocated quickly enough... - Comstud
-		 */
-		PFD_SETR(i);
-# else
-		if (timeofday > (cptr->lasttime + 2))
-		{
-		    PFD_SETR(i);
-		} 
-		else if (delay2 > 2)
-		    delay2 = 2;
-# endif
-	    } 
-	    else if (!IsMe(cptr)) 
-	    {
-		if (DBufLength(&cptr->recvQ) && delay2 > 2)
-		    delay2 = 1;
-		PFD_SETR(i);
-	    }
-	    
-	    length = DBufLength(&cptr->sendQ);
-	    if (DoList(cptr) && IsSendable(cptr)) 
-	    {
-		send_list(cptr, 64);
-		length = DBufLength(&cptr->sendQ);
-	    }
-	    
-	    if (length || IsConnecting(cptr) ||
-		(ZipOut(cptr) && zip_is_data_out(cptr->serv->zip_out))) 
-		PFD_SETW(i);
-	}
-	
-	if (resfd >= 0) 
-	{
-	    PFD_SETR(resfd);
-	    res_pfd = pfd;
-	}
-
-	waittime = MIN(delay2, delay) * 1000;
-	nfds = poll(poll_fdarray, nbr_pfds, waittime);
-	if (nfds == -1 && ((errno == EINTR) || (errno == EAGAIN)))
-	    return -1;
-	else if (nfds >= 0)
-	    break;
-	report_error("poll %s:%s", &me);
-	res++;
-	if (res > 5)
-	    restart("too many poll errors");
-	sleep(10);
-    }
-    
-    if (res_pfd && (res_pfd->revents & (POLLREADFLAGS | POLLERRORS))) 
-    {
-	do_dns_async();
-	nfds--;
-    }
-    
-    for (pfd = poll_fdarray, i = 0; i < nbr_pfds; i++, pfd++) 
-    {
-        fd = pfd->fd;
-
-        if (pfd == res_pfd)
-           continue;
-
-        if (nfds && pfd->revents)
-        {
-           nfds--;
-           rr = pfd->revents & (POLLREADFLAGS | POLLERRORS);
-           rw = pfd->revents & POLLWRITEFLAGS;
-
-           if ((auth > 0) && ((cptr = authclnts[fd]) != NULL) && (cptr->authfd == fd)) 
-           {
-               auth--;
-               if (rr)
-                  read_authports(cptr);
-               if (rw && cptr->authfd >= 0)
-                  send_authports(cptr);
-               continue;
-           }
-
-           if (!(cptr = local[fd]))
-              continue;
-
-           if (rr && IsListening(cptr)) 
-           {
-              accept_connection(cptr);
-              continue;
-           }
-
-           if (IsMe(cptr))
-              continue;
-
-           if (rw) /* socket is marked for writing.. */
-           {
-              int write_err = 0;
-	    
-              if (IsConnecting(cptr))
-                 write_err = completed_connection(cptr);
-              if (!write_err)
-                 send_queued(cptr);
-
-              if (IsDead(cptr) || write_err) 
-              {
-                 ircsprintf(errmsg, "Write Error: %s",
-                            (cptr->flags & FLAGS_SENDQEX) ?
-                            "SendQ Exceeded" : irc_get_sockerr(cptr));
-                 exit_client(cptr, cptr, &me, errmsg);
-                 continue;
-              }
-
-           }
-	
-           length = 1; /* for fall through case */
-	
-           if (rr)
-              length = read_packet(cptr);
-           else if(DBufLength(&cptr->recvQ) && IsPerson(cptr) && !NoNewLine(cptr))
-              length = do_client_queue(cptr);
-        }
-        else /* nfds == 0 or there are no events for this socket */
-        {
-           if(!(cptr = local[fd]))
-              continue;
-
-           if(DBufLength(&cptr->recvQ) && IsPerson(cptr) && !NoNewLine(cptr))
-              length = do_client_queue(cptr);
-           else
-              continue;
-        }   
-
-# ifdef DEBUGMODE
-	readcalls++;
-# endif
-	if (length == FLUSH_BUFFER)
-	    continue;
-	
-	if (IsDead(cptr)) 
-	{
-	    ircsprintf(errmsg, "Read/Dead Error: %s", 
-		       (cptr->flags & FLAGS_SENDQEX) ?
-		       "SendQ Exceeded" : irc_get_sockerr(cptr));
-	    exit_client(cptr, cptr, &me, errmsg);
-	    continue;
-	}
-	
-	if (length > 0)
-	    continue;
-	
-	/* An error has occured reading from cptr, drop it. */
-	read_error_exit(cptr, length, cptr->sockerr);
-    }
-    return 0;
-}
+#include "socketengine_poll.c"
 
 #elif defined(USE_KQUEUE) /* END USE_POLL */
 
@@ -2278,6 +2048,9 @@ int connect_server(aConfItem * aconf, aClient * by, struct hostent *hp)
 #ifdef PINGNAZI
     nextping = timeofday;
 #endif
+
+    add_fd(cptr->fd, FDT_CLIENT, cptr);
+    set_fd_flags(cptr->fd, FDF_WANTREAD|FDF_WANTWRITE);
 
     return 0;
 }
@@ -2468,6 +2241,7 @@ static void do_dns_async()
 #endif
 		ClearDNS(cptr);
 		cptr->hostp = hp;
+		check_client_fd(cptr);
 	    }
 	    break;
 	case ASYNC_CONNECT:

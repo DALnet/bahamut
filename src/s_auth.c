@@ -37,6 +37,7 @@
 /* define it (BSD4.2 needs this) */
 #include "h.h"
 #include "fdlist.h"
+#include "fds.h"
 
 static void authsenderr(aClient *);
 
@@ -122,6 +123,8 @@ void start_auth(aClient *cptr)
     cptr->flags |= (FLAGS_WRAUTH | FLAGS_AUTH);
     if (cptr->authfd > highest_fd)
 	highest_fd = cptr->authfd;
+
+    add_fd(cptr->authfd, FDT_AUTH, cptr);
     return;
 }
 
@@ -180,7 +183,9 @@ static void authsenderr(aClient *cptr)
 {
     ircstp->is_abad++;
 
-    (void) close(cptr->authfd);
+    del_fd(cptr->authfd);
+
+    close(cptr->authfd);
     if (cptr->authfd == highest_fd)
 	while (!local[highest_fd])
 	    highest_fd--;
@@ -287,6 +292,7 @@ void read_authports(aClient *cptr)
       } while(0);
    }
 
+   del_fd(cptr->authfd);
    close(cptr->authfd);
    if (cptr->authfd == highest_fd)
       while (!local[highest_fd])
