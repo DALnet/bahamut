@@ -1206,8 +1206,9 @@ void io_loop()
 	    delay = 1;
 	else
 	{
+            /* We need to get back here to do that recvq thing */
 	    if(recvq_clients != NULL)
-		delay = MIN(delay, 2);
+		delay = 1;
 	    else
 		delay = MIN(delay, TIMESEC);
 	}
