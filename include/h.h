@@ -52,10 +52,6 @@ extern aConfList KList3;	/*
 				 * what we can't sort 
 				 */
 
-extern aConfList BList1;
-extern aConfList BList2;
-extern aConfList BList3;
-
 extern aConfList ZList1;
 extern aConfList ZList2;
 extern aConfList ZList3;
