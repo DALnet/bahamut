@@ -452,30 +452,89 @@ void sendto_noquit_servs_butone(int noquit, aClient *one, char *pattern, ...) {
  * Sends a message to all people (inclusing user) on local server who are
  * in same channel with user.
  */
-void sendto_common_channels(aClient *user, char *pattern, ...)
+void sendto_common_channels(aClient *from, char *pattern, ...)
 {
-	Link *channels;
-	chanMember *users;
-	aClient *cptr;
-	va_list vl;
-	
-	va_start(vl, pattern);
+   Link *channels;
+   chanMember *users;
+   aClient *cptr;
+   va_list vl;
+   char *pfix, *p;
+   int msglen, sidx = 1;
+
+   va_start(vl, pattern);
+
+   pfix = va_arg(vl, char *);
    memset((char *) sentalong, '\0', sizeof(sentalong));
-   if (user->fd >= 0)
-	  sentalong[user->fd] = 1;
-   if (user->user)
-	  for (channels = user->user->channel; channels; channels = channels->next)
-		 for (users = channels->value.chptr->members; users; users = users->next) {
-			 cptr = users->cptr;
-			 if (!MyConnect(cptr) || sentalong[cptr->fd])
-				continue;
-			 sentalong[cptr->fd]++;
-			 vsendto_prefix_one(cptr, user, pattern, vl);;
-		 }
-   if (MyConnect(user))
-	  vsendto_prefix_one(user, user, pattern, vl);
-	va_end(vl);
-	return;
+
+   if(from->fd >= 0)
+      sentalong[from->fd]++;
+
+   *sendbuf = ':';
+
+   if(IsPerson(from))
+   {
+      int flag = 0;
+      anUser *user = from->user;
+
+      for(p = from->name; *p; p++)
+         sendbuf[sidx++] = *p;
+
+      if (user)
+      {
+         if (*user->username) 
+         {
+            sendbuf[sidx++] = '!';
+            for(p = user->username; *p; p++)
+               sendbuf[sidx++] = *p;
+	 }
+         if (*user->host && !MyConnect(from)) 
+         {
+            sendbuf[sidx++] = '@';
+            for(p = user->host; *p; p++)
+               sendbuf[sidx++] = *p;
+            flag = 1;
+         }
+      }
+   
+      if (!flag && MyConnect(from) && *user->host) 
+      {
+         sendbuf[sidx++] = '@';
+         for(p = from->sockhost; *p; p++)
+            sendbuf[sidx++] = *p;
+      }
+   }
+   else
+   {
+      for(p = pfix; *p; p++)
+         sendbuf[sidx++] = *p;
+   }
+
+   msglen = ircvsprintf(&sendbuf[sidx], pattern + 3, vl);
+   msglen += sidx;
+
+   if (from->user)
+   {
+      for (channels = from->user->channel; channels; channels = channels->next)
+      {
+         for (users = channels->value.chptr->members; users; users = users->next) 
+         {
+            cptr = users->cptr;
+
+            if (!MyConnect(cptr) || sentalong[cptr->fd])
+               continue;
+
+            sentalong[cptr->fd]++;
+            send_message(cptr, sendbuf, msglen);
+            /* vsendto_prefix_one(cptr, from, pattern, vl); */
+         }
+      }
+   }
+
+   if(MyConnect(from))
+      send_message(from, sendbuf, msglen);
+
+   va_end(vl);
+   return;
 }
 #ifdef FLUD
 void sendto_channel_butlocal(aClient *one, aClient *from, aChannel *chptr, char *pattern, ...)
