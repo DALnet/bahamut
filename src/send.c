@@ -33,6 +33,10 @@
 #define NEWLINE	"\r\n"
 #endif
 
+#ifdef ALWAYS_SEND_DURING_SPLIT
+extern int currently_processing_netsplit;
+#endif
+
 static char sendbuf[2048];
 static int  send_message(aClient *, char *, int);
 
@@ -174,6 +178,12 @@ static int send_message(aClient *to, char *msg, int len) {
       if (SQinK > (to->lastsq + 4))
 	send_queued(to);
    }
+#ifdef ALWAYS_SEND_DURING_SPLIT
+   else {
+      if (currently_processing_netsplit && !(to->flags & FLAGS_BLOCKED))
+	send_queued(to);
+   }
+#endif
    return 0;
 }
 

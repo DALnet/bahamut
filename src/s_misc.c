@@ -51,7 +51,10 @@ extern fdlist serv_fdlist;
 #ifdef NO_CHANOPS_WHEN_SPLIT
 extern int  server_was_split;
 extern time_t server_split_time;
+#endif
 
+#ifdef ALWAYS_SEND_DURING_SPLIT
+int currently_processing_netsplit = NO;
 #endif
 
 static void exit_one_client(aClient *, aClient *, aClient *, char *);
@@ -651,6 +654,9 @@ exit_client(
 			 * information about where the net is broken.      Ian
 			 */
 #ifndef USE_NOQUIT
+# ifdef ALWAYS_SEND_DURING_SPLIT
+			currently_processing_netsplit = YES;
+# endif
 			(void) strcpy(comment1, me.name);
 			(void) strcat(comment1, " ");
 			(void) strcat(comment1, sptr->name);
@@ -667,6 +673,9 @@ exit_client(
 				if (IsServer(acptr) && acptr->from == sptr)
 				  exit_one_client(sptr, acptr, &me, me.name);
 			}
+# ifdef ALWAYS_SEND_DURING_SPLIT
+			currently_processing_netsplit = NO;
+# endif
 #endif
       }
       else
@@ -707,7 +716,15 @@ exit_one_client(aClient *cptr,
    }
    else if (IsServer(sptr)) {
 #ifdef USE_NOQUIT
+# ifdef ALWAYS_SEND_DURING_SPLIT
+      currently_processing_netsplit = YES;
+# endif
+
       exit_server(sptr, from, comment);
+
+# ifdef ALWAYS_SEND_DURING_SPLIT
+      currently_processing_netsplit = NO;
+# endif
       return;
 #else
       /*
