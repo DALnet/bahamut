@@ -1953,9 +1953,10 @@ int m_whois(aClient *cptr, aClient *sptr, int parc, char *parv[])
 			me.name, parv[0], name, HIDDEN_SERVER_NAME, HIDDEN_SERVER_DESC);
 	}
 	
-	if(IsOper(sptr) && IsSquelch(acptr))
+	if(IsAnOper(sptr) && IsSquelch(acptr))
 	    sendto_one(sptr, rpl_str(RPL_WHOISTEXT),
-		       me.name, parv[0], "User is squelched");
+		       me.name, parv[0], "User is squelched (%s)",
+		       IsWSquelch(acptr) ? "warned" : "silent");
 	
 	if(IsRegNick(acptr))
 	    sendto_one(sptr, rpl_str(RPL_WHOISREGNICK),
