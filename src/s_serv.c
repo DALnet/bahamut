@@ -5139,7 +5139,7 @@ int m_sqline(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
    aConfItem *aconf;
 
-   if(!IsServer(sptr))
+   if(!IsServer(sptr)||!IsULine(sptr))
       return 0;
    if(parc<2) 
    {
@@ -5169,6 +5169,8 @@ int m_sqline(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	
 int m_unsqline(aClient *cptr, aClient *sptr, int parc, char *parv[]) 
 {
+    int matchit=0;
+    char *mask;
     aConfItem *aconf, *ac2, *ac3;
     
     if(!IsServer(sptr))
@@ -5180,6 +5182,11 @@ int m_unsqline(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	return 0;
     }
     
+    if (parc==3) {
+	matchit=atoi(parv[1]);
+	mask=parv[2];
+    } else
+	mask=parv[1];
     /* find the sqline and remove it */
     /* this was way too complicated and ugly. Fixed. -lucas */
     /* Changed this to use match.  Seems to make more sense? */
@@ -5190,9 +5197,9 @@ int m_unsqline(aClient *cptr, aClient *sptr, int parc, char *parv[])
     {
 	if((aconf->status & (CONF_QUARANTINED_NICK))
 	   && (aconf->status & (CONF_SQLINE)) && 
-	   aconf->name && ((parc==3 && atoi(parv[2])==1) 
-			   ? !match(parv[1], aconf->name) 
-			   : !mycmp(parv[1], aconf->name))) 
+	   aconf->name && (matchit 
+			   ? !match(mask, aconf->name) 
+			   : !mycmp(mask, aconf->name))) 
 	{
 	    if (conf==aconf) 
 		ac2 = ac3 = conf = aconf->next;
@@ -5207,8 +5214,11 @@ int m_unsqline(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	    aconf=aconf->next;
 	}
     }
-    sendto_serv_butone(cptr, ":%s UNSQLINE %s %s", sptr->name, parv[1],
-		       (parc==3) ? parv[2] : "");
+    if (parc==3) 
+	sendto_serv_butone(cptr, ":%s UNSQLINE %d :%s", sptr->name, matchit,
+			   mask);
+    else
+	sendto_serv_butone(cptr, ":%s UNSQLINE :%s",sptr->name,mask);
     return 0;
 }
 
