@@ -228,7 +228,7 @@ int main()
 
 dnl Check to see if we have a broken FD_SETSIZE
 
-DFDSS="-DFD_SETSIZE=1024"
+DFDSS="-DFD_SETSIZE\=1024"
 
 AC_MSG_CHECKING(to see if FD_SETSIZE is broken)
 AC_TRY_RUN([

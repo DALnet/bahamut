@@ -1010,7 +1010,6 @@ m_nick(aClient *cptr,
 {
    aConfItem  *aconf;
    aClient    *acptr, *uplink;
-   chanMember *cm;
    Link       *lp;
    char        nick[NICKLEN + 2], *s;
    ts_val      newts = 0;

@@ -2220,7 +2220,7 @@ fi
 rm -f conftest*
 
 
-DFDSS="-DFD_SETSIZE=1024"
+DFDSS="-DFD_SETSIZE\=1024"
 
 echo $ac_n "checking to see if FD_SETSIZE is broken""... $ac_c" 1>&6
 echo "configure:2227: checking to see if FD_SETSIZE is broken" >&5
