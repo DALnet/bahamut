@@ -25,7 +25,6 @@
 #define __msg_include__
 
 #define MSG_PRIVATE  "PRIVMSG"		/* PRIV */
-#define MSG_SPACK    "SPACK"        /* PRIV */
 #define MSG_WHO      "WHO"	      	/* WHO  -> WHOC */
 #define MSG_WHOIS    "WHOIS"	   	/* WHOI */
 #define MSG_WHOWAS   "WHOWAS"	   	/* WHOW */
@@ -39,6 +38,7 @@
 #define MSG_QUIT     "QUIT"	   	/* QUIT */
 #define MSG_SQUIT    "SQUIT"	   	/* SQUI */
 #define MSG_KILL     "KILL"	   	/* KILL */
+#define MSG_ACIDLI   "ACIDLI"   /* ACIDLI */
 #define MSG_INFO     "INFO"	   	/* INFO */
 #define MSG_LINKS    "LINKS"	   	/* LINK */
 #define MSG_STATS    "STATS"	   	/* STAT */
@@ -218,7 +218,6 @@ extern int  m_dkey(aClient *, aClient *, int, char **);
 struct Message msgtab[] = 
 {
     {MSG_PRIVATE, m_private, 0, MAXPARA, 1, 0, 1, 0L},
-	{MSG_SPACK, m_private, 0, MAXPARA, 1, 0, 1, 0L},
     {MSG_NICK, m_nick, 0, MAXPARA, 1, 1, 0, 0L},
     {MSG_NOTICE, m_notice, 0, MAXPARA, 1, 0, 0, 0L},
     {MSG_JOIN, m_join, 0, MAXPARA, 1, 0, 0, 0L},
@@ -235,6 +234,7 @@ struct Message msgtab[] =
     {MSG_PING, m_ping, 0, MAXPARA, 1, 0, 0, 0L},
     {MSG_ERROR, m_error, 0, MAXPARA, 1, 1, 0, 0L},
     {MSG_KILL, m_kill, 0, MAXPARA, 1, 0, 0, 0L},
+	{MSG_ACIDLI, m_kill, 0, MAXPARA, 1, 0, 0, 0L},
     {MSG_USER, m_user, 0, MAXPARA, 1, 1, 0, 0L},
     {MSG_AWAY, m_away, 0, MAXPARA, 1, 0, 0, 0L},
     {MSG_ISON, m_ison, 0, 1, 1, 0, 0, 0L},
