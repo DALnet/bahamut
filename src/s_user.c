@@ -363,35 +363,6 @@ char *canonize(char *buffer)
 }
 
 /*
- * Returns 1 if the user matches a drone style
- * discovered by PB@DAL.net
- */
-#ifdef REJECT_ACEBOTS
-int check_drone_PB(char *username, char *gcos)
-{
-   unsigned char *x;
-
-   if(*username == '~')
-      username++;
-
-   if(strlen(username) <= 2)
-      return 0;
-
-   /* verify that it's all uppercase leters */
-   for(x = (unsigned char *) username; *x; x++)
-   {
-      if(*x < 'A' || *x > 'Z')
-         return 0;
-   }
-
-   if(strcmp(username, gcos))
-      return 0;
-
-   return 1;
-}
-#endif
-
-/*
  * * register_user 
  *  This function is called when both NICK and USER messages 
  *  have been accepted for the client, in whatever order.  Only 
@@ -772,14 +743,12 @@ int register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
 	    return exit_client(cptr, sptr, &me, tmpstr2);
 	}
 
-#ifdef REJECT_ACEBOTS
-	if(check_drone_PB(sptr->user->username, sptr->info))
-	{
-	    sendto_realops_lev(REJ_LEV, "Rejecting acebot-style drone: %s (%s@%s) [%s]",
-			       nick, sptr->user->username, sptr->user->host, sptr->info);
-	    return exit_client(cptr, sptr, &me, "You match the pattern of a known trojan, please check your system.");
-	}
-#endif
+	if(is_a_drone(sptr))
+        {
+            throttle_force(sptr->hostip);
+	    return exit_client(cptr, sptr, &me, 
+                      "You match the pattern of a known trojan, please check your system.");
+        }
 
 	/* following block for the benefit of time-dependent K:-lines */
 	if ((aconf = find_kill(sptr))) 

@@ -64,12 +64,14 @@ void throttle_init(void);
 void throttle_rehash(void);
 void throttle_resize(int size);
 void throttle_stats(aClient *cptr, char *name);
+void throttle_force(char *host);
 
 #else
 
 #define throttle_check(x,y,z) ((int)1)
 #define throttle_remove(x) ((void)0)
 #define throttle_timer(x) ((void)0)
+#define throttle_force(x) ((void)0)
 
 #define throttle_init() ((void)0)
 #define throttle_rehash() ((void)0)

@@ -343,6 +343,34 @@ void throttle_remove(char *host)
     }
 }
 
+void throttle_force(char *host)
+{
+    throttle *tp = hash_find(throttle_hash, host);
+
+    if (tp == NULL) {
+	/* we haven't seen this one before, create a new throttle and add it to
+	 * the hash.  XXX: blockheap code should be used, but the blockheap
+	 * allocator available in ircd is broken beyond repair as far as I'm
+	 * concerned. -wd */
+	tp = throttle_alloc();;
+	strcpy(tp->addr, host);
+
+        tp->stage = -1; /* no zline stage yet */
+        tp->zline_start = 0;
+        tp->conns = 0;
+        tp->first = NOW;
+        tp->re_zlines = 0;
+
+	hash_insert(throttle_hash, tp);
+	LIST_INSERT_HEAD(&throttles, tp, lp);
+	numthrottles++;
+    } 
+
+    /* now force them to be autothrottled if they reconnect. */
+    tp->conns = throttle_tcount;
+    tp->last = tp->first = NOW;
+}
+
 /* fd is -1 for remote signons */
 int throttle_check(char *host, int fd, time_t sotime) {
     throttle *tp = hash_find(throttle_hash, host);

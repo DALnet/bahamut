@@ -13,7 +13,7 @@ SOURCES = blalloc.c bsd.c channel.c class.c dbuf.c dich_conf.c fdlist.c \
           hash.c inet_addr.c ircd.c ircsprintf.c list.c match.c packet.c \
           parse.c res.c m_nick.c m_services.c m_who.c s_auth.c s_bsd.c \
           s_conf.c s_debug.c s_err.c s_misc.c s_numeric.c s_serv.c s_user.c \
-          scache.c send.c support.c throttle.c whowas.c zlink.c $(CONF_SRC)
+          scache.c send.c support.c throttle.c whowas.c zlink.c drone.c $(CONF_SRC)
 OBJECTS = $(SOURCES:.c=.o) version.o
 
 all: ircd
@@ -67,6 +67,12 @@ dich_conf.o: dich_conf.c ../include/sys.h ../include/setup.h \
  ../include/common.h ../include/struct.h ../include/config.h \
  ../include/defs.h ../include/hash.h ../include/class.h \
  ../include/dbuf.h ../include/h.h ../include/dich_conf.h \
+ ../include/fdlist.h ../include/patchlevel.h
+drone.o: drone.c ../include/struct.h ../include/config.h \
+ ../include/setup.h ../include/defs.h ../include/hash.h \
+ ../include/class.h ../include/dbuf.h ../include/common.h \
+ ../include/sys.h ../include/numeric.h ../include/msg.h \
+ ../include/channel.h ../include/h.h ../include/dich_conf.h \
  ../include/fdlist.h ../include/patchlevel.h
 fdlist.o: fdlist.c ../include/config.h ../include/setup.h \
  ../include/defs.h ../include/fdlist.h ../include/patchlevel.h
