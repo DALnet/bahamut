@@ -5529,7 +5529,7 @@ int m_dkey(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
    if(mycmp(parv[1], "EXIT") == 0)
    {
-      if(!(IsRC4IN(sptr) && IsRC4OUT(sptr))
+      if(!(IsRC4IN(sptr) && IsRC4OUT(sptr)))
          return exit_client(sptr, sptr, sptr, "DKEY EXIT when not in proper stage");
       return do_server_estab(sptr);
    }
