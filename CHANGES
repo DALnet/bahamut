@@ -1,3 +1,14 @@
+Changes for 1.8.3
+-----------------
+
+- Fixed classes merging bug that caused memory corruption and
+  crashes
+- Fixed a possible buffer overflow issue in oper hostmasking
+- Fixed solaris devpoll socket engine logic problems.
+- Fixed class reference counting errors.
+- Fixed a bug with +j propegation on resync
+
+
 Changes for 1.8.2
 -----------------
 
