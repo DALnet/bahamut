@@ -302,6 +302,8 @@ int sbuf_begin_share(const char* theData, int theLength, void **thePtr)
 {
     SBuffer *s;
     
+    if (theLength > 510) theLength = 510;
+    
     s = sbuf_alloc(theLength + 2); /* +2 for the \r\n we're tacking on to the buffer */
     if (!s || theLength + 2 > s->bufsize) return sbuf_alloc_error();
     
