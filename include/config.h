@@ -958,7 +958,7 @@ error CLIENT_FLOOD needs redefining.
 error CLIENT_FLOOD undefined.
 #endif
 
-#if (defined(OPTIONS_H) && !defined(OPTIONS_H_12))
+#if (defined(OPTIONS_H) && !defined(OPTIONS_H_14))
 error Using outdated include/options.h - run config
 #endif
 

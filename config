@@ -949,7 +949,7 @@ cat > $OPTIONS_H << __EOF__
  */
 #ifdef OPTIONS_H
 
-#define OPTIONS_H_12 /* dont get versions mixed up */
+#define OPTIONS_H_14 /* dont get versions mixed up */
 
 #define DPATH "$DPATH"
 #define SPATH "$SPATH"
