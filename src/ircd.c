@@ -336,7 +336,7 @@ con_class = Class (cltmp);
       }
       if (connect_server(con_conf, (aClient *) NULL,
 			 (struct hostent *) NULL) == 0)
-	 sendto_gnotice("Connection to %s activated.", con_conf->name);
+	 sendto_gnotice("from %s: Connection to %s activated.", me.name, con_conf->name);
    }
    Debug((DEBUG_NOTICE, "Next connection check : %s", myctime(next)));
    return (next);

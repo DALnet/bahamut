@@ -386,8 +386,8 @@ m_svinfo(aClient *cptr,
    deltat = abs(theirtime - tmptime);
 
    if (deltat > TS_MAX_DELTA) {
-      sendto_gnotice("Link %s dropped, excessive TS delta (my TS=%d, their TS=%d, delta=%d)",
-		get_client_name(sptr, HIDEME), tmptime, theirtime, deltat);
+      sendto_gnotice("from %s: Link %s dropped, excessive TS delta (my TS=%d, their TS=%d, delta=%d)",
+		me.name, get_client_name(sptr, HIDEME), tmptime, theirtime, deltat);
       sendto_serv_butone(&me, ":%s GNOTICE :Link %s dropped, excessive TS delta (delta=%d)",
 		me.name, get_client_name(sptr, HIDEME), deltat);
       return exit_client(sptr, sptr, sptr, "Excessive TS delta");
@@ -549,9 +549,9 @@ m_server(aClient *cptr,
       bcptr = (cptr->firsttime > acptr->from->firsttime) ? cptr : acptr->from;
       sendto_one(bcptr, "ERROR :Server %s already exists", host);
       if (bcptr == cptr) {
-			sendto_gnotice("Link %s cancelled, server %s already exists",
-				get_client_name(bcptr, HIDEME), host);
-			sendto_serv_butone(&me, ":%s GNOTICE :Link %s cancelled, server %s already exists",
+			sendto_gnotice("from %s: Link %s cancelled, server %s already exists",
+				me.name, get_client_name(bcptr, HIDEME), host);
+			sendto_serv_butone(bcptr, ":%s GNOTICE :Link %s cancelled, server %s already exists",
 				me.name, get_client_name(bcptr, HIDEME), host);
 			return exit_client(bcptr, bcptr, &me, "Server Exists");
       }
@@ -565,8 +565,10 @@ m_server(aClient *cptr,
        * =( *  - comstud
 			  */
       strcpy(nbuf, get_client_name(bcptr, HIDEME));
-      sendto_ops("Link %s cancelled, server %s reintroduced by %s",
-					  nbuf, host, get_client_name(cptr, HIDEME));
+      sendto_gnotice("from %s: Link %s cancelled, server %s reintroduced by %s",
+		me.name, nbuf, host, get_client_name(cptr, HIDEME));
+      sendto_serv_butone(&me, ":%s GNOTICE :Link %s cancelled, server %s reintroduced by %s",
+		me.name, nbuf, host, get_client_name(cptr, HIDEME));
       (void) exit_client(bcptr, bcptr, &me, "Server Exists");
    }
    /*
@@ -866,7 +868,7 @@ m_server_estab(aClient *cptr)
    if ((find_uline(cptr->confs, cptr->name))) 
      cptr->flags |= FLAGS_ULINE; 
 
-   sendto_gnotice("Linke with %s established: %s %s", inpath, IsULine(cptr) ? "ULined" : "Normal", 
+   sendto_gnotice("Link with %s established: %s %s", inpath, IsULine(cptr) ? "ULined" : "Normal", 
 		DoesTS(cptr) ? "TS link" : "Non-TS link!"); 
    sendto_serv_butone(&me, ":%s GNOTICE :Link with %s established: %s",
 		me.name, inpath, DoesTS(cptr) ? "TS link" : "Non-TS link!");
@@ -2305,12 +2307,13 @@ m_connect(aClient *cptr,
     * Let's notify about local connects, too. - lucas
     * sendto_ops_butone -> sendto_serv_butone(), like in df. -mjs
     */
-      sendto_gnotice("Received %s CONNECT %s -> %s from %s",
-		IsAnOper(cptr) ? "Local" : "Remote", parv[2] ? parv[2] : me.name, parv[1],
+      sendto_gnotice("from %s: %s CONNECT %s %s from %s",
+		me.name,  IsAnOper(cptr) ? "Local" : "Remote", 
+		parv[1], parv[2] ? parv[2] : "",
 		get_client_name(sptr, HIDEME));
-      sendto_serv_butone(&me, ":%s GNOTICE :Received %s CONNECT %s -> %s from %s", me.name,
-		IsAnOper(cptr) ? "Local" : "Remote",
-		parv[2] ? parv[2] : me.name, parv[1],
+      sendto_serv_butone(&me, ":%s GNOTICE :%s CONNECT %s %s from %s", 
+		me.name, IsAnOper(cptr) ? "Local" : "Remote",
+		parv[1], parv[2] ? parv[2] : "",
 		get_client_name(sptr, HIDEME));
 
 #if defined(USE_SYSLOG) && defined(SYSLOG_CONNECT)

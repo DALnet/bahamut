@@ -4189,6 +4189,7 @@ int m_svsmode(aClient *cptr, aClient *sptr, int parc, char *parv[]) {
 					what = MODE_DEL;
 					break;
 				 case ' ':
+				 case '\n':
 				 case '\r':
 				 case '\t':
 					break;
