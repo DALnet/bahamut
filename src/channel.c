@@ -3003,6 +3003,22 @@ if (what != x) { \
 what = x; \
 }
 
+#define SJ_MODEPLUS(x, y) \
+   if(((y) & mode.mode) && !((y) & oldmode->mode)) \
+   { \
+      INSERTSIGN(1, '+') \
+      *mbuf++ = (x); \
+   }
+
+#define SJ_MODEMINUS(x, y) \
+   if(((y) & oldmode->mode) && !((y) & mode.mode)) \
+   { \
+      INSERTSIGN(-1, '-') \
+      *mbuf++ = (x); \
+   }
+
+#define SJ_MODEADD(x, y) case (x): mode.mode |= (y); break
+
 #define ADD_PARA(p) para = p; if(pbpos) parabuf[pbpos++] = ' '; \
                      while(*para) parabuf[pbpos++] = *para++; 
 #define ADD_SJBUF(p) para = p; if(sjbufpos) sjbuf[sjbufpos++] = ' '; \
@@ -3111,57 +3127,38 @@ int m_sjoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
     s = parv[3];
     while (*s)
+    {
 	switch (*(s++))
 	{
-	case 'i':
-	    mode.mode |= MODE_INVITEONLY;
-	    break;
-	case 'n':
-	    mode.mode |= MODE_NOPRIVMSGS;
-	    break;
-	case 'p':
-	    mode.mode |= MODE_PRIVATE;
-	    break;
-	case 's':
-	    mode.mode |= MODE_SECRET;
-	    break;
-	case 'm':
-	    mode.mode |= MODE_MODERATED;
-	    break;
-	case 't':
-	    mode.mode |= MODE_TOPICLIMIT;
-	    break;
-	case 'r':
-	    mode.mode |= MODE_REGISTERED;
-	    break;
-	case 'R':
-	    mode.mode |= MODE_REGONLY;
-	    break;
-	case 'M':
-	    mode.mode |= MODE_MODREG;
-	    break;
-	case 'c':
-	    mode.mode |= MODE_NOCOLOR;
-	    break;
+	    SJ_MODEADD('i', MODE_INVITEONLY);
+	    SJ_MODEADD('n', MODE_NOPRIVMSGS);
+	    SJ_MODEADD('p', MODE_PRIVATE);
+	    SJ_MODEADD('s', MODE_SECRET);
+	    SJ_MODEADD('m', MODE_MODERATED);
+	    SJ_MODEADD('t', MODE_TOPICLIMIT);
+	    SJ_MODEADD('r', MODE_REGISTERED);
+	    SJ_MODEADD('R', MODE_REGONLY);
+	    SJ_MODEADD('M', MODE_MODREG);
+	    SJ_MODEADD('c', MODE_NOCOLOR);
+	    SJ_MODEADD('O', MODE_OPERONLY);
 #ifdef USE_CHANMODE_L
-	case 'L':
-	    mode.mode |= MODE_LISTED;
-	    break;
+	    SJ_MODEADD('L', MODE_LISTED);
 #endif
-	case 'k':
-	    strncpyzt(mode.key, parv[4 + args], KEYLEN + 1);
-	    args++;
-	    if (parc < 5 + args)
-		return 0;
-	    break;
-	case 'l':
-	    mode.limit = atoi(parv[4 + args]);
-	    args++;
-	    if (parc < 5 + args)
-		return 0;
-	    break;
-	}
+	    case 'k':
+		strncpyzt(mode.key, parv[4 + args], KEYLEN + 1);
+		args++;
+		if (parc < 5 + args)
+		    return 0;
+		break;
 
+	    case 'l':
+		mode.limit = atoi(parv[4 + args]);
+		args++;
+		if (parc < 5 + args)
+		    return 0;
+		break;
+	}
+    }
 
     doesop = (parv[4 + args][0] == '@' || parv[4 + args][1] == '@');
 
@@ -3252,133 +3249,36 @@ int m_sjoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
     
     if(mode.mode != oldmode->mode)
     {
-        /* plus modes */
-        if((MODE_PRIVATE & mode.mode) && !(MODE_PRIVATE & oldmode->mode))
-	{
-	    INSERTSIGN(1,'+')
-		*mbuf++ = 'p';
-	}
-	if((MODE_SECRET & mode.mode) && !(MODE_SECRET & oldmode->mode))
-	{
-	    INSERTSIGN(1,'+')
-		*mbuf++ = 's';
-	}
-	if((MODE_MODERATED & mode.mode) && !(MODE_MODERATED & oldmode->mode))
-	{
-	    INSERTSIGN(1,'+')
-		*mbuf++ = 'm';
-	}
-	if((MODE_NOPRIVMSGS & mode.mode) && !(MODE_NOPRIVMSGS & oldmode->mode))
-	{
-	    INSERTSIGN(1,'+')
-		*mbuf++ = 'n';
-	}
-	if((MODE_TOPICLIMIT & mode.mode) && !(MODE_TOPICLIMIT & oldmode->mode))
-	{
-	    INSERTSIGN(1,'+')
-		*mbuf++ = 't';
-	}
-	if((MODE_INVITEONLY & mode.mode) && !(MODE_INVITEONLY & oldmode->mode))
-	{
-	    INSERTSIGN(1,'+')
-		*mbuf++ = 'i';
-	}
-	if((MODE_REGISTERED & mode.mode) && !(MODE_REGISTERED & oldmode->mode))
-	{
-	    INSERTSIGN(1,'+')
-		*mbuf++='r';
-	}
-	if((MODE_REGONLY & mode.mode) && !(MODE_REGONLY & oldmode->mode))
-	{
-	    INSERTSIGN(1,'+')
-		*mbuf++='R';
-	}
-	if((MODE_MODREG & mode.mode) && !(MODE_MODREG & oldmode->mode))
-	{
-	    INSERTSIGN(1,'+')
-		*mbuf++='M';
-	}
-	if((MODE_NOCOLOR & mode.mode) && !(MODE_NOCOLOR & oldmode->mode))
-	{
-	    INSERTSIGN(1,'+')
-		*mbuf++='c';
-	}
-	if((MODE_OPERONLY & mode.mode) && !(MODE_OPERONLY & oldmode->mode))
-	{
-	    INSERTSIGN(1,'+')
-		*mbuf++='O';
-	}
+	SJ_MODEPLUS('p', MODE_PRIVATE);
+	SJ_MODEPLUS('s', MODE_SECRET);
+	SJ_MODEPLUS('m', MODE_MODERATED);
+	SJ_MODEPLUS('n', MODE_NOPRIVMSGS);
+	SJ_MODEPLUS('t', MODE_TOPICLIMIT);
+	SJ_MODEPLUS('i', MODE_INVITEONLY);
+	SJ_MODEPLUS('r', MODE_REGISTERED);
+	SJ_MODEPLUS('R', MODE_REGONLY);
+	SJ_MODEPLUS('M', MODE_MODREG);
+	SJ_MODEPLUS('c', MODE_NOCOLOR);
+	SJ_MODEPLUS('O', MODE_OPERONLY);
 #ifdef USE_CHANMODE_L
-        if((MODE_LISTED & mode.mode) && !(MODE_LISTED & oldmode->mode))
-        {
-            INSERTSIGN(1,'+')
-                *mbuf++='L';
-        }
+	SJ_MODEPLUS('L', MODE_LISTED);
 #endif
-   
-	/* minus modes */
-	if((MODE_PRIVATE & oldmode->mode) && !(MODE_PRIVATE & mode.mode))
-	{
-	    INSERTSIGN(-1,'-')
-		*mbuf++ = 'p';
-	}
-	if((MODE_SECRET & oldmode->mode) && !(MODE_SECRET & mode.mode))
-	{
-	    INSERTSIGN(-1,'-')
-		*mbuf++ = 's';
-	}
-	if((MODE_MODERATED & oldmode->mode) && !(MODE_MODERATED & mode.mode))
-	{
-	    INSERTSIGN(-1,'-')
-		*mbuf++ = 'm';
-	}
-	if((MODE_NOPRIVMSGS & oldmode->mode) && !(MODE_NOPRIVMSGS & mode.mode))
-	{
-	    INSERTSIGN(-1,'-')
-		*mbuf++ = 'n';
-	}
-	if((MODE_TOPICLIMIT & oldmode->mode) && !(MODE_TOPICLIMIT & mode.mode))
-	{
-	    INSERTSIGN(-1,'-')
-		*mbuf++ = 't';
-	}
-	if((MODE_INVITEONLY & oldmode->mode) && !(MODE_INVITEONLY & mode.mode))
-	{
-	    INSERTSIGN(-1,'-')
-		*mbuf++ = 'i';
-	}
-	if((MODE_REGISTERED & oldmode->mode) && !(MODE_REGISTERED & mode.mode))
-	{
-	    INSERTSIGN(-1,'-')
-		*mbuf++='r';
-	}
-	if((MODE_REGONLY & oldmode->mode) && !(MODE_REGONLY & mode.mode))
-	{
-	    INSERTSIGN(-1,'-')
-		*mbuf++='R';
-	}
-	if((MODE_MODREG & oldmode->mode) && !(MODE_MODREG & mode.mode))
-	{
-	    INSERTSIGN(-1,'-')
-		*mbuf++='M';
-	}
-	if((MODE_NOCOLOR & oldmode->mode) && !(MODE_NOCOLOR & mode.mode))
-	{
-	    INSERTSIGN(-1,'-')
-		*mbuf++='c';
-	}
-	if((MODE_OPERONLY & oldmode->mode) && !(MODE_OPERONLY & mode.mode))
-	{
-	    INSERTSIGN(-1,'-')
-		*mbuf++='O';
-	}
+
+	SJ_MODEMINUS('p', MODE_PRIVATE);
+	SJ_MODEMINUS('s', MODE_SECRET);
+	SJ_MODEMINUS('m', MODE_MODERATED);
+	SJ_MODEMINUS('n', MODE_NOPRIVMSGS);
+	SJ_MODEMINUS('t', MODE_TOPICLIMIT);
+	SJ_MODEMINUS('i', MODE_INVITEONLY);
+	SJ_MODEMINUS('r', MODE_REGISTERED);
+	SJ_MODEMINUS('R', MODE_REGONLY);
+	SJ_MODEMINUS('M', MODE_MODREG);
+	SJ_MODEMINUS('c', MODE_NOCOLOR);
+	SJ_MODEMINUS('O', MODE_OPERONLY);
 #ifdef USE_CHANMODE_L
-        if((MODE_LISTED & oldmode->mode) && !(MODE_LISTED & mode.mode))
-        {
-            INSERTSIGN(-1,'-')
-                *mbuf++='L';  
-        }
-#endif          	
+	SJ_MODEMINUS('L', MODE_LISTED);
+#endif
+
     }
 
     if (oldmode->limit && !mode.limit)
