@@ -51,11 +51,11 @@ void print_list_memory(aClient *cptr)
               me.name, RPL_STATSDEBUG, cptr->name, lc, lc * sizeof(DLink));
 }
 
-void add_to_list(DLink **list, aClient *cptr) 
+void add_to_list(DLink **list, void *ptr) 
 {
    DLink *lp = make_dlink();
   
-   lp->value.cptr = cptr;
+   lp->value.cp = (char *) ptr;
    lp->next = *list;
    lp->prev = NULL;
    if(lp->next)
@@ -80,7 +80,7 @@ static inline void remove_dlink_list(DLink **list, DLink *link)
    free_dlink(link);
 }
 
-void remove_from_list(DLink **list, aClient *cptr, DLink *link)
+void remove_from_list(DLink **list, void *ptr, DLink *link)
 {
    DLink *lp;
 
@@ -92,12 +92,12 @@ void remove_from_list(DLink **list, aClient *cptr, DLink *link)
 
    for(lp = *list; lp; lp = lp->next)
    {
-      if(lp->value.cptr == cptr)
+      if(lp->value.cp == (char *) ptr)
       {
          remove_dlink_list(list, lp);
          return;
       }
    }
 
-   sendto_realops("remove_from_list(%x, %x) failed!!", (int) list, (int) cptr);
+   sendto_realops("remove_from_list(%x, %x) failed!!", (int) list, (int) ptr);
 }
