@@ -1162,11 +1162,6 @@ m_info(aClient *cptr,
 #else
 	 strcpy(outstr, " IGNORE_FIRST_CHAR=0");
 #endif
-#ifdef KLINE_WITH_REASON
-	 strcat(outstr, " KLINE_WITH_REASON=1");
-#else
-	 strcat(outstr, " KLINE_WITH_REASON=0");
-#endif
 #ifdef KPATH
 	 strcat(outstr, " KPATH=1");
 #else
@@ -1177,11 +1172,6 @@ m_info(aClient *cptr,
 
 
 
-#ifdef K_COMMENT_ONLY
-	 strcpy(outstr, " K_COMMENT_ONLY=1");
-#else
-	 strcpy(outstr, " K_COMMENT_ONLY=0");
-#endif
 #ifdef LITTLE_I_LINES
 	 strcat(outstr, " LITTLE_I_LINES=1");
 #else
@@ -1544,23 +1534,11 @@ report_configured_links(aClient *sptr, int mask)
 		  pass = BadPtr(tmp->passwd) ? null : tmp->passwd;
 		  name = BadPtr(tmp->name) ? null : tmp->name;
 		  port = (int) tmp->port;
-		  /*
-			* On K line the passwd contents can be displayed on STATS
-			* reply.      -Vesa If K_COMMENT_ONLY is defined, then do it
-			* differently.
-			*/
-#ifdef K_COMMENT_ONLY
+
 		  if (tmp->status == CONF_KILL)
 			 sendto_one(sptr, rpl_str(p[1]), me.name,
 							sptr->name, c, host,
 							name, pass);
-#else
-		  if (tmp->status == CONF_KILL)
-			 sendto_one(sptr, rpl_str(p[1]), me.name,
-							sptr->name, c, host,
-							pass, name, port,
-							get_conf_class(tmp));
-#endif
 		  else if (tmp->status & CONF_QUARANTINED_NICK)
 			 sendto_one(sptr, rpl_str(p[1]), me.name,
 							sptr->name, c, pass, name, port, get_conf_class(tmp));
@@ -3257,12 +3235,8 @@ m_kline(aClient *cptr,
    if ((aconf = find_is_klined(host, user))) {
    char       *reason;
 
-#ifdef K_COMMENT_ONLY
       reason = aconf->passwd ? aconf->passwd : "<No Reason>";
-#else
-      reason = (BadPtr(aconf->passwd) || !is_comment(aconf->passwd)) ?
-	 "<No Reason>" : aconf->passwd;
-#endif
+
       sendto_one(sptr,
 	     ":%s NOTICE %s :[%s@%s] already K-lined by [%s@%s] - %s",
 		 me.name,
@@ -3280,11 +3254,7 @@ m_kline(aClient *cptr,
    aconf->status = CONF_KILL;
    DupString(aconf->host, host);
 
-#ifndef K_COMMENT_ONLY
-   (void) ircsprintf(buffer, "%s (%s)", reason, current_date);
-#else
    (void) ircsprintf(buffer, "%s (%s)", reason, current_date);
-#endif
 
    DupString(aconf->passwd, buffer);
    DupString(aconf->name, user);
@@ -3377,19 +3347,11 @@ m_kline(aClient *cptr,
       return (0);
    }
 
-#ifndef K_COMMENT_ONLY
-   (void) ircsprintf(buffer, "K:%s:%s (%s):%s\n",
-		     host,
-		     reason,
-		     current_date,
-		     user);
-#else
    (void) ircsprintf(buffer, "K:%s:%s (%s):%s\n",
 		     host,
 		     reason,
 		     current_date,
 		     user);
-#endif
 
    if ((k->kline = strdup(buffer)) == NULL) {
       free(k->comment);
@@ -3431,19 +3393,11 @@ m_kline(aClient *cptr,
       return 0;
    }
 
-#ifndef K_COMMENT_ONLY
-   (void) ircsprintf(buffer, "K:%s:%s (%s):%s\n",
-		     host,
-		     reason,
-		     current_date,
-		     user);
-#else
    (void) ircsprintf(buffer, "K:%s:%s (%s):%s\n",
 		     host,
 		     reason,
 		     current_date,
 		     user);
-#endif
 
    if (write(out, buffer, strlen(buffer)) <= 0) {
       sendto_one(sptr, ":%s NOTICE %s :Problem writing to %s",
@@ -4963,11 +4917,8 @@ int m_akill(aClient *cptr, aClient *sptr, int parc, char *parv[]) {
 	DupString(aconf->host, host);
 	DupString(aconf->name, user);
 	
-#ifndef K_COMMENT_ONLY
-        ircsprintf(buffer, "%s (%s)", reason, current_date);
-#else
 	ircsprintf(buffer, "%s (%s)", reason, current_date);
-#endif   
+
 	DupString(aconf->passwd, buffer);
 	        
 	/* whether or not we have a length, this is still a temporary akill */

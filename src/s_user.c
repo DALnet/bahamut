@@ -608,12 +608,7 @@ register_user(aClient *cptr,
 			
 			kline = (aconf->status == CONF_KILL) ? 1 : 0;
 			ktype = kline ? "K-lined" : "Autokilled";
-#ifdef K_COMMENT_ONLY
 			reason = aconf->passwd ? aconf->passwd : ktype;
-#else
-			reason = (BadPtr(aconf->passwd) || !is_comment(aconf->passwd)) ?
-			  ktype : aconf->passwd;
-#endif
 			
 #ifdef RK_NOTICES
 			sendto_realops("%s %s@%s. for %s", ktype, sptr->user->username,
@@ -631,21 +626,12 @@ register_user(aClient *cptr,
 #ifdef USE_REJECT_HOLD
 			cptr->flags |= FLAGS_REJECT_HOLD;
 #endif
-#ifdef KLINE_WITH_REASON
 			sendto_one(sptr, ":%s NOTICE %s :*** %s for %s",
 						  me.name, cptr->name, ktype, reason);
-#else
-			sendto_one(sptr, ":%s NOTICE %s :*** %s",
-						  me.name, cptr->name, ktype);
-#endif
 			ircstp->is_ref++;
 
 #ifndef USE_REJECT_HOLD			
-# ifdef KLINE_WITH_REASON
 			return exit_client(cptr, sptr, &me, reason);
-# else
-			return exit_client(cptr, sptr, &me, ktype);
-# endif
 #endif
       }
 		

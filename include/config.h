@@ -437,32 +437,6 @@
 #define DO_IDENTD
 
 /*
- * K_COMMENT_ONLY - 2nd field in K-line is ALWAYS a comment. If you
- * define this, ircd will NOT put ^O's in K: line comments. Undef this
- * if you think you might ever run a non-hybrid or non-th ircd.
- */
-#define K_COMMENT_ONLY
-
-/*
- * KLINE_WITH_REASON - show comment to client on exit define this if
- * you want users to exit with the kline/zline reason (i.e. instead of
- * "You have been K-lined" they will see the reason and to see the
- * kline/zline reason when they try to connect It's a neat feature
- * except for one thing... If you use a tcm and it shows the nick of
- * the oper doing the kline (as it does by default) Your opers can be
- * hit with retalitation... Or if your opers use scripts that stick an
- * ID into the comment field. etc. It's up to you whether you want to
- * use it or not.
- * 
- * I have rewritten a portion of the k-line processing making it faster
- * unfortuantely, using KLINE_WITH_REASON would slow down this
- * processing slightly.. how much I can't say. For very few clients
- * being KLINED very little difference, but you have been forewarned
- * 
- */
-#define KLINE_WITH_REASON
-
-/*
  * NON_REDUNDANT_KLINES - If you want the server to flag and not apply
  * redundant klines
  */

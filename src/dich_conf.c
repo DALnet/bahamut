@@ -105,17 +105,10 @@ report_conf_links(aClient *sptr,
 	 pass = BadPtr(tmp->passwd) ? null : tmp->passwd;
 	 name = BadPtr(tmp->name) ? null : tmp->name;
 	 port = (int) tmp->port;
-#ifdef K_COMMENT_ONLY
 	 if (tmp->status == CONF_KILL)
 	    sendto_one(sptr, rpl_str(numeric), me.name,
 		       sptr->name, c, host,
 		       name, 0, pass);
-#else
-	 if (tmp->status == CONF_KILL)
-	    sendto_one(sptr, rpl_str(numeric), me.name,
-		       sptr->name, c, host,
-		       pass, name, port, get_conf_class(tmp));
-#endif
 	 else if (tmp->status == CONF_ZLINE)
 	    sendto_one(sptr, rpl_str(numeric), me.name,
 		       sptr->name, c, host, pass);

@@ -1654,20 +1654,6 @@ lookup_confhost(aConfItem *aconf)
     */
    return 0;
 }
-/*
- * Why not just a simple macro? maybe next version... -Dianora 
- */
-/*
- * This is also used in ircd.c now 
- */
-
-#ifndef K_COMMENT_ONLY
-int
-is_comment(char *comment)
-{
-   return (*comment == '');
-}
-#endif
 
 int
 find_zline(char *host)
@@ -1864,11 +1850,6 @@ report_matching_host_klines(aClient *cptr, char *host)
 					 * why waste 2 function calls for this
 					 * * ? - Dianora 
 					 */
-#ifndef K_COMMENT_ONLY
-   int         port;
-
-#endif
-
    if (strlen(host) > (size_t) HOSTLEN ||
        (name ? strlen(name) : 0) > (size_t) HOSTLEN)
       return;
@@ -1883,18 +1864,10 @@ report_matching_host_klines(aClient *cptr, char *host)
       pass = BadPtr(tmp->passwd) ? null : tmp->passwd;
       name = BadPtr(tmp->name) ? null : tmp->name;
       found_host = BadPtr(tmp->host) ? null : tmp->host;
-#ifdef K_COMMENT_ONLY
       if (tmp->status == CONF_KILL)
 	 sendto_one(cptr, rpl_str(RPL_STATSKLINE), me.name,
 		    cptr->name, 'K', found_host,
 		    name, 0, pass);
-#else
-      port = BadPtr(tmp->port) ? 0 : tmp->port;
-      if (tmp->status == CONF_KILL)
-	 sendto_one(cptr, rpl_str(RPL_STATSKLINE), me.name,
-		    cptr->name, 'K', found_host,
-		    pass, name, port, get_conf_class(tmp));
-#endif
       list = NULL;
    }
 
@@ -1906,18 +1879,10 @@ report_matching_host_klines(aClient *cptr, char *host)
       pass = BadPtr(tmp->passwd) ? null : tmp->passwd;
       name = BadPtr(tmp->name) ? null : tmp->name;
       found_host = BadPtr(tmp->host) ? null : tmp->host;
-#ifdef K_COMMENT_ONLY
       if (tmp->status == CONF_KILL)
 	 sendto_one(cptr, rpl_str(RPL_STATSKLINE), me.name,
 		    cptr->name, 'K', found_host,
 		    name, 0, pass);
-#else
-      port = BadPtr(tmp->port) ? 0 : tmp->port;
-      if (tmp->status == CONF_KILL)
-	 sendto_one(cptr, rpl_str(RPL_STATSKLINE), me.name,
-		    cptr->name, 'K', found_host,
-		    pass, name, port, get_conf_class(tmp));
-#endif
       list = NULL;
    }
 
@@ -1929,18 +1894,10 @@ report_matching_host_klines(aClient *cptr, char *host)
       pass = BadPtr(tmp->passwd) ? null : tmp->passwd;
       name = BadPtr(tmp->name) ? null : tmp->name;
       found_host = BadPtr(tmp->host) ? null : tmp->host;
-#ifdef K_COMMENT_ONLY
       if (tmp->status == CONF_KILL)
 	 sendto_one(cptr, rpl_str(RPL_STATSKLINE), me.name,
 		    cptr->name, 'K', found_host,
 		    name, 0, pass);
-#else
-      port = BadPtr(tmp->port) ? 0 : tmp->port;
-      if (tmp->status == CONF_KILL)
-	 sendto_one(cptr, rpl_str(RPL_STATSKLINE), me.name,
-		    cptr->name, 'K', found_host,
-		    pass, name, port, get_conf_class(tmp));
-#endif
       list = NULL;
    }
 }
