@@ -1,32 +1,38 @@
-This file outlines the features that ircd-hybrid has for IRC Operators.
-- 09/27/97 - ThemBones (kraemer@u.washington.edu)
+The following outlines the features and commands
+that Bahamut has for operators of the server.
+- 11/13/02 - srd (srd@dal.net)
+
+Based upon opers.txt for ircd-hybrid by:
+ThemBones (kraemer@u.washington.edu)
 
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
 Usermodes: (* designates that the umode is oper only)
 
-     USERMODE     DESCRIPTION
+ USERMODE      DESCRIPTION
 -----------------------------------------------------------------
-         +O     - Designates this client is a local IRC Operator.
-                  Use the /oper command to attain this.
-         +o     - Designates this client is a global IRC Operator.
-                  Use the /oper command to attain this.
-	 +A	- Designates Server Admin
-	 +a	- Designates Services Admin
-         +i     - Designates this client 'invisible'.
-         +w     - Can see server wallops.
-       * +b     - Can see oper chatops.
-       * +g     - Can see oper globops.
-         +s     - Can see generic server messages and oper kills.
-       * +c     - Can see client connections and exits.
-         +r     - Services Mode - user is registered/identified.
-         +R     - Ignore messages from non +r clients.
-       * +k     - Can see server kill messages.
-       * +f     - Can see flood messages.
-       * +y     - Can see stats/links/admin requests to name a few.
-       * +d     - Can see server debug messages.
-       * +n     - Can see server routing notices.
-       * +h     - Operator is avaiable to help (listed in a /stats P)
+  +i        -  Designates the user is 'invisible'.
+  +w        -  User can recieve wallops messages.
+  +g        -  User can recieve globops messages.
+  +s        -  User can recieve server messages and oper kills.
+  +k        -  User can see server kill messages.
+  +r        -  User is marked as being registered/identified to services.
+  +R        -  User will not recieve messages from -r clients.
+ *+O        -  Designates the user as being a local IRC Operator.
+ *+o        -  Designates the user as being a global IRC Operator.
+ *+a        -  Designates the user as being a services administrator.
+ *+A        -  Designates the user as being a server administrator.
+ *+c        -  User can see client connections and exits.
+ *+d        -  User can see debug messages.
+ *+e        -  User can see dccallow failure notices.
+ *+f        -  User can see flood messages.
+ *+F        -  Can bypass the ircd's recvq throttling
+ *+h        -  Operator is available for help, being listed in /stats P
+ *+K        -  Recieve U:lined server kill notices
+ *+j        -  Recieve rejected drone connection notices 
+ *+m        -  user can see spambot notices.
+ *+n        -  User can see routing notices.
+ *+y        -  User can see certain information requests. (e.g. /stats)
 
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
