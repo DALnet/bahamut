@@ -300,6 +300,7 @@ count_memory(aClient *cptr, char *nick)
 
    Reg aClient *acptr;
    Reg Link   *link;
+   Reg aBan   *bp;
    Reg aChannel *chptr;
    Reg aConfItem *aconf;
    Reg aClass *cltmp;
@@ -471,9 +472,9 @@ count_memory(aClient *cptr, char *nick)
 	 chu++;
       for (link = chptr->invites; link; link = link->next)
 	 chi++;
-      for (link = chptr->banlist; link; link = link->next) {
+      for (bp = chptr->banlist; bp; bp = bp->next) {
 	 chb++;
-	 chbm += (strlen(link->value.cp) + 1 + sizeof(Link));
+	 chbm += (strlen(bp->who) + strlen(bp->banstr) + 2 + sizeof(aBan));
       }
    }
 

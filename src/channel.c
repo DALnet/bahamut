@@ -51,7 +51,7 @@ static int  add_banid(aClient *, aChannel *, char *);
 static int  can_join(aClient *, aChannel *, char *);
 static void channel_modes(aClient *, char *, char *, aChannel *);
 static int  del_banid(aChannel *, char *);
-static Link *is_banned(aClient *, aChannel *);
+static aBan *is_banned(aClient *, aChannel *);
 static int
             set_mode(aClient *, aClient *, aChannel *, int, int,
 		     char **, char *, char *);
@@ -162,7 +162,7 @@ static char *make_nick_user_host(char *nick, char *name, char *host) {
 /* add_banid - add an id to be banned to the channel  (belongs to cptr) */
 
 static int add_banid(aClient *cptr, aChannel *chptr, char *banid) {
-   Reg Link   *ban;
+   Reg aBan   *ban;
    Reg int     cnt = 0;
 
    if (MyClient(cptr))
@@ -177,34 +177,28 @@ static int add_banid(aClient *cptr, aChannel *chptr, char *banid) {
 		/* yikes, we were doing all sorts of weird crap here before, now
 		 * we ONLY want to know if current bans cover this ban, not if this
 		 * ban covers current ones, since it may cover other things too -wd */
-		else if (!match(ban->value.banptr->banstr, banid))
+		else if (!match(ban->banstr, banid))
 		  return -1;
    }
 
-   ban = make_link();
-   memset((char *) ban, '\0', sizeof(Link));
-
-   ban->flags = CHFL_BAN;
+   ban = (aBan *) MyMalloc(sizeof(aBan));
+   ban->banstr = (char *) MyMalloc(strlen(banid) + 1);
+   (void) strcpy(ban->banstr, banid);
    ban->next = chptr->banlist;
 
-   ban->value.banptr = (aBan *) MyMalloc(sizeof(aBan));
-   ban->value.banptr->banstr = (char *) MyMalloc(strlen(banid) + 1);
-   (void) strcpy(ban->value.banptr->banstr, banid);
-
    if (IsPerson(cptr)) {
-      ban->value.banptr->who =
-	 (char *) MyMalloc(strlen(cptr->name) +
+      ban->who = (char *) MyMalloc(strlen(cptr->name) +
 			   strlen(cptr->user->username) +
 			   strlen(cptr->user->host) + 3);
-      (void) sprintf(ban->value.banptr->who, "%s!%s@%s",
+      (void) sprintf(ban->who, "%s!%s@%s",
 		  cptr->name, cptr->user->username, cptr->user->host);
    }
    else {
-      ban->value.banptr->who = (char *) MyMalloc(strlen(cptr->name) + 1);
-      (void) strcpy(ban->value.banptr->who, cptr->name);
+      ban->who = (char *) MyMalloc(strlen(cptr->name) + 1);
+      (void) strcpy(ban->who, cptr->name);
    }
 
-   ban->value.banptr->when = timeofday;
+   ban->when = timeofday;
 
    chptr->banlist = ban;
    return 0;
@@ -217,20 +211,19 @@ static int add_banid(aClient *cptr, aChannel *chptr, char *banid) {
 static int
 del_banid(aChannel *chptr, char *banid)
 {
-   Reg Link  **ban;
-   Reg Link   *tmp;
+   Reg aBan  **ban;
+   Reg aBan   *tmp;
 
    if (!banid)
       return -1;
    for (ban = &(chptr->banlist); *ban; ban = &((*ban)->next))
-      if (mycmp(banid, (*ban)->value.banptr->banstr) == 0)
+      if (mycmp(banid, (*ban)->banstr) == 0)
       {
 	 tmp = *ban;
 	 *ban = tmp->next;
-	 MyFree(tmp->value.banptr->banstr);
-	 MyFree(tmp->value.banptr->who);
-	 MyFree(tmp->value.banptr);
-	 free_link(tmp);
+	 MyFree(tmp->banstr);
+	 MyFree(tmp->who);
+	 MyFree(tmp);
 	 break;
       }
    return 0;
@@ -242,13 +235,13 @@ del_banid(aChannel *chptr, char *banid)
  * IP_BAN_ALL from comstud always on...
  */
 
-static Link *is_banned(aClient *cptr, aChannel *chptr) {
-   Reg Link   *tmp;
+static aBan *is_banned(aClient *cptr, aChannel *chptr) {
+   Reg aBan   *tmp;
    char        s[NICKLEN + USERLEN + HOSTLEN + 6];
    char       *s2;
 
    if (!IsPerson(cptr))
-      return ((Link *) NULL);
+      return NULL;
 
    strcpy(s, make_nick_user_host(cptr->name, cptr->user->username,
 				 cptr->user->host));
@@ -256,8 +249,8 @@ static Link *is_banned(aClient *cptr, aChannel *chptr) {
 			    cptr->hostip);
 
    for (tmp = chptr->banlist; tmp; tmp = tmp->next)
-      if ((match(tmp->value.banptr->banstr, s) == 0) ||
-	  (match(tmp->value.banptr->banstr, s2) == 0))
+      if ((match(tmp->banstr, s) == 0) ||
+	  (match(tmp->banstr, s2) == 0))
 	 break;
    return (tmp);
 }
@@ -424,49 +417,42 @@ channel_modes(aClient *cptr, char *mbuf, char *pbuf, aChannel *chptr) {
    return;
 }
 
-static void
-send_mode_list(aClient *cptr, aChannel *chptr,
-	       char *chname,
-	       Link *top,
-	       int mask,
-	       char flag)
+static void send_ban_list(aClient *cptr, aChannel *chptr)
 {
-   Reg Link   *lp;
-   Reg char   *cp, *name;
+   Reg aBan   *bp;
+   Reg char   *cp;
    int         count = 0, send = 0;
 
    cp = modebuf + strlen(modebuf);
-   if (*parabuf)		/*
-				 * mode +l or +k xx 
-				 */
-      count = 1;
-   for (lp = top; lp; lp = lp->next) {
-      if (!(lp->flags & mask))
-	 continue;
-      if (mask == CHFL_BAN)
-	 name = lp->value.banptr->banstr;
-      else
-	 name = lp->value.cptr->name;
-      if (strlen(parabuf) + strlen(name) + 10 < (size_t) MODEBUFLEN) {
-	 (void) strcat(parabuf, " ");
-	 (void) strcat(parabuf, name);
+
+   if (*parabuf) /* mode +l or +k xx */
+     count = 1;
+
+   for (bp = chptr->banlist; bp; bp = bp->next) 
+   {
+      if (strlen(parabuf) + strlen(name) + 10 < (size_t) MODEBUFLEN) 
+      {
+         if(*parabuf)
+	    strcat(parabuf, " ");
+	 strcat(parabuf, bp->banstr);
 	 count++;
-	 *cp++ = flag;
+	 *cp++ = 'b';
 	 *cp = '\0';
       }
       else if (*parabuf)
 	 send = 1;
+
       if (count == MAXMODEPARAMS)
 	 send = 1;
+
       if (send) {
-			sendto_one(cptr, ":%s MODE %s %s %s",
-						  me.name, chname, modebuf, parabuf);
+         sendto_one(cptr, ":%s MODE %s %s %s", me.name, chptr->name, modebuf, parabuf);
 	 send = 0;
 	 *parabuf = '\0';
 	 cp = modebuf;
 	 *cp++ = '+';
 	 if (count != MAXMODEPARAMS) {
-	    (void) strcpy(parabuf, name);
+	    strcpy(parabuf, bp->banstr);
 	    *cp++ = flag;
 	 }
 	 count = 0;
@@ -548,8 +534,7 @@ send_channel_modes(aClient *cptr, aChannel *chptr)
    *parabuf = '\0';
    *modebuf = '+';
    modebuf[1] = '\0';
-   send_mode_list(cptr, chptr, chptr->chname, chptr->banlist, CHFL_BAN,
-		  'b');
+   send_ban_list(cptr, chptr);
    if (modebuf[1] || *parabuf)
       sendto_one(cptr, ":%s MODE %s %s %s",
 		 me.name, chptr->chname, modebuf, parabuf);
@@ -641,6 +626,7 @@ set_mode(aClient *cptr, aClient *sptr, aChannel *chptr, int level, int parc,
 		0x0, 0x0};
 	
 	Link *lp; /* for walking lists */
+	aBan *bp; /* for walking banlists */
 	char *modes=parv[0]; /* user's idea of mode changes */
    int args; /* counter for what argument we're on */
 	int banlsent = 0; /* Only list bans once in a command. */
@@ -774,10 +760,10 @@ set_mode(aClient *cptr, aClient *sptr, aChannel *chptr, int level, int parc,
 			if(parv[args]==NULL) {
 				if (banlsent)
 				     break; /* Send only once */
-				for(lp=chptr->banlist;lp;lp=lp->next)
+				for(bp=chptr->banlist;bp;bp=bp->next)
 				  sendto_one(sptr, rpl_str(RPL_BANLIST), me.name, cptr->name,
-								 chptr->chname, lp->value.banptr->banstr,
-								 lp->value.banptr->who, lp->value.banptr->when);
+								 chptr->chname, bp->banstr,
+								 bp->who, bp->when);
 				sendto_one(cptr, rpl_str(RPL_ENDOFBANLIST),
 							  me.name, cptr->name, chptr->chname);
 				banlsent = 1;
@@ -1126,6 +1112,7 @@ sub1_from_channel(aChannel *chptr)
 {
    Reg Link   *tmp;
    Link       *obtmp;
+   aBan	      *bp, *bprem;
 
    if (--chptr->users <= 0) {
       /*
@@ -1134,14 +1121,13 @@ sub1_from_channel(aChannel *chptr)
       while ((tmp = chptr->invites))
 	 del_invite(tmp->value.cptr, chptr);
 
-      tmp = chptr->banlist;
-      while (tmp) {
-	 obtmp = tmp;
-	 tmp = tmp->next;
-	 MyFree(obtmp->value.banptr->banstr);
-	 MyFree(obtmp->value.banptr->who);
-	 MyFree(obtmp->value.banptr);
-	 free_link(obtmp);
+      bp = chptr->banlist;
+      while (bp) {
+	 bprem = bp;
+	 bp = bp->next;
+	 MyFree(bprem->banstr);
+	 MyFree(bprem->who);
+	 MyFree(bprem);
       }
       if (chptr->prevch)
 	 chptr->prevch->nextch = chptr->nextch;

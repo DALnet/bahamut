@@ -722,6 +722,7 @@ typedef struct Ban {
 	char       *banstr;
 	char       *who;
 	time_t      when;
+	aBan 	   *next;
 } aBan;
 
 /* general link structure used for chains */
@@ -753,7 +754,7 @@ struct Channel {
 	int         users;
 	Link       *members;
 	Link       *invites;
-	Link       *banlist;
+	aBan       *banlist;
 	ts_val      channelts;
 	time_t      creationtime;
 #ifdef FLUD
