@@ -64,6 +64,8 @@ int
 static int
 dead_link(aClient *to, char *notice)
 {
+   int errtmp = errno;	/* so we don't munge this later */
+
    to->flags |= FLAGS_DEADSOCKET;
    /*
     * If because of BUFFERPOOL problem then clean dbuf's now so that
@@ -82,9 +84,9 @@ dead_link(aClient *to, char *notice)
        */
  
       ircsprintf(fbuf, "from %s: %s", me.name, notice);
-      send_globops(fbuf, get_client_name(to, HIDEME));
+      send_globops(fbuf, get_client_name(to, HIDEME), strerror(errtmp));
       ircsprintf(fbuf, ":%s GLOBOPS :%s", me.name, notice);
-      sendto_serv_butone(to, fbuf, get_client_name(to, HIDEME));
+      sendto_serv_butone(to, fbuf, get_client_name(to, HIDEME), strerror(errtmp));
    }
    Debug((DEBUG_ERROR, notice, get_client_name(to, FALSE)));
    return -1;
@@ -217,7 +219,7 @@ send_queued(aClient *to)
        * Returns always len > 0 
        */
       if ((rlen = deliver_it(to, msg, len)) < 0)
-	 return dead_link(to, "Write error to %s, closing link");
+	 return dead_link(to, "Write error to %s, closing link (%s)");
       (void) dbuf_delete(&to->sendQ, rlen);
       to->lastsq = DBufLength(&to->sendQ) / 1024;
       if (rlen < len)
