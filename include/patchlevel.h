@@ -30,7 +30,6 @@
 #define BRANCHSTATUS RELEASE
 
 #define BASENAME "bahamut"
-#define BRANCH "pelennor"
 #define MAJOR 1
 #define MINOR 4
 #define PATCH 27
@@ -39,7 +38,7 @@
 \
 \
 \
-""
+"+p1"
 
 #define PATCH2 \
 \
