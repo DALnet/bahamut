@@ -1552,8 +1552,10 @@ m_nick(aClient *cptr,
       {
          if ((aconf = find_conf_name(nick, CONF_QUARANTINED_NICK)))
          {
+	    /* No need to spam with two notices - lucas
             sendto_realops("Q:lined nick %s from %s on %s", nick,
                            "<unregistered>", me.name);
+	    */
                                 
             if (MyConnect(sptr) && (!IsServer(cptr)) && (!IsOper(cptr))
                 && (!IsULine(sptr)))
@@ -1562,7 +1564,7 @@ m_nick(aClient *cptr,
                           BadPtr(parv[0]) ? "*" : parv[0], nick,
                           BadPtr(aconf->passwd) ? "reason unspecified" :
                           aconf->passwd);
-               sendto_realops("Forbidding Q:lined nick %s from %s.",
+               sendto_realops("Forbidding Q:lined nick %s from <unregistered>%s.",
                               nick, get_client_name(cptr, FALSE));
                return 0;
             }
