@@ -955,9 +955,6 @@ int rehash(aClient *cptr, aClient *sptr, int sig)
 #endif
         remove_userbans_match_flags(UBAN_NETWORK, 0);
         remove_userbans_match_flags(UBAN_LOCAL|UBAN_TEMPORARY, 0);
-	remove_simbans_match_flags(SBAN_GCOS, 0);
-	remove_simbans_match_flags(SBAN_NICK, 0);
-	remove_simbans_match_flags(SBAN_CHAN, 0);
     }
 
     if ((fd = openconf(configfile)) == -1) 
@@ -1022,10 +1019,6 @@ int rehash(aClient *cptr, aClient *sptr, int sig)
 
     /* remove perm klines */
     remove_userbans_match_flags(UBAN_LOCAL, UBAN_TEMPORARY);
-
-    remove_simbans_match_flags(SBAN_CHAN|SBAN_LOCAL, UBAN_TEMPORARY);
-    remove_simbans_match_flags(SBAN_NICK|SBAN_LOCAL, UBAN_TEMPORARY);
-    remove_simbans_match_flags(SBAN_GCOS|SBAN_LOCAL, UBAN_TEMPORARY);
 
     clear_conf_list(&EList1);
     clear_conf_list(&EList2);
