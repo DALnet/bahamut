@@ -184,7 +184,7 @@ typedef struct MotdItem aMotd;
 #define	FLAGS_CLOSING      0x000020   /* set when closing to suppress errors */
 #define	FLAGS_LISTEN       0x000040   /* used to mark clients which we listen()
 				       * on */
-/* Flag 0x80 is free */
+#define FLAGS_HAVERECVQ	   0x000080   /* Client has full commands in their recvq */
 #define	FLAGS_DOINGDNS	   0x000100   /* client is waiting for a DNS 
 				       * response */
 #define	FLAGS_AUTH	   0x000200   /* client is waiting on rfc931 

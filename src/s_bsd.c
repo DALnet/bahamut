@@ -60,6 +60,7 @@
 #include "fdlist.h"
 #include "fds.h"
 
+extern void      engine_init();
 extern fdlist default_fdlist;
 
 #ifndef IN_LOOPBACKNET
@@ -457,6 +458,8 @@ void init_sys()
 	local[fd] = NULL;
     }
     local[1] = NULL;
+
+    engine_init();
 
     if (bootopt & BOOT_TTY)
     {
@@ -1374,6 +1377,13 @@ int do_client_queue(aClient *cptr)
 	else if(client_dopacket(cptr, readbuf, dolen) == FLUSH_BUFFER)
 	    return FLUSH_BUFFER;
     }
+
+    if(!(cptr->flags & FLAGS_HAVERECVQ) && DBufLength(&cptr->recvQ) && !NoNewLine(cptr))
+    {
+       add_to_list(&recvq_clients, cptr);
+       cptr->flags |= FLAGS_HAVERECVQ;
+    }
+
     return 1;
 }
 

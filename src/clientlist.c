@@ -17,6 +17,7 @@ Link *oper_list = NULL;
 
 /* Clients currently doing a /list */
 Link *listing_clients = NULL;
+Link *recvq_clients = NULL;
 
 int get_list_memory(Link *list)
 {
@@ -55,6 +56,17 @@ void add_to_list(Link **list, aClient *cptr)
    *list = lp;
 }
 
+void remove_from_listP(Link **list, Link *lp, Link *prev)
+{
+   if(prev)
+      prev->next = lp->next;
+   else
+      *list = lp->next;
+   free_link(lp);
+   
+   return;
+}
+
 void remove_from_list(Link **list, aClient *cptr)
 {
    Link *lp, *prev;
@@ -63,11 +75,7 @@ void remove_from_list(Link **list, aClient *cptr)
    {
       if(lp->value.cptr == cptr)
       {
-         if(prev)
-            prev->next = lp->next;
-         else
-            *list = lp->next;
-         free_link(lp);
+         remove_from_listP(list, lp, prev);
          return;
       }
    }

@@ -565,9 +565,9 @@ int exit_client(aClient *cptr, aClient *sptr, aClient *from, char *comment)
 	if (sptr->flags & FLAGS_IPHASH)
 	    remove_one_ip(sptr->ip.s_addr);
 	if (IsAnOper(sptr)) 
-	{
 	    remove_from_list(&oper_list, sptr);
-	}
+	if (sptr->flags & FLAGS_HAVERECVQ)
+	    remove_from_list(&recvq_clients, sptr);
 	if (IsClient(sptr))
 	    Count.local--;
 	if (IsNegoServer(sptr))

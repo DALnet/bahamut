@@ -46,6 +46,7 @@ extern aMotd *helpfile;		/* oper helpfile is a link list of aMotd */
 extern Link *server_list;
 extern Link *oper_list;
 extern Link *listing_clients;
+extern Link *recvq_clients;
 
 extern aConfList EList1;
 extern aConfList EList2;
@@ -327,6 +328,7 @@ extern aWatch 	 *hash_get_watch(char *);
 #define MAXWATCH       128
 
 void add_to_list(Link **, aClient *);
+void remove_from_listP(Link **, Link *, Link *);
 void remove_from_list(Link **, aClient *);
 void print_list_memory(aClient *);
 

@@ -90,7 +90,6 @@ extern struct pkl *pending_klines;
 extern void 	 do_pending_klines(void);
 #endif
 extern void      engine_read_message(int);
-extern void	 engine_init();
 
 void        	server_reboot();
 void        	restart(char *);
@@ -801,7 +800,6 @@ int main(int argc, char *argv[])
 
     /* init the file descriptor tracking system */
     init_fds();
-    engine_init();
 
     /* init the kline/akill system */
     init_userban();
@@ -846,7 +844,9 @@ int main(int argc, char *argv[])
     if (portnum < 0)
 	portnum = PORTNUM;
     me.port = portnum;
-    (void) init_sys();
+
+    init_sys();
+
     me.flags = FLAGS_LISTEN;
     if (bootopt & BOOT_INETD) 
     {
@@ -984,6 +984,29 @@ int main(int argc, char *argv[])
     
     io_loop();
     return 0;
+}
+
+void do_recvqs()
+{
+   Link *lp, *lpn, *lpprev = NULL;
+   aClient *cptr;
+
+   for(lp = recvq_clients; lp; lp = lpn)
+   {
+      lpn = lp->next;
+      cptr = lp->value.cptr;
+
+      if(DBufLength(&cptr->recvQ) && !NoNewLine(cptr))
+         do_client_queue(cptr);
+
+      if(!(DBufLength(&cptr->recvQ) && !NoNewLine(cptr)))
+      {
+         remove_from_listP(&recvq_clients, lp, lpprev);
+         cptr->flags &= ~(FLAGS_HAVERECVQ);
+      }
+      else
+         lpprev = lp;
+   }
 }
 
 void send_safelists()
@@ -1160,6 +1183,17 @@ void io_loop()
 	delay -= timeofday;
 
 	/*
+	 * Parse people who have blocked recvqs
+	 */
+	do_recvqs();
+
+	/*
+	 * Send people their /list replies, being careful
+	 * not to fill their sendQ
+	 */
+	send_safelists();
+
+	/*
 	 * Adjust delay to something reasonable [ad hoc values] (one
 	 * might think something more clever here... --msa) 
 	 * We don't really need to check that often and as long 
@@ -1171,13 +1205,12 @@ void io_loop()
 	if (delay < 1)
 	    delay = 1;
 	else
-	    delay = MIN(delay, TIMESEC);
-
-	/*
-	 * Send people their /list replies, being careful
-	 * not to fill their sendQ
-	 */
-	send_safelists();
+	{
+	    if(recvq_clients != NULL)
+		delay = MIN(delay, 2);
+	    else
+		delay = MIN(delay, TIMESEC);
+	}
 
 	/*
 	 * We want to read servers on every io_loop, as well as "busy"

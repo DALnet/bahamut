@@ -101,7 +101,10 @@ int engine_read_message(time_t delay)
       return -1;
    }
 
-   for (pfd = poll_fdarray, i = 0; i < nbr_pfds; i++, pfd++) 
+   if(delay)
+      NOW = timeofday = time(NULL);
+
+   for (pfd = poll_fdarray, i = 0; nfds && (i < nbr_pfds); i++, pfd++) 
    {
       get_fd_info(pfd->fd, &fdtype, &fdflags, &fdvalue);
 
@@ -174,42 +177,30 @@ int engine_read_message(time_t delay)
                  length = read_packet(cptr);
                else if(DBufLength(&cptr->recvQ) && IsPerson(cptr) && !NoNewLine(cptr))
                  length = do_client_queue(cptr);
+
+               if (length == FLUSH_BUFFER)
+                  continue;
+	
+               if (IsDead(cptr)) 
+               {
+                  ircsprintf(errmsg, "Read/Dead Error: %s", 
+                             (cptr->flags & FLAGS_SENDQEX) ?
+                             "SendQ Exceeded" : irc_get_sockerr(cptr));
+                  exit_client(cptr, cptr, &me, errmsg);
+                  continue;
+               }
+	
+               if (length > 0)
+                  continue;
+	
+               /* An error has occured reading from cptr, drop it. */
+               read_error_exit(cptr, length, cptr->sockerr);
                break;
 
             default:
                abort(); /* unknown client type? bail! */
          }
       }
-      else if(fdtype == FDT_CLIENT)
-      {
-         cptr = (aClient *) fdvalue;
-
-         if(DBufLength(&cptr->recvQ) && IsPerson(cptr) && !NoNewLine(cptr))
-            length = do_client_queue(cptr);
-         else
-            continue;
-      }
-      else
-         continue; /* we fall through past this if it's a client */
-
-      if (length == FLUSH_BUFFER)
-         continue;
-	
-      if (IsDead(cptr)) 
-      {
-         ircsprintf(errmsg, "Read/Dead Error: %s", 
-                    (cptr->flags & FLAGS_SENDQEX) ?
-                    "SendQ Exceeded" : irc_get_sockerr(cptr));
-         exit_client(cptr, cptr, &me, errmsg);
-         continue;
-      }
-	
-      if (length > 0)
-         continue;
-	
-      /* An error has occured reading from cptr, drop it. */
-      read_error_exit(cptr, length, cptr->sockerr);
-
    } /* end of for() loop for testing polled sockets */
 
    return 0;
