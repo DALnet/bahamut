@@ -198,7 +198,7 @@ clear_conflinks(aClient *cptr)
             cptr->serv->aconn = NULL;
         }
     }
-    else
+    else if (cptr->user != NULL)
     {
         aAllow *x;
         aOper *y;
@@ -1115,7 +1115,7 @@ confadd_kill(cVar *vars[], int lnum)
     cVar *tmp;
     struct userBan *ban;
     int i, c = 0;
-    char *ub_u, *ub_r, *host;
+    char *ub_u = NULL, *ub_r = NULL, *host = NULL;
     char fbuf[512];
     aClient *ub_acptr;
 

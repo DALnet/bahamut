@@ -3053,7 +3053,7 @@ int m_list(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
         add_to_list(&listing_clients, sptr);
 
-        if (DBufLength(&cptr->sendQ) < 2048)
+        if (SBufLength(&cptr->sendQ) < 2048)
             send_list(cptr, 64);
 
         return 0;
@@ -3202,7 +3202,7 @@ int m_list(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
         add_to_list(&listing_clients, sptr);
 
-        if (DBufLength(&cptr->sendQ) < 2048)
+        if (SBufLength(&cptr->sendQ) < 2048)
             send_list(cptr, 64);
         return 0;
     }

@@ -18,7 +18,7 @@ mkpasswd: $(mkpasswd_OBJECTS)
 	$(CC) -o mkpasswd $(mkpasswd_OBJECTS) $(IRCDLIBS)
 
 convert_conf: $(convert_conf_OBJECTS)
-    $(CC) -o convert_conf $(convert_conf_OBJECTS) $(IRCDLIBS)
+	$(CC) -o convert_conf $(convert_conf_OBJECTS) $(IRCDLIBS)
 
 clean:
 	$(RM) -f $(all_OBJECTS) mkpasswd convert_conf *~ core

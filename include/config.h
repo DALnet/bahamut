@@ -783,6 +783,12 @@
 /* INITIAL_DBUFS - how many dbufs to preallocate */
 #define INITIAL_DBUFS 1024	/* preallocate 2 megs of dbufs */
 
+
+/* INITIAL_SBUFS_X - how many bytes of sbufs to preallocate */
+#define INITIAL_SBUFS_SMALL 2 * (1 << 20) /* 2 meg */
+#define INITIAL_SBUFS_LARGE 2 * (1 << 20) /* 2 meg */
+#define INITIAL_SBUFS_USERS 256           /* number of sbuf user structs to pool */
+
 /*
  * MAXBUFFERS - increase socket buffers
  * 

@@ -29,6 +29,7 @@
 #include "msg.h"
 #include "channel.h"
 #include "throttle.h"
+#include "sbuf.h"
 
 aClient *ac_next(aClient *cptr)
 {
@@ -212,14 +213,14 @@ short ac_lastsq(aClient *cptr)
         return cptr->lastsq;
 }
 
-struct DBuf *ac_sendQ(aClient *cptr)
+SBuf *ac_sendQ(aClient *cptr)
 {
         if(cptr->fd == -1)
                 abort();
         return &cptr->sendQ;
 }
 
-struct DBuf *ac_recvQ(aClient *cptr)
+SBuf *ac_recvQ(aClient *cptr)
 {
         if(cptr->fd == -1)
                 abort();

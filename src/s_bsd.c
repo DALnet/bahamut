@@ -1070,8 +1070,8 @@ void close_connection(aClient *cptr)
         del_fd(cptr->fd);
         close(cptr->fd);
         cptr->fd = -2;
-        DBufClear(&cptr->sendQ);
-        DBufClear(&cptr->recvQ);
+        SBufClear(&cptr->sendQ);
+        SBufClear(&cptr->recvQ);
         memset(cptr->passwd, '\0', sizeof(cptr->passwd));
         if(cptr->lstn)
             cptr->lstn->clients--;
@@ -1489,7 +1489,7 @@ int do_client_queue(aClient *cptr)
 {
     int dolen = 0, done;
     
-    while (DBufLength(&cptr->recvQ) && !NoNewLine(cptr) &&
+    while (SBufLength(&cptr->recvQ) && !NoNewLine(cptr) &&
        ((cptr->status < STAT_UNKNOWN) || (cptr->since - timeofday < 10) ||
         IsNegoServer(cptr))) 
     {
@@ -1497,9 +1497,9 @@ int do_client_queue(aClient *cptr)
     if (IsServer(cptr) || IsNegoServer(cptr)) 
     {
 #if defined(MAXBUFFERS)
-        dolen = dbuf_get(&cptr->recvQ, readbuf, rcvbufmax * sizeof(char));
+        dolen = sbuf_get(&cptr->recvQ, readbuf, rcvbufmax * sizeof(char));
 #else
-        dolen = dbuf_get(&cptr->recvQ, readbuf, sizeof(readbuf));
+        dolen = sbuf_get(&cptr->recvQ, readbuf, sizeof(readbuf));
 #endif
         if (dolen <= 0)
         break;
@@ -1509,31 +1509,31 @@ int do_client_queue(aClient *cptr)
     }
     
 #if defined(MAXBUFFERS)
-    dolen = dbuf_getmsg(&cptr->recvQ, readbuf, rcvbufmax * sizeof(char));
+    dolen = sbuf_getmsg(&cptr->recvQ, readbuf, rcvbufmax * sizeof(char));
 #else
-    dolen = dbuf_getmsg(&cptr->recvQ, readbuf, sizeof(readbuf));
+    dolen = sbuf_getmsg(&cptr->recvQ, readbuf, sizeof(readbuf));
 #endif
     
     if (dolen <= 0) 
     {
         if (dolen < 0)
-        return exit_client(cptr, cptr, cptr, "dbuf_getmsg fail");
+        return exit_client(cptr, cptr, cptr, "sbuf_getmsg fail");
         
-        if (DBufLength(&cptr->recvQ) < 510) 
+        if (SBufLength(&cptr->recvQ) < 510) 
         {
         cptr->flags |= FLAGS_NONL;
         break;
         }
         /* The buffer is full (more than 512 bytes) and it has no \n
          * Some user is trying to trick us. Kill their recvq. */
-        DBufClear(&cptr->recvQ);
+        SBufClear(&cptr->recvQ);
         break;
     }
     else if(client_dopacket(cptr, readbuf, dolen) == FLUSH_BUFFER)
         return FLUSH_BUFFER;
     }
 
-    if(!(cptr->flags & FLAGS_HAVERECVQ) && DBufLength(&cptr->recvQ) && !NoNewLine(cptr))
+    if(!(cptr->flags & FLAGS_HAVERECVQ) && SBufLength(&cptr->recvQ) && !NoNewLine(cptr))
     {
        add_to_list(&recvq_clients, cptr);
        cptr->flags |= FLAGS_HAVERECVQ;
@@ -1551,7 +1551,7 @@ int do_client_queue(aClient *cptr)
  * do any flooding >:-) -avalon
  */
 
-#define MAX_CLIENT_RECVQ 8192   /* 4 dbufs */
+#define MAX_CLIENT_RECVQ 8192
 
 int read_packet(aClient * cptr)
 {
@@ -1561,7 +1561,7 @@ int read_packet(aClient * cptr)
      * is a person and has a recvq of less than MAX_CLIENT_RECVQ,
      * read from this client
      */ 
-    if (!(IsPerson(cptr) && DBufLength(&cptr->recvQ) > MAX_CLIENT_RECVQ)) 
+    if (!(IsPerson(cptr) && SBufLength(&cptr->recvQ) > MAX_CLIENT_RECVQ)) 
     {
     errno = 0;
     
@@ -1605,21 +1605,21 @@ int read_packet(aClient * cptr)
      * Before we even think of parsing what we just read, stick 
      * it on the end of the receive queue and do it when its turn
      * comes around. */
-    if (dbuf_put(&cptr->recvQ, readbuf, length) < 0)
-        return exit_client(cptr, cptr, cptr, "dbuf_put fail");
+    if (sbuf_put(&cptr->recvQ, readbuf, length) < 0)
+        return exit_client(cptr, cptr, cptr, "sbuf_put fail");
     
     if (IsPerson(cptr) &&
 #ifdef NO_OPER_FLOOD
         !IsAnOper(cptr) &&
 #endif
-        DBufLength(&cptr->recvQ) > CLIENT_FLOOD)
+        SBufLength(&cptr->recvQ) > CLIENT_FLOOD)
     {
         sendto_realops_lev(FLOOD_LEV,
                    "Flood -- %s!%s@%s (%d) Exceeds %d RecvQ",
                    cptr->name[0] ? cptr->name : "*",
                    cptr->user ? cptr->user->username : "*",
                    cptr->user ? cptr->user->host : "*",
-                   DBufLength(&cptr->recvQ), CLIENT_FLOOD);
+                   SBufLength(&cptr->recvQ), CLIENT_FLOOD);
         return exit_client(cptr, cptr, cptr, "Excess Flood");
     }
     return do_client_queue(cptr);

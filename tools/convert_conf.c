@@ -37,14 +37,15 @@
 #define SBAN_WILD      0x020   /* sban mask contains wildcards */
 #define SBAN_TEMPORARY 0x040   /* sban is temporary */
 
+#define MAX_USERVERS 32
 
 aConnect   *connects  = ((aConnect *) NULL);    /* connects, C/N pairs  */
 aAllow     *allows    = ((aAllow *) NULL);  /* allows  - I lines    */
 Conf_Me    *MeLine    = ((Conf_Me *) NULL); /* meline - only one    */
 aOper      *opers     = ((aOper *) NULL);   /* opers - Olines   */
 aPort      *ports     = ((aPort *) NULL);   /* ports - P/M lines    */
-aUserv     *uservers  = ((aUserv *) NULL);  /* Uservs - Ulined  */
 aClass     *classes = NULL;
+char*      uservers[MAX_USERVERS];
 
 typedef struct _asimban SimBan;
 typedef struct _ahostban HostBan;
@@ -275,14 +276,6 @@ Conf_Me *make_me()
     return i;
 }
 
-aUserv *make_userv()
-{
-    aUserv *i;
-    i = (struct Conf_Userv *) MyMalloc(sizeof(aUserv));
-    memset((char *) i, '\0', sizeof(aUserv));
-    return i;
-}
-
 /* find the appropriate conf and return it */
 
 aConnect *
@@ -319,14 +312,15 @@ find_aConnect_match(char *name, char *username, char *host)
     return aconn;
 }
 
-aUserv *
+char *
 find_aUserver(char *name)
 {
-    aUserv *tmp;
-    for(tmp = uservers; tmp; tmp = tmp->next)
-        if(!mycmp(name, tmp->name))
+    int i;
+    
+    for (i = 0; uservers[i]; ++i)
+        if (mycmp(name, uservers[i]) == 0)
             break;
-    return tmp;
+    return uservers[i];
 }
 
 aOper *
@@ -335,6 +329,7 @@ find_oper(char *name, char *username, char *sockhost, char *hostip)
     aOper *aoper;
     char userhost[USERLEN + HOSTLEN + 3];
     char userip[USERLEN + HOSTLEN + 3];
+    int i;
 
     /* sockhost OR hostip must match our host field */
 
@@ -343,9 +338,15 @@ find_oper(char *name, char *username, char *sockhost, char *hostip)
     (void) sprintf(userip, "%s@%s", username, sockhost);
 
     for(aoper = opers; aoper; aoper = aoper->next)
-        if(!(mycmp(name, aoper->nick) && (match(userhost, aoper->hostmask) ||
-           match(userip, aoper->hostmask))))
+    {
+        for (i = 0; aoper->hosts[i]; ++i)
+        {
+            if(!(mycmp(name, aoper->nick) && (match(userhost, aoper->hosts[i]) ||
+                 match(userip, aoper->hosts[i]))))
                 break;
+        }
+        if (aoper->hosts[i]) break;
+    }
     return aoper;
 }
 
@@ -406,25 +407,44 @@ void
 confadd_oper(char *name, char *host, char *passwd, char *flags, char *class)
 {
     aOper *x;
-    int *i, flag, new;
+    int *i, flag, new, hostidx;
     char *m = "*";
+    
+    if (!strchr(host, '@') && *host != '/')
+    {
+        char       *newhost;
+        int         len = 3;
+        len += strlen(host);
+        newhost = (char *) MyMalloc(len);
+        (void) sprintf(newhost, "*@%s", host);
+        host = newhost;
+    }
+
 
     if((x = find_oper_byname(name)))
     {
-        MyFree(x->hostmask);
-        MyFree(x->passwd);
-        x->flags = 0;
         new = 0;
+        for (hostidx = 0; x->hosts[hostidx]; ++hostidx)
+        {
+            if (mycmp(x->hosts[hostidx], host) == 0)
+                break;
+        }
+        if (x->hosts[hostidx] == NULL)
+        {
+            DupString(x->hosts[hostidx], host);
+            x->hosts[hostidx+1] = NULL;
+        }
     }
     else
     {
         x = make_oper();
         DupString(x->nick, name);
+        DupString(x->passwd, passwd);
+        DupString(x->hosts[0], host);
+        x->hosts[1] = NULL;
         new = 1;
     }
     x->legal = 1;
-    DupString(x->hostmask, host);
-    DupString(x->passwd, passwd);
     for (m=(*flags) ? flags : m; *m; m++)
     {
         for (i=oper_access; (flag = *i); i+=2)
@@ -438,16 +458,6 @@ confadd_oper(char *name, char *host, char *passwd, char *flags, char *class)
         x->class = find_class(class);
     else
         x->class = find_class("default");
-    if (!strchr(x->hostmask, '@') && *x->hostmask != '/')
-    {
-        char       *newhost;
-        int         len = 3;
-        len += strlen(x->hostmask);
-        newhost = (char *) MyMalloc(len);
-        (void) sprintf(newhost, "*@%s", x->hostmask);
-        MyFree(x->hostmask);
-        x->hostmask = newhost;
-    }
     if(new)
     {
         x->next = opers;
@@ -634,18 +644,18 @@ confadd_me(char *servername, char *info, char *dpass, char *rpass,
     }
     if(aline1)
     {
-        MyFree(MeLine->aline1);
-        DupString(MeLine->aline1, aline1);
+        MyFree(MeLine->admin[0]);
+        DupString(MeLine->admin[0], aline1);
     }
     if(aline2)
     {
-        MyFree(MeLine->aline2);
-        DupString(MeLine->aline2, aline2);
+        MyFree(MeLine->admin[1]);
+        DupString(MeLine->admin[1], aline2);
     }
     if(aline3)
     {
-        MyFree(MeLine->aline3);
-        DupString(MeLine->aline3, aline3);
+        MyFree(MeLine->admin[2]);
+        DupString(MeLine->admin[2], aline3);
     }
     if(dpass)
     {
@@ -709,6 +719,23 @@ confadd_hostban(char *username, char *mask, char *reason)
     hbans = x;
     return;
 }
+
+void
+confadd_uline(char *host)
+{
+    int i;
+    
+    if (find_aUserver(host) != NULL)
+        return;
+    
+    for (i = 0; uservers[i]; ++i);
+    
+    DupString(uservers[i], host);
+    uservers[i+1] = NULL;
+}
+ 
+    
+
 /*
  * openconf
  *
@@ -1052,13 +1079,7 @@ initconf(int opt, int fd, aClient *rehasher)
         }
         if (t_status & CONF_ULINE)
         {
-            aUserv *x;
-            if((x = find_aUserver(t_host)))
-                continue;
-            x = make_userv();
-            DupString(x->name, t_host);
-            x->next = uservers;
-            uservers = x;
+            confadd_uline(t_host);
             continue;
         }
         if(t_status & CONF_DRPASS)
@@ -1084,16 +1105,17 @@ printconf()
     aOper  *aoper;
     aConnect *aconn;
     aPort   *aport;
-    aUserv  *userv;
     SimBan  *sban;
     HostBan *hban;
 
     printf("/* Generated by Bahamut's convert_conf */ \n");
     printf("\nglobal %s {\n", MeLine->servername);
     printf("    info \"%s\";\n", MeLine->info);
-    printf("    admin1 \"%s\";\n", MeLine->aline1);
-    printf("    admin2 \"%s\";\n", MeLine->aline2);
-    printf("    admin3 \"%s\";\n", MeLine->aline3);
+    printf("    admin {\n");
+    printf("        \"%s\";\n", MeLine->admin[0]);
+    printf("        \"%s\";\n", MeLine->admin[1]);
+    printf("        \"%s\";\n", MeLine->admin[2]);
+    printf("    };");
     printf("    dpass \"%s\";\n", MeLine->diepass);
     printf("    rpass \"%s\";\n", MeLine->restartpass);
     printf("}\n\n");
@@ -1122,22 +1144,21 @@ printconf()
     printf("/* Oper definitions */\n\n");
     for(aoper = opers; aoper; aoper = aoper->next)
     {
+        int i;
+        char oper_flags[32] = { 0 }, *ptr = oper_flags;
         printf("oper %s {\n", aoper->nick);
-        printf("    host \"%s\";\n", aoper->hostmask);
+        for (i = 0; aoper->hosts[i]; ++i)
+            printf("    host \"%s\";\n", aoper->hosts[i]);
         printf("    passwd \"%s\";\n", aoper->passwd);
-        if(aoper->flags & (OFLAG_GLOBAL|OFLAG_ADMIN))
-            printf("    flags ADMIN;\n");
-        else if(aoper->flags & (OFLAG_GLOBAL|OFLAG_SADMIN))
-            printf("    flags SADMIN;\n");
-        else if(aoper->flags & OFLAG_GLOBAL)
-            printf("    flags OPER;\n");
+        if(aoper->flags & OFLAG_ADMIN)
+            *ptr++ = 'A';
+        if(aoper->flags & OFLAG_SADMIN)
+            *ptr++ = 'a';
+        if(aoper->flags & OFLAG_GLOBAL)
+            *ptr++ = 'O';
         else if(aoper->flags & OFLAG_LOCAL)
-            printf("    flags LOCOP;\n");
-        else
-        {
-            printf("\n\n\n\n ERROR READING OPER FLAGS! \n");
-            exit(-1);
-        }
+            *ptr++ = 'o';
+        if (*ptr) printf("    flags %s;\n", oper_flags);
         printf("    class \"%s\";\n", aoper->class->name);
         printf("}\n\n");
     }
@@ -1165,11 +1186,18 @@ printconf()
         printf("    class \"%s\";\n", aconn->class->name);
         printf("}\n\n");
     }
-    printf("/* Superservers */\n\n");
-    printf("superservers (\n\n");
-    for(userv = uservers; userv; userv = userv->next)
-        printf("    server %s;\n", userv->name);
-    printf("}\n\n");
+    if (uservers[0])
+    {
+        int i;
+        printf("/* Superservers */\n\n");
+        printf("superservers (\n\n");
+        for (i = 0; uservers[i]; ++i)
+        {
+            if (i != 0) printf(",\n");
+            printf("%s", uservers[i]);
+        }
+        printf("\n\n)\n}\n");
+    }
     printf("/* port configurations */\n\n");
     for(aport = ports; aport; aport = aport->next)
     {

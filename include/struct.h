@@ -63,6 +63,8 @@ extern char REPORT_DO_DNS[256], REPORT_FIN_DNS[256], REPORT_FIN_DNSC[256],
 
 #include "hash.h"
 
+#include "sbuf.h"
+
 typedef struct Client aClient;
 typedef struct Channel aChannel;
 typedef struct User anUser;
@@ -91,7 +93,7 @@ typedef long ts_val;
 
 typedef struct MotdItem aMotd;
 
-#include "dbuf.h"		/* THIS REALLY SHOULDN'T BE HERE!!! --msa */
+
 
 #define	HOSTLEN		63	/* Length of hostname.  Updated to */
 
@@ -864,8 +866,8 @@ struct Client
     char        buffer[BUFSIZE];        /* Incoming message buffer */
     short       lastsq;	         /* # of 2k blocks when sendqueued called 
 				  * last */
-    struct DBuf        sendQ;	 /* Outgoing message queue--if socket full */
-    struct DBuf        recvQ;	 /* Hold for data incoming yet to be parsed */
+    SBuf        sendQ;	     /* Outgoing message queue--if socket full */
+    SBuf        recvQ;	     /* Hold for data incoming yet to be parsed */
     long        sendM;		 /* Statistics: protocol messages send */
     long        sendK;		 /* Statistics: total k-bytes send */
     long        receiveM;	 /* Statistics: protocol messages received */
@@ -1343,7 +1345,7 @@ typedef struct SearchOptions
  * and we haven't used 2/3rds of their sendQ
  */
 #define IsSendable(x)      (!((x)->flags & FLAGS_BLOCKED) && \
-                            DBufLength(&(x)->sendQ) < (int) \
+                            SBufLength(&(x)->sendQ) < (int) \
                             ((float) (x)->class->maxsendq / 1.5))
 #define DoList(x)          (((x)->user) && ((x)->user->lopt))
 

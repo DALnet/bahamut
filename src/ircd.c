@@ -25,6 +25,7 @@
 #include "sys.h"
 #include "numeric.h"
 #include "msg.h"
+#include "sbuf.h"
 #include <sys/file.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -96,7 +97,6 @@ static void 	io_loop();
 /* externally needed functions */
 
 extern void 	init_fdlist(fdlist *);	    /* defined in fdlist.c */
-extern void	dbuf_init();	            /* defined in dbuf.c */
 extern void 	read_motd(char *);	    /* defined in s_serv.c */
 #ifdef SHORT_MOTD
 extern void 	read_shortmotd(char *);	    /* defined in s_serv.c */
@@ -611,9 +611,9 @@ int main(int argc, char *argv[])
      * it is intended to keep the ircd from being swapped out. BSD
      * swapping criteria do not match the requirements of ircd
      */
-	
-#ifdef INITIAL_DBUFS
-    dbuf_init();	/* set up some dbuf stuff to control paging */
+
+#if defined(INITIAL_SBUFS_LARGE) && defined(INITIAL_SBUFS_SMALL)	
+    sbuf_init();	
 #endif
     
     sbrk0 = (char *) sbrk((size_t) 0);
@@ -824,8 +824,6 @@ int main(int argc, char *argv[])
     R_fin_id = strlen(REPORT_FIN_ID);
     R_fail_id = strlen(REPORT_FAIL_ID);
 	
-	write_pidfile();
-	
     Debug((DEBUG_NOTICE, "Server ready..."));
 #ifdef USE_SYSLOG
     syslog(LOG_NOTICE, "Server Ready");
@@ -842,6 +840,10 @@ int main(int argc, char *argv[])
 
     init_sys();
     forked = 1;
+
+    /* the pid file must be written *AFTER* the fork */
+	write_pidfile();
+	
 
     /* moved this to here such that we allow more verbose error
      * checking on startup.  -epi
@@ -881,13 +883,13 @@ void do_recvqs()
       lpn = lp->next;
       cptr = lp->value.cptr;
 
-      if(DBufLength(&cptr->recvQ) && !NoNewLine(cptr))
+      if(SBufLength(&cptr->recvQ) && !NoNewLine(cptr))
       {
          if(do_client_queue(cptr) == FLUSH_BUFFER)
             continue;
       }
 
-      if(!(DBufLength(&cptr->recvQ) && !NoNewLine(cptr)))
+      if(!(SBufLength(&cptr->recvQ) && !NoNewLine(cptr)))
       {
          remove_from_list(&recvq_clients, cptr, lp);
          cptr->flags &= ~(FLAGS_HAVERECVQ);

@@ -207,8 +207,9 @@ send_usage(aClient *cptr, char *nick)
 #endif /* HAVE_GETRUSAGE */
     sendto_one(cptr, ":%s %d %s :Reads %d Writes %d",
                me.name, RPL_STATSDEBUG, nick, readcalls, writecalls);
-    sendto_one(cptr, ":%s %d %s :DBUF alloc %d used %d",
+/*    sendto_one(cptr, ":%s %d %s :DBUF alloc %d used %d",
                me.name, RPL_STATSDEBUG, nick, DBufCount, DBufUsedCount);
+               */
     sendto_one(cptr,
                ":%s %d %s :Writes:  <0 %d 0 %d <16 %d <32 %d <64 %d",
                me.name, RPL_STATSDEBUG, nick,
@@ -281,7 +282,7 @@ count_memory(aClient *cptr, char *nick)
     u_long      awm = 0;        /* memory used by aways */
     u_long      wwm = 0;        /* whowas array memory used */
     u_long      com = 0;        /* memory used by conf lines */
-    size_t      db = 0, db2 = 0;        /* memory used by dbufs */
+/*    size_t      db = 0, db2 = 0; */       /* memory used by dbufs */
     u_long      rm = 0;         /* res memory used */
     u_long      mem_servers_cached;     /* memory used by scache */
 
@@ -512,11 +513,11 @@ count_memory(aClient *cptr, char *nick)
                WW_MAX, sizeof(aWhowas *) * WW_MAX,
                WATCHHASHSIZE, sizeof(aWatch *) * WATCHHASHSIZE);
 
-    count_dbuf_memory(&db, &db2);
+/*    count_dbuf_memory(&db, &db2);
     sendto_one(cptr, ":%s %d %s :Dbuf blocks %d(%d) MAX %d(%d)",
                me.name, RPL_STATSDEBUG, nick, DBufUsedCount, db2,
                DBufCount, db);
-
+*/
     rm = cres_mem(cptr);
 
     count_scache(&number_servers_cached, &mem_servers_cached);
@@ -529,13 +530,13 @@ count_memory(aClient *cptr, char *nick)
     tothash = (sizeof(aHashEntry)*U_MAX)+(sizeof(aHashEntry)*CH_MAX) +
         (sizeof(aWatch *)*WATCHHASHSIZE) + (sizeof(aWhowas *)*WW_MAX);
 
-    tot = totww + totch + totcl + totmisc + db + rm + tothash + linkallocsz +
+    tot = totww + totch + totcl + totmisc + /*db +*/ rm + tothash + linkallocsz +
           dlinkallocsz + fludallocsz + totuban;
 
     sendto_one(cptr, ":%s %d %s :whowas %d chan %d client/user %d misc %d "
-               "dbuf %d hash %d res %d link %d flud %d simuserban %d",
+               /*dbuf %d*/ "hash %d res %d link %d flud %d simuserban %d",
                me.name, RPL_STATSDEBUG, nick, totww, totch, totcl, totmisc,
-               db, tothash, rm, linkallocsz, fludallocsz, totuban);
+               /*db,*/ tothash, rm, linkallocsz, fludallocsz, totuban);
 
     sendto_one(cptr, ":%s %d %s :TOTAL: %d sbrk(0)-etext: %u",
                me.name, RPL_STATSDEBUG, nick, tot,
@@ -646,7 +647,7 @@ serv_info(aClient *cptr, char *name)
         receiveK += acptr->receiveK;
         sendto_one(cptr, Lformat, me.name, RPL_STATSLINKINFO,
                     name, get_client_name(acptr, HIDEME),
-                    (int) DBufLength(&acptr->sendQ),
+                    (int) SBufLength(&acptr->sendQ),
                     (int) acptr->sendM, (int) acptr->sendK,
                     (int) acptr->receiveM, (int) acptr->receiveK,
                     timeofday - acptr->firsttime, timeofday - acptr->since,
@@ -916,7 +917,7 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
             sendto_one(sptr, Lformat, me.name, RPL_STATSLINKINFO, parv[0],
                         (IsAnOper(sptr) ? get_client_name(acptr, TRUE) :
                         get_client_name(acptr, HIDEME)),
-                        (int) DBufLength(&acptr->sendQ),
+                        (int) SBufLength(&acptr->sendQ),
                         (int) acptr->sendM, (int) acptr->sendK,
                         (int) acptr->receiveM, (int) acptr->receiveK,
                         timeofday - acptr->firsttime, sincetime,
@@ -939,7 +940,7 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
                              timeofday - acptr->since;
                 sendto_one(sptr, Lformat, me.name, RPL_STATSLINKINFO, parv[0],
                         get_client_name(acptr, HIDEME),
-                        (int) DBufLength(&acptr->sendQ),
+                        (int) SBufLength(&acptr->sendQ),
                         (int) acptr->sendM, (int) acptr->sendK,
                         (int) acptr->receiveM, (int) acptr->receiveK,
                         timeofday - acptr->firsttime, sincetime,
