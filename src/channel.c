@@ -1886,95 +1886,111 @@ void send_topic_burst(aClient *cptr)
 }
 
 /*
- * * m_topic *        parv[0] = sender prefix *       parv[1] = topic text
+ * m_topic 
+ * parv[0] = sender prefix 
+ * parv[1] = topic text
  */
-int
-m_topic(aClient *cptr,
-		  aClient *sptr,
-		  int parc,
-		  char *parv[])
+int m_topic(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
    aChannel   *chptr = NullChn;
-   char       *topic = NULL, *name, *tnick=sptr->name;
-	time_t ts=timeofday;
-	
-   if (parc < 2) {
-      sendto_one(sptr, err_str(ERR_NEEDMOREPARAMS),
-					  me.name, parv[0], "TOPIC");
+   char       *topic = NULL, *name, *tnick = sptr->name;
+   time_t     ts = timeofday;
+   int        member;	
+
+   if (parc < 2) 
+   {
+      sendto_one(sptr, err_str(ERR_NEEDMOREPARAMS), me.name, parv[0], "TOPIC");
       return 0;
    }
 	
    name = parv[1];
-	chptr = find_channel(name, NullChn);
-	if(!chptr) {
-		sendto_one(sptr, err_str(ERR_NOSUCHCHANNEL), me.name, parv[0], name);
-		return 0;
-	}
-	
-	if (parc > 1 && IsChannelName(name)) {
-		if(!IsMember(sptr, chptr) && !IsServer(sptr) && !IsULine(sptr)) {
-			sendto_one(sptr, err_str(ERR_NOTONCHANNEL),
-						  me.name, parv[0], name);
-			return 0;
-		}
-		 if (parc>3 && (!MyConnect(sptr) || IsULine(sptr) || IsServer(sptr))) {
-				topic=(parc>4 ? parv[4] : "");
-				tnick=parv[2];
-				ts=atoi(parv[3]);
-		 } else {
-				topic=parv[2];
-		 }
-	}
-	
-	if (!topic) {		/*
-							 * only asking  for topic  
-							 */
-		if (chptr->topic[0] == '\0')
-		  sendto_one(sptr, rpl_str(RPL_NOTOPIC),
-						 me.name, parv[0], chptr->chname);
-		else {
-			sendto_one(sptr, rpl_str(RPL_TOPIC),
-						  me.name, parv[0],
-						  chptr->chname, chptr->topic);
-			sendto_one(sptr, rpl_str(RPL_TOPICWHOTIME),
-						  me.name, parv[0], chptr->chname,
-						  chptr->topic_nick,
-						  chptr->topic_time);
-		}
-	}
-	else if (((!(chptr->mode.mode & MODE_TOPICLIMIT) || is_chan_op(sptr, chptr))
-				|| IsULine(sptr) || IsServer(sptr))) {
-		/*
-		 * setting a topic 
-		 */
+   chptr = find_channel(name, NullChn);
+   if(!chptr) 
+   {
+      sendto_one(sptr, err_str(ERR_NOSUCHCHANNEL), me.name, parv[0], name);
+      return 0;
+   }
 
-		/* local topic is newer than remote topic and we have a topic
-		   and we're in a synch (server setting topic) */
-		if(IsServer(sptr) && !IsULine(sptr) && chptr->topic_time >= ts && chptr->topic[0])
-		   return 0;
+   member = IsMember(sptr, chptr);
 
-		strncpyzt(chptr->topic, topic, TOPICLEN + 1);
-		strcpy(chptr->topic_nick, tnick);
-		chptr->topic_time = ts;
+   if (parc == 2) /* user is requesting a topic */ 
+   {	
+      int showchan = 0;
+      char *namep = chptr->name;
+      char tempchname[CHANNELLEN + 2];
+
+      if(!member && !(ShowChannel(sptr, chptr)))
+      {
+         if(IsAdmin(sptr))
+         {
+            tempchname[0] = '%';
+            strcpy(&tempchname[1], chptr->name);
+            namep = tempchname;
+         }
+         else
+         {
+            sendto_one(sptr, err_str(ERR_NOTONCHANNEL), me.name, parv[0], name);
+            return 0;
+         }
+      }
+
+      if (chptr->topic[0] == '\0')
+         sendto_one(sptr, rpl_str(RPL_NOTOPIC), me.name, parv[0], namep);
+      else 
+      {
+         sendto_one(sptr, rpl_str(RPL_TOPIC), me.name, parv[0], namep, chptr->topic);
+         sendto_one(sptr, rpl_str(RPL_TOPICWHOTIME), me.name, parv[0], namep,
+                    chptr->topic_nick, chptr->topic_time);
+      }
+      return 0;
+   }
+	
+   if(!member && !IsServer(sptr) && !IsULine(sptr)) 
+   {
+      sendto_one(sptr, err_str(ERR_NOTONCHANNEL), me.name, parv[0], name);
+      return 0;
+   }
+
+   if (parc > 3 && (!MyConnect(sptr) || IsULine(sptr) || IsServer(sptr)))
+   {
+      topic = (parc > 4 ? parv[4] : "");
+      tnick = parv[2];
+      ts = atoi(parv[3]);
+   } 
+   else 
+   {
+      topic = parv[2];
+   }
+	
+   if (((!(chptr->mode.mode & MODE_TOPICLIMIT) || is_chan_op(sptr, chptr))
+            || IsULine(sptr) || IsServer(sptr))) 
+   {
+      /* setting a topic */
+
+      /* local topic is newer than remote topic and we have a topic
+         and we're in a synch (server setting topic) */
+
+      if(IsServer(sptr) && !IsULine(sptr) && chptr->topic_time >= ts && chptr->topic[0])
+         return 0;
+
+      strncpyzt(chptr->topic, topic, TOPICLEN + 1);
+      strcpy(chptr->topic_nick, tnick);
+      chptr->topic_time = ts;
 		
-		/* in this case I think it's better that we send all the info that df 
-		 * sends with the topic, so I changed everything to work like that.
-		 * Yes, this means we can't link to full hybrid servers, oops, :) 
-		 * -wd */
-		sendto_match_servs(chptr, cptr, ":%s TOPIC %s %s %lu :%s",
-								 parv[0], chptr->chname, chptr->topic_nick,
-								 chptr->topic_time, chptr->topic);
-		sendto_channel_butserv(chptr, sptr, ":%s TOPIC %s :%s",
-									  parv[0],
-									  chptr->chname, chptr->topic);
-	}
-	else
-	  sendto_one(sptr, err_str(ERR_CHANOPRIVSNEEDED),
-					 me.name, parv[0], chptr->chname);
-	
+      /* in this case I think it's better that we send all the info that df 
+       * sends with the topic, so I changed everything to work like that. -wd */
+
+      sendto_match_servs(chptr, cptr, ":%s TOPIC %s %s %lu :%s", parv[0], chptr->chname, 
+                         chptr->topic_nick, chptr->topic_time, chptr->topic);
+      sendto_channel_butserv(chptr, sptr, ":%s TOPIC %s :%s", parv[0],
+                             chptr->chname, chptr->topic);
+   }
+   else
+      sendto_one(sptr, err_str(ERR_CHANOPRIVSNEEDED), me.name, parv[0], chptr->chname);
 	
    return 0;
 }
+
 /*
  * * m_invite *       parv[0] - sender prefix *       parv[1] - user to
  * invite *     parv[2] - channel number
@@ -2149,6 +2165,7 @@ m_list(aClient *cptr,
     LOpts	*lopt = NULL;
     Link	*lp, *next;
     int		usermax, usermin, error = 0, doall = 0;
+    int 	x;
     time_t	chantimemin, chantimemax;
     ts_val	topictimemin, topictimemax;
     Link 	*yeslist = NULL, *nolist = NULL;
@@ -2311,10 +2328,21 @@ m_list(aClient *cptr,
 	     else /* Just a normal channel */
 	     {
 		chptr = find_channel(name, NullChn);
-		if (chptr && (ShowChannel(sptr, chptr) || IsAdmin(sptr)))
+		if (chptr && ((x = ShowChannel(sptr, chptr)) || IsAdmin(sptr)))
+                {
+		   char *nameptr = name;
+		   char channame[CHANNELLEN + 2];
+
+		   if(!x && IsAdmin(sptr))
+		   {
+		      chaname[0] = '%';
+		      strcpy(&chaname[1], chptr->name);
+		      nameptr = chaname;
+		   }
+
 		   sendto_one(sptr, rpl_str(RPL_LIST), me.name, parv[0],
-			ShowChannel(sptr, chptr) ? name : "*",
-			chptr->users, chptr->topic);
+		      nameptr, chptr->users, chptr->topic);
+		}
 	     }
 	 } /* switch */
    } /* while */
@@ -2396,7 +2424,7 @@ int m_names(aClient *cptr, aClient *sptr, int parc, char *parv[])
    }
 
    /* cache whether this user is a member of this channel or not */
-   member = IsMember(sptr, chptr) ? 1 : 0;
+   member = IsMember(sptr, chptr);
 
    if(PubChannel(chptr))
       buf[0] = '=';
