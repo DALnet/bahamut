@@ -798,6 +798,7 @@ int check_server(aClient * cptr,
 static int completed_connection(aClient * cptr)
 {
    aConfItem *aconf;
+   aConfItem *nconf;
 
    SetHandshake(cptr);
 
@@ -806,18 +807,22 @@ static int completed_connection(aClient * cptr)
       sendto_realops("Lost C-Line for %s", get_client_name(cptr, HIDEME));
       return -1;
    }
+   nconf = find_conf(cptr->confs, cptr->name, CONF_NOCONNECT_SERVER);
+   if (!aconf) {
+      sendto_realops("Lost N-Line for %s", get_client_name(cptr, HIDEME));
+      return -1;
+   }
    if (!BadPtr(aconf->passwd))
       sendto_one(cptr, "PASS %s :TS", aconf->passwd);
 
    /* pass on our capabilities to the server we /connect'd */
 
-   sendto_one(cptr, "CAPAB TS3 NOQUIT SSJOIN BURST UNCONNECT DKEY ZIP");
+   if(!(nconf->port & CAPAB_DODKEY))
+      sendto_one(cptr, "CAPAB TS3 NOQUIT SSJOIN BURST UNCONNECT ZIP");
+   else
+      sendto_one(cptr, "CAPAB TS3 NOQUIT SSJOIN BURST UNCONNECT DKEY ZIP");
 
-   aconf = find_conf(cptr->confs, cptr->name, CONF_NOCONNECT_SERVER);
-   if (!aconf) {
-      sendto_realops("Lost N-Line for %s", get_client_name(cptr, HIDEME));
-      return -1;
-   }
+   aconf = nconf;
    sendto_one(cptr, "SERVER %s 1 :%s",
 	      my_name_for_link(me.name, aconf), me.info);
 #ifdef DO_IDENTD
