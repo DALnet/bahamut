@@ -992,7 +992,7 @@ echo "#endif" >> $OPTIONS_H
 echo "" >> $OPTIONS_H
 echo "#endif /* This is the endif for the ifdef at the top. */" >> $OPTIONS_H
 ### now insert the FDLIMIT in the makefile
-cat Makefile | sed s/'FDLIMIT=.*'/FDLIMIT=${FDLIMIT}/ | tee Makefile >/dev/null
+cat Makefile | sed s/'FDLIMIT=.*'/FDLIMIT=-DFD_SETSIZE=${FDLIMIT}/ | tee Makefile >/dev/null
 ### Solaris compat?
 if [ -n "$SOLARIS" ] ; then
 cat Makefile | sed s/'XFLAGS=.*'/XFLAGS=-DUSE_POLL/ | tee Makefile >/dev/null
