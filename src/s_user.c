@@ -1373,40 +1373,42 @@ static inline int m_message(aClient *cptr, aClient *sptr, int parc,
 	/* nickname addressed? */
 	if (!ischan && (acptr = find_person(nick, NULL))) 
 	{
-#ifdef FLUD
-	    if (!notice && MyFludConnect(acptr))
-#else
-		if (!notice && MyConnect(acptr))
-#endif
-		{
-
-		    switch(check_for_ctcp(parv[2], &dccmsg))
-		    {
-		    case CTCP_NONE:
-			break;
-
-		    case CTCP_DCCSEND:
-#ifdef FLUD
-			if (check_for_flud(sptr, acptr, NULL, 1))
-			    return 0;
-#endif
-
-			if(check_dccsend(sptr, acptr, dccmsg))
-			    continue;
-			break;
-                
-		    default:
-#ifdef FLUD
-			if (check_for_flud(sptr, acptr, NULL, 1))
-			    return 0;
-#endif
-			break;
-		    }
-		}
-	    if (IsNoNonReg(acptr) && !IsRegNick(sptr)) {
+	    if (IsNoNonReg(acptr) && !IsRegNick(sptr) && !IsULine(sptr) &&
+		!IsOper(sptr))
+	    {
 		sendto_one(sptr, rpl_str(ERR_NONONREG), me.name, parv[0],
 			   acptr->name);
 		return 0;
+	    }
+#ifdef FLUD
+	    if (!notice && MyFludConnect(acptr))
+#else
+	    if (!notice && MyConnect(acptr))
+#endif
+	    {
+
+		switch(check_for_ctcp(parv[2], &dccmsg))
+		{
+		case CTCP_NONE:
+		    break;
+		    
+		case CTCP_DCCSEND:
+#ifdef FLUD
+		    if (check_for_flud(sptr, acptr, NULL, 1))
+			return 0;
+#endif
+		    
+		    if(check_dccsend(sptr, acptr, dccmsg))
+			continue;
+		    break;
+		    
+		default:
+#ifdef FLUD
+		    if (check_for_flud(sptr, acptr, NULL, 1))
+			return 0;
+#endif
+		    break;
+		}
 	    }
 	    if (!is_silenced(sptr, acptr)) 
 	    {				 
