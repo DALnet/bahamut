@@ -29,6 +29,7 @@
 #include "sys.h"
 #include "numeric.h"
 #include "zlink.h"
+#include "hooks.h"
 #include <sys/stat.h>
 #include <fcntl.h>
 #if !defined(ULTRIX) && !defined(SGI) && !defined(sequent) && \
@@ -568,6 +569,8 @@ int exit_client(aClient *cptr, aClient *sptr, aClient *from, char *comment)
     
     if (MyConnect(sptr)) 
     {
+	call_hooks(CHOOK_SIGNOFF, sptr);
+
 	if (sptr->flags & FLAGS_IPHASH)
 	    remove_one_ip(sptr->ip.s_addr);
 	if (IsAnOper(sptr)) 

@@ -383,8 +383,8 @@ void drop_all_hooks(aModule *owner)
 
       if(hk->owner == owner)
       {
-         sendto_realops_lev(DEBUG_LEV, "Module cleanup: removing hooktype %d for opaque %d", 
-                            hk->hooktype, (int) owner);
+         sendto_realops_lev(DEBUG_LEV, "Module cleanup: removing hook [%s] for opaque %d", 
+                            get_texthooktype(hk->hooktype), (int) owner);
 
          hooklist = get_hooklist((enum c_hooktype) hk->hooktype);
 
