@@ -857,6 +857,7 @@ struct Channel {
 #define MODE_REGISTERED	0x1000
 #define MODE_REGONLY	0x2000
 #define MODE_NOCOLOR	0x4000
+#define MODE_OPERONLY   0x8000
 
 /* the hell is this? - lucas */
 /* #define	MODE_FLAGS	    0x3fff*/

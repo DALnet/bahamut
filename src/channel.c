@@ -518,6 +518,8 @@ channel_modes(aClient *cptr, char *mbuf, char *pbuf, aChannel *chptr) {
       *mbuf++ = 'R';
    if (chptr->mode.mode & MODE_NOCOLOR)
       *mbuf++ = 'c';
+   if (chptr->mode.mode & MODE_OPERONLY)
+      *mbuf++ = 'O';
    if (chptr->mode.limit) {
       *mbuf++ = 'l';
       if (IsMember(cptr, chptr) || IsServer(cptr) || IsULine(cptr)) {
@@ -826,6 +828,13 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr, int level, in
             *mbuf++='-';
             break;
 
+         case 'O':
+	   if (level<1 || !IsOper(sptr))
+	   {
+	       errors |= SM_ERR_NOPRIVS;
+	       break;
+	   }
+	   
          case 'o':
          case 'v':
             if(level<1) 
@@ -1164,6 +1173,8 @@ can_join(aClient *sptr, aChannel *chptr, char *key)
          return (ERR_INVITEONLYCHAN);
    if (chptr->mode.mode & MODE_REGONLY && !IsRegNick(sptr))
          return (ERR_NEEDREGGEDNICK);
+   if (chptr->mode.mode & MODE_OPERONLY && !IsOper(sptr))
+         return (ERR_NOPRIVILEGES);
    if (*chptr->mode.key && (BadPtr(key) || mycmp(chptr->mode.key, key)))
       return (ERR_BADCHANNELKEY);
    if (chptr->mode.limit && chptr->users >= chptr->mode.limit) 
