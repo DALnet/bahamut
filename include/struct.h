@@ -300,6 +300,14 @@ typedef struct MotdItem aMotd;
 #define SPAM_LEV 	7
 #define DCCSEND_LEV	8
 
+/* SEND_UMODES:
+ *  we send these to remote servers.
+ * ALL_UMODES
+ *  we send these to our clients.
+ *  if you don't put something in ALL_UMODES, 
+ *  that mode will be 'silent.'
+ */
+
 #define	SEND_UMODES (UMODE_i|UMODE_o|UMODE_r|UMODE_a|UMODE_A|\
                      UMODE_R)
 #define ALL_UMODES (SEND_UMODES|UMODE_w|UMODE_h|\

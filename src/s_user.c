@@ -2902,10 +2902,11 @@ int m_umode(aClient *cptr, aClient *sptr, int parc, char *parv[])
     {
 	m = buf;
 	*m++ = '+';
-	for (s = user_modes; (flag = *s) && (m - buf < BUFSIZE - 4);
-	     s += 2)
-	    if (sptr->umode & flag)
+	for (s = user_modes; (flag = *s) && (m - buf < BUFSIZE - 4); s += 2)
+	{
+	    if (sptr->umode & (flag & ALL_UMODES))
 		*m++ = (char) (*(s + 1));
+	}
 	*m = '\0';
 	sendto_one(sptr, rpl_str(RPL_UMODEIS),
 		   me.name, parv[0], buf);

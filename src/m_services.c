@@ -427,7 +427,7 @@ int channel_svsmode(aClient *cptr, aClient *sptr, int parc, char *parv[])
  */
 int m_svsmode(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
-    int            flag, *s, what;
+    int            flag, *s, what, oldumode;
     char          *m, *modes, *optarg;
     aClient       *acptr;
     ts_val         ts = 0;
@@ -457,7 +457,7 @@ int m_svsmode(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	return 0;
 
     what = MODE_ADD;
-
+    oldumode = acptr->umode;
     for (m = modes; *m; m++)
 	switch(*m)
 	{
@@ -497,6 +497,12 @@ int m_svsmode(aClient *cptr, aClient *sptr, int parc, char *parv[])
     else
 	sendto_serv_butone(cptr, ":%s SVSMODE %s %ld %s",
 			   parv[0], parv[1], acptr->tsinfo, modes);
+
+    if (MyClient(acptr))
+    {
+        char buf[BUFSIZE];
+        send_umode(acptr, acptr, oldumode, ALL_UMODES, buf);
+    }
 
     return 0;
 }
