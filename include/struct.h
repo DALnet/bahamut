@@ -164,7 +164,6 @@ typedef struct MotdItem aMotd;
 #define	IsServer(x)		((x)->status == STAT_SERVER)
 #define	IsClient(x)		((x)->status == STAT_CLIENT)
 #define	IsLog(x)		((x)->status == STAT_LOG)
-#define IsNegotiatingServer(x)	((x)->status == STAT_NEGOSERV)
 
 #define	SetMaster(x)		((x)->status = STAT_MASTER)
 #define	SetConnecting(x)	((x)->status = STAT_CONNECTING)
@@ -174,7 +173,6 @@ typedef struct MotdItem aMotd;
 #define	SetServer(x)		((x)->status = STAT_SERVER)
 #define	SetClient(x)		((x)->status = STAT_CLIENT)
 #define	SetLog(x)		((x)->status = STAT_LOG)
-#define SetNegotiatingServer(x)	((x)->status = STAT_NEGOSERV)
 
 #define	FLAGS_PINGSENT     0x000001	/* Unreplied ping sent */
 #define	FLAGS_DEADSOCKET   0x000002	/* Local socket is dead--Exiting soon */
@@ -203,6 +201,8 @@ typedef struct MotdItem aMotd;
 #define FLAGS_BAD_DNS	   0x800000     /* spoofer-guy */
 #define FLAGS_SERV_NEGO	   0x1000000	/* This is a server that has passed connection tests,
                                            but is a stat < 0 for handshake purposes */
+#define FLAGS_RC4IN        0x2000000    /* This link is rc4 encrypted. */
+#define FLAGS_RC4OUT       0x4000000    /* This link is rc4 encrypted. */
 
 /* Capabilities of the ircd or clients */
 
@@ -337,6 +337,10 @@ typedef struct MotdItem aMotd;
 #define SetNegoServer(x)	((x)->flags |= FLAGS_SERV_NEGO)
 #define IsNegoServer(x)		((x)->flags & FLAGS_SERV_NEGO)
 #define ClearNegoServer(x)	((x)->flags &= ~FLAGS_SERV_NEGO)
+#define IsRC4OUT(x)		((x)->flags & FLAGS_RC4OUT)
+#define SetRC4OUT(x)		((x)->flags |= FLAGS_RC4OUT)
+#define IsRC4IN(x)		((x)->flags & FLAGS_RC4IN)
+#define SetRC4IN(x)		((x)->flags |= FLAGS_RC4IN)
 
 #define ClearSAdmin(x)  ((x)->umode &= ~UMODE_a)
 #define ClearAdmin(x)   ((x)->umode &= ~UMODE_A)
@@ -614,11 +618,11 @@ struct Server {
    char        byuser[USERLEN + 1];
    char        byhost[HOSTLEN + 1];
    aConfItem  *nline;		/* N-line pointer for this server */
-   int         dkey_random; 	/* negotiating who goes first */
-   void       *sessioninfo_in;     /* pointer to opaque sessioninfo structure */
-   void       *sessioninfo_out;     /* pointer to opaque sessioninfo structure */
-   void       *in_state;        /* etc */
-   void       *out_state;       /* etc */
+   int         dkey_flags; 	/* dkey flags */
+   void       *sessioninfo_in;  /* pointer to opaque sessioninfo structure */
+   void       *sessioninfo_out; /* pointer to opaque sessioninfo structure */
+   void       *rc4_in;        /* etc */
+   void       *rc4_out;       /* etc */
 };
 
 struct Client {
@@ -967,6 +971,7 @@ extern char *generation, *creation;
 
 /* misc defines */
 
+#define RC4_NEXT_BUFFER -3
 #define	FLUSH_BUFFER	-2
 #define	UTMP		"/etc/utmp"
 #define	COMMA		","

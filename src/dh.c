@@ -72,7 +72,42 @@ static int verify_is_hex(char *string)
    return 1;
 }
 
-int make_entropy()
+int dh_hexstr_to_raw(char *string, unsigned char *hexout, int *hexlen)
+{
+   int l = strlen(string);
+   char tmp[3] = {'\0', '\0', '\0'};
+   int tmpidx = 0;
+   int hexidx = 0;
+
+   if(l & 0x01) /* check if it's odd length */
+   {  
+      l++;
+      tmp[tmpidx++] = '0'; /* pad with zero */
+   }
+   
+   while(*string)
+   {
+      tmp[tmpidx++] = *string++;
+      if(tmpidx == 2)
+      {
+         char *eptr;
+         unsigned char x;
+   
+         tmpidx = 0;
+   
+         x = strtol(tmp, &eptr, 16);
+         if(*eptr != '\0')
+         {
+            return 0;
+         }
+         hexout[hexidx++] = (unsigned char) x;
+      }
+   }
+   *hexlen = hexidx;
+   return 1;
+}
+
+static int make_entropy()
 {
    mpz_t randint;
    FILE *fp;

@@ -447,6 +447,10 @@ remove_client_from_list(aClient *cptr)
          dh_end_session(cptr->serv->sessioninfo_in);
       if(cptr->serv->sessioninfo_out)
          dh_end_session(cptr->serv->sessioninfo_out);
+      if(cptr->serv->rc4_in)
+         rc4_destroystate(cptr->serv->rc4_in);
+      if(cptr->serv->rc4_out)
+         rc4_destroystate(cptr->serv->rc4_out);
       MyFree((char *) cptr->serv);
    }
    /*

@@ -25,6 +25,8 @@
 #include "sys.h"
 #include "msg.h"
 #include "h.h"
+#include "dh.h"
+
 /*
  * * dopacket *       cptr - pointer to client structure for which the buffer
  * data *              applies. *       buffer - pointr to the buffer
@@ -42,6 +44,9 @@ dopacket(aClient *cptr, char *buffer, int length)
    char   *ch2;
    char *cptrbuf;
    aClient    *acpt = cptr->acpt;
+
+   if(IsRC4IN(cptr))
+      rc4_process_stream(cptr->serv->rc4_in, buffer, length);
 
    cptrbuf = cptr->buffer;
    me.receiveB += length;	/*
@@ -67,10 +72,13 @@ dopacket(aClient *cptr, char *buffer, int length)
       me.receiveK += (me.receiveB >> 10);
       me.receiveB &= 0x03ff;
    }
+
    ch1 = cptrbuf + cptr->count;
-   ch2 = buffer;
-   while (--length >= 0) {
-   char g;
+   ch2 = buffer;   
+
+   while (--length >= 0) 
+   {
+      char g;
 
       g = (*ch1 = *ch2++);
       /*
@@ -97,12 +105,19 @@ dopacket(aClient *cptr, char *buffer, int length)
 				 * * FLUSH_BUFFER without removing the *
 				 * * structure pointed by cptr... --msa 
 				 */
-	 if (parse(cptr, cptr->buffer, ch1) == FLUSH_BUFFER)
-	    /*
-	     * * FLUSH_BUFFER means actually that cptr * structure
-	     * *does* not exist anymore!!! --msa
-	     */
-	    return FLUSH_BUFFER;
+	 switch (parse(cptr, cptr->buffer, ch1))
+         {
+            case FLUSH_BUFFER:
+               return FLUSH_BUFFER;
+
+            case RC4_NEXT_BUFFER:
+               rc4_process_stream(cptr->serv->rc4_in, ch2, length);
+               break;
+
+            default:
+               break;
+         }
+
 	 /*
 	  * * Socket is dead so exit (which always returns with *
 	  * FLUSH_BUFFER here).  - avalon

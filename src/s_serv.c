@@ -5426,6 +5426,11 @@ int m_unszline(aClient *cptr, aClient *sptr, int parc, char *parv[])
     return 0;
 }
 
+#define DKEY_GOTIN  0x01
+#define DKEY_GOTOUT 0x02
+
+#define DKEY_DONE(x) (((x) & (DKEY_GOTIN|DKEY_GOTOUT)) == (DKEY_GOTIN|DKEY_GOTOUT))
+
 int m_dkey(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
    if(!(IsNegoServer(sptr) && parc > 1))
@@ -5464,28 +5469,62 @@ int m_dkey(aClient *cptr, aClient *sptr, int parc, char *parv[])
    {
       char keybuf[1024];
 
-      if(parc != 4)
+      if(parc != 4 || !sptr->serv->sessioninfo_in || !sptr->serv->sessioninfo_out)
          return exit_client(sptr, sptr, sptr, "DKEY PUB failure");
 
       if(mycmp(parv[2], "O") == 0) /* their out is my in! */
       {
          if(!dh_generate_shared(sptr->serv->sessioninfo_in, parv[3]))
             return exit_client(sptr, sptr, sptr, "DKEY PUB O invalid");
-         dh_get_s_shared(keybuf, 1024, sptr->serv->sessioninfo_in);
-         sendto_realops("Shared I: %s", keybuf);
-         return 0;
+         sptr->serv->dkey_flags |= DKEY_GOTOUT;
       }
-
-      if(mycmp(parv[2], "I") == 0) /* their out is my in! */
+      else if(mycmp(parv[2], "I") == 0) /* their out is my in! */
       {
          if(!dh_generate_shared(sptr->serv->sessioninfo_out, parv[3]))
             return exit_client(sptr, sptr, sptr, "DKEY PUB I invalid");
-         dh_get_s_shared(keybuf, 1024, sptr->serv->sessioninfo_out);
-         sendto_realops("Shared O: %s", keybuf);
+         sptr->serv->dkey_flags |= DKEY_GOTIN;
+      }
+      else
+         return exit_client(sptr, sptr, sptr, "DKEY PUB bad option");
+
+      if(DKEY_DONE(sptr->serv->dkey_flags))
+      {
+         int hexlen;
+         unsigned char hexbuf[1024];
+
+         sendto_one(sptr, "DKEY DONE");
+         SetRC4OUT(sptr);
+
+         if(dh_get_s_shared(keybuf, 1024, sptr->serv->sessioninfo_in) == NULL ||
+              dh_hexstr_to_raw(keybuf, hexbuf, &hexlen) == 0)
+            return exit_client(sptr, sptr, sptr, "Could not setup encrypted session");
+         sptr->serv->rc4_in = rc4_initstate(hexbuf, hexlen);
+
+         if(dh_get_s_shared(keybuf, 1024, sptr->serv->sessioninfo_out) == NULL ||
+              dh_hexstr_to_raw(keybuf, hexbuf, &hexlen) == 0)
+            return exit_client(sptr, sptr, sptr, "Could not setup encrypted session");
+         sptr->serv->rc4_out = rc4_initstate(hexbuf, hexlen);
+
+         dh_end_session(sptr->serv->sessioninfo_in);
+         dh_end_session(sptr->serv->sessioninfo_out);
+
+         sptr->serv->sessioninfo_in = sptr->serv->sessioninfo_out = NULL;
          return 0;
       }
 
-      return exit_client(sptr, sptr, sptr, "DKEY PUB bad option");
+      return 0;
+   }
+
+   if(mycmp(parv[1], "DONE") == 0)
+   {
+      if(!((sptr->serv->sessioninfo_in == NULL && sptr->serv->sessioninfo_out == NULL) &&
+           (sptr->serv->rc4_in != NULL && sptr->serv->rc4_out != NULL)))
+         return exit_client(sptr, sptr, sptr, "DKEY DONE when not done!");
+      ClearNegoServer(sptr);
+      SetRC4IN(sptr);
+      sendto_realops("Diffie-Hellman exchange with %s complete, connection encrypted.", sptr->name);
+      return RC4_NEXT_BUFFER;
+//      return do_server_estab(sptr);
    }
 
    return 0;

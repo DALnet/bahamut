@@ -7,7 +7,7 @@ SRC_1 = bsd.c channel.c class.c dbuf.c dich_conf.c
 SRC_2 = fdlist.c hash.c inet_addr.c ircd.c ircsprintf.c
 SRC_3 = list.c match.c packet.c parse.c res.c
 SRC_4 = s_auth.c s_bsd.c s_conf.c s_debug.c s_err.c s_misc.c s_numeric.c
-SRC_5 = s_serv.c s_user.c send.c support.c whowas.c scache.c blalloc.c dh.c
+SRC_5 = s_serv.c s_user.c send.c support.c whowas.c scache.c blalloc.c dh.c rc4.c
 RES_SRC =
 
 #This is only for very old systems that NEED this
@@ -189,5 +189,7 @@ scache.o: scache.c ../include/struct.h ../include/h.h \
 blalloc.o: blalloc.c ../include/blalloc.h \
  ../include/patchlevel.h
 dh.o: dh.c \
+ ../include/patchlevel.h
+rc4.o: rc4.c \
  ../include/patchlevel.h
 
