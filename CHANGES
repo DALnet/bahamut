@@ -86,6 +86,9 @@ Changes for 1.8.2
 - Set +k and +s umodes to opers only.
 - Fixed a bug in m_trace that caused cores when issuing a /trace when
   connecting to a server.
+- ERR_WHOSYNTAX reply changed to ERR_NOPRIVILEGES for non opers trying oper restricted
+  who, but using correct syntax : fixed by Unim4trix0 (AviN456@gmail.com)
+
 
 Changes for 1.8.0
 -----------------

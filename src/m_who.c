@@ -239,16 +239,21 @@ int build_searchopts(aClient *sptr, int parc, char *parv[])
 	  args++;
 	  break;
       case 'g':
-	  if(parv[args]==NULL || !IsAnOper(sptr))
-	  {
-	      sendto_one(sptr, getreply(ERR_WHOSYNTAX), me.name,
-			 sptr->name, "WHO", "who");
-	      return 0;
-	  }
-	  wsopts.gcos=parv[args];
-	  wsopts.gcos_plus=change;
-	  args++;
-	  break;
+          if(parv[args]==NULL)
+          {
+              sendto_one(sptr, getreply(ERR_WHOSYNTAX), me.name,
+                         sptr->name, "WHO", "who");
+              return 0;
+          }
+          else if(!IsAnOper(sptr))
+          {
+              sendto_one(sptr, getreply(ERR_NOPRIVILEGES), me.name, parv[0]);
+              return 0;
+          }
+          wsopts.gcos=parv[args];
+          wsopts.gcos_plus=change;
+          args++;
+          break;
       case 'h':
 	  if(parv[args]==NULL)
 	  {
@@ -260,83 +265,95 @@ int build_searchopts(aClient *sptr, int parc, char *parv[])
 	  wsopts.host_plus=change;
 	  args++;
 	  break;
-       case 't': 
-	  if(parv[args]==NULL || !IsAnOper(sptr) || 
-             (rval = strtol(parv[args], &err, 0)) == 0 || *err != '\0')
-	  {
-	      sendto_one(sptr, getreply(ERR_WHOSYNTAX), me.name,
-			 sptr->name, "WHO", "who");
-	      return 0;
-	  }
-	  wsopts.ts = rval;
-	  wsopts.ts_value = change ? 2 : 1;
-	  args++;
-	  break;
-       case 'T': 
-	  if(parv[args]==NULL || !IsAnOper(sptr) || 
-             (rval = strtol(parv[args], &err, 0)) == 0 || *err != '\0')
-	  {
-	      sendto_one(sptr, getreply(ERR_WHOSYNTAX), me.name,
-			 sptr->name, "WHO", "who");
-	      return 0;
-	  }
-	  wsopts.client_type = rval;
-	  wsopts.client_type_plus = change ? 1 : 0;
-	  args++;
-	  break;
+       case 't':
+          if(parv[args]==NULL || (rval = strtol(parv[args], &err, 0)) == 0 || *err != '\0')
+          {
+              sendto_one(sptr, getreply(ERR_WHOSYNTAX), me.name,
+                         sptr->name, "WHO", "who");
+              return 0;
+          }
+          else if(!IsAnOper(sptr))
+          {
+              sendto_one(sptr, getreply(ERR_NOPRIVILEGES), me.name, parv[0]);
+              return 0;
+          }
+          wsopts.ts = rval;
+          wsopts.ts_value = change ? 2 : 1;
+          args++;
+          break; 
+       case 'T':
+          if(parv[args]==NULL || (rval = strtol(parv[args], &err, 0)) == 0 || *err != '\0')
+          {
+              sendto_one(sptr, getreply(ERR_WHOSYNTAX), me.name,
+                         sptr->name, "WHO", "who");
+              return 0;
+          }
+          else if(!IsAnOper(sptr))
+          {
+              sendto_one(sptr, getreply(ERR_NOPRIVILEGES), me.name, parv[0]);
+              return 0;
+          }
+          wsopts.client_type = rval;
+          wsopts.client_type_plus = change ? 1 : 0;
+          args++;
+          break;
       case 'I':
-	  if(!IsAnOper(sptr))
-	  {
-	      sendto_one(sptr, getreply(ERR_WHOSYNTAX), me.name,
-			 sptr->name, "WHO", "who");
-	      return 0;
-	  }
-	  wsopts.ip_show = change;
-	  break;
+          if(!IsAnOper(sptr))
+          {
+              sendto_one(sptr, getreply(ERR_NOPRIVILEGES), me.name, parv[0]);
+              return 0;
+          }
+          wsopts.ip_show = change;
+          break; 
       case 'i':
-	  if(parv[args]==NULL || !IsAnOper(sptr))
-	  {
-	      sendto_one(sptr, getreply(ERR_WHOSYNTAX), me.name,
-			 sptr->name, "WHO", "who");
-	      return 0;
-	  }
+          if(parv[args]==NULL)
+          {
+              sendto_one(sptr, getreply(ERR_WHOSYNTAX), me.name,
+                         sptr->name, "WHO", "who");
+              return 0;
+          }
+          else if(!IsAnOper(sptr))
+          {
+              sendto_one(sptr, getreply(ERR_NOPRIVILEGES), me.name, parv[0]);
+              return 0;
+          }
           else
           {
-	      char *cpos;
-
-   	      if((cpos = strchr(parv[args], '/')))
-	      {
-		  char *err;
-		  unsigned int maskval, ipval;
-
-		  *(cpos++) = '\0';
-
-		  ipval = inet_addr(parv[args]);
-		  maskval = strtol(cpos, &err, 10);
-                  if(ipval == 0xFFFFFFFF || *err != '\0' || 
-		     maskval < 1 || maskval > 32)
-		  {
-		      sendto_one(sptr, getreply(ERR_WHOSYNTAX), me.name, sptr->name,
+              char *cpos;
+          
+              if((cpos = strchr(parv[args], '/'))) 
+              {  
+                  char *err;
+                  unsigned int maskval, ipval;
+          
+                  *(cpos++) = '\0';
+              
+                  ipval = inet_addr(parv[args]);
+                  maskval = strtol(cpos, &err, 10);
+                  if(ipval == 0xFFFFFFFF || *err != '\0' ||
+                     maskval < 1 || maskval > 32)
+                  {
+                      sendto_one(sptr, getreply(ERR_WHOSYNTAX), me.name, sptr->name,
                          "WHO", "who");
-		      return 0;
-		  }
-
-		  maskval = htonl(cidr_to_netmask(maskval));
-		  ipval &= maskval;
-
-		  wsopts.cidr4_plus = change;
-		  wsopts.cidr4_mask = maskval;
-		  wsopts.cidr4_ip = ipval;
-		  args++;
-	      }
-	      else
-	      {
-		  wsopts.ip=parv[args];
-		  wsopts.ip_plus=change;
-		  args++;
-	      }
-	  }
-	  break;
+                      return 0;
+                  }
+              
+                  maskval = htonl(cidr_to_netmask(maskval));
+                  ipval &= maskval;
+           
+                  wsopts.cidr4_plus = change;
+                  wsopts.cidr4_mask = maskval;
+                  wsopts.cidr4_ip = ipval;
+                  args++;
+              }
+              else
+              {
+                  wsopts.ip=parv[args];
+                  wsopts.ip_plus=change;
+                  args++;
+              }
+          }
+          break;
       case 'm':
 	  if(parv[args]==NULL)
 	  {
