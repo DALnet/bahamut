@@ -609,17 +609,10 @@ proc_answer(ResRQ * rptr,
 
    num_acc_answers = 0;
 
-   /*
-    * remove the "bad dns" flag
-    * if it was assigned earlier. this can be caused by nameserver flakiness.
-    */
-   if(rptr->cinfo.flags == ASYNC_CLIENT && rptr->cinfo.value.cptr)
-      rptr->cinfo.value.cptr->flags &= ~(FLAGS_BAD_DNS);
-
    cp = buf + sizeof(HEADER);
    hp = (struct hent *) &(rptr->he);
 
-   while (hp->h_addr_list[adr].s_addr)
+   while ((hp->h_addr_list[adr].s_addr) && (adr < MAXADDRS))
       adr++;
 
    alias = hp->h_aliases;
@@ -756,8 +749,6 @@ proc_answer(ResRQ * rptr,
 #ifdef DNS_ANS_DEBUG
                   sendto_realops_lev(DEBUG_LEV, "Received DNS_A answer for %s, but asked question for %s", hostbuf, rptr->name);
 #endif
-                  if(rptr->cinfo.flags == ASYNC_CLIENT && rptr->cinfo.value.cptr)
-                     rptr->cinfo.value.cptr->flags |= FLAGS_BAD_DNS; /* yell about this client later, to all opers */
                   return PROCANSWER_STRANGE;
                }
 #ifdef DNS_ANS_DEBUG
@@ -821,8 +812,6 @@ proc_answer(ResRQ * rptr,
                   sendto_realops_lev(DEBUG_LEV, "Received DNS_PTR answer for %s, but asked question for %s", 
                                      ipbuf, inetntoa((char*)&rptr->addr));
 #endif
-                  if(rptr->cinfo.flags == ASYNC_CLIENT && rptr->cinfo.value.cptr)
-                     rptr->cinfo.value.cptr->flags |= FLAGS_BAD_DNS; /* yell about this client later, to all opers */
                   return PROCANSWER_STRANGE;
                }
             }
@@ -912,8 +901,6 @@ proc_answer(ResRQ * rptr,
                      sendto_realops_lev(DEBUG_LEV, "Received DNS_CNAME(PTR) answer for %s, but asked question for %s", 
                                         ipbuf, inetntoa((char*)&rptr->addr));
 #endif
-                     if(rptr->cinfo.flags == ASYNC_CLIENT && rptr->cinfo.value.cptr)
-                        rptr->cinfo.value.cptr->flags |= FLAGS_BAD_DNS; /* yell about this client later, to all opers */
                      return PROCANSWER_STRANGE;
                   }
                }
@@ -932,8 +919,6 @@ proc_answer(ResRQ * rptr,
                      sendto_realops_lev(DEBUG_LEV, "Received DNS_CNAME(A) answer for %s, but asked question for %s", 
                                         hostbuf, rptr->name);
 #endif
-                     if(rptr->cinfo.flags == ASYNC_CLIENT && rptr->cinfo.value.cptr)
-                        rptr->cinfo.value.cptr->flags |= FLAGS_BAD_DNS; /* yell about this client later, to all opers */
                      return PROCANSWER_STRANGE;
                   }
 #ifdef DNS_ANS_DEBUG
@@ -1116,21 +1101,29 @@ get_res(char *lp)
 
       if(!hp2)
       {
-         last->he_rev.h_name = rptr->he.h_name;
-         rptr->he.h_name = NULL;
-
-         for(a = 0; rptr->he.h_aliases[a]; a++)
-         {
-            last->he_rev.h_aliases[a] = rptr->he.h_aliases[a];
-            rptr->he.h_aliases[a] = NULL;
-         }
-
-         for(a = 0; a < MAXADDRS; a++)
-         {
-            last->he_rev.h_addr_list[a].s_addr = rptr->he.h_addr_list[a].s_addr;
-            rptr->he.h_addr_list[a].s_addr = 0;
-         }
+         memcpy(&last->he_rev, &rptr->he, sizeof(struct hent));
+         memset(&rptr->he, 0, sizeof(struct hent));
          last->has_rev = 1;
+
+         /*
+          * The memcpy should be faster than these loops,
+          * but it makes it a bit more clear to show them:
+          *
+          * last->he_rev.h_name = rptr->he.h_name;
+          * rptr->he.h_name = NULL;
+          *
+          * for(a = 0; rptr->he.h_aliases[a]; a++)
+          * {
+          *   last->he_rev.h_aliases[a] = rptr->he.h_aliases[a];
+          *    rptr->he.h_aliases[a] = NULL;
+          * }
+          *
+          * for(a = 0; a < MAXADDRS; a++)
+          * {
+          *   last->he_rev.h_addr_list[a].s_addr = rptr->he.h_addr_list[a].s_addr;
+          *    rptr->he.h_addr_list[a].s_addr = 0;
+          * }
+          */
       }
 
       rem_request(rptr);
@@ -1223,8 +1216,6 @@ get_res(char *lp)
                           ":%s NOTICE AUTH :*** Your forward and reverse DNS do not match, "
                           "ignoring hostname. [%s != %s]",
                           me.name, ntoatmp_f, ntoatmp_r);
-
-               rptr->cinfo.value.cptr->flags |= FLAGS_BAD_DNS; /* yell about this client later, to all opers */
             }
 
             if (lp)
@@ -1237,7 +1228,9 @@ get_res(char *lp)
          if(numnewaddr != numaddr)
          {
             memcpy(rptr->he.h_addr_list, new_addr_list, sizeof(struct in_addr) * MAXADDRS);
+#ifdef DNS_ANS_DEBUG
             sendto_ops_lev(DEBUG_LEV, "numaddr = %d, numnewaddr = %d", numaddr, numnewaddr);
+#endif
          }
 
          /*
@@ -1622,7 +1615,7 @@ char   *s, **t;
     */
    if ((cp = find_cache_number(rptr, (char *) &rptr->he.h_addr.s_addr)))
       return cp;
-   for (i = 1; rptr->he.h_addr_list[i].s_addr; i++)
+   for (i = 1; rptr->he.h_addr_list[i].s_addr && i < MAXADDRS; i++)
       if ((cp = find_cache_number(rptr,
 			 (char *) &(rptr->he.h_addr_list[i].s_addr))))
 	 return cp;

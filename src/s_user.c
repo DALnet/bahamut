@@ -3646,7 +3646,7 @@ m_oper(aClient *cptr,
       return 0;
    }
 
-   if(!(sptr->user && sptr->user->real_oper_host == NULL))
+   if(!(sptr->user && sptr->user->real_oper_host))
    {
       if (!(aconf = find_conf_exact(name, sptr->username, sptr->sockhost, CONF_OPS)) &&
           !(aconf = find_conf_exact(name, sptr->username, cptr->hostip, CONF_OPS))) 

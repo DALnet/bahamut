@@ -2375,7 +2375,7 @@ if test -r "$gmplibname"; then
   echo "using gmplib $GMPLIB/lib$GMPLIBFN"
 else
 
- libnames="gmp.so gmp.so.3 gmp.so.3 gmp.so.3.1 gmp.so.3.1.1 gmp.so.3.0.1 gmp.so.3.0\
+ libnames="gmp.so gmp.so.3 gmp.so.3 gmp.so.3.1 gmp.so.3.1.1 gmp.so.3.0.1 gmp.so.3.0 \
            gmp.a"
 
  # look for libgmp.a: if GMPLIB is set, check there first
@@ -2604,8 +2604,6 @@ else
 #include <stdlib.h>
 #include "$GMPINC/$GMPINCFN"
 
-extern const char *gmp_version;
-
 char *str_next_period(char *x)
 {
    while(*x && *x != '.')
@@ -2689,7 +2687,7 @@ int main()
 }
 
 EOF
-if { (eval echo configure:2693: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext} && (./conftest; exit) 2>/dev/null
+if { (eval echo configure:2691: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext} && (./conftest; exit) 2>/dev/null
 then
   
 echo "$ac_t""no problems" 1>&6
@@ -2754,7 +2752,7 @@ fi
 fi
 
 echo $ac_n "checking operating system""... $ac_c" 1>&6
-echo "configure:2758: checking operating system" >&5
+echo "configure:2756: checking operating system" >&5
 case "$target" in
 *-solaris2*) cat >> confdefs.h <<\EOF
 #define OS_SOLARIS2 1
