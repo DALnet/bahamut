@@ -288,6 +288,7 @@ typedef struct MotdItem aMotd;
 #define UMODE_x     0x200000    /* umode +x - Squelch with notice */
 #define UMODE_X     0x400000    /* umode +X - Squelch without notice */
 #define UMODE_D     0x800000    /* umode +D - Hidden dccallow umode */
+#define UMODE_F     0x1000000   /* umode +F - no cptr->since message rate throttle */
 
 /* for sendto_ops_lev */
 
@@ -304,7 +305,7 @@ typedef struct MotdItem aMotd;
                      UMODE_h|UMODE_R)
 #define ALL_UMODES (SEND_UMODES|UMODE_s|UMODE_c|UMODE_r|UMODE_k|UMODE_f|\
 	            UMODE_y|UMODE_d|UMODE_g|UMODE_b|UMODE_n|UMODE_h|UMODE_m|\
-	            UMODE_O|UMODE_R|UMODE_e)
+	            UMODE_O|UMODE_R|UMODE_e|UMODE_F)
 #ifdef DEFAULT_HELP_MODE
 #define OPER_UMODES (UMODE_o|UMODE_w|UMODE_s|UMODE_y|UMODE_d|UMODE_g|\
                      UMODE_n|UMODE_h)
@@ -351,6 +352,7 @@ typedef struct MotdItem aMotd;
 #define SendGlobops(x)          ((x)->umode & UMODE_g)
 #define SendChatops(x)          ((x)->umode & UMODE_b)
 #define SendRnotice(x)          ((x)->umode & UMODE_n)
+#define NoMsgThrottle(x)	((x)->umode & UMODE_F)
 #define	IsListening(x)		((x)->flags & FLAGS_LISTEN)
 #define	DoAccess(x)		((x)->flags & FLAGS_CHKACCESS)
 #define	IsLocal(x)		((x)->flags & FLAGS_LOCAL)
@@ -364,6 +366,7 @@ typedef struct MotdItem aMotd;
 #define	SetWallops(x)  		((x)->umode |= UMODE_w)
 #define SetWSquelch(x)          ((x)->umode |= UMODE_x)
 #define SetSSquelch(x)          ((x)->umode |= UMODE_X)
+#define SetNoMsgThrottle(x)	((x)->umode |= UMODE_F)
 #define	SetDNS(x)		((x)->flags |= FLAGS_DOINGDNS)
 #define	DoingDNS(x)		((x)->flags & FLAGS_DOINGDNS)
 #define	SetAccess(x)		((x)->flags |= FLAGS_CHKACCESS)
@@ -405,6 +408,7 @@ typedef struct MotdItem aMotd;
 #define ClearLocOp(x)		((x)->umode &= ~UMODE_O)
 #define	ClearInvisible(x)	((x)->umode &= ~UMODE_i)
 #define	ClearWallops(x)		((x)->umode &= ~UMODE_w)
+#define ClearNoMsgThrottle(x)	((x)->umode &= ~UMODE_F)
 #define	ClearDNS(x)		((x)->flags &= ~FLAGS_DOINGDNS)
 #define	ClearAuth(x)		((x)->flags &= ~FLAGS_AUTH)
 #define	ClearAccess(x)		((x)->flags &= ~FLAGS_CHKACCESS)
@@ -430,13 +434,14 @@ typedef struct MotdItem aMotd;
 #define OFLAG_LNOTICE	0x00004000  /* Oper can send local serv notices */
 #define OFLAG_GNOTICE	0x00008000  /* Oper can send global notices */
 #define OFLAG_ADMIN	0x00010000  /* Admin */
-#define OFLAG_UMODEc	0x00020000  /* Oper can set umode +c */
-#define OFLAG_UMODEf	0x00040000  /* Oper can set umode +f */
+#define OFLAG_UMODEc	0x00020000  /* Oper can set umode +c : client connect */
+#define OFLAG_UMODEf	0x00040000  /* Oper can set umode +f : flood notices */
 #define OFLAG_SADMIN    0x00080000  /* Oper can be a services admin */
 #define OFLAG_ZLINE	0x00100000  /* Oper can use /zline and /unzline */
-#define OFLAG_UMODEy    0x00200000  /* Oper can set umode +y */
-#define OFLAG_UMODEd    0x00400000  /* Oper can set umode +d */
-#define OFLAG_UMODEb    0x00800000  /* Oper can set umode +b */
+#define OFLAG_UMODEy    0x00200000  /* Oper can set umode +y : spy */
+#define OFLAG_UMODEd    0x00400000  /* Oper can set umode +d : debug */
+#define OFLAG_UMODEb    0x00800000  /* Oper can set umode +b : chatops */
+#define OFLAG_UMODEF	0x01000000  /* Oper can set umode +F : no flood throttling */
 #define OFLAG_LOCAL	(OFLAG_REHASH|OFLAG_HELPOP|OFLAG_GLOBOP|OFLAG_WALLOP|\
                          OFLAG_LOCOP|OFLAG_LROUTE|OFLAG_LKILL|OFLAG_KLINE|\
                          OFLAG_UNKLINE|OFLAG_LNOTICE|OFLAG_UMODEc|OFLAG_UMODEf)
@@ -465,29 +470,7 @@ typedef struct MotdItem aMotd;
 #define OPCanUModey(x)          ((x)->oflag & OFLAG_UMODEy)     
 #define OPCanUModed(x)          ((x)->oflag & OFLAG_UMODEd)     
 #define OPCanUModeb(x)          ((x)->oflag & OFLAG_UMODEb)
-#define OPSetRehash(x)	        ((x)->oflag |= OFLAG_REHASH)
-#define OPSetDie(x)	        ((x)->oflag |= OFLAG_DIE)
-#define OPSetRestart(x)	        ((x)->oflag |= OFLAG_RESTART)
-#define OPSetHelpOp(x)	        ((x)->oflag |= OFLAG_HELPOP)
-#define OPSetGlobOps(x)	        ((x)->oflag |= OFLAG_GLOBOP)
-#define OPSetWallOps(x)	        ((x)->oflag |= OFLAG_WALLOP)
-#define OPSetLocOps(x)	        ((x)->oflag |= OFLAG_LOCOP)
-#define OPSetLRoute(x)	        ((x)->oflag |= OFLAG_LROUTE)
-#define OPSetGRoute(x)	        ((x)->oflag |= OFLAG_GROUTE)
-#define OPSetLKill(x)	        ((x)->oflag |= OFLAG_LKILL)
-#define OPSetGKill(x)	        ((x)->oflag |= OFLAG_GKILL)
-#define OPSetKline(x)	        ((x)->oflag |= OFLAG_KLINE)
-#define OPSetUnKline(x)	        ((x)->oflag |= OFLAG_UNKLINE)
-#define OPSetLNotice(x)	        ((x)->oflag |= OFLAG_LNOTICE)
-#define OPSetGNotice(x)	        ((x)->oflag |= OFLAG_GNOTICE)
-#define OPSSetAdmin(x)	        ((x)->oflag |= OFLAG_ADMIN)
-#define OPSSetSAdmin(x)         ((x)->oflag |= OFLAG_SADMIN)
-#define OPSetUModec(x)	        ((x)->oflag |= OFLAG_UMODEc)
-#define OPSetUModef(x)	        ((x)->oflag |= OFLAG_UMODEf)
-#define OPSetUModey(x)          ((x)->oflag |= OFLAG_UMODEy)
-#define OPSetUModed(x)          ((x)->oflag |= OFLAG_UMODEd)
-#define OPSetUModeb(x)          ((x)->oflag |= OFLAG_UMODEb)
-#define OPSetZLine(x)	        ((x)->oflag |= OFLAG_ZLINE)
+#define OPCanUModeF(x)		((x)->oflag & OFLAG_UMODEF)
 #define OPClearRehash(x)	((x)->oflag &= ~OFLAG_REHASH)
 #define OPClearDie(x)		((x)->oflag &= ~OFLAG_DIE)  
 #define OPClearRestart(x)	((x)->oflag &= ~OFLAG_RESTART)
@@ -511,6 +494,7 @@ typedef struct MotdItem aMotd;
 #define OPClearUModed(x)        ((x)->oflag &= ~OFLAG_UMODEd) 
 #define OPClearUModeb(x)        ((x)->oflag &= ~OFLAG_UMODEb)
 #define OPClearZLine(x)		((x)->oflag &= ~OFLAG_ZLINE)
+#define OPClearUModeF(x)	((x)->oflag &= ~OFLAG_UMODEF)
 
 /* defined debugging levels */
 #define	DEBUG_FATAL  0

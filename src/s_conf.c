@@ -1138,6 +1138,7 @@ static int oper_access[] =
     OFLAG_UMODEc,  'u',
     OFLAG_UMODEf,  'f',
     OFLAG_ZLINE,   'z',
+    OFLAG_UMODEF,  'F',
     0, 0 };
 
 /*

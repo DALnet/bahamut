@@ -228,8 +228,11 @@ int parse(aClient *cptr, char *buffer, char *bufend)
 	{
 #ifdef NO_OPER_FLOOD
 	    if (IsAnOper(cptr))
-		/* "randomly" (weighted) increase the since */
-		cptr->since += (cptr->receiveM % 10) ? 1 : 0;
+            {
+		/* "randomly" (weighted) increase the since -- only if not +F */
+		if(!NoMsgThrottle(cptr))
+		    cptr->since += (cptr->receiveM % 10) ? 1 : 0;
+            }
 	    else
 #endif
 		cptr->since += (2 + i / 120);

@@ -91,6 +91,9 @@ int  user_modes[] =
     UMODE_n, 'n',
     UMODE_m, 'm',
     UMODE_h, 'h',
+#ifdef NO_OPER_FLOOD
+    UMODE_F, 'F',
+#endif
     0, 0
 };
 
@@ -3029,16 +3032,18 @@ int m_umode(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	if (IsUmoden(sptr)) ClearUmoden(sptr);
 	if (IsUmodem(sptr)) ClearUmodem(sptr);
 	if (IsUmodee(sptr)) ClearUmodee(sptr);
+	if (NoMsgThrottle(sptr)) ClearNoMsgThrottle(sptr);
     }
     if(MyClient(sptr))
     {
 	if (IsAdmin(sptr) && !OPIsAdmin(sptr)) ClearAdmin(sptr);
 	if (IsSAdmin(sptr) && !OPIsSAdmin(sptr)) ClearSAdmin(sptr);
-	if (IsUmodef(sptr) && !OPSetUModef(sptr)) ClearUmodef(sptr);
-	if (IsUmodec(sptr) && !OPSetUModec(sptr)) ClearUmodec(sptr);
-	if (IsUmodey(sptr) && !OPSetUModey(sptr)) ClearUmodey(sptr);
-	if (IsUmoded(sptr) && !OPSetUModed(sptr)) ClearUmoded(sptr);
-	if (IsUmodeb(sptr) && !OPSetUModeb(sptr)) ClearUmodeb(sptr);
+	if (IsUmodef(sptr) && !OPCanUModef(sptr)) ClearUmodef(sptr);
+	if (IsUmodec(sptr) && !OPCanUModec(sptr)) ClearUmodec(sptr);
+	if (IsUmodey(sptr) && !OPCanUModey(sptr)) ClearUmodey(sptr);
+	if (IsUmoded(sptr) && !OPCanUModed(sptr)) ClearUmoded(sptr);
+	if (IsUmodeb(sptr) && !OPCanUModeb(sptr)) ClearUmodeb(sptr);
+	if (NoMsgThrottle(sptr) && !OPCanUModeF(sptr)) ClearNoMsgThrottle(sptr);
     }
     send_umode_out(cptr, sptr, setflags);
     
