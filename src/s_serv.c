@@ -4854,6 +4854,8 @@ m_capab(aClient *cptr, aClient *sptr, int parc, char *parv[])
         SetDKEY(cptr);
       else if (strcmp(parv[i], "ZIP") == 0)
         SetZipCapable(cptr);
+      else if (strcmp(parv[i], "NICKIP") == 0)
+	SetNICKIP(cptr);
    }
 
    return 0;
