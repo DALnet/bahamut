@@ -1031,8 +1031,7 @@ get_channel(aClient *cptr,
    if ((chptr = find_channel(chname, (aChannel *) NULL)))
       return (chptr);
    if (flag == CREATE) {
-      chptr = (aChannel *) MyMalloc(sizeof(aChannel));
-      memset((char *) chptr, '\0', sizeof(aChannel));
+      chptr = make_channel();
 
       strncpyzt(chptr->chname, chname, len + 1);
       if (channel)
@@ -1138,7 +1137,7 @@ sub1_from_channel(aChannel *chptr)
 #ifdef FLUD
       free_fluders(NULL, chptr);
 #endif
-      MyFree((char *) chptr);
+      free_channel(chptr);
       Count.chan--;
    }
 }

@@ -302,6 +302,7 @@ void count_memory(aClient *cptr, char *nick)
    extern BlockHeap *free_Links;
    extern BlockHeap *free_remote_aClients;
    extern BlockHeap *free_anUsers;
+   extern BlockHeap *free_channels;
 #ifdef FLUD
    extern BlockHeap *free_fludbots;
 #endif
@@ -376,9 +377,6 @@ void count_memory(aClient *cptr, char *nick)
 					 * * scache 
 					 */
 
-   u_long      chm = 0;		/*
-				 * memory used by channels 
-				 */
    u_long      chbm = 0;	/*
 				 * memory used by channel bans 
 				 */
@@ -425,8 +423,9 @@ void count_memory(aClient *cptr, char *nick)
    int useralloc = 0; 	/* allocated users */
    int linkalloc = 0; 	/* allocated links */
    int totallinks = 0; /* total links used */
+   int chanalloc = 0; /* total channels alloc'd */
    u_long lcallocsz = 0, rcallocsz = 0; /* size for stuff above */
-   u_long userallocsz = 0, linkallocsz = 0;
+   u_long userallocsz = 0, linkallocsz = 0, chanallocsz = 0;
 
    int fludalloc = 0;
    u_long fludallocsz = 0;
@@ -487,7 +486,6 @@ void count_memory(aClient *cptr, char *nick)
 
    for (chptr = channel; chptr; chptr = chptr->nextch) {
       ch++;
-      chm += (strlen(chptr->chname) + sizeof(aChannel));
 
       for (link = chptr->members; link; link = link->next)
 	 chu++;
@@ -530,6 +528,9 @@ void count_memory(aClient *cptr, char *nick)
 
    linkalloc = free_Links->blocksAllocated * free_Links->elemsPerBlock;
    linkallocsz = linkalloc * free_Links->elemSize;
+
+   chanalloc = free_channels->blocksAllocated * free_channels->elemsPerBlock;
+   chanallocsz = chanalloc * free_channels->elemSize;
 
 #ifdef FLUD
    fludalloc = free_fludbots->blocksAllocated * free_fludbots->elemsPerBlock;
@@ -588,10 +589,11 @@ void count_memory(aClient *cptr, char *nick)
    sendto_one(cptr, ":%s %d %s :Fludbots ALLOC %d(%d)",
 	      me.name, RPL_STATSDEBUG, nick, fludalloc, fludallocsz);
 
-   sendto_one(cptr, ":%s %d %s :Channels %d(%d) Bans %d(%d)",
-	      me.name, RPL_STATSDEBUG, nick, ch, chm, chb, chbm);
+   sendto_one(cptr, ":%s %d %s :Channels %d(%d) ALLOC %d(%d) Bans %d(%d)",
+	      me.name, RPL_STATSDEBUG, nick, ch, ch * sizeof(aChannel), 
+	      chanalloc, chanallocsz, chb, chbm);
 
-   totch = chm + chbm;
+   totch = chanallocsz + chbm;
 
    sendto_one(cptr, ":%s %d %s :Whowas users %d(%d)",
 	    me.name, RPL_STATSDEBUG, nick, wwu, wwu * sizeof(anUser));

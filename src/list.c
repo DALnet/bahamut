@@ -57,6 +57,10 @@ extern int  BlockHeapGarbageCollect(BlockHeap *);
 
 #define CLIENTS_PREALLOCATE 1024
 
+/* Number of channels to allocate per block, 1024 sounds nice. */
+
+#define CHANNELS_PREALLOCATE 1024
+
 void        outofmemory();
 
 int         numclients = 0;
@@ -68,6 +72,7 @@ BlockHeap  *free_local_aClients;
 BlockHeap  *free_Links;
 BlockHeap  *free_remote_aClients;
 BlockHeap  *free_anUsers;
+BlockHeap  *free_channels;
 
 #ifdef FLUD
 BlockHeap  *free_fludbots;
@@ -105,6 +110,12 @@ initlists()
 
    free_anUsers = BlockHeapCreate((size_t) sizeof(anUser),
 				CLIENTS_PREALLOCATE + MAXCONNECTIONS);
+
+   /* channels are a very frequent thing in ircd. :) */
+
+   free_channels = BlockHeapCreate((size_t) sizeof(aChannel),
+				CHANNELS_PREALLOCATE);
+
 
 #ifdef FLUD
    /*
@@ -283,6 +294,34 @@ free_client(aClient *cptr)
 #endif
    }
 }
+
+/*
+ * make_channel() free_channel()
+ * functions to maintain blockheap of channels.
+ */
+
+aChannel *make_channel()
+{
+   Reg aChannel *chan;
+
+   chan = BlockHeapALLOC(free_channels, aChannel);
+
+   if(chan == NULL)
+      outofmemory();
+
+   memset((char *)chan, '\0', sizeof(aChannel));
+
+   return chan;
+}
+
+void free_channel(aChannel *chan)
+{
+   if (BlockHeapFree(free_channels, chan)) {
+      sendto_ops("list.c couldn't BlockHeapFree(free_channels,chan) chan = %lX", chan);
+      sendto_ops("Please report to the hybrid team!");
+   }
+}
+
 /*
  * * 'make_user' add's an User information block to a client * if it
  * was not previously allocated.
@@ -604,6 +643,7 @@ block_garbage_collect()
    BlockHeapGarbageCollect(free_local_aClients);
    BlockHeapGarbageCollect(free_remote_aClients);
    BlockHeapGarbageCollect(free_anUsers);
+   BlockHeapGarbageCollect(free_channels);
 #ifdef FLUD
    BlockHeapGarbageCollect(free_fludbots);
 #endif /*

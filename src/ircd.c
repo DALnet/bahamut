@@ -1148,7 +1148,8 @@ time_t      lasttimeofday;
 
 #ifndef NO_PRIORITY
    (void) read_message(0, &serv_fdlist);
-   (void) read_message(1, &busycli_fdlist);
+   /* (void) read_message(1, &busycli_fdlist); 
+      we want to pause up to one second if no "busy" clients have anything to say? what?! */
    if (lifesux) {
       (void) read_message(1, &serv_fdlist);
       if (lifesux & 0x4) {	/*
@@ -1180,9 +1181,9 @@ static time_t lasttime = 0;
 #else
       if ((lasttime + (lifesux + 1)) < timeofday) {
 #endif
-	 (void) read_message(delay, NULL);	/*
-						 * check everything! 
-						 */
+	 (void) read_message(delay ? delay : 1, NULL);	/*
+						         * check everything! 
+						         */
 	 lasttime = timeofday;
       }
    }

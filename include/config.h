@@ -655,7 +655,7 @@
 #define ALWAYS_SEND_DURING_SPLIT
 
 /* INITIAL_DBUFS - how many dbufs to preallocate */
-#define INITIAL_DBUFS 1000	/* preallocate 2 megs of dbufs */
+#define INITIAL_DBUFS 1024	/* preallocate 2 megs of dbufs */
 
 /*
  * MAXBUFFERS - increase socket buffers

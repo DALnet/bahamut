@@ -259,6 +259,8 @@ extern void free_link(Link *);
 extern void free_conf(aConfItem *);
 extern void free_class(aClass *);
 extern void free_user(anUser *, aClient *);
+extern void free_channel(aChannel *);
+extern aChannel *make_channel();
 extern Link *make_link(void);
 extern anUser *make_user(aClient *);
 extern aConfItem *make_conf(void);
