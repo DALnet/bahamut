@@ -815,7 +815,7 @@ static int completed_connection(aClient * cptr)
 
    /* pass on our capabilities to the server we /connect'd */
 
-   sendto_one(cptr, "CAPAB TS3 NOQUIT SSJOIN");
+   sendto_one(cptr, "CAPAB TS3 NOQUIT SSJOIN BURST");
 
    aconf = find_conf(cptr->confs, cptr->name, CONF_NOCONNECT_SERVER);
    if (!aconf) {

@@ -665,7 +665,9 @@ register_user(aClient *cptr,
 
       if (oldstatus == STAT_MASTER && MyConnect(sptr))
 		  (void) m_oper(&me, sptr, 1, parv);
-#if defined(NO_MIXED_CASE)
+
+      /* hostile username checks begin here */
+
 		  {
 			  register char *tmpstr;
 			  u_char      c, cc;
@@ -688,7 +690,7 @@ register_user(aClient *cptr,
 			  /*
 				* First check user->username...
 				*/
-# ifdef IGNORE_FIRST_CHAR
+#ifdef IGNORE_FIRST_CHAR
 			  tmpstr = (user->username[0] == '~' ? &user->username[2] :
 							&user->username[1]);
 			  /*
@@ -700,12 +702,10 @@ register_user(aClient *cptr,
 					  user->username[0]);
 			  if ((!isalnum(cc) && !strchr(" -_.", cc)) || (cc > 127))
 				 special++;
-# else
+#else
 			  tmpstr = (user->username[0] == '~' ? &user->username[1] :
 							user->username);
-# endif /*
-			  * IGNORE 
-			*/
+#endif /* IGNORE_FIRST_CHAR */
 			  
 			  while (*tmpstr) {
 				  c = *(tmpstr++);
@@ -720,7 +720,7 @@ register_user(aClient *cptr,
 				  if ((!isalnum(c) && !strchr(" -_.", c)) || (c > 127) || (c<32))
 					 special++;
 			  }
-# ifdef NO_MIXED_CASE
+#ifdef NO_MIXED_CASE
 			  if (lower && upper) {
 				  sendto_realops_lev(REJ_LEV, "Invalid username: %s (%s@%s)",
 											nick, user->username, user->host);
@@ -728,9 +728,7 @@ register_user(aClient *cptr,
 				  (void) ircsprintf(tmpstr2, "Invalid username [%s]", user->username);
 				  return exit_client(cptr, sptr, &me, tmpstr2);
 			  }
-# endif /*
-			  * NO_MIXED_CASE 
-			*/
+#endif /* NO_MIXED_CASE */
 			  if (special) {
 				  sendto_realops_lev(REJ_LEV, "Invalid username: %s (%s@%s)",
 											nick, user->username, user->host);
@@ -744,7 +742,7 @@ register_user(aClient *cptr,
 			  
 			  if (strcmp(user->username, username)) {
 				  
-# ifdef IGNORE_FIRST_CHAR
+#ifdef IGNORE_FIRST_CHAR
 				  tmpstr = (username[0] == '~' ? &username[2] : &username[1]);
 				  /*
 					* Ok, we don't want to TOTALLY ignore the first character.
@@ -755,11 +753,9 @@ register_user(aClient *cptr,
 				  
 				  if ((!isalnum(cc) && !strchr(" -_.", cc)) || (cc > 127))
 					 special++;
-# else
+#else
 				  tmpstr = (username[0] == '~' ? &username[1] : username);
-# endif /*
-				  * IGNORE 
-			*/
+#endif /* IGNORE_FIRST_CHAR */
 				  while (*tmpstr) {
 					  c = *(tmpstr++);
 					  if (islower(c)) {
@@ -773,7 +769,7 @@ register_user(aClient *cptr,
 					  if ((!isalnum(c) && !strchr(" -_.", c)) || (c > 127))
 						 special++;
 				  }
-# ifdef NO_MIXED_CASE
+#ifdef NO_MIXED_CASE
 				  if (lower && upper) {
 					  sendto_realops_lev(REJ_LEV, "Invalid username: %s (%s@%s)",
 												nick, username, user->host);
@@ -782,9 +778,7 @@ register_user(aClient *cptr,
 											  username);
 					  return exit_client(cptr, sptr, &me, tmpstr2);
 				  }
-# endif /*
-				  * NO_MIXED_CASE 
-			*/
+#endif / * NO_MIXED_CASE */
 				  if (special) {
 					  sendto_realops_lev(REJ_LEV, "Invalid username: %s (%s@%s)",
 												nick, username, user->host);
@@ -795,7 +789,7 @@ register_user(aClient *cptr,
 				  }
 			  }			/* usernames different  */
 		  }
-#endif /* NO_MIXED_CASE */
+
       /*
        * reject single character usernames which aren't alphabetic i.e.
        * reject jokers who have '?@somehost' or '.@somehost'

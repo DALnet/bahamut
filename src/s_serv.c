@@ -282,9 +282,6 @@ m_squit(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	     parv[0], server, comment);
 #endif
    }
-   else if (MyConnect(acptr))
-      sendto_ops("Received SQUIT %s from %s (%s)",
-		 acptr->name, get_client_name(sptr, HIDEME), comment);
 
    return exit_client(cptr, acptr, sptr, comment);
 }

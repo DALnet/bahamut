@@ -1009,6 +1009,7 @@ main(int argc, char *argv[])
 #endif
 
    io_loop();
+   return 0;
 }
 
 void io_loop()
