@@ -136,41 +136,6 @@ collapse(char *pattern)
       }
    return pattern;
 }
-/*
- * *  Case insensitive comparison of two NULL terminated strings. *
- * 
- *      returns  0, if s1 equal to s2 *         <0, if s1
- * lexicographically less than s2 *             >0, if s1
- * lexicographically greater than s2
- */
-/* screw that lexocographic crap, nothing in ircd ever cares */
-int
-mycmp(char *s1, char *s2)
-{
-   Reg unsigned char *str1 = (unsigned char *) s1;
-   Reg unsigned char *str2 = (unsigned char *) s2;
-	while (toupper(*str1) == toupper(*str2)) {
-		if (*str1 == '\0')
-		  return 0;
-		str1++;str2++;
-	}
-   return (-1);
-}
-
-int
-myncmp(char *str1, char *str2, int n)
-{
-   Reg unsigned char *s1 = (unsigned char *) str1;
-   Reg unsigned char *s2 = (unsigned char *) str2;
-   while (toupper(*s1) == toupper(*s2)) {
-		s1++;
-		s2++;
-      n--;
-      if (n == 0 || (*s1 == '\0' && *s2 == '\0'))
-		  return 0;
-   }
-   return (-1);
-}
 
 unsigned char tolowertab[] =
 {0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa,
@@ -373,6 +338,34 @@ unsigned char char_atribs[] =
      */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 };
 
+/* screw that lexocographic crap, nothing in ircd ever cares */
+int
+mycmp(char *s1, char *s2)
+{
+   Reg unsigned char *str1 = (unsigned char *) s1;
+   Reg unsigned char *str2 = (unsigned char *) s2;
+	while (touppertab[*str1] == touppertab[*str2]) {
+		if (*str1 == '\0')
+		  return 0;
+		str1++;str2++;
+	}
+   return (-1);
+}
+
+int
+myncmp(char *str1, char *str2, int n)
+{
+   Reg unsigned char *s1 = (unsigned char *) str1;
+   Reg unsigned char *s2 = (unsigned char *) str2;
+   while (touppertab[*s1] == touppertab[*s2]) {
+		s1++;
+		s2++;
+      n--;
+      if (n == 0 || (*s1 == '\0' && *s2 == '\0'))
+		  return 0;
+   }
+   return (-1);
+}
  
 int wdmatch(const char *string, const char *wild) {
    /* the *! in a match is such a common case that we optimize
