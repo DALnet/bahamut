@@ -5215,19 +5215,28 @@ int m_unsqline(aClient *cptr, aClient *sptr, int parc, char *parv[])
 int m_sgline(aClient *cptr, aClient *sptr, int parc, char *parv[]) 
 {
    aConfItem *aconf;
-
+   int len;
+   char *mask, *reason;
+    
    if(!IsServer(sptr))
       return 0;
-   if(parc<2) 
+   if(parc<3) 
    {
 	sendto_one(sptr, err_str(ERR_NEEDMOREPARAMS), me.name, parv[0], "SGLINE");
 	return 0;
    }
 	
-   /* get rid of redundancies */
-   parv[1]=collapse(parv[1]);
+   len=atoi(parv[1]);
+   mask=parv[2];
+   if ((mask+len)==':') {
+       mask[len]='\0';
+       reason=mask+len+1;
+   } else { /* Bogus */
+       return;
+   }
+
    /* if we have any G:lines (SG or G) that match
-    * this Q:line, just return (no need to waste cpu */
+    * this G:line, just return (no need to waste cpu */
 
    if (!(aconf=find_conf_name(parv[1], CONF_GCOS)))
    {
@@ -5235,13 +5244,13 @@ int m_sgline(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	aconf=make_conf();
 	
 	aconf->status=(CONF_GCOS|CONF_SGLINE); /* G:line and SGline, woo */
-	DupString(aconf->name, parv[1]);
-	DupString(aconf->passwd, (parv[2]!=NULL ? parv[2] :
-				  "Reason Unspecified"));
+	DupString(aconf->name, mask);
+	DupString(aconf->passwd, reason : "Reason Unspecified");
 	aconf->next=conf;
 	conf=aconf;
    }
-   sendto_serv_butone(cptr, ":%s SGLINE %s :%s", sptr->name, parv[1], aconf->passwd);
+   sendto_serv_butone(cptr, ":%s SGLINE %d :%s:%s", sptr->name, len,
+		      aconf->name,aconf->passwd);
    return 0;
 }
 	
