@@ -436,7 +436,7 @@ int build_searchopts(aClient *sptr, int parc, char *parv[])
       if(wsopts.show_chan && !(wsopts.check_away || wsopts.gcos ||
 			       wsopts.host || wsopts.check_umode ||
 			       wsopts.server || wsopts.user || wsopts.nick ||
-			       wsopts.ip || wsopts.channel || wsopts.class))
+			       wsopts.ip || wsopts.channel || wsopts.class_value || wsopts.ts_value))
       {
 	  if(parv[args]==NULL)
 	  {

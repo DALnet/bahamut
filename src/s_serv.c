@@ -1556,7 +1556,7 @@ int m_links(aClient *cptr, aClient *sptr, int parc, char *parv[])
     int         n;
 
     /* reject non-local requests */
-    if (!IsAnOper(sptr) && !MyConnect(sptr))
+    if (IsServer(sptr) || (!IsAnOper(sptr) && !MyConnect(sptr)))
 	return 0;
 
     mask = (parc < 2) ? NULL : parv[1];
