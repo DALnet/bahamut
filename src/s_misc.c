@@ -1071,6 +1071,12 @@ void serv_info(aClient *cptr, char *name)
 		   timeofday - acptr->since,
 		   IsServer(acptr) ? (DoesTS(acptr) ?
 				      "TS" : "NoTS") : "-");
+
+      
+	if(RC4EncLink(acptr))
+	    sendto_one(cptr, ":%s %d %s : - RC4 encrypted",
+		       me.name, RPL_STATSDEBUG, name);
+
 	if(ZipOut(acptr))
 	{
 	    unsigned long ib, ob;
@@ -1079,7 +1085,21 @@ void serv_info(aClient *cptr, char *name)
 	    zip_out_get_stats(acptr->serv->zip_out, &ib, &ob, &rat);
 	    if(ib)
 	    {
-		sendto_one(cptr, ":%s %d %s : - Zip inbytes %d, outbytes %d "
+		sendto_one(cptr, ":%s %d %s : - [O] Zip inbytes %d, outbytes %d "
+			   "(%3.2f%%)",
+			   me.name, RPL_STATSDEBUG, name, ib, ob, rat);
+	    }
+	}
+
+	if(ZipIn(acptr))
+	{
+	    unsigned long ib, ob;
+	    double rat;
+
+	    zip_in_get_stats(acptr->serv->zip_in, &ib, &ob, &rat);
+	    if(ob)
+	    {
+		sendto_one(cptr, ":%s %d %s : - [I] Zip inbytes %d, outbytes %d "
 			   "(%3.2f%%)",
 			   me.name, RPL_STATSDEBUG, name, ib, ob, rat);
 	    }
