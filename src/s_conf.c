@@ -1770,6 +1770,29 @@ aConfItem *find_kill(aClient *cptr)
     return (find_is_klined(host, name));
 }
 
+aConfItem *find_kill_perm(aClient *cptr)
+{
+    char       *host, *name;
+    aConfItem  *ret;
+    if (!cptr->user)
+	return 0;
+
+    host = cptr->sockhost;
+    name = cptr->user->username;
+
+    if (strlen(host) > (size_t) HOSTLEN ||
+	(name ? strlen(name) : 0) > (size_t) HOSTLEN)
+	return (0);
+
+    if (find_eline(cptr))
+	return 0;
+   
+    ret=find_is_klined_perm(host, name);
+    if (ret!=NULL) return ret;
+    host=cptr->hostip;
+    return (find_is_klined_perm(host, name));
+}
+
 /*
  * WARNING, no sanity checking on length of name,host etc. thats
  * expected to be done by caller.... *sigh* -Dianora
@@ -1832,6 +1855,50 @@ aConfItem *find_is_klined(char *host, char *name)
 	    }
 	}
     }
+    
+    reverse(rev, host);
+
+    /*
+     * I have NEVER seen a kline with a port field, have you? I have
+     * removed the testing of the port number from here -Dianora
+     */
+    /* Start with hostnames of the form "*word" (most frequent) -Sol */
+
+    list = &KList2;
+    while ((tmp = find_matching_conf(list, rev)) != NULL) 
+    {
+	if (tmp->name && (!name || !match(tmp->name, name)))
+	    return (tmp);
+	list = NULL;
+    }
+
+    /* Try hostnames of the form "word*" -Sol */
+    
+    list = &KList1;
+    while ((tmp = find_matching_conf(list, host)) != NULL) 
+    {
+	if (tmp->name && (!name || !match(tmp->name, name)))
+	    return (tmp);
+	list = NULL;
+    }
+
+    /* If none of the above worked, try non-sorted entries -Sol */
+
+    list = &KList3;
+    while ((tmp = l_find_matching_conf(list, host)) != NULL) 
+    {
+	if (tmp->host && tmp->name && (!name || !match(tmp->name, name)))
+	    return (tmp);
+	list = NULL;
+    }
+    return ((aConfItem *) NULL);
+}
+
+aConfItem *find_is_klined_perm(char *host, char *name)
+{
+    aConfList  *list;
+    aConfItem  *tmp;
+    char        rev[HOSTLEN + 1];	
     
     reverse(rev, host);
 
@@ -1973,6 +2040,23 @@ aConfItem *find_zkill(aClient *cptr)
     return (find_is_zlined(host));
 }
 
+aConfItem *find_zkill_perm(aClient *cptr)
+{
+    char       *host;
+
+    if (!cptr->user)
+	return 0;
+    
+    host = cptr->hostip;		/* guaranteed to always be less than
+					 * HOSTIPLEN - Dianora 
+					 */
+
+    if (find_eline(cptr))
+	return 0;
+
+    return (find_is_zlined_perm(host));
+}
+
 /*
  * find_is_zlined
  * 
@@ -1998,6 +2082,21 @@ aConfItem *find_is_zlined(char *host)
 	}
     }
 
+    if ((tmp = find_matching_conf(&ZList1, host))) 
+	if (tmp!=NULL) return (tmp);
+    return NULL;
+}
+
+aConfItem *find_is_zlined_perm(char *host)
+{
+    aConfItem  *tmp;
+
+    /*
+     * This code is almost identical to find_zline but in the case of an
+     * active quote zline, the loser deserves to know why they are being
+     * zlined don't they? - Dianora
+     */
+   
     if ((tmp = find_matching_conf(&ZList1, host))) 
 	if (tmp!=NULL) return (tmp);
     return NULL;

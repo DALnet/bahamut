@@ -108,8 +108,10 @@ extern aConfItem *find_conf_host(Link *, char *, int);
 extern aConfItem *find_conf_ip(Link *, char *, char *, int);
 extern aConfItem *find_conf_name(char *, int);
 extern aConfItem *find_kill(aClient *);
+extern aConfItem *find_kill_perm(aClient *);
 extern aConfItem *find_dkill(aClient *);
 extern aConfItem *find_zkill(aClient *);
+extern aConfItem *find_zkill_perm(aClient *);
 extern aConfItem *find_uline(Link *, char *);
 extern aConfItem *find_is_ulined(char *);
 
@@ -117,7 +119,9 @@ extern void 	  report_matching_host_klines(aClient *, char *);
 
 /* report_matching_host_klines defined in s_conf.c */
 
+extern aConfItem *find_is_klined_perm(char *, char *);
 extern aConfItem *find_is_klined(char *, char *);
+extern aConfItem *find_is_zlined_perm(char *);
 extern aConfItem *find_is_zlined(char *);
 
 extern void 	  add_temp_kline(aConfItem *);

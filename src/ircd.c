@@ -397,10 +397,10 @@ static time_t check_pings(time_t currenttime)
 
 	if (rehashed && IsPerson(cptr)) 
 	{
-	    if ((aconf = find_zkill(cptr)))	
+	    if ((aconf = find_zkill_perm(cptr)))	
 		zkillflag = YES;
 
-            if (!zline_in_progress && !zkillflag && (aconf = find_kill(cptr)))	
+            if (!zline_in_progress && !zkillflag && (aconf = find_kill_perm(cptr)))	
 		killflag = YES;
 
 	    if (killflag || zkillflag)
