@@ -248,9 +248,6 @@ del_banid(aChannel *chptr, char *banid)
       {
 	 tmp = *ban;
 	 *ban = tmp->next;
-	 MyFree(tmp->banstr);
-	 MyFree(tmp->who);
-	 MyFree(tmp);
 
          for (cm = chptr->members; cm; cm = cm->next) 
 	 {
@@ -263,7 +260,12 @@ del_banid(aChannel *chptr, char *banid)
 		      cm->cptr->user->host);
 	   if (match(banid, nickuhost) == 0 || match(banid, s) == 0) 
               cm->bans--;
-	  }
+	 }
+
+	 MyFree(tmp->banstr);
+	 MyFree(tmp->who);
+	 MyFree(tmp);
+
 	 break;
       }
    return 0;
