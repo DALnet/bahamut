@@ -1309,7 +1309,7 @@ m_join(aClient *cptr,
 #ifdef NO_CHANOPS_WHEN_SPLIT
 			if (!IsAnOper(sptr) && server_was_split && server_split_recovery_time) {
 				if ((server_split_time + server_split_recovery_time) < NOW) {
-					if (serv_fdlist.entry[1] > serv_fdlist.last_entry)
+					if (serv_fdlist.last_entry)
 					  server_was_split = NO;
 					else {
 						server_split_time = NOW;	/*
