@@ -1,8 +1,25 @@
 Outstanding bugs
 - "Sux mode," where a server<->server connection can take a long time to
   establish if one or both sides filters ident connections
-- Source address support on /connect may not work under some conditions
-- Squelching needs finished - Release was too important
+
+Changes for 1.4.35
+- Source address support on /connect problem fixed
+- Squelching added, umode +x or +X (+X is silent squelch), this
+  prevents the user from doing certain online tasks such as privmsg.
+  Meant to be set by a U: lined server or client using SVSMODE.
+- Complete rewrite of the kline/akill/zline system. (s)zlines no longer 
+  exist. K: lines set on IP addresses without username portions (or *)
+  are treated as Z: lines used to be. CIDR banning is now supported
+  in all K: line/akill bans (ie, 204.127.54.112/28).
+- +F usermode bypasses ircd's recvq throttling for opers
+- Improved handling under high load situations
+- Ban munching bug introduced in 1.4.34 is fixed
+- /rehash GC now works
+- lots of sendto_ops_lev changed to sendto_realops_lev for speed
+- Fix a bug where we'd try to target limit messages by a server and
+  write to locations of memory that weren't ours :)
+- Fix O: flags that just didn't work as advertised
+- Various code cleanup and readability fixes
 
 Changes for 1.4.34
 - Don't use FD_SETSIZE at all if USE_POLL is defined
