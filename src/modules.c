@@ -21,25 +21,33 @@ extern Conf_Modules *modules;
 int 
 m_module(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
-
-    if(MyClient(sptr) && !(IsAnOper(sptr) && IsAdmin(sptr)))
+    if(MyClient(sptr) && !IsAnOper(sptr))
     {
         sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name, parv[0]);
         return 0;
     }
-
-    if(!MyClient(sptr) && !(IsULine(sptr) || IsServer(sptr)))
+    if(parc < 2)
+    {
+        sendto_one(sptr, err_str(ERR_NEEDMOREPARAMS), me.name,
+                        parv[0], "MODULE");
         return 0;
+    }
 
-    if(!MyClient(sptr) && parc > 2 && mycmp(parv[1], "CGLOBAL") == 0)
+    /* if its a query of a remote server, fire it off */
+    if(hunt_server(cptr, sptr, ":%s MODULE %s %s", 2,
+                   parc, parv) != HUNTED_ISME)
+        return 0;
+    else if(parc > 2 && (mycmp(parv[1], "CGLOBAL") == 0))
     {
         char pbuf[512];
+
+        if(!(IsServer(sptr) || IsULine(sptr)))
+            return 0;
 
         /* Pass this on to all servers! */
         make_parv_copy(pbuf, parc, parv);
         sendto_serv_butone(cptr, ":%s MODULE %s", parv[0], pbuf);
     }
-
     return 0;
 }
 
@@ -305,34 +313,60 @@ unload_module(aClient *sptr, char *modname)
 int 
 m_module(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
-    if(MyClient(sptr) && !(IsAnOper(sptr)))
+    if(!IsAnOper(sptr))
     {
         sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name, parv[0]);
         return 0;
     }
 
+    if(parc < 2)
+    {
+        sendto_one(sptr, err_str(ERR_NEEDMOREPARAMS), me.name,
+                        parv[0], "MODULE");
+        return 0;
+    }
+
+    /* if its a query of a remote server, fire it off */
+    if(hunt_server(cptr, sptr, ":%s MODULE %s %s", 2, 
+            parc, parv) != HUNTED_ISME)
+        return 0;
+
+    /* this should technically never happen anyway, but.. */
     if(!MyClient(sptr) && !(IsAnOper(sptr) || IsULine(sptr) || IsServer(sptr)))
         return 0;
 
     if(parc > 2 && mycmp(parv[1], "LOAD") == 0)
     {
-        if(!MyClient(sptr) && IsAdmin(sptr))
+        if(!(MyClient(sptr) && IsAdmin(sptr)))
         {
             sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name, parv[0]);
             return 0;
         }
         if(!BadPtr(parv[2]))
             load_module(sptr, parv[2]);
+        else
+        {
+            sendto_one(sptr, err_str(ERR_NEEDMOREPARAMS), me.name,
+                       parv[0], "MODULE");
+            return 0;
+        }
+
     }
     else if(parc > 2 && mycmp(parv[1], "UNLOAD") == 0)
     {
-        if(!MyClient(sptr) && IsAdmin(sptr))
+        if(!(MyClient(sptr) && IsAdmin(sptr)))
         {
             sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name, parv[0]);
             return 0;
         }
         if(!BadPtr(parv[2]))
             unload_module(sptr, parv[2]);
+        else
+        {
+            sendto_one(sptr, err_str(ERR_NEEDMOREPARAMS), me.name,
+                       parv[0], "MODULE");
+            return 0;
+        }
     }
     else if(parc > 1 && mycmp(parv[1], "LIST") == 0)
     {
@@ -349,7 +383,7 @@ m_module(aClient *cptr, aClient *sptr, int parc, char *parv[])
     else if(parc > 2 && mycmp(parv[1], "CMD") == 0)
     {
         aModule *themod;
-        if(!MyClient(sptr) && IsAdmin(sptr))
+        if(!(MyClient(sptr) && IsAdmin(sptr)))
         {
             sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name, parv[0]);
             return 0;
