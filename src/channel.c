@@ -760,7 +760,7 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr, int level, in
       MODE_PRIVATE, 'p', MODE_SECRET, 's',
       MODE_MODERATED, 'm', MODE_NOPRIVMSGS, 'n',
       MODE_TOPICLIMIT, 't', MODE_REGONLY, 'R',
-      MODE_INVITEONLY, 'i', MODE_NOCOLOR, 'c',
+      MODE_INVITEONLY, 'i', MODE_NOCOLOR, 'c', MODE_OPERONLY, 'O',
       0x0, 0x0
    };
 	
@@ -833,8 +833,15 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr, int level, in
 	   {
 	       errors |= SM_ERR_NOPRIVS;
 	       break;
+	   } else {
+	       if (change=='+')
+		   chptr->mode.mode|=MODE_OPERONLY;
+	       else
+		   chptr->mode.mode&=~MODE_OPERONLY;
+	       *mbuf++ = *modes;
+	       nmodes++;
 	   }
-	   
+	   break;
          case 'o':
          case 'v':
             if(level<1) 
