@@ -80,7 +80,7 @@ dopacket(aClient *cptr, char *buffer, int length)
    if(ZipIn(cptr))
    {
       int err;
-      ch2 = zip_input(cptr, ch2, &length, &err);
+      ch2 = zip_input(cptr->serv->zip_in, ch2, &length, &err);
 
       if(length == -1)
       {
@@ -127,7 +127,7 @@ dopacket(aClient *cptr, char *buffer, int length)
                if(length)
                {
                   int err;
-                  ch2 = zip_input(cptr, ch2, &length, &err);
+                  ch2 = zip_input(cptr->serv->zip_in, ch2, &length, &err);
 
                   if(length == -1)
                   {
