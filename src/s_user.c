@@ -927,7 +927,7 @@ register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
                     sptr->user->real_oper_host = 
                         MyMalloc(strlen(sptr->user->host) + 1);
                     sptr->user->real_oper_username = 
-                        MyMalloc(strlen(sptr->username) + 1);
+                        MyMalloc(strlen(sptr->user->username) + 1);
                     sptr->user->real_oper_ip = 
                         MyMalloc(strlen(sptr->hostip) + 1);
                     strcpy(sptr->user->real_oper_host, sptr->user->host);
