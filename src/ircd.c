@@ -339,7 +339,7 @@ static time_t try_connections(time_t currenttime)
             next = aconn->hold;
     }
 
-    if (connecting) 
+    if (connecting && (!server_list || confopts & FLAGS_HUB)) 
     {
         if (con_conn->next)     /* are we already last? */
         {

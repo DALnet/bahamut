@@ -354,7 +354,7 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 				   "Nick change collision from %s to %s",
 				   sptr->name, acptr->name);
 		ircstp->is_kill++;
-		sendto_serv_butone(cptr, ":%s KILL %s : %s (Nick Collision)",me.name,
+		sendto_serv_butone(cptr, ":%s KILL %s :%s (Nick Collision)", me.name,
 				   sptr->name, me.name);
 		sptr->flags |= FLAGS_KILLED;
 		if (sameuser)

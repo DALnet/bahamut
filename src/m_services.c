@@ -722,11 +722,14 @@ m_chankill(aClient *cptr, aClient *sptr, int parc, char *parv[])
     {
         next = cur->next;
         if(MyClient(cur->cptr)) /* tell our clients that the channel is gone */
-            sendto_one(cur->cptr, ":%s KICK %s :%s", parv[0], parv[1], (parc == 3) ? parv[2] : "");
+            sendto_prefix_one(cur->cptr, sptr, ":%s KICK %s %s :%s", parv[0],
+                              parv[1], cur->cptr->name,
+                              (parc == 3) ? parv[2] : "");
         remove_user_from_channel(cur->cptr, chptr);
         cur = next;
     }
     /* at this point, the channel should not exist locally */
-    sendto_serv_butone(cptr, ":%s CHANKILL %s :%s", parv[0], parv[1], (parc == 3) ? parv[2] : "");
+    sendto_serv_butone(cptr, ":%s CHANKILL %s :%s", parv[0], parv[1],
+                       (parc == 3) ? parv[2] : "");
     return 0;
 }
