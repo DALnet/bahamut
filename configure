@@ -307,7 +307,7 @@ ac_includes_default="\
 # include <unistd.h>
 #endif"
 
-ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS PACKAGE VERSION CC CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT build build_cpu build_vendor build_os host host_cpu host_vendor host_os target target_cpu target_vendor target_os SET_MAKE RM CP MV INSTALL_PROGRAM INSTALL_SCRIPT INSTALL_DATA CPP EGREP ENCRYPT_SRC SSL_INCLUDES SSL_LIBS SENGINE FDSETSIZE INSTALL_DIR LIBOBJS LTLIBOBJS'
+ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS PACKAGE VERSION CC CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT build build_cpu build_vendor build_os host host_cpu host_vendor host_os target target_cpu target_vendor target_os SET_MAKE RM CP MV INSTALL_PROGRAM INSTALL_SCRIPT INSTALL_DATA CPP EGREP ENCRYPT_SRC SSL_INCLUDES SSL_LIBS SENGINE INSTALL_DIR LIBOBJS LTLIBOBJS'
 ac_subst_files=''
 
 # Initialize some variables set by options.
@@ -5234,6 +5234,37 @@ done
 
 
 
+case "$target" in
+    *-solaris2*)
+        solaris2="yes"
+        cat >>confdefs.h <<\_ACEOF
+#define OS_SOLARIS2 1
+_ACEOF
+
+        cat >>confdefs.h <<\_ACEOF
+#define OS_SOLARIS 1
+_ACEOF
+
+        ;;
+    *-freebsd*)
+        freebsd="yes"
+        ;;
+    *-linux*)
+        linux="yes"
+        ;;
+    *aix*)
+        aix="yes"
+        cat >>confdefs.h <<\_ACEOF
+#define AIX 1
+_ACEOF
+
+        ;;
+    *-darwin*)
+        check_hmodules="no"
+        ;;
+esac
+
+
 set_hmodules="disabled"
 
 if test "$check_hmodules" = "yes"; then
@@ -5639,34 +5670,6 @@ fi
 
 unset save_LIBS
 
-
-
-case "$target" in
-    *-solaris2*)
-        solaris2="yes"
-        cat >>confdefs.h <<\_ACEOF
-#define OS_SOLARIS2 1
-_ACEOF
-
-        cat >>confdefs.h <<\_ACEOF
-#define OS_SOLARIS 1
-_ACEOF
-
-        ;;
-    *-freebsd*)
-        freebsd="yes"
-        ;;
-    *-linux*)
-        linux="yes"
-        ;;
-    *aix*)
-        aix="yes"
-        cat >>confdefs.h <<\_ACEOF
-#define AIX 1
-_ACEOF
-
-        ;;
-esac
 
 
 if test "$check_sengine" = "yes"; then
@@ -6907,14 +6910,6 @@ fi
 SENGINE="socketengine_$engine.c"
 
 if test $engine = "select"; then
-    { echo "$as_me:$LINENO: WARNING: " >&5
-echo "$as_me: WARNING: " >&2;}
-    { echo "$as_me:$LINENO: WARNING: select is not reccomended!" >&5
-echo "$as_me: WARNING: select is not reccomended!" >&2;}
-    { echo "$as_me:$LINENO: WARNING: " >&5
-echo "$as_me: WARNING: " >&2;}
-    FDSETSIZE='-DFD_SETSIZE=1024'
-
     echo "$as_me:$LINENO: checking to see if FD_SETSIZE is broken" >&5
 echo $ECHO_N "checking to see if FD_SETSIZE is broken... $ECHO_C" >&6
     if test "$cross_compiling" = yes; then
@@ -6971,7 +6966,7 @@ echo "$as_me: WARNING: MAXCONNECTIONS must be no higher than the hardwired FD_SE
 #define BROKEN_FD_SETSIZE 1
 _ACEOF
 
-    FDSETSIZE=' # FD_SETSIZE is broken on this machine!'
+    broken_fd_setsize="yes"
 
 fi
 rm -f core core.* *.core gmon.out bb.out conftest$ac_exeext conftest.$ac_objext conftest.$ac_ext
@@ -6991,7 +6986,15 @@ echo $ECHO_N "checking Maximum file descriptors... $ECHO_C" >&6;
   echo $ECHO_N "(cached) $ECHO_C" >&6
 else
 
-cat << _EOF_ > test.c
+
+cat >conftest.$ac_ext <<_ACEOF
+#line $LINENO "configure"
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+
     #include <sys/types.h>
     #include <sys/time.h>
     #include <sys/resource.h>
@@ -7013,7 +7016,9 @@ cat << _EOF_ > test.c
 
     int main()
     {
-        #ifdef RLIMIT_FD_MAX
+    #ifndef BROKEN_FD_SETSIZE
+
+    #ifdef RLIMIT_FD_MAX
         struct rlimit limit;
 
         if(!getrlimit(RLIMIT_FD_MAX, &limit))
@@ -7024,16 +7029,23 @@ cat << _EOF_ > test.c
                 printf("%ld", (long) limit.rlim_max);
         }
         else
-        #endif
+    #endif
             printf("256");
-        return 1;
+
+    #else
+        printf("%d", FD_SETSIZE);
+    #endif
+        return 0;
     }
-_EOF_
-    $CC -o test test.c >/dev/null 2>&1
-    maxconnections=`./test`
+
+
+_ACEOF
+
+    $CC -o conftest conftest.c >/dev/null 2>&1
+    maxconnections=`./conftest`
     echo "$as_me:$LINENO: result: $maxconnections" >&5
 echo "${ECHO_T}$maxconnections" >&6
-    $RM -f test test.c
+    $RM -f conftest conftest.c
 
 fi
 
@@ -7050,12 +7062,15 @@ _ACEOF
 
 fi
 
+if test "$engine" = "select" && test "$broken_fd_setsize" != "yes"; then
+    CFLAGS="$CFLAGS -DFD_SETSIZE=$maxconnections"
+fi
+
 if test $prefix = NONE; then
     prefix=${HOME}/ircd
 fi
 
 INSTALL_DIR="${prefix}"
-
 
 
 
@@ -7711,7 +7726,6 @@ s,@ENCRYPT_SRC@,$ENCRYPT_SRC,;t t
 s,@SSL_INCLUDES@,$SSL_INCLUDES,;t t
 s,@SSL_LIBS@,$SSL_LIBS,;t t
 s,@SENGINE@,$SENGINE,;t t
-s,@FDSETSIZE@,$FDSETSIZE,;t t
 s,@INSTALL_DIR@,$INSTALL_DIR,;t t
 s,@LIBOBJS@,$LIBOBJS,;t t
 s,@LTLIBOBJS@,$LTLIBOBJS,;t t
