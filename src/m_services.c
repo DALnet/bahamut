@@ -711,21 +711,23 @@ int
 m_chankill(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     aChannel *chptr = NULL;
-    chanMember *cur = NULL;
+    chanMember *cur = NULL, *next = NULL;
     aClient *acptr = NULL;
 
     if(!IsULine(sptr) || parc < 2)  /* we can kick without a reason. */
         return 0;
     if(!(chptr = find_channel(parv[1], NULL)))
         return 0;
-    for(cur = chptr->members; cur; cur=cur->next)
+    cur = chptr->members; 
+    while(cur)
     {
+        next = cur->next;
         acptr = cur->cptr;
         if(MyClient(acptr)) /* tell our clients that the channel is gone */
             sendto_one(acptr, ":%s KICK %s :%s", parv[0], parv[1], (parc == 3) ? parv[2] : "");
+        remove_user_from_channel(acptr, chptr);
+        cur = next;
     }
-    for(cur = chptr->members; cur; cur=cur->next)   /* im being lazy, i know */
-        remove_user_from_channel(cur->cptr, chptr);
     /* at this point, the channel should not exist locally */
     sendto_serv_butone(cptr, ":%s CHANKILL %s :%s", parv[0], parv[1], (parc == 3) ? parv[2] : "");
     return 0;
