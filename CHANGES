@@ -6,6 +6,12 @@ Outstanding bugs
 
 Changes for 1.4.33
 - Only ops can invite on channels
+- Various desync-causing memory-corrupting bugs fixed
+- Fixed a problem with perm klines where they werent removing the user
+- Moved to zlib 1.1.4, as 1.1.3 was vulnerable (but not directly in ircd)
+- Fixed minor SVSKILL wrong direction issue.
+- Fixed a wierd desync issue with sqlined channels
+- Fixed /stats l's sendM statistic - it wasnt working properly with crypt
 
 Changes for 1.4.32
 - Throttling modified to be more friendly and punish repeat offenders

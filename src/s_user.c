@@ -1294,7 +1294,9 @@ static inline int m_message(aClient *cptr, aClient *sptr, int parc,
 {
     aClient *acptr;
     char *s;
+#ifdef SERVICESHUB
     char *myparv[2];
+#endif
     int i, ret, ischan;
     aChannel *chptr;
     char *nick, *server, *p, *cmd, *dccmsg;
