@@ -75,7 +75,7 @@ char *infotext[] =
 	 "Epiphani            Aaron Wiebe         epiphani@dal.net",
 	 "lucas               Lucas Madar         lucas@negaverse.org",
 	 "MSofty              Mark Salerno        msofty@dal.net",
-	 "Raistlin_Mejere     Jason Slagle        raistlin@bahamut.net",
+	 "Raistlin_Majere     Jason Slagle        raistlin@bahamut.net",
 	 "Rakarra             Ian Westcott        rakarra@dal.net",
 	 "sedition            David Parton        sedition@dal.net",
 	 "White_Dragon        Chip Norkus         wd@dal.net",
