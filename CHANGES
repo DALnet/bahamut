@@ -1,3 +1,7 @@
+Changes for 1.4.22
+- Fixed a bug where a server with a bad name trying to connect or trying
+  to be used in /links could crash Bahamut
+
 Changes for 1.4.21
 - rate-squelch zipinbuf complain messages
 - turn off yet more DNS debug messages (forward<>reverse query error)
