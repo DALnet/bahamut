@@ -2114,9 +2114,8 @@ int m_help(aClient *cptr, aClient *sptr, int parc, char *parv[])
     {
        if (parc < 2 || *parv[1] == '\0')
        {
-          sendto_one(sptr, ":%s!%s@%s NOTICE %s :For a list of help topics, "
-                     "type /%s %s", HELPSERV, HS_UNAME, STATS_NAME, sptr->name
-                     , HELPSERV, DEF_HELP_CMD);
+          sendto_one(sptr, ":%s NOTICE %s :For a list of help topics, type "
+                     "/%s %s", me.name, sptr->name, HELPSERV, DEF_HELP_CMD);
           return -1;
        }
        return m_hs(cptr, sptr, parc, parv);
