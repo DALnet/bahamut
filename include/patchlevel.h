@@ -34,7 +34,7 @@
 #define MINOR 4
 #define PATCH 29
 
-#define PATCH1 "pre1"
+#define PATCH1 ""
 
 #define PATCH2 ""
 

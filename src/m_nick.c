@@ -492,12 +492,16 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	 * if the nickname is different, set the TS
 	 * AND set it -r. No need to propogate MODE -r and spam
 	 * the network on registered nick changes. yuck. - lucas
+	 * With the advent of UMODE_R we need to spam the network.
 	 */
      
 	if (mycmp(parv[0], nick))
 	{
 	    sptr->tsinfo = newts ? newts : (ts_val) timeofday;
 	    sptr->umode&=~UMODE_r;
+	    sendto_serv_butone(cptr, ":%s MODE %s -r",
+			       parv[0], parv[0]);
+
 	}
      
 	if (MyConnect(sptr))
