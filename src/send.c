@@ -309,6 +309,42 @@ void sendto_serv_butone(aClient *one, char *pattern, ...) {
 	va_end(vl);
    return;
 }
+
+/*
+ * sendto_noquit_servs
+ * 
+ * Send a message to all noquit servs if noquit = 1,
+ * or all non-noquit servs if noquit = 0
+ */
+void sendto_noquit_servs(int noquit, char *pattern, ...) {
+	int i;
+	aClient *cptr;
+	int j, k = 0;
+	fdlist send_fdlist;
+	va_list vl;
+	
+	va_start(vl, pattern);
+   for (i = serv_fdlist.entry[j = 1];
+		  j <= serv_fdlist.last_entry; i = serv_fdlist.entry[++j]) {
+      if (!(cptr = local[i]) || (noquit ^ IsNoQuit(cptr)))
+		  continue;
+
+                                   /* (noquit ^ IsNoQuit(cptr)
+                                    * therefore, if they're both 0, or both 1, the result is 0.
+                                    * otherwise, the result is 1. Shoot me if I mixed up my logic.
+				    *       - lucas    */
+
+
+      send_fdlist.entry[++k] = i;
+   }
+   send_fdlist.last_entry = k;
+   if (k)
+	  vsendto_fdlist(&send_fdlist, pattern, vl);
+	va_end(vl);
+   return;
+}
+
+
 /*
  * sendto_common_channels()
  * 

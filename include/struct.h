@@ -201,12 +201,16 @@ typedef struct MotdItem aMotd;
 /* Capabilities of the ircd (part of FLAGS, above) */
 
 #define CAPAB_TS3     0x4000000	/* Supports the TS3 Protocal */
+#define CAPAB_NOQUIT  0x8000000 /* Supports NOQUIT */
 
 /* flags macros. */
 
 #define SetTS3(x)   ((x)->flags |= CAPAB_TS3)
 #define IsTS3       ((x)->flags & CAPAB_TS3)
 #define IsULine(x) ((x)->flags & FLAGS_ULINE)
+
+#define SetNoQuit(x) ((x)->flags |= CAPAB_NOQUIT)
+#define IsNoQuit(x) ((x)->flags & CAPAB_NOQUIT)
 
 /* User Modes */
 #define UMODE_o     0x00001	/* umode +o - Oper */

@@ -820,7 +820,7 @@ m_server_estab(aClient *cptr)
 
    sendto_one(cptr, "SVINFO %d %d 0 :%ld", TS_CURRENT, TS_MIN,
 	      (ts_val) timeofday);
-   sendto_one(cptr, "CAPAB :TS3");
+   sendto_one(cptr, "CAPAB TS3 NOQUIT");
 
    det_confs_butmask(cptr, CONF_LEAF | CONF_HUB | CONF_NOCONNECT_SERVER | CONF_ULINE);
    /*
@@ -4778,6 +4778,8 @@ m_capab(aClient *cptr, aClient *sptr, int parc, char *parv[])
    for (i = 1; i < parc; i++) {
       if (strcmp(parv[i], "TS3") == 0)
 	 SetTS3(cptr);
+      if (strcmp(parv[i], "NOQUIT") == 0)
+	 SetNoQuit(cptr);
    }
 	return 0;
 }
