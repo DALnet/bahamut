@@ -270,7 +270,7 @@ struct Message msgtab[] = {
    {MSG_SQLINE, m_sqline, 0, MAXPARA, 1, 0, 0, 0L},
    {MSG_UNSQLINE, m_unsqline, 0, MAXPARA, 1, 0, 0, 0L },
    {MSG_CAPAB, m_capab, 0, MAXPARA, 1, 1, 0, 0L},
-   {MSG_BURST, m_burst, 0, MAXPARA, 1, 1, 0, 0L},
+   {MSG_BURST, m_burst, 0, MAXPARA, 1, 0, 0, 0L},
    {(char *) 0, (int (*)()) 0, 0, 0, 0, 0, 0, 0L}
 };
 
