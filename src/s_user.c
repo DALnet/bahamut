@@ -47,7 +47,7 @@
 
 int
             do_user(char *, aClient *, aClient *, char *, char *, char *,
-		    int, char *);
+		    unsigned long, char *);
 
 int         botwarn(char *, char *, char *, char *);
 
@@ -1429,7 +1429,7 @@ m_nick(aClient *cptr,
 				}
 				
 				return do_user(nick, cptr, sptr, parv[5], parv[6],
-									parv[7], (int)parv[8], parv[9]);
+									parv[7], strtoul(parv[8], NULL, 0), parv[9]);
       }
    }
    else if (sptr->name[0]) {
@@ -2681,7 +2681,7 @@ do_user(char *nick,
 	char *username,
 	char *host,
 	char *server,
-	int serviceid,			
+	unsigned long serviceid,			
 	char *realname)
 {
    anUser     *user;
@@ -4224,7 +4224,8 @@ int m_svsmode(aClient *cptr, aClient *sptr, int parc, char *parv[]) {
 					break;
  */ 
 				 case 'd':
-					if(parv[3] && isdigit(*parv[3])) acptr->user->servicestamp = atol(parv[3]);
+					if(parv[3] && isdigit(*parv[3])) 
+						acptr->user->servicestamp = strtoul(parv[3], NULL, 0);
 					break;
 				 default:
 					for (s = user_modes; (flag = *s); s += 2)
