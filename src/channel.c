@@ -1125,11 +1125,11 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
 		break;
             }
 	    
-	    /* Do not let *'s in keys in preperation for key hiding
-	     * - Raist
+	    /* Do not let *'s in keys in preperation for key hiding - Raist
+	     * Also take out ",", which makes a channel unjoinable - lucas
 	     */
 	    
-	    if (strchr(parv[args],'*')!=NULL) {
+	    if (strchr(parv[args], '*') != NULL || strchr(parv[args], ',') != NULL) {
 		args++;
 		break;
 	    }
