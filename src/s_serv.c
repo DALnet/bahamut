@@ -915,9 +915,13 @@ m_server_estab(aClient *cptr)
 	/* send out our SQLINES too */
 	for(aconf=conf ; aconf ; aconf=aconf->next) 
 	{
-	     if(aconf->status&(CONF_QUARANTINED_NICK|CONF_SQLINE)) 
+	    if((aconf->status&CONF_QUARANTINED_NICK)
+		&& (aconf->status&CONF_SQLINE)) 
 		sendto_one(cptr, ":%s SQLINE %s :%s", me.name, aconf->name, aconf->passwd);
 	}
+
+	/* Lets do szlines */
+	send_szlines(cptr);
 
    /* Bursts are about to start.. send a BURST */
    if (IsBurst(cptr))

@@ -1701,33 +1701,6 @@ lookup_confhost(aConfItem *aconf)
 }
 
 int
-find_zline(char *host)
-{
-    aConfItem *tmp;
-    if (strlen(host) > (size_t) HOSTLEN)
-	return (0);
-    
-    if (szlines) {
-	tmp=szlines;
-	while(szlines) {
-	    if (match(tmp->host, host)) return -1;
-	    tmp=tmp->next;
-	}
-    }
-    
-    /*
-     * Try hostnames of the form "word*" -Sol 
-     * For D lines most of them are going to be nnn.nnn.nnn.* to  deny a
-     * /24 - Dianora I won't check for any other kind of Zline now...
-     */
-    
-    if (find_matching_conf(&ZList1, host))
-	return (-1);
-    else
-	return (0);
-}
-
-int
 find_eline(aClient *cptr)
 {
    return find_conf_match(cptr, &EList1, &EList2, &EList3);
@@ -1994,8 +1967,8 @@ find_is_zlined(char *host)
    
    if (szlines) {
        tmp=szlines;
-       while(szlines) {
-	   if (match(tmp->host, host)) return tmp;
+       while(tmp) {
+	   if (match(tmp->host,host)==0) return tmp;
 	   tmp=tmp->next;
        }
    }
@@ -2092,6 +2065,15 @@ void report_szlines(aClient *sptr) {
 	sendto_one(sptr, rpl_str(RPL_STATSZLINE), me.name,
 		   sptr->name, 'z' , tmp->host, 
 		   BadPtr(tmp->passwd) ? "No Reason" : tmp->passwd);
+	tmp=tmp->next;
+    }
+}
+
+void send_szlines(aClient *cptr) {
+    aConfItem *tmp;
+    tmp=szlines;
+    while (tmp) {
+	sendto_one(cptr, ":%s SZLINE %s :%s", me.name, tmp->host, tmp->passwd);
 	tmp=tmp->next;
     }
 }

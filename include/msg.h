@@ -106,6 +106,8 @@
 #define MSG_UNSQLINE "UNSQLINE" 	/* UNSQLINE */
 #define MSG_BURST    "BURST"     	/* BURST */
 #define MSG_DCCALLOW "DCCALLOW"		/* dccallow */
+#define MSG_SZLINE   "SZLINE"           /* szline */
+#define MSG_UNSZLINE "UNSZLINE"         /* unszline */
 #define MAXPARA      15
 
 extern int  m_kline(aClient *, aClient *, int, char **);
@@ -190,6 +192,9 @@ extern int  m_sqline(aClient *, aClient *, int, char **);
 extern int  m_unsqline(aClient *, aClient *, int, char **);
 extern int  m_burst(aClient *, aClient *, int, char **);
 extern int  m_dccallow(aClient *, aClient *, int, char **);
+extern int  m_szline(aClient *, aClient *, int, char **);
+extern int  m_unszline(aClient *, aClient *, int, char **);
+
 
 #ifdef MSGTAB
 struct Message msgtab[] = {
@@ -274,6 +279,8 @@ struct Message msgtab[] = {
    {MSG_UNSQLINE, m_unsqline, 0, MAXPARA, 1, 0, 0, 0L },
    {MSG_CAPAB, m_capab, 0, MAXPARA, 1, 1, 0, 0L},
    {MSG_BURST, m_burst, 0, MAXPARA, 1, 0, 0, 0L},
+   {MSG_SZLINE, m_szline, 0, MAXPARA, 1, 0, 0, 0L},
+   {MSG_UNSZLINE, m_unszline, 0, MAXPARA, 1, 0, 0, 0L},
    {(char *) 0, (int (*)()) 0, 0, 0, 0, 0, 0, 0L}
 };
 

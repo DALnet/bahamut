@@ -122,8 +122,6 @@ static char readbuf[8192];
 # endif
 #endif
 
-/* externally defined functions */
-extern int find_zline(char *);	/* defined in s_conf.c */
 
 /*
  * add_local_domain() 
@@ -1457,6 +1455,8 @@ static void read_error_exit(aClient *cptr, int length, int err)
 
 void accept_connection(aClient *cptr)
 {
+   aConfItem *tmp;
+   char dumpstring[491];
    static struct sockaddr_in addr;
    int addrlen = sizeof(struct sockaddr_in);
    char host[HOSTLEN + 2];
@@ -1478,9 +1478,11 @@ void accept_connection(aClient *cptr)
 
    strncpyzt(host, (char *) inetntoa((char *) &addr.sin_addr), sizeof(host));
 
-   if (find_zline(host)) 
+   if ((tmp=find_is_zlined(host))!=NULL) 
    {
       ircstp->is_ref++;
+      ircsprintf(dumpstring,"ERROR :Host zlined: %s\r\n",tmp->passwd);
+      write(newfd, dumpstring, strlen(dumpstring));
       close(newfd);
       return;
    }

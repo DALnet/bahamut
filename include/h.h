@@ -138,7 +138,7 @@ extern int 	  remove_temp_kline(char *host, char *user, int type);
 extern void       add_szline(aConfItem *);
 extern void       remove_szline(char *, int);
 extern void       report_szlines(aClient *);
-
+extern void       send_szlines(aClient *);
 
 extern int  	  find_restrict(aClient *);
 extern int  	  rehash(aClient *, aClient *, int);
