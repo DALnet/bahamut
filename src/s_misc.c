@@ -602,7 +602,6 @@ exit_client(
 				MyFree(sptr->user->lopt);
 				sptr->user->lopt = NULL;
 			}
-                        remove_dcc_references(sptr);
 			sendto_realops_lev(CCONN_LEV, "Client exiting: %s (%s@%s) [%s] [%s]",
 									 sptr->name, sptr->user->username,
 									 sptr->user->host,
@@ -862,6 +861,7 @@ exit_one_client(aClient *cptr,
 	    del_invite(sptr, lp->value.chptr);
 	 /* Clean up silences */
 	 while ((lp = sptr->user->silence)) (void)del_silence(sptr, lp->value.cp);
+         remove_dcc_references(sptr);
 	 /*
 	  * again, this is all that is needed 
 	  */
