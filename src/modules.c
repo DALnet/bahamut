@@ -297,6 +297,7 @@ typedef struct module_hook {
 
 static DLink *preaccess_hooks = NULL;
 static DLink *postaccess_hooks = NULL;
+static DLink *postmotd_hooks = NULL;
 static DLink *msg_hooks = NULL;
 static DLink *mymsg_hooks = NULL;
 static DLink *every10_hooks = NULL;
@@ -318,6 +319,9 @@ char *get_texthooktype(enum c_hooktype hooktype)
 
       case CHOOK_POSTACCESS:
          return "Post-access";
+
+      case CHOOK_POSTMOTD:
+         return "Post-MOTD";
 
       case CHOOK_MSG:
          return "Message";
@@ -350,6 +354,10 @@ DLink **get_hooklist(enum c_hooktype hooktype)
 
       case CHOOK_POSTACCESS:
          hooklist = &postaccess_hooks;
+         break;
+
+      case CHOOK_POSTMOTD:
+         hooklist = &postmotd_hooks;
          break;
 
       case CHOOK_MSG:
@@ -477,6 +485,16 @@ int call_hooks(enum c_hooktype hooktype, ...)
       case CHOOK_POSTACCESS:
          acptr = va_arg(vl, aClient *);
          for(lp = postaccess_hooks; lp; lp = lp->next)
+         {
+            int (*rfunc) (aClient *) = ((aHook *)lp->value.cp)->funcptr;
+            if((ret = (*rfunc)(acptr)) == FLUSH_BUFFER)
+               break;
+         }
+         break;
+
+      case CHOOK_POSTMOTD:
+         acptr = va_arg(vl, aClient *);
+         for(lp = postmotd_hooks; lp; lp = lp->next)
          {
             int (*rfunc) (aClient *) = ((aHook *)lp->value.cp)->funcptr;
             if((ret = (*rfunc)(acptr)) == FLUSH_BUFFER)

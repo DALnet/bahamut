@@ -15,6 +15,9 @@ enum c_hooktype {
    CHOOK_POSTACCESS,  /* called after access checks are done (right before client is put on network) */
                       /* Params: 1: (aClient *), returns int */
 
+   CHOOK_POSTMOTD,    /* called after MOTD is shown to the client */
+                      /* Params: 1: (aClient *), returns int */
+
    CHOOK_MSG,         /* called for every privmsg or notice */
                       /* Params: 3: (aClient *, int isnotice, char *msgtext), returns int */
 

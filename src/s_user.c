@@ -1062,6 +1062,9 @@ int register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
 	memset(sptr->passwd, '\0', PASSWDLEN);
 	
 	if (ubuf[1]) send_umode(cptr, sptr, 0, ALL_UMODES, ubuf);
+
+	if(call_hooks(CHOOK_POSTMOTD, sptr) == FLUSH_BUFFER)
+	    return FLUSH_BUFFER;
     }
 
     return 0;
