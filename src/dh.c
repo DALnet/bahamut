@@ -37,10 +37,11 @@
 #include <openssl/bn.h>
 #include <openssl/dh.h>
 
-struct session_info {
-   DH *dh;
-   char *session_shared;
-   int session_shared_length;
+struct session_info 
+{
+    DH *dh;
+    char *session_shared;
+    int session_shared_length;
 };
 
 /*
@@ -67,341 +68,338 @@ static BIGNUM *ircd_generator;
 
 static int verify_is_hex(char *string)
 {
-   int l = strlen(string);
-   char tmp[4] = {'\0', '\0', '\0', '\0'};
-   int tmpidx = 0;
+    int l = strlen(string);
+    char tmp[4] = {'\0', '\0', '\0', '\0'};
+    int tmpidx = 0;
 
-   if(l & 0x01) /* check if it's odd length */
-   {  
-      l++;
-      tmp[tmpidx++] = '0'; /* pad with zero */
-   }
+    if(l & 0x01) /* check if it's odd length */
+    {  
+        l++;
+        tmp[tmpidx++] = '0'; /* pad with zero */
+    }
    
-   while(*string)
-   {
-      tmp[tmpidx++] = *string++;
-      if(tmpidx == 2)
-      {
-         char *eptr;
-         unsigned char x;
+    while(*string)
+    {
+        tmp[tmpidx++] = *string++;
+        if(tmpidx == 2)
+        {
+            char *eptr;
+            unsigned char x;
    
-         tmpidx = 0;
+            tmpidx = 0;
    
-         x = strtol(tmp, &eptr, 16);
-         if(*eptr != '\0')
-         {
-            return 0;
-         }
-      }
-   }
-   return 1;
+            x = strtol(tmp, &eptr, 16);
+            if(*eptr != '\0')
+                return 0;
+        }
+    }
+    return 1;
 }
 
 int dh_hexstr_to_raw(char *string, unsigned char *hexout, int *hexlen)
 {
-   int l = strlen(string);
-   char tmp[3] = {'\0', '\0', '\0'};
-   int tmpidx = 0;
-   int hexidx = 0;
+    int l = strlen(string);
+    char tmp[3] = {'\0', '\0', '\0'};
+    int tmpidx = 0;
+    int hexidx = 0;
 
-   if(l & 0x01) /* check if it's odd length */
-   {  
-      l++;
-      tmp[tmpidx++] = '0'; /* pad with zero */
-   }
+    if(l & 0x01) /* check if it's odd length */
+    {  
+        l++;
+        tmp[tmpidx++] = '0'; /* pad with zero */
+    }
    
-   while(*string)
-   {
-      tmp[tmpidx++] = *string++;
-      if(tmpidx == 2)
-      {
-         char *eptr;
-         unsigned char x;
+    while(*string)
+    {
+        tmp[tmpidx++] = *string++;
+        if(tmpidx == 2)
+        {
+            char *eptr;
+            unsigned char x;
    
-         tmpidx = 0;
+            tmpidx = 0;
    
-         x = strtol(tmp, &eptr, 16);
-         if(*eptr != '\0')
-         {
-            return 0;
-         }
-         hexout[hexidx++] = (unsigned char) x;
-      }
-   }
-   *hexlen = hexidx;
-   return 1;
+            x = strtol(tmp, &eptr, 16);
+            if(*eptr != '\0')
+                return 0;
+            hexout[hexidx++] = (unsigned char) x;
+        }
+    }
+    *hexlen = hexidx;
+    return 1;
 }
 
 static int make_entropy()
 {
-   char randbuf[RAND_BYTES * 4];
-   FILE *fp;
-   int i;
+    char randbuf[RAND_BYTES * 4];
+    FILE *fp;
+    int i;
 
-   printf("No random state found, trying to generate entropy from /dev/random...\n");
-   printf("This may take a moment.\n");
-   printf("To speed up this process, do something else on the system for a bit.\n");
+    printf("\nNo random state found, generating entropy from /dev/random...\n");
 
-   fp = fopen("/dev/random", "r");
-   if(!fp)
-   {
-      printf("Could not load random values from /dev/random: %s\n", strerror(errno));
-      printf("ircd needs a %d byte random seed.\n", RAND_BYTES);
-      printf("You can place a file containing random data called .ircd.entropy\n");
-      printf("in the directory with your ircd.conf. This file must be at least %d bytes\n", RAND_BYTES);
-      printf("long and should be suitably random.\n");
-      return 0;
-   }
+    fp = fopen("/dev/random", "r");
+    if(!fp)
+    {
+        printf("Could not load random values from /dev/random: %s\n", 
+                strerror(errno));
+        printf("ircd needs a %d byte random seed.\n", RAND_BYTES);
+        printf("You can place a file containing random data called"
+               " .ircd.entropy\nin the directory with your ircd.conf."
+               " This file must be at least %d bytes\n", RAND_BYTES);
+        printf("long and should be suitably random.\n");
+        return 0;
+    }
 
-   for(i = 0; i < (RAND_BYTES * 4); i++)
-   {
-      int cv;
+    for(i = 0; i < (RAND_BYTES * 4); i++)
+    {
+        int cv;
 
-      cv = fgetc(fp);
+        cv = fgetc(fp);
 
-      if(cv == EOF)
-      {
-         if(ferror(fp))
-         {
-            printf("Error while reading from random source: %s. hrmm.\n", strerror(errno));
-            fclose(fp);
-            return 0;
-         }
-         clearerr(fp);
-         usleep(100);
-         i--;
-         continue;
-      }
+        if(cv == EOF)
+        {
+            if(ferror(fp))
+            {
+                printf("Error while reading from random source: %s. hrmm.\n", 
+                        strerror(errno));
+                fclose(fp);
+                return 0;
+            }
+            clearerr(fp);
+            usleep(100);
+            i--;
+            continue;
+        }
 
-      randbuf[i] = cv;
-      if(i && (i % 64 == 0))
-      {
-         printf(" %d%% ", (int)(((float) i / (float) (RAND_BYTES * 4)) * 100.0));
-         fflush(stdout);
-      }
-      else
-      {
-         printf(".");
-         fflush(stdout);
-      }
-   }
-   printf("Done.\n");
-   fclose(fp);
+        randbuf[i] = cv;
+        if(i && (i % 64 == 0))
+        {
+            printf(" %d%% .. ", (int)(((float) i / (float) (RAND_BYTES * 4)) 
+                    * 100.0));
+            fflush(stdout);
+        }
+    }
+    printf("Done.\n");
+    fclose(fp);
 
-   fp = fopen(".ircd.entropy", "w");
-   if(!fp)
-   {
-      printf("Could not open .ircd.entropy for writing: %s\n", strerror(errno));
-      return 0;
-   }
+    fp = fopen(".ircd.entropy", "w");
+    if(!fp)
+    {
+        printf("Could not open .ircd.entropy for writing: %s\n", 
+                strerror(errno));
+        return 0;
+    }
 
-   fwrite(randbuf, RAND_BYTES * 4, 1, fp);
-   fclose(fp);
+    fwrite(randbuf, RAND_BYTES * 4, 1, fp);
+    fclose(fp);
 
-   RAND_load_file(".ircd.entropy", -1);
+    RAND_load_file(".ircd.entropy", -1);
 
-   return 1;
+    return 1;
 }
 
 static int init_random()
 {
-   int ret;
-   time_t now;
+    int ret;
+    time_t now;
 
-   ret = RAND_load_file(".ircd.entropy", -1);
-   if(ret <= 0)
-   {
-      if(!make_entropy())
-         return -1;
-   }
-   else
-      printf("%d bytes of entropy loaded.\n", ret);
+    ret = RAND_load_file(".ircd.entropy", -1);
+    if(ret <= 0)
+    {
+        if(!make_entropy())
+            return -1;
+    }
+    else
+        printf("%d bytes of entropy loaded.\n", ret);
 
-   now = time(NULL);   
+    now = time(NULL);   
 
-   /* this is probably not too good, but it saves just writing
-      the whole state back to disk with no changes. */
-   RAND_seed(&now, 4); 
-   RAND_write_file(".ircd.entropy");
+    /* this is probably not too good, but it saves just writing
+       the whole state back to disk with no changes. */
+    RAND_seed(&now, 4); 
+    RAND_write_file(".ircd.entropy");
 
-   return 0;
+    return 0;
 }
 
 static void create_prime()
 {
-   char buf[PRIME_BYTES_HEX];
-   int i;
-   int bufpos = 0;
+    char buf[PRIME_BYTES_HEX];
+    int i;
+    int bufpos = 0;
 
-   for(i = 0; i < PRIME_BYTES; i++)
-   {
-      char *x = hex_to_string[dh_prime_1024[i]];
-      while(*x)
-         buf[bufpos++] = *x++;
-   }
-   buf[bufpos] = '\0';
+    for(i = 0; i < PRIME_BYTES; i++)
+    {
+        char *x = hex_to_string[dh_prime_1024[i]];
+        while(*x)
+            buf[bufpos++] = *x++;
+    }
+    buf[bufpos] = '\0';
 
-   ircd_prime = NULL;
-   BN_hex2bn(&ircd_prime, buf);
-   ircd_generator = BN_new();
-   BN_set_word(ircd_generator, dh_gen_1024);
+    ircd_prime = NULL;
+    BN_hex2bn(&ircd_prime, buf);
+    ircd_generator = BN_new();
+    BN_set_word(ircd_generator, dh_gen_1024);
 }
 
 int dh_init()
 {
-   ERR_load_crypto_strings();
+    ERR_load_crypto_strings();
 
-   create_prime();
-   if(init_random() == -1)
-      return -1;
-   return 0; 
+    create_prime();
+    if(init_random() == -1)
+        return -1;
+    return 0; 
 }
 
 int dh_generate_shared(void *session, char *public_key)
 {
-   BIGNUM *tmp;
-   int len;
-   struct session_info *si = (struct session_info *) session;
+    BIGNUM *tmp;
+    int len;
+    struct session_info *si = (struct session_info *) session;
 
-   if(verify_is_hex(public_key) == 0 || !si || si->session_shared)
-      return 0;
+    if(verify_is_hex(public_key) == 0 || !si || si->session_shared)
+        return 0;
 
-   tmp = NULL;
-   BN_hex2bn(&tmp, public_key);
-   if(!tmp)
-      return 0;
+    tmp = NULL;
+    BN_hex2bn(&tmp, public_key);
+    if(!tmp)
+        return 0;
 
-   si->session_shared_length = DH_size(si->dh);
-   si->session_shared = (char *) malloc(DH_size(si->dh));
-   len = DH_compute_key(si->session_shared, tmp, si->dh);
-   BN_free(tmp);
+    si->session_shared_length = DH_size(si->dh);
+    si->session_shared = (char *) malloc(DH_size(si->dh));
+    len = DH_compute_key(si->session_shared, tmp, si->dh);
+    BN_free(tmp);
 
-   if(len < 0)
-      return 0;
+    if(len < 0)
+        return 0;
 
-   si->session_shared_length = len;
+    si->session_shared_length = len;
 
-   return 1;
+    return 1;
 }
 
 void *dh_start_session()
 {
-   struct session_info *si;
+    struct session_info *si;
 
-   si = (struct session_info *) malloc(sizeof(struct session_info));
-   if(!si) abort();
+    si = (struct session_info *) malloc(sizeof(struct session_info));
+    if(!si) 
+        abort();
 
-   memset(si, 0, sizeof(struct session_info));
+    memset(si, 0, sizeof(struct session_info));
 
-   si->dh = DH_new();
-   si->dh->p = BN_dup(ircd_prime);
-   si->dh->g = BN_dup(ircd_generator);
+    si->dh = DH_new();
+    si->dh->p = BN_dup(ircd_prime);
+    si->dh->g = BN_dup(ircd_generator);
 
-   if(!DH_generate_key(si->dh))
-   {
-      DH_free(si->dh);
-      free(si);
-      return NULL;
-   }
+    if(!DH_generate_key(si->dh))
+    {
+        DH_free(si->dh);
+        free(si);
+        return NULL;
+    }
 
-   return (void *) si;
+    return (void *) si;
 }
 
 void dh_end_session(void *session)
 {
-   struct session_info *si = (struct session_info *) session;
+    struct session_info *si = (struct session_info *) session;
 
-   if(si->dh)
-   {
-      DH_free(si->dh);
-      si->dh = NULL;
-   }
+    if(si->dh)
+    {
+        DH_free(si->dh);
+        si->dh = NULL;
+    }
 
-   if(si->session_shared)
-   {
-      memset(si->session_shared, 0, si->session_shared_length);
-      free(si->session_shared);
-      si->session_shared = NULL;
-   }
+    if(si->session_shared)
+    {
+        memset(si->session_shared, 0, si->session_shared_length);
+        free(si->session_shared);
+        si->session_shared = NULL;
+    }
 
-   free(si);
+    free(si);
 }
 
 char *dh_get_s_public(char *buf, int maxlen, void *session)
 {
-   struct session_info *si = (struct session_info *) session;
-   char *tmp;
+    struct session_info *si = (struct session_info *) session;
+    char *tmp;
 
-   if(!si || !si->dh || !si->dh->pub_key)
-      return NULL;   
+    if(!si || !si->dh || !si->dh->pub_key)
+        return NULL;   
 
-   tmp = BN_bn2hex(si->dh->pub_key);
-   if(!tmp) 
-      return NULL;
+    tmp = BN_bn2hex(si->dh->pub_key);
+    if(!tmp) 
+        return NULL;
 
-   if(strlen(tmp) + 1 > maxlen)
-   {
-      OPENSSL_free(tmp);
-      return NULL;
-   }
-   strcpy(buf, tmp);
-   OPENSSL_free(tmp);
+    if(strlen(tmp) + 1 > maxlen)
+    {
+        OPENSSL_free(tmp);
+        return NULL;
+    }
+    strcpy(buf, tmp);
+    OPENSSL_free(tmp);
 
-   return buf;
+    return buf;
 }
 
 int dh_get_s_shared(char *buf, int *maxlen, void *session)
 {
-   struct session_info *si = (struct session_info *) session;
+    struct session_info *si = (struct session_info *) session;
 
-   if(!si || !si->session_shared || *maxlen < si->session_shared_length)
-      return 0;
+    if(!si || !si->session_shared || *maxlen < si->session_shared_length)
+        return 0;
 
-   *maxlen = si->session_shared_length;
-   memcpy(buf, si->session_shared, *maxlen);
+    *maxlen = si->session_shared_length;
+    memcpy(buf, si->session_shared, *maxlen);
 
-   return 1;
+    return 1;
 }
 
-static char *hex_to_string[256] = {
-   "00", "01", "02", "03", "04", "05", "06", "07", 
-   "08", "09", "0a", "0b", "0c", "0d", "0e", "0f", 
-   "10", "11", "12", "13", "14", "15", "16", "17", 
-   "18", "19", "1a", "1b", "1c", "1d", "1e", "1f", 
-   "20", "21", "22", "23", "24", "25", "26", "27", 
-   "28", "29", "2a", "2b", "2c", "2d", "2e", "2f", 
-   "30", "31", "32", "33", "34", "35", "36", "37", 
-   "38", "39", "3a", "3b", "3c", "3d", "3e", "3f", 
-   "40", "41", "42", "43", "44", "45", "46", "47", 
-   "48", "49", "4a", "4b", "4c", "4d", "4e", "4f", 
-   "50", "51", "52", "53", "54", "55", "56", "57", 
-   "58", "59", "5a", "5b", "5c", "5d", "5e", "5f", 
-   "60", "61", "62", "63", "64", "65", "66", "67", 
-   "68", "69", "6a", "6b", "6c", "6d", "6e", "6f", 
-   "70", "71", "72", "73", "74", "75", "76", "77", 
-   "78", "79", "7a", "7b", "7c", "7d", "7e", "7f", 
-   "80", "81", "82", "83", "84", "85", "86", "87", 
-   "88", "89", "8a", "8b", "8c", "8d", "8e", "8f", 
-   "90", "91", "92", "93", "94", "95", "96", "97", 
-   "98", "99", "9a", "9b", "9c", "9d", "9e", "9f", 
-   "a0", "a1", "a2", "a3", "a4", "a5", "a6", "a7", 
-   "a8", "a9", "aa", "ab", "ac", "ad", "ae", "af", 
-   "b0", "b1", "b2", "b3", "b4", "b5", "b6", "b7", 
-   "b8", "b9", "ba", "bb", "bc", "bd", "be", "bf", 
-   "c0", "c1", "c2", "c3", "c4", "c5", "c6", "c7", 
-   "c8", "c9", "ca", "cb", "cc", "cd", "ce", "cf", 
-   "d0", "d1", "d2", "d3", "d4", "d5", "d6", "d7", 
-   "d8", "d9", "da", "db", "dc", "dd", "de", "df", 
-   "e0", "e1", "e2", "e3", "e4", "e5", "e6", "e7", 
-   "e8", "e9", "ea", "eb", "ec", "ed", "ee", "ef", 
-   "f0", "f1", "f2", "f3", "f4", "f5", "f6", "f7", 
-   "f8", "f9", "fa", "fb", "fc", "fd", "fe", "ff"
-};
+static char *hex_to_string[256] = 
+{
+    "00", "01", "02", "03", "04", "05", "06", "07", 
+    "08", "09", "0a", "0b", "0c", "0d", "0e", "0f", 
+    "10", "11", "12", "13", "14", "15", "16", "17", 
+    "18", "19", "1a", "1b", "1c", "1d", "1e", "1f", 
+    "20", "21", "22", "23", "24", "25", "26", "27", 
+    "28", "29", "2a", "2b", "2c", "2d", "2e", "2f", 
+    "30", "31", "32", "33", "34", "35", "36", "37", 
+    "38", "39", "3a", "3b", "3c", "3d", "3e", "3f", 
+    "40", "41", "42", "43", "44", "45", "46", "47", 
+    "48", "49", "4a", "4b", "4c", "4d", "4e", "4f", 
+    "50", "51", "52", "53", "54", "55", "56", "57", 
+    "58", "59", "5a", "5b", "5c", "5d", "5e", "5f", 
+    "60", "61", "62", "63", "64", "65", "66", "67", 
+    "68", "69", "6a", "6b", "6c", "6d", "6e", "6f", 
+    "70", "71", "72", "73", "74", "75", "76", "77", 
+    "78", "79", "7a", "7b", "7c", "7d", "7e", "7f", 
+    "80", "81", "82", "83", "84", "85", "86", "87", 
+    "88", "89", "8a", "8b", "8c", "8d", "8e", "8f", 
+    "90", "91", "92", "93", "94", "95", "96", "97", 
+    "98", "99", "9a", "9b", "9c", "9d", "9e", "9f", 
+    "a0", "a1", "a2", "a3", "a4", "a5", "a6", "a7", 
+    "a8", "a9", "aa", "ab", "ac", "ad", "ae", "af", 
+    "b0", "b1", "b2", "b3", "b4", "b5", "b6", "b7", 
+    "b8", "b9", "ba", "bb", "bc", "bd", "be", "bf", 
+    "c0", "c1", "c2", "c3", "c4", "c5", "c6", "c7", 
+    "c8", "c9", "ca", "cb", "cc", "cd", "ce", "cf", 
+    "d0", "d1", "d2", "d3", "d4", "d5", "d6", "d7", 
+    "d8", "d9", "da", "db", "dc", "dd", "de", "df", 
+    "e0", "e1", "e2", "e3", "e4", "e5", "e6", "e7", 
+    "e8", "e9", "ea", "eb", "ec", "ed", "ee", "ef", 
+    "f0", "f1", "f2", "f3", "f4", "f5", "f6", "f7", 
+    "f8", "f9", "fa", "fb", "fc", "fd", "fe", "ff"
+}; 
 
 /* This prime is taken from IPsec */
 
 static unsigned int dh_gen_1024 = 2;
-static unsigned char dh_prime_1024[] = {
+static unsigned char dh_prime_1024[] = 
+{
         0xF4, 0x88, 0xFD, 0x58, 0x4E, 0x49, 0xDB, 0xCD,
         0x20, 0xB4, 0x9D, 0xE4, 0x91, 0x07, 0x36, 0x6B,
         0x33, 0x6C, 0x38, 0x0D, 0x45, 0x1D, 0x0F, 0x7C,
