@@ -309,7 +309,7 @@ void read_authports(aClient *cptr)
    }
 #ifdef SHOW_HEADERS
    else
-      sendto_one(cptr, REPORT_FIN_ID);
+      send(cptr->fd, REPORT_FIN_ID, R_fin_id, 0);
 #endif
 
    ircstp->is_asuc++;
