@@ -113,7 +113,11 @@ char *infotext[] =
 	 "Thanks also to those who continue to make twinkies and doritos, as they",
 	 "are the backbone of most programmers' diets and thus make it possible",
 	 "for code like this to be developed!",
-    "",
+	 "",
+	 "And an extra special thanks to Emma/curve for keeping our dream",
+	 "alive by whining about all our easter eggs.  This one goes out to",
+	 "you!",
+	 "",
 	 0,
 };
 !SUB!THIS!
