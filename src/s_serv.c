@@ -3562,6 +3562,7 @@ int m_kline(aClient *cptr, aClient *sptr, int parc, char *parv[])
 			       get_client_name(acptr2, FALSE));
 		    ircsprintf(fbuf,"K-Lined: %s",reason);
 		    (void) exit_client(acptr2,acptr2,&me,fbuf);
+		    i--;
 		}
 	    }
 	}
@@ -5319,6 +5320,7 @@ int m_akill(aClient *cptr, aClient *sptr, int parc, char *parv[])
 			   get_client_name(acptr, FALSE));
 		ircsprintf(fbuf,"Autokilled: %s",reason);
 		(void) exit_client(acptr,acptr,&me,fbuf);
+		i--;
 	    }
 	}
     }
