@@ -115,7 +115,6 @@ static int  dorehash = 0;
 static char *dpath = DPATH;
 int         rehashed = 1;
 int         zline_in_progress = 0; /* killing off matching D lines */
-int         noisy_htm = NOISY_HTM; /* Is high traffic mode noisy or not? */ 
 time_t      nextconnect = 1;	   /* time for next try_connections call */
 time_t      nextping = 1;	   /* same as above for check_pings() */
 time_t      nextdnscheck = 0;	   /* next time to poll dns to force timeout */
@@ -545,31 +544,6 @@ setup_corefile()
 #endif
 }
 
-/*
- * code added by mika nystrom (mnystrom@mit.edu) 
- * this flag is used to signal globally that the server is heavily
- * loaded, something which can be taken into account when processing
- * e.g. user commands and scheduling ping checks
- * Changed by Taner Halicioglu (taner@CERF.NET) 
- */
-
-#if (MAXCONNECTIONS > 1024)
-#define LOADSEND 64
-#else
-#define LOADSEND (MAXCONNECTIONS / 16)
-#endif
-
-#define LOADCFREQ 5		/* every 5s */
-
-#if !defined(HUB) && defined(USE_HTM)
-int         lifesux = 1;
-#else
-int         lifesux = 0;
-#endif
-int         LRV = LOADSEND;
-time_t      LCF = LOADCFREQ;
-int         HTMLOCK=NO;
-
 char REPORT_DO_DNS[256], REPORT_FIN_DNS[256], REPORT_FIN_DNSC[256], 
     REPORT_FAIL_DNS[256], REPORT_DO_ID[256], REPORT_FIN_ID[256], 
     REPORT_FAIL_ID[256];
@@ -935,9 +909,6 @@ void io_loop()
 {
     char to_send[200];
     int lastexp=0;
-#if !defined(HUB) && defined(USE_HTM)
-    time_t lasthtmtime = 0;
-#endif
 
     time_t	next10sec = 0; /* For events we do every 10 seconds */
 
@@ -986,53 +957,6 @@ void io_loop()
 	    lastbwRK = me.receiveK;
 	    lastbwcalc = timeofday;
 	}
-
-	/*
-	 * This chunk of code determines whether or not "life sucks", that
-	 * is to say if the traffic level is so high that standard server
-	 * commands should be restricted
-	 * 
-	 * Changed by Taner so that it tells you what's going on as well as
-	 * allows forced on (long LCF), etc...
-	 * 
-	 * Modified so HTM works on outgoing traffic
-	 * No crap, just blocks heavy outgoing commands like /list and /who
-	 * when our outgoing traffic is really high. 
-	 */
-	/* Wrapped this in #ifndef HUB as on a hub it's silly */
-
-#if !defined(HUB) && defined(USE_HTM)
-	if ((timeofday - lasthtmtime) >= LCF) 
-	{
-	    lasthtmtime = timeofday;
-	    if (curSendK > (float) LRV || HTMLOCK == YES) 
-	    {
-		if (!lifesux) 
-		{
-		    lifesux = 1;
-
-		    if (noisy_htm)
-		    {
-			if(HTMLOCK)
-			    sendto_ops("Entering high-traffic mode - (LOCKED)");
-			else
-			    sendto_ops("Entering high-traffic mode - (outgoing %.2fK/s > "
-				       "%dK/s)", curSendK, LRV);
-		    }
-		}
-	    }
-	    else 
-	    {
-		LCF = LOADCFREQ;
-		if (lifesux) 
-		{
-		    lifesux = 0;
-		    if (noisy_htm)
-			sendto_ops("Resuming standard operation . . . .");
-		}
-	    }
-	}
-#endif
 
 	/*
 	 * We only want to connect if a connection is due, not every
@@ -1126,12 +1050,6 @@ void io_loop()
 		delay = MIN(delay, TIMESEC);
 	}
 
-	/*
-	 * We want to read servers on every io_loop, as well as "busy"
-	 * clients (which again, includes servers. If "lifesux", then we
-	 * read servers AGAIN, and then flush any data to servers. -Taner
-	 */
-
 	engine_read_message(delay);	/* check everything! */
 
 	/*
@@ -1153,7 +1071,7 @@ void io_loop()
 	}
 #endif
 	
-	if (dorehash && !lifesux) 
+	if (dorehash) 
 	{
 	    (void) rehash(&me, &me, 1);
         (void) read_motd(MOTD);
@@ -1175,6 +1093,8 @@ void io_loop()
 	 * empty them in read_message we can't empty them here.
 	 * one effect: during htm, output to normal lusers
 	 * will lag.
+     * htm doesnt exist anymore, but this comment was funny, so i
+     * left it in. -epi
 	 */
 	
 	/* Now we've made this call a bit smarter. */

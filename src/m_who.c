@@ -40,7 +40,6 @@ int build_searchopts(aClient *, int, char **);
 int chk_who(aClient *, int);
 
 /* Externally defined stuffs */
-extern int lifesux;
 extern int user_modes[];
 
 extern Link *find_channel_link(Link *, aChannel *);
@@ -723,8 +722,7 @@ int m_who(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		   wsopts.host!=NULL ? wsopts.host : wsopts.nick);
 	return 0;
     }
-    /* if HTM, drop this too */
-    if(lifesux && !IsAnOper(sptr))
+    if(!IsAnOper(sptr))
     {
 	sendto_one(sptr, rpl_str(RPL_LOAD2HI), me.name, sptr->name);
 	return 0;

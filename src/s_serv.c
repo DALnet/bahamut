@@ -53,8 +53,6 @@
 #include "fdlist.h"
 #include "throttle.h"
 
-extern int  lifesux;
-extern int  HTMLOCK;
 static char buf[BUFSIZE];
 extern int  rehashed;
 extern int  forked;
@@ -1164,9 +1162,6 @@ int m_burst(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	 * they're not BURST capab
 	 */
 	
-#ifdef HTM_LOCK_ON_NETBURST
-	HTMLOCK = NO;
-#endif
 	sendto_gnotice("from %s: synch to %s in %d %s at %s sendq", me.name,
 		       *parv, (timeofday-sptr->firsttime), 
 		       (timeofday-sptr->firsttime)==1?"sec":"secs", parv[1]);
@@ -1178,10 +1173,7 @@ int m_burst(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	
     }
     else
-    { /* SOB.. lock HTM if defined by admin */
-#ifdef HTM_LOCK_ON_NETBURST
-	HTMLOCK = YES;
-#endif
+    {
 	sptr->flags |= FLAGS_EOBRECV;
     }
     return 0;
@@ -2363,119 +2355,6 @@ int m_set(aClient *cptr, aClient *sptr, int parc, char *parv[])
     return 0;
 }
 
-/* m_htm - high traffic mode info */
-int m_htm(aClient *cptr, aClient *sptr, int parc, char *parv[])
-{
-#if !defined(HUB) && defined(USE_HTM)
-#define LOADCFREQ 5
-    char       *command;
-
-    extern int  lifesux, LRV, LCF, noisy_htm;	/* in ircd.c */
-    extern float curSendK;
-#endif
-
-    if (!MyClient(sptr) || !IsOper(sptr)) 
-    {
-	sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name, parv[0]);
-	return 0;
-    }
-#if !defined(HUB) && defined(USE_HTM)
-    sendto_one(sptr,":%s NOTICE %s :HTM is %s(%d), %s. Max rate = %dK/s. "
-	       "Current = %.2fK/s", me.name, parv[0], lifesux ? "ON" : "OFF",
-	       lifesux, noisy_htm ? "NOISY" : "QUIET",
-	       LRV, curSendK);
-    if (parc > 1) 
-    {
-	command = parv[1];
-	if (!strcasecmp(command, "TO")) 
-	{
-	    if (parc > 2) 
-	    {
-		int new_value = atoi(parv[2]);
-
-		if (new_value < 10) 
-		    sendto_one(sptr,
-			       ":%s NOTICE %s :\002Cannot set LRV < 10!\002",
-			       me.name, parv[0]);
-		else
-		    LRV = new_value;
-
-		sendto_one(sptr, ":%s NOTICE %s :NEW Max rate = %dK/s. "
-			   "Current = %.2fK/s", me.name, parv[0], LRV, curSendK);
-		sendto_realops("%s!%s@%s set new HTM rate to %dK/s (%.2fK/s "
-			       "current)",
-			       parv[0], sptr->user->username, sptr->sockhost,
-			       LRV, curSendK);
-	    }
-	    else
-		sendto_one(sptr, ":%s NOTICE %s :LRV command needs an integer"
-			   "parameter", me.name, parv[0]);
-	}
-	else 
-	{
-	    if (!strcasecmp(command, "ON")) 
-	    {
-		lifesux = 1;
-		sendto_one(sptr, ":%s NOTICE %s :HTM is now ON.", me.name, 
-			   parv[0]);
-		sendto_ops("Entering high-traffic mode: Forced by %s!%s@%s",
-			   parv[0], sptr->user->username, sptr->sockhost);
-		LCF = 30;		/* 30s */
-	    }
-	    else if (!strcasecmp(command, "OFF")) 
-	    {
-#ifdef HTM_LOCK_ON_NETBURST
-		if (HTMLOCK == YES) 
-		{
-		    if (!IsAdmin(sptr)) 
-		    {
-			sendto_one(sptr, ":%s NOTICE %s :Cannot change HTM - "
-				   "Currently LOCKED");
-			return 0;
-		    }
-		    else
-		    {
-			sendto_one(sptr, ":%s NOTICE %s :Removing HTM LOCK");
-			sendto_ops("Resuming standard operation through HTM "
-				   "LOCK: Forced by %s!%s@%s",
-				   parv[0], sptr->user->username,
-				   sptr->sockhost);
-			lifesux = 0;
-			LCF = LOADCFREQ;
-			return 0;
-		    }
-		}
-#endif 
-
-		lifesux = 0;
-		LCF = LOADCFREQ;
-		sendto_one(sptr, ":%s NOTICE %s :HTM is now OFF.", me.name,
-			   parv[0]);
-		sendto_ops("Resuming standard operation: Forced by %s!%s@%s",
-			   parv[0], sptr->user->username, sptr->sockhost);
-	    }
-	    else if (!strcasecmp(command, "QUIET")) 
-	    {
-		sendto_ops("HTM is now QUIET");
-		noisy_htm = NO;
-	    }
-	    else if (!strcasecmp(command, "NOISY")) 
-	    {
-		sendto_ops("HTM is now NOISY");
-		noisy_htm = YES;
-	    }
-	    else
-		sendto_one(sptr, ":%s NOTICE %s :Commands are:HTM [ON] [OFF] "
-			   "[TO int] [QUIET] [NOISY]", me.name, parv[0]);
-	}
-    }
-#else /* !(hub) && !(use_htm) */
-    sendto_one(sptr, ":%s NOTICE %s :HTM is not enabled in this ircd.",
-               me.name, parv[0]);
-#endif
-    return 0;
-}
-
 /*
  * cluster() input            
  * - pointer to a hostname output 
@@ -3605,7 +3484,7 @@ int m_trace(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	return 0;	 
     }
 
-    if (dow && lifesux && !IsOper(sptr)) 
+    if (dow && !IsOper(sptr)) 
     {
 	sendto_one(sptr, rpl_str(RPL_LOAD2HI), me.name, parv[0]);
 	return 0;

@@ -82,7 +82,6 @@
 #ifdef UNKLINE
 #define MSG_UNKLINE  "UNKLINE"		/* UNKLINE */
 #endif
-#define MSG_HTM      "HTM"	      	/* HTM */
 #define MSG_SET      "SET"	      	/* SET */
 #define MSG_SAMODE   "SAMODE"    	/* SAMODE */
 #define MSG_SAJOIN   "SAJOIN"		/* SAJOIN */
@@ -203,7 +202,6 @@ extern int  m_restart(aClient *, aClient *, int, char **);
 extern int  m_die(aClient *, aClient *, int, char **);
 extern int  m_hash(aClient *, aClient *, int, char **);
 extern int  m_dns(aClient *, aClient *, int, char **);
-extern int  m_htm(aClient *, aClient *, int, char **);
 extern int  m_set(aClient *, aClient *, int, char **);
 extern int  m_capab(aClient *, aClient *, int, char **);
 extern int  m_silence(aClient *, aClient *, int, char **);
@@ -283,7 +281,6 @@ struct Message msgtab[] =
     {MSG_REHASH, m_rehash, 0, MAXPARA, 1, 0, 0, 0L},
     {MSG_RESTART, m_restart, 0, MAXPARA, 1, 0, 0, 0L},
     {MSG_DIE, m_die, 0, MAXPARA, 1, 0, 0, 0L},
-    {MSG_HTM, m_htm, 0, MAXPARA, 1, 0, 0, 0L},
     {MSG_SET, m_set, 0, MAXPARA, 1, 0, 0, 0L},
     {MSG_CHANSERV, m_cs, 0, 1, 1, 0, 0, 0L},
     {MSG_NICKSERV, m_ns, 0, 1, 1, 0, 0, 0L},

@@ -395,12 +395,6 @@ int send_queued(aClient *to)
 	{
 	    to->flags &= (~FLAGS_SOBSENT);
 	    sendto_one(to, "BURST %d", SBufLength(&to->sendQ));
-	    if (!(to->flags & FLAGS_EOBRECV)) /* hey we're the last to synch */
-	    { 
-#ifdef HTM_LOCK_ON_NETBURST
-		HTMLOCK = NO;
-#endif
-	    }
 	}
     }
     return (IsDead(to)) ? -1 : 0;

@@ -58,7 +58,6 @@ extern aClass *classes;
 
 
 #include "fdlist.h"
-extern int  	 lifesux;
 extern fdlist 	 serv_fdlist;
 extern fdlist 	 busycli_fdlist;
 extern fdlist 	 default_fdlist;

@@ -59,9 +59,7 @@ extern void outofmemory(void);	/*
 #ifdef MAXBUFFERS
 extern void reset_sock_opts();
 extern int send_lusers(aClient *,aClient *,int, char **);
-
 #endif
-extern int  lifesux;
 
 #ifdef WINGATE_NOTICE
 extern char ProxyMonURL[TOPICLEN + 1];

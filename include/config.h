@@ -469,9 +469,6 @@
  */
 #undef IRCII_KLUDGE
 
-/* NOISY_HTM - should HTM be noisy by default should be YES or NO */
-#define NOISY_HTM YES
-
 /*
  * CLIENT_FLOOD - client excess flood threshold this controls the
  * number of bytes the server will allow a client to send to the server
@@ -549,21 +546,6 @@
  * enabled.
  */
 #define WARN_NO_NLINE
-
-/*
- * USE_HTM
- * Define this if you want to use HTM (high traffic mode)
- * to limit expensive commands when outgoing traffic is very high.
- * This option has no effect on a hub.
- */
-#undef USE_HTM
-
-/* 
- * HTM_LOCK_ON_NETBURST Define this if you want your server to
- * stay in HTM while the server is synching to the network 
- * after a connect
- */
-#undef HTM_LOCK_ON_NETBURST
 
 /* DEFAULT_PROXY_INFO_URL
  * Rather self explanitory. If not specified in T: line,

@@ -88,9 +88,6 @@ static char *CliSJOINFmt = ":%s SJOIN %ld %s";
 static char nickbuf[BUFSIZE], buf[BUFSIZE];
 static char modebuf[REALMODEBUFLEN], parabuf[REALMODEBUFLEN];
 
-/* htm ... */
-extern int lifesux;
-
 /* externally defined function */
 extern Link *find_channel_link(Link *, aChannel *);     /* defined in list.c */
 #ifdef ANTI_SPAMBOT
@@ -3032,13 +3029,6 @@ int m_list(aClient *cptr, aClient *sptr, int parc, char *parv[])
         return 0;
     }
 
-    /* if HTM, drop this too */
-    if(lifesux)
-    {
-        sendto_one(sptr, rpl_str(RPL_LOAD2HI), me.name, sptr->name);
-        return 0;
-    }
-    
     if (parc < 2 || BadPtr(parv[1]))
     {
 
