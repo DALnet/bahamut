@@ -283,6 +283,97 @@ void vsendto_one(aClient *to, char *pattern, va_list vl) {
    send_message(to, sendbuf, len);
 }
 
+/* prefix_buffer
+ *
+ * take varargs and dump prefixed message into a buffer
+ * remote: 1 if client is remote, 0 if local
+ * from: the client sending the message
+ * prefix: the prefix as specified (parv[0] usually)
+ * buffer: the buffer to dump this into (NO BOUNDS CHECKING!)
+ * pattern: varargs pattern
+ * vl: varargs variable list with one arg taken already
+ */
+static inline int prefix_buffer(int remote, aClient *from, char *prefix, char *buffer, char *pattern, va_list vl)
+{
+   char *p;      /* temp pointer */
+   int msglen;   /* the length of the message we end up with */
+   int sidx = 1; /* start at offset 1 */
+
+   *buffer = ':';
+
+   if(!remote && IsPerson(from))
+   {
+      int flag = 0;
+      anUser *user = from->user;
+
+      for(p = from->name; *p; p++)
+         buffer[sidx++] = *p;
+
+      if (user)
+      {
+         if (*user->username) 
+         {
+            buffer[sidx++] = '!';
+            for(p = user->username; *p; p++)
+               buffer[sidx++] = *p;
+	 }
+         if (*user->host && !MyConnect(from)) 
+         {
+            buffer[sidx++] = '@';
+            for(p = user->host; *p; p++)
+               buffer[sidx++] = *p;
+            flag = 1;
+         }
+      }
+   
+      if (!flag && MyConnect(from) && *user->host) 
+      {
+         buffer[sidx++] = '@';
+         for(p = from->sockhost; *p; p++)
+            buffer[sidx++] = *p;
+      }
+   }
+   else
+   {
+      for(p = prefix; *p; p++)
+         buffer[sidx++] = *p;
+   }
+
+   msglen = ircvsprintf(&buffer[sidx], pattern + 3, vl);
+   msglen += sidx;
+
+   return msglen;
+}
+
+static inline int check_fake_direction(aClient *from, aClient *to)
+{
+   if (!MyClient(from) && IsPerson(to) && (to->from == from->from)) 
+   {
+      if (IsServer(from)) 
+      {
+         sendto_ops("Message to %s[%s] dropped from %s (Fake Direction)",
+                      to->name, to->from->name, from->name);
+         return -1;
+      }
+
+      sendto_ops("Ghosted: %s[%s@%s] from %s[%s@%s] (%s)", to->name, to->user->username, 
+                 to->user->host, from->name, from->user->username, from->user->host, to->from->name);
+      sendto_serv_butone(NULL, ":%s KILL %s :%s (%s[%s@%s] Ghosted %s)", me.name, to->name, 
+                         me.name, to->name, to->user->username, to->user->host, to->from->name);
+
+      to->flags |= FLAGS_KILLED;
+      exit_client(NULL, to, &me, "Ghosted client");
+
+      if (IsPerson(from))
+         sendto_one(from, err_str(ERR_GHOSTEDCLIENT), me.name, from->name, to->name, 
+                    to->user->username, to->user->host, to->from);
+      return -1;
+   }
+
+   return 0;
+}
+
+
 void sendto_channel_butone(aClient *one, aClient *from, aChannel *chptr, char *pattern, ...) 
 {
    chanMember *cm;
@@ -290,7 +381,7 @@ void sendto_channel_butone(aClient *one, aClient *from, aChannel *chptr, char *p
    int i;
    int didlocal = 0, didremote = 0;
    va_list vl;
-   char *pfix, *p;
+   char *pfix;
    
    va_start(vl, pattern);
 
@@ -303,57 +394,15 @@ void sendto_channel_butone(aClient *one, aClient *from, aChannel *chptr, char *p
       if (acptr->from == one)
          continue; /* ...was the one I should skip */
       i = acptr->from->fd;
-      if (MyConnect(acptr) && IsRegisteredUser(acptr)) 
+      if (MyClient(acptr)) 
       {
          if(!didlocal)
-         {
-            int sidx = 1;
+            didlocal = prefix_buffer(0, from, pfix, sendbuf, pattern, vl);
 
-            *sendbuf = ':';
+         if(check_fake_direction(from, acptr))
+            continue;
 
-            if(IsPerson(from))
-            {
-               int flag = 0;
-               anUser *user = from->user;
-
-               for(p = from->name; *p; p++)
-                  sendbuf[sidx++] = *p;
-
-               if (user)
-               {
-                  if (*user->username) 
-                  {
-                     sendbuf[sidx++] = '!';
-                     for(p = user->username; *p; p++)
-                        sendbuf[sidx++] = *p;
-	          }
-                  if (*user->host && !MyConnect(from)) 
-                  {
-                     sendbuf[sidx++] = '@';
-                     for(p = user->host; *p; p++)
-                        sendbuf[sidx++] = *p;
-                     flag = 1;
-                  }
-               }
-
-               if (!flag && MyConnect(from) && *user->host) 
-               {
-                  sendbuf[sidx++] = '@';
-                  for(p = from->sockhost; *p; p++)
-                     sendbuf[sidx++] = *p;
-               }
-            }
-            else
-            {
-               for(p = pfix; *p; p++)
-                  sendbuf[sidx++] = *p;
-            }
-
-            didlocal = ircvsprintf(&sendbuf[sidx], pattern + 3, vl);
-            didlocal += sidx;
-         }
          send_message(acptr, sendbuf, didlocal);
-         /* vsendto_prefix_one(acptr, from, pattern, vl); */
          sentalong[i] = 1;
       }
       else 
@@ -363,22 +412,14 @@ void sendto_channel_butone(aClient *one, aClient *from, aChannel *chptr, char *p
           * link already
           */
          if(!didremote)
-         {
-            int ridx = 1;
+            didremote = prefix_buffer(1, from, pfix, remotebuf, pattern, vl);
 
-            *remotebuf = ':';
-
-            for(p = pfix; *p; p++)
-               remotebuf[ridx++] = *p;
-            didremote = ircvsprintf(&remotebuf[ridx], pattern + 3, vl);
-            didremote += ridx;
-         }
+         if(check_fake_direction(from, acptr))
+            continue;
 
          if (sentalong[i] == 0) 
          {
             send_message(acptr, remotebuf, didremote);
-            /* er, let's _not_ remake this entire buffer each time */
-            /* vsendto_prefix_one(acptr, from, pattern, vl); */
             sentalong[i] = 1;
          }
       }
@@ -458,8 +499,8 @@ void sendto_common_channels(aClient *from, char *pattern, ...)
    chanMember *users;
    aClient *cptr;
    va_list vl;
-   char *pfix, *p;
-   int msglen, sidx = 1;
+   char *pfix;
+   int msglen = 0;
 
    va_start(vl, pattern);
 
@@ -468,49 +509,6 @@ void sendto_common_channels(aClient *from, char *pattern, ...)
 
    if(from->fd >= 0)
       sentalong[from->fd]++;
-
-   *sendbuf = ':';
-
-   if(IsPerson(from))
-   {
-      int flag = 0;
-      anUser *user = from->user;
-
-      for(p = from->name; *p; p++)
-         sendbuf[sidx++] = *p;
-
-      if (user)
-      {
-         if (*user->username) 
-         {
-            sendbuf[sidx++] = '!';
-            for(p = user->username; *p; p++)
-               sendbuf[sidx++] = *p;
-	 }
-         if (*user->host && !MyConnect(from)) 
-         {
-            sendbuf[sidx++] = '@';
-            for(p = user->host; *p; p++)
-               sendbuf[sidx++] = *p;
-            flag = 1;
-         }
-      }
-   
-      if (!flag && MyConnect(from) && *user->host) 
-      {
-         sendbuf[sidx++] = '@';
-         for(p = from->sockhost; *p; p++)
-            sendbuf[sidx++] = *p;
-      }
-   }
-   else
-   {
-      for(p = pfix; *p; p++)
-         sendbuf[sidx++] = *p;
-   }
-
-   msglen = ircvsprintf(&sendbuf[sidx], pattern + 3, vl);
-   msglen += sidx;
 
    if (from->user)
    {
@@ -524,14 +522,21 @@ void sendto_common_channels(aClient *from, char *pattern, ...)
                continue;
 
             sentalong[cptr->fd]++;
+            if(!msglen)
+               msglen = prefix_buffer(0, from, pfix, sendbuf, pattern, vl);
+            if(check_fake_direction(from, cptr))
+               continue;
             send_message(cptr, sendbuf, msglen);
-            /* vsendto_prefix_one(cptr, from, pattern, vl); */
          }
       }
    }
 
    if(MyConnect(from))
+   {
+      if(!msglen)
+         msglen = prefix_buffer(0, from, pfix, sendbuf, pattern, vl);
       send_message(from, sendbuf, msglen);
+   }
 
    va_end(vl);
    return;
@@ -580,7 +585,7 @@ void sendto_channel_butserv(aChannel *chptr, aClient *from, char *pattern, ...)
    aClient *acptr;
    va_list vl;
    int didlocal = 0;
-   char *pfix, *p;
+   char *pfix;
 
    va_start(vl, pattern);
 
@@ -591,52 +596,10 @@ void sendto_channel_butserv(aChannel *chptr, aClient *from, char *pattern, ...)
       if (MyConnect(acptr = cm->cptr))
       {
          if(!didlocal)
-         {
-            int sidx = 1;
+            didlocal = prefix_buffer(0, from, pfix, sendbuf, pattern, vl);
 
-            *sendbuf = ':';
-
-            if(IsPerson(from))
-            {
-               int flag = 0;
-               anUser *user = from->user;
-
-               for(p = from->name; *p; p++)
-                  sendbuf[sidx++] = *p;
-
-               if (user)
-               {
-                  if (*user->username) 
-                  {
-                     sendbuf[sidx++] = '!';
-                     for(p = user->username; *p; p++)
-                        sendbuf[sidx++] = *p;
-	          }
-                  if (*user->host && !MyConnect(from)) 
-                  {
-                     sendbuf[sidx++] = '@';
-                     for(p = user->host; *p; p++)
-                        sendbuf[sidx++] = *p;
-                     flag = 1;
-                  }
-               }
-
-               if (!flag && MyConnect(from) && *user->host) 
-               {
-                  sendbuf[sidx++] = '@';
-                  for(p = from->sockhost; *p; p++)
-                     sendbuf[sidx++] = *p;
-               }
-            }
-            else
-            {
-               for(p = pfix; *p; p++)
-                  sendbuf[sidx++] = *p;
-            }
-
-            didlocal = ircvsprintf(&sendbuf[sidx], pattern + 3, vl);
-            didlocal += sidx;
-         }
+         if(check_fake_direction(from, acptr))
+            continue;
 
          send_message(acptr, sendbuf, didlocal);
 
