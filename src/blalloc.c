@@ -253,6 +253,7 @@ int BlockHeapFree(BlockHeap *bh, void *ptr)
 	     */
 	    if ((walker->allocMap[ctr] & bitmask) == 0)
 	    {
+		abort(); /* This is more useful than some random complaining */
 #if defined(USE_SYSLOG) && defined(SYSLOG_BLOCK_ALLOCATOR)
 		syslog(LOG_DEBUG, "blalloc.c bit already clear in map!");
 #endif
