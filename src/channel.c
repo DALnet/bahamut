@@ -2476,6 +2476,81 @@ send_user_joins(aClient *cptr, aClient *user)
    return;
 }
 
+static void kill_ban_list(aClient *cptr, aChannel *chptr)
+{  
+   chanMember *cm;
+   aBan   *bp, *bpn;
+   char   *cp;
+   int         count = 0, send = 0;
+      
+   cp = modebuf;  
+   *cp++ = '-';
+   *cp = '\0';      
+         
+   *parabuf = '\0';
+         
+   for (bp = chptr->banlist; bp; bp = bp->next)
+   {  
+      if (strlen(parabuf) + strlen(bp->banstr) + 10 < (size_t) MODEBUFLEN)
+      {  
+         if(*parabuf)
+            strcat(parabuf, " ");
+         strcat(parabuf, bp->banstr);
+         count++;   
+         *cp++ = 'b';
+         *cp = '\0';
+      }
+      else if (*parabuf)
+         send = 1;
+   
+      if (count == MAXMODEPARAMS)
+         send = 1;
+    
+      if (send) {
+         sendto_channel_butserv(chptr, &me, ":%s MODE %s %s %s", cptr->name,
+                chptr->chname, modebuf, parabuf);
+         send = 0;
+         *parabuf = '\0';
+         cp = modebuf;
+         *cp++ = '-';
+         if (count != MAXMODEPARAMS) {
+            strcpy(parabuf, bp->banstr);
+            *cp++ = 'b';
+         }
+         count = 0; 
+         *cp = '\0';
+      }
+   }  
+
+   if(*parabuf)
+   {
+      sendto_channel_butserv(chptr, &me, ":%s MODE %s %s %s", cptr->name,
+                             chptr->chname, modebuf, parabuf);
+   }
+
+   /* physically destroy channel ban list */   
+
+   bp = chptr->banlist;
+   while(bp)
+   {
+      bpn = bp->next;
+      MyFree(bp->banstr);
+      MyFree(bp->who);
+      MyFree(bp);
+      bp = bpn;
+   }
+
+   chptr->banlist = NULL;
+   
+   /* reset bquiet on all channel members */
+   for (cm = chptr->members; cm; cm = cm->next)
+   {     
+      if(MyConnect(cm->cptr))
+         cm->bans = 0;
+   }
+}
+
+
 static inline void
 sjoin_sendit(aClient *cptr,
 	     aClient *sptr,
@@ -2602,7 +2677,6 @@ m_sjoin(aClient *cptr,
    }
 
    memset((char *) &mode, '\0', sizeof(mode));
-   *parabuf = '\0';
 
    doesop = (parv[4 + args][0] == '@' || parv[4 + args][1] == '@');
 
@@ -2661,7 +2735,10 @@ m_sjoin(aClient *cptr,
    else if (newts < oldts) {
       /* if remote ts is older, and they have ops, don't keep our modes. */
       if (doesop)   
-		  keepourmodes = 0;
+      {
+         kill_ban_list(sptr, chptr);
+         keepourmodes = 0;
+      }
       if (haveops && !doesop)
 		  tstosend = oldts;
       else
@@ -2693,6 +2770,8 @@ m_sjoin(aClient *cptr,
          strcpy(mode.key, oldmode->key);
       }
    }
+
+   *parabuf = '\0';
 
    /*
     * since the most common case is that the modes are exactly the same,
