@@ -3703,7 +3703,7 @@ int m_dccallow(aClient *cptr, aClient *sptr, int parc, char *parv[])
     static char *dcc_help[] = 
 	{
 	    "/DCCALLOW [<+|->nick[,<+|->nick, ...]] [list] [help]",
-	    "You may allow DCCs of filetypes which are otherwise blocked by"
+	    "You may allow DCCs of filetypes which are otherwise blocked by "
 	    "the IRC server",
 	    "by specifying a DCC allow for the user you want to recieve files "
 	    "from.",
