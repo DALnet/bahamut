@@ -28,6 +28,13 @@
 #include "numeric.h"
 #include "dh.h"
 #include "zlink.h"
+#include "fds.h"
+
+/*
+ * STOP_SENDING_ON_SHORT_SEND:
+ * Treat a short send as a blocked socket
+ */
+#define STOP_SENDING_ON_SHORT_SEND
 
 #ifdef ALWAYS_SEND_DURING_SPLIT
 extern int currently_processing_netsplit;
@@ -320,16 +327,25 @@ int send_queued(aClient *to)
     while (DBufLength(&to->sendQ) > 0) 
     {
 	msg = dbuf_map(&to->sendQ, &len);
-	/* Returns always len > 0 */
 	if ((rlen = deliver_it(to, msg, len)) < 0)
 	    return dead_link(to, "Write error to %s, closing link (%s)",
 			     errno);
-	(void) dbuf_delete(&to->sendQ, rlen);
+	dbuf_delete(&to->sendQ, rlen);
 	to->lastsq = (DBufLength(&to->sendQ) >> 10);
-	if (rlen < len)
-	    /* ..or should I continue until rlen==0? */
-	    /* no... rlen==0 means the send returned EWOULDBLOCK... */
-	    break;
+
+#ifdef STOP_SENDING_ON_SHORT_SEND
+        if (rlen < len)
+        {
+            /* Treat this socket as blocking */
+            to->flags |= FLAGS_BLOCKED;
+            set_fd_flags(to->fd, FDF_WANTWRITE);
+#else
+        if (rlen == 0)
+        {
+            /* Socket is blocking... */
+#endif
+            break;
+        }
 
 	if(more_data && DBufLength(&to->sendQ) == 0)
 	{
