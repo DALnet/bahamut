@@ -304,7 +304,7 @@ typedef struct MotdItem aMotd;
                      UMODE_h|UMODE_R)
 #define ALL_UMODES (SEND_UMODES|UMODE_s|UMODE_c|UMODE_r|UMODE_k|UMODE_f|\
 	            UMODE_y|UMODE_d|UMODE_g|UMODE_b|UMODE_n|UMODE_h|UMODE_m|\
-	            UMODE_O|UMODE_R|UMODE_e|UMODE_x|UMODE_X)
+	            UMODE_O|UMODE_R|UMODE_e)
 #ifdef DEFAULT_HELP_MODE
 #define OPER_UMODES (UMODE_o|UMODE_w|UMODE_s|UMODE_y|UMODE_d|UMODE_g|\
                      UMODE_n|UMODE_h)

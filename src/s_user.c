@@ -1425,8 +1425,17 @@ static inline int m_message(aClient *cptr, aClient *sptr, int parc,
 	    return 0;
 #endif
 #endif
+	/* Deal with squelched clients */
+	if (ISSSquelch(sptr))
+	    return 0;
+	if (ISWSquelch(sptr)) {
+	    sendto_one(sptr, ":%s NOTICE %s :You are currently squelched.  "
+		       "Message not sent.", me.name, parv[0]);
+	    return 0;
+	}
 	parv[1] = canonize(parv[1]);
     }
+
 
     for (p = NULL, nick = strtoken(&p, parv[1], ","), i = 0; nick && i<20 ;
 	 nick = strtoken(&p, NULL, ",")) 
