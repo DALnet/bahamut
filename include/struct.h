@@ -497,7 +497,6 @@ struct ConfItem {
 #define	CONF_HUB		0x2000
 #define CONF_ELINE		0x4000
 #define CONF_FLINE		0x8000
-#define	CONF_BLINE		0x10000
 #define	CONF_ZLINE		0x20000
 #define CONF_QUARANTINED_NICK 	0x40000
 #define CONF_ULINE 		0x80000
@@ -525,7 +524,11 @@ struct User {
 	char        username[USERLEN + 1];
 	char        host[HOSTLEN + 1];
 	char       *server;		  /* pointer to scached server name */
+#ifdef OS_SOLARIS
+	uint_t    servicestamp; /* solaris is gay -epi */
+#else
 	u_int32_t servicestamp; /* Services id - Raistlin */
+#endif
    /*
     * In a perfect world the 'server' name should not be needed, a
     * pointer to the client describing the server is enough. 

@@ -240,11 +240,6 @@ static int 	ckinitconf(int opt)
 	  aconf->status = CONF_ADMIN;
 	  break;
 
-	case 'B':
-	case 'b':
-	  aconf->status = CONF_BLINE;
-	  break;
-
 	case 'C': /* Server where I should try to connect */
 	case 'c': /* in case of lp failures             */
 	  ccount++;

@@ -46,10 +46,6 @@ aConfList   KList1 = {0, NULL};			/* ordered */
 aConfList   KList2 = {0, NULL};			/* ordered, reversed */
 aConfList   KList3 = {0, NULL};			/* what we can't sort */
 
-aConfList   BList1 = {0, NULL};			/* ordered */
-aConfList   BList2 = {0, NULL};			/* ordered, reversed */
-aConfList   BList3 = {0, NULL};			/* what we can't sort */
-
 aConfList   ZList1 = {0, NULL};			/* ordered */
 
 aConfList   EList1 = {0, NULL};			/* ordered */
