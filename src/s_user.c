@@ -1697,7 +1697,7 @@ static inline int m_message(aClient *cptr, aClient *sptr, int parc,
 	    if (!IsMe(acptr)) 
 	    {
 #ifdef SERVICESHUB
-                if(mycmp(server+1, SERVICES_NAME)!=0) 
+                if(mycmp(server+1, SERVICES_NAME)==0) 
 		{
                   if(!mycmp(nick,NICKSERVATSERVICES)) {
                     myparv[0]=parv[0];
@@ -1925,7 +1925,7 @@ int m_whois(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	    sendto_one(sptr, rpl_str(RPL_WHOISCHANNELS),
 		       me.name, parv[0], name, buf);
 
-	if(!(IsUmodeI(acptr) && !IsAnOper(sptr)))
+	if(!(IsUmodeI(acptr) && !IsAnOper(sptr)) || (acptr == sptr))
 	{	
 	     sendto_one(sptr, rpl_str(RPL_WHOISSERVER),
 			me.name, parv[0], name, user->server,

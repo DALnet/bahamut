@@ -639,11 +639,7 @@ struct User
     char        host[HOSTLEN + 1];
     char       *server;        /* pointer to scached server name */
     unsigned int servicetype;  /* set by SVSMODE +T */
-#ifdef OS_SOLARIS              /* SVSMODE +d */
-    uint_t    servicestamp;    /* solaris is gay -epi */
-#else
-    u_int32_t servicestamp;    /* Services id - Raistlin */
-#endif
+    unsigned int servicestamp; /* set by SVSMODE +d */
     /*
      * In a perfect world the 'server' name should not be needed, a
      * pointer to the client describing the server is enough. 
