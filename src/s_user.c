@@ -2121,8 +2121,9 @@ int m_quit(aClient *cptr, aClient *sptr, int parc, char *parv[])
 int m_kill(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     aClient    *acptr;
-    char       *user, *path, *killer, *p, *nick;
-    char mypath[KILLLEN + 1];
+    char       *user, *path, *p, *nick, *reason;
+    char 	mypath[KILLLEN + 1];
+    char 	mymsg[KILLLEN + 1];
     char       *unknownfmt = "<Unknown>";	/*
 						 * AFAIK this shouldnt happen
 						 * but -Raist 
@@ -2138,17 +2139,17 @@ int m_kill(aClient *cptr, aClient *sptr, int parc, char *parv[])
     
     user = parv[1];
     path = parv[2];		/* Either defined or NULL (parc >= 2!!) */
-    if(path==NULL)
-	path=")";
     
     if (!IsPrivileged(cptr))
     {
 	sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name, parv[0]);
 	return 0;
     }
+
     if (!BadPtr(path))
 	if (strlen(path) > (size_t) KILLLEN)
 	    path[KILLLEN] = '\0';
+
     if (MyClient(sptr))
 	user = canonize(user);
     for (p = NULL, nick = strtoken(&p, user, ","); nick;
@@ -2198,27 +2199,35 @@ int m_kill(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	if(MyClient(sptr)) 
 	{
 	    char myname[HOSTLEN+1], *s;
-	    int slen;
+
+	    if(!BadPtr(path))
+	    {
+		ircsnprintf(mymsg, KILLLEN + 1, "(%s)", path);
+		reason = mymsg;
+	    }
+	    else
+		reason = "(No reason specified)";
 
 	    strncpy(myname, me.name, HOSTLEN + 1);
-	    if((s = index(myname, '.')))
-		*s=0;
+	    if((s = strchr(myname, '.')))
+		*s = 0;
 	    
-	    /* "<myname>!<sptr->user->host>!<sptr->name> (path)" */
-	    slen = KILLLEN - (strlen(sptr->name) + strlen(sptr->user->host) +
-			      strlen(myname) + 8);
-	    if(slen < 0)
-		slen = 0;
-	    
-	    if(strlen(path) > slen) 
-		path[slen] = '\0'; 
-	    
-	    ircsprintf(mypath, "%s!%s!%s (%s)", myname, sptr->user->host,
-		       sptr->name, path); 
-	    mypath[KILLLEN]='\0';  
+	    ircsnprintf(mypath, KILLLEN + 1, "%s!%s!%s", myname, sptr->user->host, sptr->name); 
 	}
 	else
-	    strncpy(mypath,path,KILLLEN + 1);
+	{
+	    if(BadPtr(path) || !(reason = strchr(path, ' ')))
+	    {
+		path = sptr->name;
+		reason = "(No reason specified)";
+	    }
+	    else
+	    {
+	        *reason = '\0';
+		reason++;
+	    }
+	    strncpyzt(mypath, path, KILLLEN + 1);
+	}
 	/*
 	 * Notify all *local* opers about the KILL, this includes the
 	 * one originating the kill, if from this server--the special
@@ -2235,10 +2244,10 @@ int m_kill(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	if(IsULine(sptr))
 	    sendto_realops_lev(USKILL_LEV, 
 			   "Received KILL message for %s!%s@%s. "
-			   "From %s Path: %s", acptr->name,
+			   "From %s Path: %s %s", acptr->name,
 			   acptr->user ? acptr->user->username : unknownfmt,
 			   acptr->user ? acptr->user->host : unknownfmt,
-			   parv[0], mypath);
+			   parv[0], mypath, reason);
 	else if (IsAnOper(sptr))
 #ifdef NO_USER_SERVERNOTICES
 	    sendto_realops_lev(0,
@@ -2246,37 +2255,42 @@ int m_kill(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	    sendto_ops_lev(0,
 #endif 
 			   "Received KILL message for %s!%s@%s. From %s "
-			   "Path: %s", acptr->name, 
+			   "Path: %s %s", acptr->name, 
 			   acptr->user ? acptr->user->username : unknownfmt,
 			   acptr->user ? acptr->user->host : unknownfmt,
-			   parv[0], mypath);
+			   parv[0], mypath, reason);
 	else
 	    sendto_ops_lev(SKILL_LEV, 
 			   "Received KILL message for %s!%s@%s. "
-			   "From %s Path: %s", acptr->name,
+			   "From %s Path: %s %s", acptr->name,
 			   acptr->user ? acptr->user->username : unknownfmt,
 			   acptr->user ? acptr->user->host : unknownfmt,
-			   parv[0], mypath);
+			   parv[0], mypath, reason);
 		
 #if defined(USE_SYSLOG) && defined(SYSLOG_KILL)
 	if (IsOper(sptr))
-	    syslog(LOG_INFO, "KILL From %s!%s@%s For %s Path %s",
+	    syslog(LOG_INFO, "KILL From %s!%s@%s For %s Path %s %s",
 		   parv[0], acptr->name,
 		   acptr->user ? acptr->user->username : unknownfmt,
-		   acptr->user ? acptr->user->host : unknownfmt, mypath);
+		   acptr->user ? acptr->user->host : unknownfmt, mypath, reason);
 #endif
 	/*
 	 * And pass on the message to other servers. Note, that if KILL
 	 * was changed, the message has to be sent to all links, also
 	 * back. Suicide kills are NOT passed on --SRB
 	 */
+	/*
+	 * Set FLAGS_KILLED. This prevents exit_one_client from sending
+	 * the unnecessary QUIT for this. ,This flag should never be
+	 * set in any other place...
+	 */
 	if (!MyConnect(acptr) || !MyConnect(sptr) || !IsAnOper(sptr))
 	{
-	    sendto_serv_butone(cptr, ":%s KILL %s :%s",
-			       parv[0], acptr->name, mypath);
+	    sendto_serv_butone(cptr, ":%s KILL %s :%s %s",
+			       parv[0], acptr->name, mypath, reason);
 	    if (chasing && IsServer(cptr))
-		sendto_one(cptr, ":%s KILL %s :%s",
-			   me.name, acptr->name, mypath);
+		sendto_one(cptr, ":%s KILL %s :%s %s",
+			   me.name, acptr->name, mypath, reason);
 	    acptr->flags |= FLAGS_KILLED;
 	}
 	/*
@@ -2285,24 +2299,24 @@ int m_kill(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	 * notification chasing the above kill, it won't get far anyway
 	 * as this user don't exist there any more either
 	 */
+#ifndef HIDE_KILL_ORIGINS
 	if (MyConnect(acptr))
-	    sendto_prefix_one(acptr, sptr, ":%s KILL %s :%s",
-			      parv[0], acptr->name, mypath);
-	/*
-	 * Set FLAGS_KILLED. This prevents exit_one_client from sending
-	 * the unnecessary QUIT for this. ,This flag should never be
-	 * set in any other place...
-	 */
+	    sendto_prefix_one(acptr, sptr, ":%s KILL %s :%s %s",
+			      parv[0], acptr->name, mypath, reason);
+
 	if (MyConnect(acptr) && MyConnect(sptr) && IsAnOper(sptr))
-	    (void) ircsprintf(buf2, "Local kill by %s (%s)", sptr->name,
-			      BadPtr(parv[2]) ? sptr->name : parv[2]);
+	    ircsprintf(buf2, "Local kill by %s %s", sptr->name, reason);
 	else 
-	{
-	    killer = strchr(mypath, '(');
-	    if(killer==NULL)
-		killer="()";
-	    (void)ircsprintf(buf2, "Killed (%s %s)", sptr->name, killer);
-	}
+	    ircsprintf(buf2, "Killed (%s %s)", sptr->name, reason);
+#else
+	if (MyConnect(acptr))
+	    sendto_one(acptr, ":%s KILL %s :%s %s",
+		       HIDDEN_SERVER_NAME, acptr->name,
+		       HIDDEN_SERVER_NAME, reason);
+
+	ircsprintf(buf2, "Killed (%s %s)", HIDDEN_SERVER_NAME, reason);
+#endif
+
 	if (exit_client(cptr, acptr, sptr, buf2) == FLUSH_BUFFER)
 	    return FLUSH_BUFFER;
     }

@@ -742,6 +742,14 @@
  * HIDE_NUMERIC_SOURCE
  * All numerics going out to local clients come from the local server
  * Necessary for numerics from remote servers not giving information away
+ * 
+ * HIDE_KILL_ORIGINS
+ * All /kills appear, from a user standpoint, to come from HIDDEN_SERVER_NAME
+ * Note that NO_USER_SERVERNOTICES must be defined for this to actually 
+ * provide any security.
+ *
+ * HIDE_SPLIT_SERVERS
+ * Hide the names of servers during netsplits
  */
 /* #undef NO_USER_SERVERNOTICES */
 /* #undef NO_USER_STATS */
@@ -749,6 +757,8 @@
 /* #undef NO_USER_TRACE */
 /* #undef NO_USER_OPERTARGETED_COMMANDS */
 /* #undef HIDE_NUMERIC_SOURCE */
+/* #undef HIDE_KILL_ORIGINS */
+/* #undef HIDE_SPLIT_SERVERS */
 
 /***********************/
 /* OPER HIDING SECTION */
@@ -818,6 +828,8 @@
 # define NO_USER_TRACE
 # define NO_USER_OPERTARGETED_COMMANDS
 # define HIDE_NUMERIC_SOURCE
+# define HIDE_KILL_ORIGINS
+# define HIDE_SPLIT_SERVERS
 #endif
 
 /******************************************************************

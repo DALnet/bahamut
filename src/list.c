@@ -349,7 +349,9 @@ void remove_client_from_list(aClient *cptr)
     }
     if (cptr->next)
 	cptr->next->prev = cptr->prev;
-    if (IsPerson(cptr) && cptr->user)
+
+    /* No /whowas entries for +I people */
+    if (IsPerson(cptr) && cptr->user && !IsUmodeI(cptr))
     {
 	add_history(cptr, 0);
 	off_history(cptr);

@@ -515,7 +515,11 @@ void exit_server(aClient *lcptr, aClient *cptr, aClient *from, char *comment)
 {
     char splitname[HOSTLEN + HOSTLEN + 2];
 
+#ifdef HIDE_SPLIT_SERVERS
+    ircsprintf(splitname, "%s %s", HIDDEN_SERVER_NAME, HIDDEN_SERVER_NAME);
+#else
     ircsprintf(splitname, "%s %s", cptr->uplink->name, cptr->name);
+#endif
 
     Debug((DEBUG_NOTICE, "exit_server(%s, %s, %s)", cptr->name, from->name,
 	   comment));
