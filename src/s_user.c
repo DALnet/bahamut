@@ -3036,7 +3036,7 @@ m_kill(aClient *cptr,
 			mypath[TOPICLEN]='\0';
 		}
 		else
-		  strncpy(mypath,path,TOPICLEN);
+		  strncpy(mypath,path,sizeof(mypath));
 		/*
 		 * * Notify all *local* opers about the KILL, this includes the
 		 * one * originating the kill, if from this server--the special
