@@ -1,3 +1,6 @@
+#ifndef LOCAL_RESOLV_H
+#define LOCAL_RESOLV_H 1
+
 /*
  * Copyright (c) 1983, 1987, 1989 The Regents of the University of
  * California. All rights reserved.
@@ -129,4 +132,10 @@ struct state {
 
 extern struct state _res;
 extern char *p_cdname(), *p_rr(), *p_type(), *p_class(), *p_time();
+
+#if ((__GNU_LIBRARY__ == 6) && (__GLIBC__ >=2) && (__GLIBC_MINOR__ >= 2))
+#define res_init __res_init
+#endif
+
 extern int  res_init();
+#endif

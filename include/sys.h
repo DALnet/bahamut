@@ -73,6 +73,10 @@
 #  include <sys/time.h>
 # endif
 
+#if ((__GNU_LIBRARY__ == 6) && (__GLIBC__ >=2) && (__GLIBC_MINOR__ >= 2))
+#include <time.h>
+#endif
+
 # define MyFree(x)       if ((x) != NULL) free(x)
 
 # ifdef NEXT

@@ -2163,7 +2163,7 @@ int connect_server(aConfItem * aconf, aClient * by, struct hostent *hp)
       myaddr.sin_port = 0;
       myaddr.sin_addr.s_addr = inet_addr(aconf->localhost);
       bzero(&(myaddr.sin_zero), 8);
-      if (bind(cptr->fd, &myaddr, sizeof(struct sockaddr)))
+      if (bind(cptr->fd, (struct sockaddr *) &myaddr, sizeof(struct sockaddr)))
       {
          errtmp = errno;
          report_error("Connect to host %s failed: %s", cptr);
