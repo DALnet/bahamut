@@ -3145,6 +3145,10 @@ m_pong(aClient *cptr,
          sptr->flags &= ~FLAGS_TOPICBURST;
          sendto_gnotice("from %s: %s has processed topic burst (synched to network data).",
 			me.name, sptr->name);
+#ifdef HUB
+	sendto_serv_butone(&me, "%s GNOTICE :%s has processed topic burst (synced to network data).",
+			me.name, sptr->name);
+#endif
       }
    }
 
