@@ -103,12 +103,13 @@ void dbuf_allocblock(int num)
   {
     dfree->next = (dfree + 1);
     dfree++;
-    DBufCount++;
   }
 
   dfree->next = dbufFreeList;
 
   dbufFreeList = dbp;
+
+  DBufCount += num;
 }
 
 void dbuf_init()
