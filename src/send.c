@@ -126,16 +126,18 @@ static int dead_link(aClient *to, char *notice, int sockerr)
 static int send_message(aClient *to, char *msg, int len, void* sbuf) 
 {
     static int  SQinK;
-    int flag = 0;
+    int flag;
     
 #ifdef DUMP_DEBUG
     fprintf(dumpfp, "-> %s: %s\n", (to->name ? to->name : "*"), msg);
 #endif
 
     if (to->from)
-        to = to->from;   /* shouldn't be necessary */
+        to = to->from;
 
-    if (sbuf == NULL)
+    flag = (!sbuf || ZipOut(to) || IsRC4OUT(to)) ? 1 : 0;
+
+    if (flag == 1)
     {
         if(IsServer(to) || IsNegoServer(to))
         {
@@ -218,7 +220,6 @@ static int send_message(aClient *to, char *msg, int len, void* sbuf)
         
         if(len == 0)
             return 0;
-        flag = 1;
     }
 
 #ifdef HAVE_ENCRYPTION_ON
@@ -227,7 +228,6 @@ static int send_message(aClient *to, char *msg, int len, void* sbuf)
         /* don't destroy the data in 'msg' */
         rc4_process_stream_to_buf(to->serv->rc4_out, msg, rc4buf, len);
         msg = rc4buf;
-        flag = 1;
     }
 #endif
 
