@@ -1497,7 +1497,7 @@ m_message(aClient *cptr, aClient *sptr, int parc, char *parv[], int notice)
     {
         /* if squelched or spamming, allow only messages to self */
         if ((IsSquelch(sptr)
-#if defined(ANTISPAMBOT) && !defined(ANTI_SPAMBOT_WARN_ONLY)
+#if defined(ANTI_SPAMBOT) && !defined(ANTI_SPAMBOT_WARN_ONLY)
             || (sptr->join_leave_count >= MAX_JOIN_LEAVE_COUNT)
 #endif
             ) && mycmp(parv[0], parv[1]))
