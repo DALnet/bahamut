@@ -533,7 +533,7 @@ exit_client(
 			for (acptr = client; acptr; acptr = next) {
 				next = acptr->next;
 				if (!IsServer(acptr) && acptr->from == sptr)
-				  exit_one_client(NULL, acptr, &me, comment1);
+				  exit_one_client(sptr, acptr, &me, comment1);
 			}
 			/*
 			 * * Second SQUIT all servers behind this link
