@@ -2241,7 +2241,7 @@ char       *tmps;
       sendto_one(sptr, err_str(ERR_NOTEXTTOSEND), me.name, parv[0]);
       return -1;
    }
-   if ((strlen(parv[1]) >= 4) && (!strncmp(parv[1], "help", 4))) {
+   if ((strlen(parv[1]) >= 4) && (!myncmp(parv[1], "help", 4))) {
       sendto_one(sptr, ":services!service@%s NOTICE %s :For ChanServ "
 		 "help use: /chanserv help", SERVICES_NAME,
 		 sptr->name);
@@ -4151,16 +4151,16 @@ static int check_for_ctcp(char *str, char **dccptr)
 
    while ((p = strchr(p, 1)) != NULL) 
    {
-      if (strncasecmp(++p, "DCC", 3) == 0)
+      if (myncmp(++p, "DCC", 3) == 0)
       {
          if(dccptr)
             *dccptr = p;
-         if(strncasecmp(p+3, " SEND", 5) == 0)
+         if(myncmp(p+3, " SEND", 5) == 0)
             return CTCP_DCCSEND;
          else
 	    return CTCP_DCC;
       }
-      if (strncasecmp(++p, "ACTION", 6) != 0)
+      if (myncmp(++p, "ACTION", 6) != 0)
 	 return CTCP_YES;
       if ((p = strchr(p, 1)) == NULL)
 	 return CTCP_NONE;
