@@ -90,13 +90,16 @@ free_vars(cVar *vars[])
 
 /* error handler */
 
+static char *current_file = "unknown";
+
 void
 confparse_error(char *problem, int line)
 {
     if(!forked)
-        printf("ERROR:  %s near line %d\n", problem, line);
+        printf("ERROR:  %s near line %d of %s\n", problem, line, current_file);
     else
-        sendto_realops("Conf Error:  %s near line %d", problem, line);
+        sendto_realops("Conf Error:  %s near line %d of %s", problem, line,
+                        current_file);
     return;
 }
 
@@ -623,8 +626,6 @@ parse_block(tConf *block, char *cur, FILE *file, int *lnum)
     return NULL;
 }
             
-
-
 int
 initconf(char *filename)
 {
@@ -634,6 +635,8 @@ initconf(char *filename)
     char *tok;
     tConf *block = NULL;
     FILE *file;
+
+    current_file = filename;
 
     if(!(file = fopen(filename, "r")))
     {
@@ -682,6 +685,7 @@ initconf(char *filename)
                 cur++;
                 if(initconf(var) == -1)
                     return -1;
+                current_file = filename;    /* reset */
                 continue;
             }    
             for(block = tconftab; block->tok; block++)
