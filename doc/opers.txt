@@ -169,15 +169,6 @@ COMMAND         - USAGE and DESCRIPTION
                   -- If compiled with UNKLINE --
                   Will attempt to unkline the given <user@host>
 
-+ ZLINE         - ZLINE <nick|ip> :[reason]
-                  Adds a ZLINE to the ircd.conf or klines.conf file
-                  which will deny any connections from the IP address
-                  of the banned client.  The banned client will receive
-                  a message saying he/she is banned with reason [reason]
-
-                  In order to use <nick> rather than <ip>, <nick> must
-                  be on your server.
-
 + HTM           - HTM [option]
                   When no [option] is given, HTM shows the current 
                   High Traffic Mode rate and whether HTM is on or off.
