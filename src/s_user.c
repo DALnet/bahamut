@@ -1385,7 +1385,8 @@ check_for_ctcp(char *str, char **dccptr)
             else
                 return CTCP_DCC;
         }
-        if (myncmp(++p, "ACTION", 6) != 0)
+        /* p was increased twice. 'ACTION' could not be found. -- nicobn */
+        if (myncmp(p, "ACTION", 6) != 0)
             return CTCP_YES;
         if ((p = strchr(p, 1)) == NULL)
             return CTCP_NONE;
