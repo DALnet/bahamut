@@ -285,7 +285,7 @@ int m_identify(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	sendto_one(sptr, err_str(ERR_NOTEXTTOSEND), me.name, parv[0]);
 	return -1;
     }
-    (void) ircsprintf(buf, "IDENTIFY %s", parv[1]);
+    (void) ircsprintf(buf, BUFSIZE, "IDENTIFY %s", parv[1]);
 
     myparv[0]=parv[0];
     myparv[1]=buf;

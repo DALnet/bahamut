@@ -269,7 +269,7 @@ void throttle_init(void) {
     /* create the throttle hash. */
     throttle_hash = create_hash_table(THROTTLE_HASHSIZE,
 	    offsetof(throttle, addr), HOSTIPLEN,
-	    HASH_FL_STRING, strcmp);
+	    HASH_FL_STRING, (int (*)(void *, void *))strcmp);
 }
 
 int throttle_check(char *host, int local) {
@@ -335,12 +335,15 @@ int throttle_check(char *host, int local) {
 /* walk through our list of throttles, expire any as necessary.  in the case of
  * Z:lines, expire them at the end of the Z:line timeout period. */
 void throttle_timer(time_t now) {
-    throttle *tp;
+    throttle *tp, *tp2;
 
     if (!throttle_enable)
 	return;
 
-    LIST_FOREACH(tp, &throttles, lp) {
+    tp = LIST_FIRST(&throttles);
+    while (tp != NULL)
+    {
+	tp2=LIST_NEXT(tp, lp);
 	if ((tp->zlined && now - tp->added >= throttle_ztime) ||
 		(!tp->zlined && now - tp->added >= throttle_ttime)) {
 	    /* delete this item */
@@ -349,6 +352,7 @@ void throttle_timer(time_t now) {
 	    free(tp);
 	    numthrottles--;
 	}
+	tp=tp2;
     }
 }
 
