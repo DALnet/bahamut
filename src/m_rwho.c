@@ -341,7 +341,7 @@ static int rwho_parseopts(aClient *sptr, int parc, char *parv[])
                     *s++ = 0;
                     i = strtol(s, &s, 10);
                     if (*s == 0 && 1 < i && i < 32)
-                        rwho_opts.ip_mask = cidr_to_netmask(i);
+                        rwho_opts.ip_mask = htonl(cidr_to_netmask(i));
                 }
                 else
                     rwho_opts.ip_mask = ~0;
