@@ -123,8 +123,7 @@ AC_MSG_CHECKING(for OpenSSL)
 
 if test "X$cf_enable_openssl" != "Xno" ; then
   cf_openssl_basedir=""
-  if test "X$cf_enable_openssl" != "Xauto" &&
-     test "X$cf_enable_openssl" != "Xyes" ; then
+  if test "X$cf_enable_openssl" = "Xyes" ; then
      dnl Support for --enable-openssl=/some/place
      cf_openssl_basedir="${cf_enable_openssl}"
   else
