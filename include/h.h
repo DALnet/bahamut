@@ -102,12 +102,15 @@ extern char *pretty_mask(char *);
 
 
 extern aClient *find_chasing(aClient *, char *, int *);
+
+#if 0
 extern aClient *find_client(char *, aClient *);
 extern aClient *find_name(char *, aClient *);
 extern aClient *find_person(char *, aClient *);
 extern aClient *find_server(char *, aClient *);
 extern aClient *find_service(char *, aClient *);
 extern aClient *find_userhost(char *, char *, aClient *, int *);
+#endif
 
 extern int  attach_conf(aClient *, aConfItem *);
 extern aConfItem *attach_confs(aClient *, char *, int);
@@ -372,3 +375,5 @@ extern      int     hash_check_watch(aClient *, int);
 extern      int     hash_del_watch_list(aClient  *);
 extern      aWatch *hash_get_watch(char *);
 #define MAXWATCH       128
+
+#include "find.h"

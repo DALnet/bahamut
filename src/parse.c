@@ -51,16 +51,20 @@ static struct Message *tree_parse(char *);
 
 int num_msg_trees = 0;
 
+/* all of the find_(thing) functions have been 
+ * changed to #defines and inline functions
+ */
+
+#if 0
 /*
- * *  Find a client (server or user) by name. *
+ *  Find a client (server or user) by name. *
  * 
- *  *Note* *    Semantics of this function has been changed from *
- * the old. 'name' is now assumed to be a null terminated *     string
+ * Note: Semantics of this function has been changed from 
+ * the old. 'name' is now assumed to be a null terminated string
  * and the search is the for server and user.
  */
 
-aClient    *
-find_client(char *name, aClient *cptr)
+aClient *find_client(char *name, aClient *cptr)
 {
    if (name)
       cptr = hash_find_client(name, cptr);
@@ -68,8 +72,7 @@ find_client(char *name, aClient *cptr)
    return cptr;
 }
 
-aClient    *
-find_nickserv(char *name, aClient *cptr)
+aClient * find_nickserv(char *name, aClient *cptr)
 {
    if (name)
       cptr = hash_find_nickserver(name, cptr);
@@ -77,14 +80,13 @@ find_nickserv(char *name, aClient *cptr)
    return cptr;
 }
 /*
- * *  Find a user@host (server or user). *
+ * Find a user@host (server or user).
  * 
- *  *Note* *    Semantics of this function has been changed from *
- * the old. 'name' is now assumed to be a null terminated *     string
+ * Note: Semantics of this function has been changed from 
+ * the old. 'name' is now assumed to be a null terminated string
  * and the search is the for server and user.
  */
-aClient    *
-find_userhost(char *user,
+aClient *find_userhost(char *user,
 	      char *host,
 	      aClient *cptr,
 	      int *count)
@@ -108,27 +110,26 @@ find_userhost(char *user,
    return res;
 }
 /*
- * *  Find server by name. *
+ * Find server by name. 
  * 
- *      This implementation assumes that server and user names *
- * are unique, no user can have a server name and vice versa. * One
- * should maintain separate lists for users and servers, *      if this
- * restriction is removed. *
+ *      This implementation assumes that server and user names
+ * are unique, no user can have a server name and vice versa. One
+ * should maintain separate lists for users and servers, if this
+ * restriction is removed.
  * 
- *  *Note* *    Semantics of this function has been changed from *
- * the old. 'name' is now assumed to be a null terminated *     string.
+ * *Note*   Semantics of this function has been changed from
+ * the old. 'name' is now assumed to be a null terminated string.
  */
 
-aClient    *
-find_server(char *name, aClient *cptr)
+aClient *find_server(char *name, aClient *cptr)
 {
    if (name)
       cptr = hash_find_server(name, cptr);
    return cptr;
 }
 
-aClient    *
-find_name(char *name, aClient *cptr)
+/* this function also uses server masking, marked for death later */
+aClient *find_name(char *name, aClient *cptr)
 {
    Reg aClient *c2ptr = cptr;
 
@@ -153,8 +154,7 @@ find_name(char *name, aClient *cptr)
 /*
  * *  Find person by (nick)name.
  */
-aClient    *
-find_person(char *name, aClient *cptr)
+aClient *find_person(char *name, aClient *cptr)
 {
    Reg aClient *c2ptr = cptr;
 
@@ -165,6 +165,8 @@ find_person(char *name, aClient *cptr)
    else
       return cptr;
 }
+#endif
+
 /*
  * parse a buffer.
  * 
