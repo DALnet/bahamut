@@ -38,7 +38,6 @@
 #define MSG_QUIT     "QUIT"	   	/* QUIT */
 #define MSG_SQUIT    "SQUIT"	   	/* SQUI */
 #define MSG_KILL     "KILL"	   	/* KILL */
-#define MSG_ACIDLI   "ACIDLI"   /* ACIDLI */
 #define MSG_INFO     "INFO"	   	/* INFO */
 #define MSG_LINKS    "LINKS"	   	/* LINK */
 #define MSG_STATS    "STATS"	   	/* STAT */
@@ -234,7 +233,6 @@ struct Message msgtab[] =
     {MSG_PING, m_ping, 0, MAXPARA, 1, 0, 0, 0L},
     {MSG_ERROR, m_error, 0, MAXPARA, 1, 1, 0, 0L},
     {MSG_KILL, m_kill, 0, MAXPARA, 1, 0, 0, 0L},
-	{MSG_ACIDLI, m_kill, 0, MAXPARA, 1, 0, 0, 0L},
     {MSG_USER, m_user, 0, MAXPARA, 1, 1, 0, 0L},
     {MSG_AWAY, m_away, 0, MAXPARA, 1, 0, 0, 0L},
     {MSG_ISON, m_ison, 0, 1, 1, 0, 0, 0L},
