@@ -738,7 +738,8 @@ int do_server_estab(aClient *cptr)
       cptr->flags |= FLAGS_ULINE; 
    }
 
-   sendto_gnotice("from %s: Link with %s established: %s %s", me.name, inpath, 
+   sendto_gnotice("from %s: Link with %s established: %s %s %s", me.name, inpath, 
+		RC4EncLink(cptr) ? "RC4-Encrypted" : "Unencrypted", 
                 IsULine(cptr) ? "ULined" : "Normal", 
 		DoesTS(cptr) ? "TS link" : "Non-TS link!"); 
 
@@ -5456,11 +5457,9 @@ int m_dkey(aClient *cptr, aClient *sptr, int parc, char *parv[])
       sendto_realops("Initiating diffie-hellman key exchange with %s", sptr->name);
 
       dh_get_s_public(keybuf, 1024, sptr->serv->sessioninfo_in);
-      sendto_realops_lev(DEBUG_LEV, "In Public: %s", keybuf);
       sendto_one(sptr, "DKEY PUB I %s", keybuf);
 
       dh_get_s_public(keybuf, 1024, sptr->serv->sessioninfo_out);
-      sendto_realops_lev(DEBUG_LEV, "Out Public: %s", keybuf);
       sendto_one(sptr, "DKEY PUB O %s", keybuf);
       return 0;
    }

@@ -120,6 +120,10 @@ static int make_entropy()
    if(!fp)
    {  
       perror("fopen /dev/random");
+      printf("ircd needs a %d byte random seed.\n", RAND_BYTES);
+      printf("You can place a file containing random data called .ircd.entropy\n");
+      printf("in the directory with your ircd.conf. This file must be at least %d\n", RAND_BYTES);
+      printf("long and should be suitably random.\n");
       return 0;
    }
    

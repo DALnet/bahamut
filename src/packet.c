@@ -111,7 +111,8 @@ dopacket(aClient *cptr, char *buffer, int length)
                return FLUSH_BUFFER;
 
             case RC4_NEXT_BUFFER:
-               rc4_process_stream(cptr->serv->rc4_in, ch2, length);
+               if(length)
+                  rc4_process_stream(cptr->serv->rc4_in, ch2, length);
                break;
 
             default:

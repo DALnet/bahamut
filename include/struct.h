@@ -341,6 +341,7 @@ typedef struct MotdItem aMotd;
 #define SetRC4OUT(x)		((x)->flags |= FLAGS_RC4OUT)
 #define IsRC4IN(x)		((x)->flags & FLAGS_RC4IN)
 #define SetRC4IN(x)		((x)->flags |= FLAGS_RC4IN)
+#define RC4EncLink(x)		((x)->flags & (FLAGS_RC4IN|FLAGS_RC4OUT) == (FLAGS_RC4IN|FLAGS_RC4OUT))
 
 #define ClearSAdmin(x)  ((x)->umode &= ~UMODE_a)
 #define ClearAdmin(x)   ((x)->umode &= ~UMODE_A)
