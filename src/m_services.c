@@ -508,6 +508,14 @@ int m_svsmode(aClient *cptr, aClient *sptr, int parc, char *parv[])
 			acptr->umode |= flag;
 		    else
 			acptr->umode &= ~flag;
+
+		    /* If this SVSMODE removed their oper status,
+		     * remove them from the oper fd list */
+		    if(MyConnect(acptr) && what == MODE_DEL && 
+                       (flag == UMODE_o || flag == UMODE_O) && 
+		       !IsAnOper(acptr)) 
+			delfrom_fdlist(acptr->fd, &oper_fdlist);
+
 		    break;
 		}
 	    }

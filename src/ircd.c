@@ -1131,7 +1131,7 @@ void io_loop()
              * space out these heavy tasks at semi-random intervals, so as not to coincide
              * with anything else ircd does regularly 
              */
-	    nextbanexpire += 31;
+	    nextbanexpire = NOW + 31;
 	    expire_userbans();
 	    throttle_timer(NOW);
 	}
