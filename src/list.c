@@ -417,12 +417,11 @@ remove_client_from_list(aClient *cptr)
       Count.server--;
    else if (IsClient(cptr)) {
       Count.total--;
-      if (IsAnOper(cptr)) {
+      if (IsAnOper(cptr))
 	 Count.oper--;
-      }
+      if (IsInvisible(cptr))
+         Count.invisi--;
    }
-   if (IsInvisible(cptr))
-      Count.invisi--;
    checklist();
    if (cptr->prev)
       cptr->prev->next = cptr->next;
