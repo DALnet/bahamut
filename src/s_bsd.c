@@ -1476,7 +1476,6 @@ static int read_packet(aClient *cptr, int dataready)
 	 if (length <= 0)
 	   return length;
       }
-   if (length==0) return length;
 
    /*
     * * For server connections, we process as many as we can without *
