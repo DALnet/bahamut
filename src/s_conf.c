@@ -1211,7 +1211,7 @@ initconf(int opt, int fd)
 	       break;
 	    }
 
-      /* Do quoting of characters and # detection. */
+      /* Do quoting of characters detection. */
 
       for (tmp = line; *tmp; tmp++) 
       {
@@ -1230,8 +1230,6 @@ initconf(int opt, int fd)
 	    else
 	       for (s = tmp; (*s = *(s + 1)); s++);
 	 }
-		  else if (*tmp == '#')
-	    *tmp = '\0';
       }
 
       if (!*line || line[0] == '#' || line[0] == '\n' ||
@@ -1349,7 +1347,7 @@ initconf(int opt, int fd)
 	 case 'q':
 	    aconf->status = CONF_QUARANTINED_NICK;
 	    break;
-
+ 
 	 case 'T':
 	 case 't':
 	    aconf->status = CONF_MONINFO;
@@ -1450,6 +1448,12 @@ initconf(int opt, int fd)
 
 	 /* NOTREACHED */
       }
+
+       if(aconf->status & CONF_QUARANTINE)
+       {
+         if(*aconf->name && *aconf->name == '#')
+           aconf->status = CONF_QUARANTINED_CHAN;
+       }
 
       /*
        * * If conf line is a class definition, create a class entry *

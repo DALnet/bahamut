@@ -1177,8 +1177,10 @@ can_join(aClient *sptr, aChannel *chptr, char *key)
           break;
       }
    }
-	if (invited || IsULine(sptr))
-		 return 0;
+   if (invited || IsULine(sptr))
+	 return 0;
+   if (!IsOper(sptr) && find_conf_name(chptr->chname, CONF_QUARANTINED_CHAN))
+         return (ERR_NOPRIVILEGES);
    if (is_banned(sptr, chptr))
 	 return (ERR_BANNEDFROMCHAN);
    if (chptr->mode.mode & MODE_INVITEONLY)
@@ -1188,10 +1190,10 @@ can_join(aClient *sptr, aChannel *chptr, char *key)
    if (chptr->mode.mode & MODE_OPERONLY && !IsOper(sptr))
          return (ERR_NOPRIVILEGES);
    if (*chptr->mode.key && (BadPtr(key) || mycmp(chptr->mode.key, key)))
-      return (ERR_BADCHANNELKEY);
+         return (ERR_BADCHANNELKEY);
    if (chptr->mode.limit && chptr->users >= chptr->mode.limit) 
-		 return (ERR_CHANNELISFULL);
-	 return 0;
+	 return (ERR_CHANNELISFULL);
+   return 0;
 }
 /*
  * * Remove bells and commas from channel name

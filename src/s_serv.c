@@ -839,7 +839,7 @@ int do_server_estab(aClient *cptr)
 	/* send out our SQLINES and SGLINES too */
 	for(aconf=conf ; aconf ; aconf=aconf->next) 
 	{
-	    if((aconf->status&CONF_QUARANTINED_NICK)
+	    if((aconf->status&CONF_QUARANTINE)
 		&& (aconf->status&CONF_SQLINE)) 
 		sendto_one(cptr, ":%s SQLINE %s :%s", me.name, 
 			   aconf->name, aconf->passwd);
@@ -1582,7 +1582,7 @@ static int  report_array[12][3] =
    {CONF_OPERATOR, RPL_STATSOLINE, 'O'},
    {CONF_HUB, RPL_STATSHLINE, 'H'},
    {CONF_LOCOP, RPL_STATSOLINE, 'o'},
-   {CONF_QUARANTINED_NICK, RPL_STATSQLINE, 'Q'},
+   {CONF_QUARANTINE, RPL_STATSQLINE, 'Q'},
    {CONF_ULINE, RPL_STATSULINE, 'U'},
    {0, 0}
 };
@@ -1633,7 +1633,7 @@ report_configured_links(aClient *sptr, int mask)
 			 sendto_one(sptr, rpl_str(p[1]), me.name,
 							sptr->name, c, host,
 							name, pass);
-		  else if (tmp->status & CONF_QUARANTINED_NICK)
+		  else if (tmp->status & CONF_QUARANTINE)
 			 sendto_one(sptr, rpl_str(p[1]), me.name,
 							sptr->name, c, pass, name, port, get_conf_class(tmp));
 		  else if (tmp->status & CONF_GCOS)
@@ -1902,7 +1902,7 @@ m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		
 	 case 'Q':
 	 case 'q':
-		report_configured_links(sptr, CONF_QUARANTINED_NICK);
+		report_configured_links(sptr, CONF_QUARANTINE);
 		break;
 		
 	 case 'R':
@@ -5265,12 +5265,17 @@ int m_sqline(aClient *cptr, aClient *sptr, int parc, char *parv[])
    /* if we have any Q:lines (SQ or Q) that match
     * this Q:line, just return (no need to waste cpu */
 
-   if (!(aconf=find_conf_name(parv[1], CONF_QUARANTINED_NICK)))
+   if (!(aconf=find_conf_name(parv[1], CONF_QUARANTINE)))
    {
 	/* okay, it doesn't suck, build a new conf for it */
 	aconf=make_conf();
 	
-	aconf->status=(CONF_QUARANTINED_NICK|CONF_SQLINE); /* Q:line and SQline, woo */
+        /* Q:line and SQline, woo */
+        if(*parv[1]=='#')
+	  aconf->status=(CONF_QUARANTINED_CHAN|CONF_SQLINE); 
+        else
+	  aconf->status=(CONF_QUARANTINED_NICK|CONF_SQLINE);
+
 	DupString(aconf->name, parv[1]);
 	DupString(aconf->passwd, (parv[2]!=NULL ? parv[2] : "Reserved"));
 	aconf->next=conf;
@@ -5310,7 +5315,7 @@ int m_unsqline(aClient *cptr, aClient *sptr, int parc, char *parv[])
     ac2 = ac3 = aconf = conf;
     while(aconf)
     {
-	if((aconf->status & (CONF_QUARANTINED_NICK))
+	if((aconf->status & (CONF_QUARANTINE))
 	   && (aconf->status & (CONF_SQLINE)) && 
 	   aconf->name && (matchit 
 			   ? !match(mask, aconf->name) 
