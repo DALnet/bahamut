@@ -75,7 +75,11 @@ void dbuf_init()
 ** dbuf_alloc - allocates a dbufbuf structure either from freelist or
 ** creates a new one.
 */
+#ifndef DEBUG_DBUF
 static dbufbuf *dbuf_alloc()
+#else
+static dbufbuf *dbuf_alloc(char *file, short line, char *function)
+#endif
 {
   Reg	dbufbuf *dbptr;
 
@@ -86,6 +90,13 @@ static dbufbuf *dbuf_alloc()
   if ( (dbptr = freelist) )
     {
       freelist = freelist->next;
+#ifdef DEBUG_DBUF       
+       dbuftable[dbuftableused].ptr=dbptr;
+       dbuftable[dbuftableused].line=line;
+       strcpy(dbuftable[dbuftableused].file, file);
+       strcpy(dbuftable[dbuftableused].function, function);
+       dbuftableused++;
+#endif       
       return dbptr;
     }
   if (dbufalloc * DBUFSIZ > BUFFERPOOL)
@@ -96,7 +107,15 @@ static dbufbuf *dbuf_alloc()
   dbufblocks++;
   if (dbufblocks > maxdbufblocks)
       maxdbufblocks = dbufblocks;
-  return (dbufbuf *)MyMalloc(sizeof(dbufbuf));
+   dbptr=(dbufbuf *)MyMalloc(sizeof(dbufbuf));
+#ifdef DEBUG_DBUF
+   dbuftable[dbuftableused].ptr=dbptr;
+   dbuftable[dbuftableused].line=line;
+   strcpy(dbuftable[dbuftableused].file, file);
+   strcpy(dbuftable[dbuftableused].function, function);
+   dbuftableused++;
+#endif  
+  return dbptr;
 }
 
 /*
@@ -104,9 +123,24 @@ static dbufbuf *dbuf_alloc()
 */
 static	void	dbuf_free(dbufbuf *ptr)
 {
-  dbufalloc--;
-  ptr->next = freelist;
-  freelist = ptr;
+#ifdef DEBUG_DBUF   
+   int i;
+   for (i = 0; (i < dbuftableused) && (dbuftable[i].ptr != ptr); i++);
+   if (i==dbuftableused) {
+      dbufalloc--;
+      ptr->next = freelist;
+      freelist = ptr;
+      return;
+   }
+   dbuftableused--;
+   dbuftable[i].ptr=dbuftable[dbuftableused].ptr;
+   dbuftable[i].line=dbuftable[dbuftableused].line;
+   strcpy(dbuftable[i].file, dbuftable[dbuftableused].file);
+   strcpy(dbuftable[i].function, dbuftable[dbuftableused].function);
+#endif
+   dbufalloc--;
+   ptr->next = freelist;
+   freelist = ptr;
 }
 /*
 ** This is called when malloc fails. Scrap the whole content
@@ -129,23 +163,10 @@ static int dbuf_malloc_error(dbuf *dyn)
   return -1;
 }
 
-#ifdef DEBUG_DBUF
-int dbuf__put(dbuf *dyn,char *buf, int length, char *file, short line, char *function) {
-   int ret;
-   dbuftable[dbuftableused].ptr=dyn;
-   dbuftable[dbuftableused].line=line;
-   strcpy(dbuftable[dbuftableused].file, file);
-   strcpy(dbuftable[dbuftableused].function, function);
-   dbuftableused++;
-   ret=r_dbuf_put(dyn, buf, length);
-   return ret;
-}
-#endif
-
 #ifndef DEBUG_DBUF
 int	dbuf_put(dbuf *dyn,char *buf,int length)
 #else
-int     r_dbuf_put(dbuf *dyn,char *buf,int length)
+int     dbuf__put(dbuf *dyn,char *buf,int length, char *file, short line, char *function)
 #endif
 {
   Reg	dbufbuf	**h, *d;
@@ -178,8 +199,12 @@ int     r_dbuf_put(dbuf *dyn,char *buf,int length)
     {
       if ((d = *h) == NULL)
 	{
-	  if ((d = (dbufbuf *)dbuf_alloc()) == NULL)
-	    return dbuf_malloc_error(dyn);
+#ifdef DEBUG_DBUF	   
+	  if ((d = (dbufbuf *)dbuf_alloc(file,line,function)) == NULL)
+#else
+	   if ((d = (dbufbuf *)dbuf_alloc())== NULL)
+#endif	       
+	     return dbuf_malloc_error(dyn);
 	  dyn->tail = d;
 	  *h = d;
 	  d->next = NULL;
@@ -210,26 +235,7 @@ char	*dbuf_map(dbuf *dyn,int *length)
   return (dyn->head->data + dyn->offset);
 }
 
-#ifdef DEBUG_DBUF
-int dbuf__delete(dbuf *dyn, int length, char *file, short line, char *function) {
-   int ret, i=0;
-   for (i = 0; (i < dbuftableused) && (dbuftable[i].ptr != dyn); i++);
-   if (i==dbuftableused) return 1;
-   dbuftableused--;
-   dbuftable[i].ptr=dbuftable[dbuftableused].ptr;
-   dbuftable[i].line=dbuftable[dbuftableused].line;
-   strcpy(dbuftable[i].file, dbuftable[dbuftableused].file);
-   strcpy(dbuftable[i].function, dbuftable[dbuftableused].function);
-   ret=r_dbuf_delete(dyn, length);
-   return ret;
-}
-#endif  
-
-#ifndef DEBUG_DBUF
 int	dbuf_delete(dbuf *dyn,int length)
-#else
-int     r_dbuf_delete(dbuf *dyn,int length)  
-#endif
 {
   dbufbuf *d;
   int chunk;
@@ -321,7 +327,7 @@ getmsg_init:
 	  */
 	  if (copy == 1)
 	    {
-	      (void)dbuf_delete(dyn, 1);
+	      (void)dbuf_delete(dyn,1);
 	      goto getmsg_init;
 	    }
 	  break;
@@ -350,7 +356,7 @@ getmsg_init:
   ** and delete the rest of it!
   */
   if (copy - i > 0)
-    (void)dbuf_delete(dyn, copy - i);
+    (void)dbuf_delete(dyn,copy);
   if (i >= 0)
     *(buf+i) = '\0';	/* mark end of messsage */
   

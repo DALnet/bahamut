@@ -149,7 +149,6 @@ int         dbuf__put(dbuf *, char *, int, char *, short, char *);
  * rror condition, rather fatal...
  */
 int         dbuf_get(dbuf *, char *, int);
-
 /*
  * Dynamic buffer header 
  */
@@ -190,12 +189,7 @@ char       *dbuf_map(dbuf *, int *);
 /*
  * Return number of bytes accessible 
  */
-#ifndef DEBUG_DBUF
 int         dbuf_delete(dbuf *, int);
-#else
-int dbuf__delete(dbuf *, int, char *, short, char *);
-#define dbuf_delete(x, y) dbuf__delete(x, y, __FILE__, __LINE__, __FUNCTION__)
-#endif
 /*
  * Dynamic buffer header 
  */
@@ -215,7 +209,6 @@ int dbuf__delete(dbuf *, int, char *, short, char *);
 #define DBufClear(dyn)	dbuf_delete((dyn),DBufLength(dyn))
 
 extern int  dbuf_getmsg(dbuf *, char *, int);
-
 #endif /*
         * __dbuf_include__ 
         */
