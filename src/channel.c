@@ -417,7 +417,7 @@ void remove_matching_bans(aChannel *chptr, aClient *cptr, aClient *from)
   return;
 }
 
-int check_joinrate(aChannel *chptr, time_t ts, int local)
+int check_joinrate(aChannel *chptr, time_t ts, int local, aClient *cptr)
 {
     int join_num = DEFAULT_JOIN_NUM;
     int join_time = DEFAULT_JOIN_TIME;
@@ -448,7 +448,12 @@ int check_joinrate(aChannel *chptr, time_t ts, int local)
 
     /* If it's local and we've filled the join count, say no */
     if(local && chptr->join_count >= join_num)
+    {
+	sendto_realops_lev(DEBUG_LEV, "Join rate throttling on %s for %s!%s@%s (%d/%d in %d)",
+		chptr->chname, cptr->name, cptr->user->username, cptr->user->host,
+		chptr->join_count, join_num, NOW - chptr->join_start);
 	return 0;
+    }
 
     return 1;
 #endif
@@ -1111,6 +1116,15 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
             break;
 
 	case 'j':
+#ifdef JOINRATE_SERVER_ONLY
+            if (!IsServer(sptr) && !IsULine(sptr)) 
+            {
+		sendto_one(sptr, err_str(ERR_ONLYSERVERSCANCHANGE),
+			   me.name, cptr->name, chptr->chname);
+		break;
+            }
+#endif
+
             if(level<1) 
             {
 		errors |= SM_ERR_NOPRIVS;
@@ -1452,7 +1466,7 @@ static int can_join(aClient *sptr, aChannel *chptr, char *key)
 	return (ERR_BADCHANNELKEY);
     if (chptr->mode.limit && chptr->users >= chptr->mode.limit) 
 	return (ERR_CHANNELISFULL);
-    if (check_joinrate(chptr, NOW, 1) == 0)
+    if (check_joinrate(chptr, NOW, 1, sptr) == 0)
 	return (ERR_CHANNELISFULL);
     if (is_banned(sptr, chptr))
 	return (ERR_BANNEDFROMCHAN);
@@ -1492,7 +1506,7 @@ static int can_join_whynot(aClient *sptr, aChannel *chptr, char *key, char *reas
         reasonbuf[rbufpos++] = 'k';
     if (chptr->mode.limit && chptr->users >= chptr->mode.limit) 
         reasonbuf[rbufpos++] = 'l';
-    if (check_joinrate(chptr, NOW, 1) == 0)
+    if (check_joinrate(chptr, NOW, 1, sptr) == 0)
         reasonbuf[rbufpos++] = 'j';
     if (is_banned(sptr, chptr))
         reasonbuf[rbufpos++] = 'b';

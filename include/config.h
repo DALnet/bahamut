@@ -1070,11 +1070,14 @@
  *                    DEFAULT_JOIN_TIME seconds.
  * DEFAULT_JOIN_TIME: time to collect joins.
  * NO_DEFAULT_JOINRATE: No default, just let people use +j
+ * JOINRATE_SERVER_ONLY: Only let servers/U: lined things set +j.
+ *                       KEEP THIS IF USING A NETWORK WITH PRE-1.4.36 SERVERS!
  */
 /* defaults are very forgiving. */
 #define DEFAULT_JOIN_NUM  8
 #define DEFAULT_JOIN_TIME 4
 #undef NO_DEFAULT_JOINRATE
+#define JOINRATE_SERVER_ONLY
 
 /*
  * ----------------- archaic and/or broken secion -------------------- 
