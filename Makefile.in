@@ -79,6 +79,7 @@ SHELL=/bin/sh
 SUBDIRS=src tools
 
 MAKE=make 'CFLAGS=${CFLAGS}' 'INSTALL=${INSTALL}' 'LDFLAGS=${LDFLAGS}'
+MAKEPROFILE=make 'CFLAGS=${CFLAGS}' 'INSTALL=${INSTALL}' 'LDFLAGS=${LDFLAGS} -pg'
 
 all:	build
 
@@ -104,6 +105,13 @@ build:
 	@echo "WARNING: THIS IS BETA SOFTWARE AND IT MAY NOT WORK AS ADVERTISED"
 	@echo "FOR THIS REASON, DO NOT RUN THIS ON THE MAIN NETWORK WITHOUT THE"
 	@echo "PRIOR APPROVAL OF THE CODING TEAM. YOU HAVE BEEN WARNED!"
+
+profile:
+	@for i in $(SUBDIRS); do \
+		echo "Building $$i [profile]";\
+		cd $$i;\
+		${MAKEPROFILE} build; cd ..;\
+	done
 
 clean:
 	${RM} -f *~ core
