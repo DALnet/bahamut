@@ -85,8 +85,8 @@ VOIDSIG dummy()
 int deliver_it(aClient *cptr, char *str, int len)
 {
     int         retval;
-    aListener    *lptr = cptr->lstn;	
-#ifdef	DEBUGMODE
+    aListener    *lptr = cptr->lstn;    
+#ifdef  DEBUGMODE
     writecalls++;
 #endif
     retval = send(cptr->fd, str, len, 0);
@@ -97,56 +97,56 @@ int deliver_it(aClient *cptr, char *str, int len)
      * errno=EWOULDBLOCK. 
      */
     if (retval < 0 && (errno == EWOULDBLOCK || errno == EAGAIN ||
-		       errno == ENOBUFS))
+               errno == ENOBUFS))
     {
-	retval = 0;
-	cptr->flags |= FLAGS_BLOCKED;
-	set_fd_flags(cptr->fd, FDF_WANTWRITE);
-	return (retval);		/* Just get out now... */
+        retval = 0;
+        cptr->flags |= FLAGS_BLOCKED;
+        set_fd_flags(cptr->fd, FDF_WANTWRITE);
+        return (retval);        /* Just get out now... */
     }
     else if (retval > 0)
     {
-	if(cptr->flags & FLAGS_BLOCKED)
-	{
-	    cptr->flags &= ~FLAGS_BLOCKED;
-	    unset_fd_flags(cptr->fd, FDF_WANTWRITE);
-	}
+        if(cptr->flags & FLAGS_BLOCKED)
+        {
+            cptr->flags &= ~FLAGS_BLOCKED;
+            unset_fd_flags(cptr->fd, FDF_WANTWRITE);
+        }
     }
     
 #ifdef DEBUGMODE
     if (retval < 0)
     {
-	writeb[0]++;
-	Debug((DEBUG_ERROR, "write error (%s) to %s",
-	       sys_errlist[errno], cptr->name));
+        writeb[0]++;
+        Debug((DEBUG_ERROR, "write error (%s) to %s",
+           sys_errlist[errno], cptr->name));
     }
     else if (retval == 0)
-	writeb[1]++;
+        writeb[1]++;
     else if (retval < 16)
-	writeb[2]++;
+        writeb[2]++;
     else if (retval < 32)
-	writeb[3]++;
+        writeb[3]++;
     else if (retval < 64)
-	writeb[4]++;
+        writeb[4]++;
     else if (retval < 128)
-	writeb[5]++;
+        writeb[5]++;
     else if (retval < 256)
-	writeb[6]++;
+        writeb[6]++;
     else if (retval < 512)
-	writeb[7]++;
+        writeb[7]++;
     else if (retval < 1024)
-	writeb[8]++;
+        writeb[8]++;
     else
-	writeb[9]++;
+        writeb[9]++;
 #endif
     if (retval > 0)
     {
-	cptr->sendB += retval;
-	if (cptr->sendB & 0x0400)
-	{
-	    cptr->sendK += (cptr->sendB >> 10);
-	    cptr->sendB &= 0x03ff;	/* 2^10 = 1024, 3ff = 1023 */
-	}
+        cptr->sendB += retval;
+        if (cptr->sendB & 0x0400)
+        {
+            cptr->sendK += (cptr->sendB >> 10);
+            cptr->sendB &= 0x03ff;  /* 2^10 = 1024, 3ff = 1023 */
+        }
         me.sendB += retval;
         if (me.sendB & 0x0400)
         {
@@ -154,15 +154,15 @@ int deliver_it(aClient *cptr, char *str, int len)
             me.sendB &= 0x03ff;
         }
 
-	if (lptr)
-	{
-	    lptr->sendB += retval;
-	    if (lptr->sendB & 0x0400) 
-	    {
-		lptr->sendK += (lptr->sendB >> 10);
-		lptr->sendB &= 0x03ff;
-	    }
-	}
+        if (lptr)
+        {
+            lptr->sendB += retval;
+            if (lptr->sendB & 0x0400) 
+            {
+                lptr->sendK += (lptr->sendB >> 10);
+                lptr->sendB &= 0x03ff;
+            }
+        }
     }
     return (retval);
 }

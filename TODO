@@ -3,7 +3,6 @@ THINGS TO FIX BEFORE RELEASE
    
     - Iline attachment/matching
     - Class assignment
-    - Fix /connect problem
 
 TODO LIST
 ---------
@@ -14,12 +13,18 @@ TODO LIST
 - Implement +I channel invite lists
 - Implement +e channel exemption lists
 - Implement IPV6
-- Switch encryption to RSA
 - Split up aClient into separate structures for local and remote users
 - Replace configuration file format with bind style configuration:
 	- Split aConfItem into multiple structures
 	- Outdate the use of config script within configuration file
 - Backport message tokenization from 1.6
 - Backport IDENTITY from 1.6
-- Add support for multiple language sets via flatfile configuration
 - Switch internal queuing system to shared queues.
+- Move class management into config systems, and undo massive
+  obfuscation macros.
+
+List to Ponder
+--------------
+
+- Add support for multiple language sets via flatfile configuration
+- Switch encryption to RSA
