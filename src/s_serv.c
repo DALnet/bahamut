@@ -1637,14 +1637,14 @@ report_configured_links(aClient *sptr, int mask)
 			 sendto_one(sptr, rpl_str(p[1]), me.name,
 							sptr->name, c, pass, name, port, get_conf_class(tmp));
 		  else {
-			  if(!IsAnOper(sptr))
-				 sendto_one(sptr, rpl_str(p[1]), me.name,
-								sptr->name, c, "*", name, port,
-								get_conf_class(tmp));
+			  if(!IsAnOper(sptr) && !IsULine(sptr))
+			      sendto_one(sptr, rpl_str(p[1]), me.name,
+					 sptr->name, c, "*", name, port,
+					 get_conf_class(tmp));
 			  else
-				 sendto_one(sptr, rpl_str(p[1]), me.name,
-								sptr->name, c, host, name, port,
-								get_conf_class(tmp));
+			      sendto_one(sptr, rpl_str(p[1]), me.name,
+					 sptr->name, c, host, name, port,
+					 get_conf_class(tmp));
 		  }
 	  }
    return;

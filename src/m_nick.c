@@ -137,18 +137,6 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
      
    }
    
-   if (((!IsNICKIP(sptr) && (parc == 10)) || (IsNICKIP(sptr) && (parc == 11)))
-        && (!strchr(parv[6], '.')))
-   {
-     /*
-      * Ok, we got the right number of params, but there isn't a
-      * single dot in the hostname, which is suspicious. Don't fret
-      * about it just kill it. - ThemBones
-      */
-     sendto_realops("BAD HOSTNAME: %s[%s@%s] on %s (from %s)",
-		    parv[0], parv[5], parv[6], parv[7], parv[0]);
-   }
-   
    strncpyzt(nick, parv[1], NICKLEN + 1);
    /*
     * if do_nick_name() returns a null name OR if the server sent a
