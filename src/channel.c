@@ -933,6 +933,7 @@ static void send_channel_lists(aClient *cptr, aChannel *chptr)
             send = 0;
             *parabuf = 0;
             cp = modebuf;
+            *cp++ = '+';
             if (count != MAXTSMODEPARAMS)
             {
                 strcpy(parabuf, exempt->banstr);
@@ -969,6 +970,7 @@ static void send_channel_lists(aClient *cptr, aChannel *chptr)
             send = 0;
             *parabuf = 0;
             cp = modebuf;
+            *cp++ = '+';
             if (count != MAXTSMODEPARAMS)
             {
                 strcpy(parabuf, inv->invstr);
