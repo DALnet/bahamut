@@ -1103,25 +1103,26 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
                 break;
             for(tmp = connects; tmp; tmp = tmp->next)
             {
-                if(!IsULine(sptr) || (!IsAnOper(sptr) && !IsAdmin(sptr)))
+                if (tmp->legal == -1)
+                    continue;
+
+                if(IsULine(sptr) || (MyClient(sptr) && IsAdmin(sptr)))
                 {
-                    sendto_one(sptr, rpl_str(RPL_STATSCLINE), me.name,
-                                sptr->name, (tmp->legal == -1 ? "Cx" : "C"),
-                                "*", tmp->name, tmp->port, tmp->class->name);
-                    sendto_one(sptr, rpl_str(RPL_STATSNLINE), me.name,
-                                sptr->name, (tmp->legal == -1 ? "Nx" : "N"),
-                                "*", tmp->name, tmp->flags, tmp->class->name);
-                }
-                else
-                {
-                    if (tmp->legal == -1)
-                        continue;
                     sendto_one(sptr, rpl_str(RPL_STATSCLINE), me.name,
                            sptr->name, "C", tmp->host, tmp->name, tmp->port,
                            tmp->class->name);
                     sendto_one(sptr, rpl_str(RPL_STATSNLINE), me.name,
                            sptr->name, "N", tmp->host, tmp->name, tmp->flags,
                            tmp->class->name);
+                }
+                else
+                {
+                    sendto_one(sptr, rpl_str(RPL_STATSCLINE), me.name,
+                               sptr->name, "C", "*", tmp->name, tmp->port,
+                               tmp->class->name);
+                    sendto_one(sptr, rpl_str(RPL_STATSNLINE), me.name,
+                               sptr->name, "N", "*", tmp->name, tmp->flags,
+                               tmp->class->name);
                 }
             }
         }
