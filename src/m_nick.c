@@ -524,23 +524,8 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		sptr->last_nick_change = NOW;
 		sptr->number_of_nick_changes++;
 	 
-		if (sptr->number_of_nick_changes <= MAX_NICK_CHANGES || 
-		    IsAnOper(sptr))
-		{
-#endif
-		    sendto_common_channels(sptr, ":%s NICK :%s", parv[0], 
-					   nick);
-		    if (sptr->user)
-		    {
-			if(!IsUmodeI(sptr))
-			    add_history(sptr, 1);
-			
-			sendto_serv_butone(cptr, ":%s NICK %s :%ld",
-					   parv[0], nick, sptr->tsinfo);
-		    }
-#ifdef ANTI_NICK_FLOOD
-		}
-		else
+		if (sptr->number_of_nick_changes > MAX_NICK_CHANGES && 
+		    !IsAnOper(sptr))
 		{
 		    sendto_one(sptr,
 			       ":%s NOTICE %s :*** Notice -- Too many nick "
@@ -549,6 +534,27 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		    return 0;
 		}
 #endif
+		/* If it changed nicks, -r it */
+		if ((sptr->umode & UMODE_r) && (mycmp(parv[0], nick) != 0))
+		{
+		    unsigned int oldumode;
+		    char mbuf[BUFSIZE];
+
+		    oldumode = sptr->umode;
+		    sptr->umode &= ~UMODE_r;
+		    send_umode(sptr, sptr, oldumode, ALL_UMODES, mbuf);
+		}
+
+		sendto_common_channels(sptr, ":%s NICK :%s", parv[0], 
+				       nick);
+		if (sptr->user)
+		{
+		    if(!IsUmodeI(sptr))
+			add_history(sptr, 1);
+			
+		    sendto_serv_butone(cptr, ":%s NICK %s :%ld",
+				       parv[0], nick, sptr->tsinfo);
+		}
 	    }
 	}
 	else
@@ -562,15 +568,10 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		sendto_serv_butone(cptr, ":%s NICK %s :%ld",
 				   parv[0], nick, sptr->tsinfo);
 	    }
-	}
-	/*
-	 * set it -r. No need to propogate MODE -r and spam
-	 * the network on registered nick changes. yuck. - lucas
-	 * Do this after the nick change was succesful - Raistlin
-	 */
-	if (mycmp(parv[0], nick))
-	{
-	    sptr->umode&=~UMODE_r;
+
+	    /* If it changed nicks, -r it */
+	    if (mycmp(parv[0], nick))
+		sptr->umode &= ~UMODE_r;
 	}
     } 
     else
@@ -597,7 +598,7 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	    }
 	}
 	
-	(void) strcpy(sptr->name, nick);
+	strcpy(sptr->name, nick);
 	sptr->tsinfo = timeofday;
 	if (sptr->user)
 	{
@@ -612,13 +613,13 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
    
     if (sptr->name[0])
     {
-	(void) del_from_client_hash_table(sptr->name, sptr);
+	del_from_client_hash_table(sptr->name, sptr);
 	samenick = mycmp(sptr->name, nick) ? 0 : 1;
 	if (IsPerson(sptr) && !samenick)
 	    hash_check_watch(sptr, RPL_LOGOFF);
     }
-    (void) strcpy(sptr->name, nick);
-    (void) add_to_client_hash_table(nick, sptr);
+    strcpy(sptr->name, nick);
+    add_to_client_hash_table(nick, sptr);
     if (IsPerson(sptr) && !samenick)
 	hash_check_watch(sptr, RPL_LOGON);
     return 0;

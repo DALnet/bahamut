@@ -352,7 +352,17 @@ int m_svsnick(aClient *cptr, aClient *sptr, int parc, char *parv[])
         }
     }
 
-    acptr->umode &= ~UMODE_r;
+    if(acptr->umode & UMODE_r)
+    {
+	unsigned int oldumode;
+	char mbuf[BUFSIZE];
+
+	oldumode = acptr->umode;
+	acptr->umode &= ~UMODE_r;
+
+        send_umode(acptr, acptr, oldumode, ALL_UMODES, mbuf);
+    }
+
     acptr->tsinfo = atoi(parv[3]);
 #ifdef ANTI_NICK_FLOOD
     acptr->last_nick_change = atoi(parv[3]);
@@ -534,7 +544,7 @@ int m_svsmode(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	sendto_serv_butone(cptr, ":%s SVSMODE %s %ld %s",
 			   parv[0], parv[1], acptr->tsinfo, modes);
 
-    if (MyClient(acptr))
+    if (MyClient(acptr) && (oldumode != acptr->umode))
     {
         char buf[BUFSIZE];
         send_umode(acptr, acptr, oldumode, ALL_UMODES, buf);
