@@ -350,9 +350,9 @@
  * Pretty self explanatory: These are shown in server notices and to the 
  * recipient of a "you are banned" message.
  */
-#define LOCAL_BAN_NAME "kline"
+#define LOCAL_BAN_NAME "k-line"
 #define NETWORK_BAN_NAME "autokill"
-#define LOCAL_BANNED_NAME "klined"
+#define LOCAL_BANNED_NAME "k-lined"
 #define NETWORK_BANNED_NAME "autokilled"
 
 /* CONNECTFAST
