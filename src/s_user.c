@@ -897,7 +897,7 @@ register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
                    MAXMODEPARAMSUSER,maxchannelsperuser,MAXBANS,
                    NICKLEN,TOPICLEN,TOPICLEN,Network_Name,MAXSILES);
         sendto_one(sptr, rpl_str(RPL_PROTOCTL), me.name, parv[0], tmpstr2);
-        ircsprintf(tmpstr2,"WATCH=128 CASEMAPPING=ascii ELIST=cmntu "
+        ircsprintf(tmpstr2,"WATCH=%d CASEMAPPING=ascii ELIST=cmntu "
                    "CHANMODES=b"
 #ifdef EXEMPT_LISTS
                    "e"

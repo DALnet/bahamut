@@ -199,6 +199,8 @@ int add_exempt_id(aClient* cptr, aChannel* chptr, char* exempt_id)
 {
     aBanExempt*   exempt = NULL;
     int           cnt = 0;
+    chanMember   *cm;
+    char      	 *s, nickuhost[NICKLEN+USERLEN+HOSTLEN+6];
 
     for (exempt = chptr->banexempt_list; exempt; exempt = exempt->next)
     {
@@ -232,6 +234,20 @@ int add_exempt_id(aClient* cptr, aChannel* chptr, char* exempt_id)
         (void) strcpy(exempt->who, cptr->name);
     }
 
+    for (cm = chptr->members; cm; cm = cm->next)
+    {
+        if(!MyConnect(cm->cptr))
+            continue;
+
+        strcpy(nickuhost, make_nick_user_host(cm->cptr->name,
+                                              cm->cptr->user->username,
+                                              cm->cptr->hostip));
+        s = make_nick_user_host(cm->cptr->name, cm->cptr->user->username,
+                                cm->cptr->user->host);
+        if (match(exempt_id, nickuhost) == 0 || match(exempt_id, s) == 0)
+            cm->banexs++;
+    }
+
     return 0;
 }
 
@@ -239,6 +255,8 @@ int del_exempt_id(aChannel* chptr, char* exempt_id)
 {
    aBanExempt**  exempt;
    aBanExempt*   tmp;
+   chanMember   *cm;
+   char         *s, nickuhost[NICKLEN+USERLEN+HOSTLEN+6];
 
    if (!exempt_id)
        return -1;
@@ -248,7 +266,22 @@ int del_exempt_id(aChannel* chptr, char* exempt_id)
        {
            tmp = *exempt;
            *exempt = tmp->next;
-           
+
+           for (cm = chptr->members; cm; cm = cm->next)
+           {
+               if(!MyConnect(cm->cptr) || cm->banexs == 0)
+                   continue;
+
+               strcpy(nickuhost, make_nick_user_host(cm->cptr->name,
+                                                     cm->cptr->user->username,
+                                                     cm->cptr->hostip));
+               s = make_nick_user_host(cm->cptr->name,
+                                       cm->cptr->user->username,
+                                       cm->cptr->user->host);
+               if (!match(exempt_id, nickuhost) || !match(exempt_id, s))
+                   cm->banexs--;
+           }
+
            MyFree(tmp->banstr);
            MyFree(tmp->who);
            MyFree(tmp);
@@ -669,6 +702,9 @@ static void add_user_to_channel(aChannel *chptr, aClient *who, int flags)
         cm->cptr = who;
         cm->next = chptr->members;
         cm->bans = 0;
+#ifdef EXEMPT_LISTS
+        cm->banexs = 0;
+#endif
         chptr->members = cm;
         chptr->users++;
         
@@ -758,6 +794,9 @@ int can_send(aClient *cptr, aChannel *chptr, char *msg)
         if ((chptr->mode.mode & MODE_NOCOLOR) && msg_has_colors(msg))
             return (ERR_NOCOLORSONCHAN);
         if (MyClient(cptr) && is_banned(cptr, chptr))
+#ifdef EXEMPT_LISTS
+            if (!is_exempt(cptr, chptr))
+#endif
             return (MODE_BAN); /*
                                 * channel is -n and user is not there;
                                 * we need to bquiet them if we can
@@ -769,6 +808,9 @@ int can_send(aClient *cptr, aChannel *chptr, char *msg)
             !(cm->flags & (CHFL_CHANOP | CHFL_VOICE)))
             return (MODE_MODERATED);
         if(cm->bans && !(cm->flags & (CHFL_CHANOP | CHFL_VOICE)))
+#ifdef EXEMPT_LISTS
+            if (!cm->banexs)
+#endif
             return (MODE_BAN);
         if ((chptr->mode.mode & MODE_MODREG) && !IsRegNick(cptr) &&
             !(cm->flags & (CHFL_CHANOP | CHFL_VOICE)))
@@ -1886,33 +1928,20 @@ static int can_join(aClient *sptr, aChannel *chptr, char *key)
     if (check_joinrate(chptr, NOW, 1, sptr) == 0)
         error = ERR_CHANNELISFULL;
     
-    /* We have to check bans in two places here as an optimization. You 
-    ** can *check* just once, but then you check the bans even if error != 0.
-    */
-    
 #ifdef INVITE_LISTS
-    if (error != 0)
+    if (error && is_invited(sptr, chptr))
+        error = 0;
+#endif
+
+    if (!error)
     {
-        if (!is_invited(sptr, chptr)) return error;
 #ifdef EXEMPT_LISTS
-        if (!is_exempt(sptr, chptr) && is_banned(sptr, chptr))
-#else
-        if (is_banned(sptr, chptr))
+        if (!is_exempt(sptr, chptr))
 #endif
-            return ERR_BANNEDFROMCHAN;
+            if (is_banned(sptr, chptr))
+                error = ERR_BANNEDFROMCHAN;
     }
-    else
-    {
-#endif /* INVITE_LISTS */        
-#ifdef EXEMPT_LISTS
-        if (!is_exempt(sptr, chptr) && is_banned(sptr, chptr))
-#else
-        if (is_banned(sptr, chptr))
-#endif
-            return ERR_BANNEDFROMCHAN;
-#ifdef INVITE_LISTS            
-    }
-#endif
+
     return error;
 }
 
@@ -3547,17 +3576,24 @@ void send_user_joins(aClient *cptr, aClient *user)
 
 void kill_ban_list(aClient *cptr, aChannel *chptr)
 {  
-    chanMember *cm;
-    aBan   *bp, *bpn;
-    char   *cp;
+    chanMember  *cm;
+    void        *pnx;
+    aBan        *bp;
+#ifdef EXEMPT_LISTS
+    aBanExempt  *ep;
+#endif
+#ifdef INVITE_LISTS
+    anInvite   *ip;
+#endif
+    char       *cp;
     int         count = 0, send = 0;
-      
+
     cp = modebuf;  
     *cp++ = '-';
     *cp = '\0';      
-    
+
     *parabuf = '\0';
-         
+
     for (bp = chptr->banlist; bp; bp = bp->next)
     {  
         if (strlen(parabuf) + strlen(bp->banstr) + 10 < (size_t) MODEBUFLEN)
@@ -3592,7 +3628,83 @@ void kill_ban_list(aClient *cptr, aChannel *chptr)
                 count = 0; 
             *cp = '\0';
         }
-    }  
+    }
+
+#ifdef EXEMPT_LISTS
+    for (ep = chptr->banexempt_list; ep; ep = ep->next)
+    {
+        if (strlen(parabuf) + strlen(ep->banstr) + 10 < (size_t) MODEBUFLEN)
+        {
+            if(*parabuf)
+                strcat(parabuf, " ");
+            strcat(parabuf, ep->banstr);
+            count++;
+            *cp++ = 'e';
+            *cp = '\0';
+        }
+        else if (*parabuf)
+            send = 1;
+
+        if (count == MAXMODEPARAMS)
+            send = 1;
+
+        if (send) {
+            sendto_channel_butserv_me(chptr, cptr, ":%s MODE %s %s %s",
+                                      cptr->name, chptr->chname, modebuf, parabuf);
+            send = 0;
+            *parabuf = '\0';
+            cp = modebuf;
+            *cp++ = '-';
+            if (count != MAXMODEPARAMS)
+            {
+                strcpy(parabuf, ep->banstr);
+                *cp++ = 'e';
+                count = 1;
+            }
+            else
+                count = 0;
+            *cp = '\0';
+        }
+    }
+#endif
+
+#ifdef INVITE_LISTS
+    for (ip = chptr->invite_list; ip; ip = ip->next)
+    {
+        if (strlen(parabuf) + strlen(ip->invstr) + 10 < (size_t) MODEBUFLEN)
+        {
+            if(*parabuf)
+                strcat(parabuf, " ");
+            strcat(parabuf, ip->invstr);
+            count++;
+            *cp++ = 'I';
+            *cp = '\0';
+        }
+        else if (*parabuf)
+            send = 1;
+
+        if (count == MAXMODEPARAMS)
+            send = 1;
+
+        if (send) {
+            sendto_channel_butserv_me(chptr, cptr, ":%s MODE %s %s %s",
+                                      cptr->name, chptr->chname, modebuf, parabuf);
+            send = 0;
+            *parabuf = '\0';
+            cp = modebuf;
+            *cp++ = '-';
+            if (count != MAXMODEPARAMS)
+            {
+                strcpy(parabuf, ip->invstr);
+                *cp++ = 'I';
+                count = 1;
+            }
+            else
+                count = 0;
+            *cp = '\0';
+        }
+    }
+#endif
 
     if(*parabuf)
     {
@@ -3605,20 +3717,50 @@ void kill_ban_list(aClient *cptr, aChannel *chptr)
     bp = chptr->banlist;
     while(bp)
     {
-        bpn = bp->next;
+        pnx = bp->next;
         MyFree(bp->banstr);
         MyFree(bp->who);
         MyFree(bp);
-        bp = bpn;
+        bp = pnx;
     }
-
     chptr->banlist = NULL;
-   
+
+#ifdef EXEMPT_LISTS
+    ep = chptr->banexempt_list;
+    while(ep)
+    {
+        pnx = ep->next;
+        MyFree(ep->banstr);
+        MyFree(ep->who);
+        MyFree(ep);
+        ep = pnx;
+    }
+    chptr->banexempt_list = NULL;
+#endif
+
+#ifdef INVITE_LISTS
+    ip = chptr->invite_list;
+    while(ip)
+    {
+        pnx = ip->next;
+        MyFree(ip->invstr);
+        MyFree(ip->who);
+        MyFree(ip);
+        ip = pnx;
+    }
+    chptr->invite_list = NULL;
+#endif
+
     /* reset bquiet on all channel members */
     for (cm = chptr->members; cm; cm = cm->next)
     {     
         if(MyConnect(cm->cptr))
+        {
             cm->bans = 0;
+#ifdef EXEMPT_LISTS
+            cm->banexs = 0;
+#endif
+        }
     }
 }
 

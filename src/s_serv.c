@@ -805,7 +805,7 @@ int send_lusers(aClient *cptr, aClient *sptr, int parc, char *parv[])
             if (m_ulined != Count.myulined) 
             {
                 sendto_realops_lev(DEBUG_LEV,
-                                   "Local ulinedserver count off by %d",
+                                   "Local superserver count off by %d",
                                    Count.myulined - m_ulined);
                 Count.myulined = m_ulined;
             }
@@ -957,7 +957,7 @@ m_connect(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
     if (!(aconn = find_aConnect(parv[1])))
     {
-        sendto_one(sptr, "NOTICE %s :Connect: No C line found for %s.",
+        sendto_one(sptr, "NOTICE %s :Connect: No Connect block found for %s.",
                    parv[0], parv[1]);
         return 0;
     }

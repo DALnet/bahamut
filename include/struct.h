@@ -1071,6 +1071,9 @@ struct ChanLink
     aClient *cptr;
     int flags;
     int bans;	/* for bquiet: number of bans against this user */
+#ifdef EXEMPT_LISTS
+    int banexs;	/* number of ban exemptions for this user */
+#endif
 };
 
 /* general link structure used for chains */

@@ -90,7 +90,7 @@ static int _match(char *mask, char *name)
 	else
 	    q = 0;
 
-	if ((ToLower(*m) != tolower(*n)) && ((*m != '?') || q))
+	if ((ToLower(*m) != ToLower(*n)) && ((*m != '?') || q))
 	{
 	    if (!wild)
 		return 1;

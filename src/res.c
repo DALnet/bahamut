@@ -48,7 +48,7 @@
 
 #define PROCANSWER_STRANGE   -2 /* invalid answer or query, try again */
 #define PROCANSWER_MALICIOUS -3 /* obviously malicious reply, 
-				 * don't do DNS on this ip. */
+				                 * don't do DNS on this ip. */
 
 #undef	DEBUG			/* because theres alot of debug code in here */
 #if !defined(AIX) && !defined(SOL20)

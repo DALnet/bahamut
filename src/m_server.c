@@ -314,10 +314,10 @@ m_server_estab(aClient *cptr)
     if (!(aconn = cptr->serv->aconn))
     {
         ircstp->is_ref++;
-        sendto_one(cptr, "ERROR :Access denied. No N line for server %s",
+        sendto_one(cptr, "ERROR :Access denied. No Connect block for server %s",
                    inpath);
-        sendto_ops("Access denied. No N line for server %s", inpath);
-        return exit_client(cptr, cptr, cptr, "No N line for server");
+        sendto_ops("Access denied. No Connect block for server %s", inpath);
+        return exit_client(cptr, cptr, cptr, "No Connect block for server");
     }
 
     encr = cptr->passwd;
@@ -585,11 +585,11 @@ int m_server(aClient *cptr, aClient *sptr, int parc, char *parv[])
         {
 
 #ifdef WARN_NO_NLINE
-            sendto_realops("Link %s dropped, no N: line",
+            sendto_realops("Link %s dropped, no Connect block",
                            get_client_name(cptr, TRUE));
 #endif
 
-            return exit_client(cptr, cptr, cptr, "NO N line");
+            return exit_client(cptr, cptr, cptr, "No Connect block");
         }
     }
 
@@ -688,8 +688,8 @@ int m_server(aClient *cptr, aClient *sptr, int parc, char *parv[])
                                get_client_name(cptr, HIDEME), host,
                                aconn ? (aconn->host ? aconn->host : "*") :
                                "!");
-            sendto_one(cptr, "ERROR :%s has no H: line for %s.",
-                       get_client_name(cptr, HIDEME), host);
+            sendto_one(cptr, "ERROR :You're not a hub (introducing %s)",
+                       host);
             return exit_client(cptr, cptr, cptr, "Too many servers");
         }
 
@@ -711,7 +711,7 @@ int m_server(aClient *cptr, aClient *sptr, int parc, char *parv[])
         if (IsULine(sptr) || find_aUserver(acptr->name))
         {
             acptr->flags |= FLAGS_ULINE;
-            sendto_realops_lev(DEBUG_LEV, "%s introducing U:lined server %s",
+            sendto_realops_lev(DEBUG_LEV, "%s introducing super server %s",
                                cptr->name, acptr->name);
         }
 
@@ -730,12 +730,13 @@ int m_server(aClient *cptr, aClient *sptr, int parc, char *parv[])
                 continue;
             if (!(aconn = bcptr->serv->aconn))
             {
-                sendto_gnotice("from %s: Lost N-line for %s on %s. Closing",
-                               me.name, get_client_name(cptr, HIDEME), host);
-                sendto_serv_butone(cptr, ":%s GNOTICE :Lost N-line for %s on "
-                                   "%s. Closing", me.name,
+                sendto_gnotice("from %s: Lost Connect block for %s on %s."
+                               " Closing", me.name,
+                               get_client_name(cptr, HIDEME), host);
+                sendto_serv_butone(cptr, ":%s GNOTICE :Lost Connect block for"
+                                   " %s on %s. Closing", me.name,
                                    get_client_name(cptr, HIDEME), host);
-                return exit_client(cptr, cptr, cptr, "Lost N line");
+                return exit_client(cptr, cptr, cptr, "Lost Connect block");
             }
             if (match(my_name_for_link(me.name, aconn), acptr->name) == 0)
                 continue;
@@ -774,7 +775,7 @@ int m_server(aClient *cptr, aClient *sptr, int parc, char *parv[])
             ircstp->is_ref++;
             sendto_ops("Received unauthorized connection from %s.",
                        get_client_host(cptr));
-            return exit_client(cptr, cptr, cptr, "No C/N conf lines");
+            return exit_client(cptr, cptr, cptr, "No Connect block");
     }
 }
 

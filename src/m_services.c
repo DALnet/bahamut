@@ -576,6 +576,13 @@ int m_svsmode(aClient *cptr, aClient *sptr, int parc, char *parv[])
     return 0;
 }
 
+/* m_svshold
+ *   Adds a temporary local nick ban.
+ * parv[0] - sender
+ * parv[1] - nick
+ * parv[2] - duration (0 to remove existing ban)
+ * parv[3] - optional reason
+ */
 int m_svshold(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     struct simBan *ban, *oban;
@@ -589,6 +596,7 @@ int m_svshold(aClient *cptr, aClient *sptr, int parc, char *parv[])
     length = strtol(parv[2], NULL, 0);
     reason = (parc < 4) ? "Nickname is reserved, try again later" : parv[3];
 
+    /* marked local so netbursts don't propagate it */
     ban = make_simpleban(SBAN_LOCAL|SBAN_NICK|SBAN_TEMPORARY, parv[1]);
     if(!ban)
     {
@@ -609,7 +617,7 @@ int m_svshold(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	else
 	{
 	    if(oban->reason)
-		free(oban->reason);
+		MyFree(oban->reason);
 	    oban->reason = (char *) MyMalloc(strlen(reason) + 1);
 	    strcpy(oban->reason, reason);
 	    oban->timeset = NOW;

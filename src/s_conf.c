@@ -305,8 +305,13 @@ find_port(int port, char *bind)
 {
     aPort *tmp;
     for(tmp = ports; tmp; tmp = tmp->next)
-        if((tmp->port == port) && !mycmp(tmp->address, bind))
-            break;
+        if (tmp->port == port)
+        {
+            if (tmp->address == bind)  /* both NULL */
+                break;
+            if (tmp->address && bind && !mycmp(tmp->address, bind))
+                break;
+        }
     return tmp;
 }
 
@@ -2098,6 +2103,10 @@ int rehash(aClient *cptr, aClient *sptr, int sig)
         sendto_ops("Got signal SIGHUP, reloading ircd conf. file");
         remove_userbans_match_flags(UBAN_NETWORK, 0);
         remove_userbans_match_flags(UBAN_LOCAL|UBAN_TEMPORARY, 0);
+        remove_simbans_match_flags(SBAN_NICK|SBAN_LOCAL|SBAN_TEMPORARY, 0);
+        remove_simbans_match_flags(SBAN_CHAN|SBAN_LOCAL|SBAN_TEMPORARY, 0);
+        remove_simbans_match_flags(SBAN_GCOS|SBAN_LOCAL|SBAN_TEMPORARY, 0);
+
     }
 
     /* Shadowfax's LOCKFILE code */
@@ -2121,6 +2130,10 @@ int rehash(aClient *cptr, aClient *sptr, int sig)
 
     /* remove perm klines */
     remove_userbans_match_flags(UBAN_LOCAL, UBAN_TEMPORARY);
+    remove_simbans_match_flags(SBAN_NICK|SBAN_LOCAL, SBAN_TEMPORARY);
+    remove_simbans_match_flags(SBAN_CHAN|SBAN_LOCAL, SBAN_TEMPORARY);
+    remove_simbans_match_flags(SBAN_GCOS|SBAN_LOCAL, SBAN_TEMPORARY);
+
 
     initclass();
 

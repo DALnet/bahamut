@@ -40,6 +40,14 @@
 #define DH_HEADER
 #include "dh.h"
 
+
+#ifdef __OpenBSD__
+#define RAND_SRC "/dev/arandom"
+#else
+#define RAND_SRC "/dev/random"
+#endif
+
+
 static int verify_is_hex(char *string)
 {
     int l = strlen(string);
@@ -103,24 +111,32 @@ int dh_hexstr_to_raw(char *string, unsigned char *hexout, int *hexlen)
     return 1;
 }
 
+static inline void entropy_error(void)
+{
+    printf("\nCould not generate entropy from %s:\n%s\n\n",
+           RAND_SRC, strerror(errno));
+    printf("ircd needs a %d byte random seed.\n", RAND_BYTES);
+    printf("You can place a file containing random data called"
+           " .ircd.entropy\nin the directory with your ircd.conf."
+           " This file must be at least %d bytes\n", RAND_BYTES);
+    printf("long and should be suitably random.\n");
+}
+
 static int make_entropy()
 {
     char randbuf[RAND_BYTES * 4];
     FILE *fp;
     int i;
 
-    printf("\nNo random state found, generating entropy from /dev/random...\n");
+    printf("\nNo random state found, generating entropy from %s...\n",
+           RAND_SRC);
+    printf("On some systems this may take a while, and can be helped by"
+           " keeping the\nsystem busy, such as pounding on the keyboard.\n");
 
-    fp = fopen("/dev/random", "r");
+    fp = fopen(RAND_SRC, "r");
     if(!fp)
     {
-        printf("Could not load random values from /dev/random: %s\n", 
-                strerror(errno));
-        printf("ircd needs a %d byte random seed.\n", RAND_BYTES);
-        printf("You can place a file containing random data called"
-               " .ircd.entropy\nin the directory with your ircd.conf."
-               " This file must be at least %d bytes\n", RAND_BYTES);
-        printf("long and should be suitably random.\n");
+        entropy_error();
         return 0;
     }
 
@@ -134,8 +150,7 @@ static int make_entropy()
         {
             if(ferror(fp))
             {
-                printf("Error while reading from random source: %s. hrmm.\n", 
-                        strerror(errno));
+                entropy_error();
                 fclose(fp);
                 return 0;
             }

@@ -1016,7 +1016,7 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
     else
         name = me.name;
 
-    if (stat != (char) 0 && !IsULine(sptr))
+    if (stat != (char) 0 && !IsULine(sptr) && !IsServer(sptr))
         sendto_realops_lev(SPY_LEV, "STATS %c requested by %s (%s@%s) [%s]",
                stat, sptr->name, sptr->user->username,
                sptr->user->host, sptr->user->server);
@@ -1104,7 +1104,7 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
                                 (tmp->port ? tmp->port : 0),
                                 tmp->class->name);
                     sendto_one(sptr, rpl_str(RPL_STATSNLINE), me.name,
-                                sptr->name, "N", "*", tmp->name, "1",
+                                sptr->name, "N", "*", tmp->name, tmp->flags,
                                 tmp->class->name);
                 }
                 else
@@ -1113,7 +1113,7 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
                            sptr->name, "C", tmp->host, tmp->name,
                            (tmp->port ? tmp->port : 0), tmp->class->name);
                     sendto_one(sptr, rpl_str(RPL_STATSNLINE), me.name,
-                           sptr->name, "N", tmp->host, tmp->name, "1",
+                           sptr->name, "N", tmp->host, tmp->name, tmp->flags,
                            tmp->class->name);
                 }
             }

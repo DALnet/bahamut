@@ -435,12 +435,6 @@ int sbuf_delete(SBuf* theBuf, int theLength)
     }
     if (theBuf->head == NULL) theBuf->tail = NULL;
     
-    /* debug profiling code */
-    if (theBuf->head == NULL && theBuf->length != 0)
-    {
-        syslog(LOG_INFO, "sbuf: length <> 0, head,tail = NULL -- creating core by abort()");
-        abort();
-    }
     return 1;
 }
 

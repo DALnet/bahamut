@@ -153,11 +153,11 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	    sendto_realops_lev(DEBUG_LEV, "Bad Nick: %s From: %s %s",
 			       parv[1], parv[0],
 			       get_client_name(cptr, FALSE));
-	    sendto_one(cptr, ":%s KILL %s :Bad Nick",
-		       me.name, parv[1]);
+	    sendto_one(cptr, ":%s KILL %s :%s (Bad Nick)",
+		       me.name, parv[1], me.name);
 	    if (sptr != cptr) { /* bad nick change */     
-		sendto_serv_butone(cptr, ":%s KILL %s :Bad Nick", me.name,
-				   parv[0]);
+		sendto_serv_butone(cptr, ":%s KILL %s :%s (Bad Nick)", me.name,
+				   parv[0], me.name);
 		sptr->flags |= FLAGS_KILLED;
 		return exit_client(cptr, sptr, &me, "BadNick");
 	    }
@@ -202,8 +202,8 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	     */
 	    sendto_realops_lev(SKILL_LEV, "Nick collision on %s", sptr->name);
 	    ircstp->is_kill++;
-	    sendto_one(cptr, ":%s KILL %s :Nick Collision", me.name, 
-		       sptr->name);
+	    sendto_one(cptr, ":%s KILL %s :%s (Nick Collision)", me.name, 
+		       sptr->name, me.name);
 	    sptr->flags |= FLAGS_KILLED;
 	    return exit_client(cptr, sptr, &me, "Nick/Server collision");
 	}
@@ -243,8 +243,8 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	    else if (!(acptr->user))
 	    {
 		sendto_realops_lev(SKILL_LEV, "Nick Collision on %s", parv[1]);
-		sendto_serv_butone(NULL, ":%s KILL %s :Nick Collission",
-				   me.name, acptr->name);
+		sendto_serv_butone(NULL, ":%s KILL %s :%s (Nick Collision)",
+				   me.name, acptr->name, me.name);
 		acptr->flags |= FLAGS_KILLED;
 		/* Having no USER struct should be ok... */
 		return exit_client(cptr, acptr, &me,
@@ -288,8 +288,8 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		ircstp->is_kill++;
 		sendto_one(acptr, err_str(ERR_NICKCOLLISION),
 			   me.name, acptr->name, acptr->name);
-		sendto_serv_butone(NULL, ":%s KILL %s :Nick Collission",
-				   me.name,acptr->name);
+		sendto_serv_butone(NULL, ":%s KILL %s :%s (Nick Collision)",
+				   me.name, acptr->name, me.name);
 		acptr->flags |= FLAGS_KILLED;
 		return exit_client(cptr, acptr, &me, "Nick collision");
 	    }
@@ -310,8 +310,8 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		    ircstp->is_kill++;
 		    sendto_one(acptr, err_str(ERR_NICKCOLLISION),
 			       me.name, acptr->name, acptr->name);
-		    sendto_serv_butone(sptr, ":%s KILL %s :Nick Collision",
-				       me.name, acptr->name);
+		    sendto_serv_butone(sptr, ":%s KILL %s :%s (Nick Collision)",
+				       me.name, acptr->name, me.name);
 		    acptr->flags |= FLAGS_KILLED;
 		    (void) exit_client(cptr, acptr, &me, "Nick collision");
 		    break;
@@ -332,11 +332,11 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	    ircstp->is_kill++;
 	    sendto_one(acptr, err_str(ERR_NICKCOLLISION),
 		       me.name, acptr->name, acptr->name);
-	    sendto_serv_butone(NULL, ":%s KILL %s :Nick Collision",me.name,
-			       sptr->name);
+	    sendto_serv_butone(NULL, ":%s KILL %s :%s (Nick Collision)",me.name,
+			       sptr->name, me.name);
 	    ircstp->is_kill++;
-	    sendto_serv_butone(NULL, ":%s KILL %s :Nick Collision",me.name,
-			       acptr->name);
+	    sendto_serv_butone(NULL, ":%s KILL %s :%s (Nick Collision)",me.name,
+			       acptr->name, me.name);
 	    acptr->flags |= FLAGS_KILLED;
 	    (void) exit_client(NULL, acptr, &me, "Nick collision(new)");
 	    sptr->flags |= FLAGS_KILLED;
@@ -354,8 +354,8 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 				   "Nick change collision from %s to %s",
 				   sptr->name, acptr->name);
 		ircstp->is_kill++;
-		sendto_serv_butone(cptr, ":%s KILL %s :Nick Collision",me.name,
-				   sptr->name);
+		sendto_serv_butone(cptr, ":%s KILL %s : %s (Nick Collision)",me.name,
+				   sptr->name, me.name);
 		sptr->flags |= FLAGS_KILLED;
 		if (sameuser)
 		    return exit_client(cptr, sptr, &me, "Nick collision(old)");
@@ -369,8 +369,8 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		ircstp->is_kill++;
 		sendto_one(acptr, err_str(ERR_NICKCOLLISION),
 			   me.name, acptr->name, acptr->name);
-		sendto_serv_butone(sptr, ":%s KILL %s :Nick Collision",me.name,
-				   acptr->name);
+		sendto_serv_butone(sptr, ":%s KILL %s :%s (Nick Collision)",me.name,
+				   acptr->name, me.name);
 		acptr->flags |= FLAGS_KILLED;
 		(void) exit_client(cptr, acptr, &me, "Nick collision");
 	    }
@@ -460,7 +460,7 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	    {
 #ifndef DONT_CHECK_QLINE_REMOTE
 		if (!MyConnect(sptr))
-		    sendto_realops("Q:lined nick %s from %s on %s", nick,
+		    sendto_realops("Restricted nick %s from %s on %s", nick,
 				   (*sptr->name != 0 && !IsServer(sptr)) ?
 				   sptr->name : "<unregistered>",
 				   (sptr->user == NULL) ? ((IsServer(sptr)) ?
@@ -477,7 +477,7 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 			       ban->reason,
 			       BadPtr(ban->mask) ? "N/A" : ban->mask);
 		    sendto_realops_lev(REJ_LEV,
-				       "Forbidding Q:lined nick %s from %s.",
+				       "Forbidding restricted nick %s from %s.",
 				       nick, get_client_name(cptr, FALSE));
 		    return 0;
 		}
@@ -580,7 +580,7 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 			       ban->reason,
 			       BadPtr(ban->mask) ? "N/A" : ban->mask);
 		    sendto_realops_lev(REJ_LEV,
-				       "Forbidding Q:lined nick %s from "
+				       "Forbidding restricted nick %s from "
 				       "<unregistered>%s.", nick,
 				       get_client_name(cptr, FALSE));
 		    return 0;

@@ -1,3 +1,28 @@
+Changes for 1.8.2
+-----------------
+
+- fixed entropy generation on OpenBSD and cleaned up status messages 
+  (from Mark19960)
+- fixed cosmetic error in /stats C reply
+- fixed autoconnect blast when connect->port was specified but not 
+  class->connfreq (from Mark19960)
+- fixed crash on /stats request from a server (from Mark19960)
+- fixed invite exceptions not working at all (from wshs)
+- fixed ban exemptions not affecting bquiet (from wshs)
+- fixed -e/-I sync failure during netbursts of older channels
+- tweaked reference.conf
+- corrected new find_port() check
+- now removing simbans (restrict blocks) on rehash (from Ballsy)
+- fixed cosmetic errors in nick collision kills (from Goplat)
+- Converted old "X line" messages to "X block"
+- Changed stray free() to MyFree()
+- Corrected a tolower() reference I missed the first time around
+- Removed ancient prototype causing compile failures with gcc 3.4
+- Fixed 005 WATCH token (was using incorrect number)
+- Removed temporary debug code causing compile failure when !USE_SYSLOG
+
+
+
 Changes for 1.8.0
 -----------------
 

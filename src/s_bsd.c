@@ -678,7 +678,7 @@ int check_server_init(aClient * cptr)
 
     if (!(aconn = find_aConnect(cptr->name)))
     {
-        Debug((DEBUG_DNS, "No C/N lines for %s", name));
+        Debug((DEBUG_DNS, "No Connect block for %s", name));
         return -1;
     }
 

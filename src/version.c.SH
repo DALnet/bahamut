@@ -80,6 +80,7 @@ char *infotext[] =
 	 "MSofty              Mark Salerno        msofty@dal.net",
 	 "Rakarra             Ian Westcott        rakarra@dal.net",
      "lucas               Lucas Madar         lucas@dal.net",
+     "Quension            Trevor Talbot       quension@mac.com",
 	 "srd                 Sean McKay          srd@powertrip.net",
 	 "White_Dragon        Chip Norkus         wd@dal.net",
      "xPsycho             Ryan Smith          xpsycho@dal.net",

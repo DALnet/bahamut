@@ -299,7 +299,7 @@ static time_t try_connections(time_t currenttime)
     for (aconn = connects; aconn; aconn = aconn->next) 
     {
         /* Also when already connecting! (update holdtimes) --SRB */
-        if (aconn->port <= 0)
+        if (aconn->port <= 0 || aconn->class->connfreq == 0)
             continue;
         cltmp = aconn->class;
 
