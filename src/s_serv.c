@@ -987,7 +987,6 @@ int m_burst(aClient *cptr, aClient *sptr, int parc, char *parv[]) {
     HTMLOCK = YES;
 #endif
     sptr->flags |= FLAGS_EOBRECV;
-    sendto_gnotice("from %s: RECEIVED SOB FROM %s", me.name, *parv);
   }
   return 0;
 }
