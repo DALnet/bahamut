@@ -229,19 +229,21 @@ int send_queued(aClient *to) {
 	break;
    }
 
-   if (to->flags & FLAGS_SOBSENT && IsBurst(to) && !(to->flags & FLAGS_BURST) && DBufLength(&to->sendQ) < 20480) { /* 20k */
-     sendto_one(to, "BURST %d", DBufLength(&to->sendQ));
-     to->flags &= (~FLAGS_SOBSENT);
-     if (!(to->flags & FLAGS_EOBRECV)) { /* hey we're the last to synch.. let's notify */
-       sendto_gnotice("from %s: synch to %s in %d %s", me.name, to->name, (timeofday-to->firsttime), 
-         (timeofday-to->firsttime)==1?"sec":"secs");
-   #ifdef HUB
-       sendto_serv_butone(to, ":%s GNOTICE :synch to %s in %d %s", me.name, to->name,
-         (timeofday-to->firsttime), (timeofday-to->firsttime)==1?"sec":"secs");
-   #endif
-   #ifdef HTM_LOCK_ON_NETBURST
-       HTMLOCK = NO;
-   #endif
+   if ((to->flags & FLAGS_SOBSENT) && IsBurst(to) && DBufLength(&to->sendQ) < 20480) { /* 20k */
+     if (!(to->flags & FLAGS_BURST)) {
+       sendto_one(to, "BURST %d", DBufLength(&to->sendQ));
+       to->flags &= (~FLAGS_SOBSENT);
+       if (!(to->flags & FLAGS_EOBRECV)) { /* hey we're the last to synch.. let's notify */
+         sendto_gnotice("from %s: synch to %s in %d %s", me.name, to->name, (timeofday-to->firsttime), 
+            (timeofday-to->firsttime)==1?"sec":"secs");
+#ifdef HUB
+         sendto_serv_butone(to, ":%s GNOTICE :synch to %s in %d %s", me.name, to->name,
+            (timeofday-to->firsttime), (timeofday-to->firsttime)==1?"sec":"secs");
+#endif
+#ifdef HTM_LOCK_ON_NETBURST
+         HTMLOCK = NO;
+#endif
+       }
      }
    }
    
