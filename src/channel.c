@@ -2493,6 +2493,9 @@ int m_join(aClient *cptr, aClient *sptr, int parc, char *parv[])
                    me.name, parv[0], "JOIN");
         return 0;
     }
+
+    if (MyClient(sptr))
+        parv[1] = canonize(parv[1]);
         
     *jbuf = '\0';
     /*
