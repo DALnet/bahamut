@@ -384,7 +384,7 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	{
 	    /* if we can't find the server this nick is on, 
 	     * complain loudly and ignore it. - lucas */
-	    sendto_realops("Remote nick %s on UNKNOWN server %s\n",
+	    sendto_realops("Remote nick %s on UNKNOWN server %s",
 			   nick, parv[7]);
 	    return 0;
 	}
@@ -442,16 +442,6 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
     }
     else if (sptr->name[0])
     {
-	/*
-	 * Client just changing his/her nick. If he/she is on a
-	 * channel, send note of change to all clients on that channel.
-	 * Propagate notice to other servers.
-	 */
-	/* if the nickname is different, set the TS */
-	if (mycmp(parv[0], nick))
-	{
-	    sptr->tsinfo = newts ? newts : (ts_val) timeofday;
-	}
 #ifdef DONT_CHECK_QLINE_REMOTE
 	if (MyConnect(sptr))
 	{
@@ -536,6 +526,18 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		    send_umode(sptr, sptr, oldumode, ALL_UMODES, mbuf);
 		}
 
+                /* LOCAL NICKHANGE */
+                /*
+                 * Client just changing his/her nick. If he/she is on a
+                 * channel, send note of change to all clients on that channel.
+                 * Propagate notice to other servers.
+                 */
+                /* if the nickname is different, set the TS */
+                if (mycmp(parv[0], nick))
+                {
+                  sptr->tsinfo = newts ? newts : (ts_val) timeofday;
+                }
+
 		sendto_common_channels(sptr, ":%s NICK :%s", parv[0], 
 				       nick);
 		if (sptr->user)
@@ -549,6 +551,18 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	}
 	else
 	{
+            /* REMOTE NICKCHANGE */
+            /*
+             * Client just changing his/her nick. If he/she is on a
+             * channel, send note of change to all clients on that channel.
+             * Propagate notice to other servers.
+             */
+            /* if the nickname is different, set the TS */
+            if (mycmp(parv[0], nick))
+            {
+              sptr->tsinfo = newts ? newts : (ts_val) timeofday;
+            }
+
 	    sendto_common_channels(sptr, ":%s NICK :%s", parv[0], nick);
 	    if (sptr->user)
 	    {
