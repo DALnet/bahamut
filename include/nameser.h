@@ -29,8 +29,10 @@
 #define MAXCDNAME	255	/* maximum compressed domain name */
 #define MAXLABEL	63	/* maximum length of domain label */
 
-#define QFIXEDSZ	4 	/* Number of bytes of fixed size data in query structure */
-#define RRFIXEDSZ	10 	/* number of bytes of fixed size data in resource record */
+#define QFIXEDSZ	4 	/* Number of bytes of fixed size 
+				 * data in query structure */
+#define RRFIXEDSZ	10 	/* number of bytes of fixed size data
+				 * in resource record */
 #define NAMESERVER_PORT	53 	/* Internet nameserver port number */
 
 /* Currently defined opcodes */
@@ -52,7 +54,7 @@
 /* Currently defined response codes */
 
 #ifdef	NOERROR			/* defined by solaris2 in 
-# undef	NOERROR			 * <sys/stream.h> to be -1 */
+#undef	NOERROR			 * <sys/stream.h> to be -1 */
 #endif
 
 #define NOERROR		0	/* no error */
@@ -118,11 +120,11 @@
 #define CONV_BADBUFLEN -4
 
 #ifndef BYTE_ORDER
-# define	LITTLE_ENDIAN	1234	/* least-significant byte first (vax) */
-# define	BIG_ENDIAN	4321	/* most-significant byte first (IBM, net) */
-# define	PDP_ENDIAN	3412	/* LSB first in word, MSW first in long (pdp) */
+#define	LITTLE_ENDIAN	1234   /* least-significant byte first (vax) */
+#define	BIG_ENDIAN	4321   /* most-significant byte first (IBM, net) */
+#define	PDP_ENDIAN	3412   /* LSB first in word, MSW first in long (pdp) */
 
-# if defined(vax) || defined(ns32000) || defined(sun386) || defined(MIPSEL) || \
+#if defined(vax) || defined(ns32000) || defined(sun386) || defined(MIPSEL) || \
     defined(BIT_ZERO_ON_RIGHT) || defined(sequent) || defined(i386) ||\
     defined(___vax__) || defined(__ns32000__) || defined(__sun386__) ||\
     defined(__alpha)
@@ -158,51 +160,52 @@ UNDEFINED_BIT_ORDER;
  * rearrangement.
  */
 
-typedef struct {
-   u_short     id;		/* query identification number */
+typedef struct
+{
+    u_short     id;		/* query identification number */
 #if BYTE_ORDER == BIG_ENDIAN    
-
-   /* fields in third byte */
-
-   u_char      qr:1;		/* response flag */
-   u_char      opcode:4;	/* purpose of message */
-   u_char      aa:1;		/* authoritive answer */
-   u_char      tc:1;		/* truncated message */
-   u_char      rd:1;		/* recursion desired */
-
-   /* fields in fourth byte */
-
-   u_char      ra:1;		/* recursion available */
-   u_char      pr:1;		/* primary server required (non standard) */
-   u_char      unused:2;	/* unused bits */
-   u_char      rcode:4;		/* response code */
-
+    
+    /* fields in third byte */
+    
+    u_char      qr:1;		/* response flag */
+    u_char      opcode:4;	/* purpose of message */
+    u_char      aa:1;		/* authoritive answer */
+    u_char      tc:1;		/* truncated message */
+    u_char      rd:1;		/* recursion desired */
+    
+    /* fields in fourth byte */
+    
+    u_char      ra:1;		/* recursion available */
+    u_char      pr:1;		/* primary server required (non standard) */
+    u_char      unused:2;	/* unused bits */
+    u_char      rcode:4;		/* response code */
+    
 #endif
 #if BYTE_ORDER == LITTLE_ENDIAN || BYTE_ORDER == PDP_ENDIAN
+    
+    /* fields in third byte */
 
-   /* fields in third byte */
-
-   u_char      rd:1;		/* recursion desired */
-   u_char      tc:1;		/* truncated message */
-   u_char      aa:1;		/* authoritive answer */
-   u_char      opcode:4;	/* purpose of message */
-   u_char      qr:1;		/* response flag */
-
-   /* fields in fourth byte */
-
-   u_char      rcode:4;		/* response code */
-   u_char      unused:2;	/* unused bits */
-   u_char      pr:1;		/* primary server required (non standard) */
-   u_char      ra:1;		/* recursion available */
-
+    u_char      rd:1;		/* recursion desired */
+    u_char      tc:1;		/* truncated message */
+    u_char      aa:1;		/* authoritive answer */
+    u_char      opcode:4;	/* purpose of message */
+    u_char      qr:1;		/* response flag */
+    
+    /* fields in fourth byte */
+    
+    u_char      rcode:4;		/* response code */
+    u_char      unused:2;	/* unused bits */
+    u_char      pr:1;		/* primary server required (non standard) */
+    u_char      ra:1;		/* recursion available */
+    
 #endif
 
-   /* remaining bytes */
-
-   u_short     qdcount;		/* number of question entries */
-   u_short     ancount;		/* number of answer entries */
-   u_short     nscount;		/* number of authority entries */
-   u_short     arcount;		/* number of resource entries */
+    /* remaining bytes */
+    
+    u_short     qdcount;		/* number of question entries */
+    u_short     ancount;		/* number of answer entries */
+    u_short     nscount;		/* number of authority entries */
+    u_short     arcount;		/* number of resource entries */
 } HEADER;
 
 /* Defines for handling compressed domain names */
@@ -211,17 +214,18 @@ typedef struct {
 
 /* Structure for passing resource records around. */
 
-struct rrec {
-   short       r_zone;		/* zone number */
-   short       r_class;		/* class number */
-   short       r_type;		/* type number */
+struct rrec 
+{
+    short       r_zone;		/* zone number */
+    short       r_class;		/* class number */
+    short       r_type;		/* type number */
 #ifdef	__alpha
-   u_int       r_ttl;		/* time to live */
+    u_int       r_ttl;		/* time to live */
 #else
-   u_long      r_ttl;		/* time to live */
+    u_long      r_ttl;		/* time to live */
 #endif
-   int         r_size;		/* size of data area */
-   char       *r_data;		/* pointer to data */
+    int         r_size;		/* size of data area */
+    char       *r_data;		/* pointer to data */
 };
 
 extern u_short _getshort();

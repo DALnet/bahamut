@@ -31,7 +31,7 @@
 #include "ircsprintf.h"
 
 extern int  R_do_dns, R_fin_dns, R_fin_dnsc, R_fail_dns, R_do_id,
-            R_fin_id, R_fail_id;
+    R_fin_id, R_fail_id;
 
 extern aMotd *motd;
 extern struct tm *motd_tm;
@@ -91,15 +91,6 @@ extern char 	*pretty_mask(char *);
 
 
 extern aClient 	*find_chasing(aClient *, char *, int *);
-
-#if 0
-extern aClient 	*find_client(char *, aClient *);
-extern aClient 	*find_name(char *, aClient *);
-extern aClient 	*find_person(char *, aClient *);
-extern aClient 	*find_server(char *, aClient *);
-extern aClient 	*find_service(char *, aClient *);
-extern aClient 	*find_userhost(char *, char *, aClient *, int *);
-#endif
 
 extern int  	  attach_conf(aClient *, aConfItem *);
 extern aConfItem *attach_confs(aClient *, char *, int);
@@ -170,13 +161,15 @@ extern char 	 *strerror(int);
 extern int  	  dgets(int, char *, int);
 extern char 	 *inetntoa(char *);
 extern int  	  dbufalloc, dbufblocks, debuglevel, errno, h_errno;
-extern int  	  highest_fd, debuglevel, portnum, debugtty, maxusersperchannel;
+extern int  	  highest_fd, debuglevel, portnum,
+    debugtty, maxusersperchannel;
 extern int  	  readcalls, udpfd, resfd;
 extern aClient 	 *add_connection(aClient *, int);
 extern int  	  add_listener(aConfItem *);
 extern void 	  add_local_domain(char *, int);
 extern int  	  check_client(aClient *);
-extern int  	  check_server(aClient *, struct hostent *, aConfItem *, aConfItem *, int);
+extern int  	  check_server(aClient *, struct hostent *, aConfItem *,
+			       aConfItem *, int);
 extern int  	  check_server_init(aClient *);
 extern void 	  close_connection(aClient *);
 extern void 	  close_listeners();
@@ -258,7 +251,7 @@ extern void 	  checklist(void);
 extern void 	  remove_client_from_list(aClient *);
 extern void 	  initlists(void);
 extern void 	  block_garbage_collect(void);	/* list.c */
-extern void       block_destroy(void);	/* list.c */
+extern void       block_destroy(void);	        /* list.c */
 
 extern void 	  add_class(int, int, int, int, long);
 extern void 	  fix_class(aConfItem *, aConfItem *);
@@ -297,9 +290,7 @@ extern void 	  off_history(aClient *);
 extern int  	  dopacket(aClient *, char *, int);
 extern int  	  client_dopacket(aClient *, char *, int);
 
-/*
- * VARARGS2 
- */
+/* VARARGS2 */
 
 extern void 	  debug(int level, char *pattern, ...);
 

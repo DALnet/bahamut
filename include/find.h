@@ -28,9 +28,9 @@
  
 static inline aClient *find_person(char *name, aClient *cptr)
 {
-   aClient *acptr = find_client(name, cptr);
- 
-   return acptr ? (IsClient(acptr) ? acptr : cptr) : cptr;
+    aClient *acptr = find_client(name, cptr);
+    
+    return acptr ? (IsClient(acptr) ? acptr : cptr) : cptr;
 } 
 
 #endif /* __find_include__ */

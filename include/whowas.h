@@ -24,12 +24,13 @@
 
 /* WHOWAS structure moved here from whowas.c */
 
-typedef struct aname {
-   anUser     *ww_user;
-   aClient    *ww_online;
-   time_t      ww_logout;
-   char        ww_nick[NICKLEN + 1];
-   char        ww_info[REALLEN + 1];
+typedef struct aname 
+{
+    anUser     *ww_user;
+    aClient    *ww_online;
+    time_t      ww_logout;
+    char        ww_nick[NICKLEN + 1];
+    char        ww_info[REALLEN + 1];
 } aName;
 
 /*
@@ -60,9 +61,7 @@ aClient    *get_history(char *, time_t);
 
 int         m_whowas(aClient *, aClient *, int, char *[]);
 
-/*
- * for debugging...counts related structures stored in whowas array.
- */
+/* for debugging...counts related structures stored in whowas array. */
 void        count_whowas_memory(int *, u_long *);
 
 #endif /* __whowas_include__ */

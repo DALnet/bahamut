@@ -44,10 +44,11 @@ struct DBufBuffer;
 ** implementation of this package without changing the
 ** interface.
 */
-struct DBuf {
-  struct DBufBuffer* head;   /* First data buffer, if length > 0 */
-  struct DBufBuffer* tail;   /* last data buffer, if length > 0 */
-  size_t             length; /* Current number of bytes stored */
+struct DBuf 
+{
+    struct DBufBuffer* head;   /* First data buffer, if length > 0 */
+    struct DBufBuffer* tail;   /* last data buffer, if length > 0 */
+    size_t             length; /* Current number of bytes stored */
 };
 
 extern int DBufCount;

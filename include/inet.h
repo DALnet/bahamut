@@ -22,9 +22,7 @@
 
 /* $Id$ */
 
-/*
- * External definitions for functions in inet(3) 
- */
+/* External definitions for functions in inet(3) */
 #include "config.h"		/* for system definitions */
 
 #ifdef	__alpha

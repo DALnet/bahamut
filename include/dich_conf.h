@@ -46,16 +46,18 @@
 typedef struct ConfList aConfList;
 typedef struct ConfEntry aConfEntry;
 
-struct ConfList {
-   unsigned int length;
-   aConfEntry *conf_list;
+struct ConfList 
+{
+    unsigned int length;
+    aConfEntry *conf_list;
 };
 
-struct ConfEntry {
-   char       *pattern;
-   aConfItem  *conf;
-   aConfEntry *next;
-   aConfList  *sub;
+struct ConfEntry 
+{
+    char       *pattern;
+    aConfItem  *conf;
+    aConfEntry *next;
+    aConfList  *sub;
 };
 
 extern void addto_conf_list();

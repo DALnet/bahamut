@@ -21,8 +21,8 @@
 /* $Id$ */
 
 #ifndef FD_ZERO
-# define FD_ZERO(set)      (((set)->fds_bits[0]) = 0)
-# define FD_SET(s1, set)   (((set)->fds_bits[0]) |= 1 << (s1))
-# define FD_ISSET(s1, set) (((set)->fds_bits[0]) & (1 << (s1)))
-# define FD_SETSIZE        30
+#define FD_ZERO(set)      (((set)->fds_bits[0]) = 0)
+#define FD_SET(s1, set)   (((set)->fds_bits[0]) |= 1 << (s1))
+#define FD_ISSET(s1, set) (((set)->fds_bits[0]) & (1 << (s1)))
+#define FD_SETSIZE        30
 #endif

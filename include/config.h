@@ -45,9 +45,7 @@
 #ifndef OPTIONS_H
 
 /**** MAKE SURE THIS IS CORRECT ****/
-/*
- * ONLY EDIT "HARD_FDLIMIT_" and "INIT_MAXCLIENTS" 
- */
+/* ONLY EDIT "HARD_FDLIMIT_" and "INIT_MAXCLIENTS" */
 #define HARD_FDLIMIT_   2048
 #define INIT_MAXCLIENTS 2000
 
@@ -149,11 +147,11 @@
  * you use syslog above, you may want to turn some (none) of the
  * spurious log messages for KILL,SQUIT,etc off.
  */
-#undef	SYSLOG_KILL		        /* log all operator kills */
+#undef	SYSLOG_KILL		/* log all operator kills */
 #undef	SYSLOG_SQUIT	        /* log all remote squits */
 #undef	SYSLOG_CONNECT	        /* log remote connect messages */
-#undef	SYSLOG_USERS		     /* send userlog stuff to syslog */
-#undef	SYSLOG_OPER		        /* log all users who successfully oper */
+#undef	SYSLOG_USERS		/* send userlog stuff to syslog */
+#undef	SYSLOG_OPER		/* log all users who successfully oper */
 #undef   SYSLOG_BLOCK_ALLOCATOR /* debug block allocator */
 
 /*
@@ -281,22 +279,6 @@
  */
 #undef FNAME_USERLOG "/usr/local/ircd/users"	
 #undef FNAME_OPERLOG "/usr/local/ircd/opers"
-
-/*
- * CUSTOM_ERR - colorful notice/error/messages Defining this will use
- * custom notice/error/messages from include/s_err.h instead of stock
- * ones in ircd/s_err.c.  If you prefer the "colorful" messages that
- * Hybrid was known for, or if you wish to customize the messages,
- * define this.  Otherwise leave it undef'd for plain ole boring
- * messages.
- */
-
-/*
- * DO NOT USE CUSTOM_ERR
- * IT IS BROKEN!
- * EDIT S_ERR.C INSTEAD!
- */
-#undef CUSTOM_ERR
 
 /* Don't change this... */
 #define HARD_FDLIMIT	(HARD_FDLIMIT_ - 10)
@@ -587,13 +569,11 @@
  */
 #define FAILED_OPER_NOTICE
 
-
 /*
  * RK_NOTICES - Show notices when rline/kline'd connections are denied.
  * This generates a TON of crap, I reccomend leaving it undef'd.
  */
 #undef RK_NOTICES
-
 
 /*
  * ANTI_NICK_FLOOD - prevents nick flooding define if you want to block
@@ -657,7 +637,7 @@
  * HTM_LOCK_ON_NETBURST Define this if you want your server to
  * stay in HTM while the server is synching to the network 
  * after a connect
-*/
+ */
 #undef HTM_LOCK_ON_NETBURST
 
 /* DEFAULT_PROXY_INFO_URL
@@ -983,11 +963,11 @@
 
 #if defined(DEBUGMODE) || defined(DNS_DEBUG)
 extern void debug(int level, char *pattern, ...);
-# define Debug(x) debug x
-# define LOGFILE LPATH
+#define Debug(x) debug x
+#define LOGFILE LPATH
 #else
-# define Debug(x) ;
-# define LOGFILE "/dev/null"
+#define Debug(x) ;
+#define LOGFILE "/dev/null"
 #endif
 
 #define CONFIG_H_LEVEL_12

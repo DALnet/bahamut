@@ -21,31 +21,32 @@
 /* $Id$ */
 
 #ifndef	__class_include__
-# define __class_include__
-typedef struct Class {
-   int          class;
-   int          conFreq;
-   int          pingFreq;
-   int          maxLinks;
-   long         maxSendq;
-   int          links;
-   struct Class *next;
+#define __class_include__
+typedef struct Class
+{
+    int          class;
+    int          conFreq;
+    int          pingFreq;
+    int          maxLinks;
+    long         maxSendq;
+    int          links;
+    struct Class *next;
 } aClass;
 
-# define	Class(x)	((x)->class)
-# define	ConFreq(x)	((x)->conFreq)
-# define	PingFreq(x)	((x)->pingFreq)
-# define	MaxLinks(x)	((x)->maxLinks)
-# define	MaxSendq(x)	((x)->maxSendq)
-# define	Links(x)	((x)->links)
-# define	ConfLinks(x)	(Class(x)->links)
-# define	ConfMaxLinks(x)	(Class(x)->maxLinks)
-# define	ConfClass(x)	(Class(x)->class)
-# define	ConfConFreq(x)	(Class(x)->conFreq)
-# define	ConfPingFreq(x)	(Class(x)->pingFreq)
-# define	ConfSendq(x)	(Class(x)->maxSendq)
-# define	FirstClass() 	classes
-# define	NextClass(x)	((x)->next)
+#define	Class(x)	((x)->class)
+#define	ConFreq(x)	((x)->conFreq)
+#define	PingFreq(x)	((x)->pingFreq)
+#define	MaxLinks(x)	((x)->maxLinks)
+#define	MaxSendq(x)	((x)->maxSendq)
+#define	Links(x)	((x)->links)
+#define	ConfLinks(x)	(Class(x)->links)
+#define	ConfMaxLinks(x)	(Class(x)->maxLinks)
+#define	ConfClass(x)	(Class(x)->class)
+#define	ConfConFreq(x)	(Class(x)->conFreq)
+#define	ConfPingFreq(x)	(Class(x)->pingFreq)
+#define	ConfSendq(x)	(Class(x)->maxSendq)
+#define	FirstClass() 	classes
+#define	NextClass(x)	((x)->next)
 
 extern      aClass *classes;
 extern      aClass *find_class(int);

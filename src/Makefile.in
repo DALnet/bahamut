@@ -162,7 +162,7 @@ s_debug.o: s_debug.c ../include/struct.h ../include/config.h \
 s_err.o: s_err.c ../include/struct.h ../include/config.h \
  ../include/setup.h ../include/defs.h ../include/hash.h \
  ../include/class.h ../include/dbuf.h ../include/numeric.h \
- ../include/s_err.h ../include/patchlevel.h
+ ../include/patchlevel.h
 s_misc.o: s_misc.c ../include/struct.h ../include/config.h \
  ../include/setup.h ../include/defs.h ../include/hash.h \
  ../include/class.h ../include/dbuf.h ../include/common.h \

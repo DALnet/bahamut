@@ -25,10 +25,11 @@
 #ifndef	__hash_include__
 #define __hash_include__
 
-typedef struct hashentry {
-   int         hits;
-   int         links;
-   void       *list;
+typedef struct hashentry
+{
+    int         hits;
+    int         links;
+    void       *list;
 } aHashEntry;
 
 /* Taner had BITS_PER_COL 4 BITS_PER_COL_MASK 0xF - Dianora */

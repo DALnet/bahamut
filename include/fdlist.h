@@ -3,9 +3,10 @@
 
 /* $Id$ */
 
-typedef struct fdstruct {
-   int         entry[MAXCONNECTIONS + 2];
-   int         last_entry;
+typedef struct fdstruct 
+{
+    int         entry[MAXCONNECTIONS + 2];
+    int         last_entry;
 } fdlist;
 
 void        addto_fdlist(int a, fdlist * b);

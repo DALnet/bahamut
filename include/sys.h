@@ -21,79 +21,78 @@
 /* $Id$ */
 
 #ifndef	__sys_include__
-# define __sys_include__
-# ifdef ISC202
-#  include <net/errno.h>
-# else
-#  include <sys/errno.h>
-# endif
-# include "setup.h"
-# include <stdio.h>
-# include <sys/types.h>
-# include <sys/param.h>
-/* #include "cdefs.h" #include "bitypes.h" */
+#define __sys_include__
+#ifdef ISC202
+#include <net/errno.h>
+#else
+#include <sys/errno.h>
+#endif
+#include "setup.h"
+#include <stdio.h>
+#include <sys/types.h>
+#include <sys/param.h>
 
-# if defined( HAVE_UNISTD_H )
-#  include <unistd.h>
-# endif
+#if defined( HAVE_UNISTD_H )
+#include <unistd.h>
+#endif
 
-# if defined( HAVE_STDLIB_H )
-#  include <stdlib.h>
-# endif
+#if defined( HAVE_STDLIB_H )
+#include <stdlib.h>
+#endif
 
-# if defined( HAVE_STRINGS_H )
-#  include <strings.h>
-# endif
+#if defined( HAVE_STRINGS_H )
+#include <strings.h>
+#endif
 
-# if defined( HAVE_STRING_H )
-#  include <string.h>
-# endif
+#if defined( HAVE_STRING_H )
+#include <string.h>
+#endif
 
-# if defined( HAVE_LIMITS_H )
-#  include <limits.h>
-# endif
+#if defined( HAVE_LIMITS_H )
+#include <limits.h>
+#endif
 
-# define	strcasecmp	mycmp
-# define	strncasecmp	myncmp
+#define	strcasecmp	mycmp
+#define	strncasecmp	myncmp
 
-# if !defined( HAVE_INDEX )
-#  define   index   strchr
-#  define   rindex  strrchr
-# endif
+#if !defined( HAVE_INDEX )
+#define   index   strchr
+#define   rindex  strrchr
+#endif
 
-# ifdef AIX
-#  include <sys/select.h>
-# endif
-# if defined(AIX)
-#  include <time.h>
-#  ifdef AIX
-#   include <sys/time.h>
-#  endif
-# else
-#  include <sys/time.h>
-# endif
+#ifdef AIX
+#include <sys/select.h>
+#endif
+#if defined(AIX)
+#include <time.h>
+#ifdef AIX
+#include <sys/time.h>
+#endif
+#else
+#include <sys/time.h>
+#endif
 
 #if ((__GNU_LIBRARY__ == 6) && (__GLIBC__ >=2) && (__GLIBC_MINOR__ >= 2))
 #include <time.h>
 #endif
 
-# define MyFree(x)       if ((x) != NULL) free(x)
+#define MyFree(x)       if ((x) != NULL) free(x)
 
-# ifdef NEXT
-#  define VOIDSIG int		/* whether signal() returns int of void */
-# else
-#  define VOIDSIG void		/* whether signal() returns int of void */
-# endif
+#ifdef NEXT
+#define VOIDSIG int		/* whether signal() returns int of void */
+#else
+#define VOIDSIG void		/* whether signal() returns int of void */
+#endif
 
 extern VOIDSIG dummy();
 
-# ifdef	NO_U_TYPES
+#ifdef	NO_U_TYPES
 
 typedef unsigned char u_char;
 typedef unsigned short u_short;
 typedef unsigned long u_long;
 typedef unsigned int u_int;
 
-# endif
+#endif
 
 #endif /* __sys_include__ */

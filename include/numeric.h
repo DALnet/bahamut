@@ -67,7 +67,7 @@
 #define RPL_STATSULINE	     246
 #define	RPL_STATSDEBUG	     249
 #ifdef HIGHEST_CONNECTION
-# define RPL_STATSCONN 	     250
+#define RPL_STATSCONN 	     250
 #endif
 #define	RPL_LUSERCLIENT      251
 #define RPL_LUSEROP          252
@@ -84,8 +84,8 @@
 #define RPL_LOAD2HI          263
 
 #ifdef CLIENT_COUNT
-# define RPL_LOCALUSERS      265
-# define RPL_GLOBALUSERS     266
+#define RPL_LOCALUSERS       265
+#define RPL_GLOBALUSERS      266
 #endif
 #define RPL_SILELIST         271
 #define RPL_ENDOFSILELIST    272
@@ -144,8 +144,8 @@
 #define RPL_LOAD2HI          263
 
 #ifdef CLIENT_COUNT
-# define RPL_LOCALUSERS      265
-# define RPL_GLOBALUSERS     266
+#define RPL_LOCALUSERS       265
+#define RPL_GLOBALUSERS      266
 #endif
 #define RPL_SILELIST         271
 #define RPL_ENDOFSILELIST    272
@@ -223,10 +223,8 @@
 /* rpl_endofwho below (315) */
 #define	RPL_ENDOFWHOWAS      369
 
-#define RPL_WHOISCHANOP      316	/*
-					 * redundant and not needed but
-					 * * reserved 
-					 */
+#define RPL_WHOISCHANOP      316	/* redundant and not needed but
+					 * reserved */
 #define RPL_WHOISIDLE        317
 
 #define RPL_ENDOFWHOIS       318
@@ -381,7 +379,7 @@
 #define RPL_WATCHLIST        606
 #define RPL_ENDOFWATCHLIST   607
 
-#define RPL_DCCSTATUS           617
+#define RPL_DCCSTATUS        617
 #define RPL_DCCLIST          618
 #define RPL_ENDOFDCCLIST     619
 #define RPL_DCCINFO          620

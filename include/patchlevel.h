@@ -34,59 +34,23 @@
 #define MINOR 4
 #define PATCH 29
 
-#define PATCH1 \
-\
-\
-\
-"pre1"
+#define PATCH1 "pre1"
 
-#define PATCH2 \
-\
-\
-\
-""
+#define PATCH2 ""
 
-#define PATCH3 \
-\
-\
-\
-""
+#define PATCH3 ""
 
-#define PATCH4 \
-\
-\
-\
-""
+#define PATCH4 ""
 
-#define PATCH5 \
-\
-\
-\
-""
+#define PATCH5 ""
 
-#define PATCH6 \
-\
-\
-\
-""
+#define PATCH6 ""
 
-#define PATCH7 \
-\
-\
-\
-""
+#define PATCH7 ""
 
-#define PATCH8 \
-\
-\
-\
-""
+#define PATCH8 ""
 
-#define PATCH9 \
-\
-\
-\
-""
+#define PATCH9 ""
 
 #define PATCHES PATCH1 PATCH2 PATCH3 PATCH4 PATCH5 PATCH6 PATCH7 PATCH8 PATCH9
 
