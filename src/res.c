@@ -21,6 +21,30 @@
 #include "resolv.h"
 #include "inet.h"
 
+/* ALLOW_CACHE_NAMES
+ *
+ * If enabled, this allows our resolver code to keep a hash table
+ * of names, for which we find in gethost_byname calls.
+ * This presents a few problems with anti-spoofing code.
+ *
+ * Since the majority of our host lookups are reverse, having
+ * a cached record for reverse records (addresses) seems useful.
+ * If, for some reason, you want this on, you may define it.
+ */
+#undef ALLOW_CACHE_NAMES
+
+/* SEARCH_CACHE_ADDRESSES
+ *
+ * All of our records will probably only have one valid IP address.
+ * If you want to search for multiple addresses, define this.
+ * (In the current implementation, it should not really be possible
+ * to get multiple addresses.)
+ *
+ * If not, it saves CPU as a cache miss does not traverse the
+ * entire cache tree for a result.
+ */
+#undef SEARCH_CACHE_ADDRESSES
+
 #define PROCANSWER_STRANGE   -2 /* invalid answer or query, try again */
 #define PROCANSWER_MALICIOUS -3 /* obviously malicious reply, don't do DNS on this ip. */
 
@@ -62,7 +86,9 @@ static int  send_res_msg(char *, int, int);
 static ResRQ *find_id(int);
 static int  hash_number(unsigned char *);
 static void update_list(ResRQ *, aCache *);
+#ifdef ALLOW_CACHE_NAMES
 static int  hash_name(char *);
+#endif
 static struct hostent *getres_err(ResRQ *, char *);
 
 static struct cacheinfo {
@@ -169,11 +195,19 @@ char   *s;
 	  old, *rptr, r2ptr));
 #endif
    r2ptr = old;
+
    if (r2ptr->he.h_name)
       MyFree((char *) r2ptr->he.h_name);
    for (i = 0; i < MAXALIASES; i++)
       if ((s = r2ptr->he.h_aliases[i]))
 	 MyFree(s);
+
+   if (r2ptr->he_rev.h_name)
+      MyFree((char *) r2ptr->he_rev.h_name);
+   for (i = 0; i < MAXALIASES; i++)
+      if ((s = r2ptr->he_rev.h_aliases[i]))
+	 MyFree(s);
+
    if (r2ptr->name)
       MyFree(r2ptr->name);
    MyFree(r2ptr);
@@ -589,22 +623,82 @@ proc_answer(ResRQ * rptr,
    alias = hp->h_aliases;
    while (*alias)
       alias++;
-#ifdef SOL20			/*
-				 * brain damaged compiler (Solaris2) it
-				 * * seems 
-				 */
-   for (; hptr->qdcount > 0; hptr->qdcount--)
-#else
-   while (hptr->qdcount-- > 0)
-#endif
-      if ((n = dn_skipname(cp, eob)) == -1)
-	 break;
+
+   if(hptr->qdcount != 1)
+   {
+      sendto_realops_lev(DEBUG_LEV, "DNS packet with question count of %d (???)", hptr->qdcount);
+      return -1;
+   }
+
+   /*
+    * ensure the question we're getting a reply for
+    * is a the right question.
+    */
+
+   if((n = dn_expand(buf, eob, cp, hostbuf, sizeof(hostbuf))) <= 0)
+   {
+      /* broken dns packet, toss it out */
+      return -1;
+   }
+   else
+   {
+      int strangeness = 0;
+      char tmphost[HOSTLEN];
+
+      hostbuf[HOSTLEN] = '\0';
+      cp += n;
+      type = (int) _getshort(cp);
+      cp += sizeof(short);
+      class = (int) _getshort(cp);
+      cp += sizeof(short);
+      if(class != C_IN)
+      {
+         sendto_realops_lev(DEBUG_LEV, "Expected DNS packet class C_IN, got %d (???)", class);
+         strangeness++;
+      }
+
+      if(type != rptr->type)
+      {
+         sendto_realops_lev(DEBUG_LEV, "Expected DNS packet type %d, got %d (???)", rptr->type, type);
+         strangeness++;
+      }
+
+      if(rptr->type == T_A && rptr->name)
+      {
+         strcpy(tmphost, rptr->name);
+      }
+      else if(rptr->type == T_PTR)
+      {
+         u_char *ipp;
+
+         ipp = (u_char *) &rptr->addr.s_addr;
+         ircsprintf(tmphost, "%u.%u.%u.%u.in-addr.arpa",
+                    (u_int) (ipp[3]), (u_int) (ipp[2]),
+                    (u_int) (ipp[1]), (u_int) (ipp[0]));  
+      }
       else
-	 cp += (n + QFIXEDSZ);
+      {
+         sendto_realops_lev(DEBUG_LEV, "rptr->type is unknown type %d! (rptr->name == %x)", 
+                            rptr->type, rptr->name);
+         return -1;
+      }    
+
+      if(mycmp(tmphost, hostbuf) != 0)
+      {
+         sendto_realops_lev(DEBUG_LEV, "Asked question for %s, but got reply about question %s (!!!)",
+                            tmphost, hostbuf);
+         strangeness++;
+      }
+
+      if(strangeness)
+         return PROCANSWER_STRANGE;
+   }
+
    /*
     * proccess each answer sent to us blech.
     */
-   while (hptr->ancount-- > 0 && cp && cp < eob) {
+   while (hptr->ancount-- > 0 && cp && cp < eob) 
+   {
       n = dn_expand(buf, eob, cp, hostbuf, sizeof(hostbuf));
       hostbuf[HOSTLEN] = '\0';
 
@@ -648,6 +742,11 @@ proc_answer(ResRQ * rptr,
 
       switch (type) {
 	 case T_A:
+            if(rptr->name == NULL)
+            {
+               sendto_realops_lev(DEBUG_LEV, "Received DNS_A answer, but null rptr->name!");
+               return PROCANSWER_STRANGE;
+            }
             if(mycmp(rptr->name, hostbuf) != 0)
             {
                if(!num_acc_answers || !(acc = is_acceptable_answer(hostbuf)))
@@ -697,10 +796,8 @@ proc_answer(ResRQ * rptr,
             {
                if(!(arpa_to_ip(hostbuf, &ptrrep.s_addr)))
                {
-#ifdef DNS_ANS_DEBUG
                   sendto_realops_lev(DEBUG_LEV, "Received strangely formed PTR answer for %s (asked for %s) -- ignoring", 
                                      hostbuf, inetntoa((char *)&rptr->addr));
-#endif
                   return PROCANSWER_STRANGE;
                }
 
@@ -983,8 +1080,9 @@ get_res(char *lp)
          break;
    }
 
-   if (a > 0 && rptr->type == T_PTR) {
-   struct hostent *hp2 = NULL;
+   if (a > 0 && rptr->type == T_PTR) 
+   {
+      struct hostent *hp2 = NULL;
 
       Debug((DEBUG_DNS, "relookup %s <-> %s",
 	     rptr->he.h_name, inetntoa((char *) &rptr->he.h_addr)));
@@ -997,22 +1095,137 @@ get_res(char *lp)
 	 if (lp)
 	    memcpy(lp, (char *) &rptr->cinfo, sizeof(Link));
 
-      /*
-       * If name wasn't found, a request has been queued and it will be
-       * the last one queued.  This is rather nasty way to keep a host
-       * alias with the query. -avalon
-       */
-      if (!hp2 && rptr->he.h_aliases[0])
-	 for (a = 0; rptr->he.h_aliases[a]; a++) {
-	    Debug((DEBUG_DNS, "Copied CNAME %s for %s",
-		   rptr->he.h_aliases[a],
-		   rptr->he.h_name));
-	    last->he.h_aliases[a] = rptr->he.h_aliases[a];
-	    rptr->he.h_aliases[a] = NULL;
-	 }
+      if(!hp2)
+      {
+         last->he_rev.h_name = rptr->he.h_name;
+         rptr->he.h_name = NULL;
+
+         for(a = 0; rptr->he.h_aliases[a]; a++)
+         {
+            last->he_rev.h_aliases[a] = rptr->he.h_aliases[a];
+            rptr->he.h_aliases[a] = NULL;
+         }
+
+         for(a = 0; a < MAXADDRS; a++)
+         {
+            last->he_rev.h_addr_list[a].s_addr = rptr->he.h_addr_list[a].s_addr;
+            rptr->he.h_addr_list[a].s_addr = 0;
+         }
+         last->has_rev = 1;
+      }
 
       rem_request(rptr);
       return hp2;
+   }
+
+   if(a > 0 && rptr->type == T_A)
+   {
+      if(rptr->has_rev == 0)
+      {
+         sendto_ops_lev(DEBUG_LEV, "Blindly accepting dns result for %s", 
+                        rptr->he.h_name ? rptr->he.h_name : inetntoa((char *)&rptr->addr));
+      }
+      else
+      {
+         int invalid_parms_name = 0;
+         int invalid_parms_ip = 0;
+         int found_match_ip = 0;
+         int nidx, tidx;
+         int numaddr, numnewaddr;
+         struct in_addr new_addr_list[MAXADDRS];
+
+         if(!(rptr->he.h_name && rptr->he_rev.h_name))
+            invalid_parms_name++;
+
+         if(!(rptr->he.h_addr_list[0].s_addr && rptr->he_rev.h_addr_list[0].s_addr))
+            invalid_parms_ip++;
+
+         if(invalid_parms_name || invalid_parms_ip)
+         {
+            sendto_ops_lev(DEBUG_LEV, "DNS query missing things! name: %s ip: %s",
+                           invalid_parms_name ? "MISSING" : rptr->he.h_name,
+                           invalid_parms_ip ? "MISSING" : inetntoa((char *)&rptr->he.h_addr_list[0]));
+            if (lp)
+               memcpy(lp, (char *) &rptr->cinfo, sizeof(Link));
+            rem_request(rptr);
+            return NULL;
+         }
+
+         /* 
+          * This must ensure that all IPs in the forward query (he)
+          * are also in the reverse query (he_rev).
+          * Those not in the reverse query must be zeroed out!
+          */
+
+         for(numaddr = numnewaddr = nidx = 0; nidx < MAXADDRS; nidx++)
+         {
+            int does_match;
+
+            if(rptr->he.h_addr_list[nidx].s_addr == 0)
+               break;
+
+            numaddr++;
+
+            for(tidx = does_match = 0; tidx < MAXADDRS; tidx++)
+            {
+               if(rptr->he_rev.h_addr_list[tidx].s_addr == 0)
+                  break;
+
+               if(rptr->he_rev.h_addr_list[tidx].s_addr == rptr->he.h_addr_list[nidx].s_addr) /* MATCH */
+               {
+                  found_match_ip++;
+                  does_match = 1;
+                  break;
+               }
+            }
+            
+            if(does_match)
+            {
+               new_addr_list[numnewaddr++].s_addr = rptr->he.h_addr_list[nidx].s_addr;
+               new_addr_list[numnewaddr].s_addr = 0;
+            }
+         }
+         
+         if(!found_match_ip)
+         {
+            char ntoatmp_r[64];
+            char ntoatmp_f[64];
+
+            strcpy(ntoatmp_f, inetntoa((char *)&rptr->he.h_addr_list[0]));
+            strcpy(ntoatmp_r, inetntoa((char *)&rptr->he_rev.h_addr_list[0]));
+
+            sendto_ops_lev(DEBUG_LEV, "Forward and Reverse queries do not have matching IP! %s<>%s %s<>%s",
+                           rptr->he.h_name, rptr->he_rev.h_name,
+                           ntoatmp_f, ntoatmp_r);
+
+            if(rptr->cinfo.flags == ASYNC_CLIENT && rptr->cinfo.value.cptr)
+            {
+               sendto_one(rptr->cinfo.value.cptr,
+                          ":%s NOTICE AUTH :*** Your forward and reverse DNS do not match, "
+                          "ignoring hostname. [%s != %s]",
+                          me.name, ntoatmp_f, ntoatmp_r);
+
+               rptr->cinfo.value.cptr->flags |= FLAGS_BAD_DNS; /* yell about this client later, to all opers */
+            }
+
+            if (lp)
+               memcpy(lp, (char *) &rptr->cinfo, sizeof(Link));
+
+            rem_request(rptr);
+            return NULL;
+         }
+
+         if(numnewaddr != numaddr)
+         {
+            memcpy(rptr->he.h_addr_list, new_addr_list, sizeof(struct in_addr) * MAXADDRS);
+            sendto_ops_lev(DEBUG_LEV, "numaddr = %d, numnewaddr = %d", numaddr, numnewaddr);
+         }
+
+         /*
+          * Our DNS query was made based on the hostname, so the hostname
+          * part should be fine.
+          */
+      }
    }
 
    if (a > 0) {
@@ -1075,6 +1288,7 @@ hash_number(unsigned char *ip)
    return (hashv);
 }
 
+#ifdef ALLOW_CACHE_NAMES
 static int
 hash_name(char *name)
 {
@@ -1085,6 +1299,7 @@ hash_name(char *name)
    hashv %= ARES_CACSIZE;
    return (hashv);
 }
+#endif
 /*
  * * Add a new cache item to the queue and hash table.
  */
@@ -1112,10 +1327,12 @@ int     hashv;
    if (!(ocp->he.h_addr))
       return NULL;
 
+#ifdef ALLOW_CACHE_NAMES
    hashv = hash_name(ocp->he.h_name);
 
    ocp->hname_next = hashtable[hashv].name_list;
    hashtable[hashv].name_list = ocp;
+#endif
 
    hashv = hash_number((u_char *) ocp->he.h_addr);
 
@@ -1258,6 +1475,7 @@ int         addrcount;
 static aCache *
 find_cache_name(char *name)
 {
+#ifdef ALLOW_CACHE_NAMES
    aCache *cp;
    char   *s;
    int     hashv, i;
@@ -1300,6 +1518,7 @@ find_cache_name(char *name)
 	    return cp;
 	 }
    }
+#endif
    return NULL;
 }
 /*
@@ -1310,11 +1529,7 @@ find_cache_number(ResRQ * rptr, char *numb)
 {
    aCache *cp;
    int     hashv, i;
-
-#ifdef	DEBUG
    struct in_addr *ip = (struct in_addr *) numb;
-
-#endif
 
    if ((u_char *) numb == (u_char *) NULL)
       return ((aCache *) NULL);
@@ -1326,14 +1541,24 @@ find_cache_number(ResRQ * rptr, char *numb)
 #endif
 
    for (; cp; cp = cp->hnum_next)
+   {
       for (i = 0; cp->he.h_addr_list[i]; i++)
-	 if (!memcmp(cp->he.h_addr_list[i], numb,
-		   sizeof(struct in_addr))) {
+      {
+         /* 
+          * A 32 bit integer compare should be faster than this...
+	  *  if (!memcmp(cp->he.h_addr_list[i], numb,
+	  *	   sizeof(struct in_addr))) 
+          */
+         if(((struct in_addr *)cp->he.h_addr_list[i])->s_addr == ip->s_addr)
+         {
 	    cainfo.ca_nu_hits++;
 	    update_list(NULL, cp);
 	    return cp;
 	 }
+      }
+   }
 
+#ifdef SEARCH_CACHE_ADDRESSES
    for (cp = cachetop; cp; cp = cp->list_next) {
       /*
        * single address entry...would have been done by hashed search
@@ -1355,6 +1580,7 @@ find_cache_number(ResRQ * rptr, char *numb)
 	    return cp;
 	 }
    }
+#endif
    return NULL;
 }
 
@@ -1472,18 +1698,20 @@ aClient *cptr;
     */
    if (hp->h_name == (char *) NULL)
       return;
+#ifdef ALLOW_CACHE_NAMES
    hashv = hash_name(hp->h_name);
 
-#ifdef	DEBUG
+# ifdef	DEBUG
    Debug((DEBUG_DEBUG, "rem_cache: h_name %s hashv %d next %#x first %#x",
 	  hp->h_name, hashv, ocp->hname_next,
 	  hashtable[hashv].name_list));
-#endif
+# endif
    for (cp = &hashtable[hashv].name_list; *cp; cp = &((*cp)->hname_next))
       if (*cp == ocp) {
 	 *cp = ocp->hname_next;
 	 break;
       }
+#endif
    /*
     * remove cache entry from hashed number list
     */

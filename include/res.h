@@ -11,8 +11,8 @@
 #define RES_INITCACH    16
 
 #define MAXPACKET	1024
-#define MAXALIASES	35
-#define MAXADDRS	35
+#define MAXALIASES	10
+#define MAXADDRS	10
 
 #define	AR_TTL		600		/* TTL in seconds for dns cache entries */
 
@@ -46,6 +46,8 @@ typedef struct reslist {
    struct reslist *next;
    Link        cinfo;
    struct hent he;
+   int         has_rev;   /* is he_rev valid? */
+   struct hent he_rev;
 } ResRQ;
 
 typedef struct cache {
