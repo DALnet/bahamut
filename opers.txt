@@ -11,20 +11,23 @@ Usermodes: (* designates that the umode is oper only)
                   Use the /oper command to attain this.
          +o     - Designates this client is a global IRC Operator.
                   Use the /oper command to attain this.
+	 +A	- Designates Server Admin
+	 +a	- Designates Services Admin
          +i     - Designates this client 'invisible'.
          +w     - Can see server wallops.
        * +b     - Can see oper chatops.
        * +g     - Can see oper globops.
          +s     - Can see generic server messages and oper kills.
        * +c     - Can see client connections and exits.
-       * +r     - Can see 'rejected' client notices.
+         +r     - Services Mode - user is registered/identified.
+         +R     - Ignore messages from non +r clients.
        * +k     - Can see server kill messages.
        * +f     - Can see flood messages.
        * +y     - Can see stats/links/admin requests to name a few.
        * +d     - Can see server debug messages.
        * +n     - Can see server routing notices.
        * +h     - Operator is avaiable to help (listed in a /stats P)
-  
+
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
 Oper Commands: (+ indicates that /quote must be used with ircII)
@@ -49,11 +52,10 @@ COMMAND         - USAGE and DESCRIPTION
                   LETTER (* = Oper only.)
                   ------ (^ = Can be configured to be oper only.)
                     c - Shows C/N lines
-                  ^ b - Shows B lines
                   ^ d - Shows D lines
                   ^ e - Shows E lines
                   ^ f - Shows F lines
-                  * h - Shows H/L lines
+                  * h - Shows H lines
                     i - Shows I lines
                     K - Shows K lines (or matched klines)
                     k - Shows temporary K lines (or matched temp klines)
@@ -127,6 +129,7 @@ COMMAND         - USAGE and DESCRIPTION
                     GC      - Performs garbage collecting of excess
                               memory.
                     MOTD    - Re-reads MOTD file
+		    THROTTLES - Clears connection throttles
 
   RESTART       - RESTART
                   Restarts the IRC server.

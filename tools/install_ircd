@@ -39,7 +39,7 @@ base_HPATH=`basename $HPATH`;
 if [ $base_SPATH = $SPATH ] ; then
   if [ ! -f ${DPATH}${SPATH} ] ; then
     echo installing ircd as ${DPATH}${SPATH};
-    ./install-sh -c src/ircd ${DPATH}$;
+    ./install-sh -c src/ircd ${DPATH};
   else
     echo installing ircd as ${DPATH}${SPATH};
     echo previous ircd saved as ircd.old;
