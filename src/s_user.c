@@ -973,13 +973,21 @@ register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
                            sptr->class->name);
 
         send_lusers(sptr, sptr, 1, parv);
-                
-        sendto_one(sptr, ":%s NOTICE %s :*** Notice -- motd was last"
-                   " changed at %s", me.name, nick, motd_last_changed_date);
+        
+        if(motd != NULL)
+        {
+            sendto_one(sptr, ":%s NOTICE %s :*** Notice -- motd was last"
+                       " changed at %s", me.name, nick, motd_last_changed_date);
+        }
+        
         if(confopts & FLAGS_SMOTD)
         {
-            sendto_one(sptr, ":%s NOTICE %s :*** Notice -- Please read the"
-                             " motd if you haven't read it", me.name, nick);
+            if(motd != NULL)
+            {
+                sendto_one(sptr, ":%s NOTICE %s :*** Notice -- Please read the"
+                                 " motd if you haven't read it", me.name, nick);
+            }
+            
             sendto_one(sptr, rpl_str(RPL_MOTDSTART), me.name, parv[0], me.name);
             if((smotd = shortmotd) == NULL)
                 sendto_one(sptr, rpl_str(RPL_MOTD), me.name, parv[0],

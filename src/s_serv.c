@@ -2752,9 +2752,7 @@ int
 send_motd(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     aMotd *temp;
-    struct tm  *tm;
     
-    tm = motd_tm;
     if (motd == (aMotd *) NULL) 
     {
         sendto_one(sptr, err_str(ERR_NOMOTD), me.name, parv[0]);
@@ -2762,10 +2760,8 @@ send_motd(aClient *cptr, aClient *sptr, int parc, char *parv[])
     }
     sendto_one(sptr, rpl_str(RPL_MOTDSTART), me.name, parv[0], me.name);
 
-    if (tm)
-        sendto_one(sptr, ":%s %d %s :- %d/%d/%d %d:%02d", me.name, RPL_MOTD,
-                   parv[0], tm->tm_mday, tm->tm_mon + 1, 1900 + tm->tm_year,
-                   tm->tm_hour, tm->tm_min);
+    sendto_one(sptr, ":%s %d %s :-%s", me.name, RPL_MOTD, parv[0], 
+               motd_last_changed_date);
 
     temp = motd;
     while (temp) 
@@ -2784,6 +2780,7 @@ void
 read_motd(char *filename)
 {
     aMotd *temp, *last;
+    struct tm *motd_tm;
     struct stat sb;
     char        buffer[MOTDLINELEN], *tmp;
     int         fd;
@@ -2826,10 +2823,9 @@ read_motd(char *filename)
     }
     close(fd);
 
-    if (motd_tm)
-        sprintf(motd_last_changed_date, "%d/%d/%d %d:%02d", motd_tm->tm_mday,
-                motd_tm->tm_mon + 1, 1900 + motd_tm->tm_year, motd_tm->tm_hour,
-                motd_tm->tm_min);
+    sprintf(motd_last_changed_date, "%d/%d/%d %d:%02d", motd_tm->tm_mday,
+            motd_tm->tm_mon + 1, 1900 + motd_tm->tm_year, motd_tm->tm_hour,
+            motd_tm->tm_min);
 }
 
 void 

@@ -53,8 +53,6 @@ aMotd      *motd;
 aMotd      *helpfile;           /* misnomer, aMotd could be generalized */
 aMotd      *shortmotd;          /* short motd */
 
-struct tm  *motd_tm;
-
 /* global conf options (from option block) */
 char ProxyMonURL[TOPICLEN+1];
 char ProxyMonHost[HOSTLEN+1];
@@ -813,7 +811,6 @@ main(int argc, char *argv[])
     
     motd = (aMotd *) NULL;
     helpfile = (aMotd *) NULL;
-    motd_tm = NULL;
     shortmotd = NULL;
         
     clear_client_hash_table();
