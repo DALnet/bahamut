@@ -1496,10 +1496,11 @@ static inline int m_message(aClient *cptr, aClient *sptr, int parc,
 	  if ((acptr = find_client(nick, NULL))) 
 	  {
 	      /* A PRIVMSG or NOTICE to me.name! */
-	      if (IsServer(acptr) && IsMe(acptr) && ismine)
+	      if (IsMe(acptr) && ismine)
 	      {
 		  if(call_hooks(CHOOK_MYMSG, sptr, notice, parv[2]) == FLUSH_BUFFER)
 		      return FLUSH_BUFFER;
+		  continue;
 	      }
 
 	      if (!IsClient(acptr)) /* now back to our regularly scheduled programming */
