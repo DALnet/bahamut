@@ -911,6 +911,12 @@ register_user(aClient *cptr,
 #else
       (void) send_motd(sptr, sptr, 1, parv);
 #endif
+#ifdef WINGATE_NOTICE
+      sendto_one(sptr, "NOTICE %s :*** Notice -- This server runs a wingate detection monitor", nick);
+      sendto_one(sptr, "NOTICE %s :*** Notice -- If you see a port 1080, or port 23 connection from %s",nick, MONITOR_HOST);
+      sendto_one(sptr, "NOTICE %s :*** Notice -- Please disregard it.  It is the wingate scanner in action.",nick);
+      sendto_one(sptr, "NOTICE %s :*** Notice -- For more information please see http://www.mydesigns.net/dalnet/wingate.htm",nick);
+#endif
 #ifdef LITTLE_I_LINES
       if (sptr->confs && sptr->confs->value.aconf &&
 			 (sptr->confs->value.aconf->flags
