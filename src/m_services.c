@@ -193,7 +193,7 @@ int m_ss(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	return -1;
     }
     if ((acptr = find_server(STATS_NAME, NULL)))
-#ifdef
+#ifdef SERVICESHUB
 	sendto_one(acptr, ":%s SS :%s", parv[0], parv[1]);
 #else
 	sendto_one(acptr, ":%s PRIVMSG %s@%s :%s", 
