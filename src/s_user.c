@@ -2671,6 +2671,7 @@ int m_oper(aClient *cptr, aClient *sptr, int parc, char *parv[])
     }
     else if (IsAnOper(sptr) && MyConnect(sptr))
     {
+        send_rplisupportoper(sptr);
         sendto_one(sptr, rpl_str(RPL_YOUREOPER), me.name, parv[0]);
         return 0;
     }
@@ -2738,6 +2739,7 @@ int m_oper(aClient *cptr, aClient *sptr, int parc, char *parv[])
                    sptr->user->username, sptr->sockhost,
                    IsOper(sptr) ? 'O' : 'o');
         send_umode_out(cptr, sptr, old);
+        send_rplisupportoper(sptr);
         sendto_one(sptr, rpl_str(RPL_YOUREOPER), me.name, parv[0]);
         set_effective_class(sptr);
 #if defined(USE_SYSLOG) && defined(SYSLOG_OPER)
@@ -3666,7 +3668,7 @@ add_dccallow(aClient *sptr, aClient *optr)
     {
         if(lp->flags != DCC_LINK_ME)
             continue;
-        if(++cnt >= MAXDCCALLOW)
+        if((++cnt >= MAXDCCALLOW) && !IsAnOper(sptr))
         {
             sendto_one(sptr, err_str(ERR_TOOMANYDCC), me.name, sptr->name,
                        optr->name, MAXDCCALLOW);

@@ -3368,7 +3368,7 @@ m_watch(aClient *cptr, aClient *sptr, int parc, char *parv[])
         {
             if (*(s+1)) 
             {
-                if (sptr->watches >= MAXWATCH) 
+                if ((sptr->watches >= MAXWATCH) && !IsAnOper(sptr))
                 {
                     sendto_one(sptr, err_str(ERR_TOOMANYWATCH),
                                me.name, cptr->name, s+1);                                       

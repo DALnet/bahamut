@@ -32,6 +32,7 @@
 
 static char rplisupport1[BUFSIZE];
 static char rplisupport2[BUFSIZE];
+static char rplisupportoper[BUFSIZE];
 static char rplversion[BUFSIZE];
 static char scratchbuf[BUFSIZE];
 
@@ -40,6 +41,12 @@ void send_rplisupport(aClient *acptr)
 {
     sendto_one(acptr, rplisupport1, acptr->name);
     sendto_one(acptr, rplisupport2, acptr->name);
+}
+
+/* send cached RPL_ISUPPORT for oper limits */
+void send_rplisupportoper(aClient *acptr)
+{
+    sendto_one(acptr, rplisupportoper, acptr->name);
 }
 
 /* send cached RPL_VERSION */
@@ -72,6 +79,10 @@ void build_rplcache(void)
                maxchannelsperuser);
 
     ircsprintf(rplisupport1, rpl_str(RPL_ISUPPORT), me.name, "%s", scratchbuf);
+
+    ircsprintf(scratchbuf,"WATCH=65535 MAXCHANNELS=%i CHANLIMIT=#:%i",
+               (maxchannelsperuser * 3), (maxchannelsperuser * 3));
+    ircsprintf(rplisupportoper, rpl_str(RPL_ISUPPORT), me.name, "%s", scratchbuf);
 
     s = scratchbuf;
     s += ircsprintf(s, "CASEMAPPING=ascii WATCH=%i SILENCE=%i ELIST=cmntu",

@@ -70,7 +70,7 @@ COMMAND         - USAGE and DESCRIPTION
                   * k - Shows temporary K lines
                     l - Shows hostname and generic info about [nick]
                   * m - Shows commands and their usage
-                    o - Shows oper bocks
+                    o - Shows oper blocks
                     p - Shows opers connected and their idle times
                   * Q - Shows local nick/chan restrictions
                   * q - Shows network nick/chan restrictions (sqlines)

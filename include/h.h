@@ -293,6 +293,7 @@ extern int  	  client_dopacket(aClient *, char *, int);
 
 extern void       send_rplversion(aClient *);
 extern void       send_rplisupport(aClient *);
+extern void       send_rplisupportoper(aClient *);
 extern void       build_rplcache(void);
 
 extern void 	  debug(int level, char *pattern, ...);
@@ -329,7 +330,7 @@ extern int     	  del_from_watch_hash_table(char *, aClient *);
 extern int     	  hash_check_watch(aClient *, int);
 extern int     	  hash_del_watch_list(aClient  *);
 extern aWatch 	 *hash_get_watch(char *);
-#define MAXWATCH       128
+#define MAXWATCH       5
 
 DLink *add_to_list(DLink **, void *);
 void remove_from_list(DLink **, void *, DLink *);
