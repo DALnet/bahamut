@@ -3079,11 +3079,11 @@ int m_samode(aClient *cptr, aClient *sptr, int parc, char *parv[]) {
 	if (strlen(modebuf) > (size_t)1)
 	  {
 		  sendto_channel_butserv(chptr, sptr, ":%s MODE %s %s %s",
-										 me.name, chptr->chname, modebuf, parabuf);
+										 parv[0], chptr->chname, modebuf, parabuf);
 		  sendto_match_servs(chptr, cptr, ":%s MODE %s %s %s",
 									parv[0], chptr->chname, modebuf, parabuf);
 		  if(MyClient(sptr)) {
-			  sendto_serv_butone(&me, ":%s GLOBOPS :%s used SAMODE (%s %s%s%s)",
+			  sendto_serv_butone(NULL, ":%s GLOBOPS :%s used SAMODE (%s %s%s%s)",
 										me.name, sptr->name, chptr->chname, modebuf,
 										(*parabuf!=0 ? " " : ""), parabuf);
 			  send_globops("from %s: %s used SAMODE (%s %s%s%s)",
