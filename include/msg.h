@@ -120,6 +120,7 @@
 #define MSG_RS	     "RS"            	/* RootServ commands */
 #define MSG_OS	     "OS"            	/* OperServ commands */
 #define MSG_SS	     "SS"            	/* StatServ commands */
+#define MSG_HS	     "HS"            	/* StatServ commands */
 
 #define MAXPARA      15
 
@@ -163,6 +164,7 @@ extern int  m_ms(aClient *, aClient *, int, char **);
 extern int  m_rs(aClient *, aClient *, int, char **);
 extern int  m_os(aClient *, aClient *, int, char **);
 extern int  m_ss(aClient *, aClient *, int, char **);
+extern int  m_hs(aClient *, aClient *, int, char **);
 extern int  m_svsnick(aClient *, aClient *, int, char **);
 extern int  m_svsnoop(aClient *, aClient *, int, char **);
 extern int  m_svskill(aClient *, aClient *, int, char **);

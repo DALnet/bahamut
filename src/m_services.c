@@ -154,12 +154,6 @@ int m_os(aClient *cptr, aClient *sptr, int parc, char *parv[])
     return 0;
 }
 
-/* m_statserv */
-int m_statserv(aClient*cptr, aClient *sptr, int parc,char *parv[])
-{
-    return m_os(cptr, sptr, parc, parv);
-}
-
 /* m_ss */
 int m_ss(aClient *cptr, aClient *sptr, int parc, char *parv[]) 
 {
@@ -179,12 +173,6 @@ int m_ss(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	sendto_one(sptr, err_str(ERR_SERVICESDOWN), me.name,
 		   parv[0], STATSERV);
     return 0;
-}
-
-/* m_statserv */
-int m_statserv(aClient*cptr, aClient *sptr, int parc,char *parv[])
-{
-    return m_os(cptr, sptr, parc, parv);
 }
 
 /* m_hs */
@@ -241,11 +229,11 @@ int m_services(aClient *cptr, aClient *sptr, int parc, char *parv[])
 				      * with ' '.. oops. - lucas
 				      */
 	if (*tmps == '#')
-	    return m_chanserv(cptr, sptr, parc, parv);
+	    return m_cs(cptr, sptr, parc, parv);
 	else
-	    return m_nickserv(cptr, sptr, parc, parv);
+	    return m_ns(cptr, sptr, parc, parv);
     }
-    return m_nickserv(cptr, sptr, parc, parv);
+    return m_ns(cptr, sptr, parc, parv);
 }
 
 /* m_identify  df465+taz */

@@ -1141,7 +1141,6 @@ struct ListOptions
     time_t   chantimemax;
     time_t   topictimemin;
     time_t   topictimemax;
-    short int   only_listed;
 };
 
 typedef struct SearchOptions 
