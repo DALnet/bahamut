@@ -4,22 +4,16 @@
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
- * 
+ *
  * 1. Redistributions of source code must retain the above copyright
  *    notice, this list of conditions and the following disclaimer.
- * 
- * 2a. Redistributions in binary form must reproduce the above copyright
- *     notice, this list of conditions and the following disclaimer in
- *     the documentation and/or other materials provided with the
- *     distribution.
- * 2b. Redistribution in binary form requires specific prior written
- *     authorization of the maintainer.
- * 
- * 3. All advertising materials mentioning features or use of this
- *    software must display the following acknowledgement:
- *    This product includes software developed by Chip Norkus.
- * 
- * 4. The names of the maintainer, developers and contributors may not be
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ *
+ * 3. The names of the maintainers, developers and contributors may not be
  *    used to endorse or promote products derived from this software
  *    without specific prior written permission.
  * 
