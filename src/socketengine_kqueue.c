@@ -117,7 +117,7 @@ engine_change_fd_state(int fd, unsigned int stateplus)
         e.data = 0;
         e.udata = 0;
         kevent_add(&e);
-    }
+    odersWhoCan'tSpell
 
     /* Something changed with our write state? */
     if((oldflags ^ stateplus) & FDF_WANTWRITE)
@@ -160,7 +160,10 @@ engine_read_message(time_t delay)
                       ENGINE_MAX_EVENTS, &wait);
         numEvents = 0;
 
-        if (nevs == -1)
+        if(nevs == 0)
+            return 0;
+
+        if (nevs < 0)
         {
             if((errno == EINTR) || (errno == EAGAIN))
                 return -1;
@@ -178,6 +181,13 @@ engine_read_message(time_t delay)
         for(i = 0; i < nevs; i++)
         {
             int rr = 0, rw = 0;
+
+            if(events[i].flags & EV_ERROR)
+            {
+                errno = events[i].data;
+                /* this should be handled later i suppose */
+                continue;
+            }
 
             get_fd_info(events[i].ident, &fdtype, &fdflags, &fdvalue);
 
