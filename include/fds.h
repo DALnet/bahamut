@@ -1,4 +1,5 @@
-#define FDSDEBUG /* Print out stuff on stderr! */
+//#define FDSDEBUG /* Print out stuff on stderr! */
+#undef FDSDEBUG // please no!
 #ifdef FDSDEBUG
 #define fdfprintf(x, y...) if(isatty(2)) fprintf(x, y);
 #else
