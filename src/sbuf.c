@@ -188,7 +188,7 @@ SBuffer* sbuf_alloc(int theSize)
 {
     SBuffer* buf;
     
-    if (theSize >= SBUF_SMALL_BUFFER)
+    if ((theSize + 1) >= SBUF_SMALL_BUFFER)
     {
         buf = largesbuf_pool;
         if (!buf) {
