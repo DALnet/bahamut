@@ -788,7 +788,8 @@ register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
             return exit_client(cptr, sptr, &me, tmpstr2);
         }
 
-        if ((i = clones_check(cptr)))
+        if (!(user->allow->flags & CONF_FLAGS_SKIPCLONES) &&
+            (i = clones_check(cptr)))
         {
             ircstp->is_ref++;
             return exit_client(cptr, sptr, &me, i == 1

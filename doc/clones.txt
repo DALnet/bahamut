@@ -25,23 +25,28 @@ to the server.
 
 Local limits set using the maxclones token in a Class block override the
 defaults; this is typically used with Allow blocks to provide exemptions
-for specific hosts.
+for specific hosts.  When a Class block defines a host limit, clients in
+that class are implicitly exempt from the default site limit.
 
 Example:
 
-        options { local_clones 1:3; };
+        options { local_clones 1:10; };
         class { name special; maxclones 5; };
-        allow { host *@10.0.0.2; class special; };
+        allow { host *@10.0.0.1; class special; };
 
-    Suppose there is one client connected from 10.0.0.3.  If another client
-    from 10.0.0.3 tries to connect, it will be rejected because the default
-    limit of 1 connection per host was reached.  Two clients from 10.0.0.2
-    will be allowed to connect, because the "special" class allows up to 5
-    connections from a single host.  However, a third client from 10.0.0.2
-    will not be allowed to connect, because the class did not specify a
-    site limit.  The default of 3 clients per site (10.0.0.*) applies in
-    this case, even though the class would have allowed more clones from
-    that host (10.0.0.2).
+    Suppose there is one client each connected from 10.0.0.2 - 9 (8 clients
+    from 10.0.0.*).  If another client from 10.0.0.2 tries to connect, it
+    will be rejected because the default limit of 1 connection per host was
+    reached.  Five more clients from 10.0.0.1 will be allowed to connect,
+    because the "special" class allows up to 5 connections from a single
+    host.
+
+    Note that because the class did not provide a site limit, five clients
+    from 10.0.0.1 will always be allowed to connect, despite the default
+    limit of 10 per site.  To maintain a site limit for these clients,
+    specify one in the class maxclones statement:
+
+        class { name special; maxclones 5:10; };
 
 The default limits can be changed online using the SET DEFLCLONES command.
 Note that this setting is not saved and will be lost when the server is
@@ -53,9 +58,10 @@ restarted; it is useful for testing or setting temporary limits.
 
     Supplying a limit of 0 will revert to the internal default.
 
-Specific local limits can be set online using the SET LCLONES command; this
-is called the "soft" local limit and overrides all other local limits.
-Like DEFLCLONES, this setting is temporary.
+Specific local limits can be set online using the SET LCLONES command;
+these are called "soft" limits and override all other local limits.
+A soft host limit also provides an implicit exemption from class and
+default site limits.  Like DEFLCLONES, these are temporary.
 
     SET LCLONES <host/site>                   - to display the limit
     SET LCLONES <host/site> <limit>           - to set the limit
@@ -63,15 +69,6 @@ Like DEFLCLONES, this setting is temporary.
     Use a specific host or site mask, e.g. "10.0.0.1".  Supplying a limit
     of 0 will remove the soft limit; class and default limits will be used
     instead.
-
-Going back to the example above, a third client from 10.0.0.2 could be
-allowed to connect by either changing the default local limits, or by
-setting a soft local limit for the site.  Both could be done online:
-
-    /quote set deflclones 1:4
-    /quote set 10.0.0.* 4
-
-Of course, the settings in ircd.conf could also be corrected appropriately.
 
 Note that it is possible to create some interesting configurations using
 the class setting.  For example, this would effectively allow 5 clones from
@@ -107,7 +104,8 @@ Example:
     they will still allow more clients to connect.
 
 Network services can set specific limits using the SVSCLONE command; these
-are referred to as "hard" global clone limits.  The command syntax is
+are referred to as "hard" global clone limits.  A hard host limit provides
+an implicit exemption from the default site limit.  The command syntax is
 provided here for services authors to reference; it is not accessible to
 clients.
 
@@ -128,10 +126,10 @@ restarted; it is useful for testing or setting temporary limits.
     Supplying a limit of 0 will revert to the internal default.
 
 Specific global limits can be set online using the SET GCLONES command;
-this is called the "soft" global clone limit and overrides the defaults.
-It will also override a services-set hard limit if it is lower, but it is
+these are called "soft" global clone limits and override the defaults.
+A lower soft limit will also override a service-set hard limit, but it is
 not possible to set a soft limit higher than a hard one.  Like DEFGCLONES,
-this setting is temporary.
+these are temporary.
 
     SET GCLONES <host/site>                   - to display the limits
     SET GCLONES <host/site> <limit>           - to set the soft limit

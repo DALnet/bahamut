@@ -154,6 +154,8 @@ clones_check(aClient *cptr)
     CloneEnt *ceip;
     CloneEnt *ce24;
     int       limit;
+    int       lpri = 0;
+    int       gpri = 0;
 
     get_clones(cptr, &ceip, &ce24, 0);
 
@@ -162,17 +164,20 @@ clones_check(aClient *cptr)
         /* local limit priority stack: soft set, class, default */
         if ((limit = ceip->sllimit))
         {
+            lpri = 3;
             if (ceip->lcount >= limit)
                 return report_lclone(cptr, ceip, limit, 0, "soft", NULL);
         }
         else if ((limit = cptr->user->allow->class->connfreq))
         {
+            lpri = 2;
             if (ceip->lcount >= limit)
                 return report_lclone(cptr, ceip, limit, 0, "class",
                                      cptr->user->allow->class->name);
         }
         else
         {
+            lpri = 1;
             limit = local_ip_limit;
             if (ceip->lcount >= limit)
                 return report_lclone(cptr, ceip, limit, 0, "default", NULL);
@@ -181,16 +186,19 @@ clones_check(aClient *cptr)
         /* global limit priority stack: soft set, services, default */
         if ((limit = ceip->sglimit))
         {
+            gpri = 3;
             if (ceip->gcount >= limit)
                 return report_gclone(cptr, ceip, limit, 0, "soft");
         }
         else if ((limit = ceip->limit))
         {
+            gpri = 2;
             if (ceip->gcount >= limit)
                 return report_gclone(cptr, ceip, limit, 0, "hard");
         }
         else
         {
+            gpri = 1;
             limit = global_ip_limit;
             if (ceip->gcount >= limit)
                 return report_gclone(cptr, ceip, limit, 0, "default");
@@ -199,24 +207,29 @@ clones_check(aClient *cptr)
 
     if (ce24)
     {
+        /* For local limits, a specific host limit provides an implicit
+         * exemption from site limits of a lower priority. */
         if ((limit = ce24->sllimit))
         {
             if (ce24->lcount >= limit)
                 return report_lclone(cptr, ce24, limit, 1, "soft", NULL);
         }
-        else if ((limit = cptr->user->allow->class->ip24clones))
+        else if (lpri <= 2 && (limit = cptr->user->allow->class->ip24clones))
         {
             if (ce24->lcount >= limit)
                 return report_lclone(cptr, ce24, limit, 1, "class",
                                      cptr->user->allow->class->name);
         }
-        else
+        else if (lpri <= 1)
         {
             limit = local_ip24_limit;
             if (ce24->lcount >= limit)
                 return report_lclone(cptr, ce24, limit, 1, "default", NULL);
         }
 
+        /* For global limits, the implicit exemption is for the default only;
+         * the soft limit can only be lower, not higher, so the service-set
+         * hard limit wins if it's not present. */
         if ((limit = ce24->sglimit))
         {
             if (ce24->gcount >= limit)
@@ -227,7 +240,7 @@ clones_check(aClient *cptr)
             if (ce24->gcount >= limit)
                 return report_gclone(cptr, ce24, limit, 1, "hard");
         }
-        else
+        else if (gpri <= 1)
         {
             limit = global_ip24_limit;
             if (ce24->gcount >= limit)

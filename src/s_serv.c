@@ -1532,49 +1532,56 @@ m_set(aClient *cptr, aClient *sptr, int parc, char *parv[])
                     parv[0], throttle_rtime);
            }
         }
-        else if (!strncasecmp(command, "LCLONE", 6))
+        else if (!strncasecmp(command, "LCLONES", 3))
         {
-            int hglimit, sglimit, sllimit, limit, rval;
-            char lbuf[16];
-
             if (parc > 3)
             {
+                int limit, rval;
+
                 limit = atoi(parv[3]);
                 rval = clones_set(parv[2], CLIM_SOFT_LOCAL, limit);
-
-                if (limit)
-                    ircsprintf(lbuf, "%d", limit);
-                else
-                    strcpy(lbuf, "default");
 
                 if (rval < 0)
                     sendto_one(sptr, ":%s NOTICE %s :Invalid IP or limit.",
                                me.name, parv[0]);
+                else if (rval > 0 && limit == 0)
+                {
+                    sendto_ops("%s removed soft local clone limit for %s",
+                               parv[0], parv[2]);
+                    sendto_one(sptr, ":%s NOTICE %s :removed soft local clone"
+                               " limit for %s", me.name, parv[0], parv[2]);
+                }
                 else if (rval > 0)
                 {
                     sendto_ops("%s changed soft local clone limit for %s from"
-                               " %d to %s", parv[0], parv[2], rval, lbuf);
+                               " %d to %d", parv[0], parv[2], rval, limit);
                     sendto_one(sptr, ":%s NOTICE %s :changed soft local clone"
-                               " limit for %s from %d to %s", me.name, parv[0],
-                               parv[2], rval, lbuf);
+                               " limit for %s from %d to %d", me.name, parv[0],
+                               parv[2], rval, limit);
+                }
+                else if (limit == 0)
+                {
+                    sendto_one(sptr, "%s NOTICE %s :no soft local clone limit"
+                               " for %s", me.name, parv[0], parv[2]);
                 }
                 else
                 {
-                    sendto_ops("%s set soft local clone limit for %s to %s",
-                               parv[0], parv[2], lbuf);
+                    sendto_ops("%s set soft local clone limit for %s to %d",
+                               parv[0], parv[2], limit);
                     sendto_one(sptr, ":%s NOTICE %s :set soft local clone"
-                               " limit for %s to %s", me.name, parv[0],
-                               parv[2], lbuf);
+                               " limit for %s to %d", me.name, parv[0],
+                               parv[2], limit);
                 }
             }
             else if (parc > 2)
             {
+                int hglimit, sglimit, sllimit;
+
                 clones_get(parv[2], &hglimit, &sglimit, &sllimit);
 
                 if (!sllimit)
-                    sendto_one(sptr, ":%s NOTICE %s :soft local clone limit"
-                               " for %s is default", me.name, parv[0],
-                               parv[2]);
+                    sendto_one(sptr, ":%s NOTICE %s :no soft local clone limit"
+                               " for %s", me.name, parv[0], parv[2]);
                 else
                     sendto_one(sptr, ":%s NOTICE %s :soft local clone limit"
                                " for %s is %d", me.name, parv[0], parv[2],
@@ -1584,11 +1591,9 @@ m_set(aClient *cptr, aClient *sptr, int parc, char *parv[])
                 sendto_one(sptr, ":%s NOTICE %s :Usage: LCLONES <ip> [<limit>]",
                            me.name, parv[0]);
         }
-        else if (!strncasecmp(command, "GCLONE", 6))
+        else if (!strncasecmp(command, "GCLONES", 3))
         {
             int hglimit, sglimit, sllimit, limit, rval;
-            char lbuf[16] = "default";
-            char lbuf2[16] = "none";
 
             if (parc > 3)
             {
@@ -1604,28 +1609,38 @@ m_set(aClient *cptr, aClient *sptr, int parc, char *parv[])
                 {
                     rval = clones_set(parv[2], CLIM_SOFT_GLOBAL, limit);
 
-                    if (limit)
-                        ircsprintf(lbuf, "%d", limit);
-
                     if (rval < 0)
                         sendto_one(sptr, ":%s NOTICE %s :Invalid IP or limit.",
                                    me.name, parv[0]);
+                    else if (rval > 0 && limit == 0)
+                    {
+                        sendto_ops("%s removed soft global clone limit for %s",
+                                   parv[0], parv[2]);
+                        sendto_one(sptr, ":%s NOTICE %s :removed soft global"
+                                   " clone limit for %s", me.name, parv[0],
+                                   parv[2]);
+                    }
                     else if (rval > 0)
                     {
                         sendto_ops("%s changed soft global clone limit for %s"
-                                   " from %d to %s", parv[0], parv[2], rval,
-                                   lbuf);
+                                   " from %d to %d", parv[0], parv[2], rval,
+                                   limit);
                         sendto_one(sptr, ":%s NOTICE %s :changed soft global"
-                                   " clone limit for %s from %d to %s",
-                                   me.name, parv[0], parv[2], rval, lbuf);
+                                   " clone limit for %s from %d to %d",
+                                   me.name, parv[0], parv[2], rval, limit);
+                    }
+                    else if (limit == 0)
+                    {
+                        sendto_one(sptr, ":%s NOTICE %s :no soft global clone"
+                                   " limit for %s", me.name, parv[0], parv[2]);
                     }
                     else
                     {
-                        sendto_ops("%s set soft global clones limit for %s to"
-                                   " %s", parv[0], parv[2], lbuf);
+                        sendto_ops("%s set soft global clone limit for %s to"
+                                   " %d", parv[0], parv[2], limit);
                         sendto_one(sptr, ":%s NOTICE %s :set soft global clone"
-                                   " limit for %s to %s", me.name, parv[0],
-                                   parv[2], lbuf);
+                                   " limit for %s to %d", me.name, parv[0],
+                                   parv[2], limit);
                     }
                 }
             }
@@ -1634,13 +1649,17 @@ m_set(aClient *cptr, aClient *sptr, int parc, char *parv[])
                 clones_get(parv[2], &hglimit, &sglimit, &sllimit);
 
                 if (sglimit)
-                    ircsprintf(lbuf, "%d", sglimit);
-                if (hglimit)
-                    ircsprintf(lbuf2, "%d", hglimit);
+                    sendto_one(sptr, ":%s NOTICE %s :soft global clone limit"
+                               " for %s is %d", me.name, parv[0], parv[2],
+                               sglimit);
+                else
+                    sendto_one(sptr, ":%s NOTICE %s :no soft global clone"
+                               " limit for %s", me.name, parv[0], parv[2]);
 
-                sendto_one(sptr, ":%s NOTICE %s :global clone limit for %s is"
-                           " (soft: %s  hard: %s)", me.name, parv[0], parv[2],
-                           lbuf, lbuf2);
+                if (hglimit)
+                    sendto_one(sptr, ":%s NOTICE %s :hard global clone limit"
+                               " for %s is %d", me.name, parv[0], parv[2],
+                               hglimit);
             }
             else
                 sendto_one(sptr, ":%s NOTICE %s :Usage: GCLONES <ip> [<limit>]",

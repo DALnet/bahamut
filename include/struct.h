@@ -632,6 +632,8 @@ typedef struct Whowas
 #define CONF_FLAGS_NOTHROTTLE      0x0040
 /* force umode +F? */
 #define CONF_FLAGS_FORCEFLOOD      0x0080
+/* skip clone checks? */
+#define CONF_FLAGS_SKIPCLONES      0x0100
 
 /* global configuration flags */
 

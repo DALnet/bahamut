@@ -1135,6 +1135,11 @@ confadd_allow(cVar *vars[], int lnum)
                     case 'm': x->flags |= CONF_FLAGS_I_OPERPORT; break;
                     case 'T': x->flags |= CONF_FLAGS_NOTHROTTLE; break;
                     case 'F': x->flags |= CONF_FLAGS_FORCEFLOOD; break;
+                    case 'C': x->flags |= CONF_FLAGS_SKIPCLONES; break;
+                    default:
+                        confparse_error("Unknown flag", lnum);
+                        free_allow(x);
+                        return -1;
                 }
 
             tmp->type = NULL;
