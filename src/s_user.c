@@ -2973,10 +2973,13 @@ m_away(aClient *cptr,
    away = sptr->user->away;
 
 #ifdef NO_AWAY_FLUD
+   if(MyClient(sptr))
+   {
       if ((sptr->alas + MAX_AWAY_TIME) < NOW)
 		sptr->acount = 0;
       sptr->alas = NOW;
       sptr->acount++;
+   }
 #endif 
 
    if (parc < 2 || !*awy2) {
@@ -2987,13 +2990,9 @@ m_away(aClient *cptr,
       if (away) {
 	 MyFree(away);
 	 sptr->user->away = NULL;
+         /* Don't spam unaway unless they were away - lucas */
+         sendto_serv_butone(cptr, ":%s AWAY", parv[0]);
       }
-      /*
-       * some lamers scripts continually do a /away, hence making a lot
-       * of unnecessary traffic. *sigh* so... as comstud has done, I've
-       * commented out this sendto_serv_butone() call -Dianora
-       */
-      sendto_serv_butone(cptr, ":%s AWAY", parv[0]);
  
       if (MyConnect(sptr))
 	 sendto_one(sptr, rpl_str(RPL_UNAWAY),
@@ -3006,7 +3005,8 @@ m_away(aClient *cptr,
     */
 #ifdef NO_AWAY_FLUD
    /* we dont care if they are just unsetting away, hence this is here */
-   if ((sptr->acount > MAX_AWAY_COUNT)) {
+   /* only care about local non-opers */
+   if (MyClient(sptr) && (sptr->acount > MAX_AWAY_COUNT) && !IsAnOper(sptr)) {
 	sendto_one(sptr, err_str(ERR_TOOMANYAWAY), me.name, parv[0]);
 	return 0;
    }
@@ -3022,16 +3022,6 @@ m_away(aClient *cptr,
 
    if (away == NULL)
       sendto_serv_butone(cptr, ":%s AWAY :%s ", parv[0], parv[1]);
-   /*
-    * This is a bad, as it breaks who and stuff on the OTHER end.  How
-    * bout We make a deal and only send an away message if the user is
-    * NOT away, and even then we'll send a null message to the other
-    * side. -Raistlin
-    */
-
-   /*
-    * don't use realloc() -Dianora 
-    */
 
    if (away)
       MyFree(away);
