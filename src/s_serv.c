@@ -1528,7 +1528,7 @@ m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
    {
       /* allow remote stats p l ? u */
       if (!((stat == 'p') || (stat == 'P') || (stat=='?') || (stat=='u') ||
-	(stat='l') || (stat='L')) && !MyConnect(sptr))
+	(stat=='l') || (stat=='L')) && !MyConnect(sptr))
 		  return 0;
 		
       if ((last_used + MOTD_WAIT) > NOW)
