@@ -4409,7 +4409,7 @@ void send_svsmode_out(aClient *cptr, aClient *sptr, aClient *bsptr, int old) {
  */
 int m_svsmode(aClient *cptr, aClient *sptr, int parc, char *parv[]) {
 	 int 		flag, *s, what, setflags;
-	 char 	      **p, *m;
+	 char 	       *m, *modes, *optarg;
 	 aClient       *acptr;
 	 ts_val         ts = 0;
 
@@ -4417,74 +4417,73 @@ int m_svsmode(aClient *cptr, aClient *sptr, int parc, char *parv[]) {
 	    	return 0;
 
 	 if ((parc >= 4) && ((parv[3][0] == '+') || (parv[3][0] == '-')))
+	 {
 		ts = atol(parv[2]);
+		modes = parv[3];
+		optarg = (parc > 4) ? parv[4] : NULL;
+	 }
+	 else
+	 {
+		modes = parv[2];
+		optarg = (parc > 3) ? parv[3] : NULL;
+	 }
+
+	 if (!(acptr = find_person(parv[1], NULL)))
+		return 0;
+
+	 if (ts && (ts != acptr->tsinfo))
+		return 0;
 
 	 what = MODE_ADD;
-
-	 if (!(acptr = find_person(parv[1], NULL))) 
-		return 0;
 	 setflags = 0;
-
-	 /* if the services timestamp doesnt match our nick creation time,
-	  * then we should be dropping this entirely.  someone is toying
-	  * with us };>  -Epi
-	  */
-
-	 if ((ts) && (ts != acptr->tsinfo))
-		return 0;
 
 	 for (s = user_modes; (flag = *s); s += 2)
 		 if (acptr->umode & flag)
 			 setflags |= flag;
-	 for (p = &parv[2]; p && *p; p++ )
-		 for (m = *p; *m; m++)
-			 switch(*m) {
-				 case '+':
-					what = MODE_ADD;
-					break;
-				 case '-':
-					what = MODE_DEL;
-					break;
-				 case ' ':
-				 case '\n':
-				 case '\r':
-				 case '\t':
-					break;
+
+	 for (m = modes; *m; m++)
+	    switch(*m) {
+		 case '+':
+			what = MODE_ADD;
+			break;
+		 case '-':
+			what = MODE_DEL;
+			break;
+		 case ' ':
+		 case '\n':
+		 case '\r':
+		 case '\t':
+			break;
 /* We don't do this yet (i broke this, and am too lazy to fix it -epi)
-				 case 'l':
-					if(parv[3] && isdigit(*parv[4])) max_global_count = atoi(parv[3]);
-					break;
+ *		 case 'l':
+ *			if(parv[3] && isdigit(*parv[4])) max_global_count = atoi(parv[3]);
+ *			break;
  */ 
-				 case 'd':
-					if (ts) 
-					{
-					    if (parv[4] && isdigit(*parv[4])) 
-						acptr->user->servicestamp = strtoul(parv[4], NULL, 0);
-					}
-					else 
-					{
-  			                    if(parv[3] && isdigit(*parv[3]))
-                        			acptr->user->servicestamp = strtoul(parv[3], NULL, 0);  
-					}
-					break;
-				 default:
-					for (s = user_modes; (flag = *s); s += 2)
-						if (*m == (char)(*(s+1))) {
-							 if (what == MODE_ADD) acptr->umode |= flag;
-						   else acptr->umode &= ~flag;
-							 break;
-						}
-					break;
-			 }
-	 if (ts && parv[4])
+		 case 'd':
+			if (optarg && isdigit(*optarg))
+			   acptr->user->servicestamp = strtoul(optarg, NULL, 0);
+			break;
+		 default:
+			for (s = user_modes; (flag = *s); s += 2)
+			{
+			   if (*m == (char)(*(s+1))) 
+			   {
+			      if (what == MODE_ADD) 
+			         acptr->umode |= flag;
+			      else 
+			         acptr->umode &= ~flag;
+			      break;
+			   }
+			}
+			break;
+	 }
+
+	 if (optarg)
 		sendto_serv_butone(cptr, ":%s SVSMODE %s %s %s %s",
-			parv[0], parv[1], parv[2], parv[3], parv[4]);
-	 else if (parv[3])
-		sendto_serv_butone(cptr, ":%s SVSMODE %s %s %s", 
-			parv[0], parv[1], parv[2], parv[3]);
+			parv[0], parv[1], acptr->tsinfo, modes, optarg);
 	 else
-		sendto_serv_butone(cptr, ":%s SVSMODE %s %s",
-			parv[0], parv[1], parv[2]);
+		sendto_serv_butone(cptr, ":%s SVSMODE %s %s %s", 
+			parv[0], parv[1], acptr->tsinfo, modes);
 
 	 return 0;
 }
