@@ -6,7 +6,7 @@ Changes for 1.8.3
 - Fixed a possible buffer overflow issue in oper hostmasking
 - Fixed solaris devpoll socket engine logic problems.
 - Fixed class reference counting errors.
-- Fixed a bug with cmode +j propegation on resync
+- Fixed a bug with cmode +j propagation on resync
 - Added a second set of join counters to send warning notices
   to +d opers when the default thresholds are met.  Still sends
   a throttle notice when cmode +j thresholds are met.
@@ -16,6 +16,9 @@ Changes for 1.8.3
 - Range limiting for cmode +j args (min rate 1:8, max time 60).
 - Fixed spamming redudant cmode changes.
 - Fixed bad handling of bogus oper messages (from Zeke Gomez).
+- Fixed rehash issue with module blocks.
+- Fixed samode with no mode arguments choosing one at random for you :)
+- Increased throughput on data sent to clients.
 
 
 Changes for 1.8.2

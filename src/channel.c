@@ -1744,6 +1744,10 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
             /* if it's a -, just change the flag, we have no arguments */
             if(change=='-')
             {
+                if (MyClient(sptr) && (seenalready & MODE_JOINRATE))
+                    break;
+                seenalready |= MODE_JOINRATE;
+
                 if((prelen + (mbuf - morig) + pidx + 1) > REALMODEBUFLEN) 
                     break;
                 *mbuf++ = 'j';
@@ -1771,7 +1775,13 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
                     args++;
                     break;
                 }
-                
+                if (MyClient(sptr) && (seenalready & MODE_JOINRATE))
+                {
+                    args++;
+                    break;
+                }
+                seenalready |= MODE_JOINRATE;
+
                 tmpa = strchr(parv[args], ':');
                 if(tmpa)
                 {
@@ -1845,6 +1855,10 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
             /* if it's a -, just change the flag, we have no arguments */
             if(change=='-')
             {
+                if (MyClient(sptr) && (seenalready & MODE_LIMIT))
+                    break;
+                seenalready |= MODE_LIMIT;
+
                 if((prelen + (mbuf - morig) + pidx + 1) > REALMODEBUFLEN) 
                     break;
                 *mbuf++ = 'l';
@@ -1866,7 +1880,13 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
                     args++;
                     break;
                 }
-                
+                if (MyClient(sptr) && (seenalready & MODE_LIMIT))
+                {
+                    args++;
+                    break;
+                }
+                seenalready |= MODE_LIMIT;
+
                 /* if we're going to overflow our mode buffer,
                  * drop the change instead */
                 if((prelen + (mbuf - morig) + pidx + 16) > REALMODEBUFLEN) 
@@ -1907,7 +1927,13 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
                 args++;
                 break;
             }
-                
+            if (MyClient(sptr) && (seenalready & MODE_KEY))
+            {
+                args++;
+                break;
+            }
+            seenalready |= MODE_KEY;
+
             /* do not allow keys to start with :! ack! - lucas */
             /* another ack: don't let people set null keys! */
             /* and yet a third ack: no spaces in keys -epi  */
