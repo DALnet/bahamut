@@ -1522,6 +1522,8 @@ initconf(int opt, int fd)
             strncpyzt((ProxyMonURL + 7), DEFAULT_PROXY_INFO_URL, sizeof(ProxyMonURL) - 7);
          else
             strncpyzt((ProxyMonURL + 7), aconf->passwd, sizeof(ProxyMonURL) - 7);
+
+         continue; /* no need to keep this as a conf entry.. */
       } 
 #endif
 
