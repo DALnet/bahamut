@@ -1612,6 +1612,7 @@ int readwrite_client(aClient *cptr, int isread, int iswrite)
              * unset_fd_flags(cptr->fd, FDF_WANTWRITE);
              */
             exit_client(cptr, cptr, &me, "Socket error (write)");
+            return FLUSH_BUFFER;
         }
 
     }
