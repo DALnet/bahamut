@@ -7,7 +7,7 @@ AC_SUBST(PACKAGE)
 AC_SUBST(VERSION)
 
 AC_ARG_ENABLE(encryption, \
-[  --disable-encryption    disable rc4 link encryption (removes gnu MP dependancy)],,enable_encryption=yes)
+[  --disable-encryption    disable rc4 link encryption (removes openssl dependancy)],,enable_encryption=yes)
 
 AC_ARG_ENABLE(dronemodule, \
 [  --enable-dronemodule    enable support for loadable drone.so module],enable_dronemodule=yes,enable_dronemodule=no)
@@ -269,366 +269,135 @@ AC_MSG_RESULT(can't tell))
 AC_SUBST(DFDSS)
 
 if test $enable_encryption = no; then
-echo "encryption disabled, skipping GNU MP checks..."
+echo "encryption disabled, skipping openssl checks..."
 ENCRYPT_SRC=""
 AC_SUBST(ENCRYPT_SRC)
 else
-echo "encryption enabled, looking for GNU MP library..."
+echo "encryption enabled, looking for openssl library..."
 ENCRYPT_SRC="rc4.c dh.c"
 AC_SUBST(ENCRYPT_SRC)
 AC_DEFINE(HAVE_ENCRYPTION_ON)
 
-# ---------- check for gmp library (stolen from eggdrop)
+# ---------- check for openssl, half stolen from openssh
 
-CURDIR=`pwd`
-AC_CHECK_PROG(BASENAME,basename,basename)
-AC_CHECK_PROG(DIRNAME,dirname,dirname)
-if test $BASENAME = "" || test $DIRNAME = "" ; then
-  echo ack...no basename or dirname, we cant configure gmp without them.
-  exit 1
-fi
+tryssl=""
 
-AC_ARG_WITH(gmplib, [  --with-gmplib=PATH      full path to gmp library], gmplibname=$withval)
-AC_ARG_WITH(gmpinc, [  --with-gmpinc=PATH      full path to gmp header], gmpincname=$withval)
+AC_ARG_WITH(ssl-dir, 
+[  --with-ssl-dir=PATH     Path to openssl installation ],
+[ tryssl=$withval ]
+)
 
-if test -r "$gmplibname"; then
-  GMPLIB=`$DIRNAME $gmplibname`
-  GMPLIBFN=`$BASENAME $gmplibname | cut -c4-`
-  echo "using gmplib $GMPLIB/lib$GMPLIBFN"
-else
+save_SSLINC=""
+save_LIBS="$LIBS"
+save_CPPFLAGS="$CPPFLAGS"
+save_CFLAGS="$CFLAGS"
 
- libnames="gmp.so gmp.so.3 gmp.so.3 gmp.so.3.1 gmp.so.3.1.1 gmp.so.3.0.1 gmp.so.3.0 \
-           gmp.a"
+found_openssl=""
 
- # look for libgmp.a: if GMPLIB is set, check there first
- if test "$GMPLIB" != ""; then
-   GMPLIBFN=notfound
-   for checkfn in $libnames;
-   do
-     if test -r $GMPLIB/lib$checkfn; then
-       if test $GMPLIBFN = notfound; then
-         GMPLIBFN=$checkfn
-       fi
-     fi
-   done
-   if test $GMPLIBFN = notfound; then
-     echo "Environment variable GMPLIB is set, but incorrect."
-     unset GMPLIB
-   fi
- fi
+   for ssldir in $tryssl "" /usr/local/openssl /usr/lib/openssl \
+       /usr/local/ssl /usr/lib/ssl /usr/local /usr/pkg /opt \
+       /opt/openssl ; do
+      LIBS="$save_LIBS -lcrypto"
+      SSLINC="$save_SSLINC"
 
- # check in common places now
- AC_MSG_CHECKING(for libgmp)
- if test "$GMPLIB" = ""; then
-   for check in $CURDIR/gmp $CURDIR/gmp-3.1.1/.libs /usr/local/lib /usr/lib /usr/i486-linuxaout/lib $HOME $HOME/lib;
-   do
-     if test "$GMPLIB" = ""; then
-       for checkfn in $libnames;
-       do
-         if test -r $check/lib$checkfn; then
-           if test "$GMPLIB" = ""; then
-             AC_MSG_RESULT(found in $check/lib$checkfn)
-             GMPLIB=$check
-             GMPLIBFN=$checkfn
-           fi
-         fi
-       done
-     fi
-   done
- else
-   AC_MSG_RESULT(found in $GMPLIB/lib$GMPLIBFN)
- fi
-
-fi # option
-
-# give up if they don't even have that
-if test "$GMPLIB" = ""; then
-  AC_MSG_RESULT(not found)
-fi
-
-# now look for pesky $GMPINCFN file
-if test -r "$gmpincname"; then
-  GMPINC=`$DIRNAME $gmpincname`
-  GMPINCFN=`$BASENAME $gmpincname`
-  echo "using gmp header $GMPINC/$GMPINCFN"
-else
-  GMPINCFN=gmp.h
-  	
-  if test "$GMPINC" != ""; then
-    if test ! -r $GMPINC/$GMPINCFN; then
-      echo "Environment variable GMPINC is set, but incorrect."
-      unset GMPINC
-    fi
-  fi
-
-  # check in common places now
-  AC_MSG_CHECKING(for $GMPINCFN)
-  if test "$GMPINC" = ""; then
-    for check in $CURDIR/gmp $CURDIR/gmp-3.1.1 /usr/local/include /usr/include $HOME $HOME/include;
-    do
-      if test -r $check/$GMPINCFN; then
-        if test "$GMPINC" != ""; then
-          break
-        fi
-        AC_MSG_RESULT(found in $check/$GMPINCFN)
-        GMPINC=$check
-        break
+      # if the directory isn't null, but doesn't exist, skip it
+      if test ! -z "$ssldir" -a ! -d "$ssldir" ; then
+         continue
       fi
-    done
-  else
-    AC_MSG_RESULT(found in $GMPINC/$GMPINCFN)
-  fi
 
-  # had GMPLIB but not GMPINC?  so close... :(
-  if test "$GMPINC" = ""; then
-    AC_MSG_RESULT(not found)
-    unset GMPLIB
-    unset GMPLIBFN
-  fi
-fi # option
+      # this test is in openssh, I guess there's a good reason?
+      if test ! -z "$ssldir" -a "z$ssldir" != "z/usr"; then
+         # try to use ssldir/lib for libraries, if it exists
+         if test -d "$ssldir/lib" ; then
+            LIBS="-L$ssldir/lib -lcrypto $save_LIBS"
+         else
+            LIBS="-L$ssldir -lcrypto $save_LIBS"
+         fi
 
-# done looking, now either GMPLIB & GMPINC are both set, or neither is set
+         if test -d "$ssldir/include" ; then
+            SSLINC="-I$ssldir/include"
+            CPPFLAGS="$SSLINC $save_CPPFLAGS"
+         else
+            SSLINC="-I$ssldir"
+            CPPFLAGS="$SSLINC $save_CPPFLAGS"
+         fi
+      fi
 
-if test "$GMPLIB" = ""; then
+      AC_TRY_RUN(
+                 [
+#include <stdio.h>
+#include <string.h>
+#include <openssl/rand.h>
+#include <openssl/opensslv.h>
+#include <openssl/crypto.h>
+int main(void)
+{
+   FILE *fp;
+   char a[2048];
+
+   fp = fopen(".openssl_h_version", "w");
+   if(fp)
+   {
+      fprintf(fp, "%s\n", OPENSSL_VERSION_TEXT);
+      fclose(fp);
+   }
+
+   fp = fopen(".openssl_l_version", "w");
+   if(fp)
+   {
+      fprintf(fp, "%s\n", SSLeay_version(SSLEAY_VERSION));
+      fclose(fp);
+   }
+
+   memset(a, 0, 2048);
+   RAND_add(a, 2048, 2048);
+   if(RAND_status() <= 0)
+      return 1;
+   return 0;
+}
+                 ],
+                 [
+                    found_openssl=1;
+                 ], [], AC_MSG_RESULT(cross compiler)
+      )
+      if test ! -z "$found_openssl" ; then
+         break;
+      fi
+
+   done
+
+if test -z "$found_openssl"; then
   echo ""
-  echo "I can't find GNU MP on this system, or I found an older version."
+  echo "I can't find OpenSSL on this system, or I found an older version."
   echo ""
-  echo "bahamut requires the GNU multiprecision library to compile with encryption."
+  echo "bahamut requires OpenSSL version 0.9.5 or later to compile with"
+  echo "encryption enabled."
+  echo ""
   echo "If you wish to disable server link encryption, run configure with"
   echo "the option --disable-encryption."
   echo ""
-  echo "If you have the gnu multiprecision library installed, I couldn't find it,"
-  echo "or I was confused by an older version. You can set the environment"
-  echo "variables GMPLIB and GMPINC to the directories of the library and the"
-  echo "header file, respectively."
+  echo "If you have openssl, you may wish to run configure with the"
+  echo "--with-ssl-dir=DIR option to specify the OpenSSL installation"
+  echo "directory."
   echo ""
-  echo "You may also make a directory \"gmp\" in the current directory"
-  echo "and place libgmp.a and gmp.h in that directory, and I will"
-  echo "autodetect it next time you run configure."
-  echo ""
-  echo "You can download gmp at http://www.swox.com/gmp, or any of the"
-  echo "GNU distribution sites (http://www.gnu.org for more information)"
+  echo "You can download openssl at http://www.openssl.org/"
   exit 1
 fi
 
-echo Checking $GMPINC/$GMPINCFN directory for gmp version
-AC_MSG_CHECKING(for gmp.h version)
-AC_TRY_RUN([
-#include <stdio.h>
-#include "$GMPINC/$GMPINCFN"
+   if test -z "$ssldir" ; then
+      ssldir="(system)"
+   fi
+   ac_cv_openssldir=$ssldir
 
-int main()
-{
-  int major = __GNU_MP_VERSION;
-  if(major < 3)
-     exit(1);
-  exit(0);
-}
-], 
-AC_MSG_RESULT(ok),
-[
-AC_MSG_RESULT(too old)
-echo "I found a version of gmp.h, but it was either not the gmp I know of,"
-echo "or it was not recent enough (I need gmp version 3.0 or later!)"
-echo ""
-echo "You should upgrade gmp from the URL below."
-echo ""
-echo "If you do not want to upgrade gmp system wide:"
-echo "You may make a directory \"gmp\" in the current directory"
-echo "and place libgmp.a and gmp.h in that directory, and I will"
-echo "autodetect it next time you run configure."
-echo ""
-echo "You can download gmp at http://www.swox.com/gmp, or any of the"
-echo "GNU distribution sites (http://www.gnu.org for more information)"
-AC_MSG_ERROR(Invalid or too old gmp.h (pre-version 3?))
-],
-AC_MSG_RESULT(can't tell))
-
-AC_MSG_CHECKING(how to link to the gmp library)
-AC_TRY_RUN([
-#include <stdio.h>
-
-int main()
-{
-   char *x = "$GMPLIBFN";
-   int a;
-
-   for(a = 0; x[a]; a++)
-      ;
-   if(a < 3)
-      exit(0);
-   if(x[a-1] == 'a' && x[a-2] == '.')
-      exit(1);
-   exit(0);
-}
-
-],
-[
-AC_MSG_RESULT(dynamic)
-GMPLIBFNCUT=`echo $GMPLIBFN | cut -d. -f1`
-GMP_LIBS="-L$GMPLIB -l$GMPLIBFNCUT"
-],
-[
-AC_MSG_RESULT(static)
-GMP_LIBS="$GMPLIB/lib$GMPLIBFN"
-], 
-AC_MSG_RESULT(grr cross compiler blah!))
-
-BKLIBS="$LIBS"
-LIBS="$LIBS $GMP_LIBS"
-
-AC_MSG_CHECKING(for gmp library matching with header)
-AC_TRY_RUN([
-#include <stdio.h>
-#include <stdlib.h>
-#include "$GMPINC/$GMPINCFN"
-
-char *str_next_period(char *x)
-{
-   while(*x && *x != '.')
-      x++;
-
-   if(*x)
-   {
-      *x = '\0';
-      return x + 1;
-   }
-
-   return NULL;
-}
-
-void *my_lame_strcpy(char *x, char *y, int ml)
-{
-   while(*y && ml--)
-   {
-      *x++ = *y++;
-   }
-   *x = '\0';
-}
-
-int main()
-{
-  int major_h = 0;
-  int minor_h = 0;
-  int plevel_h = 0;
-  int major_l = 0;
-  int minor_l = 0;
-  int plevel_l = 0;
-  char gv[128], *x, *z;
-  FILE *fp;
-
-  my_lame_strcpy(gv, gmp_version, 128);
-
-#ifdef __GNU_MP_VERSION
-  major_h = __GNU_MP_VERSION;
-#endif
-#ifdef __GNU_MP_VERSION_MINOR
-  minor_h = __GNU_MP_VERSION_MINOR;
-#endif
-#ifdef __GNU_MP_VERSION_PATCHLEVEL
-  plevel_h = __GNU_MP_VERSION_PATCHLEVEL;
-#endif
-
-  fp = fopen(".gmp_h_version", "w");
-  if(fp)
-  {
-     fprintf(fp, "%d.%d.%d", major_h, minor_h, plevel_h);
-     fclose(fp);
-  }
-
-  z = gv;
-  x = str_next_period(z);
-  major_l = atoi(z);
-  if(x)
-  {
-     z = x;
-     x = str_next_period(z);
-     minor_l = atoi(z);
-     if(x)
-     {
-        z = x;
-        x = str_next_period(z);
-        plevel_l = atoi(z);
-     }
-  }
-
-  fp = fopen(".gmp_l_version", "w");
-  if(fp)
-  {
-     fprintf(fp, "%d.%d.%d", major_l, minor_l, plevel_l);
-     fclose(fp);
-  }
-
-  if(major_l != major_h)
-     exit(1);
-
-  exit(0);
-}
-], 
-[
-AC_MSG_RESULT(no problems)
-],
-[
-AC_MSG_RESULT(problem!)
-if test -r .gmp_h_version; then
-  GMPHV=`cat .gmp_h_version`
-  GMPLV=`cat .gmp_l_version`
-  echo " - gmp header version: $GMPHV"
-  echo " - gmp library version: $GMPLV"
-else
-  echo "Link failure! Look for stale libgmp.so in your dynamic link path!"
-fi
-$RM -f .gmp_h_version .gmp_l_version
-echo "Your gmp library either has no version symbols, is not the correct 'gmp',"
-echo "or the major versions of your gmp library and gmp header differ."
-echo "You cannot have two versions of the gmp library in your dynamic (.so)"
-echo "library search path, this may be your problem."
-echo ""
-echo "You should upgrade gmp from the URL below."
-echo ""
-echo "If you do not want to upgrade gmp system wide:"
-echo "You may make a directory \"gmp\" in the current directory"
-echo "and place libgmp.a and gmp.h in that directory, and I will"
-echo "autodetect it next time you run configure."
-echo ""
-echo "You can download gmp at http://www.swox.com/gmp, or any of the"
-echo "GNU distribution sites (http://www.gnu.org for more information)"
-AC_MSG_ERROR("bad library/header match")
-],
-AC_MSG_RESULT(cross compile))
-
-LIBS="$BKLIBS"
-
-GMPHV=`cat .gmp_h_version`
-GMPLV=`cat .gmp_l_version`
-echo " - gmp header version: $GMPHV"
-echo " - gmp library version: $GMPLV"
-$RM -f .gmp_h_version .gmp_l_version
-
-if test "$GMPHV" != "$GMPLV"; then
-   echo ""
-   echo "Warning!"
-   echo "Your gmp.h and gmp library versions seem to differ!"
-   echo "If you get any linking errors regarding gmp functions (mpz_*),"
-   echo "this is probably the source of your problem!"
-   echo ""
-   echo "You can upgrade gmp from the URL below."
-   echo ""
-   echo "If you do not want to upgrade gmp system wide:"
-   echo "You may make a directory \"gmp\" in the current directory"
-   echo "and place libgmp.a and gmp.h in that directory, and I will"
-   echo "autodetect it next time you run configure."
-   echo ""
-   echo "You can download gmp at http://www.swox.com/gmp, or any of the"
-   echo "GNU distribution sites (http://www.gnu.org for more information)"
+AC_SUBST(SSLINC)
+CPPFLAGS="$save_CPPFLAGS"
+CFLAGS="$save_CFLAGS"
+echo " - openssl library version: `cat .openssl_l_version`"
+echo " - openssl header version : `cat .openssl_h_version`"
+$RM -f .openssl_l_version .openssl_h_version
 fi
 
-   AC_SUBST(GMPINC)
-   AC_SUBST(GMPINCFN)
-   AC_SUBST(GMP_LIBS)
-
-fi
-dnl end of gmp library test
+dnl end of openssl library test
 
 dnl don't add more of these unless it's critical.  Trying to get rid of them.
 AC_MSG_CHECKING(operating system)
@@ -643,10 +412,12 @@ case "$target" in
 *) AC_MSG_RESULT(nothing special required) ;;
 esac
 
-AC_OUTPUT(Makefile src/Makefile tools/Makefile include/gmp_irc.h)
+AC_OUTPUT(Makefile src/Makefile tools/Makefile)
 
 echo configuring zlib...
-cd zlib
-./configure
-cd ..
+(
+ cd zlib
+ ./configure
+ cd ..
+)
 

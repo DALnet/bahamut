@@ -5502,6 +5502,7 @@ int m_dkey(aClient *cptr, aClient *sptr, int parc, char *parv[])
     if(mycmp(parv[1], "PUB") == 0)
     {
 	char keybuf[1024];
+	int keylen;
 
 	if(parc != 4 || !sptr->serv->sessioninfo_in ||
 	   !sptr->serv->sessioninfo_out)
@@ -5524,23 +5525,20 @@ int m_dkey(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
 	if(DKEY_DONE(sptr->serv->dkey_flags))
 	{
-	    int hexlen;
-	    unsigned char hexbuf[1024];
-
 	    sendto_one(sptr, "DKEY DONE");
 	    SetRC4OUT(sptr);
 	    
-	    if(dh_get_s_shared(keybuf, 1024, sptr->serv->sessioninfo_in) ==
-	       NULL || dh_hexstr_to_raw(keybuf, hexbuf, &hexlen) == 0)
+	    keylen = 1024;
+	    if(!dh_get_s_shared(keybuf, &keylen, sptr->serv->sessioninfo_in))
 		return exit_client(sptr, sptr, sptr,
 				   "Could not setup encrypted session");
-	    sptr->serv->rc4_in = rc4_initstate(hexbuf, hexlen);
+	    sptr->serv->rc4_in = rc4_initstate(keybuf, keylen);
 	    
-	    if(dh_get_s_shared(keybuf, 1024, sptr->serv->sessioninfo_out) ==
-	       NULL || dh_hexstr_to_raw(keybuf, hexbuf, &hexlen) == 0)
+	    keylen = 1024;
+	    if(!dh_get_s_shared(keybuf, &keylen, sptr->serv->sessioninfo_out))
 		return exit_client(sptr, sptr, sptr,
 				   "Could not setup encrypted session");
-	    sptr->serv->rc4_out = rc4_initstate(hexbuf, hexlen);
+	    sptr->serv->rc4_out = rc4_initstate(keybuf, keylen);
 
 	    dh_end_session(sptr->serv->sessioninfo_in);
 	    dh_end_session(sptr->serv->sessioninfo_out);

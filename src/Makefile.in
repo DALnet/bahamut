@@ -1,7 +1,8 @@
 CC=@CC@
 RM=@RM@
-IRCDLIBS=@LIBS@ @GMP_LIBS@ ../zlib/libz.a
+IRCDLIBS=@LIBS@ ../zlib/libz.a
 INCLUDEDIR=-I../include -I../zlib
+OPENSSLINC=@SSLINC@
 
 CONF_SRC = @ENCRYPT_SRC@
 RES_SRC =
@@ -215,6 +216,7 @@ blalloc.o: blalloc.c ../include/blalloc.h \
  ../include/patchlevel.h
 dh.o: dh.c \
  ../include/patchlevel.h
+	$(CC) $(CFLAGS) $(OPENSSLINC) $(INCLUDEDIR) -c $<
 rc4.o: rc4.c \
  ../include/patchlevel.h
 zlink.o: zlink.c \

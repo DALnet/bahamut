@@ -1,4 +1,0 @@
-/* This is a kludge to include the right gmp header file,
- * as found by configure */
-
-#include "@GMPINC@/@GMPINCFN@"
