@@ -867,6 +867,8 @@ register_user(aClient *cptr,
     */
    if (++Count.total > Count.max_tot)
 	  Count.max_tot = Count.total;
+
+   if(IsInvisible(sptr)) Count.invisi++;
 	
    if (MyConnect(sptr)) {
       sptr->pingval = get_client_ping(sptr);
@@ -1437,8 +1439,6 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
             for (s = user_modes; (flag = *s); s += 2)
                if (*m == *(s + 1))
                {
-                  if (flag == UMODE_i)
-                     Count.invisi++;
                   if ((flag == UMODE_o) || (flag == UMODE_O))
                      Count.oper++;
                   sptr->umode |= flag & SEND_UMODES;
@@ -3068,8 +3068,6 @@ do_user(char *nick,
 #endif
 	   
       sptr->umode |= (UFLAGS & atoi(host));
-      if (!(oflags & UMODE_i) && IsInvisible(sptr))
-		  Count.invisi++;
       strncpyzt(user->host, host, sizeof(user->host));
       user->server = me.name;
    }
