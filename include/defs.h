@@ -91,17 +91,6 @@
 # endif
 #endif
 
-#if defined( sequent ) || defined(OS_DYNIXPTX)	/*
- * Dynix (sequent OS) 
- */
-# define SEQ_NOFILE 128		/*
- * Max number of socket connections 
-									 */
-# define DYNIXPTX 1
-# undef BSD
-# define SYSV
-#endif
-
 #if defined( BSD_RELIABLE_SIGNALS ) \
 && (defined( SYSV_UNRELIABLE_SIGNALS ) || defined( POSIX_SIGNALS ))
 error You defined too many signal types in setup.h

@@ -86,10 +86,6 @@
 
 extern VOIDSIG dummy();
 
-#ifdef	DYNIXPTX
-#define	NO_U_TYPES
-#endif
-
 #ifdef	NO_U_TYPES
 typedef unsigned char u_char;
 typedef unsigned short u_short;

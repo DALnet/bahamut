@@ -104,9 +104,6 @@ int deliver_it(aClient *cptr, char *str, int len) {
       return (retval);		/* Just get out now... */
    }
    else if (retval > 0) {
-#ifdef	pyr
-      (void) gettimeofday(&cptr->lw, NULL);
-#endif
       cptr->flags &= ~FLAGS_BLOCKED;
    }
 

@@ -396,11 +396,7 @@ void init_sys()
    struct rlimit limit;
 
    if (!getrlimit(RLIMIT_FD_MAX, &limit)) {
-# ifdef	pyr
-      if (limit.rlim_cur < MAXCONNECTIONS)
-# else
 	 if (limit.rlim_max < MAXCONNECTIONS)
-# endif
 	 {
 	    (void) fprintf(stderr, "ircd fd table too big\n");
 	    (void) fprintf(stderr, "Hard Limit: %ld IRC max: %d\n",
@@ -408,14 +404,13 @@ void init_sys()
 	    (void) fprintf(stderr, "Fix MAXCONNECTIONS\n");
 	    exit(-1);
 	 }
-# ifndef pyr
       limit.rlim_cur = limit.rlim_max;	/* make soft limit the max */
       if (setrlimit(RLIMIT_FD_MAX, &limit) == -1) {
 	 (void) fprintf(stderr, "error setting max fd's to %ld\n",
 			(long) limit.rlim_cur);
 	 exit(-1);
       }
-#  ifndef USE_POLL
+# ifndef USE_POLL
       if (MAXCONNECTIONS > FD_SETSIZE) {
 	 (void) fprintf(stderr,
 			"FD_SETSIZE = %d MAXCONNECTIONS = %d\n",
@@ -425,48 +420,27 @@ void init_sys()
 			MAXCONNECTIONS);
 	 exit(-1);
       }
-#  endif
+# endif
 
-#  ifndef HAVE_FD_ALLOC
+# ifndef HAVE_FD_ALLOC
       printf("Value of FD_SETSIZE is %d\n", FD_SETSIZE);
-#  else
+# else
       read_set = FD_ALLOC(MAXCONNECTIONS);
       write_set = FD_ALLOC(MAXCONNECTIONS);
       printf("Value of read_set is %lX\n", read_set);
       printf("Value of write_set is %lX\n", write_set);
-#  endif
+# endif
       printf("Value of NOFILE is %d\n", NOFILE);
-# endif
    }
-#endif
-#ifdef sequent
-# ifndef	DYNIXPTX
-   int fd_limit;
-
-   fd_limit = setdtablesize(MAXCONNECTIONS + 1);
-   if (fd_limit < MAXCONNECTIONS) {
-      (void) fprintf(stderr, "ircd fd table too big\n");
-      (void) fprintf(stderr, "Hard Limit: %d IRC max: %d\n",
-		     fd_limit, MAXCONNECTIONS);
-      (void) fprintf(stderr, "Fix MAXCONNECTIONS\n");
-      exit(-1);
-   }
-# endif
 #endif
 
    printf("Ircd is now becoming a daemon.\n");
 
-#if defined(DYNIXPTX) || defined(SVR3)
-   char logbuf[BUFSIZ];
-
-   (void) setvbuf(stderr, logbuf, _IOLBF, sizeof(logbuf));
-#else
-# if defined(HPUX)
+#if defined(HPUX)
    (void) setvbuf(stderr, NULL, _IOLBF, 0);
-# else
-#  if !defined(SOL20)
+#else
+# if !defined(SOL20)
    (void) setlinebuf(stderr);
-#  endif
 # endif
 #endif
 
@@ -1502,11 +1476,6 @@ int read_message(time_t delay,
    Reg int nfds;
    struct timeval wait;
 
-# ifdef	pyr
-   struct timeval nowt;
-   u_long us;
-
-# endif
 # ifndef HAVE_FD_ALLOC
    fd_set readset, writeset;
    fd_set *read_set, *write_set;
@@ -1542,12 +1511,7 @@ int read_message(time_t delay,
 						 * * entry isnt used
 						 */
    }
-# ifdef	pyr
-   (void) gettimeofday(&nowt, NULL);
-   now = nowt.tv_sec;
-# else
    now = timeofday;
-# endif
 
    for (res = 0;;) {
       FD_ZERO(read_set);
@@ -1589,25 +1553,8 @@ int read_message(time_t delay,
 	    length = DBufLength(&cptr->sendQ);
 	 }
 
-	 if (length || IsConnecting(cptr)) {
-# ifndef	pyr
+	 if (length || IsConnecting(cptr)) 
 	    FD_SET(i, write_set);
-# else
-	    {
-	       if (!(cptr->flags & FLAGS_BLOCKED)) {
-		  FD_SET(i, write_set);
-	       } else
-		  delay2 = 0, usec = 500000;
-	    }
-	    if (now - cptr->lw.tv_sec &&
-		nowt.tv_usec - cptr->lw.tv_usec < 0) us = 1000000;
-	    else
-	       us = 0;
-	    us += nowt.tv_usec;
-	    if (us - cptr->lw.tv_usec > 500000)
-	       cptr->flags &= ~FLAGS_BLOCKED;
-# endif
-	 }
       }
 
       if (resfd >= 0) {

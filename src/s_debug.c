@@ -133,10 +133,6 @@ char        serveropts[] =
         */
 #ifdef HPUX
 #include <unistd.h>
-#ifdef DYNIXPTX
-#include <sys/types.h>
-#include <time.h>
-#endif
 #endif
 #include "h.h"
 

@@ -40,10 +40,6 @@
 #ifdef HPUX
 #include <unistd.h>
 #endif
-#ifdef DYNIXPTX
-#include <sys/types.h>
-#include <time.h>
-#endif
 #include "h.h"
 #include "fdlist.h"
 extern fdlist serv_fdlist;

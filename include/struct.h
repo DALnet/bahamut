@@ -47,9 +47,6 @@
 #include <sys/syslog.h>
 #endif
 #endif
-#ifdef	pyr
-#include <sys/time.h>
-#endif
 
 #define REPORT_DO_DNS_		":%s NOTICE AUTH :*** Looking up your hostname...\n"
 #define REPORT_FIN_DNS_		":%s NOTICE AUTH :*** Found your hostname\n"
@@ -619,9 +616,6 @@ struct Client {
 	char        hostip[HOSTIPLEN + 1];	/* Keep real ip as string too - Dianora */
 	unsigned short port;	 /* and the remote port# too :-) */
 	struct hostent *hostp;
-#ifdef	pyr
-	struct timeval lw;
-#endif
 #ifdef ANTI_NICK_FLOOD
 	time_t      last_nick_change;
 	int         number_of_nick_changes;
