@@ -95,6 +95,7 @@ int  user_modes[] =
 #endif
     UMODE_x, 'x',
     UMODE_X, 'X',
+    UMODE_j, 'j',
     0, 0
 };
 
@@ -2939,8 +2940,6 @@ int m_umode(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	sptr->oflag = 0;
     }
 
-
-
     if (!(setflags & (UMODE_o | UMODE_O)) && IsAnOper(sptr))
     {
 	Count.oper++;
@@ -2953,32 +2952,6 @@ int m_umode(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	    delfrom_fdlist(sptr->fd, &oper_fdlist);
     }
     
-    /* We dont want non opers setting themselves +b - Raistlin */
-    
-    if (!(setflags & UMODE_b) && (!IsOper(sptr) && !IsLocOp(sptr)) &&
-	!IsServer(cptr))
-	sptr->umode &= ~UMODE_b;
-    
-    if (!(setflags & UMODE_e) && (!IsOper(sptr) && !IsLocOp(sptr)) &&
-	!IsServer(cptr))
-	sptr->umode &= ~UMODE_e;
-    
-    if (!(setflags & UMODE_y) && (!IsOper(sptr) && !IsLocOp(sptr)) &&
-	!IsServer(cptr))
-	sptr->umode &= ~UMODE_y;
-    
-    if (!(setflags & UMODE_n) && (!IsOper(sptr) && !IsLocOp(sptr)) &&
-	!IsServer(cptr))
-	sptr->umode &= ~UMODE_n;
-    
-    if (!(setflags & UMODE_d) && (!IsOper(sptr) && !IsLocOp(sptr)) &&
-	!IsServer(cptr))
-	sptr->umode &= ~UMODE_d;
-    
-    if (!(setflags & UMODE_h) && (!IsOper(sptr) && !IsLocOp(sptr)) &&
-	!IsServer(cptr))
-	sptr->umode &= ~UMODE_h;
-    
     if (!(setflags & UMODE_i) && IsInvisible(sptr))
 	Count.invisi++;
     if ((setflags & UMODE_i) && !IsInvisible(sptr))
@@ -2988,7 +2961,7 @@ int m_umode(aClient *cptr, aClient *sptr, int parc, char *parv[])
      * compare new flags with old flags and send string which will cause
      * servers to update correctly.
      */
-    if (!IsAnOper(sptr) && !IsServer(sptr))
+    if (!IsAnOper(sptr) && !IsServer(cptr))
     {
 	if (IsAdmin(sptr)) ClearAdmin(sptr);
 	if (IsSAdmin(sptr)) ClearSAdmin(sptr);
@@ -3000,6 +2973,8 @@ int m_umode(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	if (IsUmoden(sptr)) ClearUmoden(sptr);
 	if (IsUmodem(sptr)) ClearUmodem(sptr);
 	if (IsUmodee(sptr)) ClearUmodee(sptr);
+	if (IsUmodej(sptr)) ClearUmodej(sptr);
+	if (IsUmodeh(sptr)) ClearUmodeh(sptr);
 	if (NoMsgThrottle(sptr)) ClearNoMsgThrottle(sptr);
     }
     if(MyClient(sptr))
@@ -3008,6 +2983,7 @@ int m_umode(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	if (IsSAdmin(sptr) && !OPIsSAdmin(sptr)) ClearSAdmin(sptr);
 	if (IsUmodef(sptr) && !OPCanUModef(sptr)) ClearUmodef(sptr);
 	if (IsUmodec(sptr) && !OPCanUModec(sptr)) ClearUmodec(sptr);
+	if (IsUmodej(sptr) && !OPCanUModec(sptr)) ClearUmodej(sptr); /* can set +j if they can set +c */
 	if (IsUmodey(sptr) && !OPCanUModey(sptr)) ClearUmodey(sptr);
 	if (IsUmoded(sptr) && !OPCanUModed(sptr)) ClearUmoded(sptr);
 	if (IsUmodeb(sptr) && !OPCanUModeb(sptr)) ClearUmodeb(sptr);

@@ -288,6 +288,7 @@ typedef struct MotdItem aMotd;
 #define UMODE_X     0x400000    /* umode +X - Squelch without notice */
 #define UMODE_D     0x800000    /* umode +D - Hidden dccallow umode */
 #define UMODE_F     0x1000000   /* umode +F - no cptr->since message rate throttle */
+#define UMODE_j	    0x2000000   /* umode +j - client rejection notices */
 
 /* for sendto_ops_lev */
 
@@ -313,7 +314,7 @@ typedef struct MotdItem aMotd;
 #define ALL_UMODES (SEND_UMODES|UMODE_w|UMODE_h|\
 	            UMODE_s|UMODE_c|UMODE_r|UMODE_k|UMODE_f|\
 	            UMODE_y|UMODE_d|UMODE_g|UMODE_b|UMODE_n|UMODE_m|\
-	            UMODE_O|UMODE_R|UMODE_e|UMODE_F)
+	            UMODE_O|UMODE_R|UMODE_e|UMODE_F|UMODE_j)
 #ifdef DEFAULT_HELP_MODE
 #define OPER_UMODES (UMODE_o|UMODE_w|UMODE_s|UMODE_y|UMODE_d|UMODE_g|\
                      UMODE_n|UMODE_h)
@@ -341,6 +342,7 @@ typedef struct MotdItem aMotd;
 #define IsUmodem(x)             ((x)->umode & UMODE_m)
 #define IsUmodeh(x)             ((x)->umode & UMODE_h)
 #define IsUmodee(x)             ((x)->umode & UMODE_e)
+#define IsUmodej(x)		((x)->umode & UMODE_j)
 #define IsNoNonReg(x)           ((x)->umode & UMODE_R)
 #define IsWSquelch(x)           ((x)->umode & UMODE_x)
 #define IsSSquelch(x)           ((x)->umode & UMODE_X)
@@ -350,7 +352,7 @@ typedef struct MotdItem aMotd;
 #define	SendWallops(x)		((x)->umode & UMODE_w)
 #define	SendServNotice(x)	((x)->umode & UMODE_s)
 #define SendCConnNotice(x)	((x)->umode & UMODE_c)
-#define SendRejNotice(x)	((x)->umode & UMODE_c)
+#define SendRejNotice(x)	((x)->umode & UMODE_j)
 #define SendSkillNotice(x)	((x)->umode & UMODE_k)
 #define SendSpyNotice(x)	((x)->umode & UMODE_y)
 #define SendDCCNotice(x)	((x)->umode & UMODE_e)
@@ -409,6 +411,7 @@ typedef struct MotdItem aMotd;
 #define ClearUmoden(x)          ((x)->umode &= ~UMODE_n)
 #define ClearUmodeh(x)          ((x)->umode &= ~UMODE_h)
 #define ClearUmodee(x)          ((x)->umode &= ~UMODE_e)
+#define ClearUmodej(x)		((x)->umode &= ~UMODE_j)
 #define ClearNoNonReg(x)        ((x)->umode &= ~UMODE_R)
 #define ClearWSquelch(x)        ((x)->umode &= ~UMODE_x)
 #define ClearSSquelch(x)        ((x)->umode &= ~UMODE_X)
