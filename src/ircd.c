@@ -1413,7 +1413,7 @@ register int i, j;
 #endif
 void build_version(void) {
 	char *s=PATCHES;
-	ircsprintf(version, "%s(%s)-%.1d.%.2d(%.4d)%s", BASENAME, BRANCH,
+	ircsprintf(version, "%s(%s)-%.1d.%.1d(%.2d)%s", BASENAME, BRANCH,
 				  MAJOR, MINOR, PATCH, (*s != 0 ? PATCHES : ""));	
 }
 	
