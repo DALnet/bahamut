@@ -80,6 +80,11 @@ int         find_conf_match(aClient *, aConfList *, aConfList *, aConfList *);
 int         find_fline(aClient *);
 extern void delist_conf(aConfItem *);
 
+#ifdef WINGATE_NOTICE
+extern char ProxyMonURL[TOPICLEN+1];
+extern char ProxyMonHost[HOSTLEN+1];
+#endif
+
 aConfItem  *conf = ((aConfItem *) NULL);
 
 #ifdef LOCKFILE
@@ -1323,6 +1328,12 @@ initconf(int opt, int fd)
 	 case 'q':
 	    aconf->status = CONF_QUARANTINED_NICK;
 	    break;
+
+	 case 'T':
+	 case 't':
+	    aconf->status = CONF_MONINFO;
+	    break;
+
 	 case 'U':		/* Ultimate Servers (aka God) */
 	 case 'u':
 	    aconf->status = CONF_ULINE;
@@ -1496,6 +1507,23 @@ initconf(int opt, int fd)
 	    portnum = aconf->port;
 
       }
+
+#ifdef WINGATE_NOTICE
+      if (aconf->status == CONF_MONINFO)
+      {
+         if(!aconf->host || aconf->host[0] == '\0')
+            strncpyzt(ProxyMonHost, MONITOR_HOST, sizeof(ProxyMonHost));
+         else
+            strncpyzt(ProxyMonHost, aconf->host, sizeof(ProxyMonHost));
+
+         strcpy(ProxyMonURL, "http://");
+
+         if(!aconf->passwd || aconf->passwd[0] == '\0')
+            strncpyzt((ProxyMonURL + 7), DEFAULT_PROXY_INFO_URL, sizeof(ProxyMonURL) - 7);
+         else
+            strncpyzt((ProxyMonURL + 7), aconf->passwd, sizeof(ProxyMonURL) - 7);
+      } 
+#endif
 
       if ((aconf->status & CONF_KILL) && aconf->host) 
       {

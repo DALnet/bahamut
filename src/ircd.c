@@ -62,6 +62,12 @@ aMotd	   *shortmotd;		/* short motd */
 
 struct tm  *motd_tm;
 
+/* holds the information for the proxy monitor */
+#ifdef WINGATE_NOTICE
+char ProxyMonURL[TOPICLEN+1];
+char ProxyMonHost[HOSTLEN+1];
+#endif
+
 /* this stuff by mnystrom@mit.edu */
 #include "fdlist.h"
 
@@ -972,7 +978,11 @@ main(int argc, char *argv[])
    R_fin_id = strlen(REPORT_FIN_ID);
    R_fail_id = strlen(REPORT_FAIL_ID);
 
-
+#ifdef WINGATE_NOTICE
+   strcpy(ProxyMonURL, "http://");
+   strncpyzt((ProxyMonURL + 7), DEFAULT_PROXY_INFO_URL, (TOPICLEN + 1) - 7);
+   strncpyzt(ProxyMonHost, MONITOR_HOST, (HOSTLEN + 1));
+#endif
 	
    check_class();
    if (bootopt & BOOT_OPER) 

@@ -505,6 +505,8 @@ while [ -z "$FOO" ] ; do
     FOO="$MHOST"
     echo ""
     echo "What host does your wingate bot run from?"
+    echo "This is only a default and may be overridden with a T: line"
+    echo "See doc/example.conf for more information on T: lines"
     echo -n "[$FOO] -> $c"
     if [ -z "$AUTO_CONFIG" -o -n "$runonce" ] ; then
         read cc

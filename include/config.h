@@ -113,6 +113,10 @@
  */
 #undef HUB
 
+/* The following two are defaults only and may be overridden
+ * with T: lines in the configuration file
+ */
+
 /* Define this if you want a notice sent to connecting users
  * about wingate scanning bots.  A URL is included in the 
  * notice
@@ -633,6 +637,12 @@
  * after a connect
 */
 #undef HTM_LOCK_ON_NETBURST
+
+/* DEFAULT_PROXY_INFO_URL
+ * Rather self explanitory. If not specified in T: line,
+ * we tell clients to go to "http://<this>"
+ */
+#define DEFAULT_PROXY_INFO_URL "kline.dal.net/proxy/wingate.htm"
 
 /******************************************************************
  * STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP

@@ -531,7 +531,8 @@ struct ConfItem {
 #define CONF_ULINE 		0x80000
 #define CONF_DRPASS		0x100000	/* die/restart pass, from df465 */
 #define CONF_AKILL		0x200000
-#define CONF_SQLINE     0x400000
+#define CONF_SQLINE     	0x400000
+#define CONF_MONINFO		0x800000	/* proxy monitor info */
 #define CONF_QUARANTINE         CONF_QUARANTINED_NICK
 #define	CONF_OPS		(CONF_OPERATOR | CONF_LOCOP)
 #define	CONF_SERVER_MASK	(CONF_CONNECT_SERVER | CONF_NOCONNECT_SERVER)

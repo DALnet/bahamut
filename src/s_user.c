@@ -65,6 +65,11 @@ extern int send_lusers(aClient *,aClient *,int, char **);
 #endif
 extern int  lifesux;
 
+#ifdef WINGATE_NOTICE
+extern char ProxyMonURL[TOPICLEN + 1];
+extern char ProxyMonHost[HOSTLEN + 1];
+#endif
+
 static char buf[BUFSIZE], buf2[BUFSIZE];
 static int  user_modes[] =
 {UMODE_o, 'o',
@@ -917,11 +922,11 @@ register_user(aClient *cptr,
       sendto_one(sptr, ":%s NOTICE %s :*** Notice -- This server runs an open proxy/wingate detection monitor.", 
 		 me.name, nick);
       sendto_one(sptr, ":%s NOTICE %s :*** Notice -- If you see a port 1080 or port 23 connection from %s", me.name, 
-		 nick, MONITOR_HOST);
+		 nick, ProxyMonHost);
       sendto_one(sptr, ":%s NOTICE %s :*** Notice -- please disregard it, as it is the detector in action.",
 		 me.name, nick);
-      sendto_one(sptr, ":%s NOTICE %s :*** Notice -- For more information please see http://www.mydesigns.net/dalnet/wingate.htm", 
-		 me.name, nick);
+      sendto_one(sptr, ":%s NOTICE %s :*** Notice -- For more information please see %s", 
+		 me.name, nick, ProxyMonURL);
 #endif
 #ifdef LITTLE_I_LINES
       if (sptr->confs && sptr->confs->value.aconf &&
