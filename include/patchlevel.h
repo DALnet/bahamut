@@ -34,9 +34,9 @@
 #define MINOR 4
 #define PATCH 30
 
-#define PATCH1 "cvs"
+#define PATCH1 ".cvs"
 
-#define PATCH2 ""
+#define PATCH2 ".shmod"
 
 #define PATCH3 ""
 

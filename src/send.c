@@ -378,6 +378,32 @@ void sendto_one(aClient *to, char *pattern, ...)
     va_end(vl);
 }
 
+/* send message to single client */
+void sendto_one_services(aClient *to, char *pattern, ...) 
+{
+    va_list vl;
+    int len;		/* used for the length of the current message */
+    
+#ifdef SERVICESHUB
+    if(to && to->user && to->user->server && 
+       (!strcasecmp(to->user->server,SERVICES_NAME) || !strcasecmp(to->user->server,STATS_NAME)))
+      return;
+#endif
+
+    va_start(vl, pattern);
+    len = ircvsprintf(sendbuf, pattern, vl);
+   
+    if (to->from)
+	to = to->from;
+    if (IsMe(to)) 
+    {
+	sendto_ops("Trying to send [%s] to myself!", sendbuf);
+	return;
+    }
+    send_message(to, sendbuf, len);
+    va_end(vl);
+}
+
 void vsendto_one(aClient *to, char *pattern, va_list vl) 
 {
     int len;		/* used for the length of the current message */
@@ -508,6 +534,11 @@ void sendto_channel_butone(aClient *one, aClient *from, aChannel *chptr,
 	acptr = cm->cptr;
 	if (acptr->from == one)
 	    continue; /* ...was the one I should skip */
+#ifdef SERVICESHUB
+       if(acptr && acptr->user && acptr->user->server && 
+         (!strcasecmp(acptr->user->server,SERVICES_NAME) || !strcasecmp(acptr->user->server,STATS_NAME)))
+         continue;
+#endif
 	i = acptr->from->fd;
 	if (MyClient(acptr)) 
 	{
@@ -541,6 +572,39 @@ void sendto_channel_butone(aClient *one, aClient *from, aChannel *chptr,
 	}
     }
     
+    va_end(vl);
+    return;
+}
+
+/*
+ * sendto_server_butone_services
+ * 
+ * Send a message to all connected servers except the client 'one', and do not send to services.dal.net.
+ */
+void sendto_serv_butone_services(aClient *one, char *pattern, ...) 
+{
+    int i;
+    aClient *cptr;
+    int j, k = 0;
+    fdlist send_fdlist;
+    va_list vl;
+
+    va_start(vl, pattern);
+    for (i = serv_fdlist.entry[j = 1];
+	 j <= serv_fdlist.last_entry; i = serv_fdlist.entry[++j]) 
+    {
+#ifdef SERVICESHUB
+	if (!(cptr = local[i]) || (one && cptr == one->from) || 
+         !strcasecmp(cptr->name,SERVICES_NAME) || !strcasecmp(cptr->name,STATS_NAME))
+#else
+	if (!(cptr = local[i]) || (one && cptr == one->from))
+#endif
+	    continue;
+	send_fdlist.entry[++k] = i;
+    }
+    send_fdlist.last_entry = k;
+    if (k)
+	vsendto_fdlist(&send_fdlist, pattern, vl);
     va_end(vl);
     return;
 }
@@ -1713,6 +1777,11 @@ void sendto_channelops_butone(aClient *one, aClient *from, aChannel *chptr,
 	if (acptr->from == one ||
 	    !(cm->flags & CHFL_CHANOP))
 	    continue;
+#ifdef SERVICESHUB
+        if(acptr && acptr->user && acptr->user->server && 
+          (!strcasecmp(acptr->user->server,SERVICES_NAME) || !strcasecmp(acptr->user->server,STATS_NAME)))
+          continue;
+#endif
 	i = acptr->from->fd;
 	if (MyConnect(acptr) && IsRegisteredUser(acptr)) {
 	    vsendto_prefix_one(acptr, from, pattern, vl);
@@ -1760,6 +1829,11 @@ void sendto_channelvoice_butone(aClient *one, aClient *from, aChannel *chptr,
 	if (acptr->from == one ||
 		!(cm->flags & CHFL_VOICE))
 	    continue;
+#ifdef SERVICESHUB
+        if(acptr && acptr->user && acptr->user->server && 
+          (!strcasecmp(acptr->user->server,SERVICES_NAME) || !strcasecmp(acptr->user->server,STATS_NAME)))
+          continue;
+#endif
 	i = acptr->from->fd;
 	if (MyConnect(acptr) && IsRegisteredUser(acptr))
 	{
@@ -1807,6 +1881,11 @@ void sendto_channelvoiceops_butone(aClient *one, aClient *from, aChannel
 	if (acptr->from == one || !((cm->flags & CHFL_VOICE) ||
 				    (cm->flags & CHFL_CHANOP)))
 	    continue;
+#ifdef SERVICESHUB
+        if(acptr && acptr->user && acptr->user->server && 
+          (!strcasecmp(acptr->user->server,SERVICES_NAME) || !strcasecmp(acptr->user->server,STATS_NAME)))
+          continue;
+#endif
 	i = acptr->from->fd;
 	if (MyConnect(acptr) && IsRegisteredUser(acptr)) {
 	    vsendto_prefix_one(acptr, from, pattern, vl);

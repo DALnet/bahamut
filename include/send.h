@@ -60,6 +60,7 @@ extern void sendto_match_butone(aClient *one, aClient *from, char *mask,
 extern void sendto_match_servs(aChannel *chptr, aClient *from,
 			       char *format, ...);
 extern void sendto_one(aClient *to, char *pattern, ...);
+extern void sendto_one_services(aClient *to, char *pattern, ...);
 extern void sendto_ops(char *pattern, ...);
 extern void sendto_ops_butone(aClient *one, aClient *from, char *pattern, ...);
 extern void sendto_ops_lev(int lev, char *pattern, ...);
@@ -68,6 +69,7 @@ extern void sendto_prefix_one(aClient *to, aClient *from, char *pattern, ...);
 extern void sendto_realops_lev(int lev, char *pattern, ...);
 extern void sendto_realops(char *pattern, ...);
 extern void sendto_serv_butone(aClient *one, char *pattern, ...);
+extern void sendto_serv_butone_services(aClient *one, char *pattern, ...);
 extern void sendto_wallops_butone(aClient *one, aClient *from,
 				  char *pattern, ...);
 extern void sendto_gnotice(char *pattern, ...);

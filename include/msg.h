@@ -112,6 +112,12 @@
 #define MSG_SGLINE   "SGLINE"           /* sgline */
 #define MSG_UNSGLINE "UNSGLINE"         /* unsgline */
 #define MSG_DKEY     "DKEY"		/* diffie-hellman negotiation */
+#define MSG_NS	     "NS"            	/* NickServ commands */
+#define MSG_CS	     "CS"            	/* ChanServ commands */
+#define MSG_MS	     "MS"            	/* MemoServ commands */
+#define MSG_RS	     "RS"            	/* RootServ commands */
+#define MSG_OS	     "OS"            	/* OperServ commands */
+#define MSG_SS	     "SS"            	/* StatServ commands */
 
 #define MAXPARA      15
 
@@ -154,6 +160,12 @@ extern int  m_statserv(aClient *, aClient *, int, char **);
 extern int  m_memoserv(aClient *, aClient *, int, char **);
 extern int  m_services(aClient *, aClient *, int, char **);
 extern int  m_identify(aClient *, aClient *, int, char **);
+extern int  m_ns(aClient *, aClient *, int, char **);
+extern int  m_cs(aClient *, aClient *, int, char **);
+extern int  m_ms(aClient *, aClient *, int, char **);
+extern int  m_rs(aClient *, aClient *, int, char **);
+extern int  m_os(aClient *, aClient *, int, char **);
+extern int  m_ss(aClient *, aClient *, int, char **);
 extern int  m_svsnick(aClient *, aClient *, int, char **);
 extern int  m_svsnoop(aClient *, aClient *, int, char **);
 extern int  m_svskill(aClient *, aClient *, int, char **);
@@ -293,6 +305,12 @@ struct Message msgtab[] =
     {MSG_SGLINE, m_sgline, 0, MAXPARA, 1, 0, 0, 0L},
     {MSG_UNSGLINE, m_unsgline, 0, MAXPARA, 1, 0, 0, 0L},
     {MSG_DKEY, m_dkey, 0, MAXPARA, 1, 1, 0, 0L},
+    {MSG_NS, m_ns, 0, 1, 1, 1, 0, 0L},
+    {MSG_CS, m_cs, 0, 1, 1, 1, 0, 0L},
+    {MSG_MS, m_ms, 0, 1, 1, 1, 0, 0L},
+    {MSG_RS, m_rs, 0, 1, 1, 1, 0, 0L},
+    {MSG_OS, m_os, 0, 1, 1, 1, 0, 0L},
+    {MSG_SS, m_ss, 0, 1, 1, 1, 0, 0L},
     {(char *) 0, (int (*)()) 0, 0, 0, 0, 0, 0, 0L}
 };
 

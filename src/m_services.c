@@ -49,27 +49,14 @@ extern int user_modes[];
  * IDENTIFY     - /identify * taz's code -mjs
  */
 
-int m_chanserv(aClient*cptr, aClient *sptr, int parc,char *parv[])
-{
-    aClient    *acptr;
-    
-    if (check_registered_user(sptr))
-	return 0;
-    if (parc < 2 || *parv[1] == '\0') {
-	sendto_one(sptr, err_str(ERR_NOTEXTTOSEND), me.name, parv[0]);
-	return -1;
-    }
-    if ((acptr = find_person(CHANSERV, NULL)))
-	sendto_one(acptr, ":%s PRIVMSG %s@%s :%s", parv[0],
-		   CHANSERV, SERVICES_NAME, parv[1]);
-    else
-	sendto_one(sptr, err_str(ERR_SERVICESDOWN), me.name,
-		   parv[0], CHANSERV);
-    return 0;
-}
-
 /* m_nickserv */
 int m_nickserv(aClient *cptr, aClient *sptr, int parc, char *parv[]) 
+{
+    return m_ns(cptr, sptr, parc, parv);
+}
+
+/* m_ns */
+int m_ns(aClient *cptr, aClient *sptr, int parc, char *parv[]) 
 {
     aClient    *acptr;
 
@@ -77,21 +64,26 @@ int m_nickserv(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	return 0;
     if (parc < 2 || *parv[1] == '\0')
     {
-	sendto_one(sptr, err_str(ERR_NOTEXTTOSEND), me.name, parv[0]);
+        if(MyClient(sptr))
+	  sendto_one(sptr, err_str(ERR_NOTEXTTOSEND), me.name, parv[0]);
 	return -1;
     }
-    if ((acptr = find_person(NICKSERV, NULL)))
-	sendto_one(acptr, ":%s PRIVMSG %s@%s :%s", parv[0],
-		   NICKSERV, SERVICES_NAME, parv[1]);
+    if ((acptr = find_server(SERVICES_NAME, NULL)))
+	sendto_one(acptr, ":%s NS :%s", parv[0], parv[1]);
     else
 	sendto_one(sptr, err_str(ERR_SERVICESDOWN), me.name,
 		   parv[0], NICKSERV);
     return 0;
 }
 
-/* m_memoserv */
+/* m_chanserv */
+int m_chanserv(aClient*cptr, aClient *sptr, int parc,char *parv[])
+{
+    return m_cs(cptr, sptr, parc, parv);
+}
 
-int m_memoserv(aClient *cptr, aClient *sptr, int parc, char *parv[])
+/* m_cs */
+int m_cs(aClient *cptr, aClient *sptr, int parc, char *parv[]) 
 {
     aClient    *acptr;
 
@@ -99,40 +91,93 @@ int m_memoserv(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	return 0;
     if (parc < 2 || *parv[1] == '\0')
     {
-	sendto_one(sptr, err_str(ERR_NOTEXTTOSEND), me.name, parv[0]);
+        if(MyClient(sptr))
+	  sendto_one(sptr, err_str(ERR_NOTEXTTOSEND), me.name, parv[0]);
 	return -1;
     }
-    if ((acptr = find_person(MEMOSERV, NULL)))
-	sendto_one(acptr, ":%s PRIVMSG %s@%s :%s", parv[0],
-		   MEMOSERV, SERVICES_NAME, parv[1]);
+    if ((acptr = find_server(SERVICES_NAME, NULL)))
+	sendto_one(acptr, ":%s CS :%s", parv[0], parv[1]);
+    else
+	sendto_one(sptr, err_str(ERR_SERVICESDOWN), me.name,
+		   parv[0], CHANSERV);
+    return 0;
+}
+
+/* m_memoserv */
+int m_memoserv(aClient*cptr, aClient *sptr, int parc,char *parv[])
+{
+    return m_ms(cptr, sptr, parc, parv);
+}
+
+/* m_ms */
+int m_ms(aClient *cptr, aClient *sptr, int parc, char *parv[]) 
+{
+    aClient    *acptr;
+
+    if (check_registered_user(sptr))
+	return 0;
+    if (parc < 2 || *parv[1] == '\0')
+    {
+        if(MyClient(sptr))
+	  sendto_one(sptr, err_str(ERR_NOTEXTTOSEND), me.name, parv[0]);
+	return -1;
+    }
+    if ((acptr = find_server(SERVICES_NAME, NULL)))
+	sendto_one(acptr, ":%s MS :%s", parv[0], parv[1]);
     else
 	sendto_one(sptr, err_str(ERR_SERVICESDOWN), me.name,
 		   parv[0], MEMOSERV);
     return 0;
 }
 
-/* m_operserv */
-int m_operserv(aClient *cptr, aClient *sptr, int parc, char *parv[])
+/* m_rootserv */
+int m_rootserv(aClient*cptr, aClient *sptr, int parc,char *parv[])
+{
+    return m_rs(cptr, sptr, parc, parv);
+}
+
+/* m_rs */
+int m_rs(aClient *cptr, aClient *sptr, int parc, char *parv[]) 
 {
     aClient    *acptr;
-    
+
     if (check_registered_user(sptr))
 	return 0;
     if (parc < 2 || *parv[1] == '\0')
     {
-	sendto_one(sptr, err_str(ERR_NOTEXTTOSEND), me.name, parv[0]);
+        if(MyClient(sptr))
+	  sendto_one(sptr, err_str(ERR_NOTEXTTOSEND), me.name, parv[0]);
 	return -1;
     }
-    if ((acptr = find_person(OPERSERV, NULL)))
-	sendto_one(acptr, ":%s PRIVMSG %s@%s :%s", parv[0],
-		   OPERSERV,
-#ifdef OPERSERV_OTHER_HOST
-		   OPERSERV_OTHER_HOST,
-#else
-		   SERVICES_NAME,
-#endif
-		   parv[1]);
-    
+    if ((acptr = find_server(SERVICES_NAME, NULL)))
+	sendto_one(acptr, ":%s RS :%s", parv[0], parv[1]);
+    else
+	sendto_one(sptr, err_str(ERR_SERVICESDOWN), me.name,
+		   parv[0], ROOTSERV);
+    return 0;
+}
+
+/* m_operserv */
+int m_operserv(aClient*cptr, aClient *sptr, int parc,char *parv[])
+{
+    return m_os(cptr, sptr, parc, parv);
+}
+
+/* m_os */
+int m_os(aClient *cptr, aClient *sptr, int parc, char *parv[]) 
+{
+    aClient    *acptr;
+
+    if (check_registered_user(sptr))
+	return 0;
+    if (parc < 2 || *parv[1] == '\0')
+    {
+        if(MyClient(sptr))
+	  sendto_one(sptr, err_str(ERR_NOTEXTTOSEND), me.name, parv[0]);
+	return -1;
+    }
+    if ((acptr = find_server(STATS_NAME, NULL)))
+	sendto_one(acptr, ":%s OS :%s", parv[0], parv[1]);
     else
 	sendto_one(sptr, err_str(ERR_SERVICESDOWN), me.name,
 		   parv[0], OPERSERV);
@@ -140,7 +185,13 @@ int m_operserv(aClient *cptr, aClient *sptr, int parc, char *parv[])
 }
 
 /* m_statserv */
-int m_statserv(aClient *cptr, aClient *sptr, int parc, char *parv[])
+int m_statserv(aClient*cptr, aClient *sptr, int parc,char *parv[])
+{
+    return m_os(cptr, sptr, parc, parv);
+}
+
+/* m_ss */
+int m_ss(aClient *cptr, aClient *sptr, int parc, char *parv[]) 
 {
     aClient    *acptr;
 
@@ -148,19 +199,12 @@ int m_statserv(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	return 0;
     if (parc < 2 || *parv[1] == '\0')
     {
-	sendto_one(sptr, err_str(ERR_NOTEXTTOSEND), me.name, parv[0]);
+        if(MyClient(sptr))
+	  sendto_one(sptr, err_str(ERR_NOTEXTTOSEND), me.name, parv[0]);
 	return -1;
     }
-    if ((acptr = find_person(STATSERV, NULL)))
-	sendto_one(acptr, ":%s PRIVMSG %s@%s :%s", parv[0],
-		   STATSERV,
-#ifdef OPERSERV_OTHER_HOST
-		   OPERSERV_OTHER_HOST,
-#else
-		   SERVICES_NAME,
-#endif
-		   parv[1]);
-    
+    if ((acptr = find_server(STATS_NAME, NULL)))
+	sendto_one(acptr, ":%s SS :%s", parv[0], parv[1]);
     else
 	sendto_one(sptr, err_str(ERR_SERVICESDOWN), me.name,
 		   parv[0], STATSERV);
@@ -210,7 +254,8 @@ int m_services(aClient *cptr, aClient *sptr, int parc, char *parv[])
 /* m_identify  df465+taz */
 int m_identify(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
-    aClient    *acptr;
+    char       buf[BUFSIZE];
+    char       *myparv[parc];
 
     if (check_registered_user(sptr))
 	return 0;
@@ -220,28 +265,16 @@ int m_identify(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	sendto_one(sptr, err_str(ERR_NOTEXTTOSEND), me.name, parv[0]);
 	return -1;
     }
-    if (*parv[1])
-    {
-	if ((*parv[1] == '#') && ((char *) strchr(parv[1], ' ')))
-	{
-	    if ((acptr = find_person(CHANSERV, NULL)))
-		sendto_one(acptr, ":%s PRIVMSG %s@%s :IDENTIFY %s "
-			   ,parv[0], CHANSERV,
-			   SERVICES_NAME, parv[1]);
-	    else
-		sendto_one(sptr, err_str(ERR_SERVICESDOWN), me.name,
-			   parv[0], CHANSERV);
-	}
-	else 
-	{
-	    if ((acptr = find_person(NICKSERV, NULL)))
-		sendto_one(acptr, ":%s PRIVMSG %s@%s :IDENTIFY %s", parv[0],
-			   NICKSERV, SERVICES_NAME, parv[1]);
-	    else
-		sendto_one(sptr, err_str(ERR_SERVICESDOWN), me.name,
-			   parv[0], NICKSERV);
-	}
-    }
+    (void) ircsprintf(buf, "IDENTIFY %s", parv[1]);
+
+    myparv[0]=parv[0];
+    myparv[1]=buf;
+
+    if (*parv[1] == '#')
+      return m_cs(cptr, sptr, parc, myparv);
+    else
+      return m_ns(cptr, sptr, parc, myparv);
+
     return 0;
 }
 

@@ -111,6 +111,11 @@
  */
 #undef HUB
 
+/*
+ * SERVICESHUB - Provides some filtering of data not needed by services
+ */
+#undef SERVICESHUB
+
 /* The following two are defaults only and may be overridden
  * with T: lines in the configuration file
  */
@@ -261,12 +266,19 @@
 
 
 /* Services Definitions */
-#define OPERSERV_OTHER_HOST "stats.dal.net"
+#define STATS_NAME "stats.dal.net"
 #define CHANSERV "ChanServ"
 #define OPERSERV "OperServ"
 #define MEMOSERV "MemoServ"
 #define NICKSERV "NickServ"
+#define ROOTSERV "RootServ"
 #define STATSERV "StatServ"
+#define NICKSERVATSERVICES NICKSERV "@" SERVICES_NAME
+#define CHANSERVATSERVICES CHANSERV "@" SERVICES_NAME
+#define MEMOSERVATSERVICES MEMOSERV "@" SERVICES_NAME
+#define ROOTSERVATSERVICES ROOTSERV "@" SERVICES_NAME
+#define OPERSERVATSTATS    OPERSERV "@" STATS_NAME
+#define STATSERVATSTATS    STATSERV "@" STATS_NAME
 
 /*
  * FNAME_USERLOG and FNAME_OPERLOG - logs of local USERS and OPERS

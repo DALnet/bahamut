@@ -1290,6 +1290,7 @@ static inline int m_message(aClient *cptr, aClient *sptr, int parc,
 {
     aClient *acptr;
     char *s;
+    char *myparv[2];
     int i, ret, ischan;
     aChannel *chptr;
     char *nick, *server, *p, *cmd, *dccmsg;
@@ -1423,13 +1424,29 @@ static inline int m_message(aClient *cptr, aClient *sptr, int parc,
 		    break;
 		}
 	    }
+#ifdef DENY_SERVICES_MSGS
+            if(MyClient(acptr) && !strcasecmp(NICKSERV,nick))
+              sendto_one(sptr, rpl_str(ERR_MSGSERVICES), me.name, parv[0],
+			       NICKSERV, NICKSERV, NICKSERV);
+            else if(MyClient(acptr) && !strcasecmp(CHANSERV,nick))
+              sendto_one(sptr, rpl_str(ERR_MSGSERVICES), me.name, parv[0],
+			       CHANSERV, CHANSERV, CHANSERV);
+            else if(MyClient(acptr) && !strcasecmp(MEMOSERV,nick))
+              sendto_one(sptr, rpl_str(ERR_MSGSERVICES), me.name, parv[0],
+			       MEMOSERV, MEMOSERV, MEMOSERV);
+            else if(MyClient(acptr) && !strcasecmp(ROOTSERV,nick))
+              sendto_one(sptr, rpl_str(ERR_MSGSERVICES), me.name, parv[0],
+			       ROOTSERV, ROOTSERV, ROOTSERV);
+	    else if (!is_silenced(sptr, acptr)) 
+#else
 	    if (!is_silenced(sptr, acptr)) 
+#endif
 	    {				 
 		if (!notice && MyClient(acptr) && acptr->user &&
 		    acptr->user->away)
 		    sendto_one(sptr, rpl_str(RPL_AWAY), me.name, parv[0],
 			       acptr->name, acptr->user->away);
-		sendto_prefix_one(acptr, sptr, ":%s %s %s :%s", parv[0], cmd,
+		  sendto_prefix_one(acptr, sptr, ":%s %s %s :%s", parv[0], cmd,
 				  nick, parv[2]);
 	    }
 	    continue;
@@ -1490,7 +1507,7 @@ static inline int m_message(aClient *cptr, aClient *sptr, int parc,
 		}
 	    }
 	    else
-		sendto_one(sptr, err_str(ERR_NOSUCHNICK), me.name, parv[0],
+		sendto_one_services(sptr, err_str(ERR_NOSUCHNICK), me.name, parv[0],
 			   nick + 1);
 	    continue;
 	}
@@ -1522,7 +1539,7 @@ static inline int m_message(aClient *cptr, aClient *sptr, int parc,
 
 	    }
 	    else
-		sendto_one(sptr, err_str(ERR_NOSUCHNICK), me.name, parv[0],
+		sendto_one_services(sptr, err_str(ERR_NOSUCHNICK), me.name, parv[0],
 			   nick + 1);
 	    continue;
 	}
@@ -1570,8 +1587,31 @@ static inline int m_message(aClient *cptr, aClient *sptr, int parc,
 	    /* Not destined for a user on me :-( */
 	    if (!IsMe(acptr)) 
 	    {
-		sendto_one(acptr, ":%s %s %s :%s", parv[0], cmd, nick,
+                if(strcasecmp(server+1,SERVICES_NAME)!=0) {
+		  sendto_one(acptr, ":%s %s %s :%s", parv[0], cmd, nick,
 			   parv[2]);
+                } else {
+                  if(!strcasecmp(nick,NICKSERVATSERVICES)) {
+                    myparv[0]=parv[0];
+                    myparv[1]=parv[2];                    
+                    m_ns(cptr, sptr, parc-1, myparv);  
+                  } else if(!strcasecmp(nick,CHANSERVATSERVICES)) {
+                    myparv[0]=parv[0];
+                    myparv[1]=parv[2];                    
+                    m_cs(cptr, sptr, parc-1, myparv);  
+                  } else if(!strcasecmp(nick,MEMOSERVATSERVICES)) {
+                    myparv[0]=parv[0];
+                    myparv[1]=parv[2];                    
+                    m_ms(cptr, sptr, parc-1, myparv);  
+                  } else if(!strcasecmp(nick,ROOTSERVATSERVICES)) {
+                    myparv[0]=parv[0];
+                    myparv[1]=parv[2];                    
+                    m_rs(cptr, sptr, parc-1, myparv);  
+		  } else {
+                    sendto_one(acptr, ":%s %s %s :%s", parv[0], cmd, nick,
+			   parv[2]);
+                  }                    
+                }
 		continue;
 	    }
 	    *server = '\0';
@@ -1596,7 +1636,7 @@ static inline int m_message(aClient *cptr, aClient *sptr, int parc,
 	    if (acptr)
 		continue;
 	}
-	sendto_one(sptr, err_str(ERR_NOSUCHNICK), me.name, parv[0], nick);
+	sendto_one_services(sptr, err_str(ERR_NOSUCHNICK), me.name, parv[0], nick);
     }
     if ((i > 20) && sptr->user)
 	sendto_realops_lev(SPY_LEV, "User %s (%s@%s) tried to msg %d users",
@@ -2130,7 +2170,7 @@ int m_away(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	    MyFree(away);
 	    sptr->user->away = NULL;
 	    /* Don't spam unaway unless they were away - lucas */
-	    sendto_serv_butone(cptr, ":%s AWAY", parv[0]);
+	    sendto_serv_butone_services(cptr, ":%s AWAY", parv[0]);
 	}
 	
 	if (MyConnect(sptr))
@@ -2158,7 +2198,7 @@ int m_away(aClient *cptr, aClient *sptr, int parc, char *parv[])
      * readded because of anti-flud stuffs -epi
      */
     
-    sendto_serv_butone(cptr, ":%s AWAY :%s ", parv[0], parv[1]);
+    sendto_serv_butone_services(cptr, ":%s AWAY :%s ", parv[0], parv[1]);
 
     if (away)
 	MyFree(away);
@@ -2245,7 +2285,11 @@ int m_pong(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	    sptr->flags &= ~FLAGS_USERBURST;
 	    sendto_gnotice("from %s: %s has processed user/channel burst, "
 			   "sending topic burst.", me.name, sptr->name);
-	    send_topic_burst(sptr);
+#ifdef SERVICESHUB 
+            // services doesn't care about TOPICs during a sync or AWAY messages
+            if(strcasecmp(cptr->name,SERVICES_NAME)!=0)
+#endif
+	      send_topic_burst(sptr);
 	    sptr->flags |= FLAGS_PINGSENT|FLAGS_SOBSENT;
 	    sendto_one(sptr, "PING :%s", me.name);
 	}

@@ -546,7 +546,8 @@ static char *replies[] =
     /* 485 ERR_CHANBANREASON */	":%s 485 %s %s :Cannot join channel (%s)",
     /* 486 ERR_NONONREG */	":%s 486 %s :You must identify to a "
                                 "registered nick to private message %s",
-    /* 487 */	                NULL,
+    /* 487 ERR_MSGSERVICES */	":%s 487 %s :Error! \"/msg %s\" is no longer supported. "
+                                "Use \"/msg %s@services.dal.net\" or \"/%s\" instead.",
     /* 488 */	                NULL,
     /* 489 */	                NULL,	/* In use by Undernet */
     /* 490 */	                NULL,

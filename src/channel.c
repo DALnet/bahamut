@@ -580,7 +580,7 @@ static void channel_modes(aClient *cptr, char *mbuf, char *pbuf,
 	*mbuf++ = 'M';
 #ifdef USE_CHANMODE_L
     if (chptr->mode.mode & MODE_LISTED)
-        *mbuf++ = 'L';
+	*mbuf++ = 'L';
 #endif
     if (chptr->mode.limit) {
 	*mbuf++ = 'l';
@@ -838,7 +838,7 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
 	MODE_MODERATED, 'm', MODE_NOPRIVMSGS, 'n',
 	MODE_TOPICLIMIT, 't', MODE_REGONLY, 'R',
 	MODE_INVITEONLY, 'i', MODE_NOCOLOR, 'c', MODE_OPERONLY, 'O',
-	MODE_MODREG, 'M',
+	MODE_MODREG, 'M', 
 #ifdef USE_CHANMODE_L
         MODE_LISTED, 'L',
 #endif
@@ -2590,6 +2590,7 @@ int m_list(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	lopt->chantimemin = chantimemin;
 	lopt->nolist = nolist;
 	lopt->yeslist = yeslist;
+        lopt->only_listed = only_listed;
 
 	if (DBufLength(&cptr->sendQ) < 2048)
 	    send_list(cptr, 64);
@@ -2996,9 +2997,9 @@ int m_sjoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	    mode.mode |= MODE_NOCOLOR;
 	    break;
 #ifdef USE_CHANMODE_L
-        case 'L':
-            mode.mode |= MODE_LISTED;
-            break;
+	case 'L':
+	    mode.mode |= MODE_LISTED;
+	    break;
 #endif
 	case 'k':
 	    strncpyzt(mode.key, parv[4 + args], KEYLEN + 1);
@@ -3121,6 +3122,13 @@ int m_sjoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	    INSERTSIGN(1,'+')
 		*mbuf++='R';
 	}
+#ifdef USE_CHANMODE_L
+	if((MODE_LISTED & mode.mode) && !(MODE_LISTED & oldmode->mode))
+	{
+	    INSERTSIGN(1,'+')
+		*mbuf++='L';
+	}
+#endif
 	if((MODE_NOCOLOR & mode.mode) && !(MODE_NOCOLOR & oldmode->mode))
 	{
 	    INSERTSIGN(1,'+')
@@ -3175,6 +3183,13 @@ int m_sjoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	    INSERTSIGN(-1,'-')
 		*mbuf++='R';
 	}
+#ifdef USE_CHANMODE_L
+	if((MODE_LISTED & oldmode->mode) && !(MODE_LISTED & mode.mode))
+	{
+	    INSERTSIGN(-1,'-')
+		*mbuf++='L';
+	}
+#endif
 	if((MODE_NOCOLOR & oldmode->mode) && !(MODE_NOCOLOR & mode.mode))
 	{
 	    INSERTSIGN(-1,'-')

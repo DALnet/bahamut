@@ -22,6 +22,7 @@
 #ifndef	__find_include__
 #define __find_include__
 
+#define find_nickserver(a, b)   hash_find_nickserver(a, b)
 #define find_server(a, b)       hash_find_server(a, b)
 #define find_name(a, b)         hash_find_server(a, b)
 #define find_client(a, b)       hash_find_client(a, b)
