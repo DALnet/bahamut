@@ -756,8 +756,9 @@ int do_server_estab(aClient *cptr)
       cptr->flags |= FLAGS_ULINE; 
    }
 
-   sendto_gnotice("from %s: Link with %s established: %s %s %s %s", me.name, inpath, 
-		ZipOut(cptr) ? "Compressed" : "Uncompressed", 
+   sendto_gnotice("from %s: Link with %s established: %s %s %s %s %s", me.name, inpath, 
+		ZipOut(cptr) ? "Out-Compressed" : "Out-Uncompressed", 
+		ZipIn(cptr) ? "In-Compressed" : "In-Uncompressed", 
 		RC4EncLink(cptr) ? "RC4-Encrypted" : "Unencrypted", 
                 IsULine(cptr) ? "ULined" : "Normal", 
 		DoesTS(cptr) ? "TS link" : "Non-TS link!"); 
