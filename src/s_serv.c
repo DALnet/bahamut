@@ -2314,17 +2314,22 @@ m_connect(aClient *cptr,
    }
    /*
     * * Notify all operators about remote connect requests *
+    * Let's notify about local connects, too. - lucas
     * sendto_ops_butone -> sendto_serv_butone(), like in df. -mjs
     */
-   if (!IsAnOper(cptr)) {
-      sendto_serv_butone(&me,
-			 ":%s GLOBOPS :Remote CONNECT %s %s from %s",
-			 me.name, parv[1], parv[2] ? parv[2] : "",
-			 get_client_name(sptr, HIDEME));
+   send_globops("from %s: %s CONNECT %s %s from %s",
+		me.name, IsAnOper(cptr) ? "Local" : "Remote", 
+		parv[1], parv[2] ? parv[2] : "",
+		get_client_name(sptr, HIDEME));
+   sendto_serv_butone(&me, ":%s GLOBOPS :%s CONNECT %s %s from %s",
+		me.name, IsAnOper(cptr) ? "Local" : "Remote", 
+		parv[1], parv[2] ? parv[2] : "",
+		get_client_name(sptr, HIDEME));
+
 #if defined(USE_SYSLOG) && defined(SYSLOG_CONNECT)
-      syslog(LOG_DEBUG, "CONNECT From %s : %s %d", parv[0], parv[1], parv[2] ? parv[2] : "");
+   syslog(LOG_DEBUG, "CONNECT From %s : %s %s", parv[0], parv[1], parv[2] ? parv[2] : "");
 #endif
-   }
+
    aconf->port = port;
    switch (retval = connect_server(aconf, sptr, NULL)) {
       case 0:
