@@ -2527,5 +2527,5 @@ static void do_dns_async()
 	    bytes = 0;
 	packets++;
     }
-    while ((bytes > 0) && (packets < 100));
+    while ((bytes > 0) && (packets < 512));
 }
