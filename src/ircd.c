@@ -997,7 +997,10 @@ void do_recvqs()
       cptr = lp->value.cptr;
 
       if(DBufLength(&cptr->recvQ) && !NoNewLine(cptr))
-         do_client_queue(cptr);
+      {
+         if(do_client_queue(cptr) == FLUSH_BUFFER)
+            continue;
+      }
 
       if(!(DBufLength(&cptr->recvQ) && !NoNewLine(cptr)))
       {
