@@ -4320,11 +4320,15 @@ int m_svsmode(aClient *cptr, aClient *sptr, int parc, char *parv[]) {
  */ 
 				 case 'd':
 					if (ts) 
-					    if(parv[4] && isdigit(*parv[4])) 
+					{
+					    if (parv[4] && isdigit(*parv[4])) 
 						acptr->user->servicestamp = strtoul(parv[4], NULL, 0);
-					else
+					}
+					else 
+					{
   			                    if(parv[3] && isdigit(*parv[3]))
                         			acptr->user->servicestamp = strtoul(parv[3], NULL, 0);  
+					}
 					break;
 				 default:
 					for (s = user_modes; (flag = *s); s += 2)

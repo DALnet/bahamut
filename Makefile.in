@@ -22,7 +22,7 @@ RM=@RM@
 # Any extra compile options here:
 XFLAGS=
 # file descriptor size limit
-FDLIMIT=-DFD_SETSIZE_=1024
+FDLIMIT=@DFDSS@
 # Default CFLAGS
 CFLAGS= -Wall -g -O2 ${FDLIMIT} ${XFLAGS}
 #
