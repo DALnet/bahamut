@@ -621,8 +621,10 @@ confadd_port(int port, char *allow, char *address)
         x->port = port;
         new = 1;
     }
-    DupString(x->allow, allow);
-    DupString(x->address, address);
+    if(allow)
+        DupString(x->allow, allow);
+    if(address)
+        DupString(x->address, address);
     if(new)
     {
         x->next = ports;
@@ -705,7 +707,8 @@ confadd_simban(int flags, char *mask, char *reason)
     x = make_simban();
     x->type = flags;
     DupString(x->target, mask);
-    DupString(x->reason, reason);
+    if(reason)
+        DupString(x->reason, reason);
     x->next = sbans;
     sbans = x;
     return;
@@ -716,9 +719,12 @@ confadd_hostban(char *username, char *mask, char *reason)
 {
     HostBan *x;
     x = make_hostban();
-    DupString(x->username, username);
-    DupString(x->target, mask);
-    DupString(x->reason, reason);
+    if(username)
+        DupString(x->username, username);
+    if(mask)
+    	DupString(x->target, mask);
+	if(reason)
+    	DupString(x->reason, reason);
     x->next = hbans;
     hbans = x;
     return;

@@ -1254,7 +1254,8 @@ confadd_class(cVar *vars[], int lnum)
         {
             if(x->maxlinks > 0)
             {
-                confparse_error("Multiple maxusers/maxlinks definitions",
+                confparse_error("Multiple maxusers/maxlinks definitions"
+				" (you can only have one or the other)",
                                 lnum);
                 free_class(x);
                 return -1;
