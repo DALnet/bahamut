@@ -105,16 +105,9 @@ char        serveropts[] =
  */
 #include "hash.h"
 #include <sys/file.h>
-#ifdef HPUX
-#include <fcntl.h>
-#endif
 #if !defined(ULTRIX) && !defined(SGI) && !defined(sequent) && \
     !defined(__convex__)
 #include <sys/param.h>
-#endif
-#ifdef HPUX
-#include <sys/syscall.h>
-#define getrusage(a,b) syscall(SYS_GETRUSAGE, a, b)
 #endif
 #if defined( HAVE_GETRUSAGE )
 #ifdef SOL20
@@ -131,9 +124,6 @@ char        serveropts[] =
 #endif /*
         * HAVE_GETRUSAGE 
         */
-#ifdef HPUX
-#include <unistd.h>
-#endif
 #include "h.h"
 
 #ifndef ssize_t
@@ -199,9 +189,6 @@ send_usage(aClient *cptr, char *nick)
 #else
    int         hzz = 1;
 
-#ifdef HPUX
-   hzz = (int) sysconf(_SC_CLK_TCK);
-#endif
 #endif
 #endif
 
@@ -242,9 +229,6 @@ send_usage(aClient *cptr, char *nick)
    int         hzz = 1, ticpermin;
    int         umin, smin, usec, ssec;
 
-#ifdef HPUX
-   hzz = sysconf(_SC_CLK_TCK);
-#endif
    ticpermin = hzz * 60;
 
    umin = tmsbuf.tms_utime / ticpermin;

@@ -37,9 +37,6 @@
 #if defined(AIX) || defined(SVR3)
 #include <time.h>
 #endif
-#ifdef HPUX
-#include <unistd.h>
-#endif
 #include "h.h"
 #include "fdlist.h"
 extern fdlist serv_fdlist;

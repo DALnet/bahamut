@@ -47,15 +47,11 @@ extern __u_l inet_netof(struct in_addr);
 extern __u_l inet_addr();
 extern char *inet_ntoa();
 
-#ifndef HPUX
 extern __u_l inet_makeaddr();
 
 #endif
-#endif
-#ifndef  HPUX
 extern __u_l inet_network();
 extern __u_l inet_lnaof();
 extern __u_l inet_netof();
 
-#endif
 #undef __u_l

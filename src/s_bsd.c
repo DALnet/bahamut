@@ -77,7 +77,7 @@ extern fdlist default_fdlist;
 # define IN_LOOPBACKNET	0x7f
 #endif
 
-#if defined(MAXBUFFERS) && !defined(SEQUENT)
+#if defined(MAXBUFFERS)
 int rcvbufmax = 0, sndbufmax = 0;
 #endif
 
@@ -97,7 +97,7 @@ static void do_dns_async(void), set_sock_opts(int, aClient *);
 struct sockaddr_in vserv;
 char specific_virtual_host;
 
-#if defined(MAXBUFFERS) && !defined(SEQUENT)
+#if defined(MAXBUFFERS)
 static char *readbuf;
 #else
 static char readbuf[8192];
@@ -435,13 +435,9 @@ void init_sys()
 
    printf("Ircd is now becoming a daemon.\n");
 
-#if defined(HPUX)
-   (void) setvbuf(stderr, NULL, _IOLBF, 0);
-#else
 # if !defined(SOL20)
    (void) setlinebuf(stderr);
 # endif
-#endif
 
    for (fd = 3; fd < MAXCONNECTIONS; fd++) {
       (void) close(fd);
@@ -474,7 +470,7 @@ void init_sys()
 	 (void) close(fd);
       }
 #endif
-#if defined(HPUX) || defined(SOL20) || defined(DYNIXPTX) || \
+#if defined(SOL20) || defined(DYNIXPTX) || \
     defined(_POSIX_SOURCE) || defined(SVR4)
       (void) setsid();
 #else
@@ -1036,7 +1032,7 @@ static void set_sock_opts(int fd, aClient * cptr)
       report_error("setsockopt(SO_USELOOPBACK) %s:%s", cptr);
 #endif
 #ifdef	SO_RCVBUF
-# if defined(MAXBUFFERS) && !defined(SEQUENT)
+# if defined(MAXBUFFERS)
    if (rcvbufmax == 0) {
       int optlen;
 
@@ -1061,15 +1057,7 @@ static void set_sock_opts(int fd, aClient * cptr)
        0) report_error("setsockopt(SO_RCVBUF) %s:%s", cptr);
 #endif
 #ifdef	SO_SNDBUF
-# ifdef	_SEQUENT_
-   /* 
-    * seems that Sequent freezes up if the receving buffer is a
-    * different size to the sending buffer (maybe a tcp window problem
-    * too).
-    */
-   opt = 8192;
-# else
-#  if defined(MAXBUFFERS) && !defined(SEQUENT)
+# if defined(MAXBUFFERS)
    if (sndbufmax == 0) {
       int optlen;
 
@@ -1085,17 +1073,16 @@ static void set_sock_opts(int fd, aClient * cptr)
    if (IsServer(cptr))
       opt = sndbufmax;
    else
-      opt = 4096;
-#  else
+     opt = 4096;
+# else
    opt = 8192;
-#  endif
 # endif
    if (setsockopt(fd, SOL_SOCKET, SO_SNDBUF, (char *) &opt, sizeof(opt)) <
        0) report_error("setsockopt(SO_SNDBUF) %s:%s", cptr);
 #endif
 #if defined(IP_OPTIONS) && defined(IPPROTO_IP)
    {
-# if defined(MAXBUFFERS) && !defined(SEQUENT)
+# if defined(MAXBUFFERS)
       char *s = readbuf, *t = readbuf + (rcvbufmax * sizeof(char)) / 2;
       opt = (rcvbufmax * sizeof(char)) / 8;
 
@@ -1297,7 +1284,7 @@ static int do_client_queue(aClient *cptr)
       /* If it's become registered as a server, just parse the whole block */
       if (IsServer(cptr)) 
       {
-#if defined(MAXBUFFERS) && !defined(SEQUENT)
+#if defined(MAXBUFFERS)
          dolen = dbuf_get(&cptr->recvQ, readbuf, rcvbufmax * sizeof(char));
 #else
          dolen = dbuf_get(&cptr->recvQ, readbuf, sizeof(readbuf));
@@ -1309,7 +1296,7 @@ static int do_client_queue(aClient *cptr)
          break;
       }
 
-#if defined(MAXBUFFERS) && !defined(SEQUENT)
+#if defined(MAXBUFFERS)
       dolen = dbuf_getmsg(&cptr->recvQ, readbuf, rcvbufmax * sizeof(char));
 #else
       dolen = dbuf_getmsg(&cptr->recvQ, readbuf, sizeof(readbuf));
@@ -1359,7 +1346,7 @@ static int read_packet(aClient * cptr)
    {
       errno = 0;
 
-#if defined(MAXBUFFERS) && !defined(SEQUENT)
+#if defined(MAXBUFFERS)
       if (IsPerson(cptr))
 	 length = recv(cptr->fd, readbuf, 8192 * sizeof(char), 0);
       else
@@ -1665,11 +1652,7 @@ int read_message(time_t delay, fdlist * listp)
       }
       wait.tv_sec = MIN(delay2, delay);
       wait.tv_usec = 0;
-# ifdef HPUX
-      nfds = select(FD_SETSIZE, (fd_set *) read_set, (fd_set *) write_set, (fd_set *) 0, &wait);
-# else
       nfds = select(MAXCONNECTIONS, read_set, write_set, 0, &wait);
-# endif
       if ((timeofday = time(NULL)) == -1) {
 # ifdef USE_SYSLOG
          syslog(LOG_WARNING, "Clock Failure (%d), TS can be corrupted", errno);

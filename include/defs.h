@@ -56,10 +56,6 @@
 # define ULTRIX 1
 #endif
 
-#if (defined( hpux ) || defined(OS_HPUX)) && !defined( HPUX )
-# define HPUX 1
-#endif
-
 #if (defined( sgi ) || defined( __sgi )) && !defined( SGI )
 # define SGI 1
 #endif

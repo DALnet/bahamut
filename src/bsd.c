@@ -41,13 +41,9 @@ VOIDSIG dummy(){
 #ifndef HAVE_RELIABLE_SIGNALS
    (void) signal(SIGALRM, dummy);
    (void) signal(SIGPIPE, dummy);
-#ifndef HPUX			/* Only 9k/800 series require this, but
-	                   * don't know how to.. 
-							 */
-#ifdef SIGWINCH
+# ifdef SIGWINCH
    (void) signal(SIGWINCH, dummy);
-#endif
-#endif
+# endif
 #else
 #ifdef POSIX_SIGNALS
 struct sigaction act;

@@ -127,7 +127,7 @@ static struct DBufBuffer* dbuf_alloc()
 {
   struct DBufBuffer* db = dbufFreeList;
 
-  if (DBufUsedCount * DBUF_SIZE == BUFFERPOOL)
+  if (DBufUsedCount * DBUF_SIZE >= BUFFERPOOL)
     return NULL;
 
   if (!db)

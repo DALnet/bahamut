@@ -66,7 +66,7 @@
 #ifdef AIX
 #include <sys/select.h>
 #endif
-#if defined(HPUX )|| defined(AIX)
+#if defined(AIX)
 #include <time.h>
 #ifdef AIX
 #include <sys/time.h>
