@@ -2750,7 +2750,7 @@ void send_user_joins(aClient *cptr, aClient *user)
     return;
 }
 
-static void kill_ban_list(aClient *cptr, aChannel *chptr)
+void kill_ban_list(aClient *cptr, aChannel *chptr)
 {  
     chanMember *cm;
     aBan   *bp, *bpn;
@@ -3009,6 +3009,10 @@ int m_sjoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
     doesop = (parv[4 + args][0] == '@' || parv[4 + args][1] == '@');
 
     oldmode = &chptr->mode;
+
+    /* newts is the ts the remote server is providing */ 
+    /* oldts is our channel TS */ 
+    /* whichever TS is smaller wins. */ 
 	
     if (isnew)
 	chptr->channelts = tstosend = newts;
@@ -3016,6 +3020,7 @@ int m_sjoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	chptr->channelts = tstosend = 0;
     else if (newts == oldts)
 	tstosend = oldts;
+#ifdef OLD_WEIRD_CHANOP_NEGOTIATION
     else if (newts < oldts)
     {
 	/* if remote ts is older, and they have ops, don't keep our modes. */
@@ -3043,6 +3048,23 @@ int m_sjoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	else
 	    tstosend = oldts;
     }
+#else 
+   else if (newts < oldts) 
+   { 
+      /* if remote ts is older, don't keep our modes. */ 
+      /* FIXME FIXME FIXME */
+      /* Best to keep the old ban list, rather than cause ban desynch
+         across the network, eh? */
+      /* kill_ban_list(sptr, chptr); */
+      keepourmodes = 0; 
+      chptr->channelts = tstosend = newts; 
+   } 
+   else /* if our TS is older, don't keep their modes */ 
+   { 
+      keepnewmodes = 0; 
+      tstosend = oldts; 
+   } 
+#endif
 	
     if (!keepnewmodes)
 	mode = *oldmode;
@@ -3258,6 +3280,16 @@ int m_sjoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		}
 		cm->flags &= ~MODE_VOICE;
 	    }
+	}
+	/* 
+	 * We know if we get here, and we're in a sync, we haven't sent our topic 
+	 * to sptr yet. (since topic burst is sent after sjoin burst finishes) 
+	 */ 
+	if(chptr->topic[0]) 
+	{ 
+	    chptr->topic[0] = '\0'; 
+	    sendto_channel_butserv(chptr, sptr, ":%s TOPIC %s :%s", sptr->name,
+				   chptr->chname, chptr->topic);
 	}
 	sendto_channel_butserv(chptr, &me,
 			       ":%s NOTICE %s :*** Notice -- TS for %s "
