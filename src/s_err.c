@@ -26,7 +26,7 @@ static char *replies[] = {
 	/* 001 RPL_WELCOME */	":%s 001 %s :Welcome to the DALnet IRC Network %s!%s@%s",
 	/* 002 RPL_YOURHOST */	":%s 002 %s :Your host is %s, running version %s",
 	/* 003 RPL_CREATED */	":%s 003 %s :This server was created %s",
-	/* 004 RPL_MYINFO */	":%s 004 %s %s %s oiwscrknfydaAbghDe biklmnoprRstvc",
+	/* 004 RPL_MYINFO */	":%s 004 %s %s %s oiwscrknfydaAbghe biklmnoprRstvc",
 	/* 005 RPL_PROTOCTL*/ ":%s 005 %s NOQUIT WATCH=128 SAFELIST :are available on this server",
 	/* 006 */	NULL,
 	/* 007 */	NULL,
@@ -540,7 +540,7 @@ static char *replies[] = {
 	/* 511 ERR_SILELISTFULL */	":%s 511 %s %s :Your silence list is full",
 	/* 512 ERR_TOOMANYWATCH */	":%s 512 %s %s :Maximum size for WATCH-list is 128 entries",
 	/* 513 */	NULL,	/* In use by Undernet */
-	/* 514 ERR_TOOMANYDCC */	":%s 514 %s :Your dcc allow list is full. Maximum size is %d entries",
+	/* 514 ERR_TOOMANYDCC */	":%s 514 %s %s :Your dcc allow list is full. Maximum size is %d entries",
 	/* 515 */	NULL,
 	/* 516 */	NULL,
 	/* 517 */	NULL,
