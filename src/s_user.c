@@ -549,46 +549,6 @@ int register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
 		sptr->passwd[0] = '\0';
 	}
 
-	/* following block for the benefit of time-dependent K:-lines */
-	if ((aconf = find_kill(sptr))) 
-	{
-	    char       *reason;
-	    char	   *ktype;
-	    int         kline;
-			
-	    kline = (aconf->status == CONF_KILL) ? 1 : 0;
-	    ktype = kline ? "K-lined" : "Autokilled";
-	    reason = aconf->passwd ? aconf->passwd : ktype;
-			
-#ifdef RK_NOTICES
-	    sendto_realops("%s %s@%s. for %s", ktype, sptr->user->username,
-			   sptr->sockhost, reason);
-#endif
-	    sendto_one(sptr, err_str(ERR_YOUREBANNEDCREEP),
-		       me.name, sptr->name, ktype);
-	    sendto_one(sptr,
-		       ":%s NOTICE %s :*** You are not welcome on this %s.",
-		       me.name, sptr->name,
-		       kline ? "server" : "network");
-	    sendto_one(sptr, ":%s NOTICE %s :*** %s for %s",
-		       me.name, sptr->name, ktype, reason);
-	    sendto_one(sptr, ":%s NOTICE %s :*** Your hostmask is %s!%s@%s",
-		       me.name, sptr->name, sptr->name, sptr->user->username,
-		       sptr->sockhost);
-	    sendto_one(sptr, ":%s NOTICE %s :*** For more information, please "
-		       "mail %s and include everything shown here.",
-		       me.name, sptr->name,
-		       kline ? SERVER_KLINE_ADDRESS : NETWORK_KLINE_ADDRESS);
-	    
-#ifdef USE_REJECT_HOLD
-	    cptr->flags |= FLAGS_REJECT_HOLD;
-#endif
-	    ircstp->is_ref++;
-	    
-#ifndef USE_REJECT_HOLD			
-	    return exit_client(cptr, sptr, &me, reason);
-#endif
-	}
 		
 	/* Limit clients */
 	/*
@@ -775,6 +735,47 @@ int register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
 	    (void) ircsprintf(tmpstr2, "Invalid username [%s]",
 			      user->username);
 	    return exit_client(cptr, sptr, &me, tmpstr2);
+	}
+
+	/* following block for the benefit of time-dependent K:-lines */
+	if ((aconf = find_kill(sptr))) 
+	{
+	    char       *reason;
+	    char	   *ktype;
+	    int         kline;
+			
+	    kline = (aconf->status == CONF_KILL) ? 1 : 0;
+	    ktype = kline ? "K-lined" : "Autokilled";
+	    reason = aconf->passwd ? aconf->passwd : ktype;
+			
+#ifdef RK_NOTICES
+	    sendto_realops("%s %s@%s. for %s", ktype, sptr->user->username,
+			   sptr->sockhost, reason);
+#endif
+	    sendto_one(sptr, err_str(ERR_YOUREBANNEDCREEP),
+		       me.name, sptr->name, ktype);
+	    sendto_one(sptr,
+		       ":%s NOTICE %s :*** You are not welcome on this %s.",
+		       me.name, sptr->name,
+		       kline ? "server" : "network");
+	    sendto_one(sptr, ":%s NOTICE %s :*** %s for %s",
+		       me.name, sptr->name, ktype, reason);
+	    sendto_one(sptr, ":%s NOTICE %s :*** Your hostmask is %s!%s@%s",
+		       me.name, sptr->name, sptr->name, sptr->user->username,
+		       sptr->sockhost);
+	    sendto_one(sptr, ":%s NOTICE %s :*** For more information, please "
+		       "mail %s and include everything shown here.",
+		       me.name, sptr->name,
+		       kline ? SERVER_KLINE_ADDRESS : NETWORK_KLINE_ADDRESS);
+	    
+#ifdef USE_REJECT_HOLD
+	    cptr->flags |= FLAGS_REJECT_HOLD;
+#endif
+	    ircstp->is_ref++;
+	    
+#ifndef USE_REJECT_HOLD			
+	    return exit_client(cptr, sptr, &me, reason);
+#endif
 	}
 		
 	sendto_realops_lev(CCONN_LEV,
