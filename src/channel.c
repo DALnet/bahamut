@@ -301,7 +301,7 @@ aBan *nick_is_banned(aChannel *chptr, char *nick, aClient *cptr) {
   s = make_nick_user_host(nick, cptr->user->username, cptr->hostip);
 
   for (tmp = chptr->banlist; tmp; tmp = tmp->next)
-     if (tmp->flags & MTYP_FULL &&           /* only check applicable bans */
+     if (tmp->type == MTYP_FULL &&           /* only check applicable bans */
         ((match(tmp->banstr, s2) == 0) ||    /* check host before IP */
 	 (match(tmp->banstr, s) == 0)))
         break;
