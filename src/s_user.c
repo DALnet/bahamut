@@ -2172,7 +2172,7 @@ int m_kill(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	    sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name, parv[0]);
 	    continue;
 	}
-	if (IsServer(acptr) || IsMe(acptr))
+	if (IsServer(acptr) || IsULine(acptr) || IsMe(acptr))
 	{
 	    sendto_one(sptr, err_str(ERR_CANTKILLSERVER),
 		       me.name, parv[0]);
