@@ -72,7 +72,7 @@ char *infotext[] =
 	 "aClient             Diane Bruce         db@koruna.varner.com",
 	 "Dakal               David Knepper       dakal@dal.net",
 	 "Dalvenjah           Sven Nielsen        dalvenjah@dal.net",
-	 "Epiphani            Aaron Wiebe         epiphani@solarz.net",
+	 "Epiphani            Aaron Wiebe         epiphani@dal.net",
 	 "lucas               Lucas Madar         lucas@negaverse.org",
 	 "MSofty              Mark Salerno        msofty@dal.net",
 	 "Raistlin_Mejere     Jason Slagle        raistlin@bahamut.net",

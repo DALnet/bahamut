@@ -153,38 +153,23 @@ char        serveropts[] =
 #if defined(DNS_DEBUG) || defined(DEBUGMODE)
 static char debugbuf[1024];
 
-#ifndef	USE_STDARGS
-/*
- * VARARGS2 
- */
 void
-debug(int level,
-      char *form, char *p1, char *p2, char *p3,
-      char *p4, char *p5, char *p6, char *p7, char *p8,
-      char *p9, char *p10)
+debug(int level, char *pattern, ...)
 {
-#else
-void
-debug(int level, char *form, va_alist)
-     va_dcl
-{
-va_list     vl;
+   va_list      vl;
+   int         err = errno;
 
-   va_start(vl);
-#endif
-int         err = errno;
+   va_start(vl, pattern);
 
 #ifdef USE_SYSLOG
    if (level == DEBUG_ERROR)
-      syslog(LOG_ERR, form, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10);
+      syslog(LOG_ERR, pattern, vl);
 #endif
+
    if ((debuglevel >= 0) && (level <= debuglevel)) {
-#ifndef	USE_STDARGS
-      (void) ircsprintf(debugbuf, form,
-			p1, p2, p3, p4, p5, p6, p7, p8, p9, p10);
-#else
-      (void) vsprintf(debugbuf, form, vl);
-#endif
+
+      (void) vsprintf(debugbuf, pattern, vl);
+
       if (local[2]) {
 	 local[2]->sendM++;
 	 local[2]->sendB += strlen(debugbuf);
@@ -192,6 +177,7 @@ int         err = errno;
       (void) fprintf(stderr, "%s", debugbuf);
       (void) fputc('\n', stderr);
    }
+   va_end(vl);
    errno = err;
 }
 

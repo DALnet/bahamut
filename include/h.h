@@ -317,7 +317,7 @@ extern int  client_dopacket(aClient *, char *, int);
 /*
  * VARARGS2 
  */
-extern void debug();
+extern void debug(int level, char *pattern, ...);
 
 #ifdef DEBUGMODE
 extern void send_usage(aClient *, char *);

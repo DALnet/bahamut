@@ -930,7 +930,7 @@ error CLIENT_FLOOD undefined.
 #endif
 
 #if defined(DEBUGMODE) || defined(DNS_DEBUG)
-extern void debug();
+extern void debug(int level, char *pattern, ...);
 # define Debug(x) debug x
 # define LOGFILE LPATH
 #else
