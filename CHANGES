@@ -1,3 +1,8 @@
+Changes for 1.4.21
+- oper hostmasking no longer pollutes IPHASH (ouch)
+- configure script reworked to search better for libgmp.a
+- configure script bugs fixed
+
 Changes for 1.4.20
 - /whois works correctly for hostmasked opers. growl.
 - configure gives more information about gmp errors.
