@@ -881,6 +881,9 @@ m_server_estab(aClient *cptr)
 
    char       *inpath, *host, *s, *encr;
    int         split;
+#ifndef HUB
+   int i;
+#endif
 
    inpath = get_client_name(cptr, HIDEME);  /* "refresh" inpath with host  */
    split = mycmp(cptr->name, cptr->sockhost);
