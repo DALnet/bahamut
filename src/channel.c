@@ -1018,8 +1018,8 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
             /* show them the bans, woowoo */
             if(parv[args]==NULL)
             {
-		if (banlsent)
-		    break; /* Send only once */
+		if (banlsent || IsServer(sptr))
+		    break; /* Send only once -- and not to servers */
 		for(bp=chptr->banlist;bp;bp=bp->next)
 		    sendto_one(sptr, rpl_str(RPL_BANLIST), me.name, cptr->name,
 			       chptr->chname, bp->banstr, bp->who, bp->when);
