@@ -130,7 +130,7 @@ int         check_for_flud(aClient *, aClient *, aChannel *, int);
 void        free_fluders(aClient *, aChannel *);
 void        free_fludees(aClient *);
 #endif
-static int      check_for_ctcp(char *, char **);
+int      check_for_ctcp(char *, char **);
 static int      is_silenced(aClient *, aClient *);
 
 #ifdef ANTI_SPAMBOT
@@ -4145,7 +4145,7 @@ botwarn(char *host,
  * server.
  */
 
-static int check_for_ctcp(char *str, char **dccptr)
+int check_for_ctcp(char *str, char **dccptr)
 {
    char       *p = str;
 
