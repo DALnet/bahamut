@@ -6988,6 +6988,8 @@ echo $ECHO_N "checking Maximum file descriptors... $ECHO_C" >&6;
 else
 
 cat << _EOF_ > test.c
+    #include <sys/types.h>
+    #include <sys/time.h>
     #include <sys/resource.h>
     #include <stdio.h>
     #ifdef RLIMIT_FDMAX

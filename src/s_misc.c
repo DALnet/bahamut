@@ -717,7 +717,8 @@ int exit_client(aClient *cptr, aClient *sptr, aClient *from, char *comment)
 		       sptr->sendK, sptr->receiveK);
 #ifdef USE_SYSLOG
 	    syslog(LOG_NOTICE, "%s was connected for %lu seconds.  %lu/%lu "
-		   "sendK/recvK.", sptr->name, timeofday - sptr->firsttime,
+		   "sendK/recvK.", sptr->name, 
+			(u_long) timeofday - sptr->firsttime,
 		   sptr->sendK, sptr->receiveK);
 #endif
 	    close_connection(sptr);

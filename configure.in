@@ -357,6 +357,8 @@ if test "$check_maxconnections" == "auto"; then
     AC_CACHE_VAL(maxconnections,
 [
 cat << _EOF_ > test.c
+    #include <sys/types.h>
+    #include <sys/time.h>
     #include <sys/resource.h>
     #include <stdio.h>
     #ifdef RLIMIT_FDMAX
