@@ -3051,8 +3051,7 @@ m_away(aClient *cptr,
     * readded because of anti-flud stuffs -epi
     */
 
-   if (away == NULL)
-      sendto_serv_butone(cptr, ":%s AWAY :%s ", parv[0], parv[1]);
+   sendto_serv_butone(cptr, ":%s AWAY :%s ", parv[0], parv[1]);
 
    if (away)
       MyFree(away);
