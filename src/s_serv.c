@@ -3054,7 +3054,7 @@ int m_set(aClient *cptr, aClient *sptr, int parc, char *parv[])
 #endif
 
 	sendto_one(sptr, ":%s NOTICE %s :Options: THROTTLE "
-	      "<ENABLE|COUNT|TIME|BANTIME|HASH> [setting]", me.name, parv[0]);
+	      "<ENABLE|COUNT|TIME|RECORDTIME|HASH> [setting]", me.name, parv[0]);
     }
     return 0;
 }
