@@ -423,3 +423,4 @@ echo configuring zlib...
  cd ..
 )
 
+touch .run_configure

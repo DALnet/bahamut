@@ -1227,3 +1227,5 @@ echo ""
 echo "Now your include/options.h is configured.  Please look over" 
 echo "include/config.h for more server specific options."
 echo "To compile your server, type 'make'."
+
+rm -f .run_configure

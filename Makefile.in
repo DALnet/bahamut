@@ -95,6 +95,11 @@ build:
 		echo "Doing so now."; \
 		sh configure; \
 	fi
+	-@if [ -f .run_configure ] ; then \
+		echo "Hmm...You haven't run config after you've ran configure..."; \
+		echo "Doing so now."; \
+		sh config; \
+	fi
 	@for i in $(SUBDIRS); do \
 		echo "Building $$i";\
 		cd $$i;\
