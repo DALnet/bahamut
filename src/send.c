@@ -1549,7 +1549,7 @@ void dump_connections(int fd)
 }
 
 /* flush an fdlist intelligently */
-void flush_fdlist_connections(fdlist *listp);
+void flush_fdlist_connections(fdlist *listp)
 {
    int i, fd;
    aClient *cptr;
