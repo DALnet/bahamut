@@ -1020,8 +1020,6 @@ int rehash(aClient *cptr, aClient *sptr, int sig)
     /* remove perm klines */
     remove_userbans_match_flags(UBAN_LOCAL, UBAN_TEMPORARY);
 
-    /* Don't clear SZLine list */
-   
     clear_conf_list(&EList1);
     clear_conf_list(&EList2);
     clear_conf_list(&EList3);
@@ -1032,29 +1030,11 @@ int rehash(aClient *cptr, aClient *sptr, int sig)
 	
     (void) initconf(0, fd, sptr);
 
-#ifdef SEPARATE_QUOTE_KLINES_BY_DATE
-    {
-	char        timebuffer[20];
-	char        filenamebuf[1024];
-	struct tm  *tmptr;
-		  
-	tmptr = localtime(&NOW);
-	(void) strftime(timebuffer, 20, "%y%m%d", tmptr);
-	ircsprintf(filenamebuf, "%s.%s", klinefile, timebuffer);
-		  
-	if ((fd = openconf(filenamebuf)) == -1)
-	    sendto_ops("Can't open %s file klines could be missing!",
-		       filenamebuf);
-	else
-	    (void) initconf(0, fd, sptr);
-    }
-#else
-# ifdef KLINEFILE
+#ifdef KLINEFILE
     if ((fd = openconf(klinefile)) == -1)
 	sendto_ops("Can't open %s file klines could be missing!", klinefile);
     else
 	(void) initconf(0, fd, sptr);
-# endif
 #endif
 
     close_listeners();

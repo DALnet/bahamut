@@ -872,27 +872,7 @@ int main(int argc, char *argv[])
     }
     (void) initconf(bootopt, fd, NULL);
 	
-    /* comstuds SEPARATE_QUOTE_KLINES_BY_DATE code */
-#ifdef SEPARATE_QUOTE_KLINES_BY_DATE
-    {
-	struct tm  *tmptr;
-	char        timebuffer[20], filename[200];
-		  
-	tmptr = localtime(&NOW);
-	(void) strftime(timebuffer, 20, "%y%m%d", tmptr);
-	ircsprintf(filename, "%s.%s", klinefile, timebuffer);
-	if ((fd = openconf(filename)) == -1) 
-	{
-	    Debug((DEBUG_ERROR, "Failed reading kline file %s",
-		   filename));
-	    (void) printf("Couldn't open kline file %s\n",
-			  filename);
-	}
-	else
-	    (void) initconf(0, fd, NULL);
-    }
-#else
-# ifdef KPATH
+#ifdef KPATH
     if ((fd = openconf(klinefile)) == -1) 
     {
 	Debug((DEBUG_ERROR, "Failed reading kline file %s", klinefile));
@@ -900,8 +880,8 @@ int main(int argc, char *argv[])
     }
     else
 	(void) initconf(0, fd, NULL);
-# endif
 #endif
+
     if (!(bootopt & BOOT_INETD)) 
     {
 	static char star[] = "*";
