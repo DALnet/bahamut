@@ -1333,7 +1333,10 @@ aClient *add_connection(aClient * cptr, int fd)
 		   "include everything shown here.", me.name, 
 		   local ? SERVER_KLINE_ADDRESS : NETWORK_KLINE_ADDRESS);
 
-        exit_client(acptr, acptr, &me, reason);
+	ircstp->is_ref++;
+	throttle_force(inetntoa((char *)&acptr->ip.s_addr));
+	exit_client(acptr, acptr, &me, reason);
+
 	return NULL;
     }
 
