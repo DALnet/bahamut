@@ -920,8 +920,8 @@
  * make your client server very sluggish. You usually shouldn't need
  * this. -Dianora
  */
-#define  DEBUGMODE		/* define DEBUGMODE to enable */
-#define DUMP_DEBUG
+#undef  DEBUGMODE		/* define DEBUGMODE to enable */
+#undef DUMP_DEBUG
 
 /*
  * If your host supports varargs and has vsprintf(), vprintf() and
