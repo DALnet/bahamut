@@ -1395,9 +1395,9 @@ cres_mem(aClient *sptr)
 	 nm += strlen(h->h_name);
    }
    ts = ARES_CACSIZE * sizeof(CacheTable);
-   sendto_one(sptr, ":%s %d %s :RES table %d",
+   sendto_one(sptr, ":%s %d %s :RES table sz %d",
 	      me.name, RPL_STATSDEBUG, sptr->name, ts);
-   sendto_one(sptr, ":%s %d %s :Structs %d IP storage %d Name storage %d",
+   sendto_one(sptr, ":%s %d %s :RES Structs sz %d IP storage sz %d Name storage sz %d",
 	      me.name, RPL_STATSDEBUG, sptr->name, sm, im, nm);
    return ts + sm + im + nm;
 }
