@@ -1539,10 +1539,8 @@ report_configured_links(aClient *sptr, int mask)
 
                   if(tmp->status & CONF_SERVER_MASK)
                   {
-		     if(!OPIsRStaff(sptr) || !IsAdmin(sptr))
+		     if(!IsRouting(sptr) || !IsAdmin(sptr) || find_is_ulined(name))
   		        host = "*";
-                     if(find_is_ulined(name))
-                        host = "hidden@0.0.0.0";
                   }
 
 		  if (tmp->status == CONF_KILL)

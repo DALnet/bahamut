@@ -3729,6 +3729,9 @@ m_umode(aClient *cptr,
                 sptr->sendqlen = get_sendq(sptr);
 		sptr->oflag = 0;
 	}
+
+
+
    if (!(setflags & (UMODE_o | UMODE_O)) && IsAnOper(sptr)) {
       Count.oper++;
    }
@@ -3746,6 +3749,10 @@ m_umode(aClient *cptr,
    if (!(setflags & UMODE_b) && (!IsOper(sptr) && !IsLocOp(sptr))
        && !IsServer(cptr))
           sptr->umode &= ~UMODE_b;
+
+   if ((!(setflags & UMODE_R) && (!IsOper(sptr) && !IsLocOp(sptr))
+	&& !IsServer(cptr)) || !OPIsRStaff(sptr))
+	  sptr->umode &= ~UMODE_R;
 
    if (!(setflags & UMODE_y) && (!IsOper(sptr) && !IsLocOp(sptr))
        && !IsServer(cptr))

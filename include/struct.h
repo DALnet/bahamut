@@ -240,6 +240,7 @@ typedef struct MotdItem aMotd;
 #define UMODE_n     0x10000	/* umode +n - Routing Notices */
 #define UMODE_h     0x20000 /* umode +h - Helper */
 #define UMODE_m     0x40000 /* umode +m - spambot notices */
+#define UMODE_R     0x80000 /* unmode +R - Routing staff */
 
 /* for sendto_ops_lev */
 
@@ -251,9 +252,10 @@ typedef struct MotdItem aMotd;
 #define FLOOD_LEV 	6
 #define SPAM_LEV 	7
 
-#define	SEND_UMODES	(UMODE_i|UMODE_o|UMODE_w|UMODE_r|UMODE_a|UMODE_A|UMODE_h)
+#define	SEND_UMODES (UMODE_i|UMODE_o|UMODE_w|UMODE_r|UMODE_a|UMODE_A|UMODE_h|UMODE_R)
 #define ALL_UMODES (SEND_UMODES|UMODE_s|UMODE_c|UMODE_r|UMODE_k|UMODE_f|\
-		    UMODE_y|UMODE_d|UMODE_g|UMODE_b|UMODE_n|UMODE_h|UMODE_m|UMODE_O)
+	UMODE_y|UMODE_d|UMODE_g|UMODE_b|UMODE_n|UMODE_h|UMODE_m|\ 
+	UMODE_O|UMODE_R)
 #ifdef DEFAULT_HELP_MODE
 #define OPER_UMODES (UMODE_o|UMODE_w|UMODE_s|UMODE_y|UMODE_d|UMODE_g|UMODE_n|UMODE_h)
 #else
@@ -278,6 +280,7 @@ typedef struct MotdItem aMotd;
 #define IsUmoden(x)   ((x)->umode & UMODE_n)
 #define IsUmodem(x)   ((x)->umode & UMODE_m)
 #define IsUmodeh(x)   ((x)->umode & UMODE_h)
+#define IsRouting(x)  ((x)->umode & UMODE_R)
 #define	IsPerson(x)		((x)->user && IsClient(x))
 #define	IsPrivileged(x)		(IsAnOper(x) || IsServer(x))
 #define	SendWallops(x)		((x)->umode & UMODE_w)
@@ -298,6 +301,7 @@ typedef struct MotdItem aMotd;
 #define	IsDead(x)		((x)->flags & FLAGS_DEADSOCKET)
 #define	SetOper(x)		((x)->umode |= UMODE_o)
 #define SetRegNick(x)   ((x)->umode |= UMODE_r)
+#define SetRouting(x)   ((x)->umode |= UMODE_R)
 #define SetSAdmin(x)  ((x)->umode |= UMODE_a)
 #define	SetLocOp(x)    		((x)->umode |= UMODE_O)
 #define	SetInvisible(x)		((x)->umode |= UMODE_i)
@@ -319,6 +323,7 @@ typedef struct MotdItem aMotd;
 #define ClearUmodeb(x)  ((x)->umode &= ~UMODE_b)
 #define ClearUmoden(x)  ((x)->umode &= ~UMODE_n)
 #define ClearUmodeh(x)  ((x)->umode &= ~UMODE_h)
+#define ClearRouting(x) ((x)->umode &= ~UMODE_R)
 #define	ClearOper(x)		((x)->umode &= ~UMODE_o)
 #define ClearLocOp(x)		((x)->umode &= ~UMODE_O)
 #define	ClearInvisible(x)	((x)->umode &= ~UMODE_i)
