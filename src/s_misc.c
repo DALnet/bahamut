@@ -1026,7 +1026,7 @@ void
 serv_info(aClient *cptr, char *name)
 {
    static char Lformat[] = ":%s %d %s %s %u %u %u %u %u :%u %u %s";
-   int         j, fd;
+   int         i = 0, j, fd;
    long        sendK, receiveK, uptime;
    fdlist      l;
    aClient    *acptr;
@@ -1053,9 +1053,10 @@ serv_info(aClient *cptr, char *name)
 		 timeofday - acptr->since,
 		 IsServer(acptr) ? (DoesTS(acptr) ?
 				    "TS" : "NoTS") : "-");
+      i++;
    }
    sendto_one(cptr, ":%s %d %s :%u total server%s",
-	      me.name, RPL_STATSDEBUG, name, --j, (j == 1) ? "" : "s");
+	      me.name, RPL_STATSDEBUG, name, i, (i == 1) ? "" : "s");
 
    sendto_one(cptr, ":%s %d %s :Sent total : %7.2f %s",
 	   me.name, RPL_STATSDEBUG, name, _GMKv(sendK), _GMKs(sendK));
@@ -1129,6 +1130,10 @@ show_servers(aClient *cptr, char *name)
 						  cptr2->status);
 			continue;
       }
+#ifdef HIDEULINEDSERVS
+      if(IsULine(cptr2) && !IsAnOper(cptr))
+         continue;
+#endif
       j++;
       sendto_one(cptr, ":%s %d %s :%s (%s!%s@%s) Idle: %d",
 		 me.name, RPL_STATSDEBUG, name, cptr2->name,

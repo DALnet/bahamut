@@ -1538,13 +1538,12 @@ report_configured_links(aClient *sptr, int mask)
 		   * modified on request by taz, hide all
 	  	   * ips to other than routing staff or admins
 		   * -epi
+                   * yet again, make this just hide _all_ ips. how sad.
+                   * - lucas
 		   */
 
                   if(tmp->status & CONF_SERVER_MASK)
-                  {
-		     if(!(IsRouting(sptr) || IsAdmin(sptr)) || find_is_ulined(name))
   		        host = "*";
-                  }
 
 		  if (tmp->status == CONF_KILL)
 			 sendto_one(sptr, rpl_str(p[1]), me.name,
