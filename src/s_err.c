@@ -486,7 +486,8 @@ static char *replies[] =
     /* 437 ERR_BANNICKCHANGE */	":%s 437 %s %s :Cannot change nickname while "
                                 "banned or moderated on channel",
     /* 438 */	                NULL,	/* In use by Undernet */
-    /* 439 */	                NULL,	/* In use by Undernet */
+    /* 439 ERR_TARGETTOOFAST */	":%s 439 %s %s :Message target change too fast. "
+                                "Please wait %d seconds and then try again.",
     /* 440 ERR_SERVICESDOWN */	":%s 440 %s %s :Services is currently down. "
                                 "Please wait a few moments, and then try "
                                 "again.",

@@ -806,6 +806,16 @@ struct Client
     int capabilities;           /* what this server/client supports */
     int pingval;	        /* cache client class ping value here */
     int sendqlen;	        /* cache client max sendq here */
+
+#ifdef MSG_TARGET_LIMIT
+    struct {
+       struct Client *cli;
+       time_t sent;
+    } targets[MSG_TARGET_MAX];              /* structure for target rate limiting */
+    time_t last_target_complain;
+    unsigned int num_target_errors;
+#endif
+
 };
 
 #define	CLIENT_LOCAL_SIZE sizeof(aClient)

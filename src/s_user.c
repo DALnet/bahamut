@@ -1278,6 +1278,68 @@ int msg_has_colors(char *msg)
 }
 
 /*
+ * check target limit: message target rate limiting
+ * anti spam control!
+ * should only be called for local PERSONS!
+ * sptr: client sending message
+ * acptr: client receiving message
+ *
+ * return value:
+ * 1: block
+ * 0: do nothing
+ */
+
+#ifdef MSG_TARGET_LIMIT
+int check_target_limit(aClient *sptr, aClient *acptr)
+{
+   int ti;
+   int max_targets;
+   time_t tmin = MSG_TARGET_TIME; /* minimum time to wait before another message can be sent */
+
+   /* don't limit opers, people talking to themselves, or people talking to services */
+   if(IsOper(sptr) || sptr == acptr || IsULine(acptr))
+      return 0;
+
+   max_targets = ((NOW - sptr->firsttime) > MSG_TARGET_MINTOMAXTIME) ? MSG_TARGET_MAX : MSG_TARGET_MIN;
+
+   for(ti = 0; ti < max_targets; ti++)
+   {
+      if (
+          sptr->targets[ti].cli == NULL ||  /* no client */
+          sptr->targets[ti].cli == acptr || /* already have this client */
+          sptr->targets[ti].sent < (NOW - MSG_TARGET_TIME) /* haven't talked to this client in > MSG_TARGET_TIME secs */
+         )
+      {
+         sptr->targets[ti].cli = acptr;
+         sptr->targets[ti].sent = NOW;
+         break;
+      }
+      else if((NOW - sptr->targets[ti].sent) < tmin)
+         tmin = NOW - sptr->targets[ti].sent;
+   }
+
+   if(ti == max_targets)
+   {
+      sendto_one(sptr, err_str(ERR_TARGETTOFAST), me.name, sptr->name, acptr->name, MSG_TARGET_TIME - tmin);
+      sptr->since += 2; /* penalize them 2 seconds for this! */
+      sptr->num_target_errors++;
+
+      if(sptr->last_target_complain + 60 <= NOW)
+      {
+         sendto_ops_lev(SPAM_LEV, "Target limited: %s (%s@%s) [%d failed targets]", sptr->name,
+                        sptr->user->username, sptr->user->host, sptr->num_target_errors);
+         sptr->num_target_errors = 0;
+         sptr->last_target_complain = NOW;
+      }
+      return 1;
+   }
+
+   return 0;
+}
+#endif
+
+
+/*
  * m_message (used in m_private() and m_notice()) the general
  * function to deliver MSG's between users/channels
  * 
@@ -1398,8 +1460,13 @@ static inline int m_message(aClient *cptr, aClient *sptr, int parc,
 	    {
 		sendto_one(sptr, rpl_str(ERR_NONONREG), me.name, parv[0],
 			   acptr->name);
-		return 0;
+		continue;
 	    }
+#ifdef MSG_TARGET_LIMIT
+	    if (MyConnect(sptr) && check_target_limit(sptr, acptr))
+		continue;
+#endif
+
 #ifdef FLUD
 	    if (!notice && MyFludConnect(acptr))
 #else

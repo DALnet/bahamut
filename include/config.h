@@ -963,6 +963,26 @@
 #define THROTTLE_HASHSIZE 25147
 
 /*
+ * Message-throttling support.
+ * MSG_TARGET_LIMIT: if defined, imposes limits on message targets
+ * MSG_TARGET_MIN: initial number of message targets allowed (recommend 5 or less)
+ * MSG_TARGET_MAX: maximum number of message targets stored (recommend 5 or
+ *                 less)
+ * MSG_TARGET_MINTOMAXTIME: number of seconds a user must be online
+ *                          before given MSG_TARGET_MAX targets
+ * MSG_TARGET_TIME: time before message targets expire (this is what you should
+ *                  tweak)
+ */
+
+#define MSG_TARGET_LIMIT
+#define MSG_TARGET_MIN  5
+#define MSG_TARGET_MAX  8 /* MUST BE >= MSG_TARGET_MIN!!! */
+#define MSG_TARGET_MINTOMAXTIME 300
+#define MSG_TARGET_TIME 45
+
+
+
+/*
  * ----------------- archaic and/or broken secion -------------------- 
  */
 
