@@ -844,6 +844,8 @@ struct stats
     time_t      is_sti;     /* time spent connected by servers */
     unsigned int is_ac;     /* connections accepted */
     unsigned int is_ref;    /* accepts refused */
+    unsigned int is_throt;  /* accepts throttled */
+    unsigned int is_drone;  /* refused drones */
     unsigned int is_unco;   /* unknown commands */
     unsigned int is_wrdi;   /* command going in wrong direction */
     unsigned int is_unpf;   /* unknown prefix */
@@ -855,6 +857,8 @@ struct stats
     unsigned int is_abad;   /* bad auth requests */
     unsigned int is_udp;    /* packets recv'd on udp port */
     unsigned int is_loc;    /* local connections made */
+    unsigned int is_ref_1;  /* refused at kline stage 1 */
+    unsigned int is_ref_2;  /* refused at kline stage 2 */
 #ifdef FLUD
     unsigned int is_flud;   /* users/channels flood protected */
 #endif	                    /* FLUD */

@@ -997,6 +997,10 @@ void tstats(aClient *cptr, char *name)
 	       me.name, RPL_STATSDEBUG, name, sp->is_asuc, sp->is_abad);
     sendto_one(cptr, ":%s %d %s :local connections %u udp packets %u",
 	       me.name, RPL_STATSDEBUG, name, sp->is_loc, sp->is_udp);
+    sendto_one(cptr, ":%s %d %s :drones refused %u throttled rejections %u",
+	       me.name, RPL_STATSDEBUG, name, sp->is_drone, sp->is_throt);
+    sendto_one(cptr, ":%s %d %s :banned users refused before ident/dns %u after ident/dns %u",
+	       me.name, RPL_STATSDEBUG, name, sp->is_ref_1, sp->is_ref_2);
     sendto_one(cptr, ":%s %d %s :Client Server",
 	       me.name, RPL_STATSDEBUG, name);
     sendto_one(cptr, ":%s %d %s :connected %u %u",

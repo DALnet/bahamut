@@ -1334,6 +1334,7 @@ aClient *add_connection(aClient * cptr, int fd)
 		   local ? SERVER_KLINE_ADDRESS : NETWORK_KLINE_ADDRESS);
 
 	ircstp->is_ref++;
+	ircstp->is_ref_1++;
 	throttle_force(inetntoa((char *)&acptr->ip.s_addr));
 	exit_client(acptr, acptr, &me, reason);
 
@@ -1584,6 +1585,7 @@ void accept_connection(aClient *cptr)
         /* if they are throttled, drop them silently. */
         if (throttle_check(host, newfd, NOW) == 0) {
            ircstp->is_ref++;
+           ircstp->is_throt++;
            close(newfd);
            return;
         }

@@ -747,6 +747,8 @@ int register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
 	if(is_a_drone(sptr))
         {
             throttle_force(sptr->hostip);
+	    ircstp->is_ref++;
+	    ircstp->is_drone++;
 	    return exit_client(cptr, sptr, &me, 
                       "You match the pattern of a known trojan, please check your system.");
         }
@@ -781,6 +783,7 @@ int register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
 	    cptr->flags |= FLAGS_REJECT_HOLD;
 #endif
 	    ircstp->is_ref++;
+	    ircstp->is_ref_2++;
 
 #ifndef USE_REJECT_HOLD			
             throttle_force(sptr->hostip);

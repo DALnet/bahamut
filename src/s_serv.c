@@ -3484,7 +3484,7 @@ int m_kline(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
     if ((oban = find_userban_exact(ban, 0)))
     {
-        char *ktype = (oban->flags & UBAN_LOCAL) ? "local-banned" : "network-banned";
+        char *ktype = (oban->flags & UBAN_LOCAL) ? LOCAL_BANNED_NAME : NETWORK_BANNED_NAME;
 
 	sendto_one(sptr, ":%s NOTICE %s :[%s@%s] already %s for %s",
 		   me.name, parv[0], user, host, ktype, oban->reason ? oban->reason : "<No Reason>");
@@ -3525,9 +3525,9 @@ int m_kline(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
         if (IsPerson(acptr) && user_match_ban(acptr, ban))
         {
-            sendto_ops("Local-ban active for %s",
+            sendto_ops(LOCAL_BAN_NAME" active for %s",
                        get_client_name(acptr, FALSE));
-            ircsprintf(fbuf, "Local-banned: %s", reason);
+            ircsprintf(fbuf, LOCAL_BANNED_NAME": %s", reason);
             exit_client(acptr, acptr, &me, fbuf);
             i--;
         }
@@ -3537,7 +3537,7 @@ int m_kline(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
     if(temporary_kline_time)
     {	
-	sendto_realops("%s added temporary %d min. local-ban for [%s@%s] [%s]",
+	sendto_realops("%s added temporary %d min. "LOCAL_BAN_NAME" for [%s@%s] [%s]",
 		       parv[0], temporary_kline_time, user, host, reason);
 	return 0;
     }
@@ -4985,9 +4985,9 @@ int m_akill(aClient *cptr, aClient *sptr, int parc, char *parv[])
             continue;
 	if (IsPerson(acptr) && user_match_ban(acptr, ban))
 	{
-	    sendto_ops("Network-ban active for %s",
+	    sendto_ops(NETWORK_BAN_NAME" active for %s",
 		       get_client_name(acptr, FALSE));
-	    ircsprintf(fbuf, "Network-banned: %s", reason);
+	    ircsprintf(fbuf, NETWORK_BANNED_NAME": %s", reason);
 	    exit_client(acptr, acptr, &me, fbuf);
 	    i--;
 	}

@@ -346,6 +346,15 @@
  */
 #define DEFAULT_KLINE_TIME 30
 
+/*
+ * Pretty self explanatory: These are shown in server notices and to the 
+ * recipient of a "you are banned" message.
+ */
+#define LOCAL_BAN_NAME "kline"
+#define NETWORK_BAN_NAME "autokill"
+#define LOCAL_BANNED_NAME "klined"
+#define NETWORK_BANNED_NAME "autokilled"
+
 /* CONNECTFAST
  *
  * if not defined, only allow 1 connection per listening socket 
