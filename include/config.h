@@ -454,7 +454,7 @@
  * Hide the origins of server modes (ie, in netjoins).
  * (They will all come from me.name)
  */
-/* #undef NO_USER_SERVERNOTICES */
+#define NO_USER_SERVERNOTICES
 /* #undef NO_USER_STATS */
 /* #undef NO_LOCAL_USER_STATS */
 /* #undef NO_USER_TRACE */
