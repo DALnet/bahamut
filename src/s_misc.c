@@ -373,19 +373,34 @@ void exit_one_server(aClient *cptr, aClient *dead, aClient *from, char *spinfo, 
 {
    aClient *acptr, *next;
 
+   /* okay, this is annoying.
+    * first off, we need two loops.
+    * one: to remove all the clients.
+    * two: to remove all the servers.
+    * HOWEVER! removing a server may cause removal of more servers and more clients.
+    *  and this may make our pointer to next bad. therefore, we have to restart
+    *  the server loop each time we find a server.
+    */
+
    for (acptr = client; acptr; acptr = next) 
    {
       next = acptr->next; /* we might destroy this client record in the loop. */
 
-      /* we want to remove all things that are a downlink of cptr in this loop */
-
-      if(acptr->uplink != cptr) 
+      if(acptr->uplink != cptr || !IsPerson(cptr)) 
          continue;
 
-      if (IsServer(acptr)) /* recursively exit this server */
-         exit_one_server(acptr, dead, from, spinfo, comment);   
-      else if (IsPerson(acptr))
-         exit_one_client_in_split(acptr, dead, spinfo);
+      exit_one_client_in_split(acptr, dead, spinfo);
+   }
+
+   for (acptr = client; acptr; acptr = next) 
+   {
+      next = acptr->next; /* we might destroy this client record in the loop. */
+
+      if(acptr->uplink != cptr || !IsServer(cptr)) 
+         continue;
+
+      exit_one_server(acptr, dead, from, spinfo, comment);
+      next = client; /* restart the loop */
    }
 
    if(cptr != dead)
