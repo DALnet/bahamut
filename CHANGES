@@ -1,3 +1,53 @@
+Changes for 1.8.4
+-----------------
+- Fixed recursive server removal for non-NOQUIT links
+- Fixed TS desync during nick changes
+- Fixed RWHO reporting wrong channel member flags
+- Fixed RWHO limit handling during clone searches
+- Fixed mangled SET LCLONES reply
+- Fixed CTCP flud trips on CTCP ACTIONs (from scatterbrain)
+- Fixed cmode +j 0 sync bug (again)
+- Fixed crash when conf file doesn't exist on rehash
+- Fixed conf include directive parsing
+- Fixed non-hubs trying to autoconnect to multiple servers
+- Fixed incorrect (R)WHO +t description in help
+- Fixed motd timestamp handling (from scatterbrain)
+- Fixed duplicate link reporting for Ulined servers
+- Fixed numeric 338 colon placement
+- Fixed trailing spaces added to AWAY messages
+- Increased channel invite list to 100 entries
+- Removed WATCH and DCCALLOW limits for opers (from wshs)
+- Removed 2-user minimum default for LIST filters
+- Changed join rate warnings to show IP instead of hostname
+
+- Reworked m_message().  Behavior changes:
+    - corrected error responses
+    - error responses only sent for PRIVMSG, not NOTICE
+    - #hostmask target support removed
+    - no wildcard restrictions on $servermask target
+    - $$servermask target is now identical to $servermask
+    - U:lined clients talk through SILENCE
+    - RPL_AWAY response sent by sender's server, not recipient's
+    - services-related behavior controlled by config.h
+      (DENY_SERVICES_MSGS, PASS_SERVICES_MSGS, SUPER_TARGETS_ONLY)
+
+- Reworked services special-casing:
+    - shortform commands (NS/CS/etc) always sent between normal servers,
+      translated to long forms for super servers
+    - in SERVICESHUB mode:
+        - shortforms sent to Services_Name
+        - AWAY never sent to Services_Name
+        - TOPIC in initial netburst not sent to Services_Name or Stats_Name
+        - GOPER/GNOTICE/GLOBOPS/CHATOPS never sent to super servers
+        - channel PRIVMSG/NOTICE never sent to super servers
+
+- Server protocol changes:
+    Added CHANKILL <channel> [reason]
+      completely destroys a channel and related state
+    Shortform commands are used for non-ULined links
+      NS CS MS RS OS HS SS
+
+
 Changes for 1.8.3
 -----------------
 

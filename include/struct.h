@@ -95,6 +95,7 @@ typedef struct Conf_Modules Conf_Modules;
 typedef long ts_val;
 
 typedef struct MotdItem aMotd;
+typedef struct SAliasInfo AliasInfo;
 
 
 
@@ -653,6 +654,14 @@ typedef struct Whowas
 #define CONN_DKEY	0x010	/* cryptable   */
 #define CONN_HUB	0x100	/* hubbable!   */
 
+/* U:lined flags in Server struct */
+
+#define ULF_SFDIRECT    0x00000001  /* send shortform commands */
+#define ULF_REQTARGET   0x00000002  /* require @server target on PRIVMSGs */
+#define ULF_NOBTOPIC    0x00000010  /* don't send TOPICs on burst */
+#define ULF_NOAWAY      0x00000020  /* don't send AWAYs at all */
+
+
 struct Conf_Connect
 {
 	/* this is currently BOTH C:lines and N:lines */
@@ -777,6 +786,7 @@ struct User
     char       *server;        /* pointer to scached server name */
     unsigned int servicetype;  /* set by SVSMODE +T */
     unsigned int servicestamp; /* set by SVSMODE +d */
+    AliasInfo  *alias;         /* shortform alias data for U:lined clients */
     /*
      * In a perfect world the 'server' name should not be needed, a
      * pointer to the client describing the server is enough. 
@@ -811,6 +821,7 @@ struct Server
 #endif
     void       *zip_out;
     void       *zip_in;
+    long        uflags;             /* U:lined flags */
 };
 
 struct Client 
@@ -1015,28 +1026,31 @@ struct SMode
     int		join_time;
 };
 
-/* Message table structure */
 
-struct Message 
+/* Alias data for super clients and shortform commands */
+struct SAliasInfo
 {
-    char       *cmd;
-    int         (*func) ();
-    unsigned int count;	 /* number of times command used */
-    int         parameters;
-    char        flags;
-    
-    /* bit 0 set means that this command is allowed to be used only on
-     * the average of once per 2 seconds -SRB */
-    
-    /* I could have defined other bit maps to above instead of the next
-     * two flags that I added. so sue me. -Dianora */
-    
-    char        allow_unregistered_use;	/* flag if this command can be used 
-					 * if unregistered */
-    
-    char        reset_idle;	/* flag if this command causes idle time to be 
-				 * reset */
-    unsigned long bytes;
+    char    *shortform; /* command shortform (NS) */
+    char    *nick;      /* entity nickname (NickServ) */
+    char    *server;    /* entity's server (services) */
+    aClient *client;    /* associated online client */
+};
+
+
+#define MF_UNREG    0x0001  /* may be used by unregistered connections */
+#define MF_RIDLE    0x0002  /* reset idle time */
+#define MF_ALIAS    0x0004  /* aliastab index valid */
+
+/* Message table structure */
+struct Message
+{
+    char            *cmd;           /* command name */
+    int              (*func)();     /* callback function */
+    short            parameters;    /* number of parameters */
+    short            flags;         /* command flags */
+    int              aliasidx;      /* aliastab index */
+    unsigned int     count;         /* number of times used */
+    unsigned long    bytes;         /* number of bytes used */
 };
 
 typedef struct msg_tree 

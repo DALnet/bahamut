@@ -410,6 +410,8 @@ exit_one_client_in_split(aClient *cptr, aClient *dead, char *reason)
         del_invite(cptr, lp->value.chptr);
     while ((lp = cptr->user->silence))
         del_silence(cptr, lp->value.cp);
+    if (cptr->user->alias)
+        cptr->user->alias->client = NULL;
 
     if (cptr->ip.s_addr)
         clones_remove(cptr);

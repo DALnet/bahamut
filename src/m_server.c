@@ -138,6 +138,13 @@ do_server_estab(aClient *cptr)
     {
         Count.myulined++;
         cptr->flags |= FLAGS_ULINE;
+
+        /* special flags (should really be in conf) */
+        if (!mycmp(cptr->name, Services_Name))
+            cptr->serv->uflags |=
+                (ULF_SFDIRECT|ULF_REQTARGET|ULF_NOBTOPIC|ULF_NOAWAY);
+        else if (!mycmp(cptr->name, Stats_Name))
+            cptr->serv->uflags |= ULF_NOBTOPIC;
     }
 
     fakelinkserver_update(cptr->name, cptr->info);

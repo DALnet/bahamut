@@ -73,193 +73,25 @@ my_rand()
     return s;
 }
 
-/* m_ns */
-int m_ns(aClient *cptr, aClient *sptr, int parc, char *parv[]) 
+/* alias message handler */
+int m_aliased(aClient *cptr, aClient *sptr, int parc, char *parv[], AliasInfo *ai)
 {
-    aClient    *acptr;
-
-    if (check_registered_user(sptr))
-	return 0;
-    if (parc < 2 || *parv[1] == '\0')
+    if (parc < 2 || *parv[1] == 0)
     {
-        if(MyClient(sptr))
-	  sendto_one(sptr, err_str(ERR_NOTEXTTOSEND), me.name, parv[0]);
-	return -1;
+        sendto_one(sptr, err_str(ERR_NOTEXTTOSEND), me.name, parv[0]);
+        return -1;
     }
-    if ((acptr = find_server(Services_Name, NULL)))
-    {
-        if(confopts & FLAGS_SERVHUB)
-	        sendto_one(acptr, ":%s NS :%s", parv[0], parv[1]);
-        else
-	        sendto_one(acptr, ":%s PRIVMSG %s@%s :%s", 
-		        parv[0], NICKSERV, Services_Name, parv[1]);
-    }
-    else
-	sendto_one(sptr, err_str(ERR_SERVICESDOWN), me.name,
-		   parv[0], NICKSERV);
-    return 0;
-}
 
-/* m_cs */
-int m_cs(aClient *cptr, aClient *sptr, int parc, char *parv[]) 
-{
-    aClient    *acptr;
-
-    if (check_registered_user(sptr))
-	return 0;
-    if (parc < 2 || *parv[1] == '\0')
+    /* second check is to avoid message loops when admins get stupid */
+    if (!ai->client || ai->client->from == sptr->from)
     {
-        if(MyClient(sptr))
-	  sendto_one(sptr, err_str(ERR_NOTEXTTOSEND), me.name, parv[0]);
-	return -1;
+        sendto_one(sptr, err_str(ERR_SERVICESDOWN), me.name, parv[0],
+                   ai->nick);
+        return 0;
     }
-    if ((acptr = find_server(Services_Name, NULL)))
-    {
-        if(confopts & FLAGS_SERVHUB)
 
-	        sendto_one(acptr, ":%s CS :%s", parv[0], parv[1]);
-        else
-	        sendto_one(acptr, ":%s PRIVMSG %s@%s :%s", 
-		        parv[0], CHANSERV, Services_Name, parv[1]);
-    }
-    else
-	sendto_one(sptr, err_str(ERR_SERVICESDOWN), me.name,
-		   parv[0], CHANSERV);
-    return 0;
-}
+    sendto_alias(ai, sptr, "%s", parv[1]);
 
-/* m_ms */
-int m_ms(aClient *cptr, aClient *sptr, int parc, char *parv[]) 
-{
-    aClient    *acptr;
-
-    if (check_registered_user(sptr))
-	return 0;
-    if (parc < 2 || *parv[1] == '\0')
-    {
-        if(MyClient(sptr))
-	  sendto_one(sptr, err_str(ERR_NOTEXTTOSEND), me.name, parv[0]);
-	return -1;
-    }
-    if ((acptr = find_server(Services_Name, NULL)))
-    {
-        if(confopts & FLAGS_SERVHUB)
-	        sendto_one(acptr, ":%s MS :%s", parv[0], parv[1]);
-        else
-	        sendto_one(acptr, ":%s PRIVMSG %s@%s :%s", 
-		        parv[0], MEMOSERV, Services_Name, parv[1]);
-    }
-    else
-	sendto_one(sptr, err_str(ERR_SERVICESDOWN), me.name,
-		   parv[0], MEMOSERV);
-    return 0;
-}
-
-/* m_rs */
-int m_rs(aClient *cptr, aClient *sptr, int parc, char *parv[]) 
-{
-    aClient    *acptr;
-
-    if (check_registered_user(sptr))
-	return 0;
-    if (parc < 2 || *parv[1] == '\0')
-    {
-        if(MyClient(sptr))
-	  sendto_one(sptr, err_str(ERR_NOTEXTTOSEND), me.name, parv[0]);
-	return -1;
-    }
-    if ((acptr = find_server(Services_Name, NULL)))
-    {
-        if(confopts & FLAGS_SERVHUB)
-	        sendto_one(acptr, ":%s RS :%s", parv[0], parv[1]);
-        else
-	        sendto_one(acptr, ":%s PRIVMSG %s@%s :%s", 
-		        parv[0], ROOTSERV, Services_Name, parv[1]);
-    }
-    else
-	sendto_one(sptr, err_str(ERR_SERVICESDOWN), me.name,
-		   parv[0], ROOTSERV);
-    return 0;
-}
-
-/* m_os */
-int m_os(aClient *cptr, aClient *sptr, int parc, char *parv[]) 
-{
-    aClient    *acptr;
-
-    if (check_registered_user(sptr))
-	return 0;
-    if (parc < 2 || *parv[1] == '\0')
-    {
-        if(MyClient(sptr))
-	  sendto_one(sptr, err_str(ERR_NOTEXTTOSEND), me.name, parv[0]);
-	return -1;
-    }
-    if ((acptr = find_server(Stats_Name, NULL)))
-    {
-        if(confopts & FLAGS_SERVHUB)
-	        sendto_one(acptr, ":%s OS :%s", parv[0], parv[1]);
-        else
-	        sendto_one(acptr, ":%s PRIVMSG %s@%s :%s", 
-		    parv[0], OPERSERV, Stats_Name, parv[1]);
-    }
-    else
-	sendto_one(sptr, err_str(ERR_SERVICESDOWN), me.name,
-		   parv[0], OPERSERV);
-    return 0;
-}
-
-/* m_ss */
-int m_ss(aClient *cptr, aClient *sptr, int parc, char *parv[]) 
-{
-    aClient    *acptr;
-
-    if (check_registered_user(sptr))
-	return 0;
-    if (parc < 2 || *parv[1] == '\0')
-    {
-        if(MyClient(sptr))
-	  sendto_one(sptr, err_str(ERR_NOTEXTTOSEND), me.name, parv[0]);
-	return -1;
-    }
-    if ((acptr = find_server(Stats_Name, NULL)))
-    {
-        if(confopts & FLAGS_SERVHUB)
-	        sendto_one(acptr, ":%s SS :%s", parv[0], parv[1]);
-        else
-	        sendto_one(acptr, ":%s PRIVMSG %s@%s :%s", 
-		        parv[0], STATSERV, Stats_Name, parv[1]);
-    }
-    else
-	sendto_one(sptr, err_str(ERR_SERVICESDOWN), me.name,
-		   parv[0], STATSERV);
-    return 0;
-}
-
-/* m_hs */
-int m_hs(aClient *cptr, aClient *sptr, int parc, char *parv[]) 
-{
-    aClient    *acptr;
-
-    if (check_registered_user(sptr))
-	return 0;
-    if (parc < 2 || *parv[1] == '\0')
-    {
-        if(MyClient(sptr))
-	  sendto_one(sptr, err_str(ERR_NOTEXTTOSEND), me.name, parv[0]);
-	return -1;
-    }
-    if ((acptr = find_server(Stats_Name, NULL)))
-    {
-        if(confopts & FLAGS_SERVHUB)
-	        sendto_one(acptr, ":%s HS :%s", parv[0], parv[1]);
-        else
-	        sendto_one(acptr, ":%s PRIVMSG %s@%s :%s", 
-		        parv[0], HELPSERV, Stats_Name, parv[1]);
-    }
-    else
-	sendto_one(sptr, err_str(ERR_SERVICESDOWN), me.name,
-		   parv[0], HELPSERV);
     return 0;
 }
 
@@ -267,9 +99,7 @@ int m_hs(aClient *cptr, aClient *sptr, int parc, char *parv[])
 int m_services(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     char       *tmps;
-
-    if (check_registered_user(sptr))
-	return 0;
+    int         aidx = AII_NS;
 
     if (parc < 2 || *parv[1] == '\0')
     {
@@ -296,36 +126,33 @@ int m_services(aClient *cptr, aClient *sptr, int parc, char *parv[])
 				      * with ' '.. oops. - lucas
 				      */
 	if (*tmps == '#')
-	    return m_cs(cptr, sptr, parc, parv);
-	else
-	    return m_ns(cptr, sptr, parc, parv);
+        aidx = AII_CS;
     }
-    return m_ns(cptr, sptr, parc, parv);
+    return m_aliased(cptr, sptr, parc, parv, &aliastab[aidx]);
 }
 
 /* m_identify  df465+taz */
 int m_identify(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
-    char       buf[BUFSIZE+1];
-    char       *myparv[MAXPARA + 1];
-
-    if (check_registered_user(sptr))
-	return 0;
+    int aidx = AII_NS;
 
     if (parc < 2 || *parv[1] == '\0')
     {
 	sendto_one(sptr, err_str(ERR_NOTEXTTOSEND), me.name, parv[0]);
 	return -1;
     }
-    (void) ircsnprintf(buf, BUFSIZE, "IDENTIFY %s", parv[1]);
-
-    myparv[0]=parv[0];
-    myparv[1]=buf;
 
     if (*parv[1] == '#')
-      return m_cs(cptr, sptr, parc, myparv);
-    else
-      return m_ns(cptr, sptr, parc, myparv);
+        aidx = AII_CS;
+
+    if (!aliastab[aidx].client)
+    {
+        sendto_one(sptr, err_str(ERR_SERVICESDOWN), me.name, parv[0],
+                   aliastab[aidx].nick);
+        return 0;
+    }
+
+    sendto_alias(&aliastab[aidx], sptr, "IDENTIFY %s", parv[1]);
 
     return 0;
 }
@@ -582,7 +409,7 @@ int m_svsmode(aClient *cptr, aClient *sptr, int parc, char *parv[])
                     remove_from_list(&oper_list, acptr, NULL);
                 }
             }
-            
+
 		    break;
 		}
 	    }

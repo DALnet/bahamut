@@ -633,7 +633,7 @@ m_help(aClient *cptr, aClient *sptr, int parc, char *parv[])
                      "/%s %s", me.name, sptr->name, HELPSERV, DEF_HELP_CMD);
           return -1;
        }
-       return m_hs(cptr, sptr, parc, parv);
+        return m_aliased(cptr, sptr, parc, parv, &aliastab[AII_HS]);
  
        return 0;
     }
@@ -1086,9 +1086,6 @@ m_goper(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     char       *message = parc > 1 ? parv[1] : NULL;
 
-    if (check_registered(sptr))
-        return 0;
-
     if (BadPtr(message)) 
     {
         sendto_one(sptr, err_str(ERR_NEEDMOREPARAMS),
@@ -1101,8 +1098,7 @@ m_goper(aClient *cptr, aClient *sptr, int parc, char *parv[])
         return 0;
     }
 
-    sendto_serv_butone(IsServer(cptr) ? cptr : NULL, ":%s GOPER :%s",
-                       parv[0], message);
+    sendto_serv_butone_super(cptr, 0, ":%s GOPER :%s", parv[0], message);
     sendto_ops("from %s: %s", parv[0], message);
     return 0;
 }
@@ -1123,9 +1119,6 @@ m_gnotice(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
     char       *message = parc > 1 ? parv[1] : NULL;
     
-    if (check_registered(sptr))
-        return 0;
-
     if (BadPtr(message)) 
     {
         sendto_one(sptr, err_str(ERR_NEEDMOREPARAMS),
@@ -1138,8 +1131,7 @@ m_gnotice(aClient *cptr, aClient *sptr, int parc, char *parv[])
         return 0;
     }
 
-    sendto_serv_butone_services(IsServer(cptr) ? cptr : NULL, ":%s GNOTICE :%s",
-                       parv[0], message);
+    sendto_serv_butone_super(cptr, 0, ":%s GNOTICE :%s", parv[0], message);
     sendto_gnotice("from %s: %s", parv[0], message);
     return 0;
 }
@@ -1151,9 +1143,6 @@ m_globops(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
     /* a few changes, servers weren't able to globop -mjs */
 
-    if (check_registered(sptr))
-        return 0;
-
     if (BadPtr(message)) 
     {
         if (MyClient(sptr))
@@ -1162,17 +1151,14 @@ m_globops(aClient *cptr, aClient *sptr, int parc, char *parv[])
         return 0;
     }
 
-    /* must be a client, must be an oper or a Ulined server -mjs */
-
-    if (MyClient(sptr) && !OPCanGlobOps(sptr) && !IsULine(sptr)) 
+    if (MyClient(sptr) && !OPCanGlobOps(sptr)) 
     {
         sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name, parv[0]);
         return 0;
     }
     if (strlen(message) > TOPICLEN)
         message[TOPICLEN] = '\0';
-    sendto_serv_butone_services(IsServer(cptr) ? cptr : NULL, ":%s GLOBOPS :%s",
-                       parv[0], message);
+    sendto_serv_butone_super(cptr, 0, ":%s GLOBOPS :%s", parv[0], message);
     send_globops("from %s: %s", parv[0], message);
     return 0;
 }
@@ -1182,8 +1168,6 @@ m_chatops(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     char       *message = parc > 1 ? parv[1] : NULL;
 
-    if (check_registered(sptr))
-        return 0;
     if (BadPtr(message)) 
     {
         if (MyClient(sptr))
@@ -1192,8 +1176,7 @@ m_chatops(aClient *cptr, aClient *sptr, int parc, char *parv[])
         return 0;
     }
 
-    if (MyClient(sptr) && (!IsAnOper(sptr) || !SendChatops(sptr)) &&
-        !IsULine(sptr)) 
+    if (MyClient(sptr) && (!IsAnOper(sptr) || !SendChatops(sptr))) 
     {
         sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name, parv[0]);
         return 0;
@@ -1201,8 +1184,7 @@ m_chatops(aClient *cptr, aClient *sptr, int parc, char *parv[])
     
     if (strlen(message) > TOPICLEN)
         message[TOPICLEN] = '\0';
-    sendto_serv_butone_services(IsServer(cptr) ? cptr : NULL, ":%s CHATOPS :%s",
-                       parv[0], message);
+    sendto_serv_butone_super(cptr, 0, ":%s CHATOPS :%s", parv[0], message);
     send_chatops("from %s: %s", parv[0], message);
     return 0;
 }

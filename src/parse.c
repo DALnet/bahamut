@@ -22,12 +22,12 @@
 
 #include "struct.h"
 #include "common.h"
-#define MSGTAB
-#include "msg.h"
-#undef MSGTAB
 #include "sys.h"
 #include "numeric.h"
 #include "h.h"
+#define MSGTAB
+#include "msg.h"
+#undef MSGTAB
 
 #if defined( HAVE_STRING_H )
 #include <string.h>
@@ -224,7 +224,7 @@ int parse(aClient *cptr, char *buffer, char *bufend)
 	 * are allowed -SRB Opers can send 1 msg per second, burst of ~20
 	 * -Taner
 	 */
-	if ((mptr->flags & 1) && !(IsServer(cptr))) 
+	if (!IsServer(cptr)) 
 	{
         if (!NoMsgThrottle(cptr))
         {
@@ -289,20 +289,19 @@ int parse(aClient *cptr, char *buffer, char *bufend)
     mptr->count++;
     
     /* patch to avoid server flooding from unregistered connects */
-    /*
-     * check allow_unregistered_use flag I've set up instead of function
-     * comparing *yech* - Dianora
-     */
     
-    if (!IsRegistered(cptr) && !mptr->allow_unregistered_use) {
+    if (!IsRegistered(cptr) && !(mptr->flags & MF_UNREG)) {
 	sendto_one(from, ":%s %d %s %s :Register first.",
 		   me.name, ERR_NOTREGISTERED, from->name, ch);
 	return -1;
     }
     
-    if (IsRegisteredUser(cptr) && mptr->reset_idle)
+    if (IsRegisteredUser(cptr) && (mptr->flags & MF_RIDLE))
 	from->user->last = timeofday;
-    
+
+    if (mptr->flags & MF_ALIAS)
+         return mptr->func(cptr, from, i, para, &aliastab[mptr->aliasidx]);
+
     return (*mptr->func) (cptr, from, i, para);
 }
 

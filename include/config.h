@@ -155,6 +155,22 @@
 #undef DENY_SERVICES_MSGS
 
 /*
+ * PASS_SERVICES_MSGS
+ * Define this to cause PRIVMSG <service> to be passed to services as-is,
+ * instead of being converted to the shortform ("PRIVMSG NickServ" -> "NS").
+ * Useful if services behaves differently when it gets a target of <service>
+ * instead of <service>@<server>.  DENY_SERVICES_MSGS overrides this.
+ */
+#define PASS_SERVICES_MSGS
+
+/*
+ * SUPER_TARGETS_ONLY
+ * Define this to allow the nick@server form of PRIVMSG/NOTICE to target super
+ * servers only.  If not defined, the target may be on any server.
+ */
+#define SUPER_TARGETS_ONLY
+
+/*
  * FNAME_USERLOG and FNAME_OPERLOG - logs of local USERS and OPERS
  * Define this filename to maintain a list of persons who log into this
  * server. Logging will stop when the file does not exist. Logging will
@@ -867,6 +883,10 @@ extern void debug(int level, char *pattern, ...);
 #else
 #define Debug(x) ;
 #define LOGFILE "/dev/null"
+#endif
+
+#ifdef DENY_SERVICES_MSGS
+#undef PASS_SERVICES_MSGS
 #endif
 
 #define CONFIG_H_LEVEL_183

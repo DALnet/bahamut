@@ -111,20 +111,6 @@ void init_globals()
     strncpyzt(Network_Name, DEFAULT_NETWORK, sizeof(Network_Name));
     strncpyzt(Services_Name, DEFAULT_SERVICES_NAME, sizeof(Services_Name));
     strncpyzt(Stats_Name, DEFAULT_STATS_NAME, sizeof(Stats_Name));
-    snprintf(NS_Services_Name, sizeof(NS_Services_Name), "%s@%s", 
-                NICKSERV, Services_Name);
-    snprintf(CS_Services_Name, sizeof(CS_Services_Name), "%s@%s", 
-                CHANSERV, Services_Name);
-    snprintf(MS_Services_Name, sizeof(MS_Services_Name), "%s@%s", 
-                MEMOSERV, Services_Name);
-    snprintf(RS_Services_Name, sizeof(RS_Services_Name), "%s@%s", 
-                ROOTSERV, Services_Name);
-    snprintf(OS_Stats_Name, sizeof(OS_Stats_Name), "%s@%s", 
-                OPERSERV, Stats_Name);
-    snprintf(SS_Stats_Name, sizeof(SS_Stats_Name), "%s@%s", 
-                STATSERV, Stats_Name);
-    snprintf(HS_Stats_Name, sizeof(HS_Stats_Name), "%s@%s", 
-                HELPSERV, Stats_Name);
     strncpyzt(NS_Register_URL, DEFAULT_NS_REGISTER_URL,
               sizeof(NS_Register_URL));
     strncpyzt(Network_Kline_Address, DEFAULT_NKLINE_ADDY,
@@ -875,7 +861,6 @@ confadd_options(cVar *vars[], int lnum)
 {
     cVar *tmp;
     int c = 0;
-    char ctmp[512];
     char *s;
 
     /* here, because none of the option peice are interdependent
@@ -894,25 +879,11 @@ confadd_options(cVar *vars[], int lnum)
         {
             tmp->type = NULL;
             strncpyzt(Services_Name, tmp->value, sizeof(Services_Name));
-            sprintf(ctmp, "%s@%s", NICKSERV, Services_Name);
-            strncpyzt(NS_Services_Name, ctmp, sizeof(NS_Services_Name));
-            sprintf(ctmp, "%s@%s", CHANSERV, Services_Name);
-            strncpyzt(CS_Services_Name, ctmp, sizeof(CS_Services_Name));
-            sprintf(ctmp, "%s@%s", MEMOSERV, Services_Name);
-            strncpyzt(MS_Services_Name, ctmp, sizeof(MS_Services_Name));
-            sprintf(ctmp, "%s@%s", ROOTSERV, Services_Name);
-            strncpyzt(RS_Services_Name, ctmp, sizeof(RS_Services_Name));
         }
         else if(tmp->type && (tmp->type->flag & OPTF_STATSNAME))
         {
             tmp->type = NULL;
             strncpyzt(Stats_Name, tmp->value, sizeof(Stats_Name));
-            sprintf(ctmp, "%s@%s", OPERSERV, Stats_Name);
-            strncpyzt(OS_Stats_Name, ctmp, sizeof(OS_Stats_Name));
-            sprintf(ctmp, "%s@%s", STATSERV, Stats_Name);
-            strncpyzt(SS_Stats_Name, ctmp, sizeof(SS_Stats_Name));
-            sprintf(ctmp, "%s@%s", HELPSERV, Stats_Name);
-            strncpyzt(HS_Stats_Name, ctmp, sizeof(HS_Stats_Name));
         }
         else if(tmp->type && (tmp->type->flag & OPTF_WGMONHOST))
         {

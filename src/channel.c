@@ -2190,8 +2190,8 @@ static int can_join(aClient *sptr, aChannel *chptr, char *key)
     {
         if (error==ERR_NEEDREGGEDNICK)
             sendto_one(sptr, getreply(ERR_NEEDREGGEDNICK), me.name, sptr->name,
-                       chptr->chname, "join", NS_Services_Name,
-                       NS_Register_URL);
+                       chptr->chname, "join", aliastab[AII_NS].nick,
+                       aliastab[AII_NS].server, NS_Register_URL);
         else
             sendto_one(sptr, getreply(error), me.name, sptr->name,
                        chptr->chname, r);
@@ -3088,12 +3088,16 @@ void send_topic_burst(aClient *cptr)
 {
     aChannel *chptr;
     aClient *acptr;
+
+    if (!(confopts & FLAGS_SERVHUB) || !(cptr->serv->uflags & ULF_NOBTOPIC))
     for (chptr = channel; chptr; chptr = chptr->nextch)
     {
         if(chptr->topic[0] != '\0')
             sendto_one(cptr, ":%s TOPIC %s %s %ld :%s", me.name, chptr->chname,
                        chptr->topic_nick, chptr->topic_time, chptr->topic);
     }
+
+    if (!(confopts & FLAGS_SERVHUB) || !(cptr->serv->uflags & ULF_NOAWAY))
     for (acptr = client; acptr; acptr = acptr->next)
     {
         if(!IsPerson(acptr) || acptr->from == cptr)
@@ -3292,9 +3296,10 @@ int m_invite(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
         sendto_prefix_one(acptr, sptr, ":%s INVITE %s :%s", parv[0],
                           acptr->name, chptr->chname);
-        sendto_channelops_butone(NULL, &me, chptr, ":%s NOTICE @%s :%s invited"
-                                 " %s into channel %s", me.name, chptr->chname,
-                                 parv[0], acptr->name, chptr->chname);
+        sendto_channelflags_butone(NULL, &me, chptr, CHFL_CHANOP,
+                                   ":%s NOTICE @%s :%s invited %s into "
+                                   "channel %s", me.name, chptr->chname,
+                                   parv[0], acptr->name, chptr->chname);
 
         return 0;
     }
