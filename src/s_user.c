@@ -1910,8 +1910,15 @@ int do_user(char *nick, aClient *cptr, aClient *sptr, char *username,
     strncpyzt(sptr->info, realname, sizeof(sptr->info));
     
     sptr->user->servicestamp = serviceid;
-    if (!MyConnect(sptr)) 
+    if (!MyConnect(sptr))  {
 	sptr->ip.s_addr=ntohl(ip);
+	
+	/* add non-local clients to the throttle checker.  obviously, we only
+	 * do this for REMOTE clients!@$$@!  throttle_check() is called
+	 * elsewhere for the locals! -wd */
+	if (ip != 0) 
+	   throttle_check(inet_ntoa(sptr->ip), 0);
+    }
     if(MyConnect(sptr))
 	sptr->oflag=0;
     if (sptr->name[0])		/* NICK already received, now I have USER... */

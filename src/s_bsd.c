@@ -1556,6 +1556,12 @@ void accept_connection(aClient *cptr)
 	close(newfd);
 	return;
     }
+    /* if they are throttled, drop them silently. */
+    if (throttle_check(host, 1) == 0) {
+       ircstp->is_ref++;
+       close(newfd);
+       return;
+    }
 
     if (newfd >= HARD_FDLIMIT - 10) 
     {

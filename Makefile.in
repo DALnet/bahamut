@@ -124,7 +124,7 @@ clean:
 	fi
 
 distclean:
-	${RM} -f Makefile *~ *.rej *.orig core ircd.core
+	${RM} -f Makefile *~ *.rej *.orig core ircd.core *.tmp
 	${RM} -f config.status config.cache config.log
 	cd include; ${RM} -f setup.h *~ *.rej *.orig options.h; cd ..
 	@for i in $(SUBDIRS); do \

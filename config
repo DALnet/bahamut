@@ -129,6 +129,12 @@ if [ -n "$CRYPTPASS" ] ; then
 else
    CRYPTPASS="1"
 fi
+DOTHROTTLE="`grep 'THROTTLE_ENABLE' $OPTIONS_H | sed s/'.define THROTTLE_ENABLE'// | xargs echo -n`"
+if [ -n "$DOTHROTTLE" ] ; then
+   DOTHROTTLE=""
+else
+   DOTHROTTLE="1"
+fi
 
 ### Thats the end of grabbing there.
 fi
@@ -164,6 +170,7 @@ LOCALKLINE="admin@poorly.configured.server.com"
 NETWORKKLINE="admin@poorly.configured.server.com"
 MAXCHANNELSPERUSER="10"
 CRYPTPASS=""
+DOTHROTTLE="1"
 
 fi # ENDIF $OPTIONS_H
 ###############################
@@ -998,6 +1005,41 @@ while [ -z "$FOO" ] ; do
 done
 
 
+FOO=""
+runonce=""
+while [ -z "$FOO" ] ; do
+    if [ -n "$DOTHROTTLE" ] ; then
+	FOO="Yes"
+    else
+	FOO="No"
+    fi
+    echo ""
+    echo "Would you like to enable connection-throttling code?"
+    echo -n "[$FOO] -> $c"
+    if [ -z "$AUTO_CONFIG" -o -n "$runonce" ] ; then
+	read cc
+	runonce=Yes
+    else
+	cc=""
+    fi
+    if [ -z "$cc" ] ; then
+	cc=$FOO
+    fi
+    case "$cc" in
+	[Yy]*)
+	    DOTHROTTLE="1"
+	    ;;
+	[Nn]*)
+	    DOTHROTTLE=""
+	    ;;
+	*)
+	    echo ""
+	    echo "You need to enter either Yes or No here..."
+	    echo ""
+	    FOO=""
+	    ;;
+    esac
+done
 
 #############
 # Thats all for the user part, now to write to a file...
@@ -1084,6 +1126,11 @@ if [ -n "$CRYPTPASS" ] ; then
     echo "#define CRYPT_OPER_PASSWORD" >> $OPTIONS_H
 else
     echo "#undef CRYPT_OPER_PASSWORD" >> $OPTIONS_H
+fi
+if [ -n "$DOTHROTTLE" ] ; then
+    echo "#define THROTTLE_ENABLE" >> $OPTIONS_H
+else
+    echo "#undef THROTTLE_ENABLE" >> $OPTIONS_H
 fi
 cat >> $OPTIONS_H << __EOF__
 

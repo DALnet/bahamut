@@ -51,6 +51,7 @@
 #endif
 #include "dich_conf.h"
 #include "fdlist.h"
+#include "throttle.h"
 
 extern fdlist serv_fdlist;
 extern int  lifesux;
@@ -1944,6 +1945,13 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	break;
 		
     case 'T':
+	if (!IsAnOper(sptr)) {
+	   sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name, parv[0]);
+	   break;
+	}
+	throttle_stats(sptr, parv[0]);
+	break;
+
     case 't':
 	if (!IsAnOper(sptr)) 
 	{
@@ -2943,6 +2951,84 @@ int m_set(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	}
 
 #endif
+	else if (!strncasecmp(command, "THROTTLE", 8))  {
+	   char *changed = NULL;
+	   char *to = NULL;
+	   /* several values available:
+	    * ENABLE [on|off] to enable the code
+	    * COUNT [n] to set a max count, must be > 1
+	    * TIME [n] to set a max time before expiry, must be > 5
+	    * BANTIME [n] to set a time for the throttle bans to expire
+	    * HASH [n] to set the size of the hash table, must be bigger than
+	    *          the default */
+
+
+	   /* only handle individual settings if parc > 3 (they're actually
+	    * changing stuff) */
+	   if (parc > 3) {
+	       if (!strcasecmp(parv[2], "ENABLE"))  {
+		  changed = "ENABLE";
+		  if (tolower(*parv[3]) == 'y' || !strcasecmp(parv[3], "on")) {
+		     throttle_enable = 1;
+		     to = "ON";
+		  } else if (tolower(*parv[3]) == 'n' ||
+			   !strcasecmp(parv[3], "off")) {
+		     throttle_enable = 0;
+		     to = "OFF";
+		  }
+	       } else if (!strcasecmp(parv[2], "COUNT")) {
+		  int cnt;
+		  changed = "COUNT";
+		  cnt = atoi(parv[3]);
+		  if (cnt > 1) {
+		     throttle_tcount = cnt;
+		     to = parv[3];
+		  }
+	       } else if (!strcasecmp(parv[2], "TIME")) {
+		  int cnt;
+		  changed = "TIME";
+		  cnt = atoi(parv[3]);
+		  if (cnt >= 5) {
+		     throttle_ttime = cnt;
+		     to = parv[3];
+		  }
+	       } else if (!strcasecmp(parv[2], "BANTIME")) {
+		  int cnt;
+		  changed = "BANTIME";
+		  cnt = atoi(parv[3]);
+		  if (cnt >= 30) {
+		     throttle_ztime = cnt;
+		     to = parv[3];
+		  }
+	       } else if (!strcasecmp(parv[2], "HASH")) {
+		  int cnt;
+		  changed = "HASH";
+		  cnt = atoi(parv[3]);
+		  if (cnt >= THROTTLE_HASHSIZE) {
+		     throttle_resize(cnt);
+		     to = parv[3];
+		  }
+	       }
+
+	       if (to != NULL) {
+		  sendto_ops("%s has changed throttle %s to %s", parv[0],
+			changed, to);
+		  sendto_one(sptr, ":%s NOTICE %s :set throttle %s to %s",
+			me.name, parv[0], changed, to);
+	       }
+	   } else {
+	      /* report various things, we cannot easily get the hash size, so
+	       * leave that alone. */
+	      sendto_one(sptr, ":%s NOTICE %s :THROTTLE %s", me.name, parv[0],
+		    throttle_enable ? "enabled" : "disabled");
+	      sendto_one(sptr, ":%s NOTICE %s :THROTTLE COUNT=%d", me.name,
+		    parv[0], throttle_tcount);
+	      sendto_one(sptr, ":%s NOTICE %s :THROTTLE TIME=%d", me.name,
+		    parv[0], throttle_ttime);
+	      sendto_one(sptr, ":%s NOTICE %s :THROTTLE BANTIME=%d", me.name,
+		    parv[0], throttle_ztime);
+	   }
+	}
     }
     else 
     {
@@ -2963,6 +3049,8 @@ int m_set(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		   me.name, parv[0]);
 #endif
 
+	sendto_one(sptr, ":%s NOTICE %s :Options: THROTTLE "
+	      "<ENABLE|COUNT|TIME|BANTIME|HASH> [setting]", me.name, parv[0]);
     }
     return 0;
 }
@@ -4332,6 +4420,13 @@ int m_rehash(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	    do_rehash_akills();
 	    sendto_ops("%s is rehashing akills", parv[0]);
 	    return 0;
+	}
+	else if(mycmp(parv[1], "THROTTLES") == 0) {
+	   sendto_one(sptr, rpl_str(RPL_REHASHING), me.name, parv[0],
+		 "throttles");
+	   throttle_rehash();
+	   sendto_ops("%s is rehashing throttles", parv[0]);
+	   return 0;
 	}
     }
     else 

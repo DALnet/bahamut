@@ -890,6 +890,25 @@
 #define INET6  /* IPv6 support */
 
 /*
+ * Throttling support:
+ * THROTTLE_ENABLE    - enable throttling code, if undefined, the functions
+ *                      will be empty.  runtime settable.
+ * THROTTLE_TRIGCOUNT - number of connections to triggle throttle action
+ * THROTTLE_TRIGTIME  - number of seconds in which THROTTLE_TRIGCOUNT must
+ *                      happen
+ * THROTTLE_LENGTH    - length to Z:line throttled connections
+ * THROTTLE_HASHSIZE  - size of the throttle hashtable, also tuneable
+ *
+ * Recommended values: 3, 15, 900.  3+ connections in 15 or less seconds will
+ * result in a connection throttle z:line for 15 minutes.  These are also
+ * tuneable at runtime.  -wd */
+#define THROTTLE_ENABLE
+#define THROTTLE_TRIGCOUNT 3
+#define THROTTLE_TRIGTIME 15
+#define THROTTLE_LENGTH 900
+#define THROTTLE_HASHSIZE 25147
+
+/*
  * ----------------- archaic and/or broken secion -------------------- 
  */
 

@@ -3,6 +3,9 @@ Outstanding bugs
   establish if one or both sides filters ident connections
 - Source address support on /connect may not work under some conditions
 
+Changes for 1.4.31
+- Connection Throttling Patch from Chip Norkus
+
 Changes for 1.4.30
 - Updated 'make profile'; now on glibc2 systems, you can kill -USR1 the
   process and get a current profile dump, and restart profiling

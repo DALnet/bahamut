@@ -41,6 +41,7 @@
 #include "dh.h"
 
 #include "dich_conf.h"
+#include "throttle.h"
 
 /* Lists to do K: line matching -Sol */
 aConfList   KList1 = {0, NULL};			/* ordered */
@@ -810,6 +811,9 @@ int main(int argc, char *argv[])
     clear_scache_hash_table();	/* server cache name table */
     clear_ip_hash_table();	/* client host ip hash table */
 
+    /* init the throttle system -wd */
+    throttle_init();
+
     initlists();
     initclass();
     initwhowas();
@@ -1271,6 +1275,9 @@ void io_loop()
 	check_fdlists();
 #endif
 	
+	/* call the throttle timer to possibly flush extra gunk  -wd */
+	throttle_timer(NOW);
+
 #ifdef	LOCKFILE
 	/*
 	 * * If we have pending klines and CHECK_PENDING_KLINES minutes
