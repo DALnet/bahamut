@@ -520,7 +520,7 @@ int can_send(aClient *cptr, aChannel *chptr, char *msg)
 	    return (MODE_MODERATED);
 	if(chptr->mode.mode & MODE_NOPRIVMSGS)
 	    return (MODE_NOPRIVMSGS);
-	if (chptr->mode.mode & MODE_REGONLY && !IsRegNick(cptr))
+	if (chptr->mode.mode & MODE_MODREG && !IsRegNick(cptr))
 	    return (ERR_NEEDREGGEDNICK);
 	if ((chptr->mode.mode & MODE_NOCOLOR) && msg_has_colors(msg))
 	    return (ERR_NOCOLORSONCHAN);
@@ -537,7 +537,8 @@ int can_send(aClient *cptr, aChannel *chptr, char *msg)
 	    return (MODE_MODERATED);
 	if(cm->bans && !(cm->flags & (CHFL_CHANOP | CHFL_VOICE)))
 	    return (MODE_BAN);
-	if (chptr->mode.mode & MODE_REGONLY && !IsRegNick(cptr))
+	if (chptr->mode.mode & MODE_REGONLY && !IsRegNick(cptr) &
+	    !(cm->flags & (CHFL_CHANOP | CHFL_VOICE)))
 	    return (ERR_NEEDREGGEDNICK);
 	if ((chptr->mode.mode & MODE_NOCOLOR) && msg_has_colors(msg))
 	    return (ERR_NOCOLORSONCHAN);
@@ -575,6 +576,8 @@ static void channel_modes(aClient *cptr, char *mbuf, char *pbuf,
 	*mbuf++ = 'c';
     if (chptr->mode.mode & MODE_OPERONLY)
 	*mbuf++ = 'O';
+    if (chptr->mode.mode & MODE_MODREG)
+	*mbuf++ = 'M';
     if (chptr->mode.limit) {
 	*mbuf++ = 'l';
 	if (IsMember(cptr, chptr) || IsServer(cptr) || IsULine(cptr))
@@ -831,6 +834,7 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
 	MODE_MODERATED, 'm', MODE_NOPRIVMSGS, 'n',
 	MODE_TOPICLIMIT, 't', MODE_REGONLY, 'R',
 	MODE_INVITEONLY, 'i', MODE_NOCOLOR, 'c', MODE_OPERONLY, 'O',
+	MODE_MODREG, 'M',
 	0x0, 0x0
     };
     

@@ -455,6 +455,11 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	 * channel, send note of change to all clients on that channel.
 	 * Propagate notice to other servers.
 	 */
+	/* if the nickname is different, set the TS */
+	if (mycmp(parv[0], nick))
+	{
+	    sptr->tsinfo = newts ? newts : (ts_val) timeofday;
+	}
 #ifdef DONT_CHECK_QLINE_REMOTE
 	if (MyConnect(sptr))
 	{
@@ -488,13 +493,6 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 #ifdef DONT_CHECK_QLINE_REMOTE
 	}
 #endif
-	/*
-	 * if the nickname is different, set the TS
-	 * AND set it -r. No need to propogate MODE -r and spam
-	 * the network on registered nick changes. yuck. - lucas
-	 * With the advent of UMODE_R we need to spam the network.
-	 */
-     
 	if (MyConnect(sptr))
 	{
 	    if (IsRegisteredUser(sptr))
@@ -563,11 +561,14 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 				   parv[0], nick, sptr->tsinfo);
 	    }
 	}
+	/*
+	 * set it -r. No need to propogate MODE -r and spam
+	 * the network on registered nick changes. yuck. - lucas
+	 * Do this after the nick change was succesful - Raistlin
+	 */
 	if (mycmp(parv[0], nick))
 	{
-	    sptr->tsinfo = newts ? newts : (ts_val) timeofday;
 	    sptr->umode&=~UMODE_r;
-
 	}
     } 
     else
