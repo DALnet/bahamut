@@ -4824,40 +4824,51 @@ struct pkl *k, *ok;
 	 
 int m_svskill(aClient *cptr, aClient *sptr, int parc, char *parv[]) 
 {
-	 aClient *acptr;
-	 char  *comment;
-         ts_val ts = 0;
+   aClient *acptr;
+   char *comment;
+   char reason[TOPICLEN + 1];
+   ts_val ts = 0;
 
-         if (parc > 3) {
-           comment = parv[3] ? parv[3] : "SVS Killed";
-           ts = atol(parv[2]);
-         }
-         else
-           comment = (parc > 2 && parv[2]) ? parv[2] : "SVS Killed";
+   if (parc > 3) 
+   {
+      comment = parv[3] ? parv[3] : parv[0];
+      ts = atol(parv[2]);
+   }
+   else
+      comment = (parc > 2 && parv[2]) ? parv[2] : parv[0];
       
-	 if(!IsULine(sptr)) return -1;
-         if ((acptr = find_client(parv[1], NULL)) && (!ts || ts == acptr->tsinfo)) {
-           sendto_serv_butone(cptr, ":%s SVSKILL %s :%s", parv[0], parv[1], comment);
-           acptr->flags |= FLAGS_KILLED;
-  	   return exit_client(cptr, acptr, sptr, comment);
-         }
-	 return 0;
+   if(!IsULine(sptr)) return -1;
+   if((acptr = find_client(parv[1], NULL)) && (!ts || ts == acptr->tsinfo))
+   {
+      if(MyClient(acptr))
+      {
+         strcpy(reason, "SVSKilled: ");
+         strncpy(reason + 11, comment, TOPICLEN - 11);
+         reason[TOPICLEN] = '\0';
+         return exit_client(acptr, acptr, sptr, reason);
+      }
+      if(acptr->from == cptr)
+      {
+         sendto_ops_lev(DEBUG_LEV, "Received wrong-direction SVSKILL for %s (behind %s) from %s",
+            acptr->name, cptr->name, get_client_name(sptr, HIDEME));
+         return 0;
+      }
+      else sendto_serv_butone(cptr, ":%s SVSKILL %s :%s", parv[0], parv[1], comment);
+   }
+   return 0;
 }
 	 
 /* m_akill -
  * Parse AKILL command
- * (from df): parv[1]=host, parv[2]=user, parv[3]=comment
- * (from dfh): parv[1]=host, parv[2]=user, parv[3]=length, parv[4]=akiller, parv[5]=time set
- * parv[6]=reason
+ * parv[1]=host, parv[2]=user, parv[3]=length, parv[4]=akiller, parv[5]=time set, parv[6]=reason
  */      
 int m_akill(aClient *cptr, aClient *sptr, int parc, char *parv[]) 
 {
 	aConfItem *aconf, *ac2;
-	char *user=NULL, *host=NULL, *reason="<no reason>", 
-	     *akiller="<nonick!nouser@nohost>", buffer[1024], *current_date;   
+	char *user, *host, *reason, *akiller, buffer[1024], *current_date;   
 	time_t length=0, timeset=0;
 
-	if(!IsServer(sptr))
+	if(!IsServer(sptr) || (parc < 6))
 	  return 0;
 	
 	if(!IsULine(sptr)) 
