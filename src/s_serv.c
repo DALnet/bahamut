@@ -5520,7 +5520,6 @@ int m_dkey(aClient *cptr, aClient *sptr, int parc, char *parv[])
       if(!((sptr->serv->sessioninfo_in == NULL && sptr->serv->sessioninfo_out == NULL) &&
            (sptr->serv->rc4_in != NULL && sptr->serv->rc4_out != NULL)))
          return exit_client(sptr, sptr, sptr, "DKEY DONE when not done!");
-      ClearNegoServer(sptr);
       SetRC4IN(sptr);
       sendto_realops("Diffie-Hellman exchange with %s complete, connection encrypted.", sptr->name);
       sendto_one(sptr, "DKEY EXIT");
@@ -5531,6 +5530,7 @@ int m_dkey(aClient *cptr, aClient *sptr, int parc, char *parv[])
    {
       if(!(IsRC4IN(sptr) && IsRC4OUT(sptr)))
          return exit_client(sptr, sptr, sptr, "DKEY EXIT when not in proper stage");
+      ClearNegoServer(sptr);
       return do_server_estab(sptr);
    }
 

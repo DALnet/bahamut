@@ -574,6 +574,9 @@ exit_client(
       }
       if (IsClient(sptr))
 		  Count.local--;
+      if (IsNegoServer(sptr))
+         sendto_realops("Lost server %s during negotiation: %s", sptr->name, comment);
+
       if (IsServer(sptr)) {
 			Count.myserver--;
                         if (IsULine(sptr))
