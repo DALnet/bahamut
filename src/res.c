@@ -532,7 +532,7 @@ int arpa_to_ip(char *arpastring, unsigned int *saddr)
 }
 
 #undef DNS_ANS_DEBUG_MAX
-#define DNS_ANS_DEBUG
+#undef DNS_ANS_DEBUG
 
 #define MAX_ACCEPTABLE_ANS 10
 
@@ -697,8 +697,10 @@ proc_answer(ResRQ * rptr,
             {
                if(!(arpa_to_ip(hostbuf, &ptrrep.s_addr)))
                {
+#ifdef DNS_ANS_DEBUG
                   sendto_realops_lev(DEBUG_LEV, "Received strangely formed PTR answer for %s (asked for %s) -- ignoring", 
                                      hostbuf, inetntoa((char *)&rptr->addr));
+#endif
                   return PROCANSWER_STRANGE;
                }
 
