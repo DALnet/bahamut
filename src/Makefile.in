@@ -133,6 +133,12 @@ m_who.o: m_who.c ../include/struct.h ../include/config.h \
  ../include/sys.h ../include/numeric.h ../include/msg.h \
  ../include/channel.h ../include/h.h \
  ../include/fdlist.h ../include/patchlevel.h
+m_server.o: m_server.c ../include/struct.h ../include/config.h \
+ ../include/setup.h ../include/defs.h ../include/hash.h \
+ ../include/dbuf.h ../include/common.h \
+ ../include/sys.h ../include/numeric.h ../include/msg.h \
+ ../include/channel.h ../include/h.h \
+ ../include/fdlist.h ../include/patchlevel.h
 match.o: match.c ../include/struct.h ../include/config.h \
  ../include/setup.h ../include/defs.h ../include/hash.h \
  ../include/dbuf.h ../include/common.h \
