@@ -48,9 +48,9 @@ int build_searchopts(aClient *sptr, int parc, char *parv[])
 {
   static char *who_help[] =
   {
-      "/WHO [+|-][acghmnsuCM] [args]",
+      "/WHO [+|-][acghimnsuCM] [args]",
       "Flags are specified like channel modes,",
-      "The flags cgmnsu all have arguments",
+      "The flags cghimnsu all have arguments",
       "Flags are set to a positive check by +, a negative check by -",
       "The flags work as follows:",
       "Flag a: user is away",
@@ -60,7 +60,7 @@ int build_searchopts(aClient *sptr, int parc, char *parv[])
       "                        wildcards accepted, oper only",
       "Flag h <host>: user has string <host> in their hostname,",
       "               wildcards accepted",
-      "Flag i <ip>: user is from <ip> wildcards accepted,"
+      "Flag i <ip>: user is from <ip> wildcards accepted,",
       "Flag m <usermodes>: user has <usermodes> set on them,",
       "                    only o/A/a for nonopers",
       "Flag n <nick>: user has string <nick> in their nickname,",
@@ -307,7 +307,7 @@ int build_searchopts(aClient *sptr, int parc, char *parv[])
       if(wsopts.show_chan && !(wsopts.check_away || wsopts.gcos ||
 			       wsopts.host || wsopts.check_umode ||
 			       wsopts.server || wsopts.user || wsopts.nick ||
-			       wsopts.channel))
+			       wsopts.ip || wsopts.channel))
       {
 	  if(parv[args]==NULL)
 	  {
