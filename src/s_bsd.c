@@ -902,8 +902,6 @@ static int completed_connection(aClient * cptr)
 void close_connection(aClient * cptr)
 {
     aConfItem *aconf;
-    int i, j;
-    int empty = cptr->fd;
 
     if (IsServer(cptr))
     {
@@ -1000,24 +998,7 @@ void close_connection(aClient * cptr)
 
     det_confs_butmask(cptr, 0);
     cptr->from = NULL;		/* ...this should catch them! >:) --msa */
-    /* fd remap to keep local[i] filled at the bottom. */
-    if (empty > 0)
-	/* We don't dup listening fds (IsMe())... - CS */
-	if ((j = highest_fd) > (i = empty) &&
-	    !IsLog(local[j]) && !IsMe(local[j])) 
-	{
-	    if (dup2(j, i) == -1)
-		return;
-	    local[i] = local[j];
-	    local[i]->fd = i;
-	    local[j] = NULL;
 
-	    remap_fd(j, i);
-
-	    close(j);
-	    while (!local[highest_fd])
-		highest_fd--;
-	}
     return;
 }
 

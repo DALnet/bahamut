@@ -18,7 +18,6 @@ void init_fds();
 
 void add_fd(int fd, int type, void *value);
 void del_fd(int fd);
-void remap_fd(int oldfd, int newfd);
 
 void get_fd_info(int fd, int *type, unsigned int *flags, void **value);
 void set_fd_flags(int fd, unsigned int flags);

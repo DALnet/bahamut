@@ -47,20 +47,6 @@ static inline void fd_used_assert(int fd)
       abort();
 }
 
-void remap_fd(int oldfd, int newfd)
-{
-   fdfprintf(stderr, "remap_fd: %d %d\n", oldfd, newfd);
-
-   fd_range_assert(oldfd);
-   fd_used_assert(oldfd); 
-   fd_range_assert(newfd);
-   fd_notused_assert(newfd); 
-
-   memcpy(&fd_list[newfd], &fd_list[oldfd], sizeof(struct afd_entry));
-   del_fd(oldfd);
-   engine_add_fd(newfd);
-}
-
 void add_fd(int fd, int type, void *value)
 {
    fdfprintf(stderr, "add_fd: %d %d %x\n", fd, type, (int) value);
@@ -83,7 +69,7 @@ void del_fd(int fd)
 
    engine_del_fd(fd);
 
-   fd_list[fd].type = 0;
+   fd_list[fd].type = FDT_NONE;
    fd_list[fd].value = NULL;
    fd_list[fd].internal = NULL;
 }

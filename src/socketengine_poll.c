@@ -41,11 +41,14 @@ void engine_del_fd(int fd)
    /* If it's at the end of the array, just chop it off */
    if(arrayidx == last_pfd)
    {
+      fdfprintf(stderr, "Removing %d[%d] from end of pollfds\n", last_pfd, fd);
       last_pfd--;
       return;
    }
 
    /* Otherwise, move the last array member to where the old one was */
+   fdfprintf(stderr, "Moving pfd %d[%d] to vacated spot %d[%d] -- now %d[%d]\n", 
+             last_pfd, poll_fds[last_pfd].fd, arrayidx, fd, last_pfd, fd);
    memcpy(&poll_fds[arrayidx], &poll_fds[last_pfd], sizeof(struct pollfd));
    last_pfd--;
    set_fd_internal(poll_fds[arrayidx].fd, (void *) arrayidx);
@@ -97,6 +100,7 @@ int read_message(time_t delay, fdlist * listp)
    for (pfd = poll_fdarray, i = 0; i < nbr_pfds; i++, pfd++) 
    {
       get_fd_info(pfd->fd, &fdtype, &fdflags, &fdvalue);
+
       cptr = NULL;
       length = -1;
 
