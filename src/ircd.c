@@ -34,6 +34,7 @@
 #include <fcntl.h>
 #if defined PROFILING && defined __GLIBC__ && (__GLIBC__ >= 2)
 #include <sys/gmon.h>
+#define monstartup __monstartup
 #endif
 #include "inet.h"
 #include "h.h"
@@ -142,7 +143,7 @@ time_t      nextdnscheck = 0;	   /* next time to poll dns to force timeout */
 time_t      nextexpire = 1;	   /* next expire run on the dns cache */
 time_t      nextbanexpire = 1;     /* next time to expire the throttles/userbans */
 
-#if defined PROFILING && defined __GLIBC__ && (__GLIBC__ >= 2)
+#ifdef PROFILING
 extern void _start, etext;
 
 static int profiling_state = 1;
@@ -156,7 +157,7 @@ VOIDSIG s_dumpprof()
     sprintf(buf, "gmon.%d", (int)time(NULL));
     setenv("GMON_OUT_PREFIX", buf, 1);
     _mcleanup();
-    __monstartup ((u_long) &_start, (u_long) &etext);
+    monstartup ((u_long) &_start, (u_long) &etext);
     setenv("GMON_OUT_PREFIX", "gmon.auto", 1);
     sprintf(profiling_msg, "Reset profile, saved past profile data to %s", buf);
     profiling_newmsg = 1;
@@ -176,7 +177,7 @@ VOIDSIG s_toggleprof()
     }
     else
     {
-       __monstartup ((u_long) &_start, (u_long) &etext);
+       monstartup ((u_long) &_start, (u_long) &etext);
        setenv("GMON_OUT_PREFIX", "gmon.auto", 1);
        profiling_state = 1;
        sprintf(profiling_msg, "Turned profiling ON");
@@ -652,7 +653,7 @@ int main(int argc, char *argv[])
     uid = getuid();
     euid = geteuid();
 
-#if defined PROFILING && defined __GLIBC__ && (__GLIBC__ >= 2)
+#ifdef PROFILING
     setenv("GMON_OUT_PREFIX", "gmon.out", 1);
     (void) signal(SIGUSR1, s_dumpprof);
     (void) signal(SIGUSR2, s_toggleprof);
@@ -1227,7 +1228,7 @@ void io_loop()
 	if ((timeofday >= nextping))
 	    nextping = check_pings(timeofday);
 
-#if defined PROFILING && defined __GLIBC__ && (__GLIBC__ >= 2)
+#ifdef PROFILING
 	if (profiling_newmsg)
 	{
 	    sendto_realops("PROFILING: %s", profiling_msg);
