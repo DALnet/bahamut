@@ -168,19 +168,33 @@ m_version(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		parv[0], version, debugmode, me.name, serveropts);
    return 0;
 }
+
 /*
- * * m_squit 
+ * m_squit
+ * there are two types of squits: those going downstream (to the target server)
+ * and those going back upstream (from the target server).
+ * previously, it wasn't necessary to distinguish between these two types of 
+ * squits because they neatly echoed back all of the QUIT messages during an squit.
+ * This, however, is no longer practical.
+ * 
+ * To clarify here, DOWNSTREAM signifies an SQUIT heading towards the target server
+ * UPSTREAM signifies an SQUIT which has successfully completed, heading out everywhere.
+ *
+ * acptr is the server being squitted.
+ * a DOWNSTREAM squit is where the notice did not come from acptr->from.
+ * an UPSTREAM squit is where the notice DID come from acptr->from.
+ *
  *        parv[0] = sender prefix 
  *        parv[1] = server name 
  *	  parv[2] = comment
  */
-int
-m_squit(aClient *cptr, aClient *sptr, int parc, char *parv[])
+
+int m_squit(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
-   Reg aConfItem 	*aconf;
-   char       		*server;
-   Reg aClient 		*acptr;
-   char       		*comment = (parc > 2 && parv[2]) ? parv[2] : cptr->name;
+   aConfItem *aconf;
+   char *server;
+   aClient *acptr;
+   char *comment = (parc > 2) ? parv[2] : sptr->name;
 
    if (!IsPrivileged(sptr)) 
    {
@@ -225,50 +239,24 @@ m_squit(aClient *cptr, aClient *sptr, int parc, char *parv[])
       server = cptr->sockhost;
       acptr = cptr;
    }
-   /*
-    * * SQUIT semantics is tricky, be careful...
-    * 
-    * The old (irc2.2PL1 and earlier) code just cleans away the server
-    * client from the links (because it is never true "cptr == acptr")
-    * 
-    * This logic here works the same way until "SQUIT host" hits the
-    * server having the target "host" as local link. Then it will do
-    * a real cleanup spewing SQUIT's and QUIT's to all directions,
-    * also to the link from which the orinal SQUIT came, generating
-    * one unnecessary "SQUIT host" back to that link. 
-    * 
-    * One may think that this could be implemented like "hunt_server"
-    * (e.g. just pass on "SQUIT" without doing nothing until the
-    * server having the link as local is reached). Unfortunately this
-    * wouldn't work in the real life, because either target may be
-    * unreachable or may not comply with the request. In either case
-    * it would leave target in links--no command to clear it away.
-    * So, it's better just clean out while going forward, just to be
-    * sure. 
-    * 
-    * ...of course, even better cleanout would be to QUIT/SQUIT 
-    * dependant users/servers already on the way out, but currently
-    * there is not enough information about remote clients to do
-    * this...   --msa
-    */
+
    if (!acptr) 
    {
       sendto_one(sptr, err_str(ERR_NOSUCHSERVER),
 		 me.name, parv[0], server);
       return 0;
    }
+
    if (MyClient(sptr) && ((!OPCanGRoute(sptr) && !MyConnect(acptr)) ||	
 		(!OPCanLRoute(sptr) && MyConnect(acptr)))) 
    {
       sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name, parv[0]);
       return 0;
    }
-   /*
-    * *  Notify all opers, if my local link is remotely squitted 
-    * In df465, there's a sendto_ops() and a sendto_serv_butone()
-    * .. make it so. -mjs
-    * notify everyone about any squit, local or remote - lucas
-    */
+
+   /* If the server is mine, we don't care about upstream or downstream,
+      just kill it and do the notice. */
+
    if (MyConnect(acptr)) 
    {
       sendto_gnotice("from %s: Received SQUIT %s from %s (%s)",
@@ -281,9 +269,33 @@ m_squit(aClient *cptr, aClient *sptr, int parc, char *parv[])
       syslog(LOG_DEBUG, "SQUIT From %s : %s (%s)",
 	     parv[0], server, comment);
 #endif
+      return exit_client(cptr, acptr, sptr, comment);
    }
 
-   return exit_client(cptr, acptr, sptr, comment);
+   /* the server is not connected to me. Determine whether this is an upstream
+      or downstream squit */
+
+   if(sptr->from == acptr->from) /* upstream */
+   {
+      sendto_ops_lev(DEBUG_LEV, "Exiting server %s due to upstream squit by %s [%s]",
+         acptr->name, sptr->name, comment);
+      return exit_client(cptr, acptr, sptr, comment);
+   }
+
+   /* fallthrough: downstream */
+
+   if(!(IsUnconnect(acptr->from))) /* downstream not unconnect capable */
+   {
+      sendto_ops_lev(DEBUG_LEV, "Exiting server %s due to non-unconnect server %s [%s]",
+         acptr->name, acptr->from->name, comment);
+      return exit_client(cptr, acptr, sptr, comment);
+   }
+
+   sendto_ops_lev(DEBUG_LEV, "Passing along SQUIT for %s by %s [%s]",
+         acptr->name, sptr->name, comment);
+   sendto_one(acptr->from, ":%s SQUIT %s :%s", parv[0], acptr->name, comment);
+
+   return 0;
 }
 /*
  * * ts_servcount *   returns the number of TS servers that are
@@ -732,7 +744,7 @@ m_server_estab(aClient *cptr)
       if (bconf->passwd[0])
 	 sendto_one(cptr, "PASS %s :TS", bconf->passwd);
       /* Pass my info to the new server */
-      sendto_one(cptr, "CAPAB TS3 NOQUIT SSJOIN BURST");
+      sendto_one(cptr, "CAPAB TS3 NOQUIT SSJOIN BURST UNCONNECT");
       sendto_one(cptr, "SERVER %s 1 :%s",
 		 my_name_for_link(me.name, aconf),
 		 (me.info[0]) ? (me.info) : "IRCers United");
@@ -4692,6 +4704,8 @@ m_capab(aClient *cptr, aClient *sptr, int parc, char *parv[])
  	SetSSJoin(cptr);
       else if (strcmp(parv[i], "BURST") == 0)
         SetBurst(cptr);
+      else if (strcmp(parv[i], "UNCONNECT") == 0)
+        SetUnconnect(cptr);
    }
 
    return 0;

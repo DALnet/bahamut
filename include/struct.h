@@ -200,6 +200,7 @@ typedef struct MotdItem aMotd;
 #define CAPAB_NOQUIT  0x0000002 /* Supports NOQUIT */
 #define CAPAB_NSJOIN  0x0000004 /* server supports new smart sjoin */
 #define CAPAB_BURST   0x0000008 /* server supports BURST command */
+#define CAPAB_UNCONN  0x0000010 /* server supports UNCONNECT */
 
 #define SetTS3(x)   	((x)->capabilities |= CAPAB_TS3)
 #define IsTS3       	((x)->capabilities & CAPAB_TS3)
@@ -212,6 +213,9 @@ typedef struct MotdItem aMotd;
 
 #define SetBurst(x)	((x)->capabilities |= CAPAB_BURST)
 #define IsBurst(x)	((x)->capabilities & CAPAB_BURST)
+
+#define SetUnconnect(x)	((x)->capabilities |= CAPAB_UNCONN)
+#define IsUnconnect(x)	((x)->capabilities & CAPAB_UNCONN)
 
 /* flag macros. */
 #define IsULine(x) ((x)->flags & FLAGS_ULINE)
