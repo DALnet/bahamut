@@ -2620,7 +2620,7 @@ char *str_next_period(char *x)
 
 void *my_lame_strcpy(char *x, char *y, int ml)
 {
-   while(*x && ml--)
+   while(*y && ml--)
    {
       *x++ = *y++;
    }
