@@ -245,4 +245,5 @@ hide.o: hide.c ../include/struct.h ../include/config.h ../include/h.h
 socketengine_poll.o: ../include/config.h ../include/h.h
 socketengine_select.o: ../include/config.h ../include/h.h
 socketengine_kqueue.o: ../include/config.h ../include/h.h
+socketengine_epoll.o: ../include/config.h ../include/h.h
 
