@@ -3269,9 +3269,9 @@ m_oper(aClient *cptr,
 		else
 		  SetOper(sptr);
 #ifdef DEFAULT_HELP_MODE			
-			sptr->umode|=(UMODE_s|UMODE_g|UMODE_w|UMODE_n|UMODE_f|UMODE_h);
+			sptr->umode|=(UMODE_s|UMODE_g|UMODE_w|UMODE_n|UMODE_h);
 #else			
-			sptr->umode|=(UMODE_s|UMODE_g|UMODE_w|UMODE_n|UMODE_f);
+			sptr->umode|=(UMODE_s|UMODE_g|UMODE_w|UMODE_n);
 #endif
 			sptr->oflag = aconf->port;
       Count.oper++;
