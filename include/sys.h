@@ -62,13 +62,7 @@
 
 #ifdef AIX
 #include <sys/select.h>
-#endif
-#if defined(AIX)
 #include <time.h>
-#ifdef AIX
-#include <sys/time.h>
-#endif
-#else
 #include <sys/time.h>
 #endif
 
