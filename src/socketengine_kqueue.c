@@ -80,6 +80,7 @@ engine_del_fd(int fd)
  * seems to have gone away.  Makes me nervous, but this is safe change
  * all the same.
  * -epi
+ * on again for a whirl. */
 
    struct kevent e;
 
@@ -98,7 +99,6 @@ engine_del_fd(int fd)
    e.data = 0;
    e.udata = NULL;
    kevent_add(&e);
- */
 }
 
 void 
