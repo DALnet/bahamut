@@ -106,7 +106,6 @@ extern aConfItem *find_conf_host(Link *, char *, int);
 extern aConfItem *find_conf_ip(Link *, char *, char *, int);
 extern aConfItem *find_conf_name(char *, int);
 extern aConfItem *find_uline(Link *, char *);
-extern aConfItem *find_is_ulined(char *);
 
 extern int  	  find_restrict(aClient *);
 extern int  	  rehash(aClient *, aClient *, int);

@@ -838,23 +838,6 @@ aConfItem *find_uline(Link *lp, char *host)
     return ((aConfItem *) NULL);
 }
 
-aConfItem *find_is_ulined(char *host) 
-{
-    aConfItem *tmp;
-    int hostlen = host ? strlen(host) : 0;
-
-    if (hostlen > HOSTLEN || BadPtr(host))
-	return ((aConfItem *) NULL);
-
-    for (tmp = conf; tmp; tmp = tmp->next) 
-    {
-	if (tmp->status & CONF_ULINE && (tmp->host && !mycmp(tmp->host, host)))
-	    return tmp;
-    }
-
-    return ((aConfItem *) NULL);
-}
-
 /*
  * find_conf_ip
  * 

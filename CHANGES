@@ -1,7 +1,6 @@
 Changes for 1.4.37:
 
-- Defined NO_USER_TRACE by default
-- Changed some kqueue settings
+- Fixed a bug in kqueue causing cores (thanks lucas!)
 - Removed backwards compatibility for:
 	- NOQUIT
 	- UNCONNECT

@@ -675,7 +675,7 @@
 /* #undef NO_USER_SERVERNOTICES */
 /* #undef NO_USER_STATS */
 /* #undef NO_LOCAL_USER_STATS */
-#define NO_USER_TRACE
+/* #undef NO_USER_TRACE */
 /* #undef NO_USER_OPERTARGETED_COMMANDS */
 /* #undef HIDE_NUMERIC_SOURCE */
 /* #undef HIDE_KILL_ORIGINS */
