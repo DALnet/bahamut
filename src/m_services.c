@@ -49,12 +49,6 @@ extern int user_modes[];
  * IDENTIFY     - /identify * taz's code -mjs
  */
 
-/* m_nickserv */
-int m_nickserv(aClient *cptr, aClient *sptr, int parc, char *parv[]) 
-{
-    return m_ns(cptr, sptr, parc, parv);
-}
-
 /* m_ns */
 int m_ns(aClient *cptr, aClient *sptr, int parc, char *parv[]) 
 {
@@ -74,12 +68,6 @@ int m_ns(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	sendto_one(sptr, err_str(ERR_SERVICESDOWN), me.name,
 		   parv[0], NICKSERV);
     return 0;
-}
-
-/* m_chanserv */
-int m_chanserv(aClient*cptr, aClient *sptr, int parc,char *parv[])
-{
-    return m_cs(cptr, sptr, parc, parv);
 }
 
 /* m_cs */
@@ -103,12 +91,6 @@ int m_cs(aClient *cptr, aClient *sptr, int parc, char *parv[])
     return 0;
 }
 
-/* m_memoserv */
-int m_memoserv(aClient*cptr, aClient *sptr, int parc,char *parv[])
-{
-    return m_ms(cptr, sptr, parc, parv);
-}
-
 /* m_ms */
 int m_ms(aClient *cptr, aClient *sptr, int parc, char *parv[]) 
 {
@@ -130,12 +112,6 @@ int m_ms(aClient *cptr, aClient *sptr, int parc, char *parv[])
     return 0;
 }
 
-/* m_rootserv */
-int m_rootserv(aClient*cptr, aClient *sptr, int parc,char *parv[])
-{
-    return m_rs(cptr, sptr, parc, parv);
-}
-
 /* m_rs */
 int m_rs(aClient *cptr, aClient *sptr, int parc, char *parv[]) 
 {
@@ -155,12 +131,6 @@ int m_rs(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	sendto_one(sptr, err_str(ERR_SERVICESDOWN), me.name,
 		   parv[0], ROOTSERV);
     return 0;
-}
-
-/* m_operserv */
-int m_operserv(aClient*cptr, aClient *sptr, int parc,char *parv[])
-{
-    return m_os(cptr, sptr, parc, parv);
 }
 
 /* m_os */
@@ -208,6 +178,33 @@ int m_ss(aClient *cptr, aClient *sptr, int parc, char *parv[])
     else
 	sendto_one(sptr, err_str(ERR_SERVICESDOWN), me.name,
 		   parv[0], STATSERV);
+    return 0;
+}
+
+/* m_statserv */
+int m_statserv(aClient*cptr, aClient *sptr, int parc,char *parv[])
+{
+    return m_os(cptr, sptr, parc, parv);
+}
+
+/* m_hs */
+int m_hs(aClient *cptr, aClient *sptr, int parc, char *parv[]) 
+{
+    aClient    *acptr;
+
+    if (check_registered_user(sptr))
+	return 0;
+    if (parc < 2 || *parv[1] == '\0')
+    {
+        if(MyClient(sptr))
+	  sendto_one(sptr, err_str(ERR_NOTEXTTOSEND), me.name, parv[0]);
+	return -1;
+    }
+    if ((acptr = find_server(STATS_NAME, NULL)))
+	sendto_one(acptr, ":%s HS :%s", parv[0], parv[1]);
+    else
+	sendto_one(sptr, err_str(ERR_SERVICESDOWN), me.name,
+		   parv[0], HELPSERV);
     return 0;
 }
 

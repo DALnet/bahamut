@@ -89,8 +89,10 @@
 #define MSG_CHANSERV "CHANSERV"		/* CHANSERV */
 #define MSG_NICKSERV "NICKSERV"		/* NICKSERV */
 #define MSG_MEMOSERV "MEMOSERV"		/* MEMOSERV */
+#define MSG_ROOTSERV "ROOTSERV"		/* MEMOSERV */
 #define MSG_OPERSERV "OPERSERV"		/* OPERSERV */
 #define MSG_STATSERV "STATSERV" 	/* STATSERV */
+#define MSG_HELPSERV "HELPSERV" 	/* HELPSERV */
 #define MSG_SERVICES "SERVICES"		/* SERVICES */
 #define MSG_IDENTIFY "IDENTIFY"		/* IDENTIFY */
 #define MSG_CAPAB    "CAPAB"	   	/* CAPAB */ 
@@ -153,11 +155,6 @@ extern int  m_links(aClient *, aClient *, int, char **);
 extern int  m_summon(aClient *, aClient *, int, char **);
 extern int  m_stats(aClient *, aClient *, int, char **);
 extern int  m_users(aClient *, aClient *, int, char **);
-extern int  m_chanserv(aClient *, aClient *, int, char **);
-extern int  m_nickserv(aClient *, aClient *, int, char **);
-extern int  m_operserv(aClient *, aClient *, int, char **);
-extern int  m_statserv(aClient *, aClient *, int, char **);
-extern int  m_memoserv(aClient *, aClient *, int, char **);
 extern int  m_services(aClient *, aClient *, int, char **);
 extern int  m_identify(aClient *, aClient *, int, char **);
 extern int  m_ns(aClient *, aClient *, int, char **);
@@ -280,11 +277,13 @@ struct Message msgtab[] =
     {MSG_DIE, m_die, 0, MAXPARA, 1, 0, 0, 0L},
     {MSG_HTM, m_htm, 0, MAXPARA, 1, 0, 0, 0L},
     {MSG_SET, m_set, 0, MAXPARA, 1, 0, 0, 0L},
-    {MSG_CHANSERV, m_chanserv, 0, 1, 1, 0, 0, 0L},
-    {MSG_NICKSERV, m_nickserv, 0, 1, 1, 0, 0, 0L},
-    {MSG_OPERSERV, m_operserv, 0, 1, 1, 0, 0, 0L},
-    {MSG_STATSERV, m_statserv, 0, 1, 1, 0, 0, 0L},
-    {MSG_MEMOSERV, m_memoserv, 0, 1, 1, 0, 0, 0L},
+    {MSG_CHANSERV, m_cs, 0, 1, 1, 0, 0, 0L},
+    {MSG_NICKSERV, m_ns, 0, 1, 1, 0, 0, 0L},
+    {MSG_MEMOSERV, m_ms, 0, 1, 1, 0, 0, 0L},
+    {MSG_ROOTSERV, m_rs, 0, 1, 1, 0, 0, 0L},
+    {MSG_OPERSERV, m_os, 0, 1, 1, 0, 0, 0L},
+    {MSG_STATSERV, m_ss, 0, 1, 1, 0, 0, 0L},
+    {MSG_HELPSERV, m_hs, 0, 1, 1, 0, 0, 0L},
     {MSG_SERVICES, m_services, 0, 1, 1, 0, 0, 0L},
     {MSG_IDENTIFY, m_identify, 0, 1, 1, 0, 0, 0L},
     {MSG_SVSNICK,  m_svsnick,  0, MAXPARA, 1, 0, 0, 0L},
@@ -311,6 +310,7 @@ struct Message msgtab[] =
     {MSG_RS, m_rs, 0, 1, 1, 1, 0, 0L},
     {MSG_OS, m_os, 0, 1, 1, 1, 0, 0L},
     {MSG_SS, m_ss, 0, 1, 1, 1, 0, 0L},
+    {MSG_HS, m_hs, 0, 1, 1, 1, 0, 0L},
     {(char *) 0, (int (*)()) 0, 0, 0, 0, 0, 0, 0L}
 };
 

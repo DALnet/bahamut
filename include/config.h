@@ -268,17 +268,19 @@
 /* Services Definitions */
 #define STATS_NAME "stats.dal.net"
 #define CHANSERV "ChanServ"
-#define OPERSERV "OperServ"
-#define MEMOSERV "MemoServ"
 #define NICKSERV "NickServ"
+#define MEMOSERV "MemoServ"
 #define ROOTSERV "RootServ"
+#define OPERSERV "OperServ"
 #define STATSERV "StatServ"
+#define STATSERV "HelpServ"
 #define NICKSERVATSERVICES NICKSERV "@" SERVICES_NAME
 #define CHANSERVATSERVICES CHANSERV "@" SERVICES_NAME
 #define MEMOSERVATSERVICES MEMOSERV "@" SERVICES_NAME
 #define ROOTSERVATSERVICES ROOTSERV "@" SERVICES_NAME
 #define OPERSERVATSTATS    OPERSERV "@" STATS_NAME
 #define STATSERVATSTATS    STATSERV "@" STATS_NAME
+#define HELPSERVATSTATS    HELPSERV "@" STATS_NAME
 
 /*
  * FNAME_USERLOG and FNAME_OPERLOG - logs of local USERS and OPERS
