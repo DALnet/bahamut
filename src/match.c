@@ -23,6 +23,10 @@
 #include "struct.h"
 #include "common.h"
 #include "sys.h"
+
+#if 0 /* this code is depricated, however it may still prove useful
+         in the long run to 'show' it here */
+
 #define MAX_CALLS 512
 static int  calls = 0;
 
@@ -40,7 +44,6 @@ static int  calls = 0;
 
 static int wdmatch(const char *string, const char *wild);
 
-#if 0
 static int _match(char *mask, char *name)
 {
    Reg u_char *m = (u_char *) mask, *n = (u_char *) name;
@@ -96,12 +99,12 @@ static int _match(char *mask, char *name)
       }
    }
 }
-#endif
 
 int match(char *n, char *m) {
 	calls=0;
 	return wdmatch(m,n);
 }
+#endif
 
 /*
  * * collapse a pattern string into minimal components. * This
@@ -148,7 +151,7 @@ unsigned char tolowertab[] =
  ':', ';', '<', '=', '>', '?',
  '@', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i',
  'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's',
- 't', 'u', 'v', 'w', 'x', 'y', 'z', '[', '\\', ']', '~',
+ 't', 'u', 'v', 'w', 'x', 'y', 'z', '[', '\\', ']', '^',
  '_',
  '`', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i',
  'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's',
@@ -186,7 +189,7 @@ unsigned char touppertab[] =
  0x5f,
  '`', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I',
  'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S',
- 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '{', '|', '}', '^',
+ 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '{', '|', '}', '~',
  0x7f,
  0x80, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0x87, 0x88, 0x89,
  0x8a, 0x8b, 0x8c, 0x8d, 0x8e, 0x8f,
@@ -367,7 +370,7 @@ myncmp(char *str1, char *str2, int n)
    return (-1);
 }
  
-int wdmatch(const char *string, const char *wild) {
+int match(const char *string, const char *wild) {
    /* the *! in a match is such a common case that we optimize
 	 * for it inherently */
 	if(wild[0]=='*' && wild[1]=='!') {
