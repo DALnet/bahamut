@@ -1946,8 +1946,10 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
             }
             else 
             {
-                strncpy(chptr->mode.key,parv[args],KEYLEN);
-                ADD_PARA(chptr->mode.key)
+                char *sendkey = chptr->mode.key;
+                if (!*sendkey)
+                    sendkey = parv[args];
+                ADD_PARA(sendkey)
                 *chptr->mode.key = '\0';
             }
             *mbuf++='k';
