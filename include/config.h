@@ -634,6 +634,13 @@
  */
 #define WARN_NO_NLINE
 
+/* 
+ * HTM_LOCK_ON_NETBURST Define this if you want your server to
+ * stay in HTM while the server is synching to the network 
+ * after a connect
+*/
+#undef HTM_LOCK_ON_NETBURST
+
 /******************************************************************
  * STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP
  *

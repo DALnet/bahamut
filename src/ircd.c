@@ -614,6 +614,7 @@ int         lifesux = 1;
 int         LRV = LOADRECV;
 time_t      LCF = LOADCFREQ;
 int currlife = 0;
+int         HTMLOCK=NO;
 
 char REPORT_DO_DNS[256], REPORT_FIN_DNS[256], REPORT_FIN_DNSC[256], 
   REPORT_FAIL_DNS[256], REPORT_DO_ID[256], REPORT_FIN_ID[256], 
@@ -1046,8 +1047,8 @@ time_t      lasttimeofday;
    if ((timeofday - lasttime) >= LCF) {
       lrv = LRV * LCF;
       lasttime = timeofday;
-      currlife = (me.receiveK - lastrecvK) / int LCF;
-      if ((me.receiveK - lrv) > lastrecvK) {
+      currlife = (me.receiveK - lastrecvK) / LCF;
+      if ((me.receiveK - lrv) > lastrecvK || HTMLOCK == YES) {
 	 if (!lifesux) {
 	    /*
 	     * In the original +th code Taner had

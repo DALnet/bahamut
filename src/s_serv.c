@@ -897,6 +897,12 @@ m_server_estab(aClient *cptr)
 	     if(aconf->status&(CONF_QUARANTINED_NICK|CONF_SQLINE)) 
 		sendto_one(cptr, ":%s SQLINE %s :%s", me.name, aconf->name, aconf->passwd);
 	}
+
+   /* Bursts are about to start.. send a BURST */
+   sendto_one(cptr, "BURST"); 
+   /* we're not going to set SOBSENT until after the TOPIC burst is about to be sent.. 
+    * we don't want a premature EOB sent to the server */
+    
 	
    /*
     * * Send it in the shortened format with the TS, if it's a TS
@@ -951,6 +957,37 @@ m_server_estab(aClient *cptr)
    strcpy(cptr->sockhost, "localhost");
    return 0;
 }
+/* 
+ * m_burst
+ *      parv[0] = SendQ if an EOB
+*/
+int m_burst(aClient *cptr, aClient *sptr, int parc, char *parv[]) {
+  
+  if (!IsServer(sptr) || sptr != cptr) return 0;
+  if (parc) { /* This is an EOB */
+    sptr->flags &= ~(FLAGS_EOBRECV);
+    if (!(sptr->flags & FLAGS_SOBEOB)) { /* ok, we've sent our last BURST and we just got ours.. we're synched */
+ #ifdef HTM_LOCK_ON_NETBURST
+      HTMLOCK = NO;
+ #endif
+      sendto_gnotice("synched to %s in %d %s at %s sendq", sptr->name, (timeofday-sptr->firsttime),
+        (timeofday-sptr->firsttime)==1?"sec":"secs", parv[0]);
+ #ifdef HUB
+      sendto_serv_butone(sptr, ":%s GNOTICE :synched to %s in %d %s at %s sendq", me.name,
+        sptr->name, (timeofday-sptr->firsttime), (timeofday-sptr->firsttime)==1?"sec":"secs", parv[0]);
+ #endif
+    }
+
+  }
+  else { /* SOB.. lock HTM if defined by admin */
+#ifdef HTM_LOCK_ON_NETBURST
+    HTMLOCK = YES;
+#endif
+    sptr->flags |= FLAGS_EOBRECV;
+  }
+  return 0;
+}
+
 /*
  * * m_info 
  * 	parv[0] = sender prefix 
@@ -2724,7 +2761,7 @@ m_htm(aClient *cptr, aClient *sptr, int parc, char *parv[])
       return 0;
    }
    sendto_one(sptr,
-	      ":%s NOTICE %s :HTM is %s(%d), %s. Max rate = %dk/s. Current = %.1fk/s",
+	      ":%s NOTICE %s :HTM is %s(%d), %s. Max rate = %dk/s. Current = %dk/s",
 	      me.name, parv[0], lifesux ? "ON" : "OFF", lifesux,
 	      noisy_htm ? "NOISY" : "QUIET",
 	      LRV, currlife);
@@ -2736,6 +2773,13 @@ m_htm(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	 if (parc > 2) 
 	 {
    	    int new_value = atoi(parv[2]);
+
+#ifdef HTM_LOCK_ON_NETBURST
+            if (HTMLOCK == YES) {
+               sendto_one(sptr, ":%s NOTICE %s :Cannot change HTM - Currently LOCKED");
+               return;
+            }
+#endif 
 	    if (new_value < 10) 
 	       sendto_one(sptr, ":%s NOTICE %s :\002Cannot set LRV < 10!\002",
 			  me.name, parv[0]);

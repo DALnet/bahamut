@@ -228,6 +228,22 @@ int send_queued(aClient *to) {
 	/* no... rlen==0 means the send returned EWOULDBLOCK... */
 	break;
    }
+
+   if (to->flags & FLAGS_SOBSENT && DBufLength(&to->sendQ) < 25600) { /* 25k = synch */
+     sendto_one(to, "BURST %d", DBufLength(&to->sendQ));
+     to->flags &= (~FLAGS_SOBSENT);
+     if (!(to->flags & FLAGS_SOBEOB)) { /* hey we're the last to synch.. let's notify */
+       sendto_gnotice("synch to %s in %d %s", to->name, (timeofday-to->firsttime), 
+         (timeofday-to->firsttime)==1?"sec":"secs");
+   #ifdef HUB
+       sendto_serv_butone(to, ":%s GNOTICE synch to %s in %d %s", me.name, to->name,
+         (timeofday-to->firsttime), (timeofday-to->firsttime)==1?"sec":"secs");
+   #endif
+   #ifdef HTM_LOCK_ON_NETBURST
+       HTMLOCK = NO;
+   #endif
+     }
+   }
    
    return (IsDead(to)) ? -1 : 0;
 }
