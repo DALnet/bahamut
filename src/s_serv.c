@@ -1358,11 +1358,6 @@ int m_info(aClient *cptr, aClient *sptr, int parc, char *parv[])
 #else
 	    strcpy(outstr, " MAXBUFFERS=0");
 #endif
-#ifdef NON_REDUNDANT_KLINES
-	    strcat(outstr, " NON_REDUNDANT_KLINES=1");
-#else
-	    strcat(outstr, " NON_REDUNDANT_KLINES=0");
-#endif
 #ifdef NO_CHANOPS_WHEN_SPLIT
 	    strcat(outstr, " NO_CHANOPS_WHEN_SPLIT=1");
 #else
@@ -1488,7 +1483,7 @@ int m_info(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		       me.name, parv[0], outstr);
 
 #ifdef FLUD
-	    ircsprintf(outstr, "FLUD_BLOCK=%d FLUD_NUM=%d FLUD_TIME=%d",
+	    ircsprintf(outstr, " FLUD_BLOCK=%d FLUD_NUM=%d FLUD_TIME=%d",
 		       FLUD_BLOCK, FLUD_NUM, FLUD_TIME);
 	    sendto_one(sptr, rpl_str(RPL_INFO),
 		       me.name, parv[0], outstr);
@@ -1520,7 +1515,16 @@ int m_info(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		       TS_MAX_DELTA, TS_WARN_DELTA);
 	    sendto_one(sptr, rpl_str(RPL_INFO),
 		       me.name, parv[0], outstr);
+#ifdef USE_DRONEMODULE
+	    strcpy(outstr, "  ");
+	    if(drone_mod_version(outstr + 2, sizeof(outstr) - 2))
+	    {
+		sendto_one(sptr, rpl_str(RPL_INFO), me.name, parv[0], "Drone module version:");
+		sendto_one(sptr, rpl_str(RPL_INFO), me.name, parv[0], outstr);
+	    }
+#endif
 	}
+
 
 	sendto_one(sptr,
 		   ":%s %d %s :Birth Date: %s, compile # %s",

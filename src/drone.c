@@ -43,6 +43,7 @@
 void drone_init() { }
 void drone_rehash() { }
 int is_a_drone(aClient *sptr) { return 0; }
+char *drone_mod_version(char *a, int b) { return NULL; }
 #else
 
 #include <dlfcn.h>
@@ -158,4 +159,20 @@ int is_a_drone(aClient *sptr)
    }
    return 0;
 }
+
+char *drone_mod_version(char *buf, int buflen)
+{
+   char *v = NULL;
+
+   if(!drones_ok)
+   {
+      ircsnprintf(buf, buflen, "No drone module is currently installed.");
+      return buf;
+   }
+
+   (*get_drone_module_version)(&v);
+   ircsnprintf(buf, buflen, "%s", v ? v : "unspecified");
+   return buf; 
+}
+
 #endif /* USE_DRONEMODULE */

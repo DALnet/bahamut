@@ -436,15 +436,6 @@
 #define REJECT_IPHONE
 
 /*
- * ZLINES_IN_KPATH - put (/quote) ZLINES in your KPATH file. Define
- * this if you want ZLINES in your KPATH file.  Otherwise ZLINES will
- * be added to the main ircd.conf
- */
-#ifdef KPATH
-#undef ZLINES_IN_KPATH
-#endif /* KPATH */
-
-/*
  * HIGHEST_CONNECTION - track highest connection count Define this if
  * you want to keep track of your max connections.
  */
@@ -462,12 +453,6 @@
  * I: lines to get ircd to do ident lookup even if you define this.
  */
 #define DO_IDENTD
-
-/*
- * NON_REDUNDANT_KLINES - If you want the server to flag and not apply
- * redundant klines
- */
-#define NON_REDUNDANT_KLINES
 
 /* IDENTD_COMPLAIN - yell at users that don't have identd installed */
 #undef IDENTD_COMPLAIN
