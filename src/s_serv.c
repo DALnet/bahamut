@@ -920,8 +920,8 @@ m_server_estab(aClient *cptr)
 		sendto_one(cptr, ":%s SQLINE %s :%s", me.name, 
 			   aconf->name, aconf->passwd);
 	    if((aconf->status&CONF_GCOS) && (aconf->status&CONF_SGLINE))
-		sendto_one(cptr, ":%s SGLINE %s :%s", me.name,
-			   aconf->name, aconf->passwd);
+		sendto_one(cptr, ":%s SGLINE %d :%s:%s", me.name,
+			   strlen(aconf->name), aconf->name, aconf->passwd);
 	}
 
 	/* Lets do szlines */
@@ -5256,7 +5256,9 @@ int m_sgline(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	
 int m_unsgline(aClient *cptr, aClient *sptr, int parc, char *parv[]) 
 {
-   aConfItem *aconf, *ac2, *ac3;
+    int matchit=0;
+    char *mask;
+    aConfItem *aconf, *ac2, *ac3;
    
    if(!IsServer(sptr))
       return 0;
@@ -5294,7 +5296,7 @@ int m_unsgline(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	}
     }   
 
-   sendto_serv_butone(cptr, ":%s UNSGLINE %s %s", sptr->name, parv[1],
+   sendto_serv_butone(cptr, ":%s UNSGLINE %s :%s", sptr->name, parv[1],
 		      (parc==3) ? parv[2] : "");
    return 0;
 }
@@ -5303,7 +5305,7 @@ int m_szline(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
    aConfItem *aconf;
 
-   if(!IsServer(sptr))
+   if(!IsServer(sptr)||!IsUline(sptr))
       return 0;
    if(parc<2) 
    {
@@ -5311,7 +5313,7 @@ int m_szline(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	return 0;
    }
 	
-   if (!(aconf=find_conf_name(parv[1], CONF_ZLINE)))
+   if (!(aconf=find_is_zlined(parv[1])))
    {
 	/* okay, it doesn't suck, build a new conf for it */
 	aconf=make_conf();
@@ -5328,7 +5330,10 @@ int m_szline(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	
 int m_unszline(aClient *cptr, aClient *sptr, int parc, char *parv[]) 
 {
-    if(!IsServer(sptr))
+    int matchit = 0;
+    char *mask;
+
+    if(!IsServer(sptr) || !IsUline(sptr))
 	return 0;
     
     if(parc<2) 
@@ -5337,8 +5342,17 @@ int m_unszline(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		   "UNSZLINE");
 	return 0;
     }
-    remove_szline(parv[1], (parc==3&&atoi(parv[2])==1) ? 1 : 0);
-    sendto_serv_butone(cptr, ":%s UNSZLINE %s %s", sptr->name, parv[1],
-		       (parc==3) ? parv[2] : "");
+    if (parc==3) {
+	matchit=atoi(parv[1]);
+	mask=parv[2];
+    } else
+	mask=parv[1];
+    
+    remove_szline(mask, matchit ? 1 : 0);
+    if (parc==3)
+	sendto_serv_butone(cptr, ":%s UNSZLINE %d %s", sptr->name, matchit,
+			   mask);
+    else
+	sendto_serv_butone(cptr, ":%s UNSZLINE %s", sptr->name, mask);
     return 0;
 }
