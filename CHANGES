@@ -1,3 +1,10 @@
+Outstanding bugs in 1.4.23
+- Doesn't compile under glibc 2.2.2
+- "Sux mode," where a server<->server connection can take a long time to
+  establish if one or both sides filters ident connections
+- Source address support on /connect may not work under some conditions
+- Temp kline/akill matching on user connections is very slow with many klines
+
 Changes for 1.4.23
 - Some error message changes/fixes
 - Fixed a cloaking bug
@@ -12,6 +19,8 @@ Changes for 1.4.23
   script
 - Example.conf brought up to date
 - Display proper error messages when you can't join a channel
+- Fixed the +a (away) who flag; its behavior was reversed from what it should
+  have been
 
 Changes for 1.4.22
 - Fixed a bug where a server with a bad name trying to connect or trying
