@@ -994,11 +994,12 @@ register_user(aClient *cptr,
      if(BadPtr(pwaconf->passwd) && sptr->passwd[0] && (nsptr=find_person(NickServ,NULL))!=NULL) {
         sendto_one(nsptr,":%s PRIVMSG %s@%s :SIDENTIFY %s", sptr->name, NickServ, SERVICES_NAME, sptr->passwd);
      }
+
+     if(sptr->passwd[0])
+        memset(sptr->passwd, '\0', PASSWDLEN);
      
      if (ubuf[1]) send_umode(cptr, sptr, 0, ALL_UMODES, ubuf);
    }
-
-   memset(sptr->passwd, '\0', PASSWDLEN);
 
    return 0;
 }
@@ -1393,7 +1394,8 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
       }
       sptr = make_client(cptr, uplink);
 
-      if ((find_uline(cptr->confs, parv[7])))
+      /* If this is on a U: lined server, it's a U: lined client. */
+      if(IsULine(uplink))
          sptr->flags|=FLAGS_ULINE;
                 
       add_client_to_list(sptr);
