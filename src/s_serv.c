@@ -530,7 +530,7 @@ m_server(aClient *cptr, aClient *sptr, int parc, char *parv[])
        * a while and servers to send stuff to the wrong place.
        */
       sendto_one(cptr, "ERROR :Nickname %s already exists!", host);
-      strcpy(nbuf, get_client_name(bcptr, HIDEME));
+      strcpy(nbuf, get_client_name(cptr, HIDEME));
       sendto_gnotice("from %s: Link %s cancelled, servername/nick collision",
                 me.name, nbuf);
       sendto_serv_butone(cptr, ":%s GNOTICE :Link %s cancelled, servername/nick collision",

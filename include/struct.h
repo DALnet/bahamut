@@ -719,7 +719,8 @@ typedef struct msg_tree {
  * 
  * - Dianora
  */
-typedef struct Ban {
+
+struct Ban {
 	char       *banstr;
 	char       *who;
 	time_t      when;
