@@ -1,3 +1,13 @@
+Changes for 1.4.17
+- Oper hostmasking:
+  Your I: line password is oper<.password> where password is optional.
+  You then /server <yourserver> <yourport> <portpass:>opernick:operpass
+  Anyone +A can see your real username, host, and IP.
+
+Changes for 1.4.16
+- deal with long-time buffer overflow when more than MAXADDR
+  A DNS answers are received.
+
 Changes for 1.4.15
 - Crash in res.c fixed (due to wrong question received under heavy load)
 - name resolution prevents ircd dns cache pollution
