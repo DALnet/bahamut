@@ -977,8 +977,8 @@ struct Channel
     char        chname[CHANNELLEN+1];
 };
 
-#define	TS_CURRENT	3	/* current TS protocol version */
-#define	TS_MIN		1  	/* minimum supported TS protocol version */
+#define	TS_CURRENT	5	/* current TS protocol version */
+#define	TS_MIN		3  	/* minimum supported TS protocol version */
 #define	TS_DOESTS	0x20000000
 #define	DoesTS(x)	((x)->tsinfo == TS_DOESTS)
 /* Channel Related macros follow */
