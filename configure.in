@@ -266,3 +266,8 @@ case "$target" in
 esac
 
 AC_OUTPUT(Makefile src/Makefile tools/Makefile)
+
+echo configuring zlib...
+cd zlib
+./configure
+cd ..

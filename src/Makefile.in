@@ -1,6 +1,6 @@
 CC=@CC@
 RM=@RM@
-IRCDLIBS=@LIBS@
+IRCDLIBS=@LIBS@ ../zlib/libz.a
 INCLUDEDIR=-I../include -I../zlib
 
 SRC_1 = bsd.c channel.c class.c dbuf.c dich_conf.c
