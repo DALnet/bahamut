@@ -75,6 +75,7 @@ typedef struct SMode Mode;
 #ifdef USE_WATCH
 typedef struct Watch aWatch;
 #endif
+typedef struct Ban aBan;
 typedef struct ListOptions LOpts;
 typedef long ts_val;
 
@@ -723,7 +724,7 @@ typedef struct Ban {
 	char       *who;
 	time_t      when;
 	aBan 	   *next;
-} aBan;
+};
 
 /* general link structure used for chains */
 
