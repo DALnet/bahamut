@@ -660,6 +660,15 @@
  */
 #define DEFAULT_PROXY_INFO_URL "kline.dal.net/proxy/wingate.htm"
 
+/*
+ * STAFF_ADDRESS
+ *
+ * Hostmask for staff when oper hostmasking is used.
+ * If you are actually a dalnet server, you should not change this.
+ * The idea is to make it universal for the entire network.
+ */
+#define STAFF_ADDRESS "staff.dal.net"
+
 /******************************************************************
  * STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP
  *

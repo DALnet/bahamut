@@ -957,13 +957,13 @@ register_user(aClient *cptr,
             strcpy(sptr->user->real_oper_username, sptr->username);
             strcpy(sptr->user->real_oper_ip, sptr->hostip);
 
-            strncpyzt(sptr->user->host, "staff.dal.net", HOSTLEN + 1);
+            strncpyzt(sptr->user->host, STAFF_ADDRESS, HOSTLEN + 1);
             strncpyzt(sptr->user->username, onick, USERLEN + 1);
             strncpyzt(sptr->username, onick, USERLEN + 1);
             sptr->flags |= FLAGS_GOTID; /* fake ident */
             sptr->ip.s_addr = 0;
             strcpy(sptr->hostip, "0.0.0.0");
-            strcpy(sptr->sockhost, "staff.dal.net");
+            strcpy(sptr->sockhost, STAFF_ADDRESS);
          }
 
          if(tmpptr)
