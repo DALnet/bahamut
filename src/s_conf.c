@@ -1035,10 +1035,6 @@ rehash(aClient *cptr, aClient *sptr, int sig)
 										 * Only d lines of this form allowed 
 										 */
 	
-   clear_conf_list(&BList1);
-   clear_conf_list(&BList2);
-   clear_conf_list(&BList3);
-	
    clear_conf_list(&EList1);
    clear_conf_list(&EList2);
    clear_conf_list(&EList3);

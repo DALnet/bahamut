@@ -1767,17 +1767,6 @@ m_stats(aClient *cptr,
 			CONF_NOCONNECT_SERVER);
 		break;
 		
-	 case 'B':
-	 case 'b':
-#ifdef B_LINES_OPER_ONLY
-		if (!IsAnOper(sptr))
-		  break;
-#endif
-		report_conf_links(sptr, &BList1, RPL_STATSBLINE, 'B');
-		report_conf_links(sptr, &BList2, RPL_STATSBLINE, 'B');
-		report_conf_links(sptr, &BList3, RPL_STATSBLINE, 'B');
-		break;
-		
 	 case 'D':
 	 case 'd':
 		if (!IsAnOper(sptr))
