@@ -260,25 +260,11 @@ void read_authports(aClient *cptr)
             s++;
 
          os = s;
+
+#ifdef NO_IDENT_SYSTYPE_OTHER
          if(strncmp(os, "OTHER", 5) == 0)
             break;
-
-
-         /*
-          * From RFC1413:
-          *
-          * "OTHER" indicates the identifier is an unformatted
-          * character string consisting of printable characters in
-          * the specified character set.  "OTHER" should be
-          * specified if the user identifier does not meet the
-          * constraints of the previous paragraph.  Sending an
-          * encrypted audit token, or returning other non-userid
-          * information about a user (such as the real name and
-          * phone number of a user from a UNIX passwd file) are
-          * both examples of when "OTHER" should be used.
-          *
-          * If it's "OTHER", we don't want it. -  lucas
-          */
+#endif
 
          s = strchr(os, ':');
          if(!s)

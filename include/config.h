@@ -393,6 +393,27 @@
 #undef FOLLOW_IDENT_RFC
 
 /*
+ * NO_IDENT_SYSTYPE_OTHER
+ *
+ * From RFC1413:
+ *
+ * "OTHER" indicates the identifier is an unformatted
+ * character string consisting of printable characters in
+ * the specified character set.  "OTHER" should be
+ * specified if the user identifier does not meet the
+ * constraints of the previous paragraph.  Sending an
+ * encrypted audit token, or returning other non-userid
+ * information about a user (such as the real name and
+ * phone number of a user from a UNIX passwd file) are
+ * both examples of when "OTHER" should be used.
+ *
+ * However, it seems lots of programs actually default to
+ * returning other as a system type. (stock identd with
+ * redhat, for example)
+ */
+#undef NO_IDENT_SYSTYPE_OTHER
+
+/*
  * RFC1035_ANAL Defining this causes ircd to reject hostnames with
  * non-compliant chars. undef'ing it will allow hostnames with _ or /
  * to connect
