@@ -2672,7 +2672,7 @@ int m_oper(aClient *cptr, aClient *sptr, int parc, char *parv[])
             clp = make_clink();
         clp->aoper = aoper;
         aoper->class->links++;
-        aoper->acpt = sptr;
+        aoper->opers++;
         sptr->confs = clp;
 	if (!(aoper->flags & OFLAG_ISGLOBAL))
 	    SetLocOp(sptr);
@@ -3032,7 +3032,7 @@ int m_umode(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	     */
 	    sptr->pingval = get_client_ping(sptr);
 	    sptr->sendqlen = get_sendq(sptr);
-        sptr->confs->aoper->acpt = NULL;
+        sptr->confs->aoper->opers--;
         sptr->confs->aoper = NULL;
 	}
     }

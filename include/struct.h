@@ -670,8 +670,8 @@ struct Conf_Oper
 	char *passwd;
 	char *nick;
 	int   flags;
-	aClient *acpt;	/* user that is currently using this */
 	int   legal;
+    int   opers;    /* number of opers currently using this */
 	aClass *class;
 	aOper *next;
 };

@@ -200,7 +200,7 @@ clear_conflinks(aClient *cptr)
     if(clp->aoper)
     {
         clp->aoper->class->links--;
-        clp->aoper->acpt = NULL;
+        clp->aoper->opers--;
         if((clp->aoper->legal == -1))      /* and.. scheduled for removal */
         {
             aOper *oper = NULL, *operl;
@@ -283,17 +283,21 @@ find_oper(char *name, char *username, char *sockhost, char *hostip)
     (void) ircsprintf(userip, "%s@%s", username, sockhost);
 
     for(aoper = opers; aoper; aoper = aoper->next)
-    {
-        if(aoper->acpt)
-            continue;
         if(!(mycmp(name, aoper->nick) && (match(userhost, aoper->hostmask) ||
            match(userip, aoper->hostmask))))
                 break;
-    }
     return aoper;
 }
 
-
+aOper *
+find_oper_byname(char *name)
+{
+    aOper *aoper;
+    for(aoper = opers; aoper; aoper = aoper->next)
+        if(!mycmp(name, aoper->nick))
+            break;
+    return aoper;
+}
 
 /* find the first (best) I line to attach.
  * rewritten in feb04 for the overdue death of aConfItem
@@ -481,7 +485,7 @@ clear_opers()
     aoper = opers;
     opers = NULL;
     while(aoper)
-        if(aoper->acpt)
+        if(!aoper->opers)
         {
             aoper->legal = -1;
             if(!keep)
@@ -883,13 +887,27 @@ initconf(int opt, int fd, aClient *rehasher)
         if (t_status & CONF_OPS) 
         {
             aOper *x;
-            int *i, flag;
+            int *i, flag, new;
             char *m = "*";
 
-            x = make_oper();
+            if((x = find_oper_byname(t_name)))
+            {
+                if(x->hostmask)
+                    MyFree(x->hostmask);
+                if(x->passwd)
+                    MyFree(x->passwd);
+                x->flags = 0;
+                new = 0;
+            }
+            else
+            {
+                x = make_oper();
+                DupString(x->nick, t_name);
+                new = 1;
+            }
+            x->legal = 1;
             DupString(x->hostmask, t_host);
             DupString(x->passwd, t_passwd);
-            DupString(x->nick, t_name);
             for (m=(*t_flags) ? t_flags : m; *m; m++) 
             {
                 for (i=oper_access; (flag = *i); i+=2)
@@ -914,8 +932,11 @@ initconf(int opt, int fd, aClient *rehasher)
                 x->hostmask = newhost;
             }
             /* add to our list */
-            x->next = opers;
-            opers = x;
+            if(new)
+            {
+                x->next = opers;
+                opers = x;
+            }
             continue;
         } 
         if(t_status & CONF_NOCONNECT_SERVER)
