@@ -438,7 +438,8 @@ char 		*errtxt = "No response from %s, closing link";
 	 sendto_one(cptr, err_str(ERR_YOUREBANNEDCREEP),
 		    me.name, cptr->name, ktype);
 
-	 (void) exit_client(cptr, cptr, &me, reason);
+         ircsprintf(fbuf, "%s: %s", ktype, reason);
+	 (void) exit_client(cptr, cptr, &me, fbuf);
 	 i--;			/* subtract out this fd so we check it again.. */			
 	 continue;
       }
@@ -465,7 +466,7 @@ char 		*errtxt = "No response from %s, closing link";
           * user and a KILL line was found to be active, close this
           * connection too.
           */
-         if (((currenttime - cptr->lasttime) >= (2 * ping) && (cptr->flags & FLAGS_PINGSENT)) ||
+         if ((cptr->flags & FLAGS_PINGSENT) && ((currenttime - cptr->lasttime) >= (2 * ping)) ||
              ((!IsRegistered(cptr) && (currenttime - cptr->since) >= ping))) 
          {
 	    if (!IsRegistered(cptr) && (DoingDNS(cptr) || DoingAuth(cptr))) 
@@ -480,7 +481,7 @@ char 		*errtxt = "No response from %s, closing link";
 #ifdef SHOW_HEADERS
 	       if (DoingDNS(cptr))
 	          send(cptr->fd, REPORT_FAIL_DNS, R_fail_dns, 0);
-	       else
+	       if (DoingAuth(cptr))
 	          send(cptr->fd, REPORT_FAIL_ID, R_fail_id, 0);
 #endif
 	       Debug((DEBUG_NOTICE, "DNS/AUTH timeout %s",
