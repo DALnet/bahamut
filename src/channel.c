@@ -3495,6 +3495,11 @@ int m_sjoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
 			       tstosend, parv[2], keep_modebuf, sjbuf);
 	}
     }
+    else if(created && chptr->users == 0) 
+    {
+       /* I created the channel, but there were no people! */
+       sub1_from_channel(chptr);
+    }
     return 0;
 }
 #undef INSERTSIGN
