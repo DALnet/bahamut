@@ -61,7 +61,4 @@ aClient    *get_history(char *, time_t);
 
 int         m_whowas(aClient *, aClient *, int, char *[]);
 
-/* for debugging...counts related structures stored in whowas array. */
-void        count_whowas_memory(int *, u_long *);
-
 #endif /* __whowas_include__ */

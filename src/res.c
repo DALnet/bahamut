@@ -67,7 +67,7 @@ static char hostbuf[HOSTLEN + 1];
 static int  incache = 0;
 static CacheTable hashtable[ARES_CACSIZE];
 static ResHash idcphashtable[ARES_IDCACSIZE];
-static aCache *cachetop = NULL;
+aCache *cachetop = NULL;
 static ResRQ *last, *first;
 
 static void rem_cache(aCache *);
@@ -1967,43 +1967,4 @@ int m_dns(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	       reinfo.re_unkrep, reinfo.re_shortttl, reinfo.re_sent,
 	       reinfo.re_resends, reinfo.re_timeouts);
     return 0;
-}
-
-u_long cres_mem(aClient *sptr)
-{
-    aCache *c = cachetop;
-    struct hostent *h;
-    int i;
-    u_long      nm = 0, im = 0, sm = 0, ts = 0;
-
-    for (; c; c = c->list_next)
-    {
-	sm += sizeof(*c);
-	h = &c->he;
-	for (i = 0; h->h_addr_list[i]; i++)
-	{
-	    im += sizeof(char *);
-	    im += sizeof(struct in_addr);
-	}
-	im += sizeof(char *);
-	
-	for (i = 0; h->h_aliases[i]; i++)
-	{
-	    nm += sizeof(char *);
-	    
-	    nm += strlen(h->h_aliases[i]);
-	}
-	nm += i - 1;
-	nm += sizeof(char *);
-	
-	if (h->h_name)
-	    nm += strlen(h->h_name);
-    }
-    ts = ARES_CACSIZE * sizeof(CacheTable);
-    sendto_one(sptr, ":%s %d %s :RES table sz %d",
-	       me.name, RPL_STATSDEBUG, sptr->name, ts);
-    sendto_one(sptr, ":%s %d %s :RES Structs sz %d IP storage sz %d "
-	       "Name storage sz %d", me.name, RPL_STATSDEBUG, sptr->name, sm,
-	       im, nm);
-    return ts + sm + im + nm;
 }

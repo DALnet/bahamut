@@ -30,6 +30,7 @@ struct afd_entry {
 
 struct afd_entry fd_list[MAXCONNECTIONS];
 
+#ifdef DEBUGMODE
 static char *type_string(int type)
 {
    switch(type)
@@ -113,6 +114,7 @@ void report_fds(aClient *cptr)
 
    }
 }
+#endif
 
 static inline void fd_range_assert(int fd)
 {

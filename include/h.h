@@ -185,8 +185,7 @@ extern char 	 *get_client_host(aClient *);
 extern char 	 *my_name_for_link(char *, aConnect *);
 extern char 	 *myctime(time_t), *date(time_t);
 extern int  	  exit_client(aClient *, aClient *, aClient *, char *);
-extern void 	  initstats(void), tstats(aClient *, char *);
-extern void 	  serv_info(aClient *, char *);
+extern void 	  initstats(void);
 extern char      *make_parv_copy(char *, int, char **);
 
 int               msg_has_colors(char *);
@@ -267,9 +266,7 @@ extern int  	  client_dopacket(aClient *, char *, int);
 extern void 	  debug(int level, char *pattern, ...);
 
 #ifdef DEBUGMODE
-extern void 	  send_usage(aClient *, char *);
 extern void 	  send_listinfo(aClient *, char *);
-extern void 	  count_memory(aClient *, char *);
 #endif
 
 extern void 	  send_list(aClient *, int);
@@ -278,10 +275,6 @@ extern aChannel  *hash_get_chan_bucket(int);
 #ifdef DUMP_DEBUG
 extern FILE 	 *dumpfp;
 #endif
-
-void        	  remove_one_ip(unsigned long);
-void        	  clear_ip_hash_table(void);
-void        	  rehash_ip_hash(void);
 
 #ifdef FLUD
 int         	  check_for_ctcp();

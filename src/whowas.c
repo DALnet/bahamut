@@ -107,27 +107,6 @@ aClient *get_history(char *nick, time_t timelimit)
     return NULL;
 }
 
-void count_whowas_memory(int *wwu, u_long *wwum)
-{
-    aWhowas *tmp;
-    int i;
-    int         u = 0;
-    u_long      um = 0;
-    
-    /* count the number of used whowas structs in 'u' */
-    /* count up the memory used of whowas structs in um */
-
-    for (i = 0, tmp = &WHOWAS[0]; i < NICKNAMEHISTORYLENGTH; i++, tmp++)
-	if (tmp->hashv != -1) 
-	{
-	    u++;
-	    um += sizeof(aWhowas);
-	}
-    *wwu = u;
-    *wwum = um;
-    return;
-}
-
 /*
  * m_whowas 
  * parv[0] = sender prefix
