@@ -41,6 +41,7 @@ SERVICES_NAME="`grep 'SERVICES_NAME' $OPTIONS_H | sed s/'.define SERVICES_NAME '
 MHOST="`grep 'MONITOR_HOST' $OPTIONS_H | sed s/'.define MONITOR_HOST '// | sed s/'\"'//g | xargs echo -n`"
 LOCALKLINE="`grep 'SERVER_KLINE_ADDRESS' $OPTIONS_H | sed s/'.define SERVER_KLINE_ADDRESS '// | sed s/'\"'//g | xargs echo -n`"
 NETWORKKLINE="`grep 'NETWORK_KLINE_ADDRESS' $OPTIONS_H | sed s/'.define NETWORK_KLINE_ADDRESS '// | sed s/'\"'//g | xargs echo -n`"
+MAXCHANNELSPERUSER="`grep 'MAXCHANNELSPERUSER' $OPTIONS_H | sed s/'.define MAXCHANNELSPERUSER '// | xargs echo -n`"
 #
 # Now to pull yucky defaults out.
 #
@@ -122,6 +123,12 @@ if [ -n "$HULINED" ] ; then
 else
    HULINED="1"
 fi
+CRYPTPASS="`grep 'CRYPT_OPER_PASSWORD' $OPTIONS_H | sed s/'.define CRYPT_OPER_PASSWORD'// | xargs echo -n`"
+if [ -n "$CRYPTPASS" ] ; then
+   CRYPTPASS=""
+else
+   CRYPTPASS="1"
+fi
 
 ### Thats the end of grabbing there.
 fi
@@ -155,6 +162,8 @@ SERVICES_NAME="services.dal.net"
 MHOST="some.bot.host"
 LOCALKLINE="admin@poorly.configured.server.com"
 NETWORKKLINE="admin@poorly.configured.server.com"
+MAXCHANNELSPERUSER="10"
+CRYPTPASS=""
 
 fi # ENDIF $OPTIONS_H
 ###############################
@@ -923,6 +932,71 @@ while [ -z "$FOO" ] ; do
     esac
 done
 
+FOO=""
+runonce=""
+while [ -z "$FOO" ] ; do
+    FOO="$MAXCHANNELSPERUSER"
+    echo ""
+    echo "What is the maximum number of channels a user should be able to join?"
+    echo -n "[$FOO] -> $c"
+    if [ -z "$AUTO_CONFIG" -o -n "$runonce" ] ; then
+	read cc
+    else
+	cc=""
+	runonce=Yes
+    fi
+    if [ -z "$cc" ] ; then
+	cc=$FOO
+    fi
+    case "$cc" in
+	[1-9]*)
+	    MAXCHANNELSPERUSER="$cc"
+	    ;;
+	*)
+	    echo ""
+	    echo "You need to enter a number here."
+	    echo ""
+	    FOO=""
+	    ;;
+    esac
+done
+
+FOO=""
+runonce=""
+while [ -z "$FOO" ] ; do
+    if [ -n "$CRYPTPASS" ] ; then
+	FOO="Yes"
+    else
+	FOO="No"
+    fi
+    echo ""
+    echo "Would you like to encrypt oper passwords in O:lines?"
+    echo -n "[$FOO] -> $c"
+    if [ -z "$AUTO_CONFIG" -o -n "$runonce" ] ; then
+	read cc
+	runonce=Yes
+    else
+	cc=""
+    fi
+    if [ -z "$cc" ] ; then
+	cc=$FOO
+    fi
+    case "$cc" in
+	[Yy]*)
+	    CRYPTPASS="1"
+	    ;;
+	[Nn]*)
+	    CRYPTPASS=""
+	    ;;
+	*)
+	    echo ""
+	    echo "You need to enter either Yes or No here..."
+	    echo ""
+	    FOO=""
+	    ;;
+    esac
+done
+
 
 
 #############
@@ -959,6 +1033,7 @@ cat > $OPTIONS_H << __EOF__
 #define INIT_MAXCLIENTS $MAXUSERS
 #define MAX_BUFFER $MAXBUF
 #define SERVICES_NAME "$SERVICES_NAME"
+#define MAXCHANNELSPERUSER $MAXCHANNELSPERUSER
 __EOF__
 if [ -n "$STATSN" ] ; then
     echo "#define STATS_NOTICE" >> $OPTIONS_H
@@ -1004,6 +1079,11 @@ if [ -n "$SOLARIS" ] ; then
     echo "#define OS_SOLARIS" >> $OPTIONS_H
 else
     echo "#undef OS_SOLARIS" >> $OPTIONS_H
+fi
+if [ -n "$CRYPTPASS" ] ; then
+    echo "#define CRYPT_OPER_PASSWORD" >> $OPTIONS_H
+else
+    echo "#undef CRYPT_OPER_PASSWORD" >> $OPTIONS_H
 fi
 cat >> $OPTIONS_H << __EOF__
 

@@ -8,6 +8,8 @@ Changes for 1.4.23
   - E.g.: C:192.168.0.1:pass:server.dal.net::10:192.168.10.200
 - Block DCCs of .htm/.html files due to script viruses being spread in this
   way
+- Prompt for max channels per user and oper pw encryption in the config
+  script
 
 Changes for 1.4.22
 - Fixed a bug where a server with a bad name trying to connect or trying
