@@ -274,8 +274,8 @@ find_or_add_ip(unsigned long ip_in)
 
    if ((ptr = ip_hash_table[hash_index]) != (IP_ENTRY *) NULL) 
    {
-      if (free_ip_entries == (IP_ENTRY *) NULL) 	/* it might be
-      {	 						 * recoverable */
+      if (free_ip_entries == (IP_ENTRY *) NULL) 	/* it might be */
+      {	 						/* recoverable */
 	 sendto_ops("s_conf.c free_ip_entries was found NULL in find_or_add");
 	 sendto_ops("rehash_ip was done, this is an error.");
 	 sendto_ops("Please report to the bahamut team! bahamut-bugs@bahamut.net");
@@ -294,8 +294,8 @@ find_or_add_ip(unsigned long ip_in)
    }
    else 
    {
-      if (free_ip_entries == (IP_ENTRY *) NULL) 	/* it might be
-      {							 * recoverable */
+      if (free_ip_entries == (IP_ENTRY *) NULL) 	/* it might be */
+      {							/* recoverable */
 	 sendto_ops("s_conf.c free_ip_entries was found NULL in find_or_add");
 	 sendto_ops("rehash_ip was done, this is an error.");
 	 sendto_ops("Please report to the bahamut team! bahamut-bugs@bahamut.net");
@@ -1236,7 +1236,7 @@ initconf(int opt, int fd)
 	    aconf->status = CONF_ADMIN;
 	    break;
 
-	 case 'C':		/* Server where I should try to connect 
+	 case 'C':		/* Server where I should try to connect */
 	 case 'c':		
 	    ccount++;
 	    aconf->status = CONF_CONNECT_SERVER;
