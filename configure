@@ -2266,10 +2266,13 @@ else
   echo "configure: failed program was:" >&5
   cat conftest.$ac_ext >&5
   rm -fr conftest*
-  echo "$ac_t""YES" 1>&6
+  
+echo "$ac_t""YES" 1>&6
 echo "configure: warning: FD_SETSIZE is hard set by your operating system" 1>&2
 echo "configure: warning: MAXCONNECTIONS must be no higher than the hardwired FD_SETSIZE" 1>&2
-DFDSS=""
+echo "configure: warning: If you're using a system that supports it use the poll call instead of select." 1>&2
+DFDSS=' # FD_SETSIZE is broken on this machine!'
+
 fi
 rm -fr conftest*
 fi
@@ -2296,7 +2299,7 @@ CURDIR=`pwd`
 # Extract the first word of "basename", so it can be a program name with args.
 set dummy basename; ac_word=$2
 echo $ac_n "checking for $ac_word""... $ac_c" 1>&6
-echo "configure:2300: checking for $ac_word" >&5
+echo "configure:2303: checking for $ac_word" >&5
 if eval "test \"`echo '$''{'ac_cv_prog_BASENAME'+set}'`\" = set"; then
   echo $ac_n "(cached) $ac_c" 1>&6
 else
@@ -2325,7 +2328,7 @@ fi
 # Extract the first word of "dirname", so it can be a program name with args.
 set dummy dirname; ac_word=$2
 echo $ac_n "checking for $ac_word""... $ac_c" 1>&6
-echo "configure:2329: checking for $ac_word" >&5
+echo "configure:2332: checking for $ac_word" >&5
 if eval "test \"`echo '$''{'ac_cv_prog_DIRNAME'+set}'`\" = set"; then
   echo $ac_n "(cached) $ac_c" 1>&6
 else
@@ -2397,7 +2400,7 @@ else
 
  # check in common places now
  echo $ac_n "checking for libgmp""... $ac_c" 1>&6
-echo "configure:2401: checking for libgmp" >&5
+echo "configure:2404: checking for libgmp" >&5
  if test "$GMPLIB" = ""; then
    for check in $CURDIR/gmp $CURDIR/gmp-3.1.1/.libs /usr/local/lib /usr/lib /usr/i486-linuxaout/lib $HOME $HOME/lib;
    do
@@ -2442,7 +2445,7 @@ else
 
   # check in common places now
   echo $ac_n "checking for $GMPINCFN""... $ac_c" 1>&6
-echo "configure:2446: checking for $GMPINCFN" >&5
+echo "configure:2449: checking for $GMPINCFN" >&5
   if test "$GMPINC" = ""; then
     for check in $CURDIR/gmp $CURDIR/gmp-3.1.1 /usr/local/include /usr/include $HOME $HOME/include;
     do
@@ -2493,12 +2496,12 @@ fi
 
 echo Checking $GMPINC/$GMPINCFN directory for gmp version
 echo $ac_n "checking for gmp.h version""... $ac_c" 1>&6
-echo "configure:2497: checking for gmp.h version" >&5
+echo "configure:2500: checking for gmp.h version" >&5
 if test "$cross_compiling" = yes; then
   echo "$ac_t""can't tell" 1>&6
 else
   cat > conftest.$ac_ext <<EOF
-#line 2502 "configure"
+#line 2505 "configure"
 #include "confdefs.h"
 
 #include <stdio.h>
@@ -2513,7 +2516,7 @@ int main()
 }
 
 EOF
-if { (eval echo configure:2517: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext} && (./conftest; exit) 2>/dev/null
+if { (eval echo configure:2520: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext} && (./conftest; exit) 2>/dev/null
 then
   echo "$ac_t""ok" 1>&6
 else
@@ -2542,12 +2545,12 @@ fi
 
 
 echo $ac_n "checking how to link to the gmp library""... $ac_c" 1>&6
-echo "configure:2546: checking how to link to the gmp library" >&5
+echo "configure:2549: checking how to link to the gmp library" >&5
 if test "$cross_compiling" = yes; then
   echo "$ac_t""grr cross compiler blah!" 1>&6
 else
   cat > conftest.$ac_ext <<EOF
-#line 2551 "configure"
+#line 2554 "configure"
 #include "confdefs.h"
 
 #include <stdio.h>
@@ -2568,7 +2571,7 @@ int main()
 
 
 EOF
-if { (eval echo configure:2572: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext} && (./conftest; exit) 2>/dev/null
+if { (eval echo configure:2575: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext} && (./conftest; exit) 2>/dev/null
 then
   
 echo "$ac_t""dynamic" 1>&6
@@ -2592,12 +2595,12 @@ BKLIBS="$LIBS"
 LIBS="$LIBS $GMP_LIBS"
 
 echo $ac_n "checking for gmp library matching with header""... $ac_c" 1>&6
-echo "configure:2596: checking for gmp library matching with header" >&5
+echo "configure:2599: checking for gmp library matching with header" >&5
 if test "$cross_compiling" = yes; then
   echo "$ac_t""cross compile" 1>&6
 else
   cat > conftest.$ac_ext <<EOF
-#line 2601 "configure"
+#line 2604 "configure"
 #include "confdefs.h"
 
 #include <stdio.h>
@@ -2687,7 +2690,7 @@ int main()
 }
 
 EOF
-if { (eval echo configure:2691: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext} && (./conftest; exit) 2>/dev/null
+if { (eval echo configure:2694: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext} && (./conftest; exit) 2>/dev/null
 then
   
 echo "$ac_t""no problems" 1>&6
@@ -2761,7 +2764,7 @@ fi
 fi
 
 echo $ac_n "checking operating system""... $ac_c" 1>&6
-echo "configure:2765: checking operating system" >&5
+echo "configure:2768: checking operating system" >&5
 case "$target" in
 *-solaris2*) cat >> confdefs.h <<\EOF
 #define OS_SOLARIS2 1

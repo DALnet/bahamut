@@ -884,7 +884,7 @@ else
        echo ""
        echo "Do you want to use the poll system call?"
        echo "If you are on a solaris machine, this is mandatory."
-       echo "Linux machines should use select until poll() is ironed out."
+       echo "Linux machines using a kernel older than 2.4 should use select."
        echo "Poll works nicely on freebsd machines."
        echo "Select is more economical for small networks."
        echo -n "[$FOO] -> $c"

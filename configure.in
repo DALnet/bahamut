@@ -247,10 +247,13 @@ int main()
 }
 ], 
 AC_MSG_RESULT(no),
+[
 AC_MSG_RESULT(YES)
 AC_MSG_WARN(FD_SETSIZE is hard set by your operating system)
 AC_MSG_WARN(MAXCONNECTIONS must be no higher than the hardwired FD_SETSIZE)
-DFDSS="",
+AC_MSG_WARN(If you're using a system that supports it use the poll call instead of select.)
+DFDSS=' # FD_SETSIZE is broken on this machine!'
+],
 AC_MSG_RESULT(can't tell))
 
 AC_SUBST(DFDSS)
