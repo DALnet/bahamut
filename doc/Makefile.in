@@ -30,6 +30,8 @@ all:
 
 build:
 
+clean:
+
 install: all
 	@for i in $(FILES); do \
 		if test -f $(INSTALL_DIR)/$$i; then \
@@ -46,5 +48,5 @@ install: all
 		echo "This is the default Bahamut MOTD" >> $(INSTALL_DIR)/ircd.motd; \
 	fi
 
-distclean:
+distclean: clean
 	$(RM) -f Makefile
