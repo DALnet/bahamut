@@ -803,7 +803,8 @@ serv_info(aClient *cptr, char *name)
         sendK += acptr->sendK;
         receiveK += acptr->receiveK;
         sendto_one(cptr, Lformat, me.name, RPL_STATSLINKINFO,
-                    name, get_client_name(acptr, HIDEME),
+                    name, ( IsAnOper(cptr) ? get_client_name(acptr, HIDEME)
+                                           : acptr->name ),
                     (int) SBufLength(&acptr->sendQ),
                     (int) acptr->sendM, (int) acptr->sendK,
                     (int) acptr->receiveM, (int) acptr->receiveK,
@@ -1097,7 +1098,8 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
                 sincetime = (acptr->since > timeofday) ? 0 : 
                              timeofday - acptr->since;
                 sendto_one(sptr, Lformat, me.name, RPL_STATSLINKINFO, parv[0],
-                        get_client_name(acptr, HIDEME),
+                        ( IsAnOper(sptr) ? get_client_name(acptr, HIDEME)
+                                         : acptr->name ),
                         (int) SBufLength(&acptr->sendQ),
                         (int) acptr->sendM, (int) acptr->sendK,
                         (int) acptr->receiveM, (int) acptr->receiveK,
