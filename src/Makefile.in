@@ -320,12 +320,22 @@ rc4.o: rc4.c \
 zlink.o: zlink.c ../zlib/zlib.h ../zlib/zconf.h
 	$(CC) $(CFLAGS) $(INCLUDEDIR) -I../zlib -c $<
 
-socketengine_poll.o: ../include/config.h ../include/h.h
+socketengine_poll.o: socketengine_poll.c ../include/struct.h \
+ ../include/config.h ../include/setup.h ../include/defs.h \
+ ../include/sys.h ../include/hash.h ../include/sbuf.h \
+ ../include/common.h ../include/h.h ../include/send.h \
+ ../include/fdlist.h ../include/ircsprintf.h ../include/find.h \
+ ../include/fds.h
 socketengine_select.o: socketengine_select.c ../include/struct.h \
   ../include/config.h ../include/setup.h ../include/defs.h \
   ../include/sys.h ../include/hash.h ../include/sbuf.h \
   ../include/common.h ../include/h.h ../include/send.h \
   ../include/fdlist.h ../include/ircsprintf.h ../include/find.h \
   ../include/fds.h
-socketengine_kqueue.o: ../include/config.h ../include/h.h
+socketengine_kqueue.o: socketengine_kqueue.c ../include/struct.h \
+ ../include/config.h ../include/setup.h ../include/defs.h \
+ ../include/sys.h ../include/hash.h ../include/sbuf.h \
+ ../include/common.h ../include/h.h ../include/send.h \
+ ../include/fdlist.h ../include/ircsprintf.h ../include/find.h \
+ ../include/fds.h
 socketengine_epoll.o: ../include/config.h ../include/h.h
