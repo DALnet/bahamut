@@ -2423,6 +2423,10 @@ echo "$ac_t""YES" 1>&6
 echo "configure: warning: FD_SETSIZE is hard set by your operating system" 1>&2
 echo "configure: warning: MAXCONNECTIONS must be no higher than the hardwired FD_SETSIZE" 1>&2
 echo "configure: warning: If you're using a system that supports it use the poll call instead of select." 1>&2
+cat >> confdefs.h <<\EOF
+#define BROKEN_FD_SETSIZE 1
+EOF
+
 DFDSS=' # FD_SETSIZE is broken on this machine!'
 
 fi
@@ -2498,7 +2502,7 @@ found_openssl=""
       
 else
   cat > conftest.$ac_ext <<EOF
-#line 2502 "configure"
+#line 2506 "configure"
 #include "confdefs.h"
 
 #include <stdio.h>
@@ -2533,7 +2537,7 @@ int main(void)
 }
                  
 EOF
-if { (eval echo configure:2537: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext} && (./conftest; exit) 2>/dev/null
+if { (eval echo configure:2541: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext} && (./conftest; exit) 2>/dev/null
 then
   
                     found_openssl=1;
@@ -2584,7 +2588,7 @@ fi
 
 
 echo $ac_n "checking operating system""... $ac_c" 1>&6
-echo "configure:2588: checking operating system" >&5
+echo "configure:2592: checking operating system" >&5
 case "$target" in
 *-solaris2*) cat >> confdefs.h <<\EOF
 #define OS_SOLARIS2 1

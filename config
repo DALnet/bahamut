@@ -13,11 +13,12 @@ fi
 ##############   SET THESE VARIABLES CORRECTLY!@ ##############
 #
 BASENAME=`grep 'BASENAME' include/patchlevel.h | sed s/'.define BASENAME '// | sed s/'\"'//g | xargs echo -n`
-BRANCH=`grep 'BRANCH ' include/patchlevel.h | sed s/'.define BRANCH '// | sed s/'\"'//g | xargs echo -n`
+BRANCH=`grep 'BRANCHSTATUS ' include/patchlevel.h | sed s/'.define BRANCHSTATUS '// | sed s/'\"'//g | xargs echo -n`
 MAJOR=`grep 'MAJOR' include/patchlevel.h | sed s/'.define MAJOR '// | xargs echo -n`
 MINOR=`grep 'MINOR' include/patchlevel.h | sed s/'.define MINOR '// | xargs echo -n`
 PATCH=`grep 'PATCH ' include/patchlevel.h | sed s/'.define PATCH '// | xargs echo -n`
-IRCD=`printf '%s(%s)-%i.%.2i(%.2i)' ${BASENAME} ${BRANCH} ${MAJOR} ${MINOR} ${PATCH}`
+BROKEN_SELECT=`grep 'BROKEN_FD_SETSIZE' include/setup.h | sed s/'.define BROKEN_FD_SETSIZE'// | xargs echo -n`
+IRCD=`printf '%s(%s)-%i.%i.%i' ${BASENAME} ${BRANCH} ${MAJOR} ${MINOR} ${PATCH}`
 OPTIONS_H="include/options.h"
 ##
 ##
@@ -888,8 +889,13 @@ else
        echo ""
        echo "The following choices are available"
        echo "select - use the select() system call. More economical for small networks."
-       echo "         Has setbacks as to the maximum number of clients you can hold;"
-       echo "         Linux systems are generally locked to a maximum of 1024 clients."
+       echo "         Has setbacks as to the maximum number of clients you can hold"
+       if [ -n "$BROKEN_SELECT" ] ; then
+          echo "         ------------------------------------------------------------------"
+          echo "         [ WARNING: FD_SETSIZE is locked on this machine. You may only hold"
+          echo "           1024 clients with this lock if you use select. Use poll! :) ]"
+          echo "         ------------------------------------------------------------------"
+       fi
        echo "poll   - use the poll() system call. No limits, better performance than select,"
        echo "         however some systems do not support it. Linux 2.2 uses select to wrap poll."
        echo "kqueue - use the kqueue() system call. ONLY WORKS UNDER FREEBSD."
@@ -1193,7 +1199,12 @@ fi
 echo "#endif" >> $OPTIONS_H
 echo "" >> $OPTIONS_H
 echo "#endif /* This is the endif for the ifdef at the top. */" >> $OPTIONS_H
-### use poll?
+
+# trick it into not #defining FD_SETSIZE if it's locked
+if [ -n "$BROKEN_SELECT" ] ; then
+   USESELECT=""
+fi
+
 if [ -n "$USESELECT" ] ; then
    cat Makefile | sed s/'XFLAGS=.*'/XFLAGS=/ > Makefile.tmp
    ### now insert the FDLIMIT in the makefile

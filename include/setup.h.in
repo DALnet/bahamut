@@ -147,3 +147,6 @@
 
 /* Define if you are including the drone.so module */
 #undef USE_DRONEMODULE
+
+/* Define if FD_SETSIZE is hardcoded on this machine (broken) */
+#undef BROKEN_FD_SETSIZE
