@@ -35,6 +35,7 @@
 
 extern int user_modes[];
 extern unsigned int cidr_to_netmask(unsigned int);
+extern Link *find_channel_link(Link *, aChannel *);
 
 /* max capturing submatches to allow in all fields combined */
 #define MAX_SUBMATCHES  10
@@ -567,7 +568,7 @@ static int rwho_parseopts(aClient *sptr, int parc, char *parv[])
     }
 
     /* need something to match on*/
-    if (!(flags[0] || flags[1] || spatidx))
+    if (!(flags[0] || flags[1] || spatidx || rwho_opts.chptr))
     {
         rwho_synerr(sptr, NULL);
         return 0;
@@ -909,6 +910,9 @@ int m_rwho(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
     if (rwho_opts.chptr)
     {
+        if (!IsAdmin(sptr) && !ShowChannel(sptr, rwho_opts.chptr))
+            rwho_opts.countonly = 1;
+
         for (cm = rwho_opts.chptr->members; cm; cm = cm->next)
         {
             ac = cm->cptr;
