@@ -367,7 +367,7 @@ void throttle_force(char *host)
     } 
 
     /* now force them to be autothrottled if they reconnect. */
-    tp->conns = throttle_tcount;
+    tp->conns = -1;
     tp->last = tp->first = NOW;
 }
 
@@ -433,7 +433,8 @@ int throttle_check(char *host, int fd, time_t sotime) {
     }
 
     /* got a throttle, up the conns */
-    tp->conns++;
+    if(tp->conns >= 0)
+       tp->conns++;
     tp->last = sotime;
 
     /* check the time bits, if they exceeded the throttle timeout, we should
@@ -449,6 +450,12 @@ int throttle_check(char *host, int fd, time_t sotime) {
 	return 1;
     }
 
+    if (tp->conns == -1)
+    {
+	/* This is a forced throttle, drop 'em! */
+	return 0;
+    }
+
     if (tp->conns >= throttle_tcount) 
     {
 	/* mark them as z:lined (we do not actually add a Z:line as this would
@@ -462,9 +469,9 @@ int throttle_check(char *host, int fd, time_t sotime) {
             zlength = throttle_get_zline_time(tp->stage);
 
 	    /* let +c ops know */
-	    sendto_ops_lev(CCONN_LEV,
-		    "throttled connections from %s (%d in %d seconds) for %d minutes (offense %d)",
-		    tp->addr, tp->conns, sotime - tp->first, zlength / 60, tp->stage + 1);
+	    sendto_realops_lev(REJ_LEV,
+		               "throttled connections from %s (%d in %d seconds) for %d minutes (offense %d)",
+		               tp->addr, tp->conns, sotime - tp->first, zlength / 60, tp->stage + 1);
 
             elength = ircsnprintf(errbufr, 512, ":%s NOTICE ZUSR :You have been throttled for %d minutes for too "
                "many connections in a short period of time. Further connections in this period will reset "

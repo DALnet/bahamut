@@ -293,9 +293,9 @@ int m_squit(aClient *cptr, aClient *sptr, int parc, char *parv[])
     
     if(sptr->from == acptr->from) /* upstream */
     {
-	sendto_ops_lev(DEBUG_LEV,
-		       "Exiting server %s due to upstream squit by %s [%s]",
-		       acptr->name, sptr->name, comment);
+	sendto_realops_lev(DEBUG_LEV,
+			   "Exiting server %s due to upstream squit by %s [%s]",
+			   acptr->name, sptr->name, comment);
 	return exit_client(cptr, acptr, sptr, comment);
     }
     
@@ -303,14 +303,14 @@ int m_squit(aClient *cptr, aClient *sptr, int parc, char *parv[])
     
     if(!(IsUnconnect(acptr->from))) /* downstream not unconnect capable */
     {
-	sendto_ops_lev(DEBUG_LEV,
-		       "Exiting server %s due to non-unconnect server %s [%s]",
-		       acptr->name, acptr->from->name, comment);
+	sendto_realops_lev(DEBUG_LEV,
+			   "Exiting server %s due to non-unconnect server %s [%s]",
+			   acptr->name, acptr->from->name, comment);
 	return exit_client(&me, acptr, sptr, comment);
     }
     
-    sendto_ops_lev(DEBUG_LEV, "Passing along SQUIT for %s by %s [%s]",
-		   acptr->name, sptr->name, comment);
+    sendto_realops_lev(DEBUG_LEV, "Passing along SQUIT for %s by %s [%s]",
+		       acptr->name, sptr->name, comment);
     sendto_one(acptr->from, ":%s SQUIT %s :%s", parv[0], acptr->name, comment);
 
     return 0;
@@ -4869,9 +4869,9 @@ int m_svskill(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	}
 	if(acptr->from == cptr)
 	{
-	    sendto_ops_lev(DEBUG_LEV, "Received wrong-direction SVSKILL for "
-			   "%s (behind %s) from %s", acptr->name, cptr->name,
-			   get_client_name(sptr, HIDEME));
+	    sendto_realops_lev(DEBUG_LEV, "Received wrong-direction SVSKILL for "
+			       "%s (behind %s) from %s", acptr->name, cptr->name,
+			       get_client_name(sptr, HIDEME));
 	    return 0;
 	}
 	else if(ts == 0) 

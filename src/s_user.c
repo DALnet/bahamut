@@ -48,8 +48,6 @@
 int         do_user(char *, aClient *, aClient *, char *, char *, char *,
 		    unsigned long, unsigned int, char *);
 
-int         botwarn(char *, char *, char *, char *);
-
 extern char motd_last_changed_date[];
 extern int  send_motd(aClient *, aClient *, int, char **);
 extern void send_topic_burst(aClient *);
@@ -101,7 +99,6 @@ int  user_modes[] =
 };
 
 /* internally defined functions */
-int         botreject(char *);
 unsigned long my_rand(void);	/* provided by orabidoo */
 /* externally defined functions */
 extern int  find_fline(aClient *);	/* defined in s_conf.c */
@@ -1336,8 +1333,8 @@ int check_target_limit(aClient *sptr, aClient *acptr)
 
       if(sptr->last_target_complain + 60 <= NOW)
       {
-         sendto_ops_lev(SPAM_LEV, "Target limited: %s (%s@%s) [%d failed targets]", sptr->name,
-                        sptr->user->username, sptr->user->host, sptr->num_target_errors);
+         sendto_realops_lev(SPAM_LEV, "Target limited: %s (%s@%s) [%d failed targets]", sptr->name,
+                            sptr->user->username, sptr->user->host, sptr->num_target_errors);
          sptr->num_target_errors = 0;
          sptr->last_target_complain = NOW;
       }
@@ -3097,61 +3094,6 @@ void send_umode_out(aClient *cptr, aClient *sptr, int old)
 	send_umode(cptr, sptr, old, ALL_UMODES, buf);
 }
 
-/**
- ** botreject(host)
- **   Reject a bot based on a fake hostname...
- **           -Taner
- **/
-int botreject(char *host)
-{
-    /*
-     * Eggdrop Bots:   "USER foo 1 1 :foo" Vlad, Com, joh Bots:
-     * "USER foo null null :foo" Annoy/OJNKbots: "user foo . . :foo"
-     * (disabled) Spambots that are based on OJNK: "user foo x x :foo"
-     */
-#undef CHECK_FOR_ANNOYOJNK
-    if (!strcmp(host, "1"))
-	return 1;
-    if (!strcmp(host, "null"))
-	return 2;
-    if (!strcmp(host, "x"))
-	return 3;
-#ifdef CHECK_FOR_ANNOYOJNK
-    if (!strcmp(host, "."))
-	return 4;
-#endif
-    return 0;
-}
-
-/**
- ** botwarn(host, nick, user, realhost)
- **     Warn that a bot MAY be connecting (added by ThemBones)
- **/
-int botwarn(char *host, char *nick, char *user, char *realhost)
-{
-    /*
-     * Eggdrop Bots:      "USER foo 1 1 :foo" Vlad, Com, joh Bots:
-     * "USER foo null null :foo" Annoy/OJNKbots:    "user foo . . :foo"
-     * (disabled)
-     */
-#undef CHECK_FOR_ANNOYOJNK
-    if (!strcmp(host, "1"))
-	sendto_realops_lev(CCONN_LEV, "Possible Eggdrop: %s (%s@%s)",
-			   nick, user, realhost);
-    if (!strcmp(host, "null"))
-	sendto_realops_lev(CCONN_LEV, "Possible ComBot: %s (%s@%s)",
-			   nick, user, realhost);
-    if (!strcmp(host, "x"))
-	sendto_realops_lev(CCONN_LEV, "Possible SpamBot: %s (%s@%s)",
-			   nick, user, realhost);
-#ifdef CHECK_FOR_ANNOYOJNK
-    if (!strcmp(host, "."))
-	sendto_realops_lev(CCONN_LEV, "Possible AnnoyBot: %s (%s@%s)",
-			   nick, user, realhost);
-#endif
-    return 0;
-}
-
 /*
  * This function checks to see if a CTCP message (other than ACTION) is
  * contained in the passed string.  This might seem easier than I am
@@ -3201,9 +3143,9 @@ void announce_fluder(aClient *fluder, aClient *cptr, aChannel *chptr, int type)
     else
 	fludee = chptr->chname;
     
-    sendto_ops_lev(FLOOD_LEV, "Flooder %s [%s@%s] on %s target: %s",
-		   fluder->name, fluder->user->username, fluder->user->host,
-		   fluder->user->server, fludee);
+    sendto_realops_lev(FLOOD_LEV, "Flooder %s [%s@%s] on %s target: %s",
+		       fluder->name, fluder->user->username, fluder->user->host,
+		       fluder->user->server, fludee);
 }
 
 /*

@@ -203,7 +203,7 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	     * danger of the server being disconnected.  Ultimate way to
 	     * jupiter a nick ? >;-). -avalon
 	     */
-	    sendto_ops_lev(SKILL_LEV, "Nick collision on %s", sptr->name);
+	    sendto_realops_lev(SKILL_LEV, "Nick collision on %s", sptr->name);
 	    ircstp->is_kill++;
 	    sendto_one(cptr, ":%s KILL %s :Nick Collision", me.name, 
 		       sptr->name);
@@ -245,7 +245,7 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	    }
 	    else if (!(acptr->user))
 	    {
-		sendto_ops_lev(SKILL_LEV, "Nick Collision on %s", parv[1]);
+		sendto_realops_lev(SKILL_LEV, "Nick Collision on %s", parv[1]);
 		sendto_serv_butone(NULL, ":%s KILL %s :Nick Collission",
 				   me.name, acptr->name);
 		acptr->flags |= FLAGS_KILLED;
@@ -287,7 +287,7 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	     */
 	    if (!newts || !acptr->tsinfo || (newts == acptr->tsinfo))
 	    {
-		sendto_ops_lev(SKILL_LEV, "Nick collision on %s", parv[1]);
+		sendto_realops_lev(SKILL_LEV, "Nick collision on %s", parv[1]);
 		ircstp->is_kill++;
 		sendto_one(acptr, err_str(ERR_NICKCOLLISION),
 			   me.name, acptr->name, acptr->name);
@@ -309,7 +309,7 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		}
 		else
 		{
-		    sendto_ops_lev(SKILL_LEV, "Nick collision on %s",parv[1]);
+		    sendto_realops_lev(SKILL_LEV, "Nick collision on %s",parv[1]);
 		    ircstp->is_kill++;
 		    sendto_one(acptr, err_str(ERR_NICKCOLLISION),
 			       me.name, acptr->name, acptr->name);
@@ -331,7 +331,7 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	if (!newts || !acptr->tsinfo || (newts == acptr->tsinfo) ||
 	    !sptr->user)
 	{
-	    sendto_ops_lev(SKILL_LEV, "Nick change collision: %s", parv[1]);
+	    sendto_realops_lev(SKILL_LEV, "Nick change collision: %s", parv[1]);
 	    ircstp->is_kill++;
 	    sendto_one(acptr, err_str(ERR_NICKCOLLISION),
 		       me.name, acptr->name, acptr->name);
@@ -353,7 +353,7 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	    if ((sameuser && newts < acptr->tsinfo) ||
 		(!sameuser && newts > acptr->tsinfo)) {
 		if (sameuser)
-		    sendto_ops_lev(SKILL_LEV, 
+		    sendto_realops_lev(SKILL_LEV, 
 				   "Nick change collision from %s to %s",
 				   sptr->name, acptr->name);
 		ircstp->is_kill++;
@@ -367,7 +367,7 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	    } 
 	    else
 	    {
-		sendto_ops_lev(SKILL_LEV, "Nick collision on %s", acptr->name);
+		sendto_realops_lev(SKILL_LEV, "Nick collision on %s", acptr->name);
 		
 		ircstp->is_kill++;
 		sendto_one(acptr, err_str(ERR_NICKCOLLISION),
@@ -419,7 +419,7 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
        
 	    /* If we get 11 and aren't NICKIP, whine */
 	    if (parc==11&&(!IsNICKIP(cptr))) 
-		sendto_ops_lev(DEBUG_LEV, "Extra Param without NICKIP from %s",
+		sendto_realops_lev(DEBUG_LEV, "Extra Param without NICKIP from %s",
 			       cptr->name);
 	    
 	    /* parse the usermodes -orabidoo */
@@ -484,7 +484,7 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 			       BadPtr(aconf->passwd) ? "Erroneous Nickname" :
 			       aconf->passwd,
 			       BadPtr(aconf->name) ? "N/A" : aconf->name);
-		    sendto_realops_lev(CCONN_LEV,
+		    sendto_realops_lev(REJ_LEV,
 				       "Forbidding Q:lined nick %s from %s.",
 				       nick, get_client_name(cptr, FALSE));
 		    return 0;
@@ -586,7 +586,7 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 			       BadPtr(aconf->passwd) ? "Erroneous Nickname" :
 			       aconf->passwd,
 			       BadPtr(aconf->name) ? "N/A" : aconf->name);
-		    sendto_realops_lev(CCONN_LEV,
+		    sendto_realops_lev(REJ_LEV,
 				       "Forbidding Q:lined nick %s from "
 				       "<unregistered>%s.", nick,
 				       get_client_name(cptr, FALSE));

@@ -1142,7 +1142,7 @@ struct hostent *get_res(char *lp)
     {
 	if(rptr->has_rev == 0)
 	{
-	    sendto_ops_lev(DEBUG_LEV, "Blindly accepting dns result for %s", 
+	    sendto_realops_lev(DEBUG_LEV, "Blindly accepting dns result for %s", 
 			   rptr->he.h_name ? rptr->he.h_name : 
 			   inetntoa((char *)&rptr->addr));
 	}
@@ -1164,7 +1164,7 @@ struct hostent *get_res(char *lp)
 
 	    if(invalid_parms_name || invalid_parms_ip)
 	    {
-		sendto_ops_lev(DEBUG_LEV, 
+		sendto_realops_lev(DEBUG_LEV, 
 			       "DNS query missing things! name: %s ip: %s",
 			       invalid_parms_name ? "MISSING" :
 			       rptr->he.h_name,
@@ -1222,7 +1222,7 @@ struct hostent *get_res(char *lp)
 		strcpy(ntoatmp_r, 
 		       inetntoa((char *)&rptr->he_rev.h_addr_list[0]));
 #ifdef DNS_ANS_DEBUG
-		sendto_ops_lev(DEBUG_LEV, "Forward and Reverse queries do "
+		sendto_realops_lev(DEBUG_LEV, "Forward and Reverse queries do "
 			       "not have matching IP! %s<>%s %s<>%s",
 			       rptr->he.h_name, rptr->he_rev.h_name,
 			       ntoatmp_f, ntoatmp_r);
@@ -1248,7 +1248,7 @@ struct hostent *get_res(char *lp)
 		memcpy(rptr->he.h_addr_list, new_addr_list,
 		       sizeof(struct in_addr) * IRC_MAXADDRS);
 #ifdef DNS_ANS_DEBUG
-		sendto_ops_lev(DEBUG_LEV, "numaddr = %d, numnewaddr = %d",
+		sendto_realops_lev(DEBUG_LEV, "numaddr = %d, numnewaddr = %d",
 			       numaddr, numnewaddr);
 #endif
 	    }

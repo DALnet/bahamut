@@ -1683,7 +1683,7 @@ void sendto_realops_lev(int lev, char *pattern, ...)
 		continue;
 	    break;
 	case DCCSEND_LEV:
-	    if (!SendDCCNotice(cptr) || !IsAnOper(cptr))
+	    if (!SendDCCNotice(cptr))
 		continue;
 	    break;
 	case FLOOD_LEV:
