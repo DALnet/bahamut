@@ -2399,10 +2399,10 @@ else
  echo $ac_n "checking for libgmp""... $ac_c" 1>&6
 echo "configure:2401: checking for libgmp" >&5
  if test "$GMPLIB" = ""; then
-   for checkfn in $libnames;
+   for check in $CURDIR/gmp $CURDIR/gmp-3.1.1/.libs /usr/local/lib /usr/lib /usr/i486-linuxaout/lib $HOME $HOME/lib;
    do
      if test "$GMPLIB" = ""; then
-       for check in $CURDIR/gmp /usr/local/lib /usr/lib /usr/i486-linuxaout/lib $HOME $HOME/lib;
+       for checkfn in $libnames;
        do
          if test -r $check/lib$checkfn; then
            if test "$GMPLIB" = ""; then
@@ -2444,7 +2444,7 @@ else
   echo $ac_n "checking for $GMPINCFN""... $ac_c" 1>&6
 echo "configure:2446: checking for $GMPINCFN" >&5
   if test "$GMPINC" = ""; then
-    for check in $CURDIR/gmp /usr/local/include /usr/include $HOME $HOME/include;
+    for check in $CURDIR/gmp $CURDIR/gmp-3.1.1 /usr/local/include /usr/include $HOME $HOME/include;
     do
       if test -r $check/$GMPINCFN; then
         if test "$GMPINC" != ""; then
@@ -2698,10 +2698,14 @@ else
   rm -fr conftest*
   
 echo "$ac_t""problem!" 1>&6
-GMPHV=`cat .gmp_h_version`
-GMPLV=`cat .gmp_l_version`
-echo " - gmp header version: $GMPHV"
-echo " - gmp library version: $GMPLV"
+if test -r .gmp_h_version; then
+  GMPHV=`cat .gmp_h_version`
+  GMPLV=`cat .gmp_l_version`
+  echo " - gmp header version: $GMPHV"
+  echo " - gmp library version: $GMPLV"
+else
+  echo "Link failure! Look for stale libgmp.so in your dynamic link path!"
+fi
 $RM -f .gmp_h_version .gmp_l_version
 echo "Your gmp library either has no version symbols, is not the correct 'gmp',"
 echo "or the major versions of your gmp library and gmp header differ."
@@ -2757,7 +2761,7 @@ fi
 fi
 
 echo $ac_n "checking operating system""... $ac_c" 1>&6
-echo "configure:2761: checking operating system" >&5
+echo "configure:2765: checking operating system" >&5
 case "$target" in
 *-solaris2*) cat >> confdefs.h <<\EOF
 #define OS_SOLARIS2 1
