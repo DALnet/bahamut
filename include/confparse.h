@@ -110,6 +110,8 @@ struct ConfVar
 #define SCONFF_MASK                 0x100000
 #define SCONFT_IPMASK   "IPMASK"
 #define SCONFF_IPMASK               0x200000
+#define SCONFT_NOTHROT  "NOTHROTTLE"
+#define SCONFF_NOTHROT              0x400000
 
 #define SCONFF_STRING               0x800000    /* allow freeform strings */
 
@@ -239,6 +241,7 @@ sConf confallowtab[] =
     {SCONFT_PORT, SCONFF_PORT, VARTYPE_INT},
     {SCONFT_PASSWD, SCONFF_PASSWD, VARTYPE_NAME},
     {SCONFT_CLASS, SCONFF_CLASS, VARTYPE_NAME},
+    {SCONFT_NOTHROT, SCONFF_NOTHROT, VARTYPE_NONE},
     {(char *) 0, 0, 0}
 };
 

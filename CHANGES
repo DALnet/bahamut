@@ -12,7 +12,7 @@ Changes for 1.8.3
   a throttle notice when cmode +j thresholds are met.
 - Fixed ERR_BANLISTFULL to respond depending on which list
   (+I/+e) is full.  From Unim4trix0 (Unim4trix0@gmail.com).
-- Readded clone limiting (now better than ever!), see doc/reference.conf
+- Readded clone limiting (now better!), see reference.conf and opers.txt
 - Range limiting for cmode +j args (min rate 1:8, max time 60).
 - Fixed spamming redudant cmode changes.
 - Fixed bad handling of bogus oper messages (from Zeke Gomez).
@@ -22,6 +22,7 @@ Changes for 1.8.3
 - Fixed ERR_CHANNELISFULL to respond depending on which limit
   (+l/+j) is reached.  From Unim4trix0 (Unim4trix0@gmail.com),
   discovered by Watchminister (stairway@gmail.com).
+- Added nothrottle option to allow blocks.
 
 
 Changes for 1.8.2

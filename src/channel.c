@@ -829,6 +829,8 @@ int check_joinrate(aChannel *chptr, time_t ts, int local, aClient *cptr)
                            chptr->chname, cptr->name, cptr->user->username,
                            cptr->user->host, chptr->default_join_count, join_num,
                            NOW - chptr->default_join_start);
+    /* update the count here for attempts, in case a lower throttle blocks */
+    chptr->default_join_count++;
 
     /* Has the channel set their own custom settings? */
     if(chptr->mode.mode & MODE_JOINRATE)
@@ -2694,7 +2696,6 @@ int m_join(aClient *cptr, aClient *sptr, int parc, char *parv[])
         else
             add_user_to_channel(chptr, sptr, 0);
         chptr->join_count++;
-        chptr->default_join_count++;
         /* Set timestamp if appropriate, and propagate */
         if (MyClient(sptr) && flags == CHFL_CHANOP) 
         {

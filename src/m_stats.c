@@ -1170,16 +1170,19 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
             {
                 CloneEnt *ce;
                 int entries = 0;
+#ifdef THROTTLE_ENABLE
                 int sllimits = 0;
                 int sglimits = 0;
                 int hlimits = 0;
                 int active = 0;
                 int sites = 0;
                 unsigned long rtot;
+#endif
 
                 for (ce = clones_list; ce; ce = ce->next)
                 {
                     entries++;
+#ifdef THROTTLE_ENABLE
                     if (ce->sllimit)
                         sllimits++;
                     if (ce->sglimit)
@@ -1193,8 +1196,10 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
                         if (!ce->clients)
                             sites++;
                     }
+#endif
                 }
 
+#ifdef THROTTLE_ENABLE
                 rtot = clones_stat.rlh + clones_stat.rls
                      + clones_stat.rgh + clones_stat.rgs;
 
@@ -1204,8 +1209,10 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
                 sendto_one(sptr, ":%s %d %s :Default global host limit: %d"
                            "  site: %d", me.name, RPL_STATSDEBUG, parv[0],
                            global_ip_limit, global_ip24_limit);
+#endif
                 sendto_one(sptr, ":%s %d %s :Clone entries: %d", me.name,
                            RPL_STATSDEBUG, parv[0], entries);
+#ifdef THROTTLE_ENABLE
                 sendto_one(sptr, ":%s %d %s :    Active hosts: %d  sites: %d",
                            me.name, RPL_STATSDEBUG, parv[0], active-sites,
                            sites);
@@ -1222,6 +1229,7 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
                 sendto_one(sptr, ":%s %d %s :    Global hosts: %lu  sites: %lu",
                            me.name, RPL_STATSDEBUG, parv[0],
                            clones_stat.rgh, clones_stat.rgs);
+#endif
             }
             break;
 

@@ -629,6 +629,8 @@ typedef struct Whowas
 #define CONF_FLAGS_I_MATCH_NAME    0x0010
 /* do we match allow:ipmask? */
 #define CONF_FLAGS_I_MATCH_HOST    0x0020
+/* remove throttle on match? */
+#define CONF_FLAGS_NOTHROTTLE      0x0040
 
 /* global configuration flags */
 

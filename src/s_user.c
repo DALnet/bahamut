@@ -495,6 +495,9 @@ register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
                     return exit_client(cptr, sptr, &me, "Internal error");
             }
         }
+
+        if (sptr->user->allow->flags & CONF_FLAGS_NOTHROTTLE)
+            throttle_remove(cptr->hostip);
         
 #ifdef ANTI_SPAMBOT
         /* This appears to be broken */
