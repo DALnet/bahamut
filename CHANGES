@@ -20,6 +20,7 @@ Changes for 1.4.34
 - Target limiting anti-spam measure installed
 - Reject acebot-style drones by default
 - Minor fixes to prevent annoying auth error messages
+- Minor configuration/installation fixes
 
 -- WARNING --
 1.4.34 may cause desynch in net joins if used on a network with newer servers!
