@@ -22,9 +22,13 @@
 /* This file contains quick and dirty functions for retriving information
  * from structures. */
 
-
-#include struct.h
-
+#include "struct.h"
+#include "common.h"
+#include "sys.h"
+#include "numeric.h"
+#include "msg.h"
+#include "channel.h"
+#include "throttle.h"
 
 aClient *ac_next(aClient *cptr)
 {
@@ -38,7 +42,7 @@ aClient *ac_prev(aClient *cptr)
 
 anUser *ac_user(aClient *cptr)
 {
-	return ac->user;
+	return cptr->user;
 }
 
 aServer *ac_server(aClient *cptr)
@@ -46,7 +50,7 @@ aServer *ac_server(aClient *cptr)
 	return cptr->serv;
 }
 
-aWhoWas *ac_whowas(aClient *cptr)
+aWhowas *ac_whowas(aClient *cptr)
 {
 	return cptr->whowas;
 }
@@ -96,7 +100,7 @@ short ac_status(aClient *cptr)
 	return cptr->status;
 }
 
-char *ac_nicksent(aClient *cptr)
+char ac_nicksent(aClient *cptr)
 {
 	return cptr->nicksent;
 }
@@ -212,14 +216,14 @@ struct DBuf *ac_sendQ(aClient *cptr)
 {
         if(cptr->fd == -1)
                 abort();
-        return cptr->sendQ;
+        return &cptr->sendQ;
 }
 
 struct DBuf *ac_recvQ(aClient *cptr)
 {
         if(cptr->fd == -1)
                 abort();
-        return cptr->recvQ;
+        return &cptr->recvQ;
 }
 
 long ac_sendM(aClient *cptr)
@@ -236,18 +240,18 @@ long ac_sendK(aClient *cptr)
         return cptr->sendK;
 }
 
-long ac_recieveM(aClient *cptr)
+long ac_receiveM(aClient *cptr)
 {
         if(cptr->fd == -1)
                 abort();
-        return cptr->recieveM;
+        return cptr->receiveM;
 }
 
-long ac_recieveK(aClient *cptr)
+long ac_receiveK(aClient *cptr)
 {
 	if(cptr->fd == -1)
 		abort();
-	return cptr->recieveK;
+	return cptr->receiveK;
 }
 
 u_short ac_sendB(aClient *cptr)
@@ -257,11 +261,11 @@ u_short ac_sendB(aClient *cptr)
         return cptr->sendB;
 }
 
-u_short ac_recieveB(aClient *cptr)
+u_short ac_receiveB(aClient *cptr)
 {
         if(cptr->fd == -1)
                 abort();
-        return cptr->recieveB;
+        return cptr->receiveB;
 }
 
 long ac_lastrecvM(aClient *cptr)

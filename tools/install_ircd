@@ -3,6 +3,10 @@
 # ircd install sh script
 # to be called from the toplevel Makefile, in install:
 
+echo ""
+echo ""
+echo "Installing for bahamut..."
+
 DPATH=`grep '#define.DPATH' include/options.h|awk '{print $3}'|tr -d \"`;
 if [ "x$DPATH" = "x" ] ; then
 DPATH=`grep '#define.DPATH' include/config.h|awk '{print $3}'|tr -d \"`;
@@ -35,6 +39,16 @@ base_HPATH=`basename $HPATH`;
 #   HPATH is the opers help file, seen by opers on /quote help
 
 # install ircd, save old one as ircd.old
+
+if [ -f ${DPATH} ] ; then
+   echo aarrggh! ${DPATH} already exists as a file. Remove it first.;
+   exit 0;
+fi
+
+if [ ! -d ${DPATH} ] ; then
+   echo Creating directory ${DPATH}...;
+   mkdir -p ${DPATH};
+fi
 
 if [ $base_SPATH = $SPATH ] ; then
   if [ ! -f ${DPATH}${SPATH} ] ; then

@@ -156,7 +156,7 @@ MAXBUF="24"
 SUNOS=""
 SOLARIS=""
 DPATH="`pwd`/"
-SPATH="`pwd`/src/ircd" 
+SPATH=""
 STATSN="1"
 SMOTD="1"
 DEFINVIS="1"
@@ -314,8 +314,22 @@ while [ -z "$FOO" ] ; do
     if [ -z "$cc" ] ; then
 	cc=$FOO
     fi
+    case "$cc" in
+	*/)
+	    ;;
+	*)
+	    echo ""
+	    echo "This must end in a / (it must be a directory!)"
+	    echo ""
+	    FOO=""
+	    ;;
+    esac
 done
 DPATH=$cc
+
+if [ -z "$SPATH" ] ; then
+   SPATH="${DPATH}ircd"
+fi
 
 FOO=""
 runonce=""
