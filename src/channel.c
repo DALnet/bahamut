@@ -1329,10 +1329,11 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
             }
             else if (parv[args] == NULL)
             {
+                anInvite    *invite;
+
                 if (anylistsent) /* don't send the list if they have received one */
                     break;
 
-                anInvite    *invite;
                 for (invite = chptr->invite_list; invite; invite = invite->next)
                     sendto_one(sptr, rpl_str(RPL_INVITELIST), me.name, cptr->name,
                                chptr->chname, invite->invstr, invite->who, invite->when);
