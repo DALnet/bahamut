@@ -1507,7 +1507,7 @@ time_t      lasttimeofday;
 	 (void) read_message(1, &busycli_fdlist);
 	 (void) read_message(1, &serv_fdlist);
       }
-      (void) flush_fdlist_connections(&serv_fdlist);
+      /* (void) flush_fdlist_connections(&serv_fdlist); see below on flush_connections */
    }
    if ((timeofday = time(NULL)) == -1) {
 	#ifdef USE_SYSLOG
@@ -1559,10 +1559,22 @@ static time_t lasttime = 0;
       dorehash = 0;
    }
    /*
-    * * Flush output buffers on all connections now if they * have data
-    * in them (or at least try to flush) * -avalon
+    * 
+    * Flush output buffers on all connections now if they 
+    * have data in them (or at least try to flush)  -avalon
+    *
+    * flush_connections(me.fd);
+    *
+    * avalon, what kind of crack have you been smoking? why
+    * on earth would we flush_connections blindly when
+    * we already check to see if we can write (and do)
+    * in read_message? There is no point, as this causes
+    * lots and lots of unnecessary sendto's which 
+    * 99% of the time will fail because if we couldn't
+    * empty them in read_message we can't empty them here.
+    * one effect: during htm, output to normal lusers
+    * will lag.
     */
-   flush_connections(me.fd);
 
 #ifdef	LOCKFILE
    /*
