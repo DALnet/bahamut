@@ -398,6 +398,10 @@ static void add_user_to_channel(aChannel *chptr, aClient *who, int flags) {
    Link   *ptr;
    chanMember *cm;
 
+#ifdef DUMP_DEBUG
+   fprintf(dumpfp,"Add to channel %s: %p:%s\n",chptr->chname,who,who->name);
+#endif
+
    if (who->user) {
       cm = make_chanmember();
       cm->flags = flags;

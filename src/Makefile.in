@@ -5,7 +5,7 @@ INCLUDEDIR=-I../include -I../zlib
 
 SRC_1 = bsd.c channel.c class.c dbuf.c dich_conf.c
 SRC_2 = fdlist.c hash.c inet_addr.c ircd.c ircsprintf.c
-SRC_3 = list.c match.c packet.c parse.c res.c
+SRC_3 = list.c match.c packet.c parse.c res.c m_nick.c
 SRC_4 = s_auth.c s_bsd.c s_conf.c s_debug.c s_err.c s_misc.c s_numeric.c
 SRC_5 = s_serv.c s_user.c send.c support.c whowas.c scache.c blalloc.c zlink.c
 CONF_SRC = @ENCRYPT_SRC@
