@@ -27,6 +27,7 @@
 #include "numeric.h"
 #include "blalloc.h"
 #include "dh.h"
+#include "zlink.h"
 
 extern int  BlockHeapGarbageCollect(BlockHeap *);
 
@@ -451,6 +452,10 @@ remove_client_from_list(aClient *cptr)
          rc4_destroystate(cptr->serv->rc4_in);
       if(cptr->serv->rc4_out)
          rc4_destroystate(cptr->serv->rc4_out);
+      if(cptr->serv->zip_in)
+         zip_destroy_input_session(cptr->serv->zip_in);
+      if(cptr->serv->zip_out)
+         zip_destroy_output_session(cptr->serv->zip_out);
       MyFree((char *) cptr->serv);
    }
    /*

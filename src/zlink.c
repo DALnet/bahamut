@@ -167,5 +167,24 @@ void zip_out_get_stats(void *session, unsigned long *insiz, unsigned long *outsi
 
    *insiz = z->stream.total_in;
    *outsiz = z->stream.total_out;
-   *ratio = ((100.0 * (double)z->stream.total_out) / (double) z->stream.total_in);
+
+   if(*insiz)
+      *ratio = ((100.0 * (double)z->stream.total_out) / (double) z->stream.total_in);
 }
+
+void zip_destroy_output_session(void *session)
+{
+   struct zipped_link_out *z = (struct zipped_link_out *) session;
+
+   deflateEnd(&z->stream);
+   free(session);
+}
+
+void zip_destroy_input_session(void *session)
+{
+   struct zipped_link_in *z = (struct zipped_link_in *) session;
+
+   inflateEnd(&z->stream);
+   free(session);
+}
+

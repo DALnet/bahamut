@@ -892,10 +892,13 @@ int do_server_estab(aClient *cptr)
 
       zip_out_get_stats(cptr->serv->zip_out, &inb, &outb, &rat);
 
-      sendto_gnotice("from %s: Connect burst to %s: %lu bytes normal, %lu compressed (%3.2f%%)",
-                     me.name, get_client_name(cptr, HIDEME), inb, outb, rat);
-      sendto_serv_butone(cptr, ":%s GNOTICE :Connect burst to %s: %lu bytes normal, %lu compressed (%3.2f%%)",
-                     me.name, get_client_name(cptr, HIDEME), inb, outb, rat);
+      if(inb)
+      {
+         sendto_gnotice("from %s: Connect burst to %s: %lu bytes normal, %lu compressed (%3.2f%%)",
+                        me.name, get_client_name(cptr, HIDEME), inb, outb, rat);
+         sendto_serv_butone(cptr, ":%s GNOTICE :Connect burst to %s: %lu bytes normal, %lu compressed (%3.2f%%)",
+                        me.name, get_client_name(cptr, HIDEME), inb, outb, rat);
+      }
    }
 
    /* stuff a PING at the end of this burst so we can figure out when
