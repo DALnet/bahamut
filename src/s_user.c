@@ -1587,6 +1587,7 @@ static inline int m_message(aClient *cptr, aClient *sptr, int parc,
 	    /* Not destined for a user on me :-( */
 	    if (!IsMe(acptr)) 
 	    {
+#ifdef SERVICESHUB
                 if(strcasecmp(server+1,SERVICES_NAME)!=0) {
 		  sendto_one(acptr, ":%s %s %s :%s", parv[0], cmd, nick,
 			   parv[2]);
@@ -1612,6 +1613,10 @@ static inline int m_message(aClient *cptr, aClient *sptr, int parc,
 			   parv[2]);
                   }                    
                 }
+#else
+                sendto_one(acptr, ":%s %s %s :%s", parv[0], cmd, nick,
+                           parv[2]);
+#endif
 		continue;
 	    }
 	    *server = '\0';
@@ -2287,7 +2292,7 @@ int m_pong(aClient *cptr, aClient *sptr, int parc, char *parv[])
 			   "sending topic burst.", me.name, sptr->name);
 #ifdef SERVICESHUB 
             // services doesn't care about TOPICs during a sync or AWAY messages
-            if(strcasecmp(cptr->name,SERVICES_NAME)!=0)
+            if(strcasecmp(cptr->name,SERVICES_NAME)!=0 && strcasecmp(cptr->name,STATS_NAME)!=0)
 #endif
 	      send_topic_burst(sptr);
 	    sptr->flags |= FLAGS_PINGSENT|FLAGS_SOBSENT;
