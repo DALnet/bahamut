@@ -1133,7 +1133,7 @@ m_nick(aClient *cptr,
        * danger of the server being disconnected. * Ultimate way to
        * jupiter a nick ? >;-). -avalon
        */
-      sendto_ops("Nick collision on %s(%s <- %s)",
+      sendto_ops_lev(SKILL_LEV, "Nick collision on %s(%s <- %s)",
 		 sptr->name, acptr->from->name,
 		 get_client_name(cptr, FALSE));
       ircstp->is_kill++;
@@ -1192,7 +1192,7 @@ m_nick(aClient *cptr,
 			goto nickkilldone;
 		}
 		else if (fromTS && !(acptr->user)) {
-			sendto_ops("Nick Collision on %s(%s(NOUSER) <- %s!%s@%s)(TS:%s)",
+			sendto_ops_lev(SKILL_LEV, "Nick Collision on %s(%s(NOUSER) <- %s!%s@%s)(TS:%s)",
 						  acptr->name, acptr->from->name, parv[1], parv[5], parv[6],
 						  cptr->name);
 			sendto_serv_butone(NULL,	/*
@@ -1251,7 +1251,7 @@ m_nick(aClient *cptr,
        */
       if (!newts || !acptr->tsinfo
 	  || (newts == acptr->tsinfo)) {
-	 sendto_ops("Nick collision on %s(%s <- %s)(both killed)",
+	 sendto_ops_lev(SKILL_LEV, "Nick collision on %s(%s <- %s)(both killed)",
 		    acptr->name, acptr->from->name,
 		    get_client_name(cptr, FALSE));
 	 ircstp->is_kill++;
@@ -1280,11 +1280,11 @@ m_nick(aClient *cptr,
 	    return 0;
 	 else {
 	    if (sameuser)
-	       sendto_ops("Nick collision on %s(%s <- %s)(older killed)",
+	       sendto_ops_lev(SKILL_LEV, "Nick collision on %s(%s <- %s)(older killed)",
 			  acptr->name, acptr->from->name,
 			  get_client_name(cptr, FALSE));
 	    else
-	       sendto_ops("Nick collision on %s(%s <- %s)(newer killed)",
+	       sendto_ops_lev(SKILL_LEV, "Nick collision on %s(%s <- %s)(newer killed)",
 			  acptr->name, acptr->from->name,
 			  get_client_name(cptr, FALSE));
 
@@ -1313,7 +1313,7 @@ m_nick(aClient *cptr,
     */
    if (!newts || !acptr->tsinfo || (newts == acptr->tsinfo) ||
        !sptr->user) {
-      sendto_ops("Nick change collision from %s to %s(%s <- %s)(both killed)",
+      sendto_ops_lev(SKILL_LEV"Nick change collision from %s to %s(%s <- %s)(both killed)",
 		 sptr->name, acptr->name, acptr->from->name,
 		 get_client_name(cptr, FALSE));
       ircstp->is_kill++;
@@ -1344,11 +1344,11 @@ m_nick(aClient *cptr,
       if ((sameuser && newts < acptr->tsinfo) ||
 	  (!sameuser && newts > acptr->tsinfo)) {
 	 if (sameuser)
-	    sendto_ops("Nick change collision from %s to %s(%s <- %s)(older killed)",
+	    sendto_ops_lev(SKILL_LEV, "Nick change collision from %s to %s(%s <- %s)(older killed)",
 		       sptr->name, acptr->name, acptr->from->name,
 		       get_client_name(cptr, FALSE));
 	 else
-	    sendto_ops("Nick change collision from %s to %s(%s <- %s)(newer killed)",
+	    sendto_ops_lev(SKILL_LEV, "Nick change collision from %s to %s(%s <- %s)(newer killed)",
 		       sptr->name, acptr->name, acptr->from->name,
 		       get_client_name(cptr, FALSE));
 	 ircstp->is_kill++;
@@ -1367,11 +1367,11 @@ m_nick(aClient *cptr,
       }
       else {
 	 if (sameuser)
-	    sendto_ops("Nick collision on %s(%s <- %s)(older killed)",
+	    sendto_ops_lev(SKILL_LEV, "Nick collision on %s(%s <- %s)(older killed)",
 		       acptr->name, acptr->from->name,
 		       get_client_name(cptr, FALSE));
 	 else
-	    sendto_ops("Nick collision on %s(%s <- %s)(newer killed)",
+	    sendto_ops_lev(SKILL_LEV, "Nick collision on %s(%s <- %s)(newer killed)",
 		       acptr->name, acptr->from->name,
 		       get_client_name(cptr, FALSE));
 
@@ -1512,7 +1512,7 @@ m_nick(aClient *cptr,
 						add_history(sptr, 1);
 						
 						sendto_serv_butone(cptr, ":%s NICK %s :%ld",
-												 parv[0], nick, sptr->tsinfo);
+							 parv[0], nick, sptr->tsinfo);
 					}
 #ifdef ANTI_NICK_FLOOD
 				}
@@ -1528,7 +1528,7 @@ m_nick(aClient *cptr,
 			}
 			if(IsRegNick(sptr)) {
 				sptr->umode&=~UMODE_r;
-				sendto_serv_butone(&me, ":%s MODE %s :-r", sptr->name, sptr->name);
+				sendto_serv_butone(&me, ":%s MODE %s :-r", nick, nick);
 			}
 		}
 		else {
