@@ -1118,7 +1118,7 @@ int check_dccsend(aClient *from, aClient *to, char *msg)
      */
     char *filename = msg + 8;
     char *ext;
-    char **farray;
+    char **farray = NULL;
     int arraysz;
     int len = 0, extlen = 0, i;
 
