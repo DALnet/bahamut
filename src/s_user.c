@@ -5066,9 +5066,12 @@ int m_dccallow(aClient *cptr, aClient *sptr, int parc, char *parv[])
             sendto_one(sptr, ":%s %d %s :The following users are on your dcc allow list:", 
                        me.name, RPL_DCCINFO, sptr->name);
             for(lp = sptr->user->dccallow; lp; lp = lp->next)
-               sendto_one(sptr, ":%s %d %s :%s %s", me.name, RPL_DCCLIST, sptr->name, lp->value.cptr->name, 
-                  (lp->flags == DCC_LINK_REMOTE) ? "is allowing you to send to them" :
-                  "is being allowed to send to you");
+            {
+               if(lp->flags == DCC_LINK_REMOTE) 
+                  continue;
+               sendto_one(sptr, ":%s %d %s :%s (%s@%s)", me.name, RPL_DCCLIST, sptr->name, 
+                          lp->value.cptr->name, lp->value.cptr->user->username, lp->value.cptr->user->host);
+            }
             sendto_one(sptr, rpl_str(RPL_ENDOFDCCLIST), me.name, sptr->name, s);
          }
          else if(!didhelp && myncmp(s, "help", 4) == 0)
