@@ -28,6 +28,8 @@
 #include <fcntl.h>
 #include <sys/wait.h>
 
+/* the majority of this is just cut and paste from ircd */
+
 #define MyMalloc(x) malloc(x)
 #define SBAN_LOCAL     0x001
 #define SBAN_NETWORK   0x002
@@ -45,7 +47,7 @@ Conf_Me    *MeLine    = ((Conf_Me *) NULL); /* meline - only one    */
 aOper      *opers     = ((aOper *) NULL);   /* opers - Olines   */
 aPort      *ports     = ((aPort *) NULL);   /* ports - P/M lines    */
 aClass     *classes = NULL;
-char*      uservers[MAX_USERVERS];
+char       *uservers[MAX_USERVERS];
 
 typedef struct _asimban SimBan;
 typedef struct _ahostban HostBan;
@@ -68,6 +70,7 @@ struct _ahostban
 
 SimBan *sbans = NULL;
 HostBan *hbans = NULL;
+int  do_tline = 0;
 char ProxyMonHost[HOSTLEN+1];
 char ProxyMonURL[TOPICLEN+1];
 
@@ -900,6 +903,11 @@ initconf(int opt, int fd, aClient *rehasher)
                 t_status = CONF_QUARANTINE;
                 break;
 
+            case 'T':
+            case 't':
+                t_status = CONF_MONINFO;
+                break;
+
             case 'U':       /* Ultimate Servers (aka God) */
             case 'u':
                 t_status = CONF_ULINE;
@@ -935,6 +943,15 @@ initconf(int opt, int fd, aClient *rehasher)
          * Everything should be contained. -epi
          */
 
+        if(t_status & CONF_MONINFO)
+        {
+            if(t_host && t_host[0] != '\0')
+                strncpyzt(ProxyMonHost, t_host, sizeof(ProxyMonHost));
+            strcpy(ProyMonURL, "http://");
+            if(t_passwd && t_passwd[0] != '\0')
+                strncpyzt(ProxyMonURL, t_passwd, sizeof(ProxyMonURL));
+            do_tline = 1;
+        }
         if(t_status & CONF_ADMIN)
         {
             confadd_me(0,0,0,0, t_host, t_passwd, t_name);
@@ -1119,6 +1136,14 @@ printconf()
     if(MeLine->restartpass && MeLine->restartpass != "")
         printf("    rpass \"%s\";\n", MeLine->restartpass);
     printf("};\n\n");
+    if(do_tline)
+    {
+        printf("/* Option Definitions */\n\n");
+        printf("options {\n");
+        printf("    wgmonhost \"%s\";\n", ProxyMonHost);
+        printf("    wgmonurl \"%s\";\n", ProxyMonURL);
+        printf("};\n\n");
+    }
     printf("/* Class Definitions */\n\n");
     for(class = classes; class; class = class->next)
     {

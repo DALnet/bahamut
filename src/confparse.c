@@ -136,8 +136,10 @@ check_quote(char *cur)
                 quote = 0;
                 break;
             }
-        cur = check_quote(cur);     /* sloppy but effective */
-        return cur;
+        if(!cur)
+            return cur;
+        else
+            return check_quote(cur);
     }
     return cur;
 }

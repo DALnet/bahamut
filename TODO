@@ -9,7 +9,6 @@ THINGS TO FIX BEFORE RELEASE
       Then remove unnessecary one byte mallocs.  Disgusting kludge.
     - Clean up config.h [Half done]
     - Fix make install
-    - Implement IPV6
 
 TODO LIST
 ---------
@@ -19,6 +18,7 @@ TODO LIST
 - Split throttling off into its own hook module.
 - Add more hooks.
 - Integrate module.ini into ircd.conf
+- Implement IPV6
 
 List to Ponder
 --------------

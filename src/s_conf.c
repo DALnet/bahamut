@@ -848,9 +848,12 @@ confadd_options(cVar *vars[], int lnum)
         {
             tmp->type = NULL;
             if(!mycmp("HUB", tmp->value))
-                confopts |= FLAGS_HUB;
+                confopts = FLAGS_HUB;
             else if(!mycmp("SERVICESHUB", tmp->value))
+            {
                 confopts |= FLAGS_SERVHUB;
+                confopts |= FLAGS_HUB;
+            }
             else if(!mycmp("CLIENT", tmp->value))
                 confopts &= ~(FLAGS_HUB|FLAGS_SERVHUB);
             else

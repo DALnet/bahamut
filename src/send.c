@@ -479,7 +479,7 @@ static inline int prefix_buffer(int remote, aClient *from, char *prefix,
     if(!remote && IsPerson(from))
     {
         int flag = 0;
-            anUser *user = from->user;
+        anUser *user = from->user;
 
         for(p = from->name; *p; p++)
                 buffer[sidx++] = *p;
