@@ -341,6 +341,11 @@ int throttle_check(char *host, int fd, time_t sotime) {
     if(fd == -1 && (NOW - sotime > throttle_ttime))
        return 1;
 
+    /* If this user is signing on 'in the future', we need to 
+       fix that. Someone has a bad remote TS, perhaps we should complain */
+    if(sotime > NOW)
+       sotime = NOW;
+
     if (tp == NULL) {
 	/* we haven't seen this one before, create a new throttle and add it to
 	 * the hash.  XXX: blockheap code should be used, but the blockheap
