@@ -483,7 +483,7 @@ time_t      oldest = 0, timeout;
        * skip over all the checks below. - lucas
        */
 
-      if (!(ping >= currenttime - cptr->lasttime))
+      if (ping < (currenttime - cptr->lasttime))
       {
          /*
           * If the server hasnt talked to us in 2*ping seconds and it has
@@ -492,8 +492,7 @@ time_t      oldest = 0, timeout;
           * connection too.
           */
          if (((currenttime - cptr->lasttime) >= (2 * ping) && (cptr->flags & FLAGS_PINGSENT)) ||
-             ((!IsRegistered(cptr) && (currenttime - cptr->since) >= ping)) ||
-	     (!IsUnknown(cptr))) 
+             ((!IsRegistered(cptr) && (currenttime - cptr->since) >= ping))) 
          {
 	    if (!IsRegistered(cptr) && (DoingDNS(cptr) || DoingAuth(cptr))) {
 	       if (cptr->authfd >= 0) {
