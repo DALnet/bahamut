@@ -23,20 +23,21 @@
 #define UBAN_LOCAL     0x001   /* formerly known as a K: or Z: line */
 #define UBAN_NETWORK   0x002   /* formerly known as an autokill or an SZline */
 
-#define UBAN_GECOS     0x100   /* formerly known as an SGLINE */
-#define UBAN_NICK      0x200   /* formerly known as an SQLINE */
+#define UBAN_GECOS     0x004   /* formerly known as an SGLINE */
+#define UBAN_NICK      0x008   /* formerly known as an SQLINE */
 
-#define UBAN_HOST      0x004   /* this ban matches against the user's resolved host */
-#define UBAN_IP        0x008   /* this ban matches against the user's IP address */
+#define UBAN_HOST      0x010   /* this ban matches against the user's resolved host */
+#define UBAN_IP        0x020   /* this ban matches against the user's IP address */
 
-#define UBAN_WILD      0x010   /* this ban has wildcards */
+#define UBAN_WILD      0x040   /* this ban has wildcards */
 
-#define UBAN_CIDR4     0x020   /* this ban is an IPv4 CIDR ban */
-#define UBAN_CIDR4BIG  0x040   /* this ban is an IPv4 CIDR ban for something greater than a /16 */
+#define UBAN_CIDR4     0x080   /* this ban is an IPv4 CIDR ban */
+#define UBAN_CIDR4BIG  0x100   /* this ban is an IPv4 CIDR ban for something greater than a /16 */
 
-#define UBAN_WILDUSER  0x080   /* Username is just '*' */
+#define UBAN_WILDUSER  0x200   /* Username is just '*' */
+#define UBAN_WILDHOST  0x400   /* Hostname is just '*.*' or '*' -- this ban is a user@* ban */
 
-#define UBAN_TEMPORARY 0x400   /* userban is temporary */
+#define UBAN_TEMPORARY 0x800   /* userban is temporary */
 
 struct userBan {
    unsigned int flags;

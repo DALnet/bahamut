@@ -176,7 +176,7 @@ int user_match_ban(aClient *cptr, struct userBan *ban)
 
    if(ban->flags & UBAN_HOST)
    {
-      if(mycmp(ban->h, cptr->user->host) == 0)
+      if((ban->flags & UBAN_WILDHOST) || mycmp(ban->h, cptr->user->host) == 0)
          return 1;
    }
 
@@ -306,7 +306,7 @@ struct userBan *check_userbanned(aClient *cptr, unsigned int yflags, unsigned in
          if((!(bl->ban->flags & UBAN_WILDUSER)) && match(bl->ban->u, cptr->user->username)) 
             continue;
 
-         if(match(bl->ban->h, cptr->user->host) == 0)
+         if((bl->ban->flags & UBAN_WILDHOST) || match(bl->ban->h, cptr->user->host) == 0)
             return bl->ban;
       }
    }
@@ -681,8 +681,15 @@ struct userBan *make_hostbased_ban(char *user, char *phost)
 
    if(wildcount && !numcount && !othercount)
    {
-      /* all wildcards? aagh! */
-      return NULL;
+      if(!user || !*user || mycmp(user, "*") == 0)
+         return NULL; /* all wildcards? aagh! */
+
+      flags = (UBAN_HOST|UBAN_WILD);
+
+      if(mycmp(host, "*.*") == 0 || mycmp(host, "*") == 0)
+         flags |= UBAN_WILDHOST;
+
+      goto success;
    }
 
    /* everything must have a dot. never more than one slash. */
