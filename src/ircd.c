@@ -93,7 +93,7 @@ extern void 	 do_pending_klines(void);
 void        	server_reboot();
 void        	restart(char *);
 static void 	open_debugfile(), setup_signals();
-static time_t 	io_loop(time_t);
+static void 	io_loop();
 
 /* externally needed functions */
 
@@ -466,7 +466,7 @@ char 		*errtxt = "No response from %s, closing link";
           * user and a KILL line was found to be active, close this
           * connection too.
           */
-         if ((cptr->flags & FLAGS_PINGSENT) && ((currenttime - cptr->lasttime) >= (2 * ping)) ||
+         if (((cptr->flags & FLAGS_PINGSENT) && ((currenttime - cptr->lasttime) >= (2 * ping))) ||
              ((!IsRegistered(cptr) && (currenttime - cptr->since) >= ping))) 
          {
 	    if (!IsRegistered(cptr) && (DoingDNS(cptr) || DoingAuth(cptr))) 
