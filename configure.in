@@ -25,7 +25,7 @@ AC_CHECK_FUNC(crypt,, AC_CHECK_LIB(descrypt, crypt,,AC_CHECK_LIB(crypt, crypt,,)
 
 dnl Checks for header files.
 AC_HEADER_STDC
-AC_CHECK_HEADERS(sys/param.h unistd.h string.h strings.h sys/syslog.h stdlib.h stddef.h stropts.h)
+AC_CHECK_HEADERS(sys/param.h unistd.h string.h strings.h sys/syslog.h stdlib.h stddef.h stropts.h limits.h)
 AC_CHECK_HEADER(malloc.h, AC_DEFINE(MALLOCH, <malloc.h>)) 
 AC_MSG_CHECKING(MIN and MAX definition)
 AC_EGREP_CPP(yes,

@@ -111,6 +111,9 @@
 /* Define if you have the <stropts.h> header file.  */
 #undef HAVE_STROPTS_H
 
+/* Define if you have the <limits.h> header file.  */
+#undef HAVE_LIMITS_H
+
 /* Define this if we have a sys_errlist */
 #undef SYS_ERRLIST_DECLARED
 

@@ -51,6 +51,10 @@
 #include <string.h>
 #endif
 
+#if defined( HAVE_LIMITS_H )
+#include <limits.h>
+#endif
+
 #define	strcasecmp	mycmp
 #define	strncasecmp	myncmp
 

@@ -951,15 +951,15 @@
 #define MAX_CLIENTS INIT_MAXCLIENTS
 
 #if defined(CLIENT_FLOOD) && ((CLIENT_FLOOD > 8000) || (CLIENT_FLOOD < 512))
-error CLIENT_FLOOD needs redefining.
+#error CLIENT_FLOOD needs redefining.
 #endif
 
 #if !defined(CLIENT_FLOOD)
-error CLIENT_FLOOD undefined.
+#error CLIENT_FLOOD undefined.
 #endif
 
 #if (defined(OPTIONS_H) && !defined(OPTIONS_H_14))
-error Using outdated include/options.h - run config
+#error Using outdated include/options.h - run config
 #endif
 
 #if defined(DEBUGMODE) || defined(DNS_DEBUG)
