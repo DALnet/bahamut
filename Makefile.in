@@ -82,6 +82,7 @@ ENGINE=
 
 SHELL=/bin/sh
 SUBDIRS=zlib src tools
+CLEANSUBDIRS=zlib src tools
 
 MAKE=make 'CFLAGS=${CFLAGS}' 'INSTALL=${INSTALL}' 'LDFLAGS=${LDFLAGS}' 'ENGINE_S=${ENGINE}'
 MAKEPROFILE=make 'CFLAGS=${CFLAGS} -pg -DPROFILING' 'INSTALL=${INSTALL}' 'LDFLAGS=${LDFLAGS} -pg' 'ENGINE_S=${ENGINE}'
@@ -115,6 +116,17 @@ profile:
 	done
 
 clean:
+	${RM} -f *~ core
+	@for i in $(CLEANSUBDIRS); do \
+		echo "Cleaning $$i";\
+		cd $$i;\
+		${MAKE} clean; cd ..;\
+	done
+	-@if [ -f include/setup.h ] ; then \
+	echo "To really restart installation, make distclean" ; \
+	fi
+
+fullclean:
 	${RM} -f *~ core
 	@for i in $(SUBDIRS); do \
 		echo "Cleaning $$i";\

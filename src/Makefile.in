@@ -1,7 +1,7 @@
 CC=@CC@
 RM=@RM@
 IRCDLIBS=@LIBS@ ../zlib/libz.a
-INCLUDEDIR=-I../include -I../zlib
+INCLUDEDIR=-I../include
 OPENSSLINC=@SSLINC@
 
 CONF_SRC = @ENCRYPT_SRC@
@@ -224,6 +224,7 @@ rc4.o: rc4.c \
  ../include/patchlevel.h
 zlink.o: zlink.c \
  ../include/patchlevel.h
+	$(CC) $(CFLAGS) $(INCLUDEDIR) -I../zlib -c $<
 throttle.o: throttle.c \
  ../include/patchlevel.h ../include/throttle.h
 userban.o: userban.c ../include/userban.h ../include/struct.h ../include/config.h \
