@@ -33,6 +33,7 @@ extern void outofmemory(void);
 typedef struct _SBuffer 
 {
     struct _SBuffer *next;
+    int        free_time;
     int        bufsize;
     int        refcount;
     char       *end;
@@ -59,7 +60,7 @@ typedef struct _SBufUserBlock
     struct _SBufUserBlock *next;
 } SBufUserBlock;
 
-SBuffer             *largesbuf_pool = NULL, *smallsbuf_pool = NULL;
+SBuffer             *largesbuf_pool = NULL, *smallsbuf_pool = NULL, *free_queue = NULL;
 SBufUser            *user_pool = NULL;
 SBufBlock           *sbuf_blocks = NULL;
 SBufUserBlock       *sbufuser_blocks = NULL;
@@ -159,21 +160,43 @@ int sbuf_init()
 
 int sbuf_free(SBuffer* buf)
 {
-    switch (buf->bufsize)
+    SBuffer* loop, *next, *prev = NULL;
+    int found = 0;
+    
+    for (loop = free_queue; loop; loop = next)
     {
-    case SBUF_LARGE_BUFFER:
-        buf->next = largesbuf_pool;
-        largesbuf_pool = buf;
-        break;
+        next = loop->next;
+        if (loop == buf) found = 1;
+        if (loop->refcount == 0 && NOW > loop->free_time)
+        {
+            switch (buf->bufsize)
+            {
+                case SBUF_LARGE_BUFFER:
+                    buf->next = largesbuf_pool;
+                    largesbuf_pool = buf;
+                    break;
         
-    case SBUF_SMALL_BUFFER:
-        buf->next = smallsbuf_pool;
-        smallsbuf_pool = buf;
-        break;
+                case SBUF_SMALL_BUFFER:
+                    buf->next = smallsbuf_pool;
+                    smallsbuf_pool = buf;
+                    break;
         
-    default:
-        return -1;
+                default:
+                    return -1;
+            }
+            if (prev == NULL) free_queue = next;
+            else prev->next = next;
+            continue;
+        }
+        prev = loop;
     }
+    
+    if (!found)
+    {
+        buf->next = free_queue;
+        free_queue = buf;
+    }
+        
     return 0;
 }
 
@@ -202,6 +225,7 @@ SBuffer* sbuf_alloc(int theSize)
         buf->refcount = 0;
         buf->end = ((char*)buf) + SBUF_BASE;
         buf->next = NULL;
+        buf->free_time = NOW;
         return buf;
     }
     else
@@ -218,6 +242,7 @@ SBuffer* sbuf_alloc(int theSize)
         buf->refcount = 0;
         buf->end = ((char*)buf) + SBUF_BASE;
         buf->next = NULL;
+        buf->free_time = NOW;
         return buf;
     }
 }
@@ -262,6 +287,7 @@ int sbuf_begin_share(const char* theData, int theLength, void **thePtr)
     *s->end++ = '\r';
     *s->end++ = '\n';
     s->refcount = 0;
+    s->free_time = NOW + SBUF_REQUIRED_TIME;
     
     *thePtr = (void*)s;
     return 1;
@@ -366,7 +392,8 @@ int sbuf_delete(SBuf* theBuf, int theLength)
             sbuf_user_free(tmp);
         }
     }
-    if (theBuf->head == NULL) theBuf->tail = NULL;
+    if (theBuf->length == 0) theBuf->tail = NULL;
+    
     return 1;
 }
 

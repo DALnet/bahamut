@@ -63,14 +63,15 @@ void engine_add_fd(int fd)
 void engine_del_fd(int fd)
 {
     struct epoll_event ev;
+    struct epoll_fd    *epfd = (struct epoll_fd*)get_fd_internal(fd);
     
     if (epoll_ctl(epoll_id, EPOLL_CTL_DEL, fd, &ev) < 0)
         abort();
         
-    if (numfds-1 != fd)
+    if (epfd - epoll_fds != numfds - 1)
     {
-        epoll_fds[fd] = epoll_fds[numfds-1];
-        set_fd_internal(epoll_fds[fd].fd, (void*)&epoll_fds[fd]);
+        *epfd = epoll_fds[numfds-1];
+        set_fd_internal(epfd->fd, (void*)epfd);
     }
     
     --numfds;

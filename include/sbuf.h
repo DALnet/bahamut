@@ -24,6 +24,7 @@
 /* Definitions */
 #define SBUF_LARGE_BUFFER			512
 #define SBUF_SMALL_BUFFER			256
+#define SBUF_REQUIRED_TIME          10
 
 /* Macros */
 #define IsEol(c)                    ((c) == '\r' || (c) == '\n')
