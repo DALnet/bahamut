@@ -2042,67 +2042,78 @@ int read_message(time_t delay, fdlist * listp)
 	nfds--;
     }
     
-    for (pfd = poll_fdarray, i = 0; (nfds > 0) && (i < nbr_pfds); i++, pfd++) 
+    for (pfd = poll_fdarray, i = 0; i < nbr_pfds; i++, pfd++) 
     {
-	if (!pfd->revents)
-	    continue;
-	if (pfd == res_pfd)
-	    continue;
-	nfds--;
-	fd = pfd->fd;
-	rr = pfd->revents & POLLREADFLAGS;
-	rw = pfd->revents & POLLWRITEFLAGS;
-	if (pfd->revents & POLLERRORS) 
-	{
-	    if (pfd->events & POLLREADFLAGS)
-		rr++;
-	    if (pfd->events & POLLWRITEFLAGS)
-		rw++;
-	}
-	if ((auth > 0) && ((cptr = authclnts[fd]) != NULL) &&
-	    (cptr->authfd == fd)) 
-	{
-	    auth--;
-	    if (rr)
-		read_authports(cptr);
-	    if (rw)
-		send_authports(cptr);
-	    continue;
-	}
-	if (!(cptr = local[fd]))
-	    continue;
-	if (rr && IsListening(cptr)) 
-	{
-	    accept_connection(cptr);
-	    continue;
-	}
-	if (IsMe(cptr))
-	    continue;
-	if (rw) /* socket is marked for writing.. */
-	{
-	    int write_err = 0;
+        fd = pfd->fd;
+
+        if (pfd == res_pfd)
+           continue;
+
+        if (nfds && pfd->revents)
+        {
+           nfds--;
+           rr = pfd->revents & (POLLREADFLAGS | POLLERRORS);
+           rw = pfd->revents & POLLWRITEFLAGS;
+
+           if ((auth > 0) && ((cptr = authclnts[fd]) != NULL) && (cptr->authfd == fd)) 
+           {
+               auth--;
+               if (rr)
+                  read_authports(cptr);
+               if (rw)
+                  send_authports(cptr);
+               continue;
+           }
+
+           if (!(cptr = local[fd]))
+              continue;
+
+           if (rr && IsListening(cptr)) 
+           {
+              accept_connection(cptr);
+              continue;
+           }
+
+           if (IsMe(cptr))
+              continue;
+
+           if (rw) /* socket is marked for writing.. */
+           {
+              int write_err = 0;
 	    
-	    if (IsConnecting(cptr))
-		write_err = completed_connection(cptr);
-	    if (!write_err)
-		(void) send_queued(cptr);
-	    if (IsDead(cptr) || write_err) 
-	    {
-		ircsprintf(errmsg, "Write Error: %s",
-			   (cptr->flags & FLAGS_SENDQEX) ?
-			   "SendQ Exceeded" : irc_get_sockerr(cptr));
-		(void) exit_client(cptr, cptr, &me, errmsg);
-		
-		continue;
-	    }
-	}
+              if (IsConnecting(cptr))
+                 write_err = completed_connection(cptr);
+              if (!write_err)
+                 send_queued(cptr);
+
+              if (IsDead(cptr) || write_err) 
+              {
+                 ircsprintf(errmsg, "Write Error: %s",
+                            (cptr->flags & FLAGS_SENDQEX) ?
+                            "SendQ Exceeded" : irc_get_sockerr(cptr));
+                 exit_client(cptr, cptr, &me, errmsg);
+                 continue;
+              }
+
+           }
 	
-	length = 1; /* for fall through case */
+           length = 1; /* for fall through case */
 	
-	if (rr)
-	    length = read_packet(cptr);
-	else if(IsPerson(cptr) && !NoNewLine(cptr))
-	    length = do_client_queue(cptr);
+           if (rr)
+              length = read_packet(cptr);
+           else if(IsPerson(cptr) && !NoNewLine(cptr))
+              length = do_client_queue(cptr);
+        }
+        else /* nfds == 0 or there are no events for this socket */
+        {
+           if(!(cptr = local[fd]))
+              continue;
+
+           if(IsPerson(cptr) && !NoNewLine(cptr))
+              length = do_client_queue(cptr);
+           else
+              continue;
+        }   
 
 # ifdef DEBUGMODE
 	readcalls++;
