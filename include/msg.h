@@ -63,6 +63,7 @@
 #define MSG_MODE     "MODE"	   	/* MODE */
 #define MSG_KICK     "KICK"	   	/* KICK */
 #define MSG_USERHOST "USERHOST"		/* USER -> USRH */
+#define MSG_USERIP   "USERIP"		/* USER -> USRH */
 #define MSG_ISON     "ISON"	   	/* ISON */
 #define MSG_REHASH   "REHASH"	   	/* REHA */
 #define MSG_RESTART  "RESTART"		/* REST */
@@ -182,6 +183,7 @@ extern int  m_close(aClient *, aClient *, int, char **);
 extern int  m_motd(aClient *, aClient *, int, char **);
 extern int  m_whowas(aClient *, aClient *, int, char **);
 extern int  m_userhost(aClient *, aClient *, int, char **);
+extern int  m_userip(aClient *, aClient *, int, char **);
 extern int  m_ison(aClient *, aClient *, int, char **);
 extern int  m_svinfo(aClient *, aClient *, int, char **);
 extern int  m_sjoin(aClient *, aClient *, int, char **);
@@ -241,6 +243,7 @@ struct Message msgtab[] =
     {MSG_LIST, m_list, 0, MAXPARA, 1, 0, 0, 0L},
     {MSG_NAMES, m_names, 0, MAXPARA, 1, 0, 0, 0L},
     {MSG_USERHOST, m_userhost, 0, 1, 1, 0, 0, 0L},
+    {MSG_USERIP, m_userip, 0, 1, 1, 0, 0, 0L},
     {MSG_TRACE, m_trace, 0, MAXPARA, 1, 0, 0, 0L},
     {MSG_PASS, m_pass, 0, MAXPARA, 1, 1, 0, 0L},
     {MSG_LUSERS, m_lusers, 0, MAXPARA, 1, 0, 0, 0L},
