@@ -102,6 +102,7 @@ int  user_modes[] =
 /* internally defined functions */
 unsigned long my_rand(void);	/* provided by orabidoo */
 /* externally defined functions */
+extern int  find_eline(aClient *);	/* defined in s_conf.c */
 extern int  find_fline(aClient *);	/* defined in s_conf.c */
 extern Link *find_channel_link(Link *, aChannel *);	/* defined in list.c */
 #ifdef FLUD
@@ -753,7 +754,7 @@ int register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
 	if(!(ban = check_userbanned(sptr, UBAN_IP|UBAN_CIDR4, UBAN_WILDUSER)))
             ban = check_userbanned(sptr, UBAN_HOST, 0);
 
-	if(ban && !find_eline(acptr)))
+	if(ban && !find_eline(sptr))
 	{
 	    char *reason, *ktype;
 	    int local;
