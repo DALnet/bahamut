@@ -130,7 +130,7 @@ void debug(int level, char *pattern, ...)
 
 #ifdef USE_SYSLOG
     if (level == DEBUG_ERROR)
-	syslog(LOG_ERR, debugbuf);
+	syslog(LOG_ERR, "%s", debugbuf);
 #endif
 
     if ((debuglevel >= 0) && (level <= debuglevel)) {
