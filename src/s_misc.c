@@ -674,10 +674,12 @@ exit_client(
 #endif
       if (sptr->fd >= 0) {
 			if (cptr != NULL && sptr != cptr)
-			  sendto_one(sptr, "ERROR :Closing Link: 0.0.0.0 %s (%s)",
+			  sendto_one(sptr, "ERROR :Closing Link: %s %s (%s)",
+							 IsPerson(sptr) ? sptr->sockhost : "0.0.0.0", 
 							 sptr->name, comment);
 			else
-			  sendto_one(sptr, "ERROR :Closing Link: 0.0.0.0 (%s)",
+			  sendto_one(sptr, "ERROR :Closing Link: %s (%s)",
+							 IsPerson(sptr) ? sptr->sockhost : "0.0.0.0", 
 							 comment);
       }
       /*
