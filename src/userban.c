@@ -1026,6 +1026,9 @@ struct simBan *find_simban_exact(struct simBan *borig)
    {
       ban = (struct simBan *) bl->ban;
 
+      if(ban->flags != borig->flags)
+         continue;
+
       if(mycmp(ban->mask, borig->mask))
          continue;
 
@@ -1500,7 +1503,10 @@ struct userBan *userban_alloc()
 
    b = (struct userBan *) MyMalloc(sizeof(struct userBan));
    if(b)
+   {
+      memset(b, 0, sizeof(struct userBan));
       userban_count++;
+   }
    return b;
 }
 
@@ -1525,7 +1531,10 @@ uBanEnt *ubanent_alloc()
 
    b = (uBanEnt *) MyMalloc(sizeof(uBanEnt));
    if(b)
+   {
+      memset(b, 0, sizeof(uBanEnt));
       ubanent_count++;
+   }
    return b;
 }
 
@@ -1541,7 +1550,10 @@ struct simBan *simban_alloc()
 
    b = (struct simBan *) MyMalloc(sizeof(struct simBan));
    if(b)
+   {
+      memset(b, 0, sizeof(struct simBan));
       simban_count++;
+   }
    return b;
 }
 

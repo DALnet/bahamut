@@ -110,3 +110,4 @@ void report_simbans_match_flags(aClient *, unsigned int, unsigned int);
 void expire_simbans();
 void send_simbans(aClient *, unsigned int);
 int count_simbans(aClient *);
+void remove_simban(struct simBan *);

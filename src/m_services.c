@@ -32,6 +32,7 @@
 #include <utmp.h>
 #include <fcntl.h>
 #include "h.h"
+#include "userban.h"
 
 /* Externally defined stuffs */
 extern int user_modes[];
@@ -547,3 +548,61 @@ int m_svsmode(aClient *cptr, aClient *sptr, int parc, char *parv[])
     return 0;
 }
 
+int m_svshold(aClient *cptr, aClient *sptr, int parc, char *parv[])
+{
+    struct simBan *ban, *oban;
+    char *reason, *mask;
+    int length;
+
+    if(!IsULine(sptr) || parc < 3)
+        return 0;
+
+    mask = parv[1];
+    length = strtol(parv[2], NULL, 0);
+    reason = (parc < 4) ? "Nickname is reserved, try again later" : parv[3];
+
+    ban = make_simpleban(SBAN_LOCAL|SBAN_NICK|SBAN_TEMPORARY, parv[1]);
+    if(!ban)
+    {
+	sendto_realops_lev(DEBUG_LEV, "make_simpleban(%s) failed on svshold", mask);
+	return 0;
+    }
+    ban->reason = NULL;
+    
+    if((oban = find_simban_exact(ban)) != NULL)
+    {
+	simban_free(ban);
+	ban = NULL;
+
+	if(length <= 0)
+	{
+	    remove_simban(oban);
+	}
+	else
+	{
+	    if(oban->reason)
+		free(oban->reason);
+	    oban->reason = (char *) MyMalloc(strlen(reason) + 1);
+	    strcpy(oban->reason, reason);
+	    oban->timeset = NOW;
+	    oban->duration = length;
+	}
+    }
+    else if(length > 0)
+    {
+	ban->reason = (char *) MyMalloc(strlen(reason) + 1);
+	strcpy(ban->reason, reason);
+	ban->timeset = NOW;
+	ban->duration = length;
+	add_simban(ban);
+    }
+    else
+	simban_free(ban);
+
+    if(parc < 4)
+	sendto_serv_butone(cptr, ":%s SVSHOLD %s %s", sptr->name, parv[1], parv[2]);
+    else
+	sendto_serv_butone(cptr, ":%s SVSHOLD %s %s :%s", sptr->name, parv[1], parv[2], parv[3]);
+
+    return 0;
+}
