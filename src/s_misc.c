@@ -826,28 +826,6 @@ static void exit_one_client(aClient *cptr, aClient *sptr, aClient *from,
     return;
 }
 
-void checklist()
-{
-    aClient *acptr;
-    int     i, j;
-
-    if (!(bootopt & BOOT_AUTODIE))
-	return;
-    for (j = i = 0; i <= highest_fd; i++)
-	if (!(acptr = local[i]))
-	    continue;
-	else if (IsClient(acptr))
-	    j++;
-    if (!j) 
-    {
-#ifdef	USE_SYSLOG
-	syslog(LOG_WARNING, "ircd exiting: checklist() s_misc.c autodie");
-#endif
-	exit(0);
-    }
-    return;
-}
-
 void initstats()
 {
     memset((char *) &ircst, '\0', sizeof(ircst));

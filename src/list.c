@@ -341,7 +341,6 @@ void remove_client_from_list(aClient *cptr)
 	if (IsInvisible(cptr))
 	    Count.invisi--;
     }
-    checklist();
     if (cptr->prev)
 	cptr->prev->next = cptr->next;
     else

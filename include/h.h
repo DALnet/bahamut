@@ -74,7 +74,7 @@ extern char Local_Kline_Address[HOSTLEN+1];
 extern int  maxchannelsperuser, tsmaxdelta, tswarndelta;
 extern int  confopts;
 
-
+extern char dpath[PATH_MAX], spath[PATH_MAX];
 
 #include "fdlist.h"
 extern fdlist 	 serv_fdlist;

@@ -577,11 +577,6 @@ void close_listeners()
     }
 }
 
-#ifdef HAVE_FD_ALLOC
-fd_set *write_set, *read_set;
-
-#endif
-
 /* init_sys */
 void init_sys()
 {
@@ -592,39 +587,34 @@ void init_sys()
 
     if (!getrlimit(RLIMIT_FD_MAX, &limit))
     {
-    if (limit.rlim_max < MAXCONNECTIONS)
-    {
-        printf("ircd fd table too big\n");
-        printf("Hard Limit: %ld IRC max: %d\n",
-               (long) limit.rlim_max, MAXCONNECTIONS);
-        printf("Fix MAXCONNECTIONS\n");
-        printf("Aborting...\n");
-        exit(-1);
-    }
-    limit.rlim_cur = limit.rlim_max;    /* make soft limit the max */
-    if (setrlimit(RLIMIT_FD_MAX, &limit) == -1)
-    {
-        printf("error setting max fd's to %ld\n",
-               (long) limit.rlim_cur);
-        printf("Aborting...\n");
-        exit(-1);
-    }
+        if (limit.rlim_max < MAXCONNECTIONS)
+        {
+            printf("ircd fd table too big\n");
+            printf("Hard Limit: %ld IRC max: %d\n",
+                    (long) limit.rlim_max, MAXCONNECTIONS);
+            printf("Fix MAXCONNECTIONS\n");
+            printf("Aborting...\n");
+            exit(-1);
+        }
+        limit.rlim_cur = limit.rlim_max;    /* make soft limit the max */
+        if (setrlimit(RLIMIT_FD_MAX, &limit) == -1)
+        {
+            printf("error setting max fd's to %ld\n",
+                (long) limit.rlim_cur);
+            printf("Aborting...\n");
+            exit(-1);
+        }
 #ifdef USE_SELECT
-    if (MAXCONNECTIONS > FD_SETSIZE)
-    {
-        printf("FD_SETSIZE = %d MAXCONNECTIONS = %d\n",
-               FD_SETSIZE, MAXCONNECTIONS);
-        printf("Make sure your kernel supports a larger "
-           "FD_SETSIZE then recompile with -DFD_SETSIZE=%d\n",
-               MAXCONNECTIONS);
-        printf("Aborting...\n");
-        exit(-1);
-    }
-#endif
-
-#ifdef HAVE_FD_ALLOC
-    read_set = FD_ALLOC(MAXCONNECTIONS);
-    write_set = FD_ALLOC(MAXCONNECTIONS);
+        if (MAXCONNECTIONS > FD_SETSIZE)
+        {
+            printf("FD_SETSIZE = %d MAXCONNECTIONS = %d\n",
+                    FD_SETSIZE, MAXCONNECTIONS);
+            printf("Make sure your kernel supports a larger "
+                    "FD_SETSIZE then recompile with -DFD_SETSIZE=%d\n",
+                    MAXCONNECTIONS);
+            printf("Aborting...\n");
+            exit(-1);
+        }
 #endif
     }
 #endif
@@ -637,8 +627,8 @@ void init_sys()
 
     for (fd = 3; fd < MAXCONNECTIONS; fd++)
     {
-    (void) close(fd);
-    local[fd] = NULL;
+        (void) close(fd);
+        local[fd] = NULL;
     }
     local[1] = NULL;
 
@@ -646,44 +636,36 @@ void init_sys()
     {
         engine_init();
 
-    /* debugging is going to a tty */
-    resfd = init_resolver(0x1f);
-    add_fd(resfd, FDT_RESOLVER, NULL);
+        /* debugging is going to a tty */
+        resfd = init_resolver(0x1f);
+        add_fd(resfd, FDT_RESOLVER, NULL);
         set_fd_flags(resfd, FDF_WANTREAD);
-    return;
+        return;
     }
 
     close(1);
+
     if (!(bootopt & BOOT_DEBUG) && !(bootopt & BOOT_STDERR))
-    close(2);
+        close(2);
 
-    if (((bootopt & BOOT_CONSOLE) || isatty(0)) &&
-    !(bootopt & BOOT_OPER) && !(bootopt & BOOT_STDERR))
-    {
-    int pid;
 
-    if ((pid = fork()) < 0)
+    if ((isatty(0)) && !(bootopt & BOOT_OPER) && !(bootopt & BOOT_STDERR))
     {
-        if ((fd = open("/dev/tty", O_RDWR)) >= 0)
-        write(fd, "Couldn't fork!\n", 15);  /* crude, but effective */
-        exit(0);
-    } else if (pid > 0)
-        exit(0);
-#ifdef TIOCNOTTY
-    if ((fd = open("/dev/tty", O_RDWR)) >= 0)
-    {
-        ioctl(fd, TIOCNOTTY, (char *) NULL);
-        close(fd);
-    }
-#endif
-#if defined(SOL20) || defined(DYNIXPTX) || \
-    defined(_POSIX_SOURCE) || defined(_SVR4_SOURCE)
-    setsid();
-#else
-    setpgrp(0, (int) getpid());
-#endif
-    close(0);       /* fd 0 opened by inetd */
-    local[0] = NULL;
+        int pid;
+
+        if ((pid = fork()) < 0)
+        {
+            if ((fd = open("/dev/tty", O_RDWR)) >= 0)
+            write(fd, "Couldn't fork!\n", 15);  /* crude, but effective */
+            exit(0);
+        } 
+        else if (pid > 0)
+            exit(0);
+
+        setsid();
+
+        close(0);       /* fd 0 opened by inetd */
+        local[0] = NULL;
     }
 
     engine_init();

@@ -824,7 +824,7 @@ int register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
 	reset_sock_opts(sptr->fd, 0);
 	/* End sock_opt hack */
 #endif
-	sendto_one(sptr, rpl_str(RPL_WELCOME), me.name, nick, nick, 
+	sendto_one(sptr, rpl_str(RPL_WELCOME), me.name, nick, Network_Name, nick, 
 		   sptr->user->username, sptr->user->host);
 	/*
 	 * This is a duplicate of the NOTICE but see below...

@@ -39,7 +39,6 @@
  */
 #if defined(OS_SOLARIS2) && !defined( SOL20 )
 # define SOL20 1
-# define USE_POLL 1		/* Get around stupid select() limitations */
 #endif
 
 #if defined( aix ) || defined( OS_AIX )

@@ -3,9 +3,6 @@
 /* If on a system with a broken FD_SETSIZE */
 #undef BROKEN_FD_SETSIZE
 
-/* Location of our installation */
-#undef DPATH
-
 /* Define to 1 if you have the `alarm' function. */
 #undef HAVE_ALARM
 
@@ -248,9 +245,6 @@
 
 /* Define to the version of this package. */
 #undef PACKAGE_VERSION
-
-/* Location of our binary */
-#undef SPATH
 
 /* Define to 1 if you have the ANSI C header files. */
 #undef STDC_HEADERS

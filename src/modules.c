@@ -184,7 +184,7 @@ int load_module(aClient *sptr, char *modname)
       return 0;
    }
 
-   ircsnprintf(mnamebuf, 512, DPATH "modules/%s.so", modname);
+   ircsnprintf(mnamebuf, 512, "%s/modules/%s.so", dpath, modname);
 
    tmpmod.handle = dlopen(mnamebuf, RTLD_NOW);
    if(tmpmod.handle == NULL)

@@ -21,7 +21,7 @@
 static char *replies[] = 
 {
     /* 000 */	NULL,
-    /* 001 RPL_WELCOME */	":%s 001 %s :Welcome to the DALnet IRC "
+    /* 001 RPL_WELCOME */	":%s 001 %s :Welcome to the %s IRC "
                                 "Network %s!%s@%s",
     /* 002 RPL_YOURHOST */	":%s 002 %s :Your host is %s, running "
                                 "version %s",

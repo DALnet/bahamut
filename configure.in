@@ -21,8 +21,6 @@ AH_TEMPLATE([OS_SOLARIS2],[If we're running on Solaris])
 AH_TEMPLATE([SYS_ERRLIST_DECLARED],[If the sys_errlist array is defined])
 AH_TEMPLATE([USE_HOOKMODULES],[Do we support loadable modules])
 AH_TEMPLATE([MAXCONNECTIONS],[Maximum Connections we allow])
-AH_TEMPLATE([DPATH],[Location of our installation])
-AH_TEMPLATE([SPATH],[Location of our binary])
 AH_TEMPLATE([NEED_EPOLL_DEFS],[epoll behavior])
 
 dnl Put our options of here for ease of reading.
@@ -46,10 +44,6 @@ AC_ARG_WITH(maxconnections,
 [  --with-maxconnections=NUMBER   Set the maximum number of sockets.],
 [ check_maxconnections=$withval ],
 [ check_maxconnections="auto" ])
-AC_ARG_WITH(spath,
-[  --with-spath=DIR               Set the path for the executable.],
-[ spath=$withval ],
-[ spath="NONE" ])
 
 dnl Checks for programs.
 AC_PROG_CC
@@ -300,7 +294,7 @@ elif test "$check_sengine" = "epoll"; then
     engine="epoll";
 elif test "$check_sengine" = "select"; then
     AC_MSG_NOTICE(setting socketengine type to select.. for some stupid reason)
-    engine = "select"
+    engine="select"
 else
     AC_MSG_NOTICE()
     AC_MSG_NOTICE(socket engine type incorrect!)
@@ -401,18 +395,14 @@ if test $prefix = NONE; then
     prefix=$HOME/ircd
 fi
 
-AC_DEFINE_UNQUOTED(DPATH, "${prefix}")
-
-if test "X$spath" = "XNONE"; then
-    spath=$prefix/ircd
-fi
-AC_DEFINE_UNQUOTED(SPATH, "${spath}")
+INSTALL_DIR="${prefix}"
 
 AC_SUBST(SSL_INCLUDES)
 AC_SUBST(SSL_LIBS)
 AC_SUBST(LIBS)
 AC_SUBST(SENGINE)
 AC_SUBST(FDSETSIZE)
+AC_SUBST(INSTALL_DIR)
 
 AC_OUTPUT(Makefile src/Makefile tools/Makefile)
 

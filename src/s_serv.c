@@ -1613,11 +1613,13 @@ int send_lusers(aClient *cptr, aClient *sptr, int parc, char *parv[])
     if ((timeofday - last_stat_save) > 3600)
     {
 	FILE *fp;
+        char tmp[PATH_MAX];
 	
 	last_stat_save = timeofday;
-	
-	fp=fopen(DPATH "/.maxclients", "w");
-	if (fp!=NULL)
+	strcat(tmp, dpath);
+    strcat(tmp, "/.maxclients");
+	fp = fopen(tmp, "w");
+	if (fp != NULL)
 	{
 	    fprintf(fp, "%d %d %li %li %li %ld %ld %ld %ld", Count.max_loc,
 		    Count.max_tot, Count.weekly, Count.monthly,
