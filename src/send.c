@@ -27,12 +27,6 @@
 #include <stdio.h>
 #include "numeric.h"
 
-#ifdef	IRCII_KLUDGE
-#define	NEWLINE	"\n"
-#else
-#define NEWLINE	"\r\n"
-#endif
-
 #ifdef ALWAYS_SEND_DURING_SPLIT
 extern int currently_processing_netsplit;
 #endif
@@ -94,27 +88,6 @@ static int dead_link(aClient *to, char *notice) {
    }  
  
 return -1;
-}
-/*
- * * flush_connections *      Used to empty all output buffers for
- * all connections. Should only *       be called once per scan of
- * connections. There should be a select in *   here perhaps but that
- * means either forcing a timeout or doing a poll. *    When flushing,
- * all we do is empty the obuffer array for each local *        client
- * and try to send it. if we cant send it, it goes into the sendQ *
- * -avalon
- */
-void flush_connections(int fd) {
-   Reg int     i;
-   Reg aClient *cptr;
-   
-   if (fd == me.fd) {
-      for (i = highest_fd; i >= 0; i--)
-	if ((cptr = local[i]) && DBufLength(&cptr->sendQ) > 0)
-	  send_queued(cptr);
-   }
-   else if (fd >= 0 && (cptr = local[fd]) && DBufLength(&cptr->sendQ) > 0)
-     send_queued(cptr);
 }
 
 /*
@@ -1503,54 +1476,87 @@ void sendto_channelvoice_butone(aClient *one, aClient *from, aChannel *chptr,
  *   on to the next server if it has any OPs or voiced users.
  */
 void sendto_channelvoiceops_butone(aClient *one, aClient *from, aChannel 
-											  *chptr, char *pattern, ...)
+				   *chptr, char *pattern, ...)
 {
-	chanMember   *cm;
-	aClient *acptr;
-	int     i;
-	va_list vl;
+   chanMember   *cm;
+   aClient *acptr;
+   int     i;
+   va_list vl;
 	
-	va_start(vl, pattern);
+   va_start(vl, pattern);
 
    INC_SERIAL
 
    for (cm = chptr->members; cm; cm = cm->next) {
       acptr = cm->cptr;
-      if (acptr->from == one ||
-			 !((cm->flags & CHFL_VOICE) || (cm->flags & CHFL_CHANOP)))
-		  continue;
+      if (acptr->from == one || !((cm->flags & CHFL_VOICE) || (cm->flags & CHFL_CHANOP)))
+         continue;
       i = acptr->from->fd;
       if (MyConnect(acptr) && IsRegisteredUser(acptr)) {
-			vsendto_prefix_one(acptr, from, pattern, vl);
-			sentalong[i] = sent_serial;
+         vsendto_prefix_one(acptr, from, pattern, vl);
+         sentalong[i] = sent_serial;
       }
-      else {
-			/*
-			 * Now check whether a message has been sent to this
-			 * *      * remote link already 
-			 */
-			if (sentalong[i] != sent_serial) {
-				vsendto_prefix_one(acptr, from, pattern, vl);
-				sentalong[i] = sent_serial;
-			}
+      else /* remote link */
+      {
+         if (sentalong[i] != sent_serial) 
+         {
+            vsendto_prefix_one(acptr, from, pattern, vl);
+            sentalong[i] = sent_serial;
+         }
       }
    }
    return;
 }
 
-/*
- * * flush_fdlist_connections
- */
+/*******************************************
+ * Flushing functions (empty queues)
+ *******************************************/
 
-void
-flush_fdlist_connections(listp)
-     fdlist     *listp;
+/*
+ * flush_connections
+ * Empty only buffers for clients without FLAGS_BLOCKED
+ * dump_connections 
+ * Unintelligently try to empty all buffers.
+ */
+void flush_connections(int fd) 
 {
-	int     i, fd;
-	aClient *cptr;
-	
-   for (fd = listp->entry[i = 1]; i <= listp->last_entry;
-		  fd = listp->entry[++i])
-	  if ((cptr = local[fd]) && DBufLength(&cptr->sendQ) > 0)
-		 (void) send_queued(cptr);
+   int     i;
+   aClient *cptr;
+   
+   if (fd == me.fd) 
+   {
+      for (i = highest_fd; i >= 0; i--)
+	if ((cptr = local[i]) && !(cptr->flags & FLAGS_BLOCKED) && DBufLength(&cptr->sendQ) > 0)
+	  send_queued(cptr);
+   }
+   else if (fd >= 0 && (cptr = local[fd]) && !(cptr->flags & FLAGS_BLOCKED) && DBufLength(&cptr->sendQ) > 0)
+     send_queued(cptr);
 }
+
+void dump_connections(int fd) 
+{
+   int     i;
+   aClient *cptr;
+   
+   if (fd == me.fd) 
+   {
+      for (i = highest_fd; i >= 0; i--)
+	if ((cptr = local[i]) && DBufLength(&cptr->sendQ) > 0)
+	  send_queued(cptr);
+   }
+   else if (fd >= 0 && (cptr = local[fd]) && DBufLength(&cptr->sendQ) > 0)
+     send_queued(cptr);
+}
+
+/* flush an fdlist intelligently */
+void flush_fdlist_connections(fdlist *listp);
+{
+   int i, fd;
+   aClient *cptr;
+	
+   for (fd = listp->entry[i = 1]; i <= listp->last_entry; fd = listp->entry[++i])
+      if ((cptr = local[fd]) && !(cptr->flags & FLAGS_BLOCKED) && DBufLength(&cptr->sendQ) > 0)
+         send_queued(cptr);
+}
+
+

@@ -131,6 +131,5 @@ extern unsigned char char_atribs[];
 # define isascii(c) ((u_char)(c) >= 0 && (u_char)(c) <= 0x7f)
 # define isgraph(c) ((char_atribs[(u_char)(c)]&PRINT) && ((u_char)(c) != 0x32))
 # define ispunct(c) (!(char_atribs[(u_char)(c)]&(CNTRL|ALPHA|DIGIT)))
-extern void flush_connections();
 extern struct SLink *find_user_link();
 #endif /* common_include */

@@ -76,4 +76,7 @@ extern void vsendto_fdlist(fdlist *listp, char *pattern, va_list vl);
 extern void vsendto_one(aClient *to, char *pattern, va_list vl);
 extern void vsendto_prefix_one(aClient *to, aClient *from, char *pattern, va_list vl);
 extern void vsendto_realops(char *pattern, va_list vl);
+
+extern void flush_connections();
+extern void dump_connections();
 #endif

@@ -908,7 +908,7 @@ void close_connection(aClient * cptr)
       (void) close(cptr->authfd);
 
    if (cptr->fd >= 0) {
-      flush_connections(cptr->fd);
+      dump_connections(cptr->fd);
       local[cptr->fd] = NULL;
       (void) close(cptr->fd);
       cptr->fd = -2;

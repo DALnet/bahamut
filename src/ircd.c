@@ -170,7 +170,7 @@ VOIDSIG s_die()
 #ifdef SAVE_MAXCLIENT_STATS
 	FILE *fp;
 #endif
-   flush_connections(me.fd);
+   dump_connections(me.fd);
 #ifdef	USE_SYSLOG
    (void) syslog(LOG_CRIT, "Server killed By SIGTERM");
 #endif
@@ -240,7 +240,7 @@ void server_reboot()
 				  (u_int) sbrk((size_t) 0) - (u_int) sbrk0);
 	
    Debug((DEBUG_NOTICE, "Restarting server..."));
-   flush_connections(me.fd);
+   dump_connections(me.fd);
    /*
     * fd 0 must be 'preserved' if either the -d or -i options have
     * been passed to us before restarting.
@@ -1187,6 +1187,7 @@ int delay = 0;
 	 (void) read_message(1, &busycli_fdlist);
 	 (void) read_message(1, &serv_fdlist);
       }
+      flush_fdlist_connections(&serv_fdlist);
    }
 
    if ((timeofday = time(NULL)) == -1) 
@@ -1203,14 +1204,14 @@ int delay = 0;
     * (that is, at most 1 second, or at least 2s when lifesux is != 0)
     * check everything. -Taner
     */
-   {
-static time_t lasttime = 0;
+   { 
+      static time_t lasttime = 0;
 
-#ifdef CLIENT_SERVER
+# ifdef CLIENT_SERVER
       if (!lifesux || (lasttime + lifesux) < timeofday) {
-#else
+# else
       if ((lasttime + (lifesux + 1)) < timeofday) {
-#endif
+# endif
 	 (void) read_message(delay ? delay : 1, NULL);	/* check everything! */
 	 lasttime = timeofday;
       }
@@ -1251,6 +1252,11 @@ static time_t lasttime = 0;
     * one effect: during htm, output to normal lusers
     * will lag.
     */
+
+    /* Now we've made this call a bit smarter. */
+    /* Only flush non-blocked sockets. */
+
+    flush_connections(me.fd);
 
 #ifndef NO_PRIORITY
    check_fdlists();
