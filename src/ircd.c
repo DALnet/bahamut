@@ -1076,7 +1076,10 @@ void io_loop()
 	 * Changed by Taner so that it tells you what's going on as well as
 	 * allows forced on (long LCF), etc...
 	 */
-	
+	/* Wrapped this in #ifndef HUB as on a hub it's silly */
+
+#ifndef HUB
+
 	if ((timeofday - lasttime) >= LCF) 
 	{
 	    lrv = LRV * LCF;
@@ -1146,6 +1149,8 @@ void io_loop()
 	    }
 	    lastrecvK = me.receiveK;
 	}
+#endif
+
 	/*
 	 * We only want to connect if a connection is due, not every
 	 * time through.  Note, if there are no active C lines, this call
