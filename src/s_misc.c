@@ -1059,12 +1059,12 @@ serv_info(aClient *cptr, char *name)
 		 timeofday - acptr->since,
 		 IsServer(acptr) ? (DoesTS(acptr) ?
 				    "TS" : "NoTS") : "-");
-      if(ZipOut(cptr))
+      if(ZipOut(acptr))
       {
          unsigned long ib, ob;
          double rat;
 
-         zip_out_get_stats(cptr->serv->zip_out, &ib, &ob, &rat);
+         zip_out_get_stats(acptr->serv->zip_out, &ib, &ob, &rat);
          if(ib)
          {
             sendto_one(cptr, ":%s %d %s :Zip inbytes %d, outbytes %d (%3.2f%%)",
