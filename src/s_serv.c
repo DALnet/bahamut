@@ -2200,7 +2200,7 @@ int     send_lusers(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		 me.name, parv[0], Count.chan);
    sendto_one(sptr, rpl_str(RPL_LUSERME),
 #ifdef HIDEULINEDSERVS
-              me.name, parv[0], IsOper(sptr) ? m_server : m_server - m_ulined);
+              me.name, parv[0], m_client, IsOper(sptr) ? m_server : m_server - m_ulined);
 #else
 	      me.name, parv[0], m_client, m_server);
 #endif
