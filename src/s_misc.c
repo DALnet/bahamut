@@ -28,6 +28,7 @@
 #include "common.h"
 #include "sys.h"
 #include "numeric.h"
+#include "zlink.h"
 #include <sys/stat.h>
 #include <fcntl.h>
 #if !defined(ULTRIX) && !defined(SGI) && !defined(sequent) && \
@@ -1058,6 +1059,18 @@ serv_info(aClient *cptr, char *name)
 		 timeofday - acptr->since,
 		 IsServer(acptr) ? (DoesTS(acptr) ?
 				    "TS" : "NoTS") : "-");
+      if(ZipOut(cptr))
+      {
+         unsigned long ib, ob;
+         double rat;
+
+         zip_out_get_stats(cptr->serv->zip_out, &ib, &ob, &rat);
+         if(ib)
+         {
+            sendto_one(cptr, ":%s %d %s :Zip inbytes %d, outbytes %d (%3.2f%%)",
+                       me.name, RPL_STATSDEBUG, name, ib, ob, rat);
+         }
+      }
       i++;
    }
    sendto_one(cptr, ":%s %d %s :%u total server%s",
