@@ -500,7 +500,7 @@ void init_sys()
 	}
 #endif
 #if defined(SOL20) || defined(DYNIXPTX) || \
-    defined(_POSIX_SOURCE) || defined(SVR4)
+    defined(_POSIX_SOURCE) || defined(_SVR4_SOURCE)
 	setsid();
 #else
 	setpgrp(0, (int) getpid());
