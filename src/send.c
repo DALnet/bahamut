@@ -223,8 +223,8 @@ int send_queued(aClient *to) {
 
    if ((to->flags & FLAGS_SOBSENT) && IsBurst(to) && DBufLength(&to->sendQ) < 20480) { /* 20k */
      if (!(to->flags & FLAGS_BURST)) {
-       sendto_one(to, "BURST %d", DBufLength(&to->sendQ));
        to->flags &= (~FLAGS_SOBSENT);
+       sendto_one(to, "BURST %d", DBufLength(&to->sendQ));
        if (!(to->flags & FLAGS_EOBRECV)) { /* hey we're the last to synch.. let's notify */
          sendto_gnotice("from %s: synch to %s in %d %s", me.name, to->name, (timeofday-to->firsttime), 
             (timeofday-to->firsttime)==1?"sec":"secs");
