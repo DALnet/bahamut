@@ -4312,10 +4312,11 @@ int m_sjoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
         {
             if ((mode.mode & MODE_JOINRATE) && !mode.join_num)
                 /* 0 wins */ ;
-            else if ((oldmode->join_num && mode.join_num > oldmode->join_num)
-                     || (mode.join_num == oldmode->join_num &&
-                         mode.join_time < oldmode->join_time))
-                /* more joins, or same joins in less time, wins */ ;
+            else if (oldmode->join_num && mode.join_num > oldmode->join_num)
+                /* more joins wins */ ;
+            else if (mode.join_num == oldmode->join_num &&
+                     mode.join_time < oldmode->join_time)
+                /* same joins in less time wins */ ;
             else
             {
                 /* our settings win */
