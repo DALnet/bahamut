@@ -46,7 +46,9 @@
 /* Stuff for poll() */
 
 #ifdef USE_POLL
-# include <stropts.h>
+# ifdef HAVE_STROPTS_H
+#  include <stropts.h>
+# endif
 # include <poll.h>
 #endif				/* USE_POLL */
 

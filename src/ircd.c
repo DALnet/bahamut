@@ -1004,7 +1004,7 @@ main(int argc, char *argv[])
    NOW = time(NULL);
 	
 #ifndef NO_PRIORITY
-   check_fdlists(time(NULL));
+   check_fdlists();
 #endif
 	
    if ((timeofday = time(NULL)) == -1) 
@@ -1177,7 +1177,8 @@ int delay = 0;
     */
 
 #ifndef NO_PRIORITY
-   (void) read_message(0, &serv_fdlist);
+   read_message(0, &serv_fdlist);
+   read_message(1, &busycli_fdlist);
    if (lifesux) 
    {
       (void) read_message(1, &serv_fdlist);
@@ -1250,6 +1251,10 @@ static time_t lasttime = 0;
     * one effect: during htm, output to normal lusers
     * will lag.
     */
+
+#ifndef NO_PRIORITY
+   check_fdlists();
+#endif
 
 #ifdef	LOCKFILE
    /*
@@ -1383,8 +1388,7 @@ struct sigaction act;
  * and finds the active clients (and servers and opers) and places them
  * on the "busy client" list
  */
-time_t
-check_fdlists(time_t now)
+void check_fdlists()
 {
 #ifdef CLIENT_SERVER
 #define BUSY_CLIENT(x)	(((x)->priority < 55) || (!lifesux && ((x)->priority < 75)))
@@ -1429,7 +1433,7 @@ register int i, j;
       }
    }
    busycli_fdlist.last_entry = j;	/* rest of the fdlist is garbage */
-   return (now + FDLISTCHKFREQ + (lifesux + 1));
+/*   return (now + FDLISTCHKFREQ + (lifesux + 1)); */
 }
 #endif
 

@@ -108,6 +108,9 @@
 /* Define if you have the <unistd.h> header file.  */
 #undef HAVE_UNISTD_H
 
+/* Define if you have the <stropts.h> header file.  */
+#undef HAVE_STROPTS_H
+
 /* Define this if we have a sys_errlist */
 #undef SYS_ERRLIST_DECLARED
 

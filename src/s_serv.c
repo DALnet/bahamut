@@ -817,7 +817,7 @@ m_server_estab(aClient *cptr)
 
 #ifndef NO_PRIORITY
    /* this causes the server to be marked as "busy" */
-   check_fdlists(timeofday);
+   check_fdlists();
 #endif
 
    cptr->pingval = get_client_ping(cptr);

@@ -147,6 +147,7 @@ LOGKILL=""
 LOGSQUIT=""
 LOGCONN=""
 SOPER=""
+USEPOLL=""
 MAXSENDQ="5050000"
 BUFPOOL="(4 * MAXSENDQLENGTH)"
 HULINED="1" 
@@ -267,6 +268,10 @@ case "$OS" in
 	echo "You are using Sun/Solaris, Compatibility code loaded..."
 	;;
 esac
+
+if [ -n "$SOLARIS" ] ; then
+    USEPOLL="1"
+fi
 
 FOO=""
 runonce=""
@@ -851,6 +856,48 @@ while [ -z "$FOO" ] ; do
     esac
 done
 
+if [ -n "$SOLARIS" ] ; then
+   echo ""
+   echo "Solaris detected, poll() forced..."
+   echo ""
+else
+   FOO=""
+   runonce=""
+   while [ -z "$FOO" ] ; do
+       FOO="Yes"
+       echo ""
+       echo "Do you want to use the poll system call?"
+       echo "If you are on a solaris machine, this is mandatory."
+       echo "Linux machines should use select until poll() is ironed out."
+       echo "Poll works nicely on freebsd machines."
+       echo "Select is more economical for small networks."
+       echo -n "[$FOO] -> $c"
+       if [ -z "$AUTO_CONFIG" -o -n "$runonce" ] ; then
+          read cc
+          runonce=Yes
+       else
+          cc=""
+       fi
+       if [ -z "$cc" ] ; then
+          cc=$FOO
+       fi
+       case "$cc" in
+          [Yy]*)
+             USEPOLL="1"
+             ;;
+          [Nn]*)
+             USEPOLL=""
+             ;;
+          *)
+             echo ""
+             echo "You need to enter either Yes or No here..."
+             echo ""
+             FOO=""
+             ;;
+       esac
+   done
+fi
+
 FOO=""
 runonce=""
 while [ -z "$FOO" ] ; do
@@ -999,9 +1046,11 @@ echo "" >> $OPTIONS_H
 echo "#endif /* This is the endif for the ifdef at the top. */" >> $OPTIONS_H
 ### now insert the FDLIMIT in the makefile
 cat Makefile | sed s/'FDLIMIT=-D.*'/FDLIMIT=-DFD_SETSIZE=${FDLIMIT}/ | tee Makefile >/dev/null
-### Solaris compat?
-if [ -n "$SOLARIS" ] ; then
-cat Makefile | sed s/'XFLAGS=.*'/XFLAGS=-DUSE_POLL/ | tee Makefile >/dev/null
+### use poll?
+if [ -n "$USEPOLL" ] ; then
+   cat Makefile | sed s/'XFLAGS=.*'/XFLAGS=-DUSE_POLL/ | tee Makefile >/dev/null
+else
+   cat Makefile | sed s/'XFLAGS=.*'/XFLAGS=/ | tee Makefile >/dev/null
 fi
 echo "Done."
 echo ""

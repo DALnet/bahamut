@@ -34,3 +34,7 @@ necessary. You will just waste a tiny bit of memory in one of the
 bit maps.
 
   - Dianora
+
+You may wish to #define NO_PRIORITY to make your small network run faster.
+
+- lucas
