@@ -791,8 +791,8 @@
  *                       KEEP THIS IF USING A NETWORK WITH PRE-1.4.36 SERVERS!
  */
 /* defaults are very forgiving. */
-#define DEFAULT_JOIN_NUM  8
-#define DEFAULT_JOIN_TIME 4
+#define DEFAULT_JOIN_NUM  2
+#define DEFAULT_JOIN_TIME 10
 #undef NO_DEFAULT_JOINRATE
 #undef JOINRATE_SERVER_ONLY
 

@@ -2627,6 +2627,7 @@ int m_join(aClient *cptr, aClient *sptr, int parc, char *parv[])
         else
             add_user_to_channel(chptr, sptr, 0);
         chptr->join_count++;
+        chptr->default_join_count++;
         /* Set timestamp if appropriate, and propagate */
         if (MyClient(sptr) && flags == CHFL_CHANOP) 
         {
@@ -4061,6 +4062,7 @@ int m_sjoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
         {
             add_user_to_channel(chptr, sptr, 0);
             chptr->join_count++;
+            chptr->default_join_count++;
             sendto_channel_butserv(chptr, sptr, ":%s JOIN :%s", parv[0],
                                    parv[2]);
         }
