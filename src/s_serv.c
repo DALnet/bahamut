@@ -1479,11 +1479,12 @@ m_links(aClient *cptr, aClient *sptr, int parc, char *parv[])
 static int  report_array[12][3] =
 {
 #else
-static int  report_array[11][3] =
+static int  report_array[12][3] =
 {
 #endif
    {CONF_CONNECT_SERVER, RPL_STATSCLINE, 'C'},
    {CONF_NOCONNECT_SERVER, RPL_STATSNLINE, 'N'},
+   {CONF_GCOS, RPL_STATSGLINE, 'G'},
    {CONF_CLIENT, RPL_STATSILINE, 'I'},
 #ifdef LITTLE_I_LINES
    {CONF_CLIENT, RPL_STATSILINE, 'i'},
@@ -1546,6 +1547,9 @@ report_configured_links(aClient *sptr, int mask)
 							sptr->name, c, host,
 							name, pass);
 		  else if (tmp->status & CONF_QUARANTINED_NICK)
+			 sendto_one(sptr, rpl_str(p[1]), me.name,
+							sptr->name, c, pass, name, port, get_conf_class(tmp));
+		  else if (tmp->status & CONF_GCOS)
 			 sendto_one(sptr, rpl_str(p[1]), me.name,
 							sptr->name, c, pass, name, port, get_conf_class(tmp));
 		  else {
@@ -1733,6 +1737,11 @@ m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		report_conf_links(sptr, &FList3, RPL_STATSFLINE, 'F');
 		break;
 		
+	 case 'G':
+	 case 'g':
+		report_configured_links(sptr, CONF_GCOS);
+		break;
+
 	 case 'H':
 	 case 'h':
 #ifdef HIDEULINEDSERVS

@@ -1267,6 +1267,11 @@ initconf(int opt, int fd)
 	    aconf->status = CONF_FLINE;
 	    break;
 
+	 case 'G':		/* restricted gcos */
+	 case 'g':
+	    aconf->status = CONF_GCOS;
+	    break;
+
 	 case 'H':		/* Hub server line */
 	 case 'h':
 	    aconf->status = CONF_HUB;

@@ -554,6 +554,8 @@ struct ConfItem {
 #define CONF_AKILL		0x200000
 #define CONF_SQLINE     	0x400000
 #define CONF_MONINFO		0x800000	/* proxy monitor info */
+#define CONF_GCOS               0x1000000
+#define CONF_SGLINE             0x2000000
 #define CONF_QUARANTINE         CONF_QUARANTINED_NICK
 #define	CONF_OPS		(CONF_OPERATOR | CONF_LOCOP)
 #define	CONF_SERVER_MASK	(CONF_CONNECT_SERVER | CONF_NOCONNECT_SERVER)

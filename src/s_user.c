@@ -2987,44 +2987,31 @@ m_user(aClient *cptr,
        char *parv[])
 {
 #define	UFLAGS	(UMODE_i|UMODE_w|UMODE_s)
-   char       *username, *host, *server, *realname;
-
-   if (parc > 2 && (username = (char *) strchr(parv[1], '@')))
-      *username = '\0';
-   if (parc < 5 || *parv[1] == '\0' || *parv[2] == '\0' ||
-       *parv[3] == '\0' || *parv[4] == '\0') {
-      sendto_one(sptr, err_str(ERR_NEEDMOREPARAMS),
-		 me.name, parv[0], "USER");
-      if (IsServer(cptr))
-	 sendto_realops("bad USER param count for %s from %s",
-			parv[0], get_client_name(cptr, FALSE));
-      else
-	 return 0;
-   }
-
-   /*
-    * Copy parameters into better documenting variables 
-    */
-
-   username = (parc < 2 || BadPtr(parv[1])) ? "<bad-boy>" : parv[1];
-   host = (parc < 3 || BadPtr(parv[2])) ? "<nohost>" : parv[2];
-   server = (parc < 4 || BadPtr(parv[3])) ? "<noserver>" : parv[3];
-   realname = (parc < 5 || BadPtr(parv[4])) ? "<bad-realname>" : parv[4];
-
-#ifdef ANTI_SPAMBOT
-# if 0
-	/* I took this code out for now, will re-evaluate later -wd */
-	/* if it's a one character user name, drop it, chances are it's a
-	 * spambot. */
-	if(username[1]==0) {
-		sendto_realops_lev(REJ_LEV, "Rejecting possible Spambot: %s (Single char user-given username: %c)",
-								 get_client_name(sptr, FALSE), username[0]);
-		ircstp->is_ref++;
-		return exit_client(cptr, sptr, sptr, "Spambot detected, rejected.");
-	}
-# endif
-#endif
-   return do_user(parv[0], cptr, sptr, username, host, server, 0, realname);
+    char       *username, *host, *server, *realname;
+    aConfItem *aconf;
+    
+    if (parc > 2 && (username = (char *) strchr(parv[1], '@')))
+	*username = '\0';
+    if (parc < 5 || *parv[1] == '\0' || *parv[2] == '\0' ||
+	*parv[3] == '\0' || *parv[4] == '\0') {
+	sendto_one(sptr, err_str(ERR_NEEDMOREPARAMS),
+		   me.name, parv[0], "USER");
+	if (IsServer(cptr))
+	    sendto_realops("bad USER param count for %s from %s",
+			   parv[0], get_client_name(cptr, FALSE));
+	else
+	    return 0;
+    }
+    /* Copy parameters into better documenting variables */   
+    username = (parc < 2 || BadPtr(parv[1])) ? "<bad-boy>" : parv[1];
+    host = (parc < 3 || BadPtr(parv[2])) ? "<nohost>" : parv[2];
+    server = (parc < 4 || BadPtr(parv[3])) ? "<noserver>" : parv[3];
+    realname = (parc < 5 || BadPtr(parv[4])) ? "<bad-realname>" : parv[4];
+    if ((aconf = find_conf_name(realname, CONF_GCOS))) {
+	return exit_client(cptr, sptr, sptr, BadPtr(aconf->passwd) ?
+			   aconf->passwd : "Bad GCOS: Reason unspecified");
+    }
+    return do_user(parv[0], cptr, sptr, username, host, server, 0, realname);
 }
 
 /*
@@ -3040,51 +3027,47 @@ do_user(char *nick,
 	unsigned long serviceid,			
 	char *realname)
 {
-   anUser     *user;
-
-   long        oflags;
-
-   user = make_user(sptr);
-   oflags = sptr->umode;
-
-   /*
-    * changed the goto into if-else...   -Taner 
-    */
-   /*
-    * ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ GOOD FOR YOU Taner!!! - Dianora 
-    */
-	
-   if (!MyConnect(sptr)) {
-      user->server = find_or_add(server);
-      strncpyzt(user->host, host, sizeof(user->host));
-   }
-   else {
-      if (!IsUnknown(sptr)) {
-			sendto_one(sptr, err_str(ERR_ALREADYREGISTRED),
-						  me.name, nick);
-			return 0;
-      }
+    anUser     *user;
+    
+    long        oflags;
+    
+    user = make_user(sptr);
+    oflags = sptr->umode;
+    
+    /*
+     * changed the goto into if-else...   -Taner 
+     * ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ GOOD FOR YOU Taner!!! - Dianora 
+     */
+    
+    if (!MyConnect(sptr)) {
+	user->server = find_or_add(server);
+	strncpyzt(user->host, host, sizeof(user->host));
+    } else {
+	if (!IsUnknown(sptr)) {
+	    sendto_one(sptr, err_str(ERR_ALREADYREGISTRED),
+		       me.name, nick);
+	    return 0;
+	}
 #ifndef	NO_DEFAULT_INVISIBLE
-      sptr->umode |= UMODE_i;
+	sptr->umode |= UMODE_i;
 #endif
-	   
-      sptr->umode |= (UFLAGS & atoi(host));
-      strncpyzt(user->host, host, sizeof(user->host));
-      user->server = me.name;
-   }
-   strncpyzt(sptr->info, realname, sizeof(sptr->info));
 	
-	sptr->user->servicestamp = serviceid;
-	if(MyConnect(sptr))
-	  sptr->oflag=0;
-   if (sptr->name[0])		/*
-									 * NICK already received, now I have
-									 * * USER... 
-									 */
-	  return register_user(cptr, sptr, sptr->name, username);
-   else
-	  strncpyzt(sptr->user->username, username, USERLEN + 1);
-	return 0;
+	sptr->umode |= (UFLAGS & atoi(host));
+	strncpyzt(user->host, host, sizeof(user->host));
+	user->server = me.name;
+    }
+    strncpyzt(sptr->info, realname, sizeof(sptr->info));
+    
+    sptr->user->servicestamp = serviceid;
+    if(MyConnect(sptr))
+	sptr->oflag=0;
+    if (sptr->name[0])		/*
+				 * NICK already received, now I have USER... 
+				 */
+	return register_user(cptr, sptr, sptr->name, username);
+    else
+	strncpyzt(sptr->user->username, username, USERLEN + 1);
+    return 0;
 }
 /*
  * * m_quit * parv[0] = sender prefix *       parv[1] = comment
