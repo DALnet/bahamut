@@ -41,18 +41,15 @@ static int  sentalong[MAXCONNECTIONS];
 int format(char *, char *, va_list vl);
 
 /*
- * * dead_link *      An error has been detected. The link *must* be
- * closed, *    but *cannot* call ExitClient (m_bye) from here. *
- * Instead, mark it with FLAGS_DEADSOCKET. This should *
- * generate ExitClient from the main loop. *
- * 
- *      If 'notice' is not NULL, it is assumed to be a format * for a
- * message to local opers. I can contain only one *     '%s', which
- * will be replaced by the sockhost field of *  the failing link. *
- * 
- *      Also, the notice is skipped for "uninteresting" cases, *
- * like Persons and yet unknown connections...
+ * dead_link
+ *
+ * somewhere along the lines of sending out, there was an error.
+ * we can't close it from the send loop, so mark it as dead
+ * and close it from the main loop.
+ *
+ * if this link is a server, tell routing people.
  */
+
 static int dead_link(aClient *to, char *notice) {
 
    int errtmp = errno;  /* so we don't munge this later */
@@ -135,16 +132,17 @@ static int send_message(aClient *to, char *msg, int len) {
    if (IsDead(to))
      return 0;
    if (DBufLength(&to->sendQ) > get_sendq(to)) {
-      if (IsServer(to))
-	sendto_ops_butone(to, &me, "Max SendQ limit exceeded for %s: %d > %d",
-			  get_client_name(to, (IsServer(to) ? HIDEME : FALSE)),
-			  DBufLength(&to->sendQ), get_sendq(to));
+      /* this would be a duplicate notice, but it contains some useful information that
+         would be spamming the rest of the network. Kept in. - lucas */
+      if (IsServer(to)) 
+	sendto_ops("Max SendQ limit exceeded for %s: %d > %d",
+		get_client_name(to, HIDEME), DBufLength(&to->sendQ), get_sendq(to));
       if (IsClient(to))
 	to->flags |= FLAGS_SENDQEX;
-      return dead_link(to, "Max Sendq exceeded");
+      return dead_link(to, "Max Sendq exceeded for %s, closing link");
    }
    else if (dbuf_put(&to->sendQ, msg, len) < 0)
-     return dead_link(to, "Buffer allocation error for %s");
+     return dead_link(to, "Buffer allocation error for %s, closing link");
    /*
     * * Update statistics. The following is slightly incorrect *
     * because it counts messages even if queued, but bytes * only
@@ -209,7 +207,7 @@ int send_queued(aClient *to) {
        * Returns always len > 0 
        */
       if ((rlen = deliver_it(to, msg, len)) < 0)
-	return dead_link(to, "Write error to %s, closing link");
+	return dead_link(to, "Write error to %s, closing link (%s)");
       (void) dbuf_delete(&to->sendQ, rlen);
       to->lastsq = DBufLength(&to->sendQ) / 1024;
       if (rlen < len)
