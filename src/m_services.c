@@ -325,7 +325,7 @@ int m_svsnick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
     /* does the nick we're changing them to already exist? */
     /* Try to make a unique nickname */
-    if((ocptr = find_person(newnick, NULL)) != NULL)
+    if((ocptr = find_client(newnick, NULL)) != NULL)
     {
         char servprefix[HOSTLEN + 1], *pptr;
         int tries = 0, nprefix;
@@ -340,11 +340,16 @@ int m_svsnick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	    nprefix = my_rand() % 999;
   	    ircsnprintf(newnick, NICKLEN, "%s-%d[%s]", parv[2], nprefix, servprefix);
             tries++;
-        } while (((ocptr = find_person(newnick, NULL)) != NULL) && (tries < 10));
+        } while (((ocptr = find_client(newnick, NULL)) != NULL) && (tries < 10));
 
 	/* well, we tried.. */
         if(ocptr)
-           return exit_client(acptr, acptr, &me, "SVSNICK Collide");
+        {
+           if(IsUnknown(ocptr))
+              return exit_client(ocptr, ocptr, &me, "SVSNICK Override");
+           else
+              return exit_client(acptr, acptr, &me, "SVSNICK Collide");
+        }
     }
 
     acptr->umode &= ~UMODE_r;
