@@ -52,6 +52,10 @@
 #include <poll.h>
 #endif /* USE_POLL */
 
+#ifdef USE_KQUEUE
+#include <sys/event.h>
+#endif
+
 #ifdef	AIX
 #include <time.h>
 #include <arpa/nameser.h>
@@ -428,7 +432,7 @@ void init_sys()
 			   (long) limit.rlim_cur);
 	    exit(-1);
 	}
-#ifndef USE_POLL
+#if !defined(USE_POLL) && !defined(USE_KQUEUE)
 	if (MAXCONNECTIONS > FD_SETSIZE)
 	{
 	    (void) fprintf(stderr,
@@ -1663,7 +1667,7 @@ void accept_connection(aClient *cptr)
  * be processed. Also check for connections with data queued and
  * whether we can write it out.
  */
-#ifndef USE_POLL
+#if !defined(USE_POLL) && !defined(USE_KQUEUE)
 int read_message(time_t delay, fdlist * listp)
 {                        
     aClient *cptr;
@@ -1730,10 +1734,7 @@ int read_message(time_t delay, fdlist * listp)
 	    {
 		if (DBufLength(&cptr->recvQ) && delay2 > 2)
 		    delay2 = 1;
-		if (DBufLength(&cptr->recvQ) < 4088) 
-		{
-		    FD_SET(i, read_set);
-		}
+		FD_SET(i, read_set);
 	    }
 
 	    length = DBufLength(&cptr->sendQ);
@@ -1907,7 +1908,7 @@ int read_message(time_t delay, fdlist * listp)
     return 0;
 }
 
-#else   /* USE_POLL */
+#elif defined(USE_POLL)   /* USE_POLL */
 
 #ifdef AIX
 #define POLLREADFLAGS (POLLIN|POLLMSG)
@@ -2029,8 +2030,7 @@ int read_message(time_t delay, fdlist * listp)
 	    {
 		if (DBufLength(&cptr->recvQ) && delay2 > 2)
 		    delay2 = 1;
-		if (DBufLength(&cptr->recvQ) < 4088)
-		    PFD_SETR(i);
+		PFD_SETR(i);
 	    }
 	    
 	    length = DBufLength(&cptr->sendQ);
@@ -2167,7 +2167,13 @@ int read_message(time_t delay, fdlist * listp)
     return 0;
 }
 
-#endif /* USE_POLL */
+#elif defined(USE_KQUEUE) /* END USE_POLL */
+
+int read_message(time_t delay, fdlist * listp)
+{
+}
+
+#endif /* USE_KQUEUE */
 
 /* connect_server */
 int connect_server(aConfItem * aconf, aClient * by, struct hostent *hp)

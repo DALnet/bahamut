@@ -11,6 +11,10 @@
 #include "config.h"
 #include "fdlist.h"
 
+#ifdef USE_KQUEUE
+#include <sys/event.h>
+#endif
+
 void addto_fdlist(int fd, fdlist * listp)
 {
     int index;
@@ -60,5 +64,8 @@ void init_fdlist(fdlist * listp)
 {
     listp->last_entry = 0;
     memset((char *) listp->entry, '\0', sizeof(listp->entry));
+#ifdef USE_KQUEUE
+    listp->kqueue_fd = kqueue();
+#endif
     return;
 }
