@@ -908,6 +908,7 @@ int main(int argc, char *argv[])
 	exit(1);
     }
 	
+    set_non_blocking(me.fd, &me);
     (void) get_my_name(&me, me.sockhost, sizeof(me.sockhost) - 1);
     if (me.name[0] == '\0')
 	strncpyzt(me.name, me.sockhost, sizeof(me.name));
