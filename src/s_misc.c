@@ -581,7 +581,7 @@ int exit_client(aClient *cptr, aClient *sptr, aClient *from, char *comment)
 		Count.myulined--;
 	    delfrom_fdlist(sptr->fd, &serv_fdlist);
 #ifdef NO_CHANOPS_WHEN_SPLIT
-	    if (serv_fdlist.entry[1] <= serv_fdlist.last_entry) 
+	    if (serv_fdlist.last_entry) 
 	    {
 		server_was_split = YES;
 		server_split_time = NOW;
