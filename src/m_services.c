@@ -197,7 +197,7 @@ int m_ss(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	sendto_one(acptr, ":%s SS :%s", parv[0], parv[1]);
 #else
 	sendto_one(acptr, ":%s PRIVMSG %s@%s :%s", 
-		STATSERV, STATS_NAME, parv[0], parv[1]);
+		parv[0], STATSERV, STATS_NAME, parv[1]);
 #endif
     else
 	sendto_one(sptr, err_str(ERR_SERVICESDOWN), me.name,
