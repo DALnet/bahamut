@@ -102,6 +102,32 @@ engine_del_fd(int fd)
    kevent_add(&e);
 
 ********/
+
+    /* But we should remove this fd from the change queue -- if it was closed
+     * but we have a change pending, kevent() will fail later.  What's worse
+     * is that when the queue is flushed due to being full, a kevent() failure
+     * may leave some changes unprocessed.  -Quension
+     */
+    int i, top;
+
+    if (!numEvents)
+        return;
+
+    top = numEvents - 1;
+    i = 0;
+    while (i < numEvents)
+    {
+        if (eventQ[i].ident == fd)
+        {
+            /* WARNING: reorders change queue */
+            if (i != top)
+                memcpy(&eventQ[i], &eventQ[top], sizeof(struct kevent));
+            top--;
+            numEvents--;
+        }
+        else
+            i++;
+    }
 }
 
 void 
