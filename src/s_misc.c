@@ -647,6 +647,7 @@ exit_client(
 			 * together into exit_one_client() to provide some useful *
 			 * information about where the net is broken.      Ian
 			 */
+#ifndef USE_NOQUIT
 			(void) strcpy(comment1, me.name);
 			(void) strcat(comment1, " ");
 			(void) strcat(comment1, sptr->name);
@@ -663,6 +664,7 @@ exit_client(
 				if (IsServer(acptr) && acptr->from == sptr)
 				  exit_one_client(sptr, acptr, &me, me.name);
 			}
+#endif
       }
       else
       {
@@ -699,6 +701,10 @@ exit_one_client(aClient *cptr,
 				 */
    }
    else if (IsServer(sptr)) {
+#ifdef USE_NOQUIT
+      exit_server(sptr, from, comment);
+      return;
+#else
       /*
        * * Old sendto_serv_but_one() call removed because we now * need
        * to send different names to different servers * (domain name
@@ -729,6 +735,7 @@ exit_one_client(aClient *cptr,
 		       sptr->name, comment);
 	 }
       }
+#endif /* USE_NOQUIT */
    }
    else if (!(IsPerson(sptr)))
       /*
