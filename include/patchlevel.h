@@ -36,7 +36,7 @@
 
 #define PATCH1 ".rhashfix"
 
-#define PATCH2 ""
+#define PATCH2 ".tlimitfix"
 
 #define PATCH3 ""
 

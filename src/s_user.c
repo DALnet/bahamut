@@ -1515,7 +1515,8 @@ static inline int m_message(aClient *cptr, aClient *sptr, int parc,
 		continue;
 	    }
 #ifdef MSG_TARGET_LIMIT
-	    if (MyConnect(sptr) && check_target_limit(sptr, acptr))
+	    /* Only check target limits for my clients */
+	    if (MyClient(sptr) && check_target_limit(sptr, acptr))
 		continue;
 #endif
 
