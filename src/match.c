@@ -102,7 +102,7 @@ static int _match(char *mask, char *name)
 
 int match(char *n, char *m) {
 	calls=0;
-	return wdmatch(m,n);
+	return wdmatch(n,m);
 }
 #endif
 
@@ -370,7 +370,7 @@ myncmp(char *str1, char *str2, int n)
    return (-1);
 }
  
-int match(char *string, char *wild) {
+int match(char *wild, char *string) {
    /* the *! in a match is such a common case that we optimize
 	 * for it inherently */
 	if(wild[0]=='*' && wild[1]=='!') {
@@ -422,7 +422,7 @@ int match(char *string, char *wild) {
 			  continue;
 			while(*string) {
 				if(touppertab[(u_char)*string]==touppertab[(u_char)*wild] &&
-					!match((string+1), (wild+1)))
+					!match((wild+1), (string+1)))
 				  return 0;
 				string++;
 			}
