@@ -170,6 +170,7 @@ zcontinue:
     
     if(nbuf)
     {
+#if 0   /* this message is annoying and not quite that useful */
 	static time_t last_complain = 0;
 	static int numrepeat = 0;
 	
@@ -194,6 +195,7 @@ zcontinue:
 	    last_complain = NOW;
 	    numrepeat = 0;
 	}
+#endif
 
 	buffer = nbuf;
 	length = nlen;
