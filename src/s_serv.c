@@ -54,6 +54,7 @@
 
 extern fdlist serv_fdlist;
 extern int  lifesux;
+extern int  HTMLOCK;
 static char buf[BUFSIZE];
 extern int  rehashed;
 extern int  zline_in_progress;
