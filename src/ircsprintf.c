@@ -46,7 +46,7 @@ int irc_printf(char *str, size_t size, const char *pattern, va_list vl) {
 					if(!u)
 					  if(i&0x80000000) {
 						  buf[len++]='-'; /* it's negative.. */
-						  i = 0xFFFFFFFF - (i & ~0x80000000);
+						  i = 0x80000000 - (i & ~0x80000000);
 					  }
 					s=&num[11];
 					do {
@@ -75,7 +75,7 @@ int irc_printf(char *str, size_t size, const char *pattern, va_list vl) {
 					format++;
 					break;
 				 case 'c':
-					buf[len++]=va_arg(ap, char);
+					buf[len++]= (char) va_arg(ap, int);
 					format++;
 					break;
 				 default:
@@ -102,7 +102,7 @@ int irc_printf(char *str, size_t size, const char *pattern, va_list vl) {
 				switch(*format) {
 				 case 's': /* most popular ;) */
 					s=va_arg(ap, char *);
-					if(*s==NULL)
+					if(s==NULL)
 					  s=nullstring;
 					while(*s && len<size)
 					  buf[len++]=*s++;
@@ -128,7 +128,7 @@ int irc_printf(char *str, size_t size, const char *pattern, va_list vl) {
 					if(!u)
 					  if(i&0x80000000) {
 						buf[len++]='-'; /* it's negative.. */
-					        i = 0xFFFFFFFF - (i & ~0x80000000);
+					        i = 0x80000000 - (i & ~0x80000000);
 					  }
 					s=&num[11];
 					do {
@@ -159,7 +159,7 @@ int irc_printf(char *str, size_t size, const char *pattern, va_list vl) {
 					format++;
 					break;
 				 case 'c':
-					buf[len++]=va_arg(ap, char);
+					buf[len++]= (char) va_arg(ap, int);
 					format++;
 					break;
 				 default:

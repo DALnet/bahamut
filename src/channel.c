@@ -1847,12 +1847,10 @@ m_topic(aClient *cptr,
 		 * setting a topic 
 		 */
 
-		if(IsServer(sptr) || IsULine(sptr))
-		{
-			/* local topic is newer than remote topic and we have a topic*/
-			if(chptr->topic_time > ts && chptr->topic[0])
-				return 0;
-		}
+		/* local topic is newer than remote topic and we have a topic
+		   and we're in a synch (server setting topic) */
+		if(IsServer(sptr) && !IsULine(sptr) && chptr->topic_time > ts && chptr->topic[0])
+		   return 0;
 
 		strncpyzt(chptr->topic, topic, sizeof(chptr->topic));
 		strcpy(chptr->topic_nick, tnick);
