@@ -52,7 +52,7 @@ void *zip_create_output_session()
    return (void *) zip;
 }
 
-#define zipInBufSize (65536)
+#define zipInBufSize (98304) /* 96K */
 static char zipInBuf[zipInBufSize];
 
 char *zip_input(void *session, char *buffer, int *len, int *err, char **nbuf, int *nbuflen)
