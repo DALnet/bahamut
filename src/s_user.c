@@ -977,8 +977,10 @@ register_user(aClient *cptr,
 							 nick, sptr->hopcount + 1, sptr->tsinfo, ubuf,
 							 user->username, user->host, user->server, sptr->user->servicestamp,
 							 sptr->info);
-	if(ubuf[1])
-	  send_umode_out(cptr, sptr, 0);
+
+   if(MyClient(sptr) && ubuf[1])
+     send_umode(cptr, sptr, 0, ALL_UMODES, ubuf);
+
    return 0;
 }
 
