@@ -67,11 +67,12 @@ char Stats_Name[HOSTLEN+1];
 char OS_Stats_Name[HOSTLEN+9];
 char SS_Stats_Name[HOSTLEN+9];
 char HS_Stats_Name[HOSTLEN+9];
+char NS_Register_URL[TOPICLEN+1];
 char Network_Kline_Address[HOSTLEN+1];
 char Local_Kline_Address[HOSTLEN+1];
 char Staff_Address[HOSTLEN+1];
 int  maxchannelsperuser, tsmaxdelta, tswarndelta;
-int  confopts;
+int  confopts, new_confopts;
 
 /* this stuff by mnystrom@mit.edu */
 #include "fdlist.h"
@@ -780,7 +781,7 @@ main(int argc, char *argv[])
         exit(0);
     }
 
-    strcat(tmp, dpath);
+    strcpy(tmp, dpath);
     strcat(tmp, "/.maxclients");
     mcsfp = fopen(tmp, "r");
     if(mcsfp != NULL)
@@ -1072,6 +1073,7 @@ void io_loop()
         if (timeofday >= next10sec)
         {
             next10sec = timeofday + 10;
+            call_hooks(CHOOK_10SEC);
         }
 
         /*
@@ -1208,7 +1210,7 @@ static void open_debugfile()
         SetLog(cptr);
         cptr->port = debuglevel;
         cptr->flags = 0;
-        cptr->acpt = cptr;
+        /*XXX cptr->acpt = cptr; */
         local[2] = cptr;
         (void) strcpy(cptr->sockhost, me.sockhost);
 

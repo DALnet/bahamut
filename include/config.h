@@ -30,7 +30,7 @@
  * Most people will have no real reason to edit config.h, with the
  * exception of perhaps turning off certain things such as throttling
  * or flood protection options.  Most of the stuff you will have to edit
- * can be found in the ircd.conf - see doc/example.conf for information
+ * can be found in the ircd.conf - see doc/reference.conf for information
  * on that.
  */
 
@@ -97,6 +97,9 @@
 #define DEFAULT_NKLINE_ADDY "admin@badly.configured.server"
 #define DEFAULT_LKLINE_ADDY "admin@badly.configured.server"
 
+/* Sent to users when they encounter mode +R */
+#define DEFAULT_NS_REGISTER_URL "http://docs.dal.net/docs/nsemail.html"
+
 /* self explanitory */
 #define DEFAULT_MAXCHANNELSPERUSER 10
 
@@ -134,6 +137,14 @@
 #define OPERSERV "OperServ"
 #define STATSERV "StatServ"
 #define HELPSERV "HelpServ"
+
+/*
+ * DENY_SERVICES_MSGS
+ * Define this to cause PRIVMSG <service> to be rejected with numeric 487,
+ * explaining that "/msg <service>" is no longer supported, and to use
+ * "/msg <service>@<services_name>" or "/<service>" instead.
+ */
+#undef DENY_SERVICES_MSGS
 
 /*
  * FNAME_USERLOG and FNAME_OPERLOG - logs of local USERS and OPERS
@@ -328,13 +339,6 @@
 #define	CLIENT_FLOOD	2560
 
 /*
- * NO_CHANOP_WHEN_SPLIT * When this is defined, users will not be
- * chanopped on empty channels * if there are no servers presently
- * connected to this server * opers are not affected. 
- */
-#define NO_CHANOPS_WHEN_SPLIT
-
-/*
  * CMDLINE_CONFIG - allow conf-file to be specified on command line
  * NOTE: defining CMDLINE_CONFIG and installing ircd SUID or SGID is a
  * MAJOR security problem - they can use the "-f" option to read any
@@ -460,10 +464,6 @@
  * HIDE_SPLIT_SERVERS
  * Hide the names of servers during netsplits
  *
- * HIDE_LINKS
- * LINKS is a static list of servers, provided by services
- * (controlled with server<>server LINKS CONTROL cmd)
- *
  * HIDE_SERVERMODE_ORIGINS
  * Hide the origins of server modes (ie, in netjoins).
  * (They will all come from me.name)
@@ -476,7 +476,6 @@
 /* #undef HIDE_NUMERIC_SOURCE */
 /* #undef HIDE_KILL_ORIGINS */
 /* #undef HIDE_SPLIT_SERVERS */
-#define HIDE_LINKS
 /* #undef HIDE_SERVERMODE_ORIGINS */
 
 /***********************/
@@ -549,7 +548,6 @@
 # define HIDE_NUMERIC_SOURCE
 # define HIDE_KILL_ORIGINS
 # define HIDE_SPLIT_SERVERS
-# define HIDE_LINKS
 # define HIDE_SERVERMODE_ORIGINS
 #endif
 
@@ -864,5 +862,5 @@ extern void debug(int level, char *pattern, ...);
 #define LOGFILE "/dev/null"
 #endif
 
-#define CONFIG_H_LEVEL_18
+#define CONFIG_H_LEVEL_182
 #endif				/* __config_include__ */

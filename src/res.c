@@ -51,9 +51,6 @@
 				                 * don't do DNS on this ip. */
 
 #undef	DEBUG			/* because theres alot of debug code in here */
-#if !defined(AIX) && !defined(SOL20)
-extern void debug();
-#endif
 
 extern int  dn_expand(char *, char *, char *, char *, int);
 extern int  dn_skipname(char *, char *);

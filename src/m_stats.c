@@ -39,6 +39,11 @@
 #include "res.h"
 #include "sbuf.h"
 
+#if defined(DEBUGMODE) && defined(HAVE_GETRUSAGE)
+#include <sys/time.h>
+#include <sys/resource.h>
+#endif
+
 extern float curSendK, curRecvK;
 extern aWhowas WHOWAS[];
 extern aCache *cachetop;
@@ -1047,8 +1052,9 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
             sincetime = (acptr->since > timeofday) ? 0 : 
                                 timeofday - acptr->since;
             sendto_one(sptr, Lformat, me.name, RPL_STATSLINKINFO, parv[0],
-                        (IsAnOper(sptr) ? get_client_name(acptr, TRUE) :
-                        get_client_name(acptr, HIDEME)),
+                        ( (IsAnOper(sptr) || !IsAnOper(acptr))
+                          ? get_client_name(acptr, TRUE)
+                          : get_client_name(acptr, HIDEME) ),
                         (int) SBufLength(&acptr->sendQ),
                         (int) acptr->sendM, (int) acptr->sendK,
                         (int) acptr->receiveM, (int) acptr->receiveK,
@@ -1100,18 +1106,19 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
                 if(!IsULine(sptr) || (!IsAnOper(sptr) && !IsAdmin(sptr)))
                 {
                     sendto_one(sptr, rpl_str(RPL_STATSCLINE), me.name,
-                                sptr->name, "C", "*", tmp->name, 
-                                (tmp->port ? tmp->port : 0),
-                                tmp->class->name);
+                                sptr->name, (tmp->legal == -1 ? "Cx" : "C"),
+                                "*", tmp->name, tmp->port, tmp->class->name);
                     sendto_one(sptr, rpl_str(RPL_STATSNLINE), me.name,
-                                sptr->name, "N", "*", tmp->name, tmp->flags,
-                                tmp->class->name);
+                                sptr->name, (tmp->legal == -1 ? "Nx" : "N"),
+                                "*", tmp->name, tmp->flags, tmp->class->name);
                 }
                 else
                 {
+                    if (tmp->legal == -1)
+                        continue;
                     sendto_one(sptr, rpl_str(RPL_STATSCLINE), me.name,
-                           sptr->name, "C", tmp->host, tmp->name,
-                           (tmp->port ? tmp->port : 0), tmp->class->name);
+                           sptr->name, "C", tmp->host, tmp->name, tmp->port,
+                           tmp->class->name);
                     sendto_one(sptr, rpl_str(RPL_STATSNLINE), me.name,
                            sptr->name, "N", tmp->host, tmp->name, tmp->flags,
                            tmp->class->name);
@@ -1193,15 +1200,20 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
                 for(tmp = opers; tmp; tmp = tmp->next)
                     for(i = 0; tmp->hosts[i]; i++)
                         sendto_one(sptr, rpl_str(RPL_STATSOLINE), me.name,
-                                sptr->name, "O", tmp->hosts[i], tmp->nick,
-                                tmp->flags, tmp->class->name);
+                                sptr->name, (tmp->legal == -1 ? "Ox" : "O"),
+                                tmp->hosts[i], tmp->nick, tmp->flags,
+                                tmp->class->name);
             }
             else
             {
                 for(tmp = opers; tmp; tmp = tmp->next)
+                {
+                    if (tmp->legal == -1)
+                        continue;
                     sendto_one(sptr, rpl_str(RPL_STATSOLINE), me.name,
-                            sptr->name, "O", "*", tmp->nick,
-                            tmp->flags, tmp->class->name);
+                            sptr->name, "O", "*", tmp->nick, tmp->flags,
+                            tmp->class->name);
+                }
             }
             break;
         }

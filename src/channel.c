@@ -28,9 +28,7 @@
 #include "h.h"
 #include "userban.h"
 
-#ifdef NO_CHANOPS_WHEN_SPLIT
 int         server_was_split = YES;
-#endif
 
 aChannel   *channel = NullChn;
 
@@ -45,14 +43,13 @@ anInvite* is_invited(aClient*, aChannel*);
 /* +e list functions */
 int       add_exempt_id(aClient*, aChannel*, char*);
 int       del_exempt_id(aChannel*, char*);
-aBanExempt* is_exempt(aClient*, aChannel*);
 #endif
 
 static int  add_banid(aClient *, aChannel *, char *);
 static int  can_join(aClient *, aChannel *, char *);
 static void channel_modes(aClient *, char *, char *, aChannel *);
 static int  del_banid(aChannel *, char *);
-static aBan *is_banned(aClient *, aChannel *);
+static int  is_banned(aClient *, aChannel *, chanMember *);
 static int  set_mode(aClient *, aClient *, aChannel *, int, 
                      int, char **, char *, char *);
 static void sub1_from_channel(aChannel *);
@@ -199,18 +196,21 @@ int add_exempt_id(aClient* cptr, aChannel* chptr, char* exempt_id)
 {
     aBanExempt*   exempt = NULL;
     int           cnt = 0;
-    chanMember   *cm;
-    char      	 *s, nickuhost[NICKLEN+USERLEN+HOSTLEN+6];
 
     for (exempt = chptr->banexempt_list; exempt; exempt = exempt->next)
     {
-        if (MyClient(cptr) && ++cnt >= MAXEXEMPTLIST)
+        if (MyClient(cptr))
         {
-            sendto_one(cptr, getreply(ERR_BANLISTFULL), me.name, cptr->name,
-                chptr->chname, exempt_id);
-            return -1;
+            if (++cnt >= MAXEXEMPTLIST)
+            {
+                sendto_one(cptr, getreply(ERR_BANLISTFULL), me.name, cptr->name,
+                    chptr->chname, exempt_id);
+                return -1;
+            }
+            if (!match(exempt->banstr, exempt_id))
+                return -1;
         }
-        else if (!match(exempt->banstr, exempt_id))
+        else if (!mycmp(exempt->banstr, exempt_id))
             return -1;
     }
     exempt = (aBanExempt*)MyMalloc(sizeof(aBanExempt));
@@ -219,6 +219,7 @@ int add_exempt_id(aClient* cptr, aChannel* chptr, char* exempt_id)
     exempt->when = timeofday;
     exempt->next = chptr->banexempt_list;
     chptr->banexempt_list = exempt;
+    chptr->banserial++;
 
     if (IsPerson(cptr))
     {
@@ -234,19 +235,16 @@ int add_exempt_id(aClient* cptr, aChannel* chptr, char* exempt_id)
         (void) strcpy(exempt->who, cptr->name);
     }
 
-    for (cm = chptr->members; cm; cm = cm->next)
+    /* determine type for less matching later */
+    if(exempt_id[0] == '*' && exempt_id[1] == '!')
     {
-        if(!MyConnect(cm->cptr))
-            continue;
-
-        strcpy(nickuhost, make_nick_user_host(cm->cptr->name,
-                                              cm->cptr->user->username,
-                                              cm->cptr->hostip));
-        s = make_nick_user_host(cm->cptr->name, cm->cptr->user->username,
-                                cm->cptr->user->host);
-        if (match(exempt_id, nickuhost) == 0 || match(exempt_id, s) == 0)
-            cm->banexs++;
+        if(exempt_id[2] == '*' && exempt_id[3] == '@')
+            exempt->type = MTYP_HOST;
+        else
+            exempt->type = MTYP_USERHOST;
     }
+    else
+        exempt->type = MTYP_FULL;
 
     return 0;
 }
@@ -255,8 +253,6 @@ int del_exempt_id(aChannel* chptr, char* exempt_id)
 {
    aBanExempt**  exempt;
    aBanExempt*   tmp;
-   chanMember   *cm;
-   char         *s, nickuhost[NICKLEN+USERLEN+HOSTLEN+6];
 
    if (!exempt_id)
        return -1;
@@ -267,20 +263,7 @@ int del_exempt_id(aChannel* chptr, char* exempt_id)
            tmp = *exempt;
            *exempt = tmp->next;
 
-           for (cm = chptr->members; cm; cm = cm->next)
-           {
-               if(!MyConnect(cm->cptr) || cm->banexs == 0)
-                   continue;
-
-               strcpy(nickuhost, make_nick_user_host(cm->cptr->name,
-                                                     cm->cptr->user->username,
-                                                     cm->cptr->hostip));
-               s = make_nick_user_host(cm->cptr->name,
-                                       cm->cptr->user->username,
-                                       cm->cptr->user->host);
-               if (!match(exempt_id, nickuhost) || !match(exempt_id, s))
-                   cm->banexs--;
-           }
+           chptr->banserial++;
 
            MyFree(tmp->banstr);
            MyFree(tmp->who);
@@ -290,19 +273,6 @@ int del_exempt_id(aChannel* chptr, char* exempt_id)
        }
    }
    return 0;
-}
-
-aBanExempt* is_exempt(aClient* cptr, aChannel* chptr)
-{
-    char* s = make_nick_user_host(cptr->name, cptr->user->username, cptr->user->host);
-    aBanExempt*    exempt;
-
-    for (exempt = chptr->banexempt_list; exempt; exempt = exempt->next)
-    {
-        if (!match(exempt->banstr, s))
-            break;
-    }
-    return exempt;
 }
 
 #endif
@@ -317,13 +287,18 @@ int add_invite_id(aClient* cptr, aChannel* chptr, char* invite_id)
     
     for (invite = chptr->invite_list; invite; invite = invite->next)
     {
-        if (MyClient(cptr) && ++cnt >= MAXINVITELIST)
+        if (MyClient(cptr))
         {
-            sendto_one(cptr, getreply(ERR_BANLISTFULL), me.name, cptr->name,
-                chptr->chname, invite_id);
-            return -1;
+            if (++cnt >= MAXINVITELIST)
+            {
+                sendto_one(cptr, getreply(ERR_BANLISTFULL), me.name, cptr->name,
+                    chptr->chname, invite_id);
+                return -1;
+            }
+            if (!match(invite->invstr, invite_id))
+                return -1;
         }
-        else if (!match(invite->invstr, invite_id))
+        else if (!mycmp(invite->invstr, invite_id))
             return -1;
     }
 
@@ -376,12 +351,18 @@ int del_invite_id(aChannel* chptr, char* invite_id)
 
 anInvite* is_invited(aClient* cptr, aChannel* chptr)
 {
-    char* s = make_nick_user_host(cptr->name, cptr->user->username, cptr->user->host);
+    char         s[NICKLEN + USERLEN + HOSTLEN + 6];
+    char        *s2;
     anInvite*    invite;
+
+    strcpy(s, make_nick_user_host(cptr->name, cptr->user->username,
+                                  cptr->user->host));
+    s2 = make_nick_user_host(cptr->name, cptr->user->username,
+                             cptr->hostip);
 
     for (invite = chptr->invite_list; invite; invite = invite->next)
     {
-        if (!match(invite->invstr, s))
+        if (!match(invite->invstr, s) || !match(invite->invstr, s2))
             break;
     }
     return invite;
@@ -396,21 +377,25 @@ static int add_banid(aClient *cptr, aChannel *chptr, char *banid)
 {
     aBan        *ban;
     int          cnt = 0;
-    chanMember  *cm;
-    char        *s, nickuhost[NICKLEN+USERLEN+HOSTLEN+6];
     
     for (ban = chptr->banlist; ban; ban = ban->next)
     {
-        if (MyClient(cptr) && (++cnt >= MAXBANS))
+        /* Begin unbreaking redundant ban checking.  First step is to allow
+         * ALL non-duplicates from remote servers.  Local clients are still
+         * subject to the flawed redundancy check for compatibility with
+         * older servers.  This check can be corrected later.  -Quension */
+        if (MyClient(cptr))
         {
-            sendto_one(cptr, getreply(ERR_BANLISTFULL), me.name, cptr->name,
-                       chptr->chname, banid);
-            return -1;
+            if (++cnt >= MAXBANS)
+            {
+                sendto_one(cptr, getreply(ERR_BANLISTFULL), me.name, cptr->name,
+                        chptr->chname, banid);
+                return -1;
+            }
+            if (!match(ban->banstr, banid))
+                return -1;
         }
-        /* yikes, we were doing all sorts of weird crap here before, now
-         * we ONLY want to know if current bans cover this ban, not if this
-         * ban covers current ones, since it may cover other things too -wd */
-        else if (!match(ban->banstr, banid))
+        else if (!mycmp(ban->banstr, banid))
             return -1;
     }
 
@@ -447,20 +432,8 @@ static int add_banid(aClient *cptr, aChannel *chptr, char *banid)
 
     ban->when = timeofday;
     chptr->banlist = ban;
+    chptr->banserial++;
     
-    for (cm = chptr->members; cm; cm = cm->next) 
-    {
-        if(!MyConnect(cm->cptr))
-            continue;
-        
-        strcpy(nickuhost, make_nick_user_host(cm->cptr->name,
-                                              cm->cptr->user->username,
-                                              cm->cptr->hostip));
-        s = make_nick_user_host(cm->cptr->name, cm->cptr->user->username,
-                                cm->cptr->user->host);
-        if (match(banid, nickuhost) == 0 || match(banid, s) == 0) 
-            cm->bans++;
-    }
     return 0;
 }
 
@@ -472,8 +445,6 @@ static int del_banid(aChannel *chptr, char *banid)
 {
    aBan        **ban;
    aBan         *tmp;
-   chanMember   *cm;
-   char         *s, nickuhost[NICKLEN+USERLEN+HOSTLEN+6];
 
    if (!banid)
        return -1;
@@ -482,22 +453,9 @@ static int del_banid(aChannel *chptr, char *banid)
        {
            tmp = *ban;
            *ban = tmp->next;
-           
-           for (cm = chptr->members; cm; cm = cm->next) 
-           {
-               if(!MyConnect(cm->cptr) || cm->bans == 0) 
-                   continue;
-               
-               strcpy(nickuhost, make_nick_user_host(cm->cptr->name,
-                                                     cm->cptr->user->username,
-                                                     cm->cptr->hostip));
-               s = make_nick_user_host(cm->cptr->name, 
-                                       cm->cptr->user->username,
-                                       cm->cptr->user->host);
-               if (match(banid, nickuhost) == 0 || match(banid, s) == 0) 
-                   cm->bans--;
-           }
-           
+
+           chptr->banserial++;
+
            MyFree(tmp->banstr);
            MyFree(tmp->who);
            MyFree(tmp);
@@ -508,36 +466,65 @@ static int del_banid(aChannel *chptr, char *banid)
 }
 
 /*
- * is_banned - returns a pointer to the ban structure if banned else
- * NULL
+ * is_banned - returns CHFL_BANNED if banned else 0
  * 
- * IP_BAN_ALL from comstud always on...
+ * caches banned status in chanMember for can_send()
+ *   -Quension [Jun 2004]
  */
 
-static aBan *is_banned(aClient *cptr, aChannel *chptr)
+static int is_banned(aClient *cptr, aChannel *chptr, chanMember *cm)
 {
-    aBan       *tmp;
+    aBan       *ban;
+#ifdef EXEMPT_LISTS
+    aBanExempt *exempt;
+#endif
     char        s[NICKLEN + USERLEN + HOSTLEN + 6];
     char       *s2;
     
     if (!IsPerson(cptr))
-        return NULL;
-    
+        return 0;
+
+    /* if cache is valid, use it */
+    if (cm)
+    {
+        if (cm->banserial == chptr->banserial)
+            return (cm->flags & CHFL_BANNED);
+        cm->banserial = chptr->banserial;
+        cm->flags &= ~CHFL_BANNED;
+    }
+
     strcpy(s, make_nick_user_host(cptr->name, cptr->user->username,
                                   cptr->user->host));
     s2 = make_nick_user_host(cptr->name, cptr->user->username,
                              cptr->hostip);
-    
-    for (tmp = chptr->banlist; tmp; tmp = tmp->next)
-        if ((match(tmp->banstr, s) == 0) ||
-            (match(tmp->banstr, s2) == 0))
+
+#ifdef EXEMPT_LISTS
+    for (exempt = chptr->banexempt_list; exempt; exempt = exempt->next)
+        if (!match(exempt->banstr, s) || !match(exempt->banstr, s2))
+            return 0;
+#endif
+
+    for (ban = chptr->banlist; ban; ban = ban->next)
+        if ((match(ban->banstr, s) == 0) ||
+            (match(ban->banstr, s2) == 0))
             break;
-    return (tmp);
+
+    if (ban)
+    {
+        if (cm)
+            cm->flags |= CHFL_BANNED;
+        return CHFL_BANNED;
+    }
+
+    return 0;
 }
 
 aBan *nick_is_banned(aChannel *chptr, char *nick, aClient *cptr)
 {
-    aBan *tmp;
+    aBan *ban;
+#ifdef EXEMPT_LISTS
+    aBanExempt *exempt;
+#endif
     char *s, s2[NICKLEN+USERLEN+HOSTLEN+6];
     
     if (!IsPerson(cptr)) return NULL;
@@ -545,13 +532,21 @@ aBan *nick_is_banned(aChannel *chptr, char *nick, aClient *cptr)
     strcpy(s2, make_nick_user_host(nick, cptr->user->username,
                                    cptr->user->host));
     s = make_nick_user_host(nick, cptr->user->username, cptr->hostip);
-    
-    for (tmp = chptr->banlist; tmp; tmp = tmp->next)
-        if (tmp->type == MTYP_FULL &&        /* only check applicable bans */
-            ((match(tmp->banstr, s2) == 0) ||    /* check host before IP */
-             (match(tmp->banstr, s) == 0)))
+
+#ifdef EXEMPT_LISTS
+    for (exempt = chptr->banexempt_list; exempt; exempt = exempt->next)
+        if (exempt->type == MTYP_FULL &&
+            ((match(exempt->banstr, s2) == 0) ||
+             (match(exempt->banstr, s) == 0)))
+            return NULL;
+#endif
+
+    for (ban = chptr->banlist; ban; ban = ban->next)
+        if (ban->type == MTYP_FULL &&        /* only check applicable bans */
+            ((match(ban->banstr, s2) == 0) ||    /* check host before IP */
+             (match(ban->banstr, s) == 0)))
             break;
-    return (tmp);
+    return (ban);
 }
 
 void remove_matching_bans(aChannel *chptr, aClient *cptr, aClient *from) 
@@ -639,6 +634,180 @@ void remove_matching_bans(aChannel *chptr, aClient *cptr, aClient *from)
   return;
 }
 
+#ifdef EXEMPT_LISTS
+void remove_matching_exempts(aChannel *chptr, aClient *cptr, aClient *from)
+{
+    aBanExempt *ex, *enext;
+    char targhost[NICKLEN+USERLEN+HOSTLEN+6];
+    char targip[NICKLEN+USERLEN+HOSTLEN+6];
+    char *m;
+    int count = 0, send = 0;
+
+    if (!IsPerson(cptr)) return;
+
+    strcpy(targhost, make_nick_user_host(cptr->name, cptr->user->username,
+                                         cptr->user->host));
+    strcpy(targip, make_nick_user_host(cptr->name, cptr->user->username,
+                                       cptr->hostip));
+
+    m = modebuf;
+    *m++ = '-';
+    *m = '\0';
+
+    *parabuf = '\0';
+
+    ex = chptr->banexempt_list;
+
+    while(ex)
+    {
+        enext = ex->next;
+        if((match(ex->banstr, targhost) == 0) ||
+           (match(ex->banstr, targip) == 0))
+        {
+            if (strlen(parabuf) + strlen(ex->banstr) + 10 < (size_t) MODEBUFLEN)
+            {
+                if(*parabuf)
+                    strcat(parabuf, " ");
+                strcat(parabuf, ex->banstr);
+                count++;
+                *m++ = 'e';
+                *m = '\0';
+            }
+            else
+                if(*parabuf)
+                    send = 1;
+
+            if(count == MAXTSMODEPARAMS)
+                send = 1;
+
+            if(send)
+            {
+                sendto_channel_butserv_me(chptr, from, ":%s MODE %s %s %s",
+                                          from->name, chptr->chname, modebuf,
+                                          parabuf);
+                sendto_match_servs(chptr, from, ":%s MODE %s %ld %s %s",
+                                   from->name, chptr->chname, chptr->channelts,
+                                   modebuf, parabuf);
+                send = 0;
+                *parabuf = '\0';
+                m = modebuf;
+                *m++ = '-';
+                if(count != MAXTSMODEPARAMS)
+                {
+                    strcpy(parabuf, ex->banstr);
+                    *m++ = 'e';
+                    count = 1;
+                }
+                else
+                    count = 0;
+                *m = '\0';
+            }
+
+            del_exempt_id(chptr, ex->banstr);
+        }
+        ex = enext;
+    }
+
+    if(*parabuf)
+    {
+        sendto_channel_butserv_me(chptr, from, ":%s MODE %s %s %s", from->name,
+                                  chptr->chname, modebuf, parabuf);
+        sendto_match_servs(chptr, from, ":%s MODE %s %ld %s %s",
+                           from->name, chptr->chname, chptr->channelts,
+                           modebuf, parabuf);
+    }
+
+    return;
+}
+#endif
+
+#ifdef INVITE_LISTS
+void remove_matching_invites(aChannel *chptr, aClient *cptr, aClient *from)
+{
+    anInvite *inv, *inext;
+    char targhost[NICKLEN+USERLEN+HOSTLEN+6];
+    char targip[NICKLEN+USERLEN+HOSTLEN+6];
+    char *m;
+    int count = 0, send = 0;
+
+    if (!IsPerson(cptr)) return;
+
+    strcpy(targhost, make_nick_user_host(cptr->name, cptr->user->username,
+                                         cptr->user->host));
+    strcpy(targip, make_nick_user_host(cptr->name, cptr->user->username,
+                                       cptr->hostip));
+
+    m = modebuf;
+    *m++ = '-';
+    *m = '\0';
+
+    *parabuf = '\0';
+
+    inv = chptr->invite_list;
+
+    while(inv)
+    {
+        inext = inv->next;
+        if((match(inv->invstr, targhost) == 0) ||
+           (match(inv->invstr, targip) == 0))
+        {
+            if (strlen(parabuf) + strlen(inv->invstr) + 10 < (size_t) MODEBUFLEN)
+            {
+                if(*parabuf)
+                    strcat(parabuf, " ");
+                strcat(parabuf, inv->invstr);
+                count++;
+                *m++ = 'I';
+                *m = '\0';
+            }
+            else
+                if(*parabuf)
+                    send = 1;
+
+            if(count == MAXTSMODEPARAMS)
+                send = 1;
+
+            if(send)
+            {
+                sendto_channel_butserv_me(chptr, from, ":%s MODE %s %s %s",
+                                          from->name, chptr->chname, modebuf,
+                                          parabuf);
+                sendto_match_servs(chptr, from, ":%s MODE %s %ld %s %s",
+                                   from->name, chptr->chname, chptr->channelts,
+                                   modebuf, parabuf);
+                send = 0;
+                *parabuf = '\0';
+                m = modebuf;
+                *m++ = '-';
+                if(count != MAXTSMODEPARAMS)
+                {
+                    strcpy(parabuf, inv->invstr);
+                    *m++ = 'I';
+                    count = 1;
+                }
+                else
+                    count = 0;
+                *m = '\0';
+            }
+
+            del_invite_id(chptr, inv->invstr);
+        }
+        inv = inext;
+    }
+
+    if(*parabuf)
+    {
+        sendto_channel_butserv_me(chptr, from, ":%s MODE %s %s %s", from->name,
+                                  chptr->chname, modebuf, parabuf);
+        sendto_match_servs(chptr, from, ":%s MODE %s %ld %s %s",
+                           from->name, chptr->chname, chptr->channelts,
+                           modebuf, parabuf);
+    }
+
+    return;
+}
+#endif
+
 int check_joinrate(aChannel *chptr, time_t ts, int local, aClient *cptr)
 {
     int join_num = DEFAULT_JOIN_NUM;
@@ -701,10 +870,8 @@ static void add_user_to_channel(aChannel *chptr, aClient *who, int flags)
         cm->flags = flags;
         cm->cptr = who;
         cm->next = chptr->members;
-        cm->bans = 0;
-#ifdef EXEMPT_LISTS
-        cm->banexs = 0;
-#endif
+        cm->banserial = chptr->banserial;
+
         chptr->members = cm;
         chptr->users++;
         
@@ -776,14 +943,13 @@ int has_voice(aClient *cptr, aChannel *chptr)
 int can_send(aClient *cptr, aChannel *chptr, char *msg)
 {
     chanMember   *cm;
-    int     member;
     
     if (IsServer(cptr) || IsULine(cptr))
         return 0;
     
-    member = (cm = find_user_member(chptr->members, cptr)) ? 1 : 0;
+    cm = find_user_member(chptr->members, cptr);
     
-    if(!member)
+    if(!cm)
     {
         if (chptr->mode.mode & MODE_MODERATED)
             return (MODE_MODERATED);
@@ -793,10 +959,7 @@ int can_send(aClient *cptr, aChannel *chptr, char *msg)
             return (ERR_NEEDREGGEDNICK);
         if ((chptr->mode.mode & MODE_NOCOLOR) && msg_has_colors(msg))
             return (ERR_NOCOLORSONCHAN);
-        if (MyClient(cptr) && is_banned(cptr, chptr))
-#ifdef EXEMPT_LISTS
-            if (!is_exempt(cptr, chptr))
-#endif
+        if (MyClient(cptr) && is_banned(cptr, chptr, NULL))
             return (MODE_BAN); /*
                                 * channel is -n and user is not there;
                                 * we need to bquiet them if we can
@@ -804,20 +967,18 @@ int can_send(aClient *cptr, aChannel *chptr, char *msg)
     }
     else
     {
-        if (chptr->mode.mode & MODE_MODERATED &&
-            !(cm->flags & (CHFL_CHANOP | CHFL_VOICE)))
-            return (MODE_MODERATED);
-        if(cm->bans && !(cm->flags & (CHFL_CHANOP | CHFL_VOICE)))
-#ifdef EXEMPT_LISTS
-            if (!cm->banexs)
-#endif
-            return (MODE_BAN);
-        if ((chptr->mode.mode & MODE_MODREG) && !IsRegNick(cptr) &&
-            !(cm->flags & (CHFL_CHANOP | CHFL_VOICE)))
-            return (ERR_NEEDREGGEDNICK);
+        /* ops and voices can talk through everything except NOCOLOR */
+        if (!(cm->flags & (CHFL_CHANOP | CHFL_VOICE)))
+        {
+            if (chptr->mode.mode & MODE_MODERATED)
+                return (MODE_MODERATED);
+            if (is_banned(cptr, chptr, cm))
+                return (MODE_BAN);
+            if ((chptr->mode.mode & MODE_MODREG) && !IsRegNick(cptr))
+                return (ERR_NEEDREGGEDNICK);
+        }
         if ((chptr->mode.mode & MODE_NOCOLOR) && msg_has_colors(msg))
             return (ERR_NOCOLORSONCHAN);
-
     }
     
     return 0;
@@ -1933,14 +2094,8 @@ static int can_join(aClient *sptr, aChannel *chptr, char *key)
         error = 0;
 #endif
 
-    if (!error)
-    {
-#ifdef EXEMPT_LISTS
-        if (!is_exempt(sptr, chptr))
-#endif
-            if (is_banned(sptr, chptr))
-                error = ERR_BANNEDFROMCHAN;
-    }
+    if (!error && is_banned(sptr, chptr, NULL))
+        error = ERR_BANNEDFROMCHAN;
 
     return error;
 }
@@ -1981,31 +2136,14 @@ can_join_whynot(aClient *sptr, aChannel *chptr, char *key, char *reasonbuf)
         reasonbuf[rbufpos++] = 'l';
     if (check_joinrate(chptr, NOW, 1, sptr) == 0)
         reasonbuf[rbufpos++] = 'j';
-        
-    /* see comment in same location of can_join for explanation */
-#ifdef INVITE_LISTS    
-    if (rbufpos != 0 && is_invited(sptr, chptr))
-    {       
-        rbufpos = 0; /* reset reasonbuf, is_invited takes care of the previous modes */
-#ifdef EXEMPT_LISTS
-        if (!is_exempt(sptr, chptr) && is_banned(sptr, chptr))
-#else
-        if (is_banned(sptr, chptr))
+
+#ifdef INVITE_LISTS
+    if (rbufpos && is_invited(sptr, chptr))
+        rbufpos = 0;
 #endif
-            reasonbuf[rbufpos++] = 'b';
-    }
-    else
-    {
-#endif /* INVITE_LISTS */
-#ifdef EXEMPT_LISTS
-        if (!is_exempt(sptr, chptr) && is_banned(sptr, chptr))
-#else
-        if (is_banned(sptr, chptr))
-#endif
-            reasonbuf[rbufpos++] = 'b';
-#ifdef INVITE_LISTS            
-    }
-#endif
+
+    if (is_banned(sptr, chptr, NULL))
+        reasonbuf[rbufpos++] = 'b';
 
     reasonbuf[rbufpos] = '\0';
     return rbufpos;
@@ -2387,10 +2525,9 @@ int m_join(aClient *cptr, aClient *sptr, int parc, char *parv[])
              */
             flags = (ChannelExists(name)) ? 0 : CHFL_CHANOP;
 
-#ifdef NO_CHANOPS_WHEN_SPLIT
-            if (!IsAnOper(sptr) && server_was_split)
+            if (!IsAnOper(sptr) && server_was_split
+                && !(confopts & FLAGS_SPLITOPOK))
                     allow_op = NO;
-#endif
             
             if ((sptr->user->joined >= maxchannelsperuser) &&
                 (!IsAnOper(sptr) || (sptr->user->joined >= 
@@ -2454,7 +2591,8 @@ int m_join(aClient *cptr, aClient *sptr, int parc, char *parv[])
         if (!chptr || (MyConnect(sptr) && (i = can_join(sptr, chptr, key))))
         {
             if (i==ERR_NEEDREGGEDNICK)
-                sendto_one(sptr, getreply(i), me.name, parv[0], name, "join");
+                sendto_one(sptr, getreply(i), me.name, parv[0], name, "join",
+                           NS_Services_Name, NS_Register_URL);
             else 
                 sendto_one(sptr, getreply(i), me.name, parv[0], name);
 
@@ -2470,12 +2608,10 @@ int m_join(aClient *cptr, aClient *sptr, int parc, char *parv[])
  * - lucas 
  */
 
-#ifdef NO_CHANOPS_WHEN_SPLIT
         if (flags && !allow_op)
             sendto_one(sptr, ":%s NOTICE %s :*** Notice -- Due to a network "
                        "split, you can not obtain channel operator status in "
                        "a new channel at this time.", me.name, sptr->name);
-#endif
         
         /* Complete user entry to the new channel (if any) */
         if (allow_op)
@@ -3090,7 +3226,8 @@ void send_list(aClient *cptr, int numsend)
             for (chptr = (aChannel *)hash_get_chan_bucket(hashnum); 
                  chptr; chptr = chptr->hnextch)
             {
-                if (SecretChannel(chptr) && !IsMember(cptr, chptr))
+                if (SecretChannel(chptr) && !IsAdmin(cptr)
+                    && !IsMember(cptr, chptr))
                     continue;
 #ifdef USE_CHANMODE_L
                 if (lopt->only_listed && !(chptr->mode.mode & MODE_LISTED))
@@ -3576,7 +3713,6 @@ void send_user_joins(aClient *cptr, aClient *user)
 
 void kill_ban_list(aClient *cptr, aChannel *chptr)
 {  
-    chanMember  *cm;
     void        *pnx;
     aBan        *bp;
 #ifdef EXEMPT_LISTS
@@ -3751,17 +3887,8 @@ void kill_ban_list(aClient *cptr, aChannel *chptr)
     chptr->invite_list = NULL;
 #endif
 
-    /* reset bquiet on all channel members */
-    for (cm = chptr->members; cm; cm = cm->next)
-    {     
-        if(MyConnect(cm->cptr))
-        {
-            cm->bans = 0;
-#ifdef EXEMPT_LISTS
-            cm->banexs = 0;
-#endif
-        }
-    }
+    /* reset bquiet cache */
+    chptr->banserial++;
 }
 
 static inline void sjoin_sendit(aClient *cptr, aClient *sptr,

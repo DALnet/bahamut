@@ -26,7 +26,7 @@
 #define __struct_include__
 
 #include "config.h"
-#if !defined(CONFIG_H_LEVEL_18)
+#if !defined(CONFIG_H_LEVEL_182)
 #error Incorrect config.h for this revision of ircd.
 #endif
 
@@ -629,6 +629,8 @@ typedef struct Whowas
 #define FLAGS_WGMONURL  0x0010
 #define FLAGS_WGMONHOST 0x0020
 #define FLAGS_WGMON     (FLAGS_WGMONURL|FLAGS_WGMONHOST)
+#define FLAGS_SHOWLINKS 0x0040
+#define FLAGS_SPLITOPOK 0x0080
 
 /* flags for connects */
 
@@ -1060,6 +1062,7 @@ struct Exempt
     char*        banstr;
     char*        who;
     time_t       when;
+    u_char       type;
     aBanExempt*  next;
 };
 #endif
@@ -1070,10 +1073,7 @@ struct ChanLink
     struct ChanLink *next;
     aClient *cptr;
     int flags;
-    int bans;	/* for bquiet: number of bans against this user */
-#ifdef EXEMPT_LISTS
-    int banexs;	/* number of ban exemptions for this user */
-#endif
+    unsigned int banserial;     /* used for bquiet cache */
 };
 
 /* general link structure used for chains */
@@ -1136,6 +1136,7 @@ struct Channel
     char        chname[CHANNELLEN+1];
     int		join_start;
     int		join_count;
+    unsigned int banserial;     /* used for bquiet cache */
 };
 
 #define	TS_CURRENT	5	/* current TS protocol version */
@@ -1149,7 +1150,7 @@ struct Channel
 #define	CHFL_CHANOP     0x0001	/* Channel operator */
 #define	CHFL_VOICE      0x0002	/* the power to speak */
 #define	CHFL_DEOPPED 	0x0004	/* deopped by us, modes need to be bounced */
-#define	CHFL_BAN	0x0008	/* ban channel flag */
+#define	CHFL_BANNED     0x0008  /* is banned */
 
 /* ban mask types */
 

@@ -27,6 +27,10 @@
 #define CONF_TABS
 #include "confparse.h"
 
+#ifndef LINE_MAX
+#define LINE_MAX 256
+#endif
+
 /* notes on confparse.c
  * While this initial revision requires a fair bit of trimming down,
  * my primary goal right now was to build an extendable system that will

@@ -456,6 +456,26 @@ int channel_svsmode(aClient *cptr, aClient *sptr, int parc, char *parv[])
             }
             break;
 
+#ifdef EXEMPT_LISTS
+    case 'e':
+            if (nick && MyClient(acptr) && change == '-')
+            {
+                remove_matching_exempts(chptr, acptr, &me);
+                sendmsg--;
+            }
+            break;
+#endif
+
+#ifdef INVITE_LISTS
+    case 'I':
+            if (nick && MyClient(acptr) && change == '-')
+            {
+                remove_matching_invites(chptr, acptr, &me);
+                sendmsg--;
+            }
+            break;
+#endif
+
 	default:
             sendmsg++;
             break;
@@ -542,18 +562,26 @@ int m_svsmode(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	    {
 		if (*m == (char)(*(s+1)))
 		{
-		    if (what == MODE_ADD)
-			acptr->umode |= flag;
-		    else
-			acptr->umode &= ~flag;
+            if (what == MODE_ADD)
+            {
+                /* no opering this way */
+                if (flag & (UMODE_o|UMODE_O))
+                    break;
+                acptr->umode |= flag;
+            }
+            else if (acptr->umode & flag)
+            {
+                acptr->umode &= ~flag;
 
-		    /* If this SVSMODE removed their oper status,
-		     * remove them from the oper fd list */
-		    if(MyConnect(acptr) && what == MODE_DEL && 
-                       (flag == UMODE_o || flag == UMODE_O) && 
-		       !IsAnOper(acptr)) 
-			remove_from_list(&oper_list, acptr, NULL);
-
+                /* deopering ok */
+                if (MyConnect(acptr) && (flag & (UMODE_o|UMODE_O))
+                    && !IsAnOper(acptr))
+                {
+                    acptr->oflag = 0;
+                    remove_from_list(&oper_list, acptr, NULL);
+                }
+            }
+            
 		    break;
 		}
 	    }

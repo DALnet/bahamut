@@ -36,7 +36,7 @@ extern ts_val ac_tsinfo(aClient *);
 extern int ac_fd(aClient *);
 extern int ac_hopcount(aClient *);
 extern short ac_status(aClient *);
-extern char *ac_nicksent(aClient *);
+extern char ac_nicksent(aClient *);
 extern char *ac_name(aClient *);
 extern char *ac_info(aClient *);
 #ifdef FLUD
@@ -62,8 +62,8 @@ extern int ac_oper_warn_count_down(aClient *);
 #endif
 extern char *ac_buffer(aClient *);
 extern short ac_lastsq(aClient *);
-extern struct DBuf *ac_sendQ(aClient *);
-extern struct DBuf *ac_recvQ(aClient *);
+extern SBuf *ac_sendQ(aClient *);
+extern SBuf *ac_recvQ(aClient *);
 extern long ac_sendM(aClient *);
 extern long ac_sendK(aClient *);
 extern long ac_recieveM(aClient *);
@@ -101,11 +101,11 @@ extern aChannel *ch_prev(aChannel *);
 extern aChannel *ch_hnext(aChannel *);
 extern int ch_hashv(aChannel *);
 extern Mode ch_mode(aChannel *);
-extern char ch_topic(aChannel *);
-extern char ch_topic_nick(aChannel *);
+extern char *ch_topic(aChannel *);
+extern char *ch_topic_nick(aChannel *);
 extern time_t ch_topic_time(aChannel *);
 extern int ch_users(aChannel *);
-extern chanMember ch_members(aChannel *);
+extern chanMember *ch_members(aChannel *);
 extern Link *ch_invites(aChannel *);
 extern aBan *ch_banlist(aChannel *);
 #ifdef INVITE_LISTS
@@ -119,6 +119,6 @@ extern ts_val ch_channelts(aChannel *);
 extern time_t ch_fludblock(aChannel *);
 extern struct fludbot *ch_fluders(aChannel *);
 #endif
-extern char ch_chname(aChannel *);
+extern char *ch_chname(aChannel *);
 extern int ch_join_start(aChannel *);
 extern int ch_join_count(aChannel *);

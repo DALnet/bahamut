@@ -26,8 +26,8 @@ static char *replies[] =
     /* 002 RPL_YOURHOST */	":%s 002 %s :Your host is %s, running "
                                 "version %s",
     /* 003 RPL_CREATED */	":%s 003 %s :This server was created %s",
-    /* 004 RPL_MYINFO */	":%s 004 %s %s %s oOiwscrkKnfydaAbgheFxXjI "
-                                "biklLmMnoprRstvcj",
+    /* 004 RPL_MYINFO */	":%s 004 %s %s %s aAbcdefFghiIjkKmnoOrRswxXy "
+                                "bceiIjklLmMnoOprRstv",
     /* 005 RPL_PROTOCTL*/       ":%s 005 %s %s :are available on this server",
     /* 006 */	                NULL,
     /* 007 */	                NULL,
@@ -535,10 +535,8 @@ static char *replies[] =
     /* 477 ERR_NEEDREGGEDNICK */       ":%s 477 %s %s :You need to identify "
                                        "to a registered nick to %s that "
                                        "channel. For help with registering "
-                                       "your nickname, type /msg "
-                                       "nickserv@services.dal.net help "
-                                       "register or see "
-                                       "http://docs.dal.net/docs/nsemail.html",
+                                       "your nickname, type \"/msg %s help "
+                                       "register\" or see %s",
     /* 478 ERR_BANLISTFULL */	":%s 478 %s %s %s :Channel ban list is full",
     /* 479 ERR_BADCHANNAME */   ":%s 479 %s %s :Channel name contains illegal "
                                 "characters",
@@ -553,7 +551,7 @@ static char *replies[] =
     /* 486 ERR_NONONREG */	":%s 486 %s :You must identify to a "
                                 "registered nick to private message %s",
     /* 487 ERR_MSGSERVICES */	":%s 487 %s :Error! \"/msg %s\" is no longer supported. "
-                                "Use \"/msg %s@services.dal.net\" or \"/%s\" instead.",
+                                "Use \"/msg %s@%s\" or \"/%s\" instead.",
     /* 488 */	                NULL,
     /* 489 */	                NULL,	/* In use by Undernet */
     /* 490 */	                NULL,

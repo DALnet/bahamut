@@ -65,10 +65,11 @@ extern char OS_Stats_Name[HOSTLEN+9];
 extern char SS_Stats_Name[HOSTLEN+9];
 extern char HS_Stats_Name[HOSTLEN+9];
 extern char Staff_Address[HOSTLEN+1];
+extern char NS_Register_URL[TOPICLEN+1];
 extern char Network_Kline_Address[HOSTLEN+1];
 extern char Local_Kline_Address[HOSTLEN+1];
 extern int  maxchannelsperuser, tsmaxdelta, tswarndelta;
-extern int  confopts;
+extern int  confopts, new_confopts;
 
 #ifndef PATH_MAX
 #define PATH_MAX 4096
@@ -96,6 +97,12 @@ extern void 	 check_fdlists();
 extern aChannel *find_channel(char *, aChannel *);
 extern aBan 	*nick_is_banned(aChannel *, char *, aClient *);
 extern void 	 remove_matching_bans(aChannel *, aClient *, aClient *);
+#ifdef EXEMPT_LISTS
+extern void 	 remove_matching_exempts(aChannel *, aClient *, aClient *);
+#endif
+#ifdef INVITE_LISTS
+extern void 	 remove_matching_invites(aChannel *, aClient *, aClient *);
+#endif
 extern void 	 remove_user_from_channel(aClient *, aChannel *);
 extern void 	 del_invite(aClient *, aChannel *);
 extern void 	 send_user_joins(aClient *, aClient *);

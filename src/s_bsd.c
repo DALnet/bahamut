@@ -247,15 +247,11 @@ void
 open_listeners()
 {
     aPort *tmp;
-    aListener *lptr;
     if(!ports)
         sendto_realops("Lost all port configurations!");
     for(tmp = ports; tmp; tmp = tmp->next)
     {
-        for(lptr = listen_list; lptr; lptr = lptr->next)
-            if(tmp->port == lptr->port)
-                break;
-        if(lptr)
+        if(tmp->lstn)
             continue;
         add_listener(tmp);
     }
@@ -678,7 +674,7 @@ int check_server_init(aClient * cptr)
 
     if (!(aconn = find_aConnect(cptr->name)))
     {
-        Debug((DEBUG_DNS, "No Connect block for %s", name));
+        Debug((DEBUG_DNS, "No Connect block for %s", cptr->name));
         return -1;
     }
 
@@ -779,7 +775,7 @@ int check_server_init(aClient * cptr)
 
     get_sockhost(cptr, aconn->host);
     
-    Debug((DEBUG_DNS, "sv_cl: access ok: %s[%s]", name, cptr->sockhost));
+    Debug((DEBUG_DNS, "sv_cl: access ok: %s[%s]", cptr->name, cptr->sockhost));
     return 0;
 }
 

@@ -56,9 +56,7 @@ extern void outofmemory(void);  /* defined in list.c */
 extern void reset_sock_opts();
 extern int send_lusers(aClient *,aClient *,int, char **);
 #endif
-#ifdef NO_CHANOPS_WHEN_SPLIT
 extern int server_was_split;
-#endif
 
 static char buf[BUFSIZE], buf2[BUFSIZE];
 int  user_modes[] =
@@ -374,7 +372,8 @@ check_oper_can_mask(aClient *sptr, char *name, char *password, char **onick)
     char *encr;
     extern char *crypt();
 
-    if(!(aoper = find_oper(name, sptr->username, sptr->sockhost, sptr->hostip)))
+    if(!(aoper = find_oper(name, sptr->user->username, sptr->user->host,
+                           sptr->hostip)))
     {
         sendto_realops("Failed OPERMASK attempt by %s (%s@%s) [No Entry for "
                        "%s]", sptr->name, sptr->user->username,
@@ -890,14 +889,31 @@ register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
         sendto_one(sptr, rpl_str(RPL_MYINFO), me.name, parv[0],
                    me.name, version);
 
-        ircsprintf(tmpstr2,"NOQUIT SAFELIST MODES=%i "
-                   "MAXCHANNELS=%i MAXBANS=%i NICKLEN=%i "
-                   "TOPICLEN=%i KICKLEN=%i CHANTYPES=# "
-                   "PREFIX=(ov)@+ NETWORK=%s SILENCE=%i",
-                   MAXMODEPARAMSUSER,maxchannelsperuser,MAXBANS,
-                   NICKLEN,TOPICLEN,TOPICLEN,Network_Name,MAXSILES);
+
+        /* Most of this tracks draft-brocklesby-irc-isupport-03, with a
+         * few differences:
+         * STD is not sent since there is no RFC
+         * MAXCHANNELS and MAXBANS are sent for compatibility with old clients
+         * SILENCE WATCH and ELIST are sent but not documented
+         */
+
+        /* send MAXBANS and MAXCHANNELS first so better tokens override them */
+        ircsprintf(tmpstr2,"NETWORK=%s SAFELIST MAXBANS=%i MAXCHANNELS=%i "
+                   "CHANNELLEN=%i KICKLEN=%i NICKLEN=%i TOPICLEN=%i MODES=%i "
+                   "CHANTYPES=# CHANLIMIT=#:%i PREFIX=(ov)@+ STATUSMSG=@+",
+                   Network_Name, MAXBANS, maxchannelsperuser, CHANNELLEN,
+                   TOPICLEN, NICKLEN, TOPICLEN, MAXMODEPARAMSUSER,
+                   maxchannelsperuser, MAXSILES);
         sendto_one(sptr, rpl_str(RPL_PROTOCTL), me.name, parv[0], tmpstr2);
-        ircsprintf(tmpstr2,"WATCH=%d CASEMAPPING=ascii ELIST=cmntu "
+
+        /* ugly conditional building now */
+        ircsprintf(tmpstr2, "CASEMAPPING=ascii "
+#ifdef EXEMPT_LISTS
+                   "EXCEPTS "
+#endif
+#ifdef INVITE_LISTS
+                   "INVEX "
+#endif
                    "CHANMODES=b"
 #ifdef EXEMPT_LISTS
                    "e"
@@ -905,8 +921,29 @@ register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
 #ifdef INVITE_LISTS
                    "I"
 #endif
-                   ",k,jl,ciLmMnOprRst",MAXWATCH);
+                   ",k,jl,ci"
+#ifdef USE_CHANMODE_L
+                   "L"
+#endif
+                   "mMnOprRst MAXLIST=b:%i"
+#ifdef EXEMPT_LISTS
+                   ",e:%i"
+#endif
+#ifdef INVITE_LISTS
+                   ",I:%i"
+#endif
+                   " WATCH=%i SILENCE=%i ELIST=cmntu TARGMAX=DCCALLOW:,JOIN:,"
+                   "KICK:4,KILL:20,NOTICE:20,PART:,PRIVMSG:20,WHOIS:,WHOWAS:",
+                   MAXBANS,
+#ifdef EXEMPT_LISTS
+                   MAXEXEMPTLIST,
+#endif
+#ifdef INVITE_LISTS
+                   MAXINVITELIST,
+#endif
+                   MAXWATCH, MAXSILES);
         sendto_one(sptr, rpl_str(RPL_PROTOCTL), me.name, parv[0], tmpstr2);
+
 
 #ifdef FORCE_EVERYONE_HIDDEN
         sptr->umode |= UMODE_I;
@@ -996,7 +1033,7 @@ register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
         else
             send_motd(sptr, sptr, 1, parv);
 
-        if(confopts & FLAGS_WGMON)
+        if((confopts & FLAGS_WGMON) == FLAGS_WGMON)
         {
             sendto_one(sptr, ":%s NOTICE %s :*** Notice -- This server runs an "
                     "open proxy monitor to prevent abuse.", me.name, nick);
@@ -1240,7 +1277,7 @@ check_dccsend(aClient *from, aClient *to, char *msg)
             SetDCCNotice(to);
  
             sendto_one(to, ":%s NOTICE %s :The majority of files sent of this "
-                       "type are malicious virii and trojan horses."
+                       "type are malicious viruses and trojan horses."
                        " In order to prevent the spread of this problem, we "
                        "are blocking DCC sends of these types of"
                        " files by default.", me.name, to->name);
@@ -1426,7 +1463,8 @@ send_msg_error(aClient *sptr, char *parv[], char *nick, int ret)
                    parv[0], nick, parv[2]);
     else if(ret == ERR_NEEDREGGEDNICK)
         sendto_one(sptr, err_str(ERR_NEEDREGGEDNICK), me.name,
-                   parv[0], nick, "speak in");          
+                   parv[0], nick, "speak in", NS_Services_Name,
+                   NS_Register_URL);
     else
         sendto_one(sptr, err_str(ERR_CANNOTSENDTOCHAN), me.name,
                    parv[0], nick);
@@ -1606,13 +1644,13 @@ m_message(aClient *cptr, aClient *sptr, int parc, char *parv[], int notice)
                 if(ismine)
                 {
                     char *tservice = NULL;
-                    if(mycmp(NICKSERV, nick))
+                    if(!mycmp(NICKSERV, nick))
                         tservice = NICKSERV;
-                    else if(mycmp(CHANSERV, nick))
+                    else if(!mycmp(CHANSERV, nick))
                         tservice = CHANSERV;
-                    else if(mycmp(MEMOSERV, nick))
+                    else if(!mycmp(MEMOSERV, nick))
                         tservice = MEMOSERV;
-                    else if(mycmp(ROOTSERV, nick))
+                    else if(!mycmp(ROOTSERV, nick))
                         tservice = ROOTSERV;
 
                     if(tservice != NULL)
@@ -1620,7 +1658,7 @@ m_message(aClient *cptr, aClient *sptr, int parc, char *parv[], int notice)
                         if(!notice)
                             sendto_one(sptr, rpl_str(ERR_MSGSERVICES), 
                                        me.name, parv[0], tservice, tservice, 
-                                       tservice);
+                                       Services_Name, tservice);
                         continue;
                     }
                 }
@@ -1647,7 +1685,7 @@ m_message(aClient *cptr, aClient *sptr, int parc, char *parv[], int notice)
                     ret = IsULine(sptr) ? 0 : can_send(sptr, chptr, parv[2]);
                     if (ret)
                     {
-                        if(notice)
+                        if(!notice)
                             send_msg_error(sptr, parv, nick, ret);
                     }
                     else 
@@ -1663,7 +1701,7 @@ m_message(aClient *cptr, aClient *sptr, int parc, char *parv[], int notice)
                     ret = IsULine(sptr) ? 0 : can_send(sptr, chptr, parv[2]);
                     if (ret)
                     {
-                        if(notice)
+                        if(!notice)
                             send_msg_error(sptr, parv, nick, ret);
                     }
                     else
@@ -1684,7 +1722,7 @@ m_message(aClient *cptr, aClient *sptr, int parc, char *parv[], int notice)
                 ret = IsULine(sptr) ? 0 : can_send(sptr, chptr, parv[2]);
                 if (ret)
                 {
-                    if(notice)
+                    if(!notice)
                         send_msg_error(sptr, parv, nick, ret);
                 }
                 else
@@ -2535,10 +2573,10 @@ m_pong(aClient *cptr, aClient *sptr, int parc, char *parv[])
             sptr->flags &= ~FLAGS_TOPICBURST;
             sendto_gnotice("from %s: %s has processed topic burst (synched "
                            "to network data).", me.name, sptr->name);
-#ifdef NO_CHANOPS_WHEN_SPLIT
+
             if(server_was_split)
                 server_was_split = NO;
-#endif
+
             if(confopts & FLAGS_HUB)
                 sendto_serv_butone(sptr, ":%s GNOTICE :%s has synched to"
                                " network data.", me.name, sptr->name);
@@ -2657,10 +2695,10 @@ int m_oper(aClient *cptr, aClient *sptr, int parc, char *parv[])
         return 0;
     }
 #if (RIDICULOUS_PARANOIA_LEVEL>=1)
-    if(!(sptr->user && sptr->user->real_oper_host))
+    if(!sptr->user->real_oper_host)
     {
 #endif
-        if(!(aoper = find_oper(name, sptr->username, sptr->sockhost, 
+        if(!(aoper = find_oper(name, sptr->user->username, sptr->user->host, 
                                sptr->hostip)))
         {
             sendto_one(sptr, err_str(ERR_NOOPERHOST), me.name, parv[0]);

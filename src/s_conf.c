@@ -53,6 +53,7 @@ extern aConnect     *make_connect();
 extern aAllow       *make_allow();
 extern struct Conf_Me   *make_me();
 extern aPort        *make_port();
+extern void          read_shortmotd(char *);
 
 /* these are our global lists of ACTIVE conf entries */
 
@@ -124,6 +125,8 @@ void init_globals()
                 STATSERV, Stats_Name);
     snprintf(HS_Stats_Name, sizeof(HS_Stats_Name), "%s@%s", 
                 HELPSERV, Stats_Name);
+    strncpyzt(NS_Register_URL, DEFAULT_NS_REGISTER_URL,
+              sizeof(NS_Register_URL));
     strncpyzt(Network_Kline_Address, DEFAULT_NKLINE_ADDY,
                                             sizeof(Network_Kline_Address));
     strncpyzt(Local_Kline_Address, DEFAULT_LKLINE_ADDY,
@@ -324,8 +327,12 @@ find_aConnect_match(char *name, char *username, char *host)
     ircsprintf(userhost, "%s@%s", username, host);
 
     for(aconn = connects; aconn; aconn = aconn->next)
+    {
+        if (aconn->legal == -1)
+            continue;
         if(!mycmp(name, aconn->name) && !match(userhost, aconn->host))
             break;
+    }
     return aconn;
 }
 
@@ -357,6 +364,9 @@ find_oper(char *name, char *username, char *sockhost, char *hostip)
 
     for(aoper = opers; aoper; aoper = aoper->next)
     {
+        if (aoper->legal == -1)
+            continue;
+
         for(i = 0; aoper->hosts[i]; i++)
         {
             if(!mycmp(name, aoper->nick) && (!match(aoper->hosts[i], userhost) 
@@ -500,7 +510,7 @@ attach_Iline(aClient *cptr, struct hostent *hp, char *sockhost)
 static int 
 attach_iline(aClient *cptr, aAllow *allow, char *uhost, int doid)
 {
-    if(allow->clients >= allow->class->maxlinks)
+    if(allow->class->links >= allow->class->maxlinks)
         return -3;
 
     if (doid)
@@ -821,6 +831,7 @@ confadd_options(cVar *vars[], int lnum)
 
     /* here, because none of the option peice are interdependent
      * all the items are added immediately.   Makes life easier
+     * ...except the option flags, which are handled specially -Quension
      */
 
     for(tmp = vars[c]; tmp; tmp = vars[++c])
@@ -857,14 +868,19 @@ confadd_options(cVar *vars[], int lnum)
         else if(tmp->type && (tmp->type->flag & OPTF_WGMONHOST))
         {
             tmp->type = NULL;
-            confopts |= FLAGS_WGMONURL;
+            new_confopts |= FLAGS_WGMONURL;
             strncpyzt(ProxyMonHost, tmp->value, sizeof(ProxyMonHost));
         }
         else if(tmp->type && (tmp->type->flag & OPTF_WGMONURL))
         {
             tmp->type = NULL;
-            confopts |= FLAGS_WGMONHOST;
+            new_confopts |= FLAGS_WGMONHOST;
             strncpyzt(ProxyMonURL, tmp->value, sizeof(ProxyMonURL));
+        }
+        else if(tmp->type && (tmp->type->flag & OPTF_NSREGURL))
+        {
+            tmp->type = NULL;
+            strncpyzt(NS_Register_URL, tmp->value, sizeof(NS_Register_URL));
         }
         else if(tmp->type && (tmp->type->flag & OPTF_MAXCHAN))
         {
@@ -875,14 +891,17 @@ confadd_options(cVar *vars[], int lnum)
         {
             tmp->type = NULL;
             if(!mycmp("HUB", tmp->value))
-                confopts = FLAGS_HUB;
+            {
+                new_confopts |= FLAGS_HUB;
+                new_confopts &= ~FLAGS_SERVHUB;
+            }
             else if(!mycmp("SERVICESHUB", tmp->value))
             {
-                confopts |= FLAGS_SERVHUB;
-                confopts |= FLAGS_HUB;
+                new_confopts |= FLAGS_SERVHUB;
+                new_confopts |= FLAGS_HUB;
             }
             else if(!mycmp("CLIENT", tmp->value))
-                confopts &= ~(FLAGS_HUB|FLAGS_SERVHUB);
+                new_confopts &= ~(FLAGS_HUB|FLAGS_SERVHUB);
             else
             {
                 confparse_error("Unknown servtype in option block", lnum);
@@ -909,17 +928,27 @@ confadd_options(cVar *vars[], int lnum)
         else if(tmp->type && (tmp->type->flag & OPTF_SMOTD))
         {
             tmp->type = NULL;
-            confopts |= FLAGS_SMOTD;
+            new_confopts |= FLAGS_SMOTD;
         }
         else if(tmp->type && (tmp->type->flag & OPTF_SMOTD))
         {
             tmp->type = NULL;
-            confopts |= FLAGS_SMOTD;
+            new_confopts |= FLAGS_SMOTD;
         }
         else if(tmp->type && (tmp->type->flag & OPTF_CRYPTPASS))
         {
             tmp->type = NULL;
-            confopts |= FLAGS_CRYPTPASS;
+            new_confopts |= FLAGS_CRYPTPASS;
+        }
+        else if(tmp->type && (tmp->type->flag & OPTF_SHOWLINKS))
+        {
+            tmp->type = NULL;
+            new_confopts |= FLAGS_SHOWLINKS;
+        }
+        else if(tmp->type && (tmp->type->flag & OPTF_SPLITOPOK))
+        {
+            tmp->type = NULL;
+            new_confopts |= FLAGS_SPLITOPOK;
         }
         else if(tmp->type && (tmp->type->flag & OPTF_TSMAXDELTA))
         {
@@ -1753,8 +1782,34 @@ merge_allows()
     allow = new_allows;
     while(allow)
     {
-        /* we dont really have to merge anything here.. */
         allow->class = find_class(allow->class_name);
+        /* we dont really have to merge anything here.. */
+        /* ..but we should avoid duplicates anyway */
+        for (ptr = allows; ptr; ptr = ptr->next)
+        {
+            if (ptr->class != allow->class)
+                continue;
+            if (ptr->port != allow->port)
+                continue;
+            if (ptr->flags != allow->flags)
+                continue;
+            if (mycmp(ptr->ipmask, allow->ipmask))
+                continue;
+            if (mycmp(ptr->hostmask, allow->hostmask))
+                continue;
+            /* inverted logic below */
+            if (ptr->passwd && allow->passwd
+                && !mycmp(ptr->passwd, allow->passwd))
+                break;
+            if (ptr->passwd == allow->passwd)
+                break;
+        }
+        /* if duplicate, mark for deletion but add anyway */
+        if (ptr)
+        {
+            ptr->legal = 1;
+            allow->legal = -1;
+        }
         ptr = allow->next;
         allow->next = allows;
         allows = allow;
@@ -1974,6 +2029,14 @@ merge_classes()
 }
 
 void
+merge_options(void)
+{
+    if (forked && !(confopts & FLAGS_SMOTD) && (new_confopts & FLAGS_SMOTD))
+        read_shortmotd(SHORTMOTD);
+    confopts = new_confopts;
+}
+
+void
 merge_confs()
 {
     int i;
@@ -1984,6 +2047,7 @@ merge_confs()
     merge_allows();
     merge_opers();
     merge_ports();
+    merge_options();
     for(i = 0; uservers[i]; i++)
         MyFree(uservers[i]);
     for(i = 0; new_uservers[i]; i++)
@@ -2136,6 +2200,7 @@ int rehash(aClient *cptr, aClient *sptr, int sig)
 
 
     initclass();
+    new_confopts = 0;
 
     if(initconf(configfile) == -1)
     {

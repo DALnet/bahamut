@@ -26,28 +26,34 @@ m_module(aClient *cptr, aClient *sptr, int parc, char *parv[])
         sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name, parv[0]);
         return 0;
     }
-    if(parc < 2)
-    {
-        sendto_one(sptr, err_str(ERR_NEEDMOREPARAMS), me.name,
-                        parv[0], "MODULE");
-        return 0;
-    }
 
-    /* if its a query of a remote server, fire it off */
-    if(hunt_server(cptr, sptr, ":%s MODULE %s %s", 2,
-                   parc, parv) != HUNTED_ISME)
-        return 0;
-    else if(parc > 2 && (mycmp(parv[1], "CGLOBAL") == 0))
+    if (parc > 2)
     {
-        char pbuf[512];
+        if (!mycmp(parv[1], "LIST") || !mycmp(parv[1], "HOOKS"))
+        {
+            if (hunt_server(cptr, sptr, "%s MODULE %s %s", 2, parc, parv)
+                != HUNTED_ISME)
+                return 0;
+        }
+        else if (!mycmp(parv[1], "CGLOBAL"))
+        {
+            char pbuf[512];
 
-        if(!(IsServer(sptr) || IsULine(sptr)))
+            if(!(IsServer(sptr) || IsULine(sptr)))
+                return 0;
+
+            /* Pass this on to all servers! */
+            make_parv_copy(pbuf, parc, parv);
+            sendto_serv_butone(cptr, ":%s MODULE %s", parv[0], pbuf);
+
             return 0;
-
-        /* Pass this on to all servers! */
-        make_parv_copy(pbuf, parc, parv);
-        sendto_serv_butone(cptr, ":%s MODULE %s", parv[0], pbuf);
+        }
     }
+
+    if (IsPerson(sptr))
+        sendto_one(sptr, "%s NOTICE %s :I don't have module support.",
+                   me.name, sptr->name);
+
     return 0;
 }
 
@@ -201,7 +207,7 @@ load_module(aClient *sptr, char *modname)
         return 0;
     }
 
-    if(modules->module_path)
+    if(modules && modules->module_path)
         ircsnprintf(mnamebuf, 512, "%s/%s.so", modules->module_path, modname);
     else
         ircsnprintf(mnamebuf, 512, "%s/modules/%s.so", dpath, modname);
@@ -331,16 +337,11 @@ m_module(aClient *cptr, aClient *sptr, int parc, char *parv[])
         return 0;
     }
 
-    /* if its a query of a remote server, fire it off */
-    if(hunt_server(cptr, sptr, ":%s MODULE %s %s", 2, 
-            parc, parv) != HUNTED_ISME)
-        return 0;
-
     /* this should technically never happen anyway, but.. */
     if(!MyClient(sptr) && !(IsAnOper(sptr) || IsULine(sptr) || IsServer(sptr)))
         return 0;
 
-    if(parc > 2 && mycmp(parv[1], "LOAD") == 0)
+    if(mycmp(parv[1], "LOAD") == 0)
     {
         if(!(MyClient(sptr) && IsAdmin(sptr)))
         {
@@ -357,7 +358,7 @@ m_module(aClient *cptr, aClient *sptr, int parc, char *parv[])
         }
 
     }
-    else if(parc > 2 && mycmp(parv[1], "UNLOAD") == 0)
+    else if(mycmp(parv[1], "UNLOAD") == 0)
     {
         if(!(MyClient(sptr) && IsAdmin(sptr)))
         {
@@ -373,24 +374,38 @@ m_module(aClient *cptr, aClient *sptr, int parc, char *parv[])
             return 0;
         }
     }
-    else if(parc > 1 && mycmp(parv[1], "LIST") == 0)
+    else if(mycmp(parv[1], "LIST") == 0)
     {
+        if(parc > 2 && hunt_server(cptr, sptr, ":%s MODULE %s %s", 2,
+                       parc, parv) != HUNTED_ISME)
+            return 0;
+
         list_modules(sptr);
         sendto_one(sptr, ":%s NOTICE %s :--- End of module list ---",
                    me.name, sptr->name);
     }
-    else if(parc > 1 && mycmp(parv[1], "HOOKS") == 0)
+    else if(mycmp(parv[1], "HOOKS") == 0)
     {
+        if(parc > 2 && hunt_server(cptr, sptr, ":%s MODULE %s %s", 2,
+                                   parc, parv) != HUNTED_ISME)
+            return 0;
+
         list_hooks(sptr);
         sendto_one(sptr, ":%s NOTICE %s :--- End of hook list ---",
                    me.name, sptr->name);
     }
-    else if(parc > 2 && mycmp(parv[1], "CMD") == 0)
+    else if(mycmp(parv[1], "CMD") == 0)
     {
         aModule *themod;
         if(!(MyClient(sptr) && IsAdmin(sptr)))
         {
             sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name, parv[0]);
+            return 0;
+        }
+        if(BadPtr(parv[2]))
+        {
+            sendto_one(sptr, err_str(ERR_NEEDMOREPARAMS), me.name,
+                       parv[0], "MODULE");
             return 0;
         }
         themod = find_module(parv[2]);
@@ -402,7 +417,7 @@ m_module(aClient *cptr, aClient *sptr, int parc, char *parv[])
         }
         return (*themod->module_command) (sptr, parc - 2, parv + 2);
     }
-    else if(!MyClient(sptr) && parc > 2 && mycmp(parv[1], "CGLOBAL") == 0)
+    else if(parc > 2 && mycmp(parv[1], "CGLOBAL") == 0)
     {
         char pbuf[512];
         aModule *themod;

@@ -529,11 +529,9 @@ m_links(aClient *cptr, aClient *sptr, int parc, char *parv[])
                            sptr->name, sptr->user->username,
                            sptr->user->host, sptr->user->server);
 
-#ifdef HIDE_LINKS
-    if(!IsAnOper(sptr))
+    if(!(confopts & FLAGS_SHOWLINKS) && !IsAnOper(sptr))
         fakeserver_list(sptr);
     else
-#endif
     for (acptr = client, (void) collapse(mask); acptr; acptr = acptr->next) 
     {
         if (!IsServer(acptr) && !IsMe(acptr))
@@ -1556,11 +1554,6 @@ m_set(aClient *cptr, aClient *sptr, int parc, char *parv[])
                    me.name, parv[0]);
 #endif
 
-#ifdef NO_CHANOPS_WHEN_SPLIT
-        sendto_one(sptr, ":%s NOTICE %s :Options: SPLITDELAY",
-                   me.name, parv[0]);
-#endif
-
         sendto_one(sptr, ":%s NOTICE %s :Options: THROTTLE "
               "<ENABLE|COUNT|TIME|RECORDTIME|HASH> [setting]", me.name, parv[0]);
     }
@@ -2311,7 +2304,7 @@ m_trace(aClient *cptr, aClient *sptr, int parc, char *parv[])
     aClass      *cltmp;
     char        *tname;
     int          doall, link_s[MAXCONNECTIONS], link_u[MAXCONNECTIONS];
-    int          cnt = 0, wilds = 0, dow = 0;
+    int          wilds = 0, dow = 0;
         
     tname = (parc > 1) ? parv[1] : me.name;
 
@@ -2465,12 +2458,10 @@ m_trace(aClient *cptr, aClient *sptr, int parc, char *parv[])
             case STAT_CONNECTING:
                 sendto_one(sptr, rpl_str(RPL_TRACECONNECTING), me.name,
                            parv[0], class, name);
-                cnt++;
                 break;
             case STAT_HANDSHAKE:
                 sendto_one(sptr, rpl_str(RPL_TRACEHANDSHAKE), me.name,
                            parv[0], class, name);
-                cnt++;
                 break;
             case STAT_ME:
                 break;
@@ -2479,7 +2470,6 @@ m_trace(aClient *cptr, aClient *sptr, int parc, char *parv[])
                 sendto_one(sptr, rpl_str(RPL_TRACEUNKNOWN),
                           me.name, parv[0], class, name,
                           acptr->firsttime ? timeofday - acptr->firsttime : -1);
-                cnt++;
                 break;
             case STAT_CLIENT:
                 /*
@@ -2504,42 +2494,23 @@ m_trace(aClient *cptr, aClient *sptr, int parc, char *parv[])
                            *(acptr->serv->byuser) ? acptr->serv->byuser : "*", 
                            *(acptr->serv->byhost) ? acptr->serv->byhost : 
                            me.name);
-                cnt++;
                 break;
             case STAT_LOG:
                 sendto_one(sptr, rpl_str(RPL_TRACELOG), me.name,
                            parv[0], LOGFILE, acptr->port);
-                cnt++;
                 break;
             default:                /* ...we actually shouldn't come here... */
                 sendto_one(sptr, rpl_str(RPL_TRACENEWTYPE), me.name,
                            parv[0], name);
-                cnt++;
                 break;
         }
     }
 
-    /*
-     * Add these lines to summarize the above which can get rather long
-     * and messy when done remotely - Avalon
-     */
-    if (!SendWallops(sptr) || !cnt) 
-    {
-        if (cnt) 
-        {
-            sendto_one(sptr, rpl_str(RPL_ENDOFTRACE), me.name,
-                       parv[0], tname);
-            return 0;
-        }
-        /* let the user have some idea that its at the end of the trace */
-        sendto_one(sptr, rpl_str(RPL_TRACESERVER),
-                   me.name, parv[0], "NONE", link_s[me.fd],
-                   link_u[me.fd], me.name, "*", "*", me.name,
-                   timeofday - acptr->lasttime);
-        sendto_one(sptr, rpl_str(RPL_ENDOFTRACE), me.name,
-                   parv[0], tname);
-        return 0;
-    }
+    /* let the user have some idea that its at the end of the trace */
+    sendto_one(sptr, rpl_str(RPL_TRACESERVER),
+                me.name, parv[0], "NONE", link_s[me.fd],
+                link_u[me.fd], me.name, "*", "*", me.name,
+                timeofday - acptr->lasttime);
 #ifdef HIDEULINEDSERVS
     if (IsOper(sptr))
 #endif
@@ -2974,6 +2945,9 @@ m_svskill(aClient *cptr, aClient *sptr, int parc, char *parv[])
     char *comment;
     char reason[TOPICLEN + 1];
     ts_val ts = 0;
+
+    if (parc < 2)
+        return 0;
 
     if (parc > 3) 
     {

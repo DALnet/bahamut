@@ -31,6 +31,8 @@
 #include "throttle.h"
 #include "sbuf.h"
 
+#include "structfunc.h"     /* here for compiler prototype checks */
+
 aClient *ac_next(aClient *cptr)
 {
 	return cptr->next;

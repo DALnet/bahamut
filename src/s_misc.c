@@ -45,9 +45,7 @@
 
 extern float curSendK, curRecvK;
 
-#ifdef NO_CHANOPS_WHEN_SPLIT
 extern int  server_was_split;
-#endif
 
 #ifdef ALWAYS_SEND_DURING_SPLIT
 int currently_processing_netsplit = NO;
@@ -582,10 +580,8 @@ exit_client(aClient *cptr, aClient *sptr, aClient *from, char *comment)
             if (IsULine(sptr))
                 Count.myulined--;
             remove_from_list(&server_list, sptr, NULL);
-#ifdef NO_CHANOPS_WHEN_SPLIT
             if (server_list == NULL) 
                 server_was_split = YES;
-#endif
         }
         sptr->flags |= FLAGS_CLOSING;
         if (IsPerson(sptr)) 

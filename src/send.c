@@ -44,6 +44,7 @@ extern int currently_processing_netsplit;
 
 static char sendbuf[2048];
 static char remotebuf[2048];
+static char selfbuf[256];
 static int  send_message(aClient *, char *, int, void*);
 
 #ifdef HAVE_ENCRYPTION_ON
@@ -175,7 +176,8 @@ static int send_message(aClient *to, char *msg, int len, void* sbuf)
 
     if (IsMe(to)) 
     {
-        sendto_ops("Trying to send to myself! [%s]", msg);
+        strncpyzt(selfbuf, msg, sizeof(selfbuf));
+        sendto_ops("Trying to send to myself! [%s]", selfbuf);
         return 0;
     }
    
@@ -408,7 +410,8 @@ void sendto_one(aClient *to, char *pattern, ...)
         to = to->from;
     if (IsMe(to)) 
     {
-        sendto_ops("Trying to send [%s] to myself!", sendbuf);
+        strncpyzt(selfbuf, sendbuf, sizeof(selfbuf));
+        sendto_ops("Trying to send [%s] to myself!", selfbuf);
         return;
     }
     send_message(to, sendbuf, len, NULL);
@@ -434,7 +437,8 @@ void sendto_one_services(aClient *to, char *pattern, ...)
         to = to->from;
     if (IsMe(to)) 
     {
-        sendto_ops("Trying to send [%s] to myself!", sendbuf);
+        strncpyzt(selfbuf, sendbuf, sizeof(selfbuf));
+        sendto_ops("Trying to send [%s] to myself!", selfbuf);
         return;
     }
     send_message(to, sendbuf, len, NULL);
@@ -451,7 +455,8 @@ void vsendto_one(aClient *to, char *pattern, va_list vl)
         to = to->from;
     if (IsMe(to) && to->fd >= 0) 
     {
-        sendto_ops("Trying to send [%s] to myself!", sendbuf);
+        strncpyzt(selfbuf, sendbuf, sizeof(selfbuf));
+        sendto_ops("Trying to send [%s] to myself!", selfbuf);
         return;
     }
     send_message(to, sendbuf, len, NULL);
