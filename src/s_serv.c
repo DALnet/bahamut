@@ -3208,7 +3208,7 @@ int m_kline(aClient *cptr, aClient *sptr, int parc, char *parv[])
     char       *user, *host;
     char       *reason;
     char       *current_date;
-    aClient    *acptr;
+    aClient    *acptr,*acptr2;
     char        tempuser[USERLEN + 2];
     char        temphost[HOSTLEN + 1];
     aConfItem  *aconf;
@@ -3403,23 +3403,25 @@ int m_kline(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	add_temp_kline(aconf);
 	for (i = 0; i <= highest_fd; i++)
 	{
-	    if (!(acptr = local[i]) || IsMe(cptr) || IsLog(cptr))
+	    if (!(acptr2 = local[i]) || IsMe(acptr2) || IsLog(acptr2))
 		continue;
-	    if (IsPerson(acptr)) {
-		if ((acptr->user->username)&&(((acptr->sockhost)&&
-					       (!match(acptr->sockhost,host)&&
-						!match(acptr->user->username,
-						       user )))||
-					      ((acptr->hostip)&&
-					       (!match(acptr->hostip,host)&&
-						!match(acptr->user->username,
-						       user)))))
+	    if (IsPerson(acptr2)) 
+	    {
+		if ((acptr2->user->username)&&(((acptr2->sockhost)&&
+					       (!match(host,acptr2->sockhost)&&
+						!match(user,
+						       acptr2->user->username)
+						   ))||((acptr2->hostip)&&
+					       (!match(host,acptr2->hostip)&&
+						!match(user,
+						       acptr2->user->username)
+						   ))))
 		    
 		{
 		    sendto_ops("K-Line active for %s",
-			       get_client_name(acptr, FALSE));
+			       get_client_name(acptr2, FALSE));
 		    ircsprintf(fbuf,"K-Lined: %s",reason);
-		    (void) exit_client(acptr,acptr,&me,fbuf);
+		    (void) exit_client(acptr2,acptr2,&me,fbuf);
 		}
 	    }
 	}
@@ -5143,17 +5145,18 @@ int m_akill(aClient *cptr, aClient *sptr, int parc, char *parv[])
     /* Check local users against it */
     for (i = 0; i <= highest_fd; i++)
     {
-	if (!(acptr = local[i]) || IsMe(cptr) || IsLog(cptr))
+	if (!(acptr = local[i]) || IsMe(acptr) || IsLog(acptr))
             continue;
-	if (IsPerson(acptr)) {
+	if (IsPerson(acptr))
+	{
 	    if ((acptr->user->username)&&(((acptr->sockhost)&& 
-					   (!match(acptr->sockhost,host)&&
-					    !match(acptr->user->username,
-						   user )))||
+					   (!match(host,acptr->sockhost)&&
+					    !match(user,
+						   acptr->user->username)))||
 					  ((acptr->hostip)&&
-					   (!match(acptr->hostip,host)&&
-					    !match(acptr->user->username,
-						   user)))))
+					   (!match(host,acptr->hostip)&&
+					    !match(user,
+						   acptr->user->username)))))
 		
 	    {
 		sendto_ops("Autokill active for %s",
