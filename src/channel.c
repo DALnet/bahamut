@@ -105,6 +105,27 @@ static int list_length(Link *lp)
     return count;
 }
 
+/* check to see if the message has any color chars in it. */
+static int
+msg_has_colors(char *msg)
+{
+
+    char *c;
+    if (msg == NULL) 
+        return 0;
+    c = msg;
+    while(*c)
+    {
+        if(*c == '\003' || *c == '\033')
+            break;
+        else
+            c++;
+    }
+    if(*c)
+        return 1;
+    return 0;
+}
+
 /*
  * find_chasing 
  *   Find the client structure for a nick name (user) using history 

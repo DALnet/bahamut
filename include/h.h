@@ -207,8 +207,6 @@ extern int  	  exit_client(aClient *, aClient *, aClient *, char *);
 extern void 	  initstats(void);
 extern char      *make_parv_copy(char *, int, char **);
 
-int               msg_has_colors(char *);
-
 extern int  	  parse(aClient *, char *, char *);
 extern void 	  init_tree_parse(struct Message *);
 
@@ -220,7 +218,6 @@ extern aClient 	 *next_client_double(aClient *, char *);
 extern int  	  m_umode(aClient *, aClient *, int, char **);
 extern int  	  m_names(aClient *, aClient *, int, char **);
 extern void 	  send_umode(aClient *, aClient *, int, int, char *);
-extern void	  send_umode_out(aClient *, aClient *, int);
 extern int 	  del_silence(aClient *, char *);
 
 
@@ -295,7 +292,6 @@ extern FILE 	 *dumpfp;
 #endif
 
 #ifdef FLUD
-int         	  check_for_ctcp();
 int         	  check_for_flood();
 void        	  free_fluders();
 void        	  free_fludees();

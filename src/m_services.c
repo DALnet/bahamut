@@ -36,12 +36,6 @@
 
 /* Externally defined stuffs */
 extern int user_modes[];
-extern unsigned long my_rand();
-
-/* internally defined stuffs */
-
-
-
 
 /*
  * the services aliases. *
@@ -50,6 +44,33 @@ extern unsigned long my_rand();
  * /operserv * MEMOSERV         - /memoserv * SERVICES  - /services *
  * IDENTIFY     - /identify * taz's code -mjs
  */
+
+/* Code provided by orabidoo */
+/*
+ * a random number generator loosely based on RC5; assumes ints are at
+ * least 32 bit
+ */
+
+static unsigned long 
+my_rand()
+{
+    static unsigned long s = 0, t = 0, k = 12345678;
+    int         i;
+
+    if (s == 0 && t == 0)
+    {
+        s = (unsigned long) getpid();
+        t = (unsigned long) time(NULL);
+    }
+    for (i = 0; i < 12; i++)
+    {
+        s = (((s ^ t) << (t & 31)) | ((s ^ t) >> (31 - (t & 31)))) + k;
+        k += s + t;
+        t = (((t ^ s) << (s & 31)) | ((t ^ s) >> (31 - (s & 31)))) + k;
+        k += s + t;
+    }
+    return s;
+}
 
 /* m_ns */
 int m_ns(aClient *cptr, aClient *sptr, int parc, char *parv[]) 
