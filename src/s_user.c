@@ -968,7 +968,7 @@ register_user(aClient *cptr,
             }
             sptr->ip.s_addr = 0;
             strcpy(sptr->hostip, "0.0.0.0");
-            strcpy(sptr->sockhost, STAFF_ADDRESS);
+            strncpy(sptr->sockhost, STAFF_ADDRESS, HOSTLEN + 1);
          }
 
          if(tmpptr)
