@@ -2299,7 +2299,8 @@ int build_searchopts(aClient *sptr, int parc, char *parv[]) {
 			if(!IsAnOper(sptr)) /* only let users search for +/-oOaA */
 			  wsopts.umodes=(wsopts.umodes&(UMODE_o|UMODE_O|UMODE_a|UMODE_A));
 			wsopts.umode_plus=change;
-			wsopts.check_umode=1;
+			if(wsopts.umodes)
+                           wsopts.check_umode=1;
 			args++;
 			break;
 		 case 'n':
