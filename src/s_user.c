@@ -3126,7 +3126,9 @@ int m_umode(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	   ) sptr->umode |= UMODE_I;
 #  endif /* FORCE_OPERS_HIDDEN */
 # endif /* FORCE_EVERYONE_HIDDEN */
-#endif /* ALLOW_HIDDEN_OPERS */
+#else /* ALLOW_HIDDEN_OPERS */
+	if (IsUmodeI(sptr)) ClearUmodeI(sptr);
+#endif
     }
     send_umode_out(cptr, sptr, setflags);
     
