@@ -68,6 +68,14 @@ void engine_add_fd(int fd)
 
 void engine_del_fd(int fd)
 {
+/* we dont accually need to do this, as a close() clears the kevent
+ * filters and automagically removes itself from the queue.
+ * plus, now that i do this, the odd bug we've had with kqueue just
+ * (appearently randomly) not returning certain write capable sockets
+ * seems to have gone away.  Makes me nervous, but this is safe change
+ * all the same.
+ * -epi
+
    struct kevent e;
 
    e.ident = fd;
@@ -85,6 +93,7 @@ void engine_del_fd(int fd)
    e.data = 0;
    e.udata = NULL;
    kevent_add(&e);
+ */
 }
 
 void engine_change_fd_state(int fd, unsigned int stateplus)

@@ -26,7 +26,7 @@
 #define BETA    2
 #define CURRENT 3
 
-#define BRANCHSTATUS CURRENT
+#define BRANCHSTATUS BETA
 
 #define BASENAME "bahamut"
 #define MAJOR 1
