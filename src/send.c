@@ -35,6 +35,7 @@ extern int currently_processing_netsplit;
 
 static char sendbuf[2048];
 static char remotebuf[2048];
+static char rc4buf[768];
 static int  send_message(aClient *, char *, int);
 
 static int  sentalong[MAXCONNECTIONS];
@@ -178,7 +179,11 @@ static int send_message(aClient *to, char *msg, int len) {
    }
 
    if(IsRC4OUT(to))
-      rc4_process_stream(to->serv->rc4_out, msg, len);
+   {
+      /* don't destroy the data in 'msg' */
+      rc4_process_stream(to->serv->rc4_out, msg, rc4buf, len);
+      msg = rc4buf;
+   }
 
    if (dbuf_put(&to->sendQ, msg, len) < 0)
      return dead_link(to, "Buffer allocation error for %s, closing link");

@@ -76,6 +76,30 @@ void rc4_process_stream(void *rc4_context, unsigned char *istring, unsigned int 
    rc4->y = (RC4BYTE) y;
 }
 
+void rc4_process_stream_to_buf(void *rc4_context, const unsigned char *istring, 
+                               unsigned char *ostring, unsigned int stringlen)
+{
+   struct rc4_state *rc4 = (struct rc4_state *) rc4_context;
+   RC4BYTE *s = rc4->mstate;
+   RC4DWORD x = rc4->x, y = rc4->y;
+   
+   while(stringlen--)
+   {
+      RC4DWORD a, b;
+
+      x = (x+1) & 0xFF;
+      a = s[x];
+      y = (y+a) & 0xFF;
+      b = s[y];
+      s[x] = b;
+      s[y] = a;
+      *ostring++ = *istring++ ^ s[(a + b) & 0xFF];
+   }
+
+   rc4->x = (RC4BYTE) x;
+   rc4->y = (RC4BYTE) y;
+}
+
 void rc4_destroystate(void *a)
 {
    memset(a, 0, sizeof(struct rc4_state));
