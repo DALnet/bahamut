@@ -45,6 +45,10 @@ void print_list_memory(aClient *cptr)
    lc = get_list_memory(listing_clients);
    sendto_one(cptr, ":%s %d %s :   listing_clients %d(%d)",
               me.name, RPL_STATSDEBUG, cptr->name, lc, lc * sizeof(Link));
+
+   lc = get_list_memory(recvq_clients);
+   sendto_one(cptr, ":%s %d %s :   recvq_clients %d(%d)",
+              me.name, RPL_STATSDEBUG, cptr->name, lc, lc * sizeof(Link));
 }
 
 void add_to_list(Link **list, aClient *cptr) 

@@ -82,6 +82,7 @@ extern void count_memory(aClient *, char *);
 extern void rehash_ip_hash();	/* defined in s_conf.c */
 extern char *find_restartpass();
 extern char *find_diepass();
+extern void report_fds();
 
 /* Local function prototypes */
 
