@@ -275,11 +275,13 @@ struct Message msgtab[] = {
    {MSG_RAKILL,   m_rakill,   0, MAXPARA, 1, 0, 0, 0L}, 
    {MSG_SILENCE,  m_silence,  0, MAXPARA, 1, 0, 0, 0L },
 #ifdef USE_WATCH
-	{MSG_WATCH, m_watch, 0, 1, 1, 0, 0, 0L },
+   {MSG_WATCH, m_watch, 0, 1, 1, 0, 0, 0L },
 #endif
-	{MSG_SQLINE, m_sqline, 0, MAXPARA, 1, 0, 0, 0L},
-	{MSG_UNSQLINE, m_unsqline, 0, MAXPARA, 1, 0, 0, 0L },
+   {MSG_SQLINE, m_sqline, 0, MAXPARA, 1, 0, 0, 0L},
+   {MSG_UNSQLINE, m_unsqline, 0, MAXPARA, 1, 0, 0, 0L },
+#ifdef DEBUG_DBUF
    {MSG_DBUF,  m_dbuf, 0, MAXPARA, 1, 0, 0, 0L},
+#endif
    {MSG_CAPAB, m_capab, 0, MAXPARA, 1, 1, 0, 0L},
    {(char *) 0, (int (*)()) 0, 0, 0, 0, 0, 0, 0L}
 };

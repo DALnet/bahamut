@@ -416,7 +416,7 @@ count_memory(aClient *cptr, char *nick)
 
 				 * memory used by conf lines 
 				 */
-   u_long      db = 0;		/*
+   u_long      db = 0, db2 = 0;		/*
 
 				 * memory used by dbufs 
 				 */
@@ -550,9 +550,9 @@ count_memory(aClient *cptr, char *nick)
 				  WATCHHASHSIZE, sizeof(aWatch *) * WATCHHASHSIZE);
 
    db = dbufblocks * sizeof(dbufbuf);
-
-   sendto_one(cptr, ":%s %d %s :Dbuf blocks %d(%d)",
-	      me.name, RPL_STATSDEBUG, nick, dbufblocks, db);
+   db2 = dbufalloc * sizeof(dbufbuf);
+   sendto_one(cptr, ":%s %d %s :Dbuf blocks %d(%d) MAX %d(%d)",
+	      me.name, RPL_STATSDEBUG, nick, dbufalloc, db2 ,dbufblocks, db);
 
    rm = cres_mem(cptr);
 
