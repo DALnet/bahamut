@@ -753,7 +753,9 @@ proc_answer(ResRQ * rptr,
             {
                if(!num_acc_answers || !(acc = is_acceptable_answer(hostbuf)))
                {
+#ifdef DNS_ANS_DEBUG
                   sendto_realops_lev(DEBUG_LEV, "Received DNS_A answer for %s, but asked question for %s", hostbuf, rptr->name);
+#endif
                   if(rptr->cinfo.flags == ASYNC_CLIENT && rptr->cinfo.value.cptr)
                      rptr->cinfo.value.cptr->flags |= FLAGS_BAD_DNS; /* yell about this client later, to all opers */
                   return PROCANSWER_STRANGE;
@@ -803,18 +805,22 @@ proc_answer(ResRQ * rptr,
             {
                if(!(arpa_to_ip(hostbuf, &ptrrep.s_addr)))
                {
+#ifdef DNS_ANS_DEBUG
                   sendto_realops_lev(DEBUG_LEV, "Received strangely formed PTR answer for %s (asked for %s) -- ignoring", 
                                      hostbuf, inetntoa((char *)&rptr->addr));
+#endif
                   return PROCANSWER_STRANGE;
                }
 
                if(ptrrep.s_addr != rptr->addr.s_addr)
                {
+#ifdef DNS_ANS_DEBUG
                   char ipbuf[16];
 
                   strcpy(ipbuf, inetntoa((char *)&ptrrep));
                   sendto_realops_lev(DEBUG_LEV, "Received DNS_PTR answer for %s, but asked question for %s", 
                                      ipbuf, inetntoa((char*)&rptr->addr));
+#endif
                   if(rptr->cinfo.flags == ASYNC_CLIENT && rptr->cinfo.value.cptr)
                      rptr->cinfo.value.cptr->flags |= FLAGS_BAD_DNS; /* yell about this client later, to all opers */
                   return PROCANSWER_STRANGE;
@@ -890,18 +896,22 @@ proc_answer(ResRQ * rptr,
                {
                   if(!(arpa_to_ip(hostbuf, &ptrrep.s_addr)))
                   {
+#ifdef DNS_ANS_DEBUG
                      sendto_realops_lev(DEBUG_LEV, "Received strangely formed CNAME(PTR) answer for %s (asked for %s) -- ignoring", 
                                         hostbuf, inetntoa((char *)&rptr->addr));
+#endif
                      return PROCANSWER_STRANGE;
                   }
 
                   if(ptrrep.s_addr != rptr->addr.s_addr)
                   {
+#ifdef DNS_ANS_DEBUG
                      char ipbuf[16];
 
                      strcpy(ipbuf, inetntoa((char *)&ptrrep));
                      sendto_realops_lev(DEBUG_LEV, "Received DNS_CNAME(PTR) answer for %s, but asked question for %s", 
                                         ipbuf, inetntoa((char*)&rptr->addr));
+#endif
                      if(rptr->cinfo.flags == ASYNC_CLIENT && rptr->cinfo.value.cptr)
                         rptr->cinfo.value.cptr->flags |= FLAGS_BAD_DNS; /* yell about this client later, to all opers */
                      return PROCANSWER_STRANGE;
@@ -918,8 +928,10 @@ proc_answer(ResRQ * rptr,
                {
                   if(!num_acc_answers || !(acc = is_acceptable_answer(hostbuf)))
                   {
+#ifdef DNS_ANS_DEBUG
                      sendto_realops_lev(DEBUG_LEV, "Received DNS_CNAME(A) answer for %s, but asked question for %s", 
                                         hostbuf, rptr->name);
+#endif
                      if(rptr->cinfo.flags == ASYNC_CLIENT && rptr->cinfo.value.cptr)
                         rptr->cinfo.value.cptr->flags |= FLAGS_BAD_DNS; /* yell about this client later, to all opers */
                      return PROCANSWER_STRANGE;

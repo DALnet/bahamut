@@ -881,7 +881,7 @@ register_user(aClient *cptr,
       Count.monthly++;
       Count.yearly++;
       if(sptr->flags & FLAGS_BAD_DNS) 
-            sendto_realops("DNS lookup: %s (%s@%s) is an attempted cache polluter", 
+            sendto_realops_lev(SPY_LEV, "DNS lookup: %s (%s@%s) is a possible cache polluter", 
                            sptr->name, sptr->user->username, sptr->user->host); 
    }
    else

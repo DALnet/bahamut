@@ -1,4 +1,7 @@
-Changes for 1.4.17
+Changes for 1.4.18
+- Changed level of some debug messages to not go to all opers
+
+Changes for 1.4.17 (never officially released)
 - Oper hostmasking:
   Your I: line password is oper<.password> where password is optional.
   You then /server <yourserver> <yourport> <portpass:>opernick:operpass
@@ -8,7 +11,7 @@ Changes for 1.4.16
 - deal with long-time buffer overflow when more than MAXADDR
   A DNS answers are received.
 
-Changes for 1.4.15
+Changes for 1.4.15 (never officially released)
 - Crash in res.c fixed (due to wrong question received under heavy load)
 - name resolution prevents ircd dns cache pollution
 
