@@ -124,7 +124,10 @@ free_oper(aOper *ptr)
 {
     int i = 0;
     while(ptr->hosts[i])
+    {
         MyFree(ptr->hosts[i]);
+        i++;
+    }
     MyFree(ptr->passwd);
     MyFree(ptr->nick);
     MyFree(ptr);
@@ -286,19 +289,29 @@ find_oper(char *name, char *username, char *sockhost, char *hostip)
     aOper *aoper;
     char userhost[USERLEN + HOSTLEN + 3];
     char userip[USERLEN + HOSTLEN + 3];
-    int i = 0;
+    int i = 0, t = 0;
 
     /* sockhost OR hostip must match our host field */
 
 
     (void) ircsprintf(userhost, "%s@%s", username, sockhost);
-    (void) ircsprintf(userip, "%s@%s", username, sockhost);
+    (void) ircsprintf(userip, "%s@%s", username, hostip);
 
     for(aoper = opers; aoper; aoper = aoper->next)
+    {
         while(aoper->hosts[i])
-            if(!(mycmp(name, aoper->nick) && (match(userhost, aoper->hosts[i]) 
-                    || match(userip, aoper->hosts[i]))))
+        {
+            if(!(mycmp(name, aoper->nick) && (!match(userhost, aoper->hosts[i]) 
+                    || !match(userip, aoper->hosts[i]))))
+            {
+                t = 1;
                 break;
+            }
+            i++;
+        }
+        if(t == 1)
+            break;
+    }
     return aoper;
 }
 
