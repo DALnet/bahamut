@@ -16,7 +16,6 @@ Changes for 1.8.3
 - Range limiting for cmode +j args (min rate 1:8, max time 60).
 - Fixed spamming redudant cmode changes.
 - Fixed bad handling of bogus oper messages (from Zeke Gomez).
-- testing
 
 
 Changes for 1.8.2
