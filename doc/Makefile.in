@@ -28,6 +28,8 @@ FILES=opers.txt example.conf example.modules.conf
 
 all:
 
+build:
+
 install: all
 	@for i in $(FILES); do \
 		if test -f $(INSTALL_DIR)/$$i; then \
@@ -43,3 +45,6 @@ install: all
 		touch $(INSTALL_DIR)/ircd.motd; \
 		echo "This is the default Bahamut MOTD" >> $(INSTALL_DIR)/ircd.motd; \
 	fi
+
+distclean:
+	$(RM) -f Makefile

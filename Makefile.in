@@ -24,7 +24,7 @@ ENGINE=@SENGINE@
 FDSETSIZE=@FDSETSIZE@
 
 SHELL=/bin/sh
-SUBDIRS=zlib src tools
+SUBDIRS=zlib src doc tools
 INSTDIRS=src doc tools
 CLEANSUBDIRS=src tools
 
