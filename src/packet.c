@@ -124,7 +124,7 @@ dopacket(aClient *cptr, char *buffer, int length)
 int client_dopacket(struct Client *cptr, char *buffer, size_t length)
 {
 
-   strncpy_irc(cptr->buffer, buffer, BUFSIZE);
+   strncpy(cptr->buffer, buffer, BUFSIZE);
    length = strlen(cptr->buffer);
    
    /*

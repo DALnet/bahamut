@@ -312,6 +312,7 @@ extern void initwhowas(void);
 extern void off_history(aClient *);
 
 extern int  dopacket(aClient *, char *, int);
+extern int  client_dopacket(aClient *, char *, int);
 
 /*
  * VARARGS2 
