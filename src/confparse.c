@@ -131,7 +131,7 @@ check_quote(char *cur)
     if((*cur == '/') && (*(cur+1) == '*'))
     {
         cur += 2;
-        quote++;
+        quote = 1;
         while((cur = strchr(cur, '*')))
             if((*(++cur) == '/'))
             {
