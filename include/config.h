@@ -806,7 +806,9 @@
  * MAXCHANNELSPERUSER - Max number of channels a user is allowed to
  * join.
  */
+#ifndef MAXCHANNELSPERUSER
 #define MAXCHANNELSPERUSER  10	/* Recommended value: 10 */
+#endif
 
 /*
  * FLUD - CTCP Flood Detection and Protection
