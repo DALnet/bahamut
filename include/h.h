@@ -127,6 +127,7 @@ extern aConfItem *find_kill(aClient *);
 extern aConfItem *find_dkill(aClient *);
 extern aConfItem *find_zkill(aClient *);
 extern aConfItem *find_uline(Link *, char *);
+extern aConfItem *find_is_ulined(char *);
 
 extern void report_matching_host_klines(aClient *, char *);
 

@@ -1509,6 +1509,16 @@ report_configured_links(aClient *sptr, int mask)
 		  name = BadPtr(tmp->name) ? null : tmp->name;
 		  port = (int) tmp->port;
 
+                  /* block out IP addresses of U: lined servers in 
+                   * a C/N request - lucas/xpsycho
+                   */
+
+                  if(tmp->status & CONF_SERVER_MASK)
+                  {
+                     if(find_is_ulined(name))
+                        host = "hidden@0.0.0.0";
+                  }
+
 		  if (tmp->status == CONF_KILL)
 			 sendto_one(sptr, rpl_str(p[1]), me.name,
 							sptr->name, c, host,
