@@ -25,6 +25,7 @@
 #include "common.h"
 #include "sys.h"
 #include "numeric.h"
+#include "channel.h"
 #include "h.h"
 
 static char buffer[1024];
