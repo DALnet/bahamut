@@ -727,16 +727,22 @@
  * Users can't get /stats from anything
  *
  * NO_LOCAL_USER_STATS
- * Local users can't get /stats from anything, each server does its own checking (not recommended)
+ * Local users can't get /stats from anything, each server does its own 
+ * checking (not recommended)
  * No effect if NO_USER_STATS is defined 
  *
  * NO_USER_TRACE
  * Users can't use TRACE
+ *
+ * NO_USER_OPERTARGETED_COMMANDS
+ * Users can't do /motd oper, /admin oper, /whois oper oper, 
+ * /whois server.* oper on any oper that is set +I 
+ * (see oper hiding section)
  */
 /* #undef NO_USER_SERVERNOTICES */
 /* #undef NO_USER_STATS */
+/* #undef NO_LOCAL_USER_STATS */
 /* #undef NO_USER_TRACE */
-/* #undef NO_LOCAL_USER_TRACE */
 /* #undef NO_USER_OPERTARGETED_COMMANDS */
 
 /***********************/
@@ -747,7 +753,8 @@
  * ALLOW_HIDDEN_OPERS
  * 
  * Allow your opers to be set +I (hidden) -- required for the commands below
- * If not defined, everything below must also be undefined
+ * If not defined, everything below in the oper hiding section must be 
+ * undefined.
  */
 #define ALLOW_HIDDEN_OPERS
 
@@ -755,6 +762,7 @@
  * DEFAULT_MASKED_HIDDEN
  * 
  * Makes all your opers that hostmasked +I (hidden) by default
+ * ALLOW_HIDDEN_OPERS must be defined with this enabled.
  */
 #define DEFAULT_MASKED_HIDDEN
 
@@ -762,6 +770,8 @@
  * ALL_OPERS_HIDDEN
  * 
  * Makes all your opers on a 'hidden' server by default (sets +I at /oper)
+ * ALLOW_HIDDEN_OPERS must be defined with this enabled.
+ * DEFAULT_MASKED_HIDDEN is reccommended with this enabled.
  */
 #undef ALL_OPERS_HIDDEN
 
@@ -769,15 +779,19 @@
  * FORCE_OPERS_HIDDEN
  *
  * Makes it so that all opers can't set -I (not hidden)
- * Define ALL_OPERS_HIDDEN and DEFAULT_MASKED_HIDDEN with this as well.
+ *
+ * Define ALL_OPERS_HIDDEN, DEFAULT_MASKED_HIDDEN, ALLOW_HIDDEN_OPERS
+ * with this as well, or things will not work properly
  */
 #undef FORCE_OPERS_HIDDEN
 
 /*
  * FORCE_EVERYONE_HIDDEN
  *
- * Makes it so that everyone on your server is set +I
- * Every other hidden option must be defined as well.
+ * Makes it so that everyone on your server is set +I and can't set -I
+ * 
+ * Every other hidden option in the oper hiding section must be 
+ * defined as well.
  */
 #undef FORCE_EVERYONE_HIDDEN
 
