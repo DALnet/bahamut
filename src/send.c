@@ -225,13 +225,7 @@ int send_queued(aClient *to) {
      if (!(to->flags & FLAGS_BURST)) {
        to->flags &= (~FLAGS_SOBSENT);
        sendto_one(to, "BURST %d", DBufLength(&to->sendQ));
-       if (!(to->flags & FLAGS_EOBRECV)) { /* hey we're the last to synch.. let's notify */
-         sendto_gnotice("from %s: synch to %s in %d %s", me.name, to->name, (timeofday-to->firsttime), 
-            (timeofday-to->firsttime)==1?"sec":"secs");
-#ifdef HUB
-         sendto_serv_butone(to, ":%s GNOTICE :synch to %s in %d %s", me.name, to->name,
-            (timeofday-to->firsttime), (timeofday-to->firsttime)==1?"sec":"secs");
-#endif
+       if (!(to->flags & FLAGS_EOBRECV)) { /* hey we're the last to synch.. */
 #ifdef HTM_LOCK_ON_NETBURST
          HTMLOCK = NO;
 #endif
