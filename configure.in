@@ -95,7 +95,7 @@ if test "$check_hmodules" = "yes"; then
     AC_CHECK_FUNCS(dlopen dlsym)
     AC_DEFINE(USE_HOOKMODULES)
     set_hmodules="enabled"
-    LIBS="$LIBS -Wl,-export-dynamic"
+    MOD_LIBS="-Wl,-export-dynamic"
 fi
 
 dnl Check for sys_errlist
@@ -269,6 +269,10 @@ if test $engine = "select"; then
     FDSETSIZE=' # FD_SETSIZE is broken on this machine!'
     ],
     AC_MSG_RESULT(can't tell))
+fi
+
+if test "$solaris2" != "yes" && test "set_hmodules" = "enabled"; then
+    LIBS="$LIBS $MOD_LIBS"
 fi
 
 AC_SUBST(SSL_INCLUDES)

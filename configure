@@ -5371,7 +5371,7 @@ done
 _ACEOF
 
     set_hmodules="enabled"
-    LIBS="$LIBS -Wl,-export-dynamic"
+    MOD_LIBS="-Wl,-export-dynamic"
 fi
 
 echo "$as_me:$LINENO: checking for sys_errlist declaration" >&5
@@ -6003,6 +6003,10 @@ _ACEOF
 fi
 rm -f core core.* *.core gmon.out bb.out conftest$ac_exeext conftest.$ac_objext conftest.$ac_ext
 fi
+fi
+
+if test "$solaris2" != "yes" && test "set_hmodules" = "enabled"; then
+    LIBS="$LIBS $MOD_LIBS"
 fi
 
 
