@@ -45,19 +45,16 @@ static int  can_join(aClient *, aChannel *, char *);
 static void channel_modes(aClient *, char *, char *, aChannel *);
 static int  del_banid(aChannel *, char *);
 static aBan *is_banned(aClient *, aChannel *);
-static int
-            set_mode(aClient *, aClient *, aChannel *, int, int,
-		     char **, char *, char *);
+static int  set_mode(aClient *, aClient *, aChannel *, int, int, char **, char *, char *);
 static void sub1_from_channel(aChannel *);
 
-int check_channelname(aClient *, unsigned char *);
+int         check_channelname(aClient *, unsigned char *);
 void        clean_channelname(unsigned char *);
 void        del_invite(aClient *, aChannel *);
 
 #ifdef ORATIMING
 struct timeval tsdnow, tsdthen;
 unsigned long tsdms;
-
 #endif
 
 /* number of seconds to add to all readings of time() when making TS's */
@@ -65,8 +62,13 @@ unsigned long tsdms;
 static char *PartFmt = ":%s PART %s";
 static char *PartFmt2 = ":%s PART %s :%s";
 
+/* old and new server SJOIN formats: old with dual TS */
 static char *oldSJOINFmt = ":%s SJOIN %ld %ld %s %s %s :%s";
 static char *newSJOINFmt = ":%s SJOIN %ld %s %s %s :%s";
+/* NP means no paramaters, don't send the extra space there */
+static char *oldSJOINFmtNP = ":%s SJOIN %ld %ld %s %s :%s";
+static char *newSJOINFmtNP = ":%s SJOIN %ld %s %s :%s";
+/* client sjoin.. old is the same as server, new is our new version */
 static char *oldCliSJOINFmt = ":%s SJOIN %ld %ld %s + :%s";
 static char *newCliSJOINFmt = ":%s SJOIN %ld %s";
 
@@ -83,6 +85,7 @@ extern Link *find_channel_link(Link *, aChannel *);	/* defined in list.c */
 extern int  spam_num;		/* defined in s_serv.c */
 extern int  spam_time;		/* defined in s_serv.c */
 #endif
+
 /* return the length (>=0) of a chain of links. */
 static int list_length(Link *lp) {
    Reg int     count = 0;
@@ -91,6 +94,7 @@ static int list_length(Link *lp) {
       count++;
    return count;
 }
+
 /*
  * find_chasing 
  *   Find the client structure for a nick name (user) using history 
@@ -1878,7 +1882,7 @@ void send_topic_burst(aClient *cptr)
    }
    for (acptr = client; acptr; acptr = acptr->next)
    {
-      if(!IsPerson(acptr))
+      if(!IsPerson(acptr) || acptr->from == cptr)
          continue;
       if(acptr->user->away)
          sendto_one(cptr, ":%s AWAY :%s", acptr->name, acptr->user->away);
@@ -2591,12 +2595,7 @@ static void kill_ban_list(aClient *cptr, aChannel *chptr)
    }
 }
 
-
-static inline void
-sjoin_sendit(aClient *cptr,
-	     aClient *sptr,
-	     aChannel *chptr,
-	     char *from)
+static inline void sjoin_sendit(aClient *cptr, aClient *sptr, aChannel *chptr, char *from)
 {
    sendto_channel_butserv(chptr, sptr, ":%s MODE %s %s %s", from,
 			  chptr->chname, modebuf, parabuf);
@@ -2622,6 +2621,11 @@ if (what != x) { \
 *mbuf++=y; \
 what = x; \
 }
+
+#define ADD_PARA(p) para = p; if(pbpos) parabuf[pbpos++] = ' '; \
+                     while(*para) parabuf[pbpos++] = *para++; 
+#define ADD_SJBUF(p) para = p; if(sjbufpos) sjbuf[sjbufpos++] = ' '; \
+                     while(*para) sjbuf[sjbufpos++] = *para++; 
 	
 int
 m_sjoin(aClient *cptr,
@@ -2636,11 +2640,11 @@ m_sjoin(aClient *cptr,
    chanMember *cm;
    int         args = 0, haveops = 0, keepourmodes = 1, keepnewmodes = 1,
 	       doesop = 0, what = 0, pargs = 0, fl, people = 0,
-	       isnew, clientjoin = 0;
-   Reg char   *s, *s0;
+	       isnew, clientjoin = 0, pbpos, sjbufpos;
+   char   *s, *s0, *para;
    static char numeric[16], sjbuf[BUFSIZE];
    char        keep_modebuf[REALMODEBUFLEN], keep_parabuf[REALMODEBUFLEN];
-   char       *mbuf = modebuf, *t = sjbuf, *p;
+   char       *mbuf = modebuf, *p;
 
    /* if my client is SJOINing, it's just a local user being a dufus. 
     *  Ignore him.
@@ -2812,7 +2816,7 @@ m_sjoin(aClient *cptr,
       }
    }
 
-   *parabuf = '\0';
+   pbpos = 0;
 
    /*
     * since the most common case is that the modes are exactly the same,
@@ -2912,84 +2916,87 @@ m_sjoin(aClient *cptr,
    if (oldmode->key[0] && !mode.key[0]) {
 		INSERTSIGN(-1,'-')
       *mbuf++ = 'k';
-      strcat(parabuf, oldmode->key);
+      ADD_PARA(oldmode->key)
       pargs++;
    }
 
    if (mode.limit && oldmode->limit != mode.limit) {
       INSERTSIGN(1,'+')
       *mbuf++ = 'l';
-      (void) ircsprintf(numeric, "%-15d", mode.limit);
+      sprintf(numeric, "%-15d", mode.limit);
       if ((s = strchr(numeric, ' ')))
 		  *s = '\0';
-      if(*parabuf)
-         strcat(parabuf, " ");         
-      strcat(parabuf, numeric);
+      ADD_PARA(numeric);
       pargs++;
    }
 
    if (mode.key[0] && strcmp(oldmode->key, mode.key)) {
       INSERTSIGN(1,'+')
       *mbuf++ = 'k';
-      if(*parabuf)
-         strcat(parabuf, " ");         
-      strcat(parabuf, mode.key);
+      ADD_PARA(mode.key)
       pargs++;
    }
 	
    chptr->mode = mode;
 	
-   if (!keepourmodes) {
+   if (!keepourmodes) /* deop and devoice everyone! */
+   {
       what = 0;
-      for (cm = chptr->members; cm; cm = cm->next) {
-			if (cm->flags & MODE_CHANOP) {
-				INSERTSIGN(-1,'-')
-				*mbuf++ = 'o';
-				if(*parabuf)
-				   strcat(parabuf, " ");
-				strcat(parabuf, cm->cptr->name);
-				pargs++;
-				if (pargs >= MAXMODEPARAMS) {
-					*mbuf = '\0';
-					sjoin_sendit(cptr, sptr, chptr,
-									 parv[0]);
-					mbuf = modebuf;
-					*mbuf = parabuf[0] = '\0';
-					pargs = what = 0;
-				}
-				cm->flags &= ~MODE_CHANOP;
-			}
-			if (cm->flags & MODE_VOICE) {
-				INSERTSIGN(-1,'-')
-				*mbuf++ = 'v';
-				if(*parabuf)
-				   strcat(parabuf, " ");
-				strcat(parabuf, cm->cptr->name);
-				pargs++;
-				if (pargs >= MAXMODEPARAMS) {
-					*mbuf = '\0';
-					sjoin_sendit(cptr, sptr, chptr,
-									 parv[0]);
-					mbuf = modebuf;
-					*mbuf = parabuf[0] = '\0';
-					pargs = what = 0;
-				}
-				cm->flags &= ~MODE_VOICE;
-			}
+      for (cm = chptr->members; cm; cm = cm->next) 
+      {
+         if (cm->flags & MODE_CHANOP) 
+         {
+            INSERTSIGN(-1,'-')
+            *mbuf++ = 'o';
+            ADD_PARA(cm->cptr->name)
+            pargs++;
+            if (pargs >= MAXMODEPARAMS) 
+            {
+               *mbuf = '\0';
+               parabuf[pbpos] = '\0';
+               sjoin_sendit(cptr, sptr, chptr, parv[0]);
+               mbuf = modebuf;
+               *mbuf = '\0';
+               pargs = pbpos = what = 0;
+            }
+            cm->flags &= ~MODE_CHANOP;
+         }
+
+         if (cm->flags & MODE_VOICE) 
+         {
+            INSERTSIGN(-1,'-')
+            *mbuf++ = 'v';
+            ADD_PARA(cm->cptr->name)
+            pargs++;
+            if (pargs >= MAXMODEPARAMS) 
+            {
+               *mbuf = '\0';
+               parabuf[pbpos] = '\0';
+               sjoin_sendit(cptr, sptr, chptr, parv[0]);
+               mbuf = modebuf;
+               *mbuf = '\0';
+               pargs = pbpos = what = 0;
+            }
+            cm->flags &= ~MODE_VOICE;
+         }
       }
-      sendto_channel_butserv(chptr, &me,
-		":%s NOTICE %s :*** Notice -- TS for %s changed from %ld to %ld",
-		me.name, chptr->chname, chptr->chname, oldts, newts);
+      sendto_channel_butserv(chptr, &me, ":%s NOTICE %s :*** Notice -- TS for %s changed from %ld to %ld",
+                             me.name, chptr->chname, chptr->chname, oldts, newts);
    }
-   if (mbuf != modebuf) {
+
+   if (mbuf != modebuf) 
+   {
       *mbuf = '\0';
+      parabuf[pbpos] = '\0';
       sjoin_sendit(cptr, sptr, chptr, parv[0]);
    }
 	
-   *modebuf = *parabuf = '\0';
+   *modebuf = '\0';
+   parabuf[0] = '\0';
    if (parv[3][0] != '0' && keepnewmodes)
 	  channel_modes(sptr, modebuf, parabuf, chptr);
-   else {
+   else 
+   {
       modebuf[0] = '0';
       modebuf[1] = '\0';
    }
@@ -2998,96 +3005,115 @@ m_sjoin(aClient *cptr,
     * sprintf(t, ":%s SJOIN %ld %ld %s %s %s :", parv[0], tstosend, tstosend,
     *			  parv[2], modebuf, parabuf);
     * t += strlen(t);
+    * the pointer "t" has been removed and is now replaced with an 
+    * index into sjbuf for faster appending
     */
 
    strcpy(keep_modebuf, modebuf);
    strcpy(keep_parabuf, parabuf);
 
+   sjbufpos = 0;
    mbuf = modebuf;
-   parabuf[0] = '\0';
+   pbpos = 0;
    pargs = 0;
    *mbuf++ = '+';
 	
    for (s = s0 = strtoken(&p, parv[args + 4], " "); s;
-		  s = s0 = strtoken(&p, (char *) NULL, " ")) {
+		  s = s0 = strtoken(&p, (char *) NULL, " ")) 
+   {
       fl = 0;
       if (*s == '@' || s[1] == '@')
-		  fl |= MODE_CHANOP;
+         fl |= MODE_CHANOP;
       if (*s == '+' || s[1] == '+')
-		  fl |= MODE_VOICE;
-      if (!keepnewmodes) {
-			if (fl & MODE_CHANOP)
-			  fl = MODE_DEOPPED;
-			else
-			  fl = 0;
-		}
+         fl |= MODE_VOICE;
+      if (!keepnewmodes) 
+      {
+         if (fl & MODE_CHANOP)
+            fl = MODE_DEOPPED;
+         else
+            fl = 0;
+      }
       while (*s == '@' || *s == '+')
-		  s++;
+         s++;
       if (!(acptr = find_chasing(sptr, s, NULL)))
-		  continue;
+         continue;
       if (acptr->from != cptr)
-		  continue;
+         continue;
       people++;
-      if (!IsMember(acptr, chptr)) {
-			add_user_to_channel(chptr, acptr, fl);
-			sendto_channel_butserv(chptr, acptr, ":%s JOIN :%s",
-										  s, parv[2]);
+      if (!IsMember(acptr, chptr)) 
+      {
+         add_user_to_channel(chptr, acptr, fl);
+         sendto_channel_butserv(chptr, acptr, ":%s JOIN :%s", s, parv[2]);
       }
       if (keepnewmodes)
-		  strcpy(t, s0);
-      else
-		  strcpy(t, s);
-      t += strlen(t);
-      *t++ = ' ';
-      if (fl & MODE_CHANOP) {
-			*mbuf++ = 'o';
-			if(*parabuf)
-			   strcat(parabuf, " ");
-			strcat(parabuf, s);
-			pargs++;
-			if (pargs >= MAXMODEPARAMS) {
-				*mbuf = '\0';
-				sjoin_sendit(cptr, sptr, chptr, parv[0]);
-				mbuf = modebuf;
-				*mbuf++ = '+';
-				parabuf[0] = '\0';
-				pargs = 0;
-			}
+      {
+         ADD_SJBUF(s0)
       }
-      if (fl & MODE_VOICE) {
-			*mbuf++ = 'v';
-			if(*parabuf)
-			   strcat(parabuf, " ");
-			strcat(parabuf, s);
-			pargs++;
-			if (pargs >= MAXMODEPARAMS) {
-				*mbuf = '\0';
-				sjoin_sendit(cptr, sptr, chptr, parv[0]);
-				mbuf = modebuf;
-				*mbuf++ = '+';
-				parabuf[0] = '\0';
-				pargs = 0;
-			}
+      else
+      {
+         ADD_SJBUF(s)
+      }
+      if (fl & MODE_CHANOP) 
+      {
+         *mbuf++ = 'o';
+         ADD_PARA(s)
+         pargs++;
+         if (pargs >= MAXMODEPARAMS) 
+         {
+            *mbuf = '\0';
+            parabuf[pbpos] = '\0';
+            sjoin_sendit(cptr, sptr, chptr, parv[0]);
+            mbuf = modebuf;
+            *mbuf++ = '+';
+            pargs = pbpos = 0;
+         }
+      }
+      if (fl & MODE_VOICE) 
+      {
+         *mbuf++ = 'v';
+         ADD_PARA(s)
+         pargs++;
+         if (pargs >= MAXMODEPARAMS) 
+         {
+            *mbuf = '\0';
+            parabuf[pbpos] = '\0';
+            sjoin_sendit(cptr, sptr, chptr, parv[0]);
+            mbuf = modebuf;
+            *mbuf++ = '+';
+            pargs = pbpos = 0;
+         }
       }
    }
-	
+
+   parabuf[pbpos] = '\0';
+
    *mbuf = '\0';
    if (pargs)
 	  sjoin_sendit(cptr, sptr, chptr, parv[0]);
-   if (people) {
-      if (t[-1] == ' ')
-		  t[-1] = '\0';
-      else
-		  *t = '\0';
+   if (people) 
+   {
+      sjbuf[sjbufpos] = '\0';
 
-      sendto_ssjoin_servs(1, chptr, cptr, newSJOINFmt, parv[0], tstosend,
+      if(keep_parabuf[0] != '\0')
+      {
+         sendto_ssjoin_servs(1, chptr, cptr, newSJOINFmt, parv[0], tstosend,
 			parv[2], keep_modebuf, keep_parabuf, sjbuf);
-      sendto_ssjoin_servs(0, chptr, cptr, oldSJOINFmt, parv[0], tstosend, tstosend,
+         sendto_ssjoin_servs(0, chptr, cptr, oldSJOINFmt, parv[0], tstosend, tstosend,
 			parv[2], keep_modebuf, keep_parabuf, sjbuf);
+      } 
+      else
+      {
+         sendto_ssjoin_servs(1, chptr, cptr, newSJOINFmtNP, parv[0], tstosend,
+			parv[2], keep_modebuf, sjbuf);
+         sendto_ssjoin_servs(0, chptr, cptr, oldSJOINFmtNP, parv[0], tstosend, tstosend,
+			parv[2], keep_modebuf, sjbuf);
+      }
    }
    return 0;
 }
 #undef INSERTSIGN
+#undef ADD_PARA
+#undef ADD_SJBUF
 
 /* m_samode - Just bout the same as df
  *  - Raistlin 

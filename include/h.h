@@ -170,8 +170,8 @@ extern char *find_or_add(char *);
 extern void count_scache(int *, u_long *);
 extern void list_scache(aClient *, aClient *, int, char **);
 
-extern char *MyMalloc(int);
-extern char *MyRealloc(char *, int);
+extern char *MyMalloc(size_t);
+extern char *MyRealloc(char *, size_t);
 
 /*
  * MyFree is defined as a macro in sys.h 
