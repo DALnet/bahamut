@@ -174,7 +174,7 @@ extern int 	do_client_queue(aClient *);
 extern void 	read_error_exit(aClient *, int, int);
 extern int 	readwrite_client(aClient *, int, int);
 
-extern char      *get_listener_name(aListener *);
+extern inline char *get_listener_name(aListener *);
 extern int        attach_Iline(aClient *, struct hostent *, char *);
 extern aConnect  *find_aConnect(char *);
 extern aOper     *find_oper(char *, char *, char *, char *);
@@ -197,8 +197,8 @@ extern char  	 *collapse(char *);
 extern int  	  writecalls, writeb[];
 extern int  	  deliver_it(aClient *, char *, int);
 
-extern int  	  check_registered(aClient *);
-extern int  	  check_registered_user(aClient *);
+extern inline int check_registered(aClient *);
+extern inline int check_registered_user(aClient *);
 extern char 	 *get_client_name(aClient *, int);
 extern char 	 *get_client_host(aClient *);
 extern char 	 *my_name_for_link(char *, aConnect *);
