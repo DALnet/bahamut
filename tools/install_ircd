@@ -132,22 +132,22 @@ fi;
 if [ $base_HPATH = $HPATH ] ; then
   if [ ! -f ${DPATH}${HPATH} ] ; then
     echo installing opers.txt as ${DPATH}${HPATH};
-    ./install-sh -c opers.txt ${DPATH};
+    ./install-sh -c doc/opers.txt ${DPATH};
   else
      echo installing opers.txt as ${DPATH}${HPATH};
      echo previous opers.txt saved as opers.txt.old;
      mv ${DPATH}${HPATH} ${DPATH}${HPATH}.old;
-     ./install-sh -c opers.txt ${DPATH};
+     ./install-sh -c doc/opers.txt ${DPATH};
   fi;
 else
   if [ ! -f $HPATH ] ; then
      echo installing opers.txt as ${HPATH};
-     ./install-sh -c opers.txt `dirname $HPATH`;
+     ./install-sh -c doc/opers.txt `dirname $HPATH`;
   else
      echo installing opers.txt as ${HPATH};
      echo previous opers.txt saved as opers.txt.old;
      mv ${HPATH} ${HPATH}.old;
-     ./install-sh -c opers.txt `dirname $HPATH`;
+     ./install-sh -c doc/opers.txt `dirname $HPATH`;
   fi;
 fi;
 
