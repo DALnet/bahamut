@@ -1779,7 +1779,7 @@ void send_topic_burst(aClient *cptr)
    for (chptr = channel; chptr; chptr = chptr->nextch)
    {
       if(chptr->topic[0] != '\0')
-         sendto_one(cptr, ":%s TOPIC %s %s %lu :%s", me.name, chptr->chname,
+         sendto_one(cptr, ":%s TOPIC %s %s %ld :%s", me.name, chptr->chname,
 		    chptr->topic_nick, chptr->topic_time, chptr->topic);
    }
 }
