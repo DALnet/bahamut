@@ -54,8 +54,8 @@ int         botwarn(char *, char *, char *, char *);
 extern char motd_last_changed_date[];
 extern int  send_motd(aClient *, aClient *, int, char **);
 extern void send_topic_burst(aClient *);
+int check_oper_can_mask(aClient *, char *, char *, char **);
 extern void outofmemory(void);	/*
-
 				 * defined in list.c 
 				 */
 #ifdef MAXBUFFERS
@@ -563,6 +563,7 @@ register_user(aClient *cptr,
       }
 		
       pwaconf = sptr->confs->value.aconf;
+
       if (sptr->flags & FLAGS_DOID && !(sptr->flags & FLAGS_GOTID)) {
 			/*
 			 * because username may point to user->username 
@@ -594,17 +595,40 @@ register_user(aClient *cptr,
 #endif
       else
 		  strncpyzt(user->username, username, USERLEN + 1);
-		
-      if (!BadPtr(pwaconf->passwd) &&
-			 !StrEq(sptr->passwd, pwaconf->passwd)) {
+
+      if (!BadPtr(pwaconf->passwd))
+      {
+         char *tmpptr = strchr(sptr->passwd, ':');
+         char tmppwd[PASSWDLEN + 1];
+
+         /*
+          * If there's a : in the password, fix it so after this function,
+          * sptr->passwd changes from:
+          * moo:cow:test:asdf
+          * to
+          * cow:test:asdf
+          */
+
+         if(tmpptr)
+         {
+            *tmpptr++ = '\0';
+            strcpy(tmppwd, tmpptr);
+         }
+
+         if(!StrEq(sptr->passwd, pwaconf->passwd)) 
+         {
 			ircstp->is_ref++;
 			sendto_one(sptr, err_str(ERR_PASSWDMISMATCH),
 						  me.name, parv[0]);
 			return exit_client(cptr, sptr, &me, "Bad Password");
+         }
+         if(tmpptr)
+            strcpy(sptr->passwd, tmppwd);
+         else
+            sptr->passwd[0] = '\0';
       }
-		
-      
-		/*
+
+      /*
        * following block for the benefit of time-dependent K:-lines
        */
       if ((aconf = find_kill(sptr))) {
@@ -905,6 +929,52 @@ register_user(aClient *cptr,
       sendto_one(sptr, rpl_str(RPL_MYINFO), me.name, parv[0],
 					  me.name, version);
 		sendto_one(sptr, rpl_str(RPL_PROTOCTL), me.name, parv[0]);
+
+      if(!BadPtr(sptr->passwd) && (pwaconf->flags & CONF_FLAGS_I_OPERPORT)) do 
+      {
+         char *onptr = sptr->passwd;
+         char *opptr;
+         char *onick;
+         char *tmpptr;
+         char tmppwd[PASSWDLEN + 1];
+
+         if(!(opptr = strchr(onptr, ':')))
+            break;
+
+         *opptr++ = '\0';
+         if((tmpptr = strchr(opptr, ':')))
+            *tmpptr++ = '\0';
+
+         if(check_oper_can_mask(sptr, onptr, opptr, &onick) != 0)
+         {
+            sendto_one(sptr, ":%s NOTICE %s :*** Your hostname has been masked.",
+                       me.name, sptr->name);
+
+            sptr->user->real_oper_host = MyMalloc(strlen(sptr->user->host) + 1);
+            sptr->user->real_oper_username = MyMalloc(strlen(sptr->username) + 1);
+            sptr->user->real_oper_ip = MyMalloc(strlen(sptr->hostip) + 1);
+            strcpy(sptr->user->real_oper_host, sptr->user->host);
+            strcpy(sptr->user->real_oper_username, sptr->username);
+            strcpy(sptr->user->real_oper_ip, sptr->hostip);
+
+            strncpyzt(sptr->user->host, "staff.dal.net", HOSTLEN + 1);
+            strncpyzt(sptr->user->username, onick, USERLEN + 1);
+            strncpyzt(sptr->username, onick, USERLEN + 1);
+            sptr->flags |= FLAGS_GOTID; /* fake ident */
+            sptr->ip.s_addr = 0;
+            strcpy(sptr->hostip, "0.0.0.0");
+            strcpy(sptr->sockhost, "staff.dal.net");
+         }
+
+         if(tmpptr)
+         {
+            strcpy(tmppwd, tmpptr);
+            strcpy(sptr->passwd, tmppwd);
+         }
+         else
+            sptr->passwd[0] = '\0';
+      } while(0);
+
       (void) send_lusers(sptr, sptr, 1, parv);
 		
       sendto_one(sptr, ":%s NOTICE %s :*** Notice -- motd was last changed at %s",
@@ -1005,12 +1075,11 @@ register_user(aClient *cptr,
 
    if(MyClient(sptr)) {
      /* if the I:line doesn't have a password and the user does, send it over to NickServ */
-     if(BadPtr(pwaconf->passwd) && sptr->passwd[0] && (nsptr=find_person(NickServ,NULL))!=NULL) {
+     if(sptr->passwd[0] && (nsptr=find_person(NickServ,NULL))!=NULL) {
         sendto_one(nsptr,":%s PRIVMSG %s@%s :SIDENTIFY %s", sptr->name, NickServ, SERVICES_NAME, sptr->passwd);
      }
 
-     if(sptr->passwd[0])
-        memset(sptr->passwd, '\0', PASSWDLEN);
+     memset(sptr->passwd, '\0', PASSWDLEN);
      
      if (ubuf[1]) send_umode(cptr, sptr, 0, ALL_UMODES, ubuf);
    }
@@ -2897,6 +2966,14 @@ m_whois(aClient *cptr,
 		sendto_one(sptr, rpl_str(RPL_WHOISUSER), me.name,
 					  parv[0], name,
 					  user->username, user->host, acptr->info);
+
+                if(user->real_oper_host && IsAdmin(sptr))
+                {
+                   sendto_one(sptr, rpl_str(RPL_WHOISACTUALLY),
+                              me.name, sptr->name, name, 
+                              user->real_oper_username, user->real_oper_host, 
+                              user->real_oper_ip);
+                }
 		
 		mlen = strlen(me.name) + strlen(parv[0]) + 6 +
 		  strlen(name);
@@ -3469,6 +3546,52 @@ m_pong(aClient *cptr,
    return 0;
 }
 
+int check_oper_can_mask(aClient *sptr, char *name, char *password, char **onick)
+{
+   aConfItem *aconf;
+   char *encr;
+
+#ifdef CRYPT_OPER_PASSWORD
+   extern char *crypt();
+#endif
+
+   if (!(aconf = find_conf_exact(name, sptr->username, sptr->sockhost, CONF_OPS)) &&
+       !(aconf = find_conf_exact(name, sptr->username, sptr->hostip, CONF_OPS))) 
+   {
+      sendto_realops("Failed OPERMASK attempt by %s (%s@%s) [No Entry for %s]", sptr->name,
+                     sptr->user->username, sptr->user->host, name);
+      return 0;
+   }
+
+#ifdef CRYPT_OPER_PASSWORD
+   /* use first two chars of the password they send in as salt */
+   /* passwd may be NULL pointer. Head it off at the pass... */
+   if (password && *aconf->passwd)
+	  encr = crypt(password, aconf->passwd);
+   else
+	  encr = "";
+#else
+   encr = password;
+#endif /* CRYPT_OPER_PASSWORD */
+
+   if(StrEq(encr, aconf->passwd))
+   {
+#ifdef USE_SYSLOG
+      syslog(LOG_INFO, "OPERMASK: %s (%s!%s@%s)", aconf->name, sptr->name, sptr->user->username,
+             sptr->user->host);
+#endif
+      *onick = aconf->name;
+      sendto_realops("%s [%s] (%s@<hidden>) has masked their hostname.", sptr->name, aconf->name, 
+                     sptr->user->username);
+      return 1;
+   }
+
+   sendto_realops("Failed OPERMASK attempt by %s (%s@%s) [Bad Password]", sptr->name,
+                  sptr->user->username, sptr->user->host);
+
+   return 0;
+}
+
 /*
  * * m_oper * parv[0] = sender prefix *       parv[1] = oper name *
  * parv[2] = oper password
@@ -3521,14 +3644,28 @@ m_oper(aClient *cptr,
 						 me.name, parv[0]);
       return 0;
    }
-   if (!(aconf = find_conf_exact(name, sptr->username, sptr->sockhost,
-											CONF_OPS)) &&
-       !(aconf = find_conf_exact(name, sptr->username,
-											cptr->hostip, CONF_OPS))) {
-      sendto_one(sptr, err_str(ERR_NOOPERHOST), me.name, parv[0]);
-		sendto_realops("Failed OPER attempt by %s (%s@%s)", parv[0],
-							sptr->user->username, sptr->user->host);
-      return 0;
+
+   if(!(sptr->user && sptr->user->real_oper_host == NULL))
+   {
+      if (!(aconf = find_conf_exact(name, sptr->username, sptr->sockhost, CONF_OPS)) &&
+          !(aconf = find_conf_exact(name, sptr->username, cptr->hostip, CONF_OPS))) 
+      {
+         sendto_one(sptr, err_str(ERR_NOOPERHOST), me.name, parv[0]);
+	 sendto_realops("Failed OPER attempt by %s (%s@%s)", parv[0],
+			sptr->user->username, sptr->user->host);
+         return 0;
+      }
+   }
+   else
+   {
+      if (!(aconf = find_conf_exact(name, sptr->user->real_oper_username, sptr->user->real_oper_host, CONF_OPS)) &&
+          !(aconf = find_conf_exact(name, sptr->user->real_oper_username, sptr->user->real_oper_ip, CONF_OPS))) 
+      {
+         sendto_one(sptr, err_str(ERR_NOOPERHOST), me.name, parv[0]);
+	 sendto_realops("Failed OPER attempt by %s (%s@%s)", parv[0],
+			sptr->user->username, sptr->user->host);
+         return 0;
+      }
    }
 #ifdef CRYPT_OPER_PASSWORD
    /* use first two chars of the password they send in as salt */

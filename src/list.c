@@ -392,6 +392,12 @@ free_user(anUser *user, aClient *cptr)
 {
    if (user->away)
       MyFree((char *) user->away);
+   if (user->real_oper_host)
+      MyFree(user->real_oper_host);
+   if (user->real_oper_username)
+      MyFree(user->real_oper_username);
+   if (user->real_oper_ip)
+      MyFree(user->real_oper_ip);
    /*
     * sanity check
     */

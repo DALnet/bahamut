@@ -365,7 +365,7 @@ static char *replies[] = {
 	/* 335 */	NULL,
 	/* 336 */	NULL,
 	/* 337 */	NULL,
-	/* 338 */	NULL,
+	/* 338 RPL_WHOISACTUALLY */	":%s 338 %s :%s is actually %s@%s [%s]",
 	/* 339 */	NULL,
 	/* 340 */	NULL,
 	/* 341 RPL_INVITING */		":%s 341 %s %s %s",

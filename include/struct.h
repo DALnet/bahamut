@@ -102,7 +102,7 @@ typedef struct MotdItem aMotd;
 #define	REALLEN	 	    50
 #define	TOPICLEN	    307
 #define	CHANNELLEN	  32
-#define	PASSWDLEN 	  20
+#define	PASSWDLEN 	  63
 #define	KEYLEN		    23
 #define	BUFSIZE		    512	/* WARNING: *DONT* CHANGE THIS!!!! */
 #define	MAXRECIPIENTS 20
@@ -602,6 +602,10 @@ struct ConfItem {
 #define CONF_FLAGS_LITTLE_I_LINE	0x0001
 #endif
 
+#define CONF_FLAGS_I_OPERPORT      0x0002 /* did the password field specify OPER? */
+#define CONF_FLAGS_I_NAME_HAS_AT   0x0004 /* does NAME in I:HOST::NAME have an @? */ 
+#define CONF_FLAGS_I_HOST_HAS_AT   0x0008 /* does HOST in I:HOST::NAME have an @? */ 
+
 /* Client structures */
 struct User {
 	Link       *channel;		/* chain of channel pointer blocks */
@@ -626,6 +630,9 @@ struct User {
 	Link       *silence;    /* chain of silenced users */
 	LOpts 	   *lopt;       /* Saved /list options */
         Link       *dccallow;   /* chain of dcc send allowed users */
+        char       *real_oper_host;
+        char       *real_oper_username;
+        char       *real_oper_ip;
 };
 
 struct Server {

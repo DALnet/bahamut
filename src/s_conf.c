@@ -48,7 +48,7 @@ char        specific_virtual_host;
 /* internally defined functions  */
 
 static int  		lookup_confhost(aConfItem *);
-static int  		attach_iline(aClient *, aConfItem *, char *);
+static int  		attach_iline(aClient *, aConfItem *, char *, int);
 static aConfItem       *temporary_klines = (aConfItem *) NULL;
 static aConfItem       *szlines = (aConfItem *) NULL;
 
@@ -117,7 +117,7 @@ attach_Iline(aClient *cptr, struct hostent *hp, char *sockhost)
 {
    aConfItem *aconf;
    char   *hname;
-   int     i;
+   int     i, ulen, uhost_has_at;
    static char uhost[HOSTLEN + USERLEN + 3];
    static char uhost2[HOSTLEN + USERLEN + 3];
    static char fullname[HOSTLEN + 1];
@@ -131,43 +131,49 @@ attach_Iline(aClient *cptr, struct hostent *hp, char *sockhost)
 	 continue;
 
       if (!aconf->host || !aconf->name)
-	 return (attach_iline(cptr, aconf, uhost));
+	 return (attach_iline(cptr, aconf, uhost, 0));
 
       if (hp)
 	 for (i = 0, hname = hp->h_name; hname; hname = hp->h_aliases[i++]) 
 	 {
-	    (void) strncpy(fullname, hname, sizeof(fullname) - 1);
+	    strncpy(fullname, hname, sizeof(fullname) - 1);
 	    add_local_domain(fullname, HOSTLEN - strlen(fullname));
 	    Debug((DEBUG_DNS, "a_il: %s->%s", sockhost, fullname));
-	    if (strchr(aconf->name, '@')) 
+	    if (aconf->flags & CONF_FLAGS_I_NAME_HAS_AT) //strchr(aconf->name, '@')) 
   	    {
-	       (void) strcpy(uhost, cptr->username);
-	       (void) strcat(uhost, "@");
-	       (void) strcpy(uhost2, cptr->username);
-	       (void) strcat(uhost2, "@");
+               uhost_has_at = 1;
+               ulen = ircsprintf(uhost, "%s@", cptr->username);
+               strcpy(uhost2, uhost);
 	    }
 	    else 
 	    {
+               uhost_has_at = 0;
+               ulen = 0;
 	       *uhost = '\0';
 	       *uhost2 = '\0';
 	    }
-	    (void) strncat(uhost, fullname, sizeof(uhost) - strlen(uhost));
-	    (void) strncat(uhost2, sockhost, sizeof(uhost2) - strlen(uhost2));
+	    strncat(uhost, fullname, sizeof(uhost) - ulen);
+	    strncat(uhost2, sockhost, sizeof(uhost2) - ulen);
 	    if ((!match(aconf->name, uhost)) || (!match(aconf->name, uhost2)))
-	       return (attach_iline(cptr, aconf, uhost));
+	       return (attach_iline(cptr, aconf, uhost, uhost_has_at));
 	 }
 
-      if (strchr(aconf->host, '@')) 
+      if (aconf->flags & CONF_FLAGS_I_HOST_HAS_AT) //strchr(aconf->host, '@')) 
       {
-	 strncpyzt(uhost, cptr->username, USERLEN + 1);
-	 (void) strcat(uhost, "@");
+         uhost_has_at = 1;
+         ulen = ircsprintf(uhost, "%s@", cptr->username);
       }
       else
+      {
+         uhost_has_at = 0;
+         ulen = 0;
 	 *uhost = '\0';
-      (void) strncat(uhost, sockhost, sizeof(uhost) - strlen(uhost));
+      }
+
+      strncat(uhost, sockhost, sizeof(uhost) - ulen);
 
       if (match(aconf->host, uhost) == 0)
-	 return (attach_iline(cptr, aconf, uhost));
+	 return (attach_iline(cptr, aconf, uhost, uhost_has_at));
    }
 
    return -1;			/* no match */
@@ -178,11 +184,11 @@ attach_Iline(aClient *cptr, struct hostent *hp, char *sockhost)
  * this one. - Dianora
  */
 static int
-attach_iline(aClient *cptr, aConfItem *aconf, char *uhost)
+attach_iline(aClient *cptr, aConfItem *aconf, char *uhost, int doid)
 {
    IP_ENTRY   *ip_found;
 
-   if (strchr(uhost, '@'))
+   if (doid)
       cptr->flags |= FLAGS_DOID;
    get_sockhost(cptr, uhost);
 
@@ -1457,6 +1463,28 @@ initconf(int opt, int fd)
    	    Class       (aconf) = find_class(0);
          if (MaxLinks(Class (aconf)) < 0)
       	    Class       (aconf) = find_class(0);
+      }
+
+      if (aconf->status & CONF_CLIENT)
+      {
+         if(strchr(aconf->host, '@'))
+            aconf->flags |= CONF_FLAGS_I_HOST_HAS_AT;
+         if(strchr(aconf->name, '@'))
+            aconf->flags |= CONF_FLAGS_I_NAME_HAS_AT;
+         if(myncmp(aconf->passwd, "oper", 4) == 0)
+         {
+            if((aconf->passwd[4] == '.') || (aconf->passwd[4] == '\0'))
+            {
+               char *tmpd = aconf->passwd;
+               char *tmp = aconf->passwd + 4;
+
+               aconf->flags |= CONF_FLAGS_I_OPERPORT;
+               if(*tmp)
+                  tmp++;
+               DupString(aconf->passwd, tmp);
+               MyFree(tmpd);
+            }
+         }
       }
 
       if (aconf->status & (CONF_LISTEN_PORT | CONF_CLIENT)) 

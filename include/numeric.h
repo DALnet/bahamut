@@ -244,6 +244,8 @@
 #define RPL_TOPICWHOTIME     333
 #define RPL_COMMANDSYNTAX    334
 
+#define RPL_WHOISACTUALLY    338
+
 #define RPL_INVITING         341
 #define	RPL_SUMMONING        342
 
