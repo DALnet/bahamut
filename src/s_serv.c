@@ -974,10 +974,10 @@ int m_burst(aClient *cptr, aClient *sptr, int parc, char *parv[]) {
  #ifdef HTM_LOCK_ON_NETBURST
     HTMLOCK = NO;
  #endif
-    sendto_gnotice("from %s: synched to %s in %d %s at %s sendq", me.name, *parv,
+    sendto_gnotice("from %s: synch to %s in %d %s at %s sendq", me.name, *parv,
         (timeofday-sptr->firsttime), (timeofday-sptr->firsttime)==1?"sec":"secs", parv[1]);
  #ifdef HUB
-    sendto_serv_butone(sptr, ":%s GNOTICE :synched to %s in %d %s at %s sendq", me.name,
+    sendto_serv_butone(sptr, ":%s GNOTICE :synch to %s in %d %s at %s sendq", me.name,
         sptr->name, (timeofday-sptr->firsttime), (timeofday-sptr->firsttime)==1?"sec":"secs", parv[1]);
  #endif
 

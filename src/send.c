@@ -236,7 +236,7 @@ int send_queued(aClient *to) {
        sendto_gnotice("from %s: synch to %s in %d %s", me.name, to->name, (timeofday-to->firsttime), 
          (timeofday-to->firsttime)==1?"sec":"secs");
    #ifdef HUB
-       sendto_serv_butone(to, ":%s GNOTICE synch to %s in %d %s", me.name, to->name,
+       sendto_serv_butone(to, ":%s GNOTICE :synch to %s in %d %s", me.name, to->name,
          (timeofday-to->firsttime), (timeofday-to->firsttime)==1?"sec":"secs");
    #endif
    #ifdef HTM_LOCK_ON_NETBURST
