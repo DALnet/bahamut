@@ -112,6 +112,7 @@ extern void     read_motd(char *);          /* defined in s_serv.c */
 extern void     read_shortmotd(char *);     /* defined in s_serv.c */
 extern void     read_help(char *);          /* defined in s_serv.c */
 extern void     init_globals();
+extern int      set_classes();
 
 char        **myargv;
 char        configfile[PATH_MAX] = {0};     /* Server configuration file */
@@ -839,6 +840,12 @@ main(int argc, char *argv[])
     if(initconf(configfile) == -1)
     {
         printf("Server not started\n");
+        exit(-1);
+    }
+    if(!set_classes())
+    {
+        printf("ERROR:  Nonexistant class referenced in config file\n"
+               "Server not started\n");
         exit(-1);
     }
     if(!new_ports)

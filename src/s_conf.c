@@ -297,7 +297,7 @@ find_aConnect(char *name)
     return tmp;
 }
 
-aPort *
+static inline aPort *
 find_port(int port)
 {
     aPort *tmp;
@@ -313,7 +313,7 @@ find_aConnect_match(char *name, char *username, char *host)
     aConnect *aconn;
     char userhost[USERLEN + HOSTLEN + 3];
 
-    (void) ircsprintf(userhost, "%s@%s", username, host);
+    ircsprintf(userhost, "%s@%s", username, host);
 
     for(aconn = connects; aconn; aconn = aconn->next)
         if(!mycmp(name, aconn->name) && !match(userhost, aconn->host))
@@ -365,7 +365,7 @@ find_oper(char *name, char *username, char *sockhost, char *hostip)
     return aoper;
 }
 
-aOper *
+static inline aOper *
 find_oper_byname(char *name)
 {
     aOper *aoper;
@@ -375,7 +375,7 @@ find_oper_byname(char *name)
     return aoper;
 }
 
-aClass *
+static inline aClass *
 find_class(char *name)
 {
     aClass *tmp;
@@ -418,7 +418,8 @@ set_effective_class(aClient *cptr)
  * rewritten in feb04 for the overdue death of aConfItem
  * and all the shit that came with it.  -epi
  */
-int attach_Iline(aClient *cptr, struct hostent *hp, char *sockhost)
+int 
+attach_Iline(aClient *cptr, struct hostent *hp, char *sockhost)
 {
     aAllow *allow;
     char   *hname;
@@ -488,7 +489,8 @@ int attach_Iline(aClient *cptr, struct hostent *hp, char *sockhost)
  * rewrote to remove the "ONE" lamity *BLEH* I agree with comstud on
  * this one. - Dianora
  */
-static int attach_iline(aClient *cptr, aAllow *allow, char *uhost, int doid)
+static int 
+attach_iline(aClient *cptr, aAllow *allow, char *uhost, int doid)
 {
     
     if (doid)
@@ -1420,6 +1422,57 @@ confadd_restrict(cVar *vars[], int lnum)
     return lnum;
 }
 
+/* set_classes
+ * after loading the config into temporary lists, we must
+ * set the appropriate classes for each conf.  If we run into
+ * problems, then back out.
+ */
+
+static inline aClass *
+find_new_class(char *name)
+{
+    aClass *tmp;
+    if(!name)
+        return find_new_class("default");
+    for(tmp = new_classes; tmp; tmp = tmp->next)
+        if(!mycmp(name, tmp->name))
+            break;
+    return tmp;
+}
+
+int
+set_classes()
+{
+    aConnect *aconn;
+    aAllow   *allow;
+    aOper    *aoper;
+
+    /* Note:
+     * You may be wondering why we're doing this here and appearently
+     * again in our merge routines!  well, this is for sanity.  if
+     * for whatever reason we dont have a class for each definition here,
+     * back out of the conf load immediately and we wont have distroyed 
+     * or overwritten any of our active data.
+     * After we run our merge_classes() routine at the start of our
+     * merge, then some of these classes will update currently active
+     * classes and be free()'d - meaning some of these references are useless.
+     * That is why we run it again inside the merge routines.
+     * -epi
+     */
+
+    for(aconn = new_connects; aconn; aconn = aconn->next)
+        if(!(aconn->class = find_new_class(aconn->class_name)))
+            return 0;
+    for(allow = new_allows; allow; allow = allow->next)
+        if(!(allow->class = find_new_class(allow->class_name)))
+            return 0;
+    for(aoper = new_opers; aoper; aoper = aoper->next)
+        if(!(aoper->class = find_new_class(aoper->class_name)))
+            return 0;
+    return 1;
+}
+
+
 /* merge routines.  used to mirge together new lists and old lists
  * after a rehash. Feb27/04 -epi
  */
@@ -1921,6 +1974,13 @@ int rehash(aClient *cptr, aClient *sptr, int sig)
     if(initconf(configfile) == -1)
     {
         sendto_realops("Rehash Aborted");
+        clear_newconfs();
+        return 1;
+    }
+
+    if(!set_classes())
+    {
+        sendto_realops("Rehash Aborted:  Nonexistant class referenced");
         clear_newconfs();
         return 1;
     }
