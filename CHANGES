@@ -11,6 +11,9 @@ Changes for 1.4.23
 - Prompt for max channels per user and oper pw encryption in the config
   script
 - Example.conf brought up to date
+- Disabled ident on server<->server connections, to deal with "sux mode,"
+  which happens when the ident port is filtered and the connection has to
+  time out
 
 Changes for 1.4.22
 - Fixed a bug where a server with a bad name trying to connect or trying

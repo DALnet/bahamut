@@ -3103,6 +3103,9 @@ m_user(aClient *cptr,
 	return exit_client(cptr, sptr, sptr, BadPtr(aconf->passwd) ?
 			   "Bad GCOS: Reason unspecified" : aconf->passwd);
     }
+#ifdef DO_IDENTD
+    start_auth(acptr);
+#endif
     return do_user(parv[0], cptr, sptr, username, host, server, 0, realname);
 }
 
