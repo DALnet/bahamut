@@ -22,6 +22,9 @@ struct fakelinkserver {
    char *description;
 };
 
+/* lserver_list is a linked list of Link structures,
+   each with the 'cp' member pointing to a struct fakelinkserver */
+
 static Link *lserver_list = NULL;
 
 static struct fakelinkserver *fakelinkserver_find(char *name)
@@ -154,6 +157,7 @@ int fakelinkscontrol(int parc, char *parv[])
    return 0;
 }
 
+/* send the list to a client doing /links */
 void fakeserver_list(aClient *sptr)
 {
    Link *lp;
@@ -167,10 +171,12 @@ void fakeserver_list(aClient *sptr)
    }
 }
 
+/* send the list to a client server (we are a hub server) */
 void fakeserver_sendserver(aClient *sptr)
 {
    Link *lp;
 
+   /* tell them to reset their list */
    sendto_one(sptr, ":%s LINKS CONTROL RESET", me.name);
 
    for (lp = lserver_list; lp; lp = lp->next)
@@ -182,13 +188,9 @@ void fakeserver_sendserver(aClient *sptr)
    }
 }
 
-void fakeserver_clear()
-{
-   fakelinkserver_reset();
-}
-
 /////////////////////////////////////////////////////////////
 
+/* -1 if lusers isn't locked */
 static time_t luserslock_expiretime = -1;
 
 int is_luserslocked() 

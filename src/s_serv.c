@@ -102,7 +102,6 @@ void fakeserver_list(aClient *);
 int fakelinkscontrol(int, char **);
 void fakelinkserver_update(char *, char *);
 void fakeserver_sendserver(aClient *);
-void fakeserver_clear();
 
 int is_luserslocked();
 void send_fake_users(aClient *);
@@ -950,8 +949,6 @@ int do_server_estab(aClient *cptr)
     /* Send out fake server list and other 'fake' stuff */
     fakeserver_sendserver(cptr);
     fakelusers_sendlock(cptr);
-#else
-    fakeserver_clear();
 #endif
 
     /* Bursts are about to start.. send a BURST */
