@@ -213,6 +213,7 @@ extern int  m_sgline(aClient *, aClient *, int, char **);
 extern int  m_unsgline(aClient *, aClient *, int, char **);
 extern int  m_dkey(aClient *, aClient *, int, char **);
 
+
 #ifdef MSGTAB
 struct Message msgtab[] = 
 {

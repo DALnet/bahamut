@@ -2915,7 +2915,9 @@ int m_umode(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	    case '\t':
 		break;
 	    case 'r':
-		break; /* users can't set themselves +r! */
+	    case 'x':
+	    case 'X':
+		break; /* users can't set themselves +r,+x, or +X! */
 	    case 'A':
 		/* set auto +a if user is setting +A */
 		if (MyClient(sptr) && (what == MODE_ADD))

@@ -1760,6 +1760,8 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	if (!((stat == 'p') || (stat == 'P') || (stat=='?') || (stat=='u') ||
 	      (stat=='l') || (stat=='L')) && !MyConnect(sptr))
 	    return 0;
+
+	sptr->since+=5;
 		
 	if ((last_used + MOTD_WAIT) > NOW)
 	    return 0;

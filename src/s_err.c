@@ -30,7 +30,7 @@ static char *replies[] =
                                 "biklLmMnoprRstvc",
     /* 005 RPL_PROTOCTL*/       ":%s 005 %s NOQUIT WATCH=%i SAFELIST MODES=%i "
                                 "MAXCHANNELS=%i MAXBANS=%i NICKLEN=%i "
-                                "TOPICLEN=%i KICKLEN=%i CHANTYPES=&# "
+                                "TOPICLEN=%i KICKLEN=%i CHANTYPES=# "
                                 "PREFIX=(ov)@+ NETWORK=DALnet SILENCE=%i "
                                 "CASEMAPPING=ascii "
                                 ":are available on this server",

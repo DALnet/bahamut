@@ -1556,8 +1556,6 @@ int m_join(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	    name[CHANNELLEN] = '\0';
 	    chanlen=CHANNELLEN;
 	}
-	if (*name == '&' && !MyConnect(sptr))
-	    continue;
 	if (*name == '0' && !atoi(name))
 	    *jbuf = '\0';
 	else if (!IsChannelName(name))

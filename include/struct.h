@@ -270,6 +270,7 @@ typedef struct MotdItem aMotd;
 #define UMODE_w     0x00008	/* umode +w - Get wallops */
 #define UMODE_s     0x00010	/* umode +s - Server notices */
 #define UMODE_c     0x00020	/* umode +c - Client connections/exits */
+#define UMODE_c     0x00020	/* umode +c - Client connections/exits */
 #define UMODE_r     0x00040	/* umode +r - registered nick */
 #define UMODE_k     0x00080	/* umode +k - Server kill messages */
 #define UMODE_f     0x00100	/* umode +f - Server flood messages */
@@ -283,9 +284,10 @@ typedef struct MotdItem aMotd;
 #define UMODE_h     0x20000     /* umode +h - Helper */
 #define UMODE_m     0x40000     /* umode +m - spambot notices */
 #define UMODE_R     0x80000     /* unmode +R - No non registered msgs */
-#define UMODE_D     0x100000    /* umode +D - pseudo/hidden, has seen dcc
-				 * warning message */
-#define UMODE_e     0x200000    /* umode +e - oper notices for the above +D */
+#define UMODE_e     0x100000    /* umode +e - oper notices for the above +D */
+#define UMODE_x     0x200000    /* umode +x - Squelch with notice */
+#define UMODE_X     0x400000    /* umode +X - Squelch without notice */
+#define UMODE_D     0x800000    /* umode +D - Hidden dccallow umode */
 
 /* for sendto_ops_lev */
 
@@ -302,7 +304,7 @@ typedef struct MotdItem aMotd;
                      UMODE_h|UMODE_R)
 #define ALL_UMODES (SEND_UMODES|UMODE_s|UMODE_c|UMODE_r|UMODE_k|UMODE_f|\
 	            UMODE_y|UMODE_d|UMODE_g|UMODE_b|UMODE_n|UMODE_h|UMODE_m|\
-	            UMODE_O|UMODE_R|UMODE_e)
+	            UMODE_O|UMODE_R|UMODE_e|UMODE_x|UMODE_X)
 #ifdef DEFAULT_HELP_MODE
 #define OPER_UMODES (UMODE_o|UMODE_w|UMODE_s|UMODE_y|UMODE_d|UMODE_g|\
                      UMODE_n|UMODE_h)
@@ -331,8 +333,8 @@ typedef struct MotdItem aMotd;
 #define IsUmodeh(x)             ((x)->umode & UMODE_h)
 #define IsUmodee(x)             ((x)->umode & UMODE_e)
 #define IsNoNonReg(x)           ((x)->umode & UMODE_R)
-#define SeenDCCNotice(x)        ((x)->umode & UMODE_D)
-#define SetDCCNotice(x)         ((x)->umode |= UMODE_D)
+#define IsWSquelch(x)           ((x)->umode & UMODE_x)
+#define ISSSquelch(x)           ((x)->umode & UMODE_X)
 #define	IsPerson(x)		((x)->user && IsClient(x))
 #define	IsPrivileged(x)		(IsAnOper(x) || IsServer(x))
 #define	SendWallops(x)		((x)->umode & UMODE_w)
@@ -359,11 +361,15 @@ typedef struct MotdItem aMotd;
 #define	SetLocOp(x)    		((x)->umode |= UMODE_O)
 #define	SetInvisible(x)		((x)->umode |= UMODE_i)
 #define	SetWallops(x)  		((x)->umode |= UMODE_w)
+#define SetWSquelch(x)          ((x)->umode |= UMODE_x)
+#define SetSSquelch(x)          ((x)->umode |= UMODE_X)
 #define	SetDNS(x)		((x)->flags |= FLAGS_DOINGDNS)
 #define	DoingDNS(x)		((x)->flags & FLAGS_DOINGDNS)
 #define	SetAccess(x)		((x)->flags |= FLAGS_CHKACCESS)
 #define	DoingAuth(x)		((x)->flags & FLAGS_AUTH)
 #define	NoNewLine(x)		((x)->flags & FLAGS_NONL)
+#define SeenDCCNotice(x)        ((x)->umode & UMODE_D)
+#define SetDCCNotice(x)         ((x)->umode |= UMODE_D)
 
 #define SetNegoServer(x)	((x)->flags |= FLAGS_SERV_NEGO)
 #define IsNegoServer(x)		((x)->flags & FLAGS_SERV_NEGO)
@@ -392,6 +398,8 @@ typedef struct MotdItem aMotd;
 #define ClearUmodeh(x)          ((x)->umode &= ~UMODE_h)
 #define ClearUmodee(x)          ((x)->umode &= ~UMODE_e)
 #define ClearNoNonReg(x)        ((x)->umode &= ~UMODE_R)
+#define ClearWSquelch(x)        ((x)->umode &= ~UMODE_x)
+#define ClearSSquelch(x)        ((x)->umode &= ~UMODE_X)
 #define	ClearOper(x)		((x)->umode &= ~UMODE_o)
 #define ClearLocOp(x)		((x)->umode &= ~UMODE_O)
 #define	ClearInvisible(x)	((x)->umode &= ~UMODE_i)
@@ -1035,7 +1043,7 @@ struct Channel
 #define IsMember(blah,chan) ((blah && blah->user && \
 		find_channel_link((blah->user)->channel, chan)) ? 1 : 0)
 
-#define	IsChannelName(name) ((name) && (*(name) == '#' || *(name) == '&'))
+#define	IsChannelName(name) ((name) && (*(name) == '#'))
 
 /* Misc macros */
 
