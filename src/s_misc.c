@@ -372,6 +372,7 @@ void exit_one_client_in_split(aClient *cptr, aClient *dead, char *reason)
 void exit_one_server(aClient *cptr, aClient *dead, aClient *from, char *spinfo, char *comment)
 {
    aClient *acptr, *next;
+   int i, j;
 
    /* okay, this is annoying.
     * first off, we need two loops.
@@ -403,13 +404,21 @@ void exit_one_server(aClient *cptr, aClient *dead, aClient *from, char *spinfo, 
       next = client; /* restart the loop */
    }
 
-   if(cptr != dead)
+   for (i = serv_fdlist.entry[j = 1]; j <= serv_fdlist.last_entry; i = serv_fdlist.entry[++j]) 
    {
-      /* todo: notify all non-noquit servs of the death of cptr */
-   }
-   else
-   {
-      /* todo: notify all servs of the death of cptr */
+      if (!(acptr = local[i]) || acptr == cptr || IsMe(acptr) || acptr == dead)
+         continue;
+
+      /* if the server is noquit, we only want to send it information about 'dead' */
+      /* if it's not, this server gets split information for ALL dead servers. */
+
+      if(IsNoQuit(acptr) && cptr != dead)
+         continue;
+
+      if (cptr->from == acptr)
+	    sendto_one(acptr, ":%s SQUIT %s :%s", from->name, cptr->name, comment);
+	 else 
+	    sendto_one(acptr, "SQUIT %s :%s", cptr->name, comment);
    }
 
    del_from_client_hash_table(cptr->name, cptr); 
