@@ -239,7 +239,7 @@ static char *replies[] = {
 	/* 214 RPL_STATSNLINE */	":%s 214 %s %c %s * %s %d %d",
 	/* 215 RPL_STATSILINE */	":%s 215 %s %c %s * %s %d %d",
 # ifdef K_COMMENT_ONLY
-	/* 216 RPL_STATSKLINE */	":%s 216 %s %c %s * %s %s",
+	/* 216 RPL_STATSKLINE */	":%s 216 %s %c %s * %s %d :%s",
 # else
 	/* 216 RPL_STATSKLINE */	":%s 216 %s %c %s %s %s %d %d",
 # endif
@@ -251,7 +251,7 @@ static char *replies[] = {
 	/* 222 */			":%s 222 %s %c %s * %s %d %d",
 	/* 223 */			":%s 223 %s %c %s * %s %d %d",
 	/* 224 */			":%s 224 %s %c %s * %s %d %d",
-	/* 225 */			":%s 225 %s %c %s %s",
+	/* 225 RPL_STATSZLINE */	":%s 225 %s %c %s %s",
 	/* 226 */	NULL,
 	/* 227 */	NULL,
 	/* 228 */	NULL,
@@ -269,7 +269,7 @@ static char *replies[] = {
 	/* 240 */	NULL,
 	/* 241 RPL_STATSLLINE */	":%s 241 %s %c %s * %s %d %d",
 	/* 242 RPL_STATSUPTIME */	":%s 242 %s :Server Up %d days, %d:%02d:%02d",
-	/* 243 RPL_STATSOLINE */	":%s 243 %s %c %s * %s %ul %d",
+	/* 243 RPL_STATSOLINE */	":%s 243 %s %c %s * %s %lu %d",
 	/* 244 RPL_STATSHLINE */	":%s 244 %s %c %s * %s %d %d",
 	/* 245 RPL_STATSSLINE */	":%s 245 %s %c %s * %s %d %d",
 	/* 246 RPL_STATSXLINE */	":%s 246 %s %c %s * %s %d %d",
@@ -495,7 +495,7 @@ static char *replies[] = {
 	/* 462 ERR_ALREADYREGISTERED */	":%s 462 %s :You may not reregister",
 	/* 463 ERR_NOPERMFORHOST */	":%s 463 %s :Your host isn't among the privileged",
 	/* 464 ERR_PASSWDMISMATCH */	":%s 464 %s :Password Incorrect",
-	/* 465 ERR_YOUREBANNEDCREEP */	":%s 465 %s :You are banned from this server- %s",
+	/* 465 ERR_YOUREBANNEDCREEP */	":%s 465 %s :You have been %s.",
 	/* 466 */	NULL,
 	/* 467 ERR_KEYSET */		":%s 467 %s %s :Channel key already set",
 	/* 468 ERR_ONLYSERVERSCANCHANGE */		":%s 468 %s %s :Only servers can change that mode",

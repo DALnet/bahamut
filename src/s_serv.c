@@ -3281,17 +3281,9 @@ m_kline(aClient *cptr,
    DupString(aconf->host, host);
 
 #ifndef K_COMMENT_ONLY
-   if (temporary_kline_time)
-      (void) ircsprintf(buffer, "Temporary K-line for %s (%s)",
-			reason, current_date);
-   else
-      (void) ircsprintf(buffer, "%s (%s)", reason, current_date);
+   (void) ircsprintf(buffer, "%s (%s)", reason, current_date);
 #else
-   if (temporary_kline_time)
-      (void) ircsprintf(buffer, "Temporary K-line for %s (%s)",
-			reason, current_date);
-   else
-      (void) ircsprintf(buffer, "%s (%s)", reason, current_date);
+   (void) ircsprintf(buffer, "%s (%s)", reason, current_date);
 #endif
 
    DupString(aconf->passwd, buffer);
@@ -4971,22 +4963,11 @@ int m_akill(aClient *cptr, aClient *sptr, int parc, char *parv[]) {
 	DupString(aconf->host, host);
 	DupString(aconf->name, user);
 	
-	if(length) {  
 #ifndef K_COMMENT_ONLY
-		ircsprintf(buffer, "Temporary AKill for %s (%s)",
-					  reason, current_date);
+        ircsprintf(buffer, "%s (%s)", reason, current_date);
 #else
-		ircsprintf(buffer, "Temporary AKill for %s (%s)",
-					  reason, current_date);
+	ircsprintf(buffer, "%s (%s)", reason, current_date);
 #endif   
-	}
-	else {
-#ifndef K_COMMENT_ONLY
-		ircsprintf(buffer, "%s (%s)", reason, current_date);
-#else
-		ircsprintf(buffer, "%s (%s)", reason, current_date);
-#endif   
-	}
 	DupString(aconf->passwd, buffer);
 	        
 	/* whether or not we have a length, this is still a temporary akill */

@@ -1887,7 +1887,7 @@ report_matching_host_klines(aClient *cptr, char *host)
       if (tmp->status == CONF_KILL)
 	 sendto_one(cptr, rpl_str(RPL_STATSKLINE), me.name,
 		    cptr->name, 'K', found_host,
-		    name, pass);
+		    name, 0, pass);
 #else
       port = BadPtr(tmp->port) ? 0 : tmp->port;
       if (tmp->status == CONF_KILL)
@@ -1910,7 +1910,7 @@ report_matching_host_klines(aClient *cptr, char *host)
       if (tmp->status == CONF_KILL)
 	 sendto_one(cptr, rpl_str(RPL_STATSKLINE), me.name,
 		    cptr->name, 'K', found_host,
-		    name, pass);
+		    name, 0, pass);
 #else
       port = BadPtr(tmp->port) ? 0 : tmp->port;
       if (tmp->status == CONF_KILL)
@@ -1933,7 +1933,7 @@ report_matching_host_klines(aClient *cptr, char *host)
       if (tmp->status == CONF_KILL)
 	 sendto_one(cptr, rpl_str(RPL_STATSKLINE), me.name,
 		    cptr->name, 'K', found_host,
-		    name, pass);
+		    name, 0, pass);
 #else
       port = BadPtr(tmp->port) ? 0 : tmp->port;
       if (tmp->status == CONF_KILL)
@@ -2123,7 +2123,8 @@ void report_temp_klines(aClient *sptr) {
    char       *host;
    char       *name;
    char       *reason;
-	char type;
+   char        type;
+   int         len;
 	
    if (temporary_klines) {
       kill_list_ptr = last_list_ptr = temporary_klines;
@@ -2171,16 +2172,21 @@ void report_temp_klines(aClient *sptr) {
 				  reason = kill_list_ptr->passwd;
 				else
 				  reason = "No Reason";
+
+                                len = (kill_list_ptr->hold - NOW) / 60;
 				
 				if(kill_list_ptr->status==CONF_KILL)
 				  type='k';
 				else if(kill_list_ptr->status==CONF_AKILL && kill_list_ptr->hold==0xFFFFFFFF)
+                                {
+                                  len = 0;
 				  type='A';
+                                }
 				else
 				  type='a';
 				
 				sendto_one(sptr, rpl_str(RPL_STATSKLINE), me.name,
-							  sptr->name, type, host, name, reason);
+					   sptr->name, type, host, name, len, reason);
 				
 				last_list_ptr = kill_list_ptr;
 				kill_list_ptr = kill_list_ptr->next;

@@ -109,7 +109,7 @@ report_conf_links(aClient *sptr,
 	 if (tmp->status == CONF_KILL)
 	    sendto_one(sptr, rpl_str(numeric), me.name,
 		       sptr->name, c, host,
-		       name, pass);
+		       name, 0, pass);
 #else
 	 if (tmp->status == CONF_KILL)
 	    sendto_one(sptr, rpl_str(numeric), me.name,

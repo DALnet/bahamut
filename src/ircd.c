@@ -427,13 +427,18 @@ time_t      oldest = 0, timeout;
       if (zkillflag || killflag)
       {
          char       *reason;
+         char       *ktype;
+
+         ktype = zkillflag ? "Z-lined" : 
+            ((aconf->status == CONF_KILL) ? "K-lined" : "Autokilled");
 
 	 if (killflag) 
          {
-	    sendto_ops("K-line active for %s",
+	    sendto_ops("%s active for %s",
+                       (aconf->status == CONF_KILL) ? "K-line" : "Autokill",
 		       get_client_name(cptr, FALSE));
 #ifdef K_COMMENT_ONLY
-	    reason = aconf->passwd ? aconf->passwd : "K-lined";
+	    reason = aconf->passwd ? aconf->passwd : ktype;
 #else
 	    reason = (BadPtr(aconf->passwd) || !is_comment(aconf->passwd)) ?
 	       "K-lined" : aconf->passwd;
@@ -449,14 +454,14 @@ time_t      oldest = 0, timeout;
 	 }
 
 	 sendto_one(cptr, err_str(ERR_YOUREBANNEDCREEP),
-		    me.name, cptr->name, reason);
+		    me.name, cptr->name, ktype);
 
 	 if (killflag) 
 	 {
 #ifdef KLINE_WITH_REASON
 	    (void) exit_client(cptr, cptr, &me, reason);
 #else
-	    (void) exit_client(cptr, cptr, &me, "you have been K-lined");
+	    (void) exit_client(cptr, cptr, &me, ktype);
 #endif
 	 }
 	 else 
@@ -464,7 +469,7 @@ time_t      oldest = 0, timeout;
 #ifdef KLINE_WITH_REASON
 	    (void) exit_client(cptr, cptr, &me, reason);
 #else
-	    (void) exit_client(cptr, cptr, &me, "you have been Z-lined");
+	    (void) exit_client(cptr, cptr, &me, ktype);
 #endif
 	 }
 #ifdef EXPERIMENTAL_CHECKPINGS

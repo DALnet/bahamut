@@ -212,6 +212,16 @@
 
 /******  END OF AUTOMATIC CONFIG SCRIPT COVERAGE  ******/
 
+/* these should be set to your local and global kline addresses */
+
+#ifndef SERVER_KLINE_ADDRESS
+#define SERVER_KLINE_ADDRESS "bad_admin@poorly.configured.server.com"
+#endif
+
+#ifndef NETWORK_KLINE_ADDRESS
+#define NETWORK_KLINE_ADDRESS "bad_admin@poorly.configured.network.com"
+#endif
+
 /* OS Depentant ifdefs */
 
 #ifdef SUNDBE
