@@ -409,21 +409,7 @@ time_t timeout_query_list(time_t now)
  */
 void del_queries(char *cp)
 {
-    ResRQ  *Trptr = find_request_cp(cp);
-    ResRQ  *ret = NULL; 
-
-    ResRQ  *rptr, *r2ptr;
-
-    for (rptr = first; rptr; rptr = r2ptr)
-    {
-	r2ptr = rptr->next;
-	if (cp == rptr->cinfo.value.cp)
-	{
-	    ret = rptr;
-	}
-    }
-
-    if(ret != Trptr) abort();
+    ResRQ  *ret = find_request_cp(cp);
 
     if(ret)
        rem_request(ret);
@@ -471,14 +457,7 @@ static int send_res_msg(char *msg, int len, int rcount)
 /* find a dns request id (id is determined by dn_mkquery) */
 static ResRQ *find_id(int id)
 {
-    ResRQ  *Trptr = find_request_id(id);
-    ResRQ  *rptr, *ret = NULL;
-
-    for (rptr = first; rptr; rptr = rptr->next)
-	if (rptr->id == id)
-	    ret = rptr;
-
-    if(ret != Trptr) abort();
+    ResRQ  *ret = find_request_id(id);
 
     return ret;
 }
