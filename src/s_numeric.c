@@ -68,18 +68,27 @@ int do_numeric(int numeric, aClient *cptr, aClient *sptr, int parc,
     buffer[0] = '\0';
     if (parc > 1)
     {
+	int bpos = 0;
+	char *p;
+
 	for (i = 2; i < (parc - 1); i++)
 	{
-	    (void) strcat(buffer, " ");
-	    (void) strcat(buffer, parv[i]);
+	    buffer[bpos++] = '\0';
+	    for(p = parv[i]; *p; p++)
+		buffer[bpos++] = *p;
 	}
-	(void) strcat(buffer, " :");
-	(void) strcat(buffer, parv[parc - 1]);
+	buffer[bpos++] = ' ';
+	buffer[bpos++] = ':';
+	for(p = parv[parc - 1]; *p; p++)
+	    buffer[bpos++] = *p;
+	buffer[bpos] = '\0';
     }
     for (; (nick = strtoken(&p, parv[1], ",")); parv[1] = NULL)
     {
 	if ((acptr = find_client(nick, (aClient *) NULL)))
 	{
+	    int dohide;
+
 	    /*
 	     * Drop to bit bucket if for me... ...one might consider
 	     * sendto_ops * here... --msa * And so it was done. -avalon *
@@ -88,23 +97,38 @@ int do_numeric(int numeric, aClient *cptr, aClient *sptr, int parc,
 	     * servers don't try to loop * with numerics which can happen
 	     * with nick collisions. * - Avalon
 	     */
+
+#ifdef HIDE_NUMERIC_SOURCE
+	    dohide = MyClient(acptr) ? 1 : 0;
+#else
+	    dohide = 0;
+#endif
+
 	    if (!IsMe(acptr) && IsPerson(acptr))
-		sendto_prefix_one(acptr, sptr, ":%s %d %s%s",
-				  parv[0], numeric, nick, buffer);
+		sendto_prefix_one(acptr, dohide ? &me : sptr, ":%s %d %s%s",
+				  dohide ? me.name : parv[0], numeric, nick, buffer);
 	    else if (IsServer(acptr) && acptr->from != cptr)
 		sendto_prefix_one(acptr, sptr, ":%s %d %s%s",
 				  parv[0], numeric, nick, buffer);
 	}
-	else if ((acptr = find_server(nick, (aClient *) NULL)))
-	{
-	    if (!IsMe(acptr) && acptr->from != cptr)
-		sendto_prefix_one(acptr, sptr, ":%s %d %s%s",
-				  parv[0], numeric, nick, buffer);
-	}
 	else if ((chptr = find_channel(nick, (aChannel *) NULL)))
-	    sendto_channel_butone(cptr, sptr, chptr, ":%s %d %s%s",
-				  parv[0],
-				  numeric, chptr->chname, buffer);
+	{
+	    int dohide;
+
+#ifdef HIDE_NUMERIC_SOURCE
+	    dohide = 1;
+#else
+	    dohide = 0;
+#endif
+	    sendto_channel_butserv(chptr, dohide ? &me : sptr, ":%s %d %s%s",
+				   dohide ? me.name : parv[0], numeric, 
+				   chptr->chname, buffer);
+
+	    sendto_channel_remote_butone(cptr, sptr, chptr, 
+					 parv[0], numeric, 
+					 chptr->chname, buffer);
+
+	}
     }
     return 0;
 }

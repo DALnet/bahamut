@@ -42,6 +42,8 @@ extern void send_operwall(aClient *, char *, char *);
 extern void sendto_all_butone(aClient *one, aClient *from, char *pattern, ...);
 extern void sendto_channel_butone(aClient *one, aClient *from, 
 				  aChannel *chptr, char *pattern, ...);
+extern void sendto_channel_remote_butone(aClient *one, aClient *from, 
+				         aChannel *chptr, char *pattern, ...);
 extern void sendto_channel_butserv(aChannel *chptr, aClient *from,
 				   char *pattern, ...);
 extern void sendto_channelops_butone(aClient *one, aClient *from,

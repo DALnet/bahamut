@@ -593,6 +593,61 @@ void sendto_channel_butone(aClient *one, aClient *from, aChannel *chptr,
 }
 
 /*
+ * Like sendto_channel_butone, but sends to all servers but 'one'
+ * that have clients in this channel.
+ */
+void sendto_channel_remote_butone(aClient *one, aClient *from, aChannel *chptr,
+			          char *pattern, ...) 
+{
+    chanMember *cm;
+    aClient *acptr;
+    int i;
+    int didremote = 0;
+    va_list vl;
+    char *pfix;
+   
+    va_start(vl, pattern);
+
+    pfix = va_arg(vl, char *);
+
+    INC_SERIAL
+    for (cm = chptr->members; cm; cm = cm->next) 
+    {
+	acptr = cm->cptr;
+	if (acptr->from == one)
+	    continue; /* ...was the one I should skip */
+#ifdef SERVICESHUB
+       if(acptr && acptr->user && acptr->user->server && 
+         (!strcasecmp(acptr->user->server,SERVICES_NAME) || !strcasecmp(acptr->user->server,STATS_NAME)))
+         continue;
+#endif
+	i = acptr->from->fd;
+	if (!MyClient(acptr)) 
+	{
+	    /*
+	     * Now check whether a message has been sent to this remote
+	     * link already
+	     */
+	    if(!didremote)
+		didremote = prefix_buffer(1, from, pfix, remotebuf,
+					  pattern, vl);
+	    
+	    if(check_fake_direction(from, acptr))
+		continue;
+	    
+	    if (sentalong[i] != sent_serial) 
+	    {
+		send_message(acptr, remotebuf, didremote);
+		sentalong[i] = sent_serial;
+	    }
+	}
+    }
+    
+    va_end(vl);
+    return;
+}
+
+/*
  * sendto_server_butone_services
  * 
  * Send a message to all connected servers except the client 'one', and do not send to services.dal.net.

@@ -1826,21 +1826,26 @@ int m_whois(aClient *cptr, aClient *sptr, int parc, char *parv[])
     if (parc > 2)
     {
 #ifdef NO_USER_OPERTARGETED_COMMANDS
-	/* 
-	 * gross! prevent someone from doing /whois servername opername
-	 * again and again for all servers until a reply is found
+	/*
+	 * Block /whois <anything> <nick1,nick2,nick3>
+	 * Also block /whois <server> <nick> for +I users
 	 */
 	if(!IsAnOper(sptr))
 	{
-	    char tmppv2[512];
-
-	    strcpy(tmppv2, parv[2]);
-	    for (tmp = tmppv2; (nick = strtoken(&p, tmp, ",")); tmp = NULL)
+	    acptr = hash_find_client(parv[2], (aClient *) NULL);
+	    if (!acptr || !IsPerson(acptr))
 	    {
-		acptr = hash_find_client(nick, (aClient *) NULL);
-		if (!acptr || !IsPerson(acptr))
-		    continue;
-		if(IsUmodeI(acptr))
+		sendto_one(sptr, err_str(ERR_NOSUCHNICK),
+			   me.name, parv[0], parv[2]);
+		return 0;
+	    }
+
+	    if(IsUmodeI(acptr))
+	    {
+		/* allow /whois nick nick, but nothing else */
+		if(mycmp(parv[1], parv[2]) == 0)
+		    parv[1] = acptr->user->server; /* And kludge it */
+		else
 		{
 		    sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name, parv[0]);
 		    return 0;
@@ -1971,7 +1976,7 @@ int m_whois(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		       me.name, parv[0], name, buf);
 	
 	/* don't give away that this oper is on this server if they're hidden! */
-	if (acptr->user && MyConnect(acptr) && !(IsUmodeI(acptr) && !IsAnOper(sptr)))
+	if (acptr->user && MyConnect(acptr) && !(IsUmodeI(acptr) && (!IsAnOper(sptr) || parc < 3)))
 	    sendto_one(sptr, rpl_str(RPL_WHOISIDLE),
 		       me.name, parv[0], name,
 		       timeofday - user->last,

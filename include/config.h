@@ -738,12 +738,17 @@
  * Users can't do /motd oper, /admin oper, /whois oper oper, 
  * /whois server.* oper on any oper that is set +I 
  * (see oper hiding section)
+ *
+ * HIDE_NUMERIC_SOURCE
+ * All numerics going out to local clients come from the local server
+ * Necessary for numerics from remote servers not giving information away
  */
 /* #undef NO_USER_SERVERNOTICES */
 /* #undef NO_USER_STATS */
 /* #undef NO_LOCAL_USER_STATS */
 /* #undef NO_USER_TRACE */
 /* #undef NO_USER_OPERTARGETED_COMMANDS */
+/* #undef HIDE_NUMERIC_SOURCE */
 
 /***********************/
 /* OPER HIDING SECTION */
@@ -812,6 +817,7 @@
 # define NO_USER_STATS
 # define NO_USER_TRACE
 # define NO_USER_OPERTARGETED_COMMANDS
+# define HIDE_NUMERIC_SOURCE
 #endif
 
 /******************************************************************
