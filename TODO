@@ -1,3 +1,2 @@
-RECVQ not being processed unless socket ready for read
 Server side squelch
-
+SMODE - TS'd modes that cannot be sent in SJOIN (+b, for instance)
