@@ -1508,7 +1508,7 @@ confadd_modules(cVar *vars[], int lnum)
     {
         if(tmp->type && (tmp->type->flag & MBTF_PATH))
         {
-            if(!x->module_path)
+            if(x->module_path)
             {
                 confparse_error("Multiple module paths defined", lnum);
                 return -1;
