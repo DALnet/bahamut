@@ -95,10 +95,7 @@ char        serveropts[] =
 #include "sys.h"
 #include "hash.h"
 #include <sys/file.h>
-#if !defined(ULTRIX) && !defined(SGI) && !defined(sequent) && \
-    !defined(__convex__)
 #include <sys/param.h>
-#endif
 #if defined( HAVE_GETRUSAGE )
 #ifdef SOL20
 #include <sys/time.h>

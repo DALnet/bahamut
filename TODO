@@ -1,0 +1,17 @@
+TODO LIST
+---------
+
+- Fix solaris compatibility
+- Implement linux epoll socket engine
+- Implement solaris /dev/poll socket engine
+- Implement +I channel invite lists
+- Implement +e channel exemption lists
+- Implement IPV6
+- Switch encryption to RSA
+- Split up aClient into separate structures for local and remote users
+- Replace configuration file format with bind style configuration:
+	- Split aConfItem into multiple structures
+	- Outdate the use of config script within configuration file
+- Backport message tokenization from 1.6
+- Backport IDENTITY from 1.6
+- 

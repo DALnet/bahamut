@@ -125,7 +125,7 @@
 #define	PDP_ENDIAN	3412   /* LSB first in word, MSW first in long (pdp) */
 
 #if defined(vax) || defined(ns32000) || defined(sun386) || defined(MIPSEL) || \
-    defined(BIT_ZERO_ON_RIGHT) || defined(sequent) || defined(i386) ||\
+    defined(BIT_ZERO_ON_RIGHT) || defined(i386) ||\
     defined(___vax__) || defined(__ns32000__) || defined(__sun386__) ||\
     defined(__alpha)
 

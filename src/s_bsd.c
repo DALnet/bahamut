@@ -1430,21 +1430,6 @@ int read_packet(aClient * cptr)
 	length = recv(cptr->fd, readbuf, sizeof(readbuf), 0);
 #endif
 
-#ifdef USE_REJECT_HOLD
-	/* 
-	 * If client has been marked as rejected i.e. it is a client that
-	 * is trying to connect again after a k-line, pretend to read it
-	 * but don't actually. -Dianora
-	 */
-
-	if (cptr->flags & FLAGS_REJECT_HOLD) {
-	    if ((cptr->firsttime + REJECT_HOLD_TIME) > timeofday)
-		exit_client(cptr, cptr, cptr, "reject held client");
-	    else
-		return 1;
-	}
-#endif
-
 	cptr->lasttime = timeofday;
 	if (cptr->lasttime > cptr->since)
 	    cptr->since = cptr->lasttime;

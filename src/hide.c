@@ -246,12 +246,10 @@ static void dolocklusers()
 
 void send_fake_users(aClient *sptr)
 {
-#ifdef CLIENT_COUNT
     sendto_one(sptr, rpl_str(RPL_LOCALUSERS), me.name, sptr->name,
                    fakelusers.m_client, fakelusers.m_clientmax);
     sendto_one(sptr, rpl_str(RPL_GLOBALUSERS), me.name, sptr->name,
                fakelusers.m_total, fakelusers.m_totalmax);
-#endif
 }
 
 void send_fake_lusers(aClient *sptr) 
@@ -281,12 +279,10 @@ void send_fake_lusers(aClient *sptr)
                fakelusers.m_server);
 #endif
 
-#ifdef CLIENT_COUNT
     sendto_one(sptr, rpl_str(RPL_LOCALUSERS), me.name, sptr->name,
                    fakelusers.m_client, fakelusers.m_clientmax);
     sendto_one(sptr, rpl_str(RPL_GLOBALUSERS), me.name, sptr->name,
                fakelusers.m_total, fakelusers.m_totalmax);
-#endif
 }
 
 int m_luserslock(aClient *cptr, aClient *sptr, int parc, char *parv[]) 

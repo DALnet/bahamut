@@ -86,11 +86,8 @@ static int do_nick_name(char *nick) {
  * parv[6] = hostname 
  * parv[7] = server 
  * parv[8] = serviceid
- * -- If NICKIP
  * parv[9] = IP
  * parv[10] = ircname
- * -- else
- * parv[9] = ircname
  * -- endif
  */
 int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
@@ -121,8 +118,7 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
      * parc == 4 on a normal server-to-server client nick change
      * parc == 11 on a normal TS style server-to-server NICK introduction
      */
-    if ((IsServer(sptr) || (parc > 4)) &&
-	((IsNICKIP(sptr) && (parc < 11)) || (!IsNICKIP(sptr) && (parc < 10))))
+    if ((IsServer(sptr) || (parc > 4)) && (parc < 11))
     {
 	/*
 	 * We got the wrong number of params. Someone is trying to trick
@@ -418,11 +414,6 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	    int *s, flag;
 	    char *m;
        
-	    /* If we get 11 and aren't NICKIP, whine */
-	    if (parc==11&&(!IsNICKIP(cptr))) 
-		sendto_realops_lev(DEBUG_LEV, "Extra Param without NICKIP from %s",
-			       cptr->name);
-	    
 	    /* parse the usermodes -orabidoo */
 	    m = &parv[4][1];
 	    while (*m)

@@ -62,10 +62,6 @@ void *rc4_initstate(unsigned char *key, int keylen)
    {
        idx2 = (key[idx1++] + rc4->mstate[i] + idx2);
        
-       if(idx2 > 255)
-	   abort(); /* let the braindead compiler die here
-		     * instead of causing memleaks */
-       
       tmp = rc4->mstate[i];
       rc4->mstate[i] = rc4->mstate[idx2];
       rc4->mstate[idx2] = tmp;

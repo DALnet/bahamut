@@ -181,61 +181,48 @@ typedef struct MotdItem aMotd;
 #define	FLAGS_KILLED       0x000004   /* Prevents "QUIT" from being sent for
 				       * this */
 #define	FLAGS_BLOCKED      0x000008   /* socket is in a blocked condition */
-#define FLAGS_REJECT_HOLD  0x000010   /* client has been klined */
-#define	FLAGS_CLOSING      0x000020   /* set when closing to suppress errors */
-#define	FLAGS_LISTEN       0x000040   /* used to mark clients which we listen()
+#define	FLAGS_CLOSING      0x000010   /* set when closing to suppress errors */
+#define	FLAGS_LISTEN       0x000020   /* used to mark clients which we listen()
 				       * on */
-#define FLAGS_HAVERECVQ	   0x000080   /* Client has full commands in their recvq */
-#define	FLAGS_DOINGDNS	   0x000100   /* client is waiting for a DNS 
+#define FLAGS_HAVERECVQ	   0x000040   /* Client has full commands in their recvq */
+#define	FLAGS_DOINGDNS	   0x000080   /* client is waiting for a DNS 
 				       * response */
-#define	FLAGS_AUTH	   0x000200   /* client is waiting on rfc931 
+#define	FLAGS_AUTH	   0x000100   /* client is waiting on rfc931 
 				       * response */
-#define	FLAGS_WRAUTH	   0x000400   /* set if we havent writen to ident 
+#define	FLAGS_WRAUTH	   0x000200   /* set if we havent writen to ident 
 				       * server */
-#define	FLAGS_LOCAL	   0x000800   /* set for local clients */
-#define	FLAGS_GOTID	   0x001000   /* successful ident lookup achieved */
-#define	FLAGS_DOID	   0x002000   /* I-lines say must use ident return */
-#define	FLAGS_NONL	   0x004000   /* No \n in buffer */
-#define FLAGS_NORMALEX     0x008000   /* Client exited normally */
-#define FLAGS_SENDQEX      0x010000   /* Sendq exceeded */
-#define FLAGS_IPHASH       0x020000   /* iphashed this client */
-#define FLAGS_ULINE 	   0x040000   /* client is U-lined */
-#define FLAGS_USERBURST	   0x080000   /* server in nick/channel netburst */
-#define FLAGS_TOPICBURST   0x100000   /* server in topic netburst */
+#define	FLAGS_LOCAL	   0x000400   /* set for local clients */
+#define	FLAGS_GOTID	   0x000800   /* successful ident lookup achieved */
+#define	FLAGS_DOID	   0x001000   /* I-lines say must use ident return */
+#define	FLAGS_NONL	   0x002000   /* No \n in buffer */
+#define FLAGS_NORMALEX     0x004000   /* Client exited normally */
+#define FLAGS_SENDQEX      0x008000   /* Sendq exceeded */
+#define FLAGS_IPHASH       0x010000   /* iphashed this client */
+#define FLAGS_ULINE 	   0x020000   /* client is U-lined */
+#define FLAGS_USERBURST	   0x040000   /* server in nick/channel netburst */
+#define FLAGS_TOPICBURST   0x080000   /* server in topic netburst */
 #define FLAGS_BURST	   (FLAGS_USERBURST | FLAGS_TOPICBURST)
-#define FLAGS_SOBSENT      0x200000   /* we've sent an SOB, just have to 
+#define FLAGS_SOBSENT      0x100000   /* we've sent an SOB, just have to 
 				       * send an EOB */
-#define FLAGS_EOBRECV      0x400000   /* we're waiting on an EOB */
-#define FLAGS_BAD_DNS	   0x800000   /* spoofer-guy */
-#define FLAGS_SERV_NEGO	   0x1000000  /* This is a server that has passed
+#define FLAGS_EOBRECV      0x200000   /* we're waiting on an EOB */
+#define FLAGS_BAD_DNS	   0x400000   /* spoofer-guy */
+#define FLAGS_SERV_NEGO	   0x800000  /* This is a server that has passed
 				       * connection tests, but is a stat < 0
 				       * for handshake purposes */
-#define FLAGS_RC4IN        0x2000000  /* This link is rc4 encrypted. */
-#define FLAGS_RC4OUT       0x4000000  /* This link is rc4 encrypted. */
-#define FLAGS_ZIPPED_IN	   0x8000000  /* This link is gzipped. */
-#define FLAGS_ZIPPED_OUT   0x10000000 /* This link is gzipped. */
+#define FLAGS_RC4IN        0x1000000  /* This link is rc4 encrypted. */
+#define FLAGS_RC4OUT       0x2000000  /* This link is rc4 encrypted. */
+#define FLAGS_ZIPPED_IN	   0x4000000  /* This link is gzipped. */
+#define FLAGS_ZIPPED_OUT   0x8000000 /* This link is gzipped. */
 
 /* Capabilities of the ircd or clients */
 
-#define CAPAB_NOQUIT  0x0000002 /* Supports NOQUIT */
-#define CAPAB_BURST   0x0000008 /* server supports BURST command */
-#define CAPAB_UNCONN  0x0000010 /* server supports UNCONNECT */
-#define CAPAB_DKEY    0x0000020 /* server supports dh-key exchange 
-				 * using "DKEY" */
-#define CAPAB_ZIP     0x0000040 /* server supports gz'd links */
-#define CAPAB_DOZIP   0x0000080 /* output to this link shall be gzipped */
-#define CAPAB_DODKEY  0x0000100 /* do I do dkey with this link? */
-#define CAPAB_NICKIP  0x0000200 /* IP in the NICK line? */
-#define CAPAB_TSMODE  0x0000400 /* MODE's parv[2] is chptr->channelts for channel mode */
+#define CAPAB_DKEY    0x0001 /* server supports dh-key exchange */
+#define CAPAB_ZIP     0x0002 /* server supports gz'd links */
+#define CAPAB_DOZIP   0x0004 /* output to this link shall be gzipped */
+#define CAPAB_DODKEY  0x0008 /* do I do dkey with this link? */
+#define CAPAB_BURST   0x0010 /* server supports BURST command */
+#define CAPAB_UNCONN  0x0020 /* server supports UNCONNECT */
 
-#define SetNoQuit(x) 	((x)->capabilities |= CAPAB_NOQUIT)
-#define IsNoQuit(x) 	((x)->capabilities & CAPAB_NOQUIT)
-
-#define SetBurst(x)	((x)->capabilities |= CAPAB_BURST)
-#define IsBurst(x)	((x)->capabilities & CAPAB_BURST)
-
-#define SetUnconnect(x)	((x)->capabilities |= CAPAB_UNCONN)
-#define IsUnconnect(x)	((x)->capabilities & CAPAB_UNCONN)
 
 #define SetDKEY(x)	((x)->capabilities |= CAPAB_DKEY)
 #define CanDoDKEY(x)    ((x)->capabilities & CAPAB_DKEY)
@@ -246,11 +233,13 @@ typedef struct MotdItem aMotd;
 #define IsZipCapable(x)	((x)->capabilities & CAPAB_ZIP)
 /* this is set in N: line, flag Z */
 #define DoZipThis(x) 	((x)->capabilities & CAPAB_DOZIP) 
-#define SetNICKIP(x)    ((x)->capabilities |= CAPAB_NICKIP)
-#define IsNICKIP(x)     ((x)->capabilities & CAPAB_NICKIP)
 
-#define SetTSMODE(x)	((x)->capabilities |= CAPAB_TSMODE)
-#define IsTSMODE(x)	((x)->capabilities & CAPAB_TSMODE)
+#define SetBurst(x)     ((x)->capabilities |= CAPAB_BURST)
+#define IsBurst(x)      ((x)->capabilities & CAPAB_BURST)
+
+#define SetUnconnect(x) ((x)->capabilities |= CAPAB_UNCONN)
+#define IsUnconnect(x)  ((x)->capabilities & CAPAB_UNCONN)
+
 
 /* flag macros. */
 #define IsULine(x) ((x)->flags & FLAGS_ULINE)

@@ -80,10 +80,8 @@
 #define RPL_ENDOFTRACE       262
 #define RPL_LOAD2HI          263
 
-#ifdef CLIENT_COUNT
 #define RPL_LOCALUSERS       265
 #define RPL_GLOBALUSERS      266
-#endif
 #define RPL_SILELIST         271
 #define RPL_ENDOFSILELIST    272
 
@@ -140,10 +138,8 @@
 #define RPL_ENDOFTRACE       262
 #define RPL_LOAD2HI          263
 
-#ifdef CLIENT_COUNT
 #define RPL_LOCALUSERS       265
 #define RPL_GLOBALUSERS      266
-#endif
 #define RPL_SILELIST         271
 #define RPL_ENDOFSILELIST    272
 
@@ -282,10 +278,8 @@
 
 
 
-#ifdef CLIENT_COUNT
-# define RPL_LOCALUSERS      265
-# define RPL_GLOBALUSERS     266
-#endif
+#define RPL_LOCALUSERS      265
+#define RPL_GLOBALUSERS     266
 #define RPL_SILELIST         271
 #define RPL_ENDOFSILELIST    272
 

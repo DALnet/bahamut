@@ -32,9 +32,9 @@
 #define BASENAME "bahamut"
 #define MAJOR 1
 #define MINOR 4
-#define PATCH 36
+#define PATCH 37
 
-#define PATCHES "p1"
+#define PATCHES "BETA"
 
 void build_version(void);
 

@@ -359,53 +359,11 @@
 #define	CHECK_PENDING_KLINES	10	/* in minutes */
 
 /*
- * FOLLOW_IDENT_RFC
- * 
- * From RFC 1413, "The Identification Protocol is not intended as an
- * authorization or access control protocol ... The use of the
- * information returned by this protocol for other than auditing is
- * strongly discouraged."
- * 
- * Defining this allows all users to set whatever username they wish,
- * despite what may be discovered by ident.  While we may get a valid
- * ident response with a different username than submitted by the
- * client, this option will cause the ident response to be discarded.
- */
-#undef FOLLOW_IDENT_RFC
-
-/*
- * NO_IDENT_SYSTYPE_OTHER
- *
- * From RFC1413:
- *
- * "OTHER" indicates the identifier is an unformatted
- * character string consisting of printable characters in
- * the specified character set.  "OTHER" should be
- * specified if the user identifier does not meet the
- * constraints of the previous paragraph.  Sending an
- * encrypted audit token, or returning other non-userid
- * information about a user (such as the real name and
- * phone number of a user from a UNIX passwd file) are
- * both examples of when "OTHER" should be used.
- *
- * However, it seems lots of programs actually default to
- * returning other as a system type. (stock identd with
- * redhat, for example)
- */
-#undef NO_IDENT_SYSTYPE_OTHER
-
-/*
  * RFC1035_ANAL Defining this causes ircd to reject hostnames with
  * non-compliant chars. undef'ing it will allow hostnames with _ or /
  * to connect
  */
 #define RFC1035_ANAL
-
-/*
- * NO_MIXED_CASE - reject mixed case usernames define this if you wish
- * to reject usernames like: FuckYou which don't have all one case
- */
-#undef NO_MIXED_CASE
 
 /*
  * IGNORE_FIRST_CHAR - define this for NO_MIXED_CASE if you wish to
@@ -428,12 +386,6 @@
 
 /* IDENTD_COMPLAIN - yell at users that don't have identd installed */
 #undef IDENTD_COMPLAIN
-
-/*
- * CLIENT_COUNT - keep a running count of Local & Global users also
- * redefine the /USERS command
- */
-#define CLIENT_COUNT
 
 /*
  * MOTD_WAIT - minimum seconds between use of MOTD, INFO, HELP, LINKS * 
@@ -994,30 +946,11 @@
 #endif
 
 /*
- * OLD_Y_LIMIT
- * 
- * #define this if you prefer the old behaviour of I lines the default
- * behaviour is to limit the total number of clients using the max
- * client limit in the corresponding Y line (class) The old behaviour
- * was to limit the client count per I line without regard to the total
- * class limit. Each have advantages and disadvantages. In an open I
- * line server, the default behaviour i.e. #undef OLD_Y_LIMIT makes
- * more sense, because you can limit the total number of clients in a
- * class. In a closed I line server The old behaviour can make more
- * sense.
- * 
- * -Dianora
- */
-#undef OLD_Y_LIMIT
-
-/*
  * If the OS has SOMAXCONN use that value, otherwise Use the value in
  * HYBRID_SOMAXCONN for the listen(); backlog try 5 or 25. 5 for AIX
  * and SUNOS, 25 should work better for other OS's
  */
 #define HYBRID_SOMAXCONN 25
-
-#define INET6  /* IPv6 support */
 
 /*
  * Throttling support:
@@ -1079,23 +1012,7 @@
 #undef NO_DEFAULT_JOINRATE
 #define JOINRATE_SERVER_ONLY
 
-/*
- * ----------------- archaic and/or broken secion -------------------- 
- */
-
-/*
- * USE_REJECT_HOLD clients that reconnect but are k-lined will have
- * their connections "held" for REJECT_HOLD_TIME seconds, they cannot
- * PRIVMSG. The idea is to keep a reconnecting client from forcing the
- * ircd to re-scan dich_conf. There is one possible serious hitch with
- * this... If it is a mass cloner, your attacker can "REJECT_HOLD" a
- * number of local fd's on your server. Against normal bots this code
- * will be a "win", against mass cloners, it could lose.
- * 
- * this is still not working yet
- */
-#undef USE_REJECT_HOLD
-#define REJECT_HOLD_TIME 60
+/* Debugging configs */
 
 #undef DNS_DEBUG
 

@@ -50,14 +50,6 @@
 # define NEXT 1
 #endif
 
-#if defined( ultrix ) && !defined( ULTRIX )
-# define ULTRIX 1
-#endif
-
-#if (defined( sgi ) || defined( __sgi )) && !defined( SGI )
-# define SGI 1
-#endif
-
 #if defined( aix ) || defined( OS_AIX )
 # include <sys/machine.h>
 # if BYTE_ORDER == BIG_ENDIAN

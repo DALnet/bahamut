@@ -261,11 +261,6 @@ void read_authports(aClient *cptr)
 
          os = s;
 
-#ifdef NO_IDENT_SYSTYPE_OTHER
-         if(strncmp(os, "OTHER", 5) == 0)
-            break;
-#endif
-
          s = strchr(os, ':');
          if(!s)
             break;

@@ -380,9 +380,7 @@ void remove_matching_bans(aChannel *chptr, aClient *cptr, aClient *from)
 	      sendto_channel_butserv_me(chptr, from, ":%s MODE %s %s %s", 
 				        from->name, chptr->chname, modebuf,
 				        parabuf);
-	      sendto_tsmode_servs(0, chptr, from, ":%s MODE %s %s %s", 
-				  from->name, chptr->chname, modebuf, parabuf);
-	      sendto_tsmode_servs(1, chptr, from, ":%s MODE %s %ld %s %s", 
+	      sendto_match_servs(chptr, from, ":%s MODE %s %ld %s %s", 
 				  from->name, chptr->chname, chptr->channelts, modebuf, parabuf);
 	      send = 0;
 	      *parabuf = '\0';
@@ -408,9 +406,7 @@ void remove_matching_bans(aChannel *chptr, aClient *cptr, aClient *from)
   {
       sendto_channel_butserv_me(chptr, from, ":%s MODE %s %s %s", from->name,
 			        chptr->chname, modebuf, parabuf);
-      sendto_tsmode_servs(0, chptr, from, ":%s MODE %s %s %s", 
-			  from->name, chptr->chname, modebuf, parabuf);
-      sendto_tsmode_servs(1, chptr, from, ":%s MODE %s %ld %s %s", 
+      sendto_match_servs(chptr, from, ":%s MODE %s %ld %s %s", 
 			  from->name, chptr->chname, chptr->channelts, modebuf, parabuf);
   }
   
@@ -692,12 +688,8 @@ static void send_ban_list(aClient *cptr, aChannel *chptr)
 	    send = 1;
 
 	if (send) {
-	    if(IsTSMODE(cptr))
-		sendto_one(cptr, ":%s MODE %s %ld %s %s", me.name, chptr->chname,
+	    sendto_one(cptr, ":%s MODE %s %ld %s %s", me.name, chptr->chname,
 			   chptr->channelts, modebuf, parabuf);
-	    else
-		sendto_one(cptr, ":%s MODE %s %s %s", me.name, chptr->chname,
-			   modebuf, parabuf);
 	    send = 0;
 	    *parabuf = '\0';
 	    cp = modebuf;
@@ -792,14 +784,8 @@ void send_channel_modes(aClient *cptr, aChannel *chptr)
     modebuf[1] = '\0';
     send_ban_list(cptr, chptr);
     if (modebuf[1] || *parabuf)
-    {
-	if(IsTSMODE(cptr))
-	    sendto_one(cptr, ":%s MODE %s %ld %s %s",
-	 	       me.name, chptr->chname, chptr->channelts, modebuf, parabuf);
-        else
-	    sendto_one(cptr, ":%s MODE %s %s %s",
-	 	       me.name, chptr->chname, modebuf, parabuf);
-    }
+    	sendto_one(cptr, ":%s MODE %s %ld %s %s",
+	        me.name, chptr->chname, chptr->channelts, modebuf, parabuf);
 }
 
 /* m_mode parv[0] - sender parv[1] - channel */
@@ -845,7 +831,7 @@ int m_mode(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	return 0;
     }
 
-    if(IsServer(cptr) && IsTSMODE(cptr) && isdigit(parv[2][0]))
+    if(IsServer(cptr) && isdigit(parv[2][0]))
     {
        ts_val modets = atol(parv[2]);
 
@@ -881,11 +867,7 @@ int m_mode(aClient *cptr, aClient *sptr, int parc, char *parv[])
 				      ":%s MODE %s %s %s", parv[0],
 				      chptr->chname, modebuf,
 				      parabuf);
-	    sendto_tsmode_servs(0, chptr, cptr,
-			       ":%s MODE %s %s %s",
-			       parv[0], chptr->chname,
-			       modebuf, parabuf);
-	    sendto_tsmode_servs(1, chptr, cptr,
+	    sendto_match_servs(chptr, cptr,
 			       ":%s MODE %s %ld %s %s",
 			       parv[0], chptr->chname, chptr->channelts,
 			       modebuf, parabuf);
@@ -3768,9 +3750,7 @@ int m_samode(aClient *cptr, aClient *sptr, int parc, char *parv[])
     {
 	sendto_channel_butserv(chptr, sptr, ":%s MODE %s %s %s",
 			       parv[0], chptr->chname, modebuf, parabuf);
-	sendto_tsmode_servs(0, chptr, cptr, ":%s MODE %s %s %s",
-		 	    parv[0], chptr->chname, modebuf, parabuf);
-	sendto_tsmode_servs(1, chptr, cptr, ":%s MODE %s 0 %s %s",
+	sendto_match_servs(chptr, cptr, ":%s MODE %s 0 %s %s",
 		 	    parv[0], chptr->chname, modebuf, parabuf);
 	if(MyClient(sptr))
 	{

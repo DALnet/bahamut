@@ -374,8 +374,8 @@ int send_queued(aClient *to)
 	}
     }
     
-    if ((to->flags & FLAGS_SOBSENT) && IsBurst(to) &&
-	DBufLength(&to->sendQ) < 20480) 
+    if ((to->flags & FLAGS_SOBSENT) && IsBurst(to)
+	 && DBufLength(&to->sendQ) < 20480) 
     {
 	if (!(to->flags & FLAGS_BURST))
 	{
@@ -727,74 +727,6 @@ void sendto_serv_butone(aClient *one, char *pattern, ...)
 }
 
 /*
- * sendto_noquit_servs_butone
- * 
- * Send a message to all noquit servs if noquit = 1,
- * or all non-noquit servs if noquit = 0
- * we omit "one", too.
- */
-void sendto_noquit_servs_butone(int noquit, aClient *one, char *pattern, ...) 
-{
-    aClient *cptr;
-    int k = 0;
-    fdlist send_fdlist;
-    va_list vl;
-    DLink *lp;
-	
-    va_start(vl, pattern);
-    for(lp = server_list; lp; lp = lp->next)
-    {
-        cptr = lp->value.cptr;
-
-	if ((noquit && !IsNoQuit(cptr)) || 
-	    (!noquit && IsNoQuit(cptr)) || 
-            one == cptr)
-	    continue;
-
-	send_fdlist.entry[++k] = cptr->fd;
-    }
-    send_fdlist.last_entry = k;
-    if (k)
-	vsendto_fdlist(&send_fdlist, pattern, vl);
-    va_end(vl);
-    return;
-}
-
-/*
- * sendto_nickip_servs_butone
- * 
- * Send a message to all nickip servs if nickip = 1,
- * or all non-nickip servs if nickip = 0
- * we omit "one", too.
- * Lame reuse of code because the current system blows.
- */
-void sendto_nickip_servs_butone(int nickip, aClient *one, char *pattern, ...) 
-{
-    aClient *cptr;
-    int k = 0;
-    fdlist send_fdlist;
-    va_list vl;
-    DLink *lp;
-	
-    va_start(vl, pattern);
-    for(lp = server_list; lp; lp = lp->next)
-    {
-	cptr = lp->value.cptr;
-	if ((nickip && !IsNICKIP(cptr)) || 
-	    (!nickip && IsNICKIP(cptr)) || 
-            one == cptr)
-	    continue;
-
-	send_fdlist.entry[++k] = cptr->fd;
-    }
-    send_fdlist.last_entry = k;
-    if (k)
-	vsendto_fdlist(&send_fdlist, pattern, vl);
-    va_end(vl);
-    return;
-}
-
-/*
  * sendto_common_channels()
  * 
  * Sends a message to all people (inclusing user) on local server who are
@@ -1093,46 +1025,6 @@ void sendto_channelops_butserv(aChannel *chptr, aClient *from, char *pattern, ..
     va_end(vl);
     return;
 }
-
-/*
- * sendto_tsmode_servs
- * 
- * send to all servers with tsmode capability (or not)
- * 
- */
-void sendto_tsmode_servs(int tsmode, aChannel *chptr, aClient *from, 
-			 char *pattern, ...)
-{
-    fdlist send_fdlist;
-    int k = 0;
-    aClient *cptr;
-    va_list vl;
-    DLink *lp;
-	
-    if (chptr) 
-    {
-	if (*chptr->chname == '&')
-	    return;
-    }
-    va_start(vl, pattern);
-
-    for(lp = server_list; lp; lp = lp->next)
-    {
-	cptr = lp->value.cptr;
-	if ((cptr == from) ||
-	    (tsmode && !IsTSMODE(cptr)) ||
-	    (!tsmode && IsTSMODE(cptr)))
-	    continue;
-	
-	send_fdlist.entry[++k] = cptr->fd;
-    }
-    send_fdlist.last_entry = k;
-    if (k)
-	vsendto_fdlist(&send_fdlist, pattern, vl);
-    va_end(vl);
-    return;
-}
-
 
 /*
  * sendto_match_servs

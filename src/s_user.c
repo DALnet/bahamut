@@ -528,10 +528,8 @@ int register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
 	    /* end identd hack */
 #endif
 	}
-#ifndef FOLLOW_IDENT_RFC
 	else if (sptr->flags & FLAGS_GOTID && *sptr->username != '-')
 	    strncpyzt(user->username, sptr->username, USERLEN + 1);
-#endif
 	else if(username != user->username) /* don't overlap */
 	    strncpyzt(user->username, username, USERLEN + 1);
 
@@ -659,17 +657,6 @@ int register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
 		if ((!isalnum(c) && !strchr(" -_.", c)) || (c > 127) || (c<32))
 		    special++;
 	    }
-#ifdef NO_MIXED_CASE
-	    if (lower && upper) 
-	    {
-		sendto_realops_lev(REJ_LEV, "Invalid username: %s (%s@%s)",
-				   nick, user->username, user->host);
-		ircstp->is_ref++;
-		(void) ircsprintf(tmpstr2, "Invalid username [%s]",
-				  user->username);
-		return exit_client(cptr, sptr, &me, tmpstr2);
-	    }
-#endif /* NO_MIXED_CASE */
 	    if (special) 
 	    {
 		sendto_realops_lev(REJ_LEV, "Invalid username: %s (%s@%s)",
@@ -781,16 +768,11 @@ int register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
 	               "include everything shown here.", me.name, sptr->name,
 	               local ? SERVER_KLINE_ADDRESS : NETWORK_KLINE_ADDRESS);
 
-#ifdef USE_REJECT_HOLD
-	    cptr->flags |= FLAGS_REJECT_HOLD;
-#endif
 	    ircstp->is_ref++;
 	    ircstp->is_ref_2++;
 
-#ifndef USE_REJECT_HOLD			
             throttle_force(sptr->hostip);
 	    return exit_client(cptr, sptr, &me, reason);
-#endif
 	}
 
 	if(call_hooks(CHOOK_POSTACCESS, sptr) == FLUSH_BUFFER)
@@ -1045,17 +1027,11 @@ int register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
 	ubuf[1] = '\0';
     }
     hash_check_watch(sptr, RPL_LOGON);
-    sendto_nickip_servs_butone(1, cptr, 
-			       "NICK %s %d %ld %s %s %s %s %lu %lu :%s",
+    sendto_serv_butone(cptr, "NICK %s %d %ld %s %s %s %s %lu %lu :%s",
 			       nick, sptr->hopcount + 1, sptr->tsinfo, ubuf,
 			       user->username, user->host, user->server, 
 			       sptr->user->servicestamp,
 			       htonl(sptr->ip.s_addr), sptr->info);
-    sendto_nickip_servs_butone(0, cptr, 
-			       "NICK %s %d %ld %s %s %s %s %lu :%s",
-			       nick, sptr->hopcount + 1, sptr->tsinfo, ubuf,
-			       user->username, user->host, user->server, 
-			       sptr->user->servicestamp, sptr->info);
    
     if(MyClient(sptr))
     {

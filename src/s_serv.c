@@ -306,16 +306,17 @@ int m_squit(aClient *cptr, aClient *sptr, int parc, char *parv[])
 			   acptr->name, sptr->name, comment);
 	return exit_client(cptr, acptr, sptr, comment);
     }
-    
+
     /* fallthrough: downstream */
-    
+
     if(!(IsUnconnect(acptr->from))) /* downstream not unconnect capable */
     {
-	sendto_realops_lev(DEBUG_LEV,
-			   "Exiting server %s due to non-unconnect server %s [%s]",
-			   acptr->name, acptr->from->name, comment);
-	return exit_client(&me, acptr, sptr, comment);
+        sendto_realops_lev(DEBUG_LEV,
+                    "Exiting server %s due to non-unconnect server %s [%s]",
+                    acptr->name, acptr->from->name, comment);
+        return exit_client(&me, acptr, sptr, comment);
     }
+
     
     sendto_realops_lev(DEBUG_LEV, "Passing along SQUIT for %s by %s [%s]",
 		       acptr->name, sptr->name, comment);
@@ -751,22 +752,11 @@ static void sendnick_TS(aClient *cptr, aClient *acptr)
 	    ubuf[0] = '+';
 	    ubuf[1] = '\0';
 	}
-	if (IsNICKIP(cptr)) 
-	{
-	    sendto_one(cptr, "NICK %s %d %ld %s %s %s %s %lu %lu :%s",
+	sendto_one(cptr, "NICK %s %d %ld %s %s %s %s %lu %lu :%s",
 		       acptr->name, acptr->hopcount + 1, acptr->tsinfo, ubuf,
 		       acptr->user->username, acptr->user->host,
 		       acptr->user->server, acptr->user->servicestamp,
 		       htonl(acptr->ip.s_addr), acptr->info);
-	}
-	else 
-	{
-	    sendto_one(cptr, "NICK %s %d %ld %s %s %s %s %lu :%s", acptr->name,
-		       acptr->hopcount + 1, acptr->tsinfo, ubuf,
-		       acptr->user->username, acptr->user->host,
-		       acptr->user->server, acptr->user->servicestamp,
-		       acptr->info);
-	}
     }
 }
 
@@ -1216,7 +1206,6 @@ int m_burst(aClient *cptr, aClient *sptr, int parc, char *parv[])
 int m_info(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     char      **text = infotext;
-    char        outstr[241];
 
     static time_t last_used = 0L;
     if (hunt_server(cptr,sptr,":%s INFO :%s",1,parc,parv) == HUNTED_ISME) 
@@ -1245,273 +1234,8 @@ int m_info(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	sendto_one(sptr, rpl_str(RPL_INFO), me.name, parv[0], "");
 
 	/* I am -definately- going to come up with a replacement for this! */
+	/* you didnt, so i removed it.. kinda stupid anyway.  -epi */
 	
-	if (IsAnOper(sptr)) {
-#ifdef ANTI_NICK_FLOOD
-	    strcpy(outstr, " ANTI_NICK_FLOOD=1");
-#else
-	    strcpy(outstr, " ANTI_NICK_FLOOD=0");
-#endif
-#ifdef ANTI_SPAMBOT
-	    strcat(outstr, " ANTI_SPAMBOT=1");
-#else
-	    strcat(outstr, " ANTI_SPAMBOT=0");
-#endif
-	    sendto_one(sptr, rpl_str(RPL_INFO),
-		       me.name, parv[0], outstr);
-
-	    
-#ifdef CLIENT_COUNT
-	    strcpy(outstr, " CLIENT_COUNT=1");
-#else
-	    strcpy(outstr, " CLIENT_COUNT=0");
-#endif
-#ifdef CLIENT_FLOOD
-	    strcat(outstr, " CLIENT_FLOOD=1");
-#else
-	    strcat(outstr, " CLIENT_FLOOD=0");
-#endif
-	    sendto_one(sptr, rpl_str(RPL_INFO),
-		       me.name, parv[0], outstr);
-
-
-
-#ifdef CUSTOM_ERR
-	    strcpy(outstr, " CUSTOM_ERR=1");
-#else
-	    strcpy(outstr, " CUSTOM_ERR=0");
-#endif
-#ifdef DNS_DEBUG
-	    strcat(outstr, " DNS_DEBUG=1");
-#else
-	    strcat(outstr, " DNS_DEBUG=0");
-#endif
-	    sendto_one(sptr, rpl_str(RPL_INFO),
-		       me.name, parv[0], outstr);
-
-#ifdef DO_IDENTD
-	    strcpy(outstr, " DO_IDENTD=1");
-#else
-	    strcpy(outstr, " DO_IDENTD=0");
-#endif
-#ifdef E_LINES_OPER_ONLY
-	    strcat(outstr, " E_LINES_OPER_ONLY=1");
-#else
-	    strcat(outstr, " E_LINES_OPER_ONLY=0");
-#endif
-#ifdef FAILED_OPER_NOTICE
-	    strcat(outstr, " FAILED_OPER_NOTICE=1");
-#else
-	    strcat(outstr, " FAILED_OPER_NOTICE=0");
-#endif
-	    sendto_one(sptr, rpl_str(RPL_INFO),
-		       me.name, parv[0], outstr);
-
-#ifdef FLUD
-	    strcpy(outstr, " FLUD=1");
-#else
-	    strcpy(outstr, " FLUD=0");
-#endif
-#ifdef SHORT_MOTD
-	    strcat(outstr, " SHORT_MOTD=1");
-#else
-	    strcat(outstr, " SHORT_MOTD=0");
-#endif
-#ifdef F_LINES_OPER_ONLY
-	    strcat(outstr, " F_LINES_OPER_ONLY=1");
-#else
-	    strcat(outstr, " F_LINES_OPER_ONLY=0");
-#endif
-	    sendto_one(sptr, rpl_str(RPL_INFO),
-		       me.name, parv[0], outstr);
-
-#ifdef HUB
-	    strcpy(outstr, " HUB=1");
-#else
-	    strcpy(outstr, " HUB=0");
-#endif
-
-#ifdef IDENTD_COMPLAIN
-	    strcat(outstr, " IDENTD_COMPLAIN=1");
-#else
-	    strcat(outstr, " IDENTD_COMPLAIN=0");
-#endif
-	    sendto_one(sptr, rpl_str(RPL_INFO),
-		       me.name, parv[0], outstr);
-
-#ifdef IGNORE_FIRST_CHAR
-	    strcpy(outstr, " IGNORE_FIRST_CHAR=1");
-#else
-	    strcpy(outstr, " IGNORE_FIRST_CHAR=0");
-#endif
-#ifdef KPATH
-	    strcat(outstr, " KPATH=1");
-#else
-	    strcat(outstr, " KPATH=0");
-#endif
-#ifdef LOCKFILE
-	    strcat(outstr, " LOCKFILE=1");
-#else
-	    strcat(outstr, " LOCKFILE=0");
-#endif
-	    sendto_one(sptr, rpl_str(RPL_INFO),
-		       me.name, parv[0], outstr);
-
-#ifdef MAXBUFFERS
-	    strcpy(outstr, " MAXBUFFERS=1");
-#else
-	    strcpy(outstr, " MAXBUFFERS=0");
-#endif
-#ifdef NO_CHANOPS_WHEN_SPLIT
-	    strcat(outstr, " NO_CHANOPS_WHEN_SPLIT=1");
-#else
-	    strcat(outstr, " NO_CHANOPS_WHEN_SPLIT=0");
-#endif
-	    sendto_one(sptr, rpl_str(RPL_INFO),
-		       me.name, parv[0], outstr);
-
-#ifdef NO_DEFAULT_INVISIBLE
-	    strcpy(outstr, " NO_DEFAULT_INVISIBLE=1");
-#else
-	    strcpy(outstr, " NO_DEFAULT_INVISIBLE=0");
-#endif
-#ifdef NO_MIXED_CASE
-	    strcat(outstr, " NO_MIXED_CASE=1");
-#else
-	    strcat(outstr, " NO_MIXED_CASE=0");
-#endif
-	    sendto_one(sptr, rpl_str(RPL_INFO),
-		       me.name, parv[0], outstr);
-
-#ifdef NO_OPER_FLOOD
-	    strcpy(outstr, " NO_OPER_FLOOD=1");
-#else
-	    strcpy(outstr, " NO_OPER_FLOOD=0");
-#endif
-	    sendto_one(sptr, rpl_str(RPL_INFO),
-		       me.name, parv[0], outstr);
-
-#ifdef OLD_Y_LIMIT
-	    strcpy(outstr, " OLD_Y_LIMIT=1");
-#else
-	    strcpy(outstr, " OLD_Y_LIMIT=0");
-#endif
-#ifdef RFC1035_ANAL
-	    strcat(outstr, " RFC1035_ANAL=1");
-#else
-	    strcat(outstr, " RFC1035_ANAL=0");
-#endif
-	    sendto_one(sptr, rpl_str(RPL_INFO),
-		       me.name, parv[0], outstr);
-
-	    sprintf(outstr, " RIDICULOUS_PARANOIA_LEVEL=%d",
-		   RIDICULOUS_PARANOIA_LEVEL);
-#ifdef SHORT_MOTD
-	    strcat(outstr, " SHORT_MOTD=1");
-#else
-	    strcat(outstr, " SHORT_MOTD=0");
-#endif
-	    sendto_one(sptr, rpl_str(RPL_INFO),
-		       me.name, parv[0], outstr);
-
-#ifdef SHOW_HEADERS
-	    strcpy(outstr, " SHOW_HEADERS=1");
-#else
-	    strcpy(outstr, " SHOW_HEADERS=0");
-#endif
-#ifdef SHOW_INVISIBLE_LUSERS
-	    strcat(outstr, " SHOW_INVISIBLE_LUSERS=1");
-#else
-	    strcat(outstr, " SHOW_INVISIBLE_LUSERS=0");
-#endif
-#ifdef SHOW_UH
-	    strcat(outstr, " SHOW_UH=1");
-#else
-	    strcat(outstr, " SHOW_UH=0");
-#endif
-	    sendto_one(sptr, rpl_str(RPL_INFO),
-		       me.name, parv[0], outstr);
-
-#ifdef STATS_NOTICE
-	    strcpy(outstr, " STATS_NOTICE=1");
-#else
-	    strcpy(outstr, " STATS_NOTICE=0");
-#endif
-#ifdef SUNDBE
-	    strcat(outstr, " SUNDBE=1");
-#else
-	    strcat(outstr, " SUNDBE=0");
-#endif
-#ifdef UNKLINE
-	    strcat(outstr, " UNKLINE=1");
-#else
-	    strcat(outstr, " UNKLINE=0");
-#endif
-	    sendto_one(sptr, rpl_str(RPL_INFO),
-		       me.name, parv[0], outstr);
-
-#ifdef USERNAMES_IN_TRACE
-	    strcpy(outstr, " USERNAMES_IN_TRACE=1");
-#else
-	    strcpy(outstr, " USERNAMES_IN_TRACE=0");
-#endif
-#ifdef USE_FAST_FD_ISSET
-	    strcat(outstr, " USE_FAST_FD_ISSET=1");
-#else
-	    strcat(outstr, " USE_FAST_FD_ISSET=0");
-#endif
-#ifdef USE_SYSLOG
-	    strcat(outstr, " USE_SYSLOG=1");
-#else
-	    strcat(outstr, " USE_SYSLOG=0");
-#endif
-	    sendto_one(sptr, rpl_str(RPL_INFO),
-		       me.name, parv[0], outstr);
-
-#ifdef WARN_NO_NLINE
-	    strcpy(outstr, " WARN_NO_NLINE=1");
-#else
-	    strcpy(outstr, " WARN_NO_NLINE=0");
-#endif
-	    sendto_one(sptr, rpl_str(RPL_INFO),
-		       me.name, parv[0], outstr);
-
-#ifdef FLUD
-	    ircsprintf(outstr, " FLUD_BLOCK=%d FLUD_NUM=%d FLUD_TIME=%d",
-		       FLUD_BLOCK, FLUD_NUM, FLUD_TIME);
-	    sendto_one(sptr, rpl_str(RPL_INFO),
-		       me.name, parv[0], outstr);
-#endif
-
-
-	    ircsprintf(outstr, " HARD_FDLIMIT_=%d HYBRID_SOMAXCONN=%d",
-		       HARD_FDLIMIT_, HYBRID_SOMAXCONN);
-	    sendto_one(sptr, rpl_str(RPL_INFO),
-		       me.name, parv[0], outstr);
-	    ircsprintf(outstr, " MOTD_WAIT=%d MOTD_MAX=%d MAXIMUM_LINKS=%d",
-		       MOTD_WAIT, MOTD_MAX, MAXIMUM_LINKS);
-	    sendto_one(sptr, rpl_str(RPL_INFO),
-		       me.name, parv[0], outstr);
-	    ircsprintf(outstr, " MAX_NICK_CHANGES=%d MAX_NICK_TIME=%d",
-		       MAX_NICK_CHANGES, MAX_NICK_TIME);
-	    sendto_one(sptr, rpl_str(RPL_INFO),
-		       me.name, parv[0], outstr);
-	    ircsprintf(outstr, " NICKNAMEHISTORYLENGTH=%d NOISY_HTM=%d",
-		       NICKNAMEHISTORYLENGTH, NOISY_HTM);
-	    sendto_one(sptr, rpl_str(RPL_INFO),
-		       me.name, parv[0], outstr);
-	    ircsprintf(outstr, " MAXSENDQLENGTH=%d BUFFERPOOL=%d "
-		       "INIT_MAXCLIENTS=%d", MAXSENDQLENGTH, BUFFERPOOL,
-		       INIT_MAXCLIENTS);
-	    sendto_one(sptr, rpl_str(RPL_INFO), 
-		       me.name, parv[0], outstr);
-	    ircsprintf(outstr, " TS_MAX_DELTA=%d TS_WARN_DELTA=%d",
-		       TS_MAX_DELTA, TS_WARN_DELTA);
-	    sendto_one(sptr, rpl_str(RPL_INFO),
-		       me.name, parv[0], outstr);
-	}
-
-
 	sendto_one(sptr,
 		   ":%s %d %s :Birth Date: %s, compile # %s",
 		   me.name, RPL_INFO, parv[0], creation, generation);
@@ -2377,12 +2101,10 @@ int send_lusers(aClient *cptr, aClient *sptr, int parc, char *parv[])
 #else
                me.name, parv[0], m_client, m_server);
 #endif
-#ifdef CLIENT_COUNT
     sendto_one(sptr, rpl_str(RPL_LOCALUSERS), me.name, parv[0],
 		   Count.local, Count.max_loc);
     sendto_one(sptr, rpl_str(RPL_GLOBALUSERS), me.name, parv[0],
 	       Count.total, Count.max_tot);
-#endif /* CLIENT_COUNT */
     return 0;
 }
 
@@ -4793,20 +4515,14 @@ int m_capab(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
     for (i = 1; i < parc; i++) 
     {
-	if (strcmp(parv[i], "NOQUIT") == 0)
-	    SetNoQuit(cptr);
-	else if (strcmp(parv[i], "BURST") == 0)
-	    SetBurst(cptr);
-	else if (strcmp(parv[i], "UNCONNECT") == 0)
-	    SetUnconnect(cptr);
+	if (strcmp(parv[i], "BURST") == 0)
+	    SetBurst(sptr);
+        else if (strcmp(parv[i], "UNCONNECT") == 0)
+            SetUnconnect(cptr);
 	else if (strcmp(parv[i], "DKEY") == 0)
 	    SetDKEY(cptr);
 	else if (strcmp(parv[i], "ZIP") == 0)
 	    SetZipCapable(cptr);
-	else if (strcmp(parv[i], "NICKIP") == 0)
-	    SetNICKIP(cptr);
-	else if (strcmp(parv[i], "TSMODE") == 0)
-	    SetTSMODE(cptr);
     }
 
     return 0;

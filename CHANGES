@@ -1,0 +1,20 @@
+Changes for 1.4.37:
+
+- Defined NO_USER_TRACE by default
+- Changed some kqueue settings
+- Removed backwards compatibility for:
+	- NOQUIT
+	- UNCONNECT
+	- TSMODE
+	- NICKIP
+  All of these modes are now REQUIRED.
+- Removed Code and defines for outdated stuff:
+	- FOLLOW_IDENT_RFC
+	- NO_IDENT_SYSTYPE_OTHER
+	- NO_MIXED_CASE
+	- OLD_Y_LIMIT
+	- USE_REJECT_HOLD
+  This code is no longer used.
+- Removed define options for:
+	- CLIENT_COUNT
+  This code is now manditory.

@@ -583,17 +583,13 @@ int attach_conf(aClient *cptr, aConfItem *aconf)
      * lines used to work, i.e. number of clients per I line not total
      * in Y 
      * -Dianora
+     * removed completely -epi
      */
 
-#ifdef OLD_Y_LIMIT
-    if ((aconf->status & (CONF_LOCOP | CONF_OPERATOR | CONF_CLIENT)) &&
-	aconf->clients >= ConfMaxLinks(aconf) && ConfMaxLinks(aconf) > 0)
-#else
 	if ((aconf->status & (CONF_LOCOP | CONF_OPERATOR)) == 0) {
 	    if ((aconf->status & CONF_CLIENT) &&
 		ConfLinks(aconf) >= ConfMaxLinks(aconf) &&
 		ConfMaxLinks(aconf) > 0)
-#endif
 	    {
 		if (!find_fline(cptr)) 
 		    return -3;	 /* Use this for printing error message */
@@ -604,9 +600,7 @@ int attach_conf(aClient *cptr, aConfItem *aconf)
 			 56, 0);
 		}
 	    }
-#ifndef OLD_Y_LIMIT
 	}
-#endif
 
     lp = make_link();
     lp->next = cptr->confs;
@@ -948,11 +942,6 @@ int rehash(aClient *cptr, aClient *sptr, int sig)
     if (sig == SIGHUP) 
     {
 	sendto_ops("Got signal SIGHUP, reloading ircd conf. file");
-#ifdef	ULTRIX
-	if (fork() > 0)
-	    exit(0);
-	write_pidfile();
-#endif
         remove_userbans_match_flags(UBAN_NETWORK, 0);
         remove_userbans_match_flags(UBAN_LOCAL|UBAN_TEMPORARY, 0);
     }
