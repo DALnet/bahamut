@@ -32,6 +32,9 @@ extern int  send_queued(aClient *);
 
 #include <stdarg.h>
 #include "fdlist.h"
+
+extern void init_send();
+
 extern void send_chatops(char *pattern, ...);
 extern void send_globops(char *pattern, ...);
 extern void send_operwall(aClient *, char *, char *);

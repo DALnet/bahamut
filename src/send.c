@@ -42,8 +42,22 @@ static char remotebuf[2048];
 static int  send_message(aClient *, char *, int);
 
 static int  sentalong[MAXCONNECTIONS];
+static int  sent_serial;
 
-int format(char *, char *, va_list vl);
+void init_send()
+{
+   memset(sentalong, 0, sizeof(int) * MAXCONNECTIONS);
+   sent_serial = 0;
+}
+
+/* This routine increments our serial number so it will
+ * be unique from anything in sentalong, no need for a memset
+ * except for every MAXINT calls - lucas
+ */
+#define INC_SERIAL if(sent_serial == INT_MAX) \
+   { memset(sentalong, 0, sizeof(sentalong)); sent_serial = 0; } \
+   sent_serial++;
+
 
 /*
  * dead_link
@@ -387,7 +401,8 @@ void sendto_channel_butone(aClient *one, aClient *from, aChannel *chptr, char *p
 
    pfix = va_arg(vl, char *);
 
-   memset((char *) sentalong, '\0', sizeof(sentalong));
+   INC_SERIAL
+
    for (cm = chptr->members; cm; cm = cm->next) 
    {
       acptr = cm->cptr;
@@ -403,7 +418,7 @@ void sendto_channel_butone(aClient *one, aClient *from, aChannel *chptr, char *p
             continue;
 
          send_message(acptr, sendbuf, didlocal);
-         sentalong[i] = 1;
+         sentalong[i] = sent_serial;
       }
       else 
       {
@@ -417,10 +432,10 @@ void sendto_channel_butone(aClient *one, aClient *from, aChannel *chptr, char *p
          if(check_fake_direction(from, acptr))
             continue;
 
-         if (sentalong[i] == 0) 
+         if (sentalong[i] != sent_serial) 
          {
             send_message(acptr, remotebuf, didremote);
-            sentalong[i] = 1;
+            sentalong[i] = sent_serial;
          }
       }
    }
@@ -505,10 +520,11 @@ void sendto_common_channels(aClient *from, char *pattern, ...)
    va_start(vl, pattern);
 
    pfix = va_arg(vl, char *);
-   memset((char *) sentalong, '\0', sizeof(sentalong));
+
+   INC_SERIAL
 
    if(from->fd >= 0)
-      sentalong[from->fd]++;
+      sentalong[from->fd] = sent_serial;
 
    if (from->user)
    {
@@ -518,10 +534,10 @@ void sendto_common_channels(aClient *from, char *pattern, ...)
          {
             cptr = users->cptr;
 
-            if (!MyConnect(cptr) || sentalong[cptr->fd])
+            if (!MyConnect(cptr) || sentalong[cptr->fd] == sent_serial)
                continue;
 
-            sentalong[cptr->fd]++;
+            sentalong[cptr->fd] = sent_serial;
             if(!msglen)
                msglen = prefix_buffer(0, from, pfix, sendbuf, pattern, vl);
             if(check_fake_direction(from, cptr))
@@ -547,11 +563,12 @@ void sendto_channel_butlocal(aClient *one, aClient *from, aChannel *chptr, char 
 	chanMember *cm;
 	aClient *acptr;
 	int i;
-	int sentalong[MAXCONNECTIONS];
 	va_list vl;
 	  
 	va_start(vl, pattern);
-   memset((char *) sentalong, '\0', sizeof(sentalong));
+
+   INC_SERIAL
+
    for (cm = chptr->members; cm; cm = cm->next) {
       acptr = cm->cptr;
       if (acptr->from == one)
@@ -562,9 +579,9 @@ void sendto_channel_butlocal(aClient *one, aClient *from, aChannel *chptr, char 
 			 * Now check whether a message has been sent to this remote
 			 * link already
 			 */
-			if (sentalong[i] == 0) {
+			if (sentalong[i] != sent_serial) {
 				vsendto_prefix_one(acptr, from, pattern, vl);
-				sentalong[i] = 1;
+				sentalong[i] = sent_serial;
 			}
       }
    }
@@ -865,7 +882,9 @@ void sendto_ops_butone(aClient *one, aClient *from, char *pattern, ...)
    va_list vl;
 	   
 	va_start(vl, pattern);
-   memset((char *) sentalong, '\0', sizeof(sentalong));
+
+   INC_SERIAL
+
    for (cptr = client; cptr; cptr = cptr->next) {
       if (!SendWallops(cptr))
 		  continue;
@@ -876,7 +895,7 @@ void sendto_ops_butone(aClient *one, aClient *from, char *pattern, ...)
       i = cptr->from->fd;	/*
 									 * find connection oper is on 
 									 */
-      if (sentalong[i])		/*
+      if (sentalong[i] == sent_serial)		/*
 									 * sent message along it already ? 
 									 */
 		  continue;
@@ -884,7 +903,7 @@ void sendto_ops_butone(aClient *one, aClient *from, char *pattern, ...)
 		  continue;		/*
 							 * ...was the one I should skip 
 							 */
-      sentalong[i] = 1;
+      sentalong[i] = sent_serial;
       vsendto_prefix_one(cptr->from, from, pattern, vl);
    }
 	va_end(vl);
@@ -1406,7 +1425,9 @@ void sendto_channelops_butone(aClient *one, aClient *from, aChannel *chptr,
 	va_list vl;
 	
 	va_start(vl, pattern);
-   memset((char *) sentalong, '\0', sizeof(sentalong));
+
+   INC_SERIAL
+
    for (cm = chptr->members; cm; cm = cm->next) {
       acptr = cm->cptr;
       if (acptr->from == one ||
@@ -1415,17 +1436,17 @@ void sendto_channelops_butone(aClient *one, aClient *from, aChannel *chptr,
       i = acptr->from->fd;
       if (MyConnect(acptr) && IsRegisteredUser(acptr)) {
 			vsendto_prefix_one(acptr, from, pattern, vl);
-			sentalong[i] = 1;
+			sentalong[i] = sent_serial;
       }
       else {
 			/*
 			 * Now check whether a message has been sent to this
 			 * *      * remote link already 
 			 */
-			if (sentalong[i] == 0) {
+			if (sentalong[i] != sent_serial) {
 				vsendto_prefix_one(acptr, from, pattern, vl);
 
-				sentalong[i] = 1;
+				sentalong[i] = sent_serial;
 			}
       }
    }
@@ -1447,7 +1468,9 @@ void sendto_channelvoice_butone(aClient *one, aClient *from, aChannel *chptr,
 	va_list vl;
 	
 	va_start(vl, pattern);
-   memset((char *) sentalong, '\0', sizeof(sentalong));
+
+   INC_SERIAL
+
    for (cm = chptr->members; cm; cm = cm->next) {
       acptr = cm->cptr;
       if (acptr->from == one ||
@@ -1456,16 +1479,16 @@ void sendto_channelvoice_butone(aClient *one, aClient *from, aChannel *chptr,
       i = acptr->from->fd;
       if (MyConnect(acptr) && IsRegisteredUser(acptr)) {
 			vsendto_prefix_one(acptr, from, pattern, vl);
-			sentalong[i] = 1;
+			sentalong[i] = sent_serial;
       }
       else {
 			/*
 			 * Now check whether a message has been sent to this
 			 * *      * remote link already 
 			 */
-			if (sentalong[i] == 0) {
+			if (sentalong[i] != sent_serial) {
 				vsendto_prefix_one(acptr, from, pattern, vl);
-				sentalong[i] = 1;
+				sentalong[i] = sent_serial;
 			}
       }
    }
@@ -1487,7 +1510,9 @@ void sendto_channelvoiceops_butone(aClient *one, aClient *from, aChannel
 	va_list vl;
 	
 	va_start(vl, pattern);
-   memset((char *) sentalong, '\0', sizeof(sentalong));
+
+   INC_SERIAL
+
    for (cm = chptr->members; cm; cm = cm->next) {
       acptr = cm->cptr;
       if (acptr->from == one ||
@@ -1496,16 +1521,16 @@ void sendto_channelvoiceops_butone(aClient *one, aClient *from, aChannel
       i = acptr->from->fd;
       if (MyConnect(acptr) && IsRegisteredUser(acptr)) {
 			vsendto_prefix_one(acptr, from, pattern, vl);
-			sentalong[i] = 1;
+			sentalong[i] = sent_serial;
       }
       else {
 			/*
 			 * Now check whether a message has been sent to this
 			 * *      * remote link already 
 			 */
-			if (sentalong[i] == 0) {
+			if (sentalong[i] != sent_serial) {
 				vsendto_prefix_one(acptr, from, pattern, vl);
-				sentalong[i] = 1;
+				sentalong[i] = sent_serial;
 			}
       }
    }

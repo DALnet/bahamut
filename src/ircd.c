@@ -823,6 +823,7 @@ main(int argc, char *argv[])
    initwhowas();
    initstats();
    init_tree_parse(msgtab);
+   init_send();
    NOW = time(NULL);
    open_debugfile();
    NOW = time(NULL);
