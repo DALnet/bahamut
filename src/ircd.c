@@ -852,6 +852,12 @@ main(int argc, char *argv[])
 #endif
       sendto_ops("Clock Failure (%d), TS can be corrupted", errno);
    }
+
+#ifdef WINGATE_NOTICE
+   strcpy(ProxyMonURL, "http://");
+   strncpyzt((ProxyMonURL + 7), DEFAULT_PROXY_INFO_URL, (TOPICLEN + 1) - 7);
+   strncpyzt(ProxyMonHost, MONITOR_HOST, (HOSTLEN + 1));
+#endif
 	
    if (portnum < 0)
 	  portnum = PORTNUM;
@@ -978,12 +984,6 @@ main(int argc, char *argv[])
    R_do_id = strlen(REPORT_DO_ID);
    R_fin_id = strlen(REPORT_FIN_ID);
    R_fail_id = strlen(REPORT_FAIL_ID);
-
-#ifdef WINGATE_NOTICE
-   strcpy(ProxyMonURL, "http://");
-   strncpyzt((ProxyMonURL + 7), DEFAULT_PROXY_INFO_URL, (TOPICLEN + 1) - 7);
-   strncpyzt(ProxyMonHost, MONITOR_HOST, (HOSTLEN + 1));
-#endif
 	
    check_class();
    if (bootopt & BOOT_OPER) 
