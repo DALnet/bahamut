@@ -1003,7 +1003,7 @@ static void rwho_reply(aClient *cptr, aClient *ac, char *buf, chanMember *cm)
         if (!cm && (rwho_opts.rplfields & RWO_CHANNEL) && chptr)
         {
             for (cm = chptr->members; cm; cm = cm->next)
-                if (cm->cptr == cptr)
+                if (cm->cptr == ac)
                     break;
         }
 
