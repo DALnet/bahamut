@@ -67,6 +67,8 @@ Changes for 1.8.2
   ircd can run with as few as 20 FDs and support 10 clients
 - Ripped out obsolete sendto_match_servs()
 - Added support for non-noquit servers in #define NOQUIT
+- Updated zlib to version 1.2.1
+- Restricted stats q/Q/g to opers
 
 
 Changes for 1.8.0
