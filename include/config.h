@@ -259,7 +259,6 @@
 
 /* File names */
 #define	CPATH	"ircd.conf"
-#define KPATH   "kline.conf"
 #define	MPATH	"ircd.motd"
 #define	SMPATH	"ircd.smotd"
 #define	LPATH	"ircd.log"
@@ -1050,9 +1049,6 @@
 #define SHORTMOTD SMPATH
 #define MYNAME SPATH
 #define CONFIGFILE CPATH
-#ifdef  KPATH
-#define KLINEFILE  KPATH
-#endif
 #define IRCD_PIDFILE PPATH
 
 #define MAX_CLIENTS INIT_MAXCLIENTS

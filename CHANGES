@@ -22,12 +22,7 @@ Changes for 1.4.37:
   aClient(user/serv) structures to appropriate conf strucutures.
 - Backported lucas's aListener structure and routines from defunct
   bahamut-devel tree.
-- ircd.conf changes:
-    - M:line no longer uses second field (ip field previously)
-    - M:line no longer uses forth field (port field previously)
-    - C:line class field now a source-to-connect-from field only.
-    - H:lines are now the N:line flag 'H' (akin to zip/encrypt flags)
-    - E:lines and F:lines are outdated and no longer used.
-    - Y:lines class name (first field) now accepts full names,
-      rather than just decimal numbers.
 - Implemented +I/+e channel lists - thanks seddy.
+- Ports now can be opened and closed on /rehash
+- config file format changed to bind-style
+- klinefile outdated

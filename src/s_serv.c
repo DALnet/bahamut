@@ -2828,15 +2828,10 @@ int m_kline(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	return 0;
     }
 
-    filename = klinefile;
+    filename = configfile;
 
-#ifdef KPATH
-    sendto_one(sptr, ":%s NOTICE %s :Added K-Line [%s@%s] to server klinefile",
-	       me.name, parv[0], user, host);
-#else
     sendto_one(sptr, ":%s NOTICE %s :Added K-Line [%s@%s] to server "
 	       "configfile", me.name, parv[0], user, host);
-#endif /* KPATH */
 
     sendto_realops("%s added K-Line for [%s@%s] [%s]",
 		   parv[0], user, host, reason);
@@ -2999,7 +2994,7 @@ int m_unkline(aClient *cptr, aClient *sptr, int parc, char *parv[])
     struct stat oldfilestat;
     mode_t      oldumask;
 
-    ircsprintf(temppath, "%s.tmp", klinefile);
+    ircsprintf(temppath, "%s.tmp", configfile);
 
     if (!IsAnOper(sptr) || !OPCanUnKline(sptr))
     {
@@ -3074,12 +3069,12 @@ int m_unkline(aClient *cptr, aClient *sptr, int parc, char *parv[])
     if (lock_kline_file() < 0) 
     {
 	sendto_one(sptr, ":%s NOTICE %s :%s is locked try again in a "
-		   "few minutes", me.name, parv[0], klinefile);
+		   "few minutes", me.name, parv[0], configfile);
 	return -1;
     }
 # endif
     
-    filename = klinefile;
+    filename = configfile;
 
     if ((in = open(filename, O_RDONLY)) == -1) 
     {
@@ -4092,7 +4087,7 @@ int lock_kline_file()
 
     if ((fd = open(LOCKFILE, O_WRONLY | O_CREAT | O_EXCL, 0666)) < 0) 
     {
-	sendto_realops("%s is locked, klines pending", klinefile);
+	sendto_realops("%s is locked, klines pending", configfile);
 	pending_kline_time = time(NULL);
 	return (-1);
     }
@@ -4112,7 +4107,7 @@ void do_pending_klines()
     /* Create Lockfile */
     if ((fd = open(LOCKFILE, O_WRONLY | O_CREAT | O_EXCL, 0666)) < 0) 
     {
-	sendto_realops("%s is locked, klines pending", klinefile);
+	sendto_realops("%s is locked, klines pending", configfile);
 	pending_kline_time = time(NULL);
 	return;
     }
@@ -4121,10 +4116,10 @@ void do_pending_klines()
     close(fd);
 
     /* Open klinefile */
-    if ((fd = open(klinefile, O_WRONLY | O_APPEND)) == -1) 
+    if ((fd = open(configfile, O_WRONLY | O_APPEND)) == -1) 
     {
 	sendto_realops("Pending klines cannot be written, cannot open %s",
-		       klinefile);
+		       configfile);
 	unlink(LOCKFILE);
 	return;
     }

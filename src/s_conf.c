@@ -25,19 +25,14 @@
 #include "sys.h"
 #include "numeric.h"
 #include "inet.h"
-#include <sys/socket.h>
-#include <fcntl.h>
-#include <sys/wait.h>
-#ifdef __hpux
-#include "inet.h"
-#endif
-#if defined(AIX) || defined(SVR3)
-#include <time.h>
-#endif
-
 #include <signal.h>
 #include "h.h"
 #include "userban.h"
+
+/* This entire file has basically been rewritten from scratch with the
+ * exception of lookup_confhost and attach_Iline/attach_iline fucntions
+ * Feb04 -epi
+ */
 
 extern int  rehashed;
 extern int  forked;
@@ -750,17 +745,22 @@ confadd_allow(char *ipmask, char *passwd, char *hostmask, int port, char *class)
     aAllow *x;
     /* Currently, Allows are the only config types without
      * easy identifiers - so we dont worry about duplicate types.
-     * this will change once a new config parser is written
      * -epi
      */
 
     x = make_allow();
     if(ipmask)
         DupString(x->ipmask, ipmask);
+    else
+        DupString(x->ipmask, "*@*");
     if(passwd)
         DupString(x->passwd, passwd);
+    else
+        DupString(x->passwd, "");
     if(hostmask)
         DupString(x->hostmask, hostmask);
+    else
+        DupString(x->hostmask, "*@*");
     if(port)
         x->port = port;
     else
@@ -814,8 +814,14 @@ confadd_port(int port, char *allow, char *address)
         x->port = port;
         new = 1;
     }
-    DupString(x->allow, allow);
-    DupString(x->address, address);
+    if(allow)
+        DupString(x->allow, allow);
+    else
+        DupString(x->allow, "");
+    if(address)
+        DupString(x->address, address);
+    else
+        DupString(x->address, "");
     if(new)
     {
         x->next = ports;
@@ -893,6 +899,89 @@ confadd_class(char *name, int ping, int connfreq, int maxlinks, long sendq)
     return;
 }
 
+void
+confadd_kill(char *user, char *host, char *reason)
+{
+    struct userBan *ban;
+    int i;
+    char *ub_u, *ub_r;
+    char fbuf[512];
+    aClient *ub_acptr;
+
+    ub_u = BadPtr(user) ? "*" : user;
+    ub_r = BadPtr(reason) ? "<No Reason>" : reason;
+
+    ban = make_hostbased_ban(ub_u, host);
+    if(!ban)
+        return;
+
+    ban->flags |= UBAN_LOCAL;
+    DupString(ban->reason, ub_r);
+    ban->timeset = NOW;
+
+    add_hostbased_userban(ban);
+
+    /* Check local users against it */
+    for (i = 0; i <= highest_fd; i++)
+    {
+        if (!(ub_acptr = local[i]) || IsMe(ub_acptr) ||
+              IsLog(ub_acptr))
+            continue;
+
+        if (IsPerson(ub_acptr) && user_match_ban(ub_acptr, ban))
+        {
+            sendto_ops(LOCAL_BAN_NAME " active for %s",
+                       get_client_name(ub_acptr, FALSE));
+            ircsprintf(fbuf, LOCAL_BANNED_NAME ": %s", ub_r);
+            exit_client(ub_acptr, ub_acptr, &me, fbuf);
+            i--;
+        }
+    }
+    return;
+}
+
+void
+confadd_uline(char *host)
+{
+    int i;
+    if(!find_aUserver(host))
+    {
+        i = 0;
+        while(uservers[i])
+            i++;
+        DupString(uservers[i], host);
+        uservers[i+1] = NULL;
+    }
+    return;
+}
+
+void
+confadd_restrict(int type, char *mask, char *reason)
+{
+    struct simBan *ban;
+
+    ban = make_simpleban(type, mask);
+    if(!ban)
+        return;
+    
+    if(!reason)
+    {
+        if(type & SBAN_CHAN)
+            reason = "Reserved Channel";
+        else if(type & SBAN_NICK)
+            reason = "Reserved Nick";
+        else if(type & SBAN_GCOS)
+            reason = "Bad GCOS";
+        else
+            return;
+    }
+    DupString(ban->reason, reason);
+    ban->timeset = NOW;
+
+    add_simban(ban);
+    return;
+}
+
     
 /*
  * rehash
@@ -905,19 +994,13 @@ int rehash(aClient *cptr, aClient *sptr, int sig)
 {
     aClass     *cltmp;
     aClient    *acptr;
-    int         i,  ret = 0, fd;
+    int         i,  ret = 0;
 
     if (sig == SIGHUP) 
     {
         sendto_ops("Got signal SIGHUP, reloading ircd conf. file");
         remove_userbans_match_flags(UBAN_NETWORK, 0);
         remove_userbans_match_flags(UBAN_LOCAL|UBAN_TEMPORARY, 0);
-    }
-
-    if ((fd = openconf(configfile)) == -1) 
-    {
-        sendto_ops("Can't open %s file aborting rehash!", configfile);
-        return -1;
     }
 
     /* Shadowfax's LOCKFILE code */
@@ -950,6 +1033,7 @@ int rehash(aClient *cptr, aClient *sptr, int sig)
         cltmp->maxlinks = -1;
 
     clear_classes();
+    initclass();
 
     if (sig != SIGINT)
     flush_cache();      /* Flush DNS cache */
@@ -957,458 +1041,13 @@ int rehash(aClient *cptr, aClient *sptr, int sig)
     /* remove perm klines */
     remove_userbans_match_flags(UBAN_LOCAL, UBAN_TEMPORARY);
 
-    /* our close_listeners() above seems to thrash our fd - reset it
-     * kludgy.. really kludgy, but works -epi
-     */
-    close(fd);
-    if ((fd = openconf(configfile)) == -1)
-    {
-        sendto_ops("Can't open %s file aborting rehash!", configfile);
-        return -1;
-    }
-
-
-    (void) initconf(0, fd, sptr);
-
-#ifdef KLINEFILE
-    if ((fd = openconf(klinefile)) == -1)
-    sendto_ops("Can't open %s file klines could be missing!", klinefile);
-    else
-    (void) initconf(0, fd, sptr);
-#endif
+    initconf(configfile);
 
     open_listeners();
 
     rehashed = 1;
 
     return ret;
-}
-
-/*
- * openconf
- * 
- * returns -1 on any error or else the fd opened from which to read the
- * configuration file from.  This may either be the file direct or one
- * end of a pipe from m4.
- */
-int openconf(char *filename)
-{
-    return open(filename, O_RDONLY);
-}
-
-extern char *getfield();
-
-/*
- * initconf() 
- *    Read configuration file. 
- * 
- * - file descriptor pointing to config file to use returns -1, 
- * if file cannot be opened, 0 if file opened
- * almost completely rewritten when killing aConfItem, feb04 -epi 
- */
-
-#define MAXCONFLINKS 150
-
-int
-initconf(int opt, int fd, aClient *rehasher)
-{
-    static char quotes[9][2] =
-    {
-    {'b', '\b'},
-    {'f', '\f'},
-    {'n', '\n'},
-    {'r', '\r'},
-    {'t', '\t'},
-    {'v', '\v'},
-    {'\\', '\\'},
-    {0, 0}
-    };
-    
-    char       *tmp, *s;
-    int         i;
-    char        line[512], c[80];
-
-    /* temp variables just til we complete the rest of the 
-     * switch to separate conf structures.  if this is still
-     * here in 2006, find me and beat me up.  -epi
-     * there shouldnt be more than 5 fields per line
-     */
-
-    int     t_status;
-    char    *t_host;
-    char    *t_passwd;
-    char    *t_name;
-    char    *t_flags;
-    char    *t_class;
-
-
-    (void) dgets(-1, NULL, 0);  /* make sure buffer is at empty pos  */
-
-    while ((i = dgets(fd, line, sizeof(line) - 1)) > 0) 
-    {
-        line[i] = '\0';
-        if ((tmp = (char *) strchr(line, '\n')))
-            *tmp = '\0';
-        else
-            while (dgets(fd, c, sizeof(c) - 1) > 0)
-                if ((tmp = (char *) strchr(c, '\n'))) 
-                {
-                    *tmp = '\0';
-                    break;
-                }
-    
-        /* Do quoting of characters detection. */
-
-        for (tmp = line; *tmp; tmp++) 
-        {
-            if (*tmp == '\\') 
-            {
-                for (i = 0; quotes[i][0]; i++)
-                    if (quotes[i][0] == *(tmp + 1)) 
-                    {
-                        *tmp = quotes[i][1];
-                        break;
-                    }
-                if (!quotes[i][0])
-                    *tmp = *(tmp + 1);
-                if (!*(tmp + 1))
-                    break;
-                else
-                    for (s = tmp; (*s = *(s + 1)); s++);
-            }
-        }
-
-        if (!*line || line[0] == '#' || line[0] == '\n' ||
-                line[0] == ' ' || line[0] == '\t')
-            continue;
-
-        /* Could we test if it's conf line at all?        -Vesa */
-
-        if (line[1] != ':') 
-        {
-            Debug((DEBUG_ERROR, "Bad config line: %s", line));
-            if(!forked)
-                printf("\nBad config line: \"%s\" - Ignored\n", line);
-            continue;
-        }
-
-        tmp = getfield(line);
-        if (!tmp)
-            continue;
-        switch (*tmp) 
-        {
-            case 'A':       
-            case 'a':       /* Administrative info */
-                t_status = CONF_ADMIN;
-                break;
-
-            case 'C':       /* Server I should try to connect */
-            case 'c':       
-                t_status = CONF_CONNECT_SERVER;
-                break;
-
-            case 'G':       /* restricted gcos */
-            case 'g':
-                t_status = CONF_GCOS;
-                break;
-
-            case 'H':       /* Hub server line */
-            case 'h':
-                t_status = CONF_HUB;
-                break;
-
-            case 'i':       /* to connect me */
-            case 'I':       
-                t_status = CONF_CLIENT;
-                break;
-            case 'K':       /* the infamous klines */
-            case 'k':
-                t_status = CONF_KILL;
-                break;
-        
-            /*
-             * Me. Host field is name used for this host 
-             * and port number is the number of the port 
-             */
-            case 'M':
-            case 'm':
-                t_status = CONF_ME;
-                break;
-        
-            case 'N':       
-            case 'n':
-
-            /* Server where I should NOT try to       
-             * connect in case of lp failures 
-             * but which tries to connect ME  
-             */
-                t_status = CONF_NOCONNECT_SERVER;
-                break;
-
-            case 'O':       /* Operator line */
-            case 'o':       
-                t_status = CONF_OPERATOR;
-                break;
-
-            case 'P':       /* listen port line */
-            case 'p':
-                t_status = CONF_LISTEN_PORT;
-                break;
-
-            case 'Q':       /* restricted nicknames */
-            case 'q':
-                t_status = CONF_QUARANTINE;
-                break;
- 
-            case 'T':
-            case 't':
-                t_status = CONF_MONINFO;
-                break;
-
-            case 'U':       /* Ultimate Servers (aka God) */
-            case 'u':
-                t_status = CONF_ULINE;
-                break;
-
-            case 'X':       /* die/restart pass line */
-            case 'x':
-                t_status = CONF_DRPASS;
-                break;
-        
-            case 'Y':       /* Class line */
-            case 'y':
-                t_status = CONF_CLASS;
-                break;
-
-            default:
-                t_status = CONF_ILLEGAL;
-                Debug((DEBUG_ERROR, "Error in config file: %s", line));
-                if(!forked)
-                    printf("Bad config line: \"%s\" - Ignored\n", line);
-                break;
-        }
-
-        if(t_status & CONF_ILLEGAL) /* skip this line */
-            continue;
-
-        t_host = getfield(NULL);
-        t_passwd = getfield(NULL);
-        t_name = getfield(NULL);
-        t_flags = getfield(NULL);
-        t_class = getfield(NULL);
-
-        /* from this point, every configuration line
-         * is taken care of within its own if statement.
-         * Everything should be contained. -epi
-         */
-
-        if(t_status & CONF_ADMIN)
-        {
-            confadd_me(0,0,0,0, t_host, t_passwd, t_name);
-            continue;
-        }
-        if (t_status & CONF_OPS) 
-        {
-            confadd_oper(t_name, t_host, t_passwd, t_flags, t_class);
-            continue;
-        }
-        if(t_status & CONF_NOCONNECT_SERVER)
-        {
-            confadd_connect(t_name, t_host, t_passwd, 0, 0, t_flags, 0,
-                            t_class);
-            continue;
-        }
-        if (t_status & CONF_CONNECT_SERVER)
-        {
-            confadd_connect(t_name, t_host, 0, t_passwd, atoi(t_flags), 0,
-                            t_class, 0);
-            continue;
-        }
-        if (t_status & CONF_CLASS) 
-        {
-            confadd_class(t_host, atoi(t_passwd), atoi(t_name), 
-                            atoi(t_flags), atoi(t_class));
-            continue;
-        }
-
-        if (t_status & CONF_CLIENT)
-        {
-            confadd_allow(t_host, t_passwd, t_name, atoi(t_flags), t_class);
-            continue;
-        }
-        if(t_status & CONF_LISTEN_PORT)
-        {
-            confadd_port(atoi(t_flags), t_host, t_passwd);
-            continue;
-        }
-
-        /*
-         * Own port and name cannot be changed after the startup.  (or
-         * could be allowed, but only if all links are closed  first). 
-         * Configuration info does not override the name and port  if
-         * previously defined. Note, that "info"-field can be changed
-         * by "/rehash". Can't change vhost mode/address either
-         */
-    
-        if (t_status == CONF_ME) 
-        {
-            confadd_me(t_host, t_name, 0, 0, 0, 0, 0);
-            continue;
-        }
-
-#ifdef WINGATE_NOTICE
-        if (t_status == CONF_MONINFO)
-        {
-            if(!t_host || t_host[0] == '\0')
-                strncpyzt(ProxyMonHost, MONITOR_HOST, sizeof(ProxyMonHost));
-            else
-                strncpyzt(ProxyMonHost, t_host, sizeof(ProxyMonHost));
-        
-            strcpy(ProxyMonURL, "http://");
-
-            if(!t_passwd || t_passwd[0] == '\0')
-                strncpyzt((ProxyMonURL + 7), DEFAULT_PROXY_INFO_URL,
-                          sizeof(ProxyMonURL) - 7);
-            else
-                strncpyzt((ProxyMonURL + 7), t_passwd, sizeof(ProxyMonURL) - 7);
-        
-            continue;
-        } 
-#endif
-
-        if (t_status & CONF_QUARANTINE)
-        {
-            struct simBan *ban;
-            unsigned int flags;
-            char *sb_m, *sb_r;
-
-            if(BadPtr(t_name))
-                continue;
-
-            flags = SBAN_LOCAL;
-            if(t_name[0] == '#')
-            {
-                flags |= SBAN_CHAN;
-                sb_r = BadPtr(t_passwd) ? "Reserved Channel" : t_passwd;
-            }
-            else
-            {
-                flags |= SBAN_NICK;
-                sb_r = BadPtr(t_passwd) ? "Reserved Nickname" : t_passwd;
-            }
-
-            sb_m = t_name;
-
-            ban = make_simpleban(flags, sb_m);
-            if(!ban)
-                continue;
-
-            ban->reason = (char *) MyMalloc(strlen(sb_r) + 1);
-            strcpy(ban->reason, sb_r);
-            ban->timeset = NOW;
-
-            add_simban(ban);
-            continue;
-        }
-
-        if (t_status & CONF_GCOS)
-        {
-            struct simBan *ban;
-            unsigned int flags;
-            char *sb_m, *sb_r;
-
-            if(BadPtr(t_name))
-                continue;
-
-            flags = SBAN_LOCAL|SBAN_GCOS;
-            sb_r = BadPtr(t_passwd) ? "Bad GCOS" : t_passwd;
-
-            sb_m = t_name;
-
-            ban = make_simpleban(flags, sb_m);
-            if(!ban)
-                continue;
-
-            ban->reason = (char *) MyMalloc(strlen(sb_r) + 1);
-            strcpy(ban->reason, sb_r);
-            ban->timeset = NOW;
-
-            add_simban(ban);
-                continue;
-        }
-
-        if (t_status & CONF_KILL)
-        {
-            struct userBan *ban;
-            char *ub_u, *ub_r;
-            int ii;
-            char fbuf[512];
-            aClient *ub_acptr;
-
-            if(BadPtr(t_host))
-                continue;
-
-            ub_u = BadPtr(t_name) ? "*" : t_name;
-            ub_r = BadPtr(t_passwd) ? "<No Reason>" : t_passwd;
-
-            ban = make_hostbased_ban(ub_u, t_host);
-            if(!ban)
-                continue;
-
-            ban->flags |= UBAN_LOCAL;
-            ban->reason = (char *) MyMalloc(strlen(ub_r) + 1);
-            strcpy(ban->reason, ub_r);
-            ban->timeset = NOW;
-        
-            add_hostbased_userban(ban);
-
-            /* Check local users against it */
-            for (ii = 0; ii <= highest_fd; ii++)
-            {
-                if (!(ub_acptr = local[i]) || IsMe(ub_acptr) || 
-                      IsLog(ub_acptr) || ub_acptr == rehasher)
-                    continue;
-        
-                if (IsPerson(ub_acptr) && user_match_ban(ub_acptr, ban))
-                {
-                    sendto_ops(LOCAL_BAN_NAME " active for %s",
-                               get_client_name(ub_acptr, FALSE));
-                    ircsprintf(fbuf, LOCAL_BANNED_NAME ": %s", ub_r);
-                    exit_client(ub_acptr, ub_acptr, &me, fbuf);
-                    ii--;
-                }
-            }
-            continue;
-        }
-        if (t_status & CONF_ULINE)
-        {
-            int i;
-            if(!find_aUserver(t_host))
-            {
-                i = 0;
-                while(uservers[i])
-                    i++;
-                DupString(uservers[i], t_host);
-                uservers[i+1] = NULL;
-            }
-            continue;
-        }
-        if(t_status & CONF_DRPASS)
-        {
-            confadd_me(0,0, t_host, t_passwd, 0, 0, 0);
-            continue;
-        }
-        /* oh shit! */
-        if(!forked)
-            printf("Error parsing config file!\n");
-        abort();
-    
-    }
-    (void) dgets(-1, NULL, 0);  /* make sure buffer is at empty pos */
-    (void) close(fd);
-    clear_classes();
-    nextping = nextconnect = time(NULL);
-    return 0;
 }
 
 /*

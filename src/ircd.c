@@ -105,18 +105,6 @@ extern void 	read_help(char *);	    /* defined in s_serv.c */
 
 char      **myargv;
 char       *configfile = CONFIGFILE; 	    /* Server configuration file */
-#ifdef KPATH
-char       *klinefile = KLINEFILE;	    /* Server kline file */
-# ifdef ZLINES_IN_KPATH
-char       *zlinefile = KLINEFILE;
-# else
-char       *zlinefile = CONFIGFILE;
-# endif
-#else
-char       *klinefile = CONFIGFILE;
-char       *zlinefile = CONFIGFILE;
-
-#endif
 
 int         debuglevel = -1;	   /* Server debug level */
 int         bootopt = 0;	   /* Server boot option flags */
@@ -574,7 +562,6 @@ FILE *dumpfp=NULL;
 int main(int argc, char *argv[])
 {
     uid_t         uid, euid;
-    int           fd;
     FILE 	*mcsfp;
 	
     if ((timeofday = time(NULL)) == -1) 
@@ -688,14 +675,6 @@ int main(int argc, char *argv[])
 	    printf("Set config file to: %s\n", configfile);
 	    break;
 			
-# ifdef KPATH
-	case 'k':
-	    (void) setuid((uid_t) uid);
-	    klinefile = p;
-	    printf("Set kline file to: %s\n", klinefile);
-	    break;
-# endif
-			
 #endif
 	case 'h':
 	    strncpyzt(me.name, p, sizeof(me.name));
@@ -792,22 +771,11 @@ int main(int argc, char *argv[])
     open_debugfile();
     NOW = time(NULL);
 
-    if ((fd = openconf(configfile)) == -1)
-    {
-        printf("Couldn't open configuration file %s.  Aborting...\n",
-                      configfile);
-        exit(-1);
-    }
-    (void) initconf(16, fd, NULL);
+    if(initconf(configfile) == -1)
+        abort();
+
     printf("Configuration Loaded.\n");
 
-#ifdef KPATH
-    if ((fd = openconf(klinefile)) == -1)
-        printf("Couldn't open kline file %s.  Ignoring...\n", klinefile);
-    else
-        (void) initconf(0, fd, NULL);
-#endif
-	
     init_fdlist(&default_fdlist);
     {
 	int i;
