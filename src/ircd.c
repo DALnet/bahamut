@@ -571,17 +571,21 @@ static int bad_command()
  * Changed by Taner Halicioglu (taner@CERF.NET) 
  */
 
-#define LOADCFREQ 5		/* every 5s */
-#define LOADRECV 40		/* 40k/s    */
+#if (MAXCONNECTIONS > 1024)
+#define LOADSEND 64
+#else
+#define LOADSEND (MAXCONNECTIONS / 16)
+#endif
 
-#ifndef HUB
+#define LOADCFREQ 5		/* every 5s */
+
+#if !defined(HUB) && defined(USE_HTM)
 int         lifesux = 1;
 #else
 int         lifesux = 0;
 #endif
-int         LRV = LOADRECV;
+int         LRV = LOADSEND;
 time_t      LCF = LOADCFREQ;
-int currlife = 0;
 int         HTMLOCK=NO;
 
 char REPORT_DO_DNS[256], REPORT_FIN_DNS[256], REPORT_FIN_DNSC[256], 
@@ -1029,10 +1033,8 @@ void io_loop()
 {
     char to_send[200];
     int lastexp=0;
-#ifndef HUB
-    time_t lasttime = 0;
-    long lastrecvK = 0;
-    int  lrv = 0;
+#if !defined(HUB) && defined(USE_HTM)
+    time_t lasthtmtime = 0;
 #endif
 
     time_t	next10sec = 0; /* For events we do every 10 seconds */
@@ -1090,46 +1092,30 @@ void io_loop()
 	 * 
 	 * Changed by Taner so that it tells you what's going on as well as
 	 * allows forced on (long LCF), etc...
+	 * 
+	 * Modified so HTM works on outgoing traffic
+	 * No crap, just blocks heavy outgoing commands like /list and /who
+	 * when our outgoing traffic is really high. 
 	 */
 	/* Wrapped this in #ifndef HUB as on a hub it's silly */
 
-#ifndef HUB
-	if ((timeofday - lasttime) >= LCF) 
+#if !defined(HUB) && defined(USE_HTM)
+	if ((timeofday - lasthtmtime) >= LCF) 
 	{
-	    lrv = LRV * LCF;
-	    lasttime = timeofday;
-	    currlife = (me.receiveK - lastrecvK) / LCF;
-	    if ((me.receiveK - lrv) > lastrecvK || HTMLOCK == YES) 
+	    lasthtmtime = timeofday;
+	    if (curSendK > (float) LRV || HTMLOCK == YES) 
 	    {
 		if (!lifesux) 
 		{
 		    lifesux = 1;
 
-		    if (noisy_htm) 
-			sendto_ops("Entering high-traffic mode - (%dk/s > "
-				   "%dk/s)", currlife, LRV);
-		}
-		else 
-		{
-		    lifesux++;		/* Ok, life really sucks! */
-		    LCF += 2;		/* Wait even longer */
-		    if (noisy_htm) 
-			sendto_ops("Still high-traffic mode %d%s (%d delay): "
-				   "%dk/s",
-				   lifesux, (lifesux > 9) ? " (TURBO)" : "",
-				   (int) LCF, currlife);
-
-		    /* Reset htm here, because its been on a little too long.
-		     * Bad Things tend to happen with HTM on too long -epi */
-
-		    if (lifesux>15) 
+		    if (noisy_htm)
 		    {
-			if (noisy_htm) 
-			    sendto_ops("Resetting HTM and raising limit to: "
-				       "%dk/s\n", LRV + 5);
-			LCF=LOADCFREQ;
-			lifesux=0;
-			LRV+=5;
+			if(HTMLOCK)
+			    sendto_ops("Entering high-traffic mode - (LOCKED)");
+			else
+			    sendto_ops("Entering high-traffic mode - (outgoing %.2fK/s > "
+				       "%dK/s)", curSendK, LRV);
 		    }
 		}
 	    }
@@ -1143,7 +1129,6 @@ void io_loop()
 			sendto_ops("Resuming standard operation . . . .");
 		}
 	    }
-	    lastrecvK = me.receiveK;
 	}
 #endif
 

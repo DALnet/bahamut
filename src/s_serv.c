@@ -3090,21 +3090,24 @@ int m_set(aClient *cptr, aClient *sptr, int parc, char *parv[])
 /* m_htm - high traffic mode info */
 int m_htm(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
+#if !defined(HUB) && defined(USE_HTM)
 #define LOADCFREQ 5
     char       *command;
 
     extern int  lifesux, LRV, LCF, noisy_htm;	/* in ircd.c */
-    extern int currlife;
+    extern float curSendK;
+#endif
 
     if (!MyClient(sptr) || !IsOper(sptr)) 
     {
 	sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name, parv[0]);
 	return 0;
     }
-    sendto_one(sptr,":%s NOTICE %s :HTM is %s(%d), %s. Max rate = %dk/s. "
-	       "Current = %dk/s", me.name, parv[0], lifesux ? "ON" : "OFF",
+#if !defined(HUB) && defined(USE_HTM)
+    sendto_one(sptr,":%s NOTICE %s :HTM is %s(%d), %s. Max rate = %dK/s. "
+	       "Current = %.2fK/s", me.name, parv[0], lifesux ? "ON" : "OFF",
 	       lifesux, noisy_htm ? "NOISY" : "QUIET",
-	       LRV, currlife);
+	       LRV, curSendK);
     if (parc > 1) 
     {
 	command = parv[1];
@@ -3121,12 +3124,12 @@ int m_htm(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		else
 		    LRV = new_value;
 
-		sendto_one(sptr, ":%s NOTICE %s :NEW Max rate = %dk/s. "
-			   "Current = %dk/s", me.name, parv[0], LRV, currlife);
-		sendto_realops("%s!%s@%s set new HTM rate to %dk/s (%dk/s "
+		sendto_one(sptr, ":%s NOTICE %s :NEW Max rate = %dK/s. "
+			   "Current = %.2fK/s", me.name, parv[0], LRV, curSendK);
+		sendto_realops("%s!%s@%s set new HTM rate to %dK/s (%.2fK/s "
 			       "current)",
 			       parv[0], sptr->user->username, sptr->sockhost,
-			       LRV, currlife);
+			       LRV, curSendK);
 	    }
 	    else
 		sendto_one(sptr, ":%s NOTICE %s :LRV command needs an integer"
@@ -3190,6 +3193,10 @@ int m_htm(aClient *cptr, aClient *sptr, int parc, char *parv[])
 			   "[TO int] [QUIET] [NOISY]", me.name, parv[0]);
 	}
     }
+#else /* !(hub) && !(use_htm) */
+    sendto_one(sptr, ":%s NOTICE %s :HTM is not enabled in this ircd.",
+               me.name, parv[0]);
+#endif
     return 0;
 }
 

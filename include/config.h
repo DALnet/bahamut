@@ -599,6 +599,14 @@
  */
 #define WARN_NO_NLINE
 
+/*
+ * USE_HTM
+ * Define this if you want to use HTM (high traffic mode)
+ * to limit expensive commands when outgoing traffic is very high.
+ * This option has no effect on a hub.
+ */
+#undef USE_HTM
+
 /* 
  * HTM_LOCK_ON_NETBURST Define this if you want your server to
  * stay in HTM while the server is synching to the network 
