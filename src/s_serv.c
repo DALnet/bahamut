@@ -1027,12 +1027,12 @@ int m_server_estab(aClient *cptr)
 #ifdef HAVE_ENCRYPTION_ON
 	if(!WantDKEY(cptr))
 	    sendto_one(cptr, "CAPAB TS3 NOQUIT SSJOIN BURST UNCONNECT ZIP "
-		       "NICKIP");
+		       "NICKIP TSMODE");
 	else
 	    sendto_one(cptr, "CAPAB TS3 NOQUIT SSJOIN BURST UNCONNECT DKEY "
-		       "ZIP NICKIP");
+		       "ZIP NICKIP TSMODE");
 #else
-	sendto_one(cptr, "CAPAB TS3 NOQUIT SSJOIN BURST UNCONNECT ZIP NICKIP");
+	sendto_one(cptr, "CAPAB TS3 NOQUIT SSJOIN BURST UNCONNECT ZIP NICKIP TSMODE");
 #endif
 
 	sendto_one(cptr, "SERVER %s 1 :%s",
@@ -5043,6 +5043,8 @@ int m_capab(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	    SetZipCapable(cptr);
 	else if (strcmp(parv[i], "NICKIP") == 0)
 	    SetNICKIP(cptr);
+	else if (strcmp(parv[i], "TSMODE") == 0)
+	    SetTSMODE(cptr);
     }
 
     return 0;

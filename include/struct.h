@@ -227,6 +227,7 @@ typedef struct MotdItem aMotd;
 #define CAPAB_DOZIP   0x0000080 /* output to this link shall be gzipped */
 #define CAPAB_DODKEY  0x0000100 /* do I do dkey with this link? */
 #define CAPAB_NICKIP  0x0000200 /* IP in the NICK line? */
+#define CAPAB_TSMODE  0x0000400 /* MODE's parv[2] is chptr->channelts for channel mode */
 
 #define SetTS3(x)   	((x)->capabilities |= CAPAB_TS3)
 #define IsTS3       	((x)->capabilities & CAPAB_TS3)
@@ -254,6 +255,9 @@ typedef struct MotdItem aMotd;
 #define DoZipThis(x) 	((x)->capabilities & CAPAB_DOZIP) 
 #define SetNICKIP(x)    ((x)->capabilities |= CAPAB_NICKIP)
 #define IsNICKIP(x)     ((x)->capabilities & CAPAB_NICKIP)
+
+#define SetTSMODE(x)	((x)->capabilities |= CAPAB_TSMODE)
+#define IsTSMODE(x)	((x)->capabilities & CAPAB_TSMODE)
 
 /* flag macros. */
 #define IsULine(x) ((x)->flags & FLAGS_ULINE)

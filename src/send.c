@@ -974,6 +974,46 @@ void sendto_ssjoin_servs(int ssjoin, aChannel *chptr, aClient *from,
 
 
 /*
+ * sendto_tsmode_servs
+ * 
+ * send to all servers with tsmode capability (or not)
+ * 
+ */
+void sendto_tsmode_servs(int tsmode, aChannel *chptr, aClient *from, 
+			 char *pattern, ...)
+{
+    int j, k = 0;
+    fdlist      send_fdlist;
+    int     i;
+    aClient *cptr;
+    va_list vl;
+	
+    if (chptr) 
+    {
+	if (*chptr->chname == '&')
+	    return;
+    }
+    va_start(vl, pattern);
+    for (i = serv_fdlist.entry[j = 1]; j <= serv_fdlist.last_entry;
+	 i = serv_fdlist.entry[++j]) 
+    {
+	if (!(cptr = local[i]) || 
+	    (cptr == from) ||
+	    (tsmode && !IsTSMODE(cptr)) ||
+	    (!tsmode && IsTSMODE(cptr)))
+	    continue;
+	
+	send_fdlist.entry[++k] = i;
+    }
+    send_fdlist.last_entry = k;
+    if (k)
+	vsendto_fdlist(&send_fdlist, pattern, vl);
+    va_end(vl);
+    return;
+}
+
+
+/*
  * * send a msg to all ppl on servers/hosts that match a specified mask *
  * (used for enhanced PRIVMSGs) *
  * 
