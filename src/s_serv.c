@@ -5228,11 +5228,11 @@ int m_sgline(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	
    len=atoi(parv[1]);
    mask=parv[2];
-   if ((mask+len)==':') {
+   if ((mask[len])==':') {
        mask[len]='\0';
        reason=mask+len+1;
    } else { /* Bogus */
-       return;
+       return 0;
    }
 
    /* if we have any G:lines (SG or G) that match
@@ -5245,7 +5245,7 @@ int m_sgline(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	
 	aconf->status=(CONF_GCOS|CONF_SGLINE); /* G:line and SGline, woo */
 	DupString(aconf->name, mask);
-	DupString(aconf->passwd, reason : "Reason Unspecified");
+	DupString(aconf->passwd, reason ? reason : "Reason Unspecified");
 	aconf->next=conf;
 	conf=aconf;
    }
