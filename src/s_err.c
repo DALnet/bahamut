@@ -28,13 +28,7 @@ static char *replies[] =
     /* 003 RPL_CREATED */	":%s 003 %s :This server was created %s",
     /* 004 RPL_MYINFO */	":%s 004 %s %s %s oOiwscrkKnfydaAbgheFxXjI "
                                 "biklLmMnoprRstvcj",
-    /* 005 RPL_PROTOCTL*/       ":%s 005 %s NOQUIT WATCH=%i SAFELIST MODES=%i "
-                                "MAXCHANNELS=%i MAXBANS=%i NICKLEN=%i "
-                                "TOPICLEN=%i KICKLEN=%i CHANTYPES=# "
-                                "PREFIX=(ov)@+ NETWORK=DALnet SILENCE=%i "
-                                "CASEMAPPING=ascii "
-                                "CHANMODES=b,k,l,ciLmMnOprRst "
-                                ":are available on this server",
+    /* 005 RPL_PROTOCTL*/       ":%s 005 %s %s :are available on this server",
     /* 006 */	                NULL,
     /* 007 */	                NULL,
     /* 008 */	                NULL,

@@ -713,7 +713,7 @@ static int proc_answer(ResRQ * rptr, HEADER *hptr, char *buf, char *eob)
     if(hptr->qdcount != 1)
     {
 	sendto_realops_lev(DEBUG_LEV,
-			   "DNS packet with question count of %d (??)",
+			   "DNS packet with question count of %d ",
 			   hptr->qdcount);
 	return -1;
     }
@@ -742,7 +742,7 @@ static int proc_answer(ResRQ * rptr, HEADER *hptr, char *buf, char *eob)
 	if(class != C_IN)
 	{
 	    sendto_realops_lev(DEBUG_LEV,
-			       "Expected DNS packet class C_IN, got %d (??)",
+			       "Expected DNS packet class C_IN, got %d ",
 			       class);
 	    strangeness++;
 	}
@@ -750,7 +750,7 @@ static int proc_answer(ResRQ * rptr, HEADER *hptr, char *buf, char *eob)
 	if(type != rptr->type)
 	{
 	    sendto_realops_lev(DEBUG_LEV,
-			       "Expected DNS packet type %d, got %d (??)",
+			       "Expected DNS packet type %d, got %d ",
 			       rptr->type, type);
 	    strangeness++;
 	}

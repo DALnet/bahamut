@@ -869,9 +869,16 @@ int register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
 	sendto_one(sptr, rpl_str(RPL_CREATED), me.name, nick, creation);
 	sendto_one(sptr, rpl_str(RPL_MYINFO), me.name, parv[0],
 		   me.name, version);
-	sendto_one(sptr, rpl_str(RPL_PROTOCTL), me.name, parv[0], MAXWATCH,
-		   MAXMODEPARAMSUSER, MAXCHANNELSPERUSER, MAXBANS, NICKLEN,
-		   TOPICLEN, TOPICLEN, MAXSILES);
+
+	ircsprintf(tmpstr2,"NOQUIT WATCH=%i SAFELIST MODES=%i "
+		   "MAXCHANNELS=%i MAXBANS=%i NICKLEN=%i "
+		   "TOPICLEN=%i KICKLEN=%i CHANTYPES=# "
+		   "PREFIX=(ov)@+ NETWORK=DALnet SILENCE=%i",
+		   MAXWATCH,MAXMODEPARAMSUSER,MAXCHANNELSPERUSER,MAXBANS,
+		   NICKLEN,TOPICLEN,TOPICLEN,MAXSILES);
+	sendto_one(sptr, rpl_str(RPL_PROTOCTL), me.name, parv[0], tmpstr2);
+	ircsprintf(tmpstr2,"CASEMAPPING=ascii CHANMODES=b,k,l,ciLmMnOprRst");
+	sendto_one(sptr, rpl_str(RPL_PROTOCTL), me.name, parv[0], tmpstr2);
 
 #ifdef FORCE_EVERYONE_HIDDEN
 	sptr->umode |= UMODE_I;
