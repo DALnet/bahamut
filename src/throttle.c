@@ -55,28 +55,30 @@ BlockHeap *throttle_freelist;
 SLIST_HEAD(hashent_list_t, hashent_t);
 typedef struct hashent_list_t hashent_list;
 
-typedef struct hashent_t {
+typedef struct hashent_t 
+{
     void    *ent;
     SLIST_ENTRY(hashent_t) lp;
 } hashent;
 
-typedef struct hash_table_t {
-    int	    size;	    /* this should probably always be prime :) */
+typedef struct hash_table_t 
+{
+    int     size;           /* this should probably always be prime :) */
     hashent_list *table;    /* our table */
-    size_t  keyoffset;	    /* this stores the offset of the key from the
-			       given structure */
-    size_t  keylen;	    /* the length of the key. if 0, assume key
-			       is a NULL terminated string */
+    size_t  keyoffset;      /* this stores the offset of the key from the
+                               given structure */
+    size_t  keylen;         /* the length of the key. if 0, assume key
+                               is a NULL terminated string */
 
-#define HASH_FL_NOCASE 0x1	/* ignore case (tolower before hash) */
-#define HASH_FL_STRING 0x2	/* key is a nul-terminated string, treat len
-				   as a maximum length to hash */
-    int	    flags;
+#define HASH_FL_NOCASE 0x1      /* ignore case (tolower before hash) */
+#define HASH_FL_STRING 0x2      /* key is a nul-terminated string, treat len
+                                   as a maximum length to hash */
+    int     flags;
     /* our comparison function, used in hash_find_ent().  this behaves much
      * like the the compare function is used in qsort().  This means that a
      * return of 0 (ZERO) means success! (this lets you use stuff like
      * strncmp easily) */
-    int	    (*cmpfunc)(void *, void *);
+    int     (*cmpfunc)(void *, void *);
 } hash_table;
 
 /* this function creates a hashtable with 'elems' buckets (elems should be
@@ -85,8 +87,8 @@ typedef struct hash_table_t {
 * function).  len is the length of the key, and flags are any flags for the
 * table (see above).  cmpfunc is the function which should be used for
 * comparison when calling 'hash_find' */
-hash_table *create_hash_table(int elems, size_t offset, size_t len,
-	int flags, int (*cmpfunc)(void *, void *));
+hash_table *create_hash_table(int elems, size_t offset, size_t len, int flags, 
+                              int (*cmpfunc)(void *, void *));
 /* this function destroys a previously created hashtable */
 void destroy_hash_table(hash_table *table);
 /* this function resizes a hash-table to the new size given with 'elems'.
@@ -114,8 +116,10 @@ void hashent_free(hashent *hp)
 
 /* hash_table creation function.  given the user's paramters, allocate
  * and empty a new hash table and return it. */
-hash_table *create_hash_table(int elems, size_t offset, size_t len,
-	int flags, int (*cmpfunc)(void *, void *)) {
+hash_table *
+create_hash_table(int elems, size_t offset, size_t len, int flags, 
+                  int (*cmpfunc)(void *, void *)) 
+{
     hash_table *htp = malloc(sizeof(hash_table));
 
     htp->size = elems;
@@ -132,16 +136,20 @@ hash_table *create_hash_table(int elems, size_t offset, size_t len,
 
 /* hash_table destroyer.  sweep through the given table and kill off every
  * hashent */
-void destroy_hash_table(hash_table *table) {
+void 
+destroy_hash_table(hash_table *table) 
+{
     hashent *hep;
     int i;
 
-    for (i = 0;i < table->size;i++) {
-	while (!SLIST_EMPTY(&table->table[i])) {
-	    hep = SLIST_FIRST(&table->table[i]);
-	    SLIST_REMOVE_HEAD(&table->table[i], lp);
-	    hashent_free(hep);
-	}
+    for (i = 0;i < table->size;i++) 
+    {
+        while (!SLIST_EMPTY(&table->table[i])) 
+        {
+            hep = SLIST_FIRST(&table->table[i]);
+            SLIST_REMOVE_HEAD(&table->table[i], lp);
+            hashent_free(hep);
+        }
     }
     MyFree(table->table);
     MyFree(table);
@@ -150,7 +158,9 @@ void destroy_hash_table(hash_table *table) {
 /* this is an expensive function.  it's not the sort of thing one should be
  * calling a lot, however, in the right situations it can provide a lot of
  * benefit */
-void resize_hash_table(hash_table *table, int elems) {
+void 
+resize_hash_table(hash_table *table, int elems) 
+{
     hashent_list *oldtable;
     int oldsize, i;
     hashent *hep;
@@ -164,43 +174,50 @@ void resize_hash_table(hash_table *table, int elems) {
 
     /* now walk each bucket in the old table, pulling off individual entries
      * and re-adding them to the table as we go */
-    for (i = 0;i < oldsize;i++) {
-	while (!SLIST_EMPTY(&oldtable[i])) {
-	    hep = SLIST_FIRST(&oldtable[i]);
-	    hash_insert(table, hep->ent);
-	    SLIST_REMOVE_HEAD(&oldtable[i], lp);
-	    hashent_free(hep);
-	}
+    for (i = 0;i < oldsize;i++) 
+    {
+        while (!SLIST_EMPTY(&oldtable[i])) 
+        {
+            hep = SLIST_FIRST(&oldtable[i]);
+            hash_insert(table, hep->ent);
+            SLIST_REMOVE_HEAD(&oldtable[i], lp);
+            hashent_free(hep);
+        }
     }
     MyFree(oldtable);
 }
 
 /* get the hash of a given key.  really only useful for insert/delete */
-unsigned int hash_get_key_hash(hash_table *table, void *key, size_t offset) {
+unsigned int 
+hash_get_key_hash(hash_table *table, void *key, size_t offset) 
+{
     char *rkey = (char *)key + offset;
     int len = table->keylen;
     unsigned int hash = 0;
 
     if (!len)
-	len = strlen(rkey);
-    else if (table->flags & HASH_FL_STRING) {
-	len = strlen(rkey);
-	if (len > table->keylen)
-	    len = table->keylen;
+        len = strlen(rkey);
+    else if (table->flags & HASH_FL_STRING) 
+    {
+        len = strlen(rkey);
+        if (len > table->keylen)
+            len = table->keylen;
     }
     /* I borrowed this algorithm from perl5.  Kudos to Larry Wall & co. */
     if (table->flags & HASH_FL_NOCASE)
-	while (len--)
-	    hash = hash * 33 + tolower(*rkey++);
+        while (len--)
+            hash = hash * 33 + tolower(*rkey++);
     else
-	while (len--)
-	    hash = hash * 33 + *rkey++;
+        while (len--)
+            hash = hash * 33 + *rkey++;
 
     return hash % table->size;
 }
 
 /* add the given item onto the hash */
-int hash_insert(hash_table *table, void *ent) {
+int 
+hash_insert(hash_table *table, void *ent) 
+{
     int hash = hash_get_key_hash(table, ent, table->keyoffset);
     hashent *hep = hashent_alloc();
 
@@ -211,16 +228,19 @@ int hash_insert(hash_table *table, void *ent) {
 }
 
 /* delete the given item from the hash */
-int hash_delete(hash_table *table, void *ent) {
+int 
+hash_delete(hash_table *table, void *ent) 
+{
     int hash = hash_get_key_hash(table, ent, table->keyoffset);
     hashent *hep;
 
-    SLIST_FOREACH(hep, &table->table[hash], lp) {
-	if (hep->ent == ent)
-	    break;
+    SLIST_FOREACH(hep, &table->table[hash], lp) 
+    {
+        if (hep->ent == ent)
+            break;
     }
     if (hep == NULL)
-	return 0;
+        return 0;
     SLIST_REMOVE(&table->table[hash], hep, hashent_t, lp);
     hashent_free(hep);
     return 1;
@@ -230,13 +250,16 @@ int hash_delete(hash_table *table, void *ent) {
  * look for, it hashes the key, and then calls the compare function in the
  * given table slice until it finds the item, or reaches the end of the
  * list. */
-void *hash_find(hash_table *table, void *key) {
+void *
+hash_find(hash_table *table, void *key) 
+{
     int hash = hash_get_key_hash(table, key, 0);
     hashent *hep;
 
-    SLIST_FOREACH(hep, &table->table[hash], lp) {
-	if (!table->cmpfunc(&((char *)hep->ent)[table->keyoffset], key))
-	    return hep->ent;
+    SLIST_FOREACH(hep, &table->table[hash], lp) 
+    {
+        if (!table->cmpfunc(&((char *)hep->ent)[table->keyoffset], key))
+            return hep->ent;
     }
 
     return NULL; /* not found */
@@ -248,17 +271,21 @@ void *hash_find(hash_table *table, void *key) {
 
 LIST_HEAD(throttle_list_t, throttle_t) throttles;
 
-typedef struct throttle_t {
+typedef struct throttle_t 
+{
     char    addr[HOSTIPLEN + 1];    /* address of the throttle */
-    int	    conns;		    /* number of connections seen from this
-				       address. */
-    time_t  first;		    /* first time we saw this IP in this stage */
+    int     conns;                  /* number of connections seen from this
+                                       address. */
+    time_t  first;                  /* first time we saw this IP 
+                                     * in this stage */
     time_t  last;                   /* last time we saw this IP */
     time_t  zline_start;            /* time we placed a zline for this host,
                                        or 0 if no zline */
-    int stage;			    /* how many times this host has been z-lined */
-    int re_zlines;                  /* just a statistic -- how many times has this
-                                       host reconnected and had their ban reset */
+    int stage;                      /* how many times this host has been 
+                                     * z-lined */
+    int re_zlines;                  /* just a statistic -- how many times has 
+                                     * this host reconnected and had their 
+                                     * ban reset */
 
     LIST_ENTRY(throttle_t) lp;
 } throttle;
@@ -278,13 +305,14 @@ int throttle_enable = 0;
 int numthrottles = 0; /* number of throttles in existence */
 
 #ifdef THROTTLE_ENABLE
-void throttle_init(void) {
+void throttle_init(void) 
+{
     hashent_freelist = BlockHeapCreate(sizeof(hashent), 1024);
     throttle_freelist = BlockHeapCreate(sizeof(throttle), 1024);
     /* create the throttle hash. */
     throttle_hash = create_hash_table(THROTTLE_HASHSIZE,
-	    offsetof(throttle, addr), HOSTIPLEN,
-	    HASH_FL_STRING, (int (*)(void *, void *))strcmp);
+            offsetof(throttle, addr), HOSTIPLEN,
+            HASH_FL_STRING, (int (*)(void *, void *))strcmp);
 }
 
 throttle *throttle_alloc()
@@ -298,7 +326,8 @@ void throttle_free(throttle *tp)
 }
 
 /* returns the zline time, in seconds */
-static int throttle_get_zline_time(int stage)
+static int 
+throttle_get_zline_time(int stage)
 {
    switch(stage)
    {
@@ -324,7 +353,8 @@ static int throttle_get_zline_time(int stage)
    return 0; /* dumb compiler */
 }
 
-void throttle_remove(char *host)
+void 
+throttle_remove(char *host)
 {
     throttle *tp = hash_find(throttle_hash, host);
 
@@ -337,17 +367,19 @@ void throttle_remove(char *host)
     }
 }
 
-void throttle_force(char *host)
+void 
+throttle_force(char *host)
 {
     throttle *tp = hash_find(throttle_hash, host);
 
-    if (tp == NULL) {
-	/* we haven't seen this one before, create a new throttle and add it to
-	 * the hash.  XXX: blockheap code should be used, but the blockheap
-	 * allocator available in ircd is broken beyond repair as far as I'm
-	 * concerned. -wd */
-	tp = throttle_alloc();;
-	strcpy(tp->addr, host);
+    if (tp == NULL) 
+    {
+        /* we haven't seen this one before, create a new throttle and add it to
+         * the hash.  XXX: blockheap code should be used, but the blockheap
+         * allocator available in ircd is broken beyond repair as far as I'm
+         * concerned. -wd */
+        tp = throttle_alloc();;
+        strcpy(tp->addr, host);
 
         tp->stage = -1; /* no zline stage yet */
         tp->zline_start = 0;
@@ -355,9 +387,9 @@ void throttle_force(char *host)
         tp->first = NOW;
         tp->re_zlines = 0;
 
-	hash_insert(throttle_hash, tp);
-	LIST_INSERT_HEAD(&throttles, tp, lp);
-	numthrottles++;
+        hash_insert(throttle_hash, tp);
+        LIST_INSERT_HEAD(&throttles, tp, lp);
+        numthrottles++;
     } 
 
     /* now force them to be autothrottled if they reconnect. */
@@ -366,11 +398,13 @@ void throttle_force(char *host)
 }
 
 /* fd is -1 for remote signons */
-int throttle_check(char *host, int fd, time_t sotime) {
+int 
+throttle_check(char *host, int fd, time_t sotime) 
+{
     throttle *tp = hash_find(throttle_hash, host);
 
     if (!throttle_enable)
-	return 1; /* always successful */
+        return 1; /* always successful */
 
     /* If this is an old remote signon, just ignore it */
     if(fd == -1 && (NOW - sotime > throttle_ttime))
@@ -381,13 +415,14 @@ int throttle_check(char *host, int fd, time_t sotime) {
     if(sotime > NOW)
        sotime = NOW;
 
-    if (tp == NULL) {
-	/* we haven't seen this one before, create a new throttle and add it to
-	 * the hash.  XXX: blockheap code should be used, but the blockheap
-	 * allocator available in ircd is broken beyond repair as far as I'm
-	 * concerned. -wd */
-	tp = throttle_alloc();;
-	strcpy(tp->addr, host);
+    if (tp == NULL) 
+    {
+        /* we haven't seen this one before, create a new throttle and add it to
+         * the hash.  XXX: blockheap code should be used, but the blockheap
+         * allocator available in ircd is broken beyond repair as far as I'm
+         * concerned. -wd */
+        tp = throttle_alloc();;
+        strcpy(tp->addr, host);
 
         tp->stage = -1; /* no zline stage yet */
         tp->zline_start = 0;
@@ -395,9 +430,9 @@ int throttle_check(char *host, int fd, time_t sotime) {
         tp->first = sotime;
         tp->re_zlines = 0;
 
-	hash_insert(throttle_hash, tp);
-	LIST_INSERT_HEAD(&throttles, tp, lp);
-	numthrottles++;
+        hash_insert(throttle_hash, tp);
+        LIST_INSERT_HEAD(&throttles, tp, lp);
+        numthrottles++;
     } 
     else if(tp->zline_start)
     {
@@ -435,26 +470,27 @@ int throttle_check(char *host, int fd, time_t sotime) {
      * actually remove this structure from the hash and free it and create a
      * new one, except that would be preposterously expensive, so we just
      * re-set variables ;) -wd */
-    if (sotime - tp->first > throttle_ttime) {
-	tp->conns = 1;
-	tp->first = sotime;
+    if (sotime - tp->first > throttle_ttime) 
+    {
+        tp->conns = 1;
+        tp->first = sotime;
 
-	/* we can probably gaurantee they aren't going to be throttled, return
-	 * success */
-	return 1;
+        /* we can probably gaurantee they aren't going to be throttled, return
+         * success */
+        return 1;
     }
 
     if (tp->conns == -1)
     {
-	/* This is a forced throttle, drop 'em! */
-	return 0;
+        /* This is a forced throttle, drop 'em! */
+        return 0;
     }
 
     if (tp->conns >= throttle_tcount) 
     {
-	/* mark them as z:lined (we do not actually add a Z:line as this would
-	 * be wasteful) and let local +c ops know about this */
-	if (fd != -1) 
+        /* mark them as z:lined (we do not actually add a Z:line as this would
+         * be wasteful) and let local +c ops know about this */
+        if (fd != -1) 
         {
             char errbufr[512];
             int zlength, elength;
@@ -462,81 +498,91 @@ int throttle_check(char *host, int fd, time_t sotime) {
             tp->stage++;
             zlength = throttle_get_zline_time(tp->stage);
 
-	    /* let +c ops know */
-	    sendto_realops_lev(REJ_LEV,
-		               "throttled connections from %s (%d in %d seconds) for %d minutes (offense %d)",
-		               tp->addr, tp->conns, sotime - tp->first, zlength / 60, tp->stage + 1);
+            /* let +c ops know */
+            sendto_realops_lev(REJ_LEV, "throttled connections from %s (%d in"
+                               " %d seconds) for %d minutes (offense %d)",
+                               tp->addr, tp->conns, sotime - tp->first, 
+                               zlength / 60, tp->stage + 1);
 
-            elength = ircsnprintf(errbufr, 512, ":%s NOTICE ZUSR :You have been throttled for %d minutes for too "
-               "many connections in a short period of time. Further connections in this period will reset "
-               "your throttle and you will have to wait longer.\r\n", me.name, zlength / 60);
+            elength = ircsnprintf(errbufr, 512, ":%s NOTICE ZUSR :You have"
+                                  " been throttled for %d minutes for too"
+                                  " many connections in a short period of time."
+                                  " Further connections in this period will"
+                                  " reset your throttle and you will have to"
+                                  " wait longer.\r\n", me.name, zlength / 60);
             send(fd, errbufr, elength, 0);
 
             if(throttle_get_zline_time(tp->stage+1) != zlength)
             {
-               elength = ircsnprintf(errbufr, 512, ":%s NOTICE ZUSR :When you return, if you are throttled again, "
-                  "your throttle will last longer.\r\n", me.name);
-               send(fd, errbufr, elength, 0);
+                elength = ircsnprintf(errbufr, 512, ":%s NOTICE ZUSR :When you"
+                                      " return, if you are throttled again, "
+                                      "your throttle will last longer.\r\n", 
+                                      me.name);
+                send(fd, errbufr, elength, 0);
             }
 
-            /* We steal this message from undernet, because mIRC detects it and doesn't try to 
-               autoreconnect */
-            elength = ircsnprintf(errbufr, 512, "ERROR :Your host is trying to (re)connect too fast -- throttled.\r\n", tp->addr);
+            /* We steal this message from undernet, because mIRC detects it 
+             * and doesn't try to autoreconnect */
+            elength = ircsnprintf(errbufr, 512, "ERROR :Your host is trying "
+                                  "to (re)connect too fast -- throttled.\r\n",
+                                  tp->addr);
             send(fd, errbufr, elength, 0);
 
-	    tp->zline_start = sotime;
-	} 
+            tp->zline_start = sotime;
+        } 
         else 
         {
-	    /* it might be desireable at some point to let people know about
-	     * these problems.  for now, however, don't. */
-	}
-
-	return 0; /* drop 'em */
+            /* it might be desireable at some point to let people know about
+             * these problems.  for now, however, don't. */
+        }
+        return 0; /* drop 'em */
     }
-
     return 1; /* they're okay. */
 }
-		
+                
 /* walk through our list of throttles, expire any as necessary.  in the case of
  * Z:lines, expire them at the end of the Z:line timeout period. */
 /* Expire at the end of the zline timeout period plus throttle_rtime */
-void throttle_timer(time_t now) {
+void 
+throttle_timer(time_t now) 
+{
     throttle *tp, *tp2;
     time_t zlength;
 
     if (!throttle_enable)
-	return;
+        return;
 
     tp = LIST_FIRST(&throttles);
     while (tp != NULL)
     {
         zlength = throttle_get_zline_time(tp->stage);
-	tp2=LIST_NEXT(tp, lp);
-	if ((now == 0) ||
-            (tp->zline_start && (now - tp->zline_start) >= (zlength + throttle_rtime)) ||
-            (!tp->zline_start && (now - tp->last) >= throttle_rtime)
-           ) 
+        tp2=LIST_NEXT(tp, lp);
+        if ((now == 0) || (tp->zline_start && 
+            (now - tp->zline_start) >= (zlength + throttle_rtime)) ||
+            (!tp->zline_start && (now - tp->last) >= throttle_rtime)) 
         {
-	    /* delete this item */
-	    LIST_REMOVE(tp, lp);
-	    hash_delete(throttle_hash, tp);
-	    throttle_free(tp);
-	    numthrottles--;
-	}
-	tp=tp2;
+            /* delete this item */
+            LIST_REMOVE(tp, lp);
+            hash_delete(throttle_hash, tp);
+            throttle_free(tp);
+            numthrottles--;
+        }
+        tp=tp2;
     }
 }
 
-void throttle_rehash(void) {
+void throttle_rehash(void) 
+{
     throttle_timer(0);
 }
 
-void throttle_resize(int size) {
+void throttle_resize(int size) 
+{
     resize_hash_table(throttle_hash, size);
 }
 
-void throttle_stats(aClient *cptr, char *name) {
+void throttle_stats(aClient *cptr, char *name) 
+{
     int pending = 0, bans = 0;
     throttle *tp;
     unsigned int tcnt, tsz, hcnt, hsz;
@@ -550,30 +596,32 @@ void throttle_stats(aClient *cptr, char *name) {
     hsz = hcnt * hashent_freelist->elemSize;
 
     sendto_one(cptr, ":%s %d %s :throttles: %d", me.name, RPL_STATSDEBUG, name,
-	    numthrottles);
+            numthrottles);
     sendto_one(cptr, ":%s %d %s :alloc memory: %d throttles (%d bytes), "
             "%d hashents (%d bytes)", me.name, RPL_STATSDEBUG, name,
             tcnt, tsz, hcnt, hsz);            
     sendto_one(cptr, ":%s %d %s :throttle hash table size: %d", me.name,
-	    RPL_STATSDEBUG, name, throttle_hash->size);
+            RPL_STATSDEBUG, name, throttle_hash->size);
 
     /* now count bans/pending */
-    LIST_FOREACH(tp, &throttles, lp) {
-	if (tp->zline_start)
-	    bans++;
-	else
-	    pending++;
+    LIST_FOREACH(tp, &throttles, lp) 
+    {
+        if (tp->zline_start)
+            bans++;
+        else
+            pending++;
     }
     sendto_one(cptr, ":%s %d %s :throttles pending=%d bans=%d", me.name,
-	    RPL_STATSDEBUG, name, pending, bans);
+            RPL_STATSDEBUG, name, pending, bans);
     LIST_FOREACH(tp, &throttles, lp) 
     {
         int ztime = throttle_get_zline_time(tp->stage);
 
-	if (tp->zline_start && tp->zline_start + ztime > NOW)
-	    sendto_one(cptr, ":%s %d %s :throttled: %s [stage %d, %d secs remain, %d futile retries]", me.name,
-		    RPL_STATSDEBUG, name, tp->addr, tp->stage, 
-		    (tp->zline_start + ztime) - NOW, tp->re_zlines);
+        if (tp->zline_start && tp->zline_start + ztime > NOW)
+            sendto_one(cptr, ":%s %d %s :throttled: %s [stage %d, %d secs"
+                             " remain, %d futile retries]", me.name,
+                            RPL_STATSDEBUG, name, tp->addr, tp->stage, 
+                            (tp->zline_start + ztime) - NOW, tp->re_zlines);
     }
 }
 
