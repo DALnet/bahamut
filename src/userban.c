@@ -506,14 +506,14 @@ static inline void report_list_match_flags(aClient *cptr, uBanEnt *bl, unsigned 
          kset[2] = '\0';
 
          if(ban->flags & (UBAN_CIDR4|UBAN_CIDR4BIG))
-            snprintf(host, 128, "%s/%d", inetntoa((char *)&ban->cidr4ip), netmask_to_cidr(ban->cidr4mask));
+            snprintf(host, 128, "%s/%d", inetntoa((char *)&ban->cidr4ip), netmask_to_cidr(ntohl(ban->cidr4mask)));
          else
             strcpy(host, ban->h);
 
          sendto_one(cptr, rpl_str(RPL_STATSKLINE), me.name,
                     cptr->name, kset, host,
                     (ban->flags & UBAN_WILDUSER) ? "*" : ban->u, 
-                    (ban->flags & UBAN_TEMPORARY) ? ((NOW - (ban->timeset + ban->duration))/60) : -1, 
+                    (ban->flags & UBAN_TEMPORARY) ? (((ban->timeset + ban->duration) - NOW) / 60) : -1, 
                     (ban->reason) ? ban->reason : "No reason");
       }
 
@@ -619,7 +619,7 @@ char *get_userban_host(struct userBan *ban, char *buf, int buflen)
    *buf = '\0';
 
    if(ban->flags & (UBAN_CIDR4|UBAN_CIDR4BIG))
-      snprintf(buf, buflen, "%s/%d", inetntoa((char *)&ban->cidr4ip), netmask_to_cidr(ban->cidr4mask));
+      snprintf(buf, buflen, "%s/%d", inetntoa((char *)&ban->cidr4ip), netmask_to_cidr(ntohl(ban->cidr4mask)));
    else
       snprintf(buf, buflen, "%s", ban->h);
 

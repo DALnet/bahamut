@@ -3503,6 +3503,14 @@ int m_kline(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	ban->duration = temporary_kline_time_seconds;
     }
 
+    if(user_match_ban(sptr, ban))
+    {
+	sendto_one(sptr, ":%s NOTICE %s :You attempted to add a ban [%s@%s] which would affect yourself. Aborted.",
+		   me.name, parv[0], user, host);
+	userban_free(ban);
+	return 0;
+    }
+
     add_hostbased_userban(ban);
 
     /* Check local users against it */
