@@ -1598,8 +1598,7 @@ m_join(aClient *cptr,
       if (!chptr ||
 			 (MyConnect(sptr) && (i = can_join(sptr, chptr, key)))) {
 			sendto_one(sptr,
-						  ":%s %d %s %s :Sorry, cannot join channel.",
-						  me.name, i, parv[0], name);
+						  getreply(i), me.name, parv[0], name);
 #ifdef ANTI_SPAMBOT
 			if (successful_join_count > 0)
 			  successful_join_count--;
