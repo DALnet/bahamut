@@ -1268,7 +1268,7 @@ confadd_kill(cVar *vars[], int lnum)
             tmp->type = NULL;
             if((host = strchr(tmp->value, '@')))
             {
-                host = '\0';
+                *host = '\0';
                 host++;
                 ub_u = tmp->value;
             }
@@ -1731,8 +1731,10 @@ merge_ports()
         {
             MyFree(old_port->allow);
             MyFree(old_port->address);
-            DupString(old_port->allow, aport->allow);
-            DupString(old_port->address, aport->address);
+            if(aport->allow)
+                DupString(old_port->allow, aport->allow);
+            if(aport->address)
+                DupString(old_port->address, aport->address);
             old_port->legal = 1;
             aport->legal = -1;
             aport = aport->next;
