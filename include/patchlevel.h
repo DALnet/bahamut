@@ -33,7 +33,7 @@
 #define BRANCH "pelennor"
 #define MAJOR 1
 #define MINOR 1
-#define PATCH 6
+#define PATCH 7
 
 #define PATCH1 \
 \

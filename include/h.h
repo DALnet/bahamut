@@ -89,6 +89,7 @@ extern int  bootopt;
 extern char *canonize(char *);
 extern time_t check_fdlists(time_t);
 extern aChannel *find_channel(char *, aChannel *);
+extern aBan *nick_is_banned(aChannel *, char *, aClient *);
 extern void remove_user_from_channel(aClient *, aChannel *);
 extern void del_invite(aClient *, aChannel *);
 extern void send_user_joins(aClient *, aClient *);

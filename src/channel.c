@@ -162,6 +162,7 @@ static char *make_nick_user_host(char *nick, char *name, char *host) {
 static int add_banid(aClient *cptr, aChannel *chptr, char *banid) {
    Reg aBan   *ban;
    Reg int     cnt = 0;
+   Reg chanMember *cm;
 
    if (MyClient(cptr))
 	  (void) collapse(banid);
@@ -199,6 +200,17 @@ static int add_banid(aClient *cptr, aChannel *chptr, char *banid) {
    ban->when = timeofday;
 
    chptr->banlist = ban;
+
+   for (cm = chptr->members; cm; cm = cm->next) {
+     char nickuhost[NICKLEN+USERLEN+HOSTLEN+3];
+     char *s = make_nick_user_host(cm->cptr->name, cm->cptr->user->username,
+                cm->cptr->hostip);
+     ircsprintf(nickuhost, "%s!%s@s", cm->cptr->name, cm->cptr->user->username,
+		cm->cptr->user->host);
+     if (match(banid, nickuhost) == 0 ||
+         match(banid, s) == 0) 
+        cm->bans++;
+   }
    return 0;
 }
 
@@ -211,6 +223,7 @@ del_banid(aChannel *chptr, char *banid)
 {
    Reg aBan  **ban;
    Reg aBan   *tmp;
+   Reg chanMember *cm;
 
    if (!banid)
       return -1;
@@ -222,6 +235,18 @@ del_banid(aChannel *chptr, char *banid)
 	 MyFree(tmp->banstr);
 	 MyFree(tmp->who);
 	 MyFree(tmp);
+
+         for (cm = chptr->members; cm; cm = cm->next) {
+           char nickuhost[NICKLEN+USERLEN+HOSTLEN+3];
+           char *s = make_nick_user_host(cm->cptr->name, cm->cptr->user->username,
+		      cm->cptr->hostip);
+	   ircsprintf(nickuhost, "%s!%s@%s", cm->cptr->name,
+		      cm->cptr->user->username, cm->cptr->user->host);
+	   if (match(banid, nickuhost) == 0 ||
+	       match(banid, s) == 0) 
+              cm->bans--;
+	   if (cm->bans < 0) cm->bans = 0;
+	 }
 	 break;
       }
    return 0;
@@ -252,6 +277,23 @@ static aBan *is_banned(aClient *cptr, aChannel *chptr) {
 	 break;
    return (tmp);
 }
+
+aBan *nick_is_banned(aChannel *chptr, char *nick, aClient *cptr) {
+  aBan *tmp;
+  char *s, s2[NICKLEN+USERLEN+HOSTLEN+3];
+
+  if (!IsPerson(cptr)) return NULL;
+
+  ircsprintf(s2, "%s!%s@%s", nick, cptr->user->username, cptr->user->host);
+  s = make_nick_user_host(nick, cptr->user->username, cptr->hostip);
+
+  for (tmp = chptr->banlist; tmp; tmp = tmp->next)
+     if ((match(tmp->banstr, s2) == 0) ||    /* check host before IP */
+	 (match(tmp->banstr, s) == 0))
+        break;
+  return (tmp);
+}
+
 /*
  * adds a user to a channel by adding another link to the channels
  * member chain.

@@ -461,7 +461,7 @@ static char *replies[] = {
 	/* 432 ERR_ERRONEOUSNICKNAME */	":%s 432 %s %s :Erroneus Nickname",
 	/* 433 ERR_NICKNAMEINUSE */	":%s 433 %s %s :Nickname is already in use.",
 	/* 434 */	NULL,
-	/* 435 */	NULL,
+	/* 435 ERR_BANONCHAN */	        ":%s 435 %s %s %s :Cannot change to a banned nickname",
 	/* 436 ERR_NICKCOLLISION */	":%s 436 %s %s :Nickname collision KILL",
 	/* 437 ERR_BANNICKCHANGE */	":%s 437 %s %s :Cannot change nickname while banned on channel",
 	/* 438 */	NULL,	/* In use by Undernet - ERR_NICKTOOFAST */
