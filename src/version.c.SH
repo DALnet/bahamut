@@ -79,6 +79,7 @@ char *infotext[] =
 	 "Rakarra             Ian Westcott        rakarra@dal.net",
 	 "sedition            David Parton        sedition@dal.net",
 	 "White_Dragon        Chip Norkus         wd@dal.net",
+         "xPsycho             Ryan Smith          xpsycho@dal.net",
 	 "",
 	 "The following people have contributed ideas or testing to the",
 	 "bahamut project:",
