@@ -742,353 +742,407 @@ m_mode(aClient *cptr,
 /* the old set_mode was pissing me off with it's disgusting
  * hackery, so I rewrote it.  Hope this works. }:> --wd
  */
-static int
-set_mode(aClient *cptr, aClient *sptr, aChannel *chptr, int level, int parc,
-			char *parv[], char *mbuf, char *pbuf) {
-	static int flags[] = {
-		MODE_PRIVATE, 'p', MODE_SECRET, 's',
-      MODE_MODERATED, 'm', MODE_NOPRIVMSGS, 'n',
-      MODE_TOPICLIMIT, 't', MODE_REGONLY, 'R',
-		MODE_INVITEONLY, 'i', MODE_NOCOLOR, 'c',
-		0x0, 0x0};
-	
-	Link *lp; /* for walking lists */
-	chanMember *cm; /* for walking channel member lists */
-	aBan *bp; /* for walking banlists */
-	char *modes=parv[0]; /* user's idea of mode changes */
-        int args; /* counter for what argument we're on */
-	int banlsent = 0; /* Only list bans once in a command. */
-	char change='+'; /* by default we + things... */
-	int errors=0; /* errors returned, set with bitflags so we only 
-								* return them once */
+static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr, int level, int parc,
+                    char *parv[], char *mbuf, char *pbuf) 
+{
 #define SM_ERR_NOPRIVS 0x0001 /* is not an op */
 #define SM_ERR_MOREPARMS 0x0002 /* needs more parameters */	
-#define SM_ERR_RESTRICTED 0x0004 /* not allowed to op others or be op'd */
-	
+#define SM_ERR_RESTRICTED 0x0004 /* not allowed to op others or be op'd */	
 #define SM_MAXMODES 6
-	/* from remote servers, ungodly numbers of modes can be sent, but
-	 * from local users only SM_MAXMODES are allowed */
-	int maxmodes=((IsServer(sptr) || IsULine(sptr)) ? 512 : SM_MAXMODES);
-	int nmodes=0; /* how many modes we've set so far */
-	aClient *who=NULL; /* who we're doing a mode for */
-	int chasing = 0;
-	int len=0, i=0; /* so we don't overrun pbuf */
-	char moreparmsstr[]="MODE   ";
-	char nuhbuf[NICKLEN + USERLEN + HOSTLEN + 6]; /* for bans */
-	
-	args=1;
-	
-	if(parc<1)
-	  return 0;
 
-	*pbuf=0;
-	*mbuf++='+'; /* add the plus, even if they don't */
-	/* go through once to clean the user's mode string so we can
-	 * have a simple parser run through it...*/
-	while(*modes && (nmodes<maxmodes)) {
-		switch(*modes) {
-		 case '+':
-			if(*(mbuf-1)=='-') {
-				*(mbuf-1)='+'; /* change it around now */
-				change='+';
-				break;
-			}
-			else if(change=='+') /* we're still doing a +, we don't care */
-			  break;
-			change=*modes;
-			*mbuf++='+';
-			break;
-		 case '-':
-			if(*(mbuf-1)=='+') {
-				*(mbuf-1)='-'; /* change it around now */
-				change='-';
-				break;
-			}
-			else if(change=='-')
-			  break; /* we're still doing a -, we don't care */
-			change=*modes;
-			*mbuf++='-';
-			break;
-		 case 'o':
-		 case 'v':
-			if(level<1) {
-				errors|=SM_ERR_NOPRIVS;
-				break;
-			}
-			if(parv[args]==NULL) {
-				/* enough people complained about this that I took it out
-				 * we just silently drop the spare +o's now */
-				/*	errors|=SM_ERR_MOREPARMS; */
-				break;
-			}
+/* this macro appends to pbuf */
+#define ADD_PARA(p) pptr = p; if(pidx) pbuf[pidx++] = ' '; while(*pptr) pbuf[pidx++] = *pptr++;
+
+   static int flags[] = 
+   {
+      MODE_PRIVATE, 'p', MODE_SECRET, 's',
+      MODE_MODERATED, 'm', MODE_NOPRIVMSGS, 'n',
+      MODE_TOPICLIMIT, 't', MODE_REGONLY, 'R',
+      MODE_INVITEONLY, 'i', MODE_NOCOLOR, 'c',
+      0x0, 0x0
+   };
+	
+   Link *lp; /* for walking lists */
+   chanMember *cm; /* for walking channel member lists */
+   aBan *bp; /* for walking banlists */
+   char *modes=parv[0]; /* user's idea of mode changes */
+   int args; /* counter for what argument we're on */
+   int banlsent = 0; /* Only list bans once in a command. */
+   char change='+'; /* by default we + things... */
+   int errors=0; /* errors returned, set with bitflags so we only return them once */
+   /* from remote servers, ungodly numbers of modes can be sent, but
+    * from local users only SM_MAXMODES are allowed */
+   int maxmodes=((IsServer(sptr) || IsULine(sptr)) ? 512 : SM_MAXMODES);
+   int nmodes=0; /* how many modes we've set so far */
+   aClient *who = NULL; /* who we're doing a mode for */
+   int chasing = 0;
+   int i=0;
+   char moreparmsstr[]="MODE   ";
+   char nuhbuf[NICKLEN + USERLEN + HOSTLEN + 6]; /* for bans */
+   char tmp[16]; /* temporary buffer */
+   int pidx = 0; /* index into pbuf */
+   char *pptr; /* temporary paramater pointer */
+   char *morig = mbuf; /* beginning of mbuf */
+   /* :cptr-name MODE chptr->chname [MBUF] [PBUF] (buflen - 3 max and NULL) */
+   int prelen = strlen(cptr->name) + strlen(chptr->chname) + 16;
+
+
+   args=1;
+	
+   if(parc<1)
+      return 0;
+
+   *mbuf++='+'; /* add the plus, even if they don't */
+   /* go through once to clean the user's mode string so we can
+    * have a simple parser run through it...*/
+
+   while(*modes && (nmodes<maxmodes)) 
+   {
+      switch(*modes) 
+      {
+         case '+':
+            if(*(mbuf-1)=='-') 
+            {
+               *(mbuf-1)='+'; /* change it around now */
+               change='+';
+               break;
+            }
+            else if(change=='+') /* we're still doing a +, we don't care */
+            break;
+            change=*modes;
+            *mbuf++='+';
+            break;
+
+         case '-':
+            if(*(mbuf-1)=='+') 
+            {
+               *(mbuf-1)='-'; /* change it around now */
+               change='-';
+               break;
+            }
+            else if(change=='-')
+               break; /* we're still doing a -, we don't care */
+            change=*modes;
+            *mbuf++='-';
+            break;
+
+         case 'o':
+         case 'v':
+            if(level<1) 
+            {
+               errors |= SM_ERR_NOPRIVS;
+               break;
+            }
+            if(parv[args]==NULL)
+            {
+               /* silently drop the spare +o/v's */
+               break;
+            }
 			
-			who=find_chasing(sptr, parv[args], &chasing);
-			cm=find_user_member(chptr->members, who);
-			if(cm==NULL) {
-				sendto_one(sptr, err_str(ERR_USERNOTINCHANNEL),
-							  me.name, cptr->name, parv[args], chptr->chname);
-				/* swallow the arg */
-				args++;
-				break;
-			}
+            who = find_chasing(sptr, parv[args], &chasing);
+            cm = find_user_member(chptr->members, who);
+            if(cm == NULL) 
+            {
+               sendto_one(sptr, err_str(ERR_USERNOTINCHANNEL),
+                          me.name, cptr->name, parv[args], chptr->chname);
+               /* swallow the arg */
+               args++;
+               break;
+            }
 #ifdef LITTLE_I_LINE
-			if(IsRestricted(sptr) && (change=='+' && *modes=='o')) {
-				errors|=SM_ERR_RESTRICTED;
-				args++;
-				break;
-			}
+            if(IsRestricted(sptr) && (change=='+' && *modes=='o')) 
+            {
+               errors |= SM_ERR_RESTRICTED;
+               args++;
+               break;
+            }
+#endif
+            /* if we're going to overflow our mode buffer,
+	     * drop the change instead */
+            if((prelen + (mbuf - morig) + pidx + NICKLEN + 1) > REALMODEBUFLEN) 
+            {
+               args++;
+               break;
+            }
+#ifdef LITTLE_I_LINE
+             if(MyClient(who) && IsRestricted(who) && (change=='+' && *modes=='o')) 
+             {
+                /* pass back to cptr a MODE -o to avoid desynch */
+                sendto_one(cptr, ":%s MODE %s -o %s", me.name, chptr->chname, who->name);
+                sendto_one(who, ":%s NOTICE %s :*** Notice -- %s attempted to chanop you. You are restricted and cannot be chanopped",
+                           me.name, who->name, sptr->name);
+                sendto_one(sptr, ":%s NOTICE %s :*** Notice -- %s is restricted and cannot be chanopped",
+                           me.name, sptr->name, who->name);
+                args++;
+                break;
+             }
 #endif
 
-			/* if we're going to overflow our mode buffer,
-			 * drop the change instead */
-			i=strlen(cm->cptr->name);
-			if(len+i>MODEBUFLEN) {
-				args++;
-				break;
-			}
-#ifdef LITTLE_I_LINE
-			if(MyClient(who) && IsRestricted(who) && (change=='+' && *modes=='o')) {
-				/* pass back to cptr a MODE -o to avoid desynch */
-				sendto_one(cptr, ":%s MODE %s -o %s", me.name,
-							  chptr->chname, who->name);
-				sendto_one(who, ":%s NOTICE %s :*** Notice -- %s attempted to chanop you. You are restricted and cannot be chanopped",
-							  me.name, who->name, sptr->name);
-				sendto_one(sptr, ":%s NOTICE %s :*** Notice -- %s is restricted and cannot be chanopped",
-							  me.name, sptr->name, who->name);
-				args++;
-				break;
-			}
-#endif
+             /* if we have the user, set them +/-[vo] */
+             if(change=='+')
+                cm->flags|=(*modes=='o' ? CHFL_CHANOP : CHFL_VOICE);
+             else
+                cm->flags&=~((*modes=='o' ? CHFL_CHANOP : CHFL_VOICE));
 
-			/* if we have the user, set them +/-[vo] */
-			if(change=='+')
-			  cm->flags|=(*modes=='o' ? CHFL_CHANOP : CHFL_VOICE);
-			else
-			  cm->flags&=~((*modes=='o' ? CHFL_CHANOP : CHFL_VOICE));
-			/* we've decided their mode was okay, cool */
-			*mbuf++=*modes;
-			strcat(parabuf, cm->cptr->name);
-			strcat(parabuf, " ");
-			len+=i+1;
-			args++;
-			nmodes++;
-			if (IsServer(sptr) && *modes == 'o' && change=='+') {
-				chptr->channelts = 0;
-				ts_warn("Server %s setting +o and blasting TS on %s", sptr->name,
-						  chptr->chname);
-			}
-			break;
-		 case 'b':
-			/* if the user has no more arguments, then they just want
-			 * to see the bans, okay, cool. */
-			if(level<1 && parv[args]!=NULL) {
-				errors|=SM_ERR_NOPRIVS;
-				break;
-			}
-			/* show them the bans, woowoo */
-			if(parv[args]==NULL) {
-				if (banlsent)
-				     break; /* Send only once */
-				for(bp=chptr->banlist;bp;bp=bp->next)
-				  sendto_one(sptr, rpl_str(RPL_BANLIST), me.name, cptr->name,
-								 chptr->chname, bp->banstr,
-								 bp->who, bp->when);
-				sendto_one(cptr, rpl_str(RPL_ENDOFBANLIST),
-							  me.name, cptr->name, chptr->chname);
-				banlsent = 1;
-				break; /* we don't pass this along, either.. */
-			}
-			/* do not allow : in bans, or a null ban */
-			if(*parv[args]==':' || *parv[args] == '\0') {
-				args++;
-				break;
-			}
-			/* make a 'pretty' ban mask here, then try and set it */
-                        /* okay kids, let's do this again.
-			 * the buffer returned by pretty_mask is from 
-			 * make_nick_user_host. This buffer is eaten by add/del banid.
-			 * Thus, some poor schmuck gets himself on the banlist. Fixed. - lucas */
-			strcpy(nuhbuf, collapse(pretty_mask(parv[args])));
-			parv[args] = nuhbuf;
-			/* if we're going to overflow our mode buffer,
-			 * drop the change instead */
-			i=strlen(parv[args]);
-			if(len+i>MODEBUFLEN) {
-				args++;
-				break;
-			}
-			/* if we can't add or delete (depending) the ban, change is
-			 * worthless anyhow */
-			if(!(change=='+' && !add_banid(sptr, chptr, parv[args])) && 
-				!(change=='-' && !del_banid(chptr, parv[args])))
-			  break;
+             /* we've decided their mode was okay, cool */
+             *mbuf++ = *modes;
+             ADD_PARA(cm->cptr->name)
+             args++;
+             nmodes++;
+             if (IsServer(sptr) && *modes == 'o' && change=='+') 
+             {
+                chptr->channelts = 0;
+                sendto_ops("Server %s setting +o and blasting TS on %s", sptr->name, chptr->chname);
+             }
+             break;
+
+         case 'b':
+            /* if the user has no more arguments, then they just want
+             * to see the bans, okay, cool. */
+            if(level < 1 && parv[args] != NULL)
+            {
+               errors |= SM_ERR_NOPRIVS;
+               break;
+            }
+            /* show them the bans, woowoo */
+            if(parv[args]==NULL)
+            {
+               if (banlsent)
+                  break; /* Send only once */
+               for(bp=chptr->banlist;bp;bp=bp->next)
+                  sendto_one(sptr, rpl_str(RPL_BANLIST), me.name, cptr->name,
+                             chptr->chname, bp->banstr, bp->who, bp->when);
+               sendto_one(cptr, rpl_str(RPL_ENDOFBANLIST), me.name, cptr->name, chptr->chname);
+               banlsent = 1;
+               break; /* we don't pass this along, either.. */
+            }
+
+            /* do not allow : in bans, or a null ban */
+            if(*parv[args]==':' || *parv[args] == '\0') 
+            {
+               args++;
+               break;
+            }
+
+            /* make a 'pretty' ban mask here, then try and set it */
+            /* okay kids, let's do this again.
+             * the buffer returned by pretty_mask is from 
+             * make_nick_user_host. This buffer is eaten by add/del banid.
+             * Thus, some poor schmuck gets himself on the banlist. Fixed. - lucas */
+            strcpy(nuhbuf, collapse(pretty_mask(parv[args])));
+            parv[args] = nuhbuf;
+            /* if we're going to overflow our mode buffer,
+             * drop the change instead */
+            if((prelen + (mbuf - morig) + pidx + strlen(nuhbuf) + 1) > REALMODEBUFLEN) 
+            {
+               args++;
+               break;
+            }
+            /* if we can't add or delete (depending) the ban, change is
+             * worthless anyhow */
+
+            if(!(change=='+' && !add_banid(sptr, chptr, parv[args])) && 
+               !(change=='-' && !del_banid(chptr, parv[args])))
+            {
+               args++;
+               break;
+            }
 				
-			*mbuf++='b';
-			strcat(pbuf, parv[args]);
-			strcat(pbuf, " ");
-			len+=i+1;
-			args++;
-			nmodes++;
-			break;
-		 case 'l':
-			/* if the user has no more arguments, then they just want
-			 * to see the bans, okay, cool. */
-			if(level<1) {
-				errors|=SM_ERR_NOPRIVS;
-				break;
-			}
-			/* if it's a -, just change the flag, we have no arguments */
-			if(change=='-') {
-				*mbuf++='l';
-				chptr->mode.mode&=~MODE_LIMIT;
-				chptr->mode.limit=0;
-				nmodes++;
-				break;
-			}
-			else {
-				if(parv[args]==NULL) {
-					errors|=SM_ERR_MOREPARMS;
-					break;
-				}
-				/* if we're going to overflow our mode buffer,
-				 * drop the change instead */
-				i=strlen(parv[args]);
-				if(len+i>MODEBUFLEN) {
-					args++;
-					break;
-				}
-				chptr->mode.mode|=MODE_LIMIT;
-				chptr->mode.limit=atoi(parv[args]);
-				if(chptr->mode.limit<1)
-				  chptr->mode.limit=1; /* clueless user, :) */
-				*mbuf++='l';
-				/* oops...we can't just shove the users args in, how obnoxious...*/
-				ircsprintf(pbuf+len, "%d ", chptr->mode.limit);
-				len=strlen(pbuf); /* yeah, who knows, heh! */
-				args++;
-				nmodes++;
-				break;
-			}
-		 case 'k':
-			if(level<1) {
-				errors|=SM_ERR_NOPRIVS;
-				break;
-			}
-			if(parv[args]==NULL)
-			  break;
+            *mbuf++ = 'b';
+            ADD_PARA(parv[args])
+            args++;
+            nmodes++;
+            break;
 
-			/* do not allow keys to start with :! ack! - lucas */
-                        /* another ack: don't let people set null keys! */
-			if(*parv[args]==':' || *parv[args] == '\0') {
-				args++;
-				break;
-			}
+         case 'l':
+            if(level<1) 
+            {
+               errors |= SM_ERR_NOPRIVS;
+               break;
+            }
 
-			/* if we're going to overflow our mode buffer,
-			 * drop the change instead */
-			i=strlen(parv[args]);
-			if(len+i>MODEBUFLEN) {
-				args++;
-				break;
-			}
+            /* if it's a -, just change the flag, we have no arguments */
+            if(change=='-')
+            {
+               if((prelen + (mbuf - morig) + pidx + 1) > REALMODEBUFLEN) 
+                  break;
+               *mbuf++ = 'l';
+               chptr->mode.mode &= ~MODE_LIMIT;
+               chptr->mode.limit = 0;
+               nmodes++;
+               break;
+            }
+            else 
+            {
+               if(parv[args] == NULL) 
+               {
+                  errors|=SM_ERR_MOREPARMS;
+                  break;
+               }
+
+               /* if we're going to overflow our mode buffer,
+	        * drop the change instead */
+               if((prelen + (mbuf - morig) + pidx + 16) > REALMODEBUFLEN) 
+               {
+                  args++;
+                  break;
+               }
+               
+               i = atoi(parv[args]);
+
+               /* toss out invalid modes */
+               if(i < 1)
+               {
+                  args++;
+                  break;
+               }
+               ircsprintf(tmp, "%d", i);
+               chptr->mode.limit = i;
+               chptr->mode.mode |= MODE_LIMIT;
+               *mbuf++ = 'l';
+               ADD_PARA(tmp);
+               args++;
+               nmodes++;
+               break;
+            }
+
+         case 'k':
+            if(level<1) 
+            {
+               errors |= SM_ERR_NOPRIVS;
+               break;
+            }
+            if(parv[args]==NULL)
+               break;
+
+            /* do not allow keys to start with :! ack! - lucas */
+            /* another ack: don't let people set null keys! */
+            if(*parv[args]==':' || *parv[args] == '\0') 
+            {
+               args++;
+               break;
+            }
+
+            /* if we're going to overflow our mode buffer,
+             * drop the change instead */
+            if((prelen + (mbuf - morig) + pidx + KEYLEN+2) > REALMODEBUFLEN) 
+            {
+               args++;
+               break;
+            }
 			
-			/* if they're an op, they can futz with the key in
-			 * any manner they like, we're not picky */
-			if(change=='+') {
-				strncpy(chptr->mode.key,parv[args],KEYLEN);
-				strcat(pbuf,parv[args]);
-				strcat(pbuf," ");
-				len+=i+1;
-			}
-			else {
-				strcat(pbuf, chptr->mode.key);
-				strcat(pbuf, " ");
-				i=strlen(chptr->mode.key);
-				len+=i+1;
-				*chptr->mode.key=0;
-			}
-			*mbuf++='k';
-			args++;
-			nmodes++;
-			break;
-		 case 'r':
-			if (!IsServer(sptr) && !IsULine(sptr)) {
-				sendto_one(sptr, err_str(ERR_ONLYSERVERSCANCHANGE),
-							  me.name, cptr->name, chptr->chname);
-				break;
-			}
-			else {
-				if(change=='+')
-				  chptr->mode.mode|=MODE_REGISTERED;
-				else
-				  chptr->mode.mode&=~MODE_REGISTERED;
-			}
-			*mbuf++='r';
-			nmodes++;
-			break;
-		 case 'i':
-			if(level<1) {
-				errors|=SM_ERR_NOPRIVS;
-				break;
-			}
-			if(change=='-')
-				while ((lp=chptr->invites))
-				  del_invite(lp->value.cptr, chptr);
-			/* fall through to default case */
-		 default:
-			/* phew, no more tough modes. }:>, the rest are all covered in one step 
-			 * with the above array */
-			if(level<1) {
-				errors|=SM_ERR_NOPRIVS;
-				break;
-			}
-			for(i=1;flags[i]!=0x0;i+=2) {
-				if(*modes==(char)flags[i]) {
-					if(change=='+')
-					  chptr->mode.mode|=flags[i-1];
-					else
-					  chptr->mode.mode&=~flags[i-1];
-					*mbuf++=*modes;
-					nmodes++;
-					break;
-				}
-			}
-			/* unknown mode.. */
-			if(flags[i]==0x0) {
-				/* we still spew lots of unknown mode bits...*/
-				/* but only to our own clients, silently ignore bogosity
-				 * from other servers... */
-				if(MyClient(sptr))
-				  sendto_one(sptr, err_str(ERR_UNKNOWNMODE), me.name, sptr->name, *modes);
-			}
-			break;
-		}
-		/* spit out more parameters error here */
-		if(errors&SM_ERR_MOREPARMS && MyClient(sptr)) {
-			moreparmsstr[5]=change;
-			moreparmsstr[6]=*modes;
-			sendto_one(sptr, err_str(ERR_NEEDMOREPARAMS),
-						  me.name, sptr->name, moreparmsstr);
-			errors&=~SM_ERR_MOREPARMS; /* oops, kill it in this case */
-		}
-		modes++;
-	}
-	/* clean up the end of the string... */
-	if(*(mbuf-1)=='+' || *(mbuf-1)=='-')
-	  *(mbuf-1)=0;
-	else
-	  *mbuf=0;
-	pbuf[len-1]=0;
-	if(MyClient(sptr)) {
-		if(errors&SM_ERR_NOPRIVS)
-		  sendto_one(sptr, err_str(ERR_CHANOPRIVSNEEDED), me.name,
-						 sptr->name, chptr->chname);	  
-		if(errors&SM_ERR_RESTRICTED)
-		  sendto_one(sptr,":%s NOTICE %s :*** Notice -- You are restricted and cannot chanop others",
-						 me.name, sptr->name);
-	}
-	/* all done! */
-	return nmodes;
+            /* if they're an op, they can futz with the key in
+             * any manner they like, we're not picky */
+            if(change=='+') 
+            {
+               strncpy(chptr->mode.key,parv[args],KEYLEN);
+               ADD_PARA(parv[args])
+            }
+            else 
+            {
+               ADD_PARA(parv[args])
+               *chptr->mode.key = '\0';
+            }
+            *mbuf++='k';
+            args++;
+            nmodes++;
+            break;
+
+         case 'r':
+            if (!IsServer(sptr) && !IsULine(sptr)) 
+            {
+               sendto_one(sptr, err_str(ERR_ONLYSERVERSCANCHANGE), me.name, cptr->name, chptr->chname);
+               break;
+            }
+            else 
+            {
+               if((prelen + (mbuf - morig) + pidx + 1) > REALMODEBUFLEN) 
+                  break;
+
+               if(change=='+')
+                  chptr->mode.mode|=MODE_REGISTERED;
+               else
+                  chptr->mode.mode&=~MODE_REGISTERED;
+            }
+            *mbuf++='r';
+            nmodes++;
+            break;
+
+         case 'i':
+            if(level < 1) 
+            {
+               errors |= SM_ERR_NOPRIVS;
+               break;
+            }
+            if(change=='-')
+               while ((lp=chptr->invites))
+                  del_invite(lp->value.cptr, chptr);
+            /* fall through to default case */
+
+         default:
+            /* phew, no more tough modes. }:>, the rest are all covered in one step 
+	     * with the above array */
+            if(level<1) 
+            {
+               errors |= SM_ERR_NOPRIVS;
+               break;
+            }
+            for(i=1;flags[i]!=0x0;i+=2) 
+            {
+               if((prelen + (mbuf - morig) + pidx + 1) > REALMODEBUFLEN) 
+                  break;
+
+               if(*modes==(char)flags[i]) 
+               {
+                  if(change=='+')
+                     chptr->mode.mode |= flags[i-1];
+                  else
+                     chptr->mode.mode &= ~flags[i-1];
+                  *mbuf++=*modes;
+                  nmodes++;
+                  break;
+               }
+            }
+            /* unknown mode.. */
+            if(flags[i]==0x0) 
+            {
+               /* we still spew lots of unknown mode bits...*/
+               /* but only to our own clients, silently ignore bogosity
+                * from other servers... */
+               if(MyClient(sptr))
+                  sendto_one(sptr, err_str(ERR_UNKNOWNMODE), me.name, sptr->name, *modes);
+			
+            }
+            break;
+      }
+
+      /* spit out more parameters error here */
+      if(errors & SM_ERR_MOREPARMS && MyClient(sptr)) 
+      {
+         moreparmsstr[5]=change;
+         moreparmsstr[6]=*modes;
+         sendto_one(sptr, err_str(ERR_NEEDMOREPARAMS), me.name, sptr->name, moreparmsstr);
+         errors &= ~SM_ERR_MOREPARMS; /* oops, kill it in this case */
+      }
+      modes++;
+   }
+   /* clean up the end of the string... */
+   if(*(mbuf-1) == '+' || *(mbuf-1) == '-')
+      *(mbuf-1) = '\0';
+   else
+      *mbuf = '\0';
+   pbuf[pidx] = '\0';
+   if(MyClient(sptr)) 
+   {
+      if(errors & SM_ERR_NOPRIVS)
+         sendto_one(sptr, err_str(ERR_CHANOPRIVSNEEDED), me.name, sptr->name, chptr->chname);	  
+      if(errors & SM_ERR_RESTRICTED)
+         sendto_one(sptr,":%s NOTICE %s :*** Notice -- You are restricted and cannot chanop others",
+                    me.name, sptr->name);
+   }
+   /* all done! */
+   return nmodes;
+#undef ADD_PARA
 }
 				
 static int

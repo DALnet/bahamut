@@ -1656,43 +1656,42 @@ int msg_has_colors(char *msg)
 }
 
 /*
- * * m_message (used in m_private() and m_notice()) * the general
- * function to deliver MSG's between users/channels *
+ * m_message (used in m_private() and m_notice()) the general
+ * function to deliver MSG's between users/channels
  * 
- *      parv[0] = sender prefix *       parv[1] = receiver list *
- * parv[2] = message text *
+ * parv[0] = sender prefix
+ * parv[1] = receiver list
+ * parv[2] = message text
  * 
- * massive cleanup * rev argv 6/91 *
+ * massive cleanup * rev argv 6/91
  * 
  */
 
-static int
-m_message(aClient *cptr,
-	  aClient *sptr,
-	  int parc,
-	  char *parv[],
-	  int notice)
+static inline int m_message(aClient *cptr, aClient *sptr, int parc, char *parv[], int notice)
 {
-   Reg aClient *acptr;
-   Reg char   *s;
-   Reg int     i, ret;
-   aChannel   *chptr;
-   char       *nick, *server, *p, *cmd;
+   aClient *acptr;
+   char *s;
+   int i, ret, ischan;
+   aChannel *chptr;
+   char *nick, *server, *p, *cmd;
 
    cmd = notice ? MSG_NOTICE : MSG_PRIVATE;
 
-   if (parc < 2 || *parv[1] == '\0') {
+   if (parc < 2 || *parv[1] == '\0') 
+   {
       sendto_one(sptr, err_str(ERR_NORECIPIENT),
 		 me.name, parv[0], cmd);
       return -1;
    }
 
-   if (parc < 3 || *parv[2] == '\0') {
+   if (parc < 3 || *parv[2] == '\0') 
+   {
       sendto_one(sptr, err_str(ERR_NOTEXTTOSEND), me.name, parv[0]);
       return -1;
    }
 
-   if (MyConnect(sptr)) {
+   if (MyConnect(sptr)) 
+   {
 #ifdef ANTI_SPAMBOT
 #ifndef ANTI_SPAMBOT_WARN_ONLY
       /*
@@ -1706,7 +1705,8 @@ m_message(aClient *cptr,
    }
 
    for (p = NULL, nick = strtoken(&p, parv[1], ","), i = 0; nick && i<20 ;
-		  nick = strtoken(&p, NULL, ",")) {
+		  nick = strtoken(&p, NULL, ",")) 
+   {
       /*
        * If someone is spamming via "/msg nick1,nick2,nick3,nick4 SPAM"
        * (or even to channels) then subject them to flood control!
@@ -1714,186 +1714,169 @@ m_message(aClient *cptr,
        */
       if (i++ > 10)
 #ifdef NO_OPER_FLOOD
-		  if (!IsAnOper(sptr) && !IsULine(sptr))	/*
-																 * No flood on U lines 
-																 */
+         if (!IsAnOper(sptr) && !IsULine(sptr))	
 #endif
-			 sptr->since += 4;
-		
+            sptr->since += 4;		
+
       /*
-       * * nickname addressed?
+       * channel msg?
        */
-      if ((acptr = find_person(nick, NULL))) {
+      ischan = IsChannelName(nick);
+      if (ischan && (chptr=find_channel(nick,NullChn))) 
+      {
 #ifdef FLUD
-			if (!notice && MyFludConnect(acptr))
-			  if (check_for_ctcp(parv[2]))
-				 if (check_for_flud(sptr, acptr, NULL, 1))
-					return 0;
+         if (!notice)
+            if (check_for_ctcp(parv[2]))
+               check_for_flud(sptr, NULL, chptr, 1);
+#endif 
+         ret = IsULine(sptr) ? 0 : can_send(sptr, chptr);
+         if(!ret && MyClient(sptr) && (chptr->mode.mode & MODE_NOCOLOR) && msg_has_colors(parv[2]))
+         {
+            if(!notice)
+               sendto_one(sptr, err_str(ERR_NOCOLORSONCHAN), me.name, parv[0], nick, parv[2]);
+               continue;
+         }
+
+         if(ret)
+         {
+            if(!notice)
+               sendto_one(sptr, err_str(ERR_CANNOTSENDTOCHAN), me.name, parv[0], nick);
+         }
+         else
+            sendto_channel_butone(cptr, sptr, chptr, ":%s %s %s :%s", parv[0], cmd, nick, parv[2]);
+         continue;
+      }
+
+      /*
+       * nickname addressed?
+       */
+      if (!ischan && (acptr = find_person(nick, NULL))) 
+      {
+#ifdef FLUD
+         if (!notice && MyFludConnect(acptr))
+            if (check_for_ctcp(parv[2]))
+               if (check_for_flud(sptr, acptr, NULL, 1))
+                  return 0;
 #endif
-			if (!is_silenced(sptr, acptr)) {				 
-				if (!notice && MyClient(acptr) && 
-					 acptr->user && acptr->user->away)
-				  sendto_one(sptr, rpl_str(RPL_AWAY), me.name,
-								 parv[0], acptr->name,
-								 acptr->user->away);
-				sendto_prefix_one(acptr, sptr, ":%s %s %s :%s",
-										parv[0], cmd, nick, parv[2]);
-			}
-			continue;
-		}
-		
-		if (nick[1] == '#' && nick[0]!='#') {
-			if (nick[0] == '@') {
-				if ((chptr = find_channel(nick + 1, NullChn))) {
-					if (can_send(sptr, chptr) == 0 || IsULine(sptr))
-					  sendto_channelops_butone(cptr, sptr, chptr, ":%s %s %s :%s",
-														parv[0], cmd, nick, parv[2]);
-					else if (!notice)
-					  sendto_one(sptr, err_str(ERR_CANNOTSENDTOCHAN), me.name,
-									 parv[0], nick + 1);
-				}
-			}
-			else if (nick[0] == '+') {
-				if ((chptr = find_channel(nick + 1, NullChn))) {
-					if (can_send(sptr, chptr) == 0 || IsULine(sptr))
-					  sendto_channelvoice_butone(cptr, sptr, chptr, ":%s %s %s :%s",
-														  parv[0], cmd, nick, parv[2]);
-					else if (!notice)
-					  sendto_one(sptr, err_str(ERR_CANNOTSENDTOCHAN), me.name,
-									 parv[0], nick + 1);
-				}
-			}
-			else
-			  sendto_one(sptr, err_str(ERR_NOSUCHNICK), me.name, parv[0],
-							 nick + 1);
-			continue;
+         if (!is_silenced(sptr, acptr)) 
+         {				 
+            if (!notice && MyClient(acptr) && acptr->user && acptr->user->away)
+               sendto_one(sptr, rpl_str(RPL_AWAY), me.name, parv[0], acptr->name, acptr->user->away);
+            sendto_prefix_one(acptr, sptr, ":%s %s %s :%s", parv[0], cmd, nick, parv[2]);
+         }
+         continue;
       }
-      if (nick[0] == '@' && nick[1] == '+' && nick[2] == '#') {
-			if ((chptr = find_channel(nick + 2, NullChn))) {
-				if (can_send(sptr, chptr) == 0 || IsULine(sptr))
-				  sendto_channelvoiceops_butone(cptr, sptr, chptr, ":%s %s %s :%s",
-														  parv[0], cmd, nick, parv[2]);
-				else if (!notice)
-				  sendto_one(sptr, err_str(ERR_CANNOTSENDTOCHAN), me.name,
-								 parv[0], nick + 1);
-			}
-			else
-			  sendto_one(sptr, err_str(ERR_NOSUCHNICK), me.name, parv[0],
-							 nick + 1);
-			continue;
+
+      if (nick[1] == '#' && nick[0]!='#') 
+      {
+         if (nick[0] == '@') 
+         {
+            if ((chptr = find_channel(nick + 1, NullChn))) 
+            {
+               if (can_send(sptr, chptr) == 0 || IsULine(sptr))
+                  sendto_channelops_butone(cptr, sptr, chptr, ":%s %s %s :%s", parv[0], cmd, nick, parv[2]);
+               else if (!notice)
+                  sendto_one(sptr, err_str(ERR_CANNOTSENDTOCHAN), me.name, parv[0], nick + 1);
+            }
+         }
+         else if (nick[0] == '+') 
+         {
+            if ((chptr = find_channel(nick + 1, NullChn))) 
+            {
+               if (IsULine(sptr) || can_send(sptr, chptr) == 0)
+                  sendto_channelvoice_butone(cptr, sptr, chptr, ":%s %s %s :%s", parv[0], cmd, nick, parv[2]);
+               else if (!notice)
+                  sendto_one(sptr, err_str(ERR_CANNOTSENDTOCHAN), me.name, parv[0], nick + 1);
+            }
+         }
+         else
+            sendto_one(sptr, err_str(ERR_NOSUCHNICK), me.name, parv[0], nick + 1);
+
+         continue;
+      }
+
+      if (nick[0] == '@' && nick[1] == '+' && nick[2] == '#') 
+      {
+         if ((chptr = find_channel(nick + 2, NullChn))) 
+         {
+            if (IsULine(sptr) || can_send(sptr, chptr) == 0)
+               sendto_channelvoiceops_butone(cptr, sptr, chptr, ":%s %s %s :%s", parv[0], cmd, nick, parv[2]);
+            else if (!notice)
+               sendto_one(sptr, err_str(ERR_CANNOTSENDTOCHAN), me.name, parv[0], nick + 1);
+         }
+         else
+            sendto_one(sptr, err_str(ERR_NOSUCHNICK), me.name, parv[0], nick + 1);
+         continue;
       }
 		
+      if(IsAnOper(sptr)) 
+      {
+         /*
+          * the following two cases allow masks in NOTICEs
+          * (for OPERs only) 
+          * 
+          * Armin, 8Jun90 (gruner@informatik.tu-muenchen.de)
+          */
+         if ((*nick == '$' || *nick == '#')) 
+         {
+            if (!(s = (char *) strrchr(nick, '.'))) 
+            {
+               sendto_one(sptr, err_str(ERR_NOTOPLEVEL), me.name, parv[0], nick);
+               continue;
+            }
+            while (*++s)
+               if (*s == '.' || *s == '*' || *s == '?')
+                  break;
+            if (*s == '*' || *s == '?') 
+            {
+               sendto_one(sptr, err_str(ERR_WILDTOPLEVEL), me.name, parv[0], nick);
+               continue;
+            }
+            sendto_match_butone(IsServer(cptr) ? cptr : NULL, sptr, nick + 1, 
+                                (*nick == '#') ? MATCH_HOST : MATCH_SERVER, ":%s %s %s :%s", parv[0],
+                                cmd, nick, parv[2]);
+            continue;
+         }
+      }
+			
       /*
-       * * channel msg?
+       * user@server addressed?
        */
-      if (IsPerson(sptr) && (chptr=find_channel(nick,NullChn))) {
-#ifdef FLUD
-			if (!notice)
-			  if (check_for_ctcp(parv[2]))
-				 check_for_flud(sptr, NULL, chptr, 1);
-#endif /*
-			* FLUD 
-        */
-
-			ret = IsULine(sptr) ? 0 : can_send(sptr, chptr);
-
-			if(!ret && MyClient(sptr) && (chptr->mode.mode & MODE_NOCOLOR) && msg_has_colors(parv[2]))
-			{
-			   if(!notice)
-			      sendto_one(sptr, err_str(ERR_NOCOLORSONCHAN),
-				         me.name, parv[0], nick, parv[2]);
-			   continue;
-			}
-
-			if(ret)
-			{
-			   if(!notice)
-			      sendto_one(sptr, err_str(ERR_CANNOTSENDTOCHAN),
-					 me.name, parv[0], nick);
-			}
-			else
-			   sendto_channel_butone(cptr, sptr, chptr, ":%s %s %s :%s",
-						      parv[0], cmd, nick, parv[2]);
-
-			continue;
+      if (!ischan && (server = (char *) strchr(nick, '@')) && (acptr = find_server(server + 1, NULL))) 
+      {
+         int count = 0;
+			
+         /* Not destined for a user on me :-( */
+         if (!IsMe(acptr)) 
+         {
+            sendto_one(acptr, ":%s %s %s :%s", parv[0], cmd, nick, parv[2]);
+            continue;
+         }
+         *server = '\0';
+			
+         /*
+          * Look for users which match the destination host 
+          * (no host == wildcard) and if one and one only is found
+          * connected to me, deliver message!
+          */
+         acptr = find_person(nick, NULL);
+         if (server)
+            *server = '@';
+         if (acptr) 
+         {
+            if (count == 1)
+               sendto_prefix_one(acptr, sptr, ":%s %s %s :%s", parv[0], cmd, nick, parv[2]);
+            else if (!notice)
+               sendto_one(sptr, err_str(ERR_TOOMANYTARGETS), me.name, parv[0], nick);
+         }
+         if (acptr)
+            continue;
       }
-		
-		
-		if(IsAnOper(sptr)) {
-			/*
-			 * * the following two cases allow masks in NOTICEs * 
-			 * (for OPERs* only) *
-			 * 
-			 * Armin, 8Jun90 (gruner@informatik.tu-muenchen.de)
-			 */
-			if ((*nick == '$' || *nick == '#')) {
-				if (!(s = (char *) strrchr(nick, '.'))) {
-					sendto_one(sptr, err_str(ERR_NOTOPLEVEL),
-								  me.name, parv[0], nick);
-					continue;
-				}
-				while (*++s)
-				  if (*s == '.' || *s == '*' || *s == '?')
-					 break;
-				if (*s == '*' || *s == '?') {
-					sendto_one(sptr, err_str(ERR_WILDTOPLEVEL),
-								  me.name, parv[0], nick);
-					continue;
-				}
-				sendto_match_butone(IsServer(cptr) ? cptr : NULL,
-										  sptr, nick + 1,
-										  (*nick == '#') ? MATCH_HOST :
-										  MATCH_SERVER,
-										  ":%s %s %s :%s", parv[0],
-										  cmd, nick, parv[2]);
-				continue;
-			}
-		}
-			
-		/*
-		 * * user@server addressed?
-		 */
-		if ((server = (char *) strchr(nick, '@')) &&
-			 (acptr = find_server(server + 1, NULL))) {
-			int         count = 0;
-			
-			/* Not destined for a user on me :-( */
-			if (!IsMe(acptr)) {
-				sendto_one(acptr, ":%s %s %s :%s", parv[0],
-							  cmd, nick, parv[2]);
-				continue;
-			}
-			*server = '\0';
-			
-			/*
-			 * * Look for users which match the destination host * 
-			 * (no* host == wildcard) and if one and one only is * found
-			 * connected to me, deliver message!
-			 */
-			acptr = find_person(nick, NULL);
-			if (server)
-			  *server = '@';
-			if (acptr) {
-				if (count == 1)
-				  sendto_prefix_one(acptr, sptr,
-										  ":%s %s %s :%s",
-										  parv[0], cmd,
-										  nick, parv[2]);
-				else if (!notice)
-				  sendto_one(sptr,
-								 err_str(ERR_TOOMANYTARGETS),
-								 me.name, parv[0], nick);
-			}
-			if (acptr)
-			  continue;
-		}
-		sendto_one(sptr, err_str(ERR_NOSUCHNICK), me.name,
-					  parv[0], nick);
-	}
-	if ((i > 20) && sptr->user)
-	  sendto_realops_lev(SPY_LEV, "User %s (%s@%s) tried to msg %d users",
-								sptr->name,
-								sptr->user->username, sptr->user->host, i);
+      sendto_one(sptr, err_str(ERR_NOSUCHNICK), me.name, parv[0], nick);
+   }
+   if ((i > 20) && sptr->user)
+      sendto_realops_lev(SPY_LEV, "User %s (%s@%s) tried to msg %d users",
+                         sptr->name, sptr->user->username, sptr->user->host, i);
    return 0;
 }
 /*
