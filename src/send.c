@@ -1013,6 +1013,51 @@ void sendto_channel_butserv(aChannel *chptr, aClient *from, char *pattern, ...)
 }
 
 /*
+ * sendto_channel_butserv_me
+ * 
+ * Send a message to all members of a channel that are connected to this
+ * server. Possibly hide the origin, if it's a server, with me.name if certain paranoia is on.
+ */
+void sendto_channel_butserv_me(aChannel *chptr, aClient *from, char *pattern, ...)
+{
+    chanMember  *cm;
+    aClient *acptr;
+    va_list vl;
+    int didlocal = 0;
+    char *pfix;
+
+    va_start(vl, pattern);
+    
+    pfix = va_arg(vl, char *);
+
+#ifdef HIDE_SERVERMODE_ORIGINS
+    if(IsServer(from) && !IsULine(from))
+    {
+       from = &me;
+       pfix = me.name;
+    }
+#endif
+
+    for (cm = chptr->members; cm; cm = cm->next)
+    {
+	if (MyConnect(acptr = cm->cptr))
+	{
+	    if(!didlocal)
+		didlocal = prefix_buffer(0, from, pfix, sendbuf, pattern, vl);
+	    
+	    if(check_fake_direction(from, acptr))
+		continue;
+
+	    send_message(acptr, sendbuf, didlocal);
+
+	    /* vsendto_prefix_one(acptr, from, pattern, vl); */
+	}
+    }
+    va_end(vl);
+    return;
+}
+
+/*
  * sendto_channelops_butserv
  * 
  * Send a message to all operators of a channel that are connected to this

@@ -46,6 +46,8 @@ extern void sendto_channel_remote_butone(aClient *one, aClient *from,
 				         aChannel *chptr, char *pattern, ...);
 extern void sendto_channel_butserv(aChannel *chptr, aClient *from,
 				   char *pattern, ...);
+extern void sendto_channel_butserv_me(aChannel *chptr, aClient *from,
+				      char *pattern, ...);
 extern void sendto_channelops_butserv(aChannel *chptr, aClient *from,
 				      char *pattern, ...);
 extern void sendto_channelops_butone(aClient *one, aClient *from,

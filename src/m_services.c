@@ -327,18 +327,12 @@ int m_svsnick(aClient *cptr, aClient *sptr, int parc, char *parv[])
     /* Try to make a unique nickname */
     if((ocptr = find_client(newnick, NULL)) != NULL)
     {
-        char servprefix[HOSTLEN + 1], *pptr;
         int tries = 0, nprefix;
-
-        strncpyzt(servprefix, me.name, NICKLEN+1);
-        pptr = strchr(servprefix, '.');
-        if(pptr)
-           *pptr = '\0';
 
         do 
         {
-	    nprefix = my_rand() % 999;
-  	    ircsnprintf(newnick, NICKLEN, "%s-%d[%s]", parv[2], nprefix, servprefix);
+	    nprefix = my_rand() % 99999;
+  	    ircsnprintf(newnick, NICKLEN, "%s-%d", parv[2], nprefix);
             tries++;
         } while (((ocptr = find_client(newnick, NULL)) != NULL) && (tries < 10));
 

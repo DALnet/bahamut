@@ -376,9 +376,9 @@ void remove_matching_bans(aChannel *chptr, aClient *cptr, aClient *from)
 	  
 	  if(send)
 	  {
-	      sendto_channel_butserv(chptr, from, ":%s MODE %s %s %s", 
-				     from->name, chptr->chname, modebuf,
-				     parabuf);
+	      sendto_channel_butserv_me(chptr, from, ":%s MODE %s %s %s", 
+				        from->name, chptr->chname, modebuf,
+				        parabuf);
 	      sendto_tsmode_servs(0, chptr, from, ":%s MODE %s %s %s", 
 				  from->name, chptr->chname, modebuf, parabuf);
 	      sendto_tsmode_servs(1, chptr, from, ":%s MODE %s %ld %s %s", 
@@ -405,8 +405,8 @@ void remove_matching_bans(aChannel *chptr, aClient *cptr, aClient *from)
   
   if(*parabuf)
   {
-      sendto_channel_butserv(chptr, from, ":%s MODE %s %s %s", from->name,
-			     chptr->chname, modebuf, parabuf);
+      sendto_channel_butserv_me(chptr, from, ":%s MODE %s %s %s", from->name,
+			        chptr->chname, modebuf, parabuf);
       sendto_tsmode_servs(0, chptr, from, ":%s MODE %s %s %s", 
 			  from->name, chptr->chname, modebuf, parabuf);
       sendto_tsmode_servs(1, chptr, from, ":%s MODE %s %ld %s %s", 
@@ -816,10 +816,10 @@ int m_mode(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	    }
 	    break;
 	default:
-	    sendto_channel_butserv(chptr, sptr,
-				   ":%s MODE %s %s %s", parv[0],
-				   chptr->chname, modebuf,
-				   parabuf);
+	    sendto_channel_butserv_me(chptr, sptr,
+				      ":%s MODE %s %s %s", parv[0],
+				      chptr->chname, modebuf,
+				      parabuf);
 	    sendto_tsmode_servs(0, chptr, cptr,
 			       ":%s MODE %s %s %s",
 			       parv[0], chptr->chname,
@@ -2307,8 +2307,8 @@ int m_topic(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	sendto_match_servs(chptr, cptr, ":%s TOPIC %s %s %lu :%s", parv[0],
 			   chptr->chname, chptr->topic_nick, 
 			   chptr->topic_time, chptr->topic);
-	sendto_channel_butserv(chptr, sptr, ":%s TOPIC %s :%s", parv[0],
-			       chptr->chname, chptr->topic);
+	sendto_channel_butserv_me(chptr, sptr, ":%s TOPIC %s :%s", parv[0],
+			          chptr->chname, chptr->topic);
     }
     else
 	sendto_one(sptr, err_str(ERR_CHANOPRIVSNEEDED), me.name, parv[0],
@@ -2919,8 +2919,8 @@ void kill_ban_list(aClient *cptr, aChannel *chptr)
 	    send = 1;
     
 	if (send) {
-	    sendto_channel_butserv(chptr, &me, ":%s MODE %s %s %s", cptr->name,
-				   chptr->chname, modebuf, parabuf);
+	    sendto_channel_butserv_me(chptr, cptr, ":%s MODE %s %s %s", cptr->name,
+				      chptr->chname, modebuf, parabuf);
 	    send = 0;
 	    *parabuf = '\0';
 	    cp = modebuf;
@@ -2939,8 +2939,8 @@ void kill_ban_list(aClient *cptr, aChannel *chptr)
 
     if(*parabuf)
     {
-	sendto_channel_butserv(chptr, &me, ":%s MODE %s %s %s", cptr->name,
-			       chptr->chname, modebuf, parabuf);
+	sendto_channel_butserv_me(chptr, cptr, ":%s MODE %s %s %s", cptr->name,
+			          chptr->chname, modebuf, parabuf);
     }
 
     /* physically destroy channel ban list */   
@@ -2968,8 +2968,8 @@ void kill_ban_list(aClient *cptr, aChannel *chptr)
 static inline void sjoin_sendit(aClient *cptr, aClient *sptr,
 				aChannel *chptr, char *from)
 {
-    sendto_channel_butserv(chptr, sptr, ":%s MODE %s %s %s", from,
-			   chptr->chname, modebuf, parabuf);
+    sendto_channel_butserv_me(chptr, sptr, ":%s MODE %s %s %s", from,
+			      chptr->chname, modebuf, parabuf);
 }
 
 /* m_resynch
@@ -3378,8 +3378,8 @@ int m_sjoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	if(chptr->topic[0]) 
 	{ 
 	    chptr->topic[0] = '\0'; 
-	    sendto_channel_butserv(chptr, sptr, ":%s TOPIC %s :%s", sptr->name,
-				   chptr->chname, chptr->topic);
+	    sendto_channel_butserv_me(chptr, sptr, ":%s TOPIC %s :%s", sptr->name,
+				      chptr->chname, chptr->topic);
 	}
 	sendto_channel_butserv(chptr, &me,
 			       ":%s NOTICE %s :*** Notice -- TS for %s "
@@ -3530,17 +3530,29 @@ int m_samode(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     int sendts;
     aChannel *chptr;
-    if (check_registered(cptr)) return 0;
-    if (!IsPrivileged(cptr))
+
+    if (!MyClient(sptr))
+	return 0;
+
+    if (!IsAnOper(sptr) || !IsSAdmin(sptr)) 
     {
 	sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name, parv[0]);
 	return 0;
     }
-    if (!IsSAdmin(cptr)||parc<2) return 0;
-    chptr=find_channel(parv[1], NullChn);
-    if (chptr==NullChn) return 0;
+
+    if(parc < 2)
+    {
+	sendto_one(sptr, err_str(ERR_NEEDMOREPARAMS),
+		   me.name, parv[0], "SAMODE");
+	return 0;
+    }
+
+    if((chptr = find_channel(parv[1], NullChn)) == NullChn)
+	return 0;
+
     if(!check_channelname(sptr, (unsigned char *)parv[1]))
 	return 0;
+
     sendts = set_mode(cptr, sptr, chptr, 2, parc - 2, parv + 2, modebuf, 
 		      parabuf);
 	

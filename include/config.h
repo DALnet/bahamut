@@ -698,6 +698,10 @@
  * HIDE_LINKS
  * LINKS is a static list of servers, provided by services
  * (controlled with server<>server LINKS CONTROL cmd)
+ *
+ * HIDE_SERVERMODE_ORIGINS
+ * Hide the origins of server modes (ie, in netjoins).
+ * (They will all come from me.name)
  */
 /* #undef NO_USER_SERVERNOTICES */
 /* #undef NO_USER_STATS */
@@ -708,6 +712,7 @@
 /* #undef HIDE_KILL_ORIGINS */
 /* #undef HIDE_SPLIT_SERVERS */
 /* #undef HIDE_LINKS */
+/* #undef HIDE_SERVERMODE_ORIGINS */
 
 /***********************/
 /* OPER HIDING SECTION */
@@ -780,6 +785,7 @@
 # define HIDE_KILL_ORIGINS
 # define HIDE_SPLIT_SERVERS
 # define HIDE_LINKS
+# define HIDE_SERVERMODE_ORIGINS
 #endif
 
 /******************************************************************
