@@ -1621,11 +1621,21 @@ int m_join(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	
 	if (MyConnect(sptr))
 	{
+	    /* have we quarantined this channel? */
+	    if(!IsOper(sptr) && (aconf = find_conf_name(name, CONF_QUARANTINED_CHAN)))
+            {
+		sendto_one(sptr, getreply(ERR_CHANBANREASON), me.name, parv[0], name,
+			BadPtr(aconf->passwd) ? "Reserved channel" :	
+			aconf->passwd);
+                continue;
+	    }
+
 	    /*
 	     * local client is first to enter previously nonexistent *
 	     * channel so make them (rightfully) the Channel * Operator.
 	     */
 	    flags = (ChannelExists(name)) ? 0 : CHFL_CHANOP;
+
 #ifdef NO_CHANOPS_WHEN_SPLIT
 	    if (!IsAnOper(sptr) && server_was_split &&
 		server_split_recovery_time)
@@ -1700,24 +1710,15 @@ int m_join(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		ts_warn("User on %s remotely JOINing new channel",
 			sptr->user->server);
 	}
-	
+
 	chptr = get_channel(sptr, name, CREATE);
 	
-	if (!chptr ||
-	    (MyConnect(sptr) && !IsOper(sptr) && 
-	     (aconf = find_conf_name(chptr->chname, CONF_QUARANTINED_CHAN))) ||
-	    (MyConnect(sptr) && (i = can_join(sptr, chptr, key))))
+	if (!chptr || (MyConnect(sptr) && (i = can_join(sptr, chptr, key))))
 	{
-	    if(aconf)
-		sendto_one(sptr,
-			   getreply(ERR_CHANBANREASON), me.name, parv[0], name,
-			   BadPtr(aconf->passwd) ? "Reserved channel" :
-					  aconf->passwd);
-            else if (i==ERR_NEEDREGGEDNICK)
+            if (i==ERR_NEEDREGGEDNICK)
 		sendto_one(sptr, getreply(i), me.name, parv[0], name, "join");
 	    else 
-		sendto_one(sptr,
-			   getreply(i), me.name, parv[0], name);
+		sendto_one(sptr, getreply(i), me.name, parv[0], name);
 
 #ifdef ANTI_SPAMBOT
 	    if (successful_join_count > 0)
