@@ -3162,7 +3162,8 @@ do_user(char *nick,
     strncpyzt(sptr->info, realname, sizeof(sptr->info));
     
     sptr->user->servicestamp = serviceid;
-    sptr->ip.s_addr=ntohl(ip);
+    if (!MyConnect(sptr)) 
+      sptr->ip.s_addr=ntohl(ip);
     if(MyConnect(sptr))
 	sptr->oflag=0;
     if (sptr->name[0])		/*
