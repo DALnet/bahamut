@@ -1068,6 +1068,8 @@ int m_mode(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
 /* the old set_mode was pissing me off with it's disgusting
  * hackery, so I rewrote it.  Hope this works. }:> --wd
+ * Corrected a 4-year-old mistake: the max modes limit applies to
+ * the number of parameters, not mode changes. -Quension [Apr 2004]
  */
 static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
                     int level, int parc, char *parv[], char *mbuf, char *pbuf) 
@@ -1108,8 +1110,9 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
                    */
     /* from remote servers, ungodly numbers of modes can be sent, but
      * from local users only SM_MAXMODES are allowed */
-    int maxmodes=((IsServer(sptr) || IsULine(sptr)) ? 512 : SM_MAXMODES);
+    int maxparams=((IsServer(sptr) || IsULine(sptr)) ? 512 : SM_MAXMODES);
     int nmodes=0; /* how many modes we've set so far */
+    int nparams=0; /* how many modes with parameters we've set so far */
     aClient *who = NULL; /* who we're doing a mode for */
     int chasing = 0;
     int i=0;
@@ -1133,7 +1136,7 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
     /* go through once to clean the user's mode string so we can
      * have a simple parser run through it...*/
 
-    while(*modes && (nmodes<maxmodes)) 
+    while(*modes) 
     {
         switch(*modes) 
         {
@@ -1191,6 +1194,12 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
                 /* silently drop the spare +o/v's */
                 break;
             }
+            if(++nparams > maxparams)
+            {
+                /* too many modes with params, eat this one */
+                args++;
+                break;
+            }
                         
             who = find_chasing(sptr, parv[args], &chasing);
             cm = find_user_member(chptr->members, who);
@@ -1232,7 +1241,7 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
 
 #ifdef INVITE_LISTS
         case 'I':
-            if (level < 1)
+            if (level < 1 && parv[args] != NULL)
             {
                 errors |= SM_ERR_NOPRIVS;
                 break;
@@ -1251,7 +1260,13 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
                 anylistsent = 1;
                 break;
             }
-
+            if(++nparams > maxparams)
+            {
+                /* too many modes with params, eat this one */
+                args++;
+                break;
+            }
+            
             if (*parv[args] == ':' || *parv[args] == '\0')
             {
                 args++; 
@@ -1287,7 +1302,7 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
 
 #ifdef EXEMPT_LISTS
         case 'e':
-            if (level < 1)
+            if (level < 1 && parv[args] != NULL)
             {
                 errors |= SM_ERR_NOPRIVS;
                 break;
@@ -1306,7 +1321,13 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
                 anylistsent = 1;
                 break;
             }
-
+            if(++nparams > maxparams)
+            {
+                /* too many modes with params, eat this one */
+                args++;
+                break;
+            }
+            
             if (*parv[args] == ':' || *parv[args] == '\0')
             {
                 args++; 
@@ -1360,6 +1381,12 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
                            cptr->name, chptr->chname);
                 anylistsent = 1;
                 break; /* we don't pass this along, either.. */
+            }
+            if(++nparams > maxparams)
+            {
+                /* too many modes with params, eat this one */
+                args++;
+                break;
             }
             
             /* do not allow : in bans, or a null ban */
@@ -1441,7 +1468,13 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
                     errors|=SM_ERR_MOREPARMS;
                     break;
                 }
-
+                if(++nparams > maxparams)
+                {
+                    /* too many modes with params, eat this one */
+                    args++;
+                    break;
+                }
+                
                 tmpa = strchr(parv[args], ':');
                 if(tmpa)
                 {
@@ -1519,7 +1552,13 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
                     errors|=SM_ERR_MOREPARMS;
                     break;
                 }
-
+                if(++nparams > maxparams)
+                {
+                    /* too many modes with params, eat this one */
+                    args++;
+                    break;
+                }
+                
                 /* if we're going to overflow our mode buffer,
                  * drop the change instead */
                 if((prelen + (mbuf - morig) + pidx + 16) > REALMODEBUFLEN) 
@@ -1554,7 +1593,13 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
             }
             if(parv[args]==NULL)
                 break;
-
+            if(++nparams > maxparams)
+            {
+                /* too many modes with params, eat this one */
+                args++;
+                break;
+            }
+                
             /* do not allow keys to start with :! ack! - lucas */
             /* another ack: don't let people set null keys! */
             /* and yet a third ack: no spaces in keys -epi  */
@@ -4098,7 +4143,6 @@ int m_sjoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
  */
 int m_samode(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
-    int sendts;
     aChannel *chptr;
 
     if (!MyClient(sptr))
@@ -4123,8 +4167,7 @@ int m_samode(aClient *cptr, aClient *sptr, int parc, char *parv[])
     if(!check_channelname(sptr, (unsigned char *)parv[1]))
         return 0;
 
-    sendts = set_mode(cptr, sptr, chptr, 2, parc - 2, parv + 2, modebuf, 
-                      parabuf);
+    set_mode(cptr, sptr, chptr, 2, parc - 2, parv + 2, modebuf, parabuf);
         
     if (strlen(modebuf) > (size_t)1)
     {

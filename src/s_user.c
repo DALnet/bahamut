@@ -897,15 +897,15 @@ register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
                    MAXMODEPARAMSUSER,maxchannelsperuser,MAXBANS,
                    NICKLEN,TOPICLEN,TOPICLEN,Network_Name,MAXSILES);
         sendto_one(sptr, rpl_str(RPL_PROTOCTL), me.name, parv[0], tmpstr2);
-        ircsprintf(tmpstr2,"WATCH=128 CASEMAPPING=ascii "
+        ircsprintf(tmpstr2,"WATCH=128 CASEMAPPING=ascii ELIST=cmntu "
                    "CHANMODES=b"
 #ifdef EXEMPT_LISTS
-                   "e"
+                   ",e"
 #endif
 #ifdef INVITE_LISTS
-                   "I"
+                   ",I"
 #endif
-                   ",k,l,ciLmMnOprRst",MAXWATCH);
+                   ",k,l,ciLmMnOprRstj",MAXWATCH);
         sendto_one(sptr, rpl_str(RPL_PROTOCTL), me.name, parv[0], tmpstr2);
 
 #ifdef FORCE_EVERYONE_HIDDEN

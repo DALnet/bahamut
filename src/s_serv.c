@@ -2410,12 +2410,6 @@ m_trace(aClient *cptr, aClient *sptr, int parc, char *parv[])
         return 0;        
     }
 
-    if (dow && !IsOper(sptr)) 
-    {
-        sendto_one(sptr, rpl_str(RPL_LOAD2HI), me.name, parv[0]);
-        return 0;
-    }
-        
     memset((char *) link_s, '\0', sizeof(link_s));
     memset((char *) link_u, '\0', sizeof(link_u));
     /* Count up all the servers and clients in a downlink. */

@@ -722,11 +722,6 @@ int m_who(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		   wsopts.host!=NULL ? wsopts.host : wsopts.nick);
 	return 0;
     }
-    if(!IsAnOper(sptr))
-    {
-	sendto_one(sptr, rpl_str(RPL_LOAD2HI), me.name, sptr->name);
-	return 0;
-    }
     
     if(wsopts.search_chan)
     {

@@ -75,12 +75,13 @@ engine_del_fd(int fd)
 {
 /* we dont accually need to do this, as a close() clears the kevent
  * filters and automagically removes itself from the queue.
- * plus, now that i do this, the odd bug we've had with kqueue just
- * (appearently randomly) not returning certain write capable sockets
- * seems to have gone away.  Makes me nervous, but this is safe change
- * all the same.
- * -epi
- * on again for a whirl. */
+ * With the way we handle kevent() calls in kevent_add(), accually
+ * running these EV_DELETE routines causes bad file descriptor returns
+ * due to the fact that they could be close()'d before the kevent() is
+ * run.  --epi
+ */
+
+/********
 
    struct kevent e;
 
@@ -99,6 +100,8 @@ engine_del_fd(int fd)
    e.data = 0;
    e.udata = NULL;
    kevent_add(&e);
+
+********/
 }
 
 void 
