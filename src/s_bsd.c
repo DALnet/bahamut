@@ -1593,6 +1593,16 @@ int readwrite_client(aClient *cptr, int isread, int iswrite)
             cptr->flags &= ~FLAGS_BLOCKED;
             unset_fd_flags(cptr->fd, FDF_WANTWRITE);
         }
+        else 
+        {
+            /* this may be our problem with occational 100% cpu looping
+             * we've experienced.  jason suggested this, here we will try
+             * this and see if it happens at all -epi */
+            sendto_realops_lev(DEBUG_LEV, "socket: Socket %d reported ready"
+                               " for write, but not blocking",cptr->fd);
+            unset_fd_flags(cptr->fd, FDF_WANTWRITE);
+        }
+
     }
 
     if (isread)
