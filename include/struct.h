@@ -659,6 +659,7 @@ struct Client {
 	int watches; /* how many watches this user has set */
         int capabilities; /* what this server/client supports */
 	int pingval;	  /* cache client class ping value here */
+        int sendqlen;	  /* cache client max sendq here */
 };
 
 #define	CLIENT_LOCAL_SIZE sizeof(aClient)

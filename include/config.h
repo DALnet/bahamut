@@ -648,6 +648,14 @@
 #define USE_NOQUIT
 
 /*
+ * PING_NAZI
+ *
+ * be nazi-ish about pings (re-check every client connect, 
+ * user registration, etc)
+ */
+#undef PING_NAZI
+
+/*
  * ALWAYS_SEND_DURING_SPLIT
  * on a large network, if your server is carrying large amounts of clients,
  * and your server splits from the main network, the amount of allocated

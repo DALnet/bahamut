@@ -821,8 +821,11 @@ m_server_estab(aClient *cptr)
 #endif
 
    cptr->pingval = get_client_ping(cptr);
+   cptr->sendqlen = get_sendq(cptr);
 
+#ifdef PINGNAZI
    nextping = timeofday;
+#endif
 
   /* error, error, error! if a server is U:'d, and it connects to us, 
    * we need to figure that out! So, do it here. - lucas 

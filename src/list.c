@@ -231,6 +231,7 @@ aClient    *make_client(aClient *from, aClient *uplink)
        * cptr->username[0] = '\0'; 
        */
       cptr->authfd = -1;
+      cptr->sendqlen = MAXSENDQLENGTH;
       return (cptr);
    }
    else {			/*

@@ -932,7 +932,9 @@ register_user(aClient *cptr,
 			sendto_one(sptr, ":%s NOTICE %s :*** Notice -- You can not be chanopped", me.name, nick);
       }
 #endif
+#ifdef PING_NAZI
       nextping = timeofday;
+#endif
 		
    }
    else if (IsServer(cptr)) {
@@ -3716,7 +3718,8 @@ m_umode(aClient *cptr,
 	
    if ((setflags & (UMODE_o | UMODE_O)) && !IsAnOper(sptr) &&
        MyConnect(sptr)) {
-      det_confs_butmask(sptr, CONF_CLIENT & ~CONF_OPS);
+                det_confs_butmask(sptr, CONF_CLIENT & ~CONF_OPS);
+                sptr->sendqlen = get_sendq(sptr);
 		sptr->oflag = 0;
 	}
    if (!(setflags & (UMODE_o | UMODE_O)) && IsAnOper(sptr)) {

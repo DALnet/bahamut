@@ -136,7 +136,7 @@ static int send_message(aClient *to, char *msg, int len) {
    
    if (IsDead(to))
      return 0;
-   if (DBufLength(&to->sendQ) > get_sendq(to)) {
+   if (DBufLength(&to->sendQ) > to->sendqlen) {
       /* this would be a duplicate notice, but it contains some useful information that
          would be spamming the rest of the network. Kept in. - lucas */
       if (IsServer(to)) 

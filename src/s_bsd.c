@@ -773,6 +773,8 @@ int check_server(aClient * cptr,
    (void) attach_conf(cptr, n_conf);
    (void) attach_conf(cptr, c_conf);
    (void) attach_confs(cptr, name, CONF_HUB | CONF_LEAF | CONF_ULINE);
+   /* this may give cptr a new sendq length.. */
+   cptr->sendqlen = get_sendq(cptr);
 
    if ((c_conf->ipnum.s_addr == -1))
       memcpy((char *) &c_conf->ipnum, (char *) &cptr->ip,
@@ -1709,7 +1711,9 @@ int read_message(time_t delay,
 	        * Use of add_connection (which never fails :) meLazy
 	        */
 	       (void) add_connection(cptr, fd);
+#ifdef PINGNAZI
 	       nextping = timeofday;
+#endif
 	       if (!cptr->acpt)
 		  cptr->acpt = &me;
 	    }
@@ -2168,7 +2172,9 @@ int read_message(time_t delay, fdlist * listp)
 	  * Use of add_connection (which never fails :) meLazy
 	  */
 	 (void) add_connection(cptr, newfd);
+#ifdef PINGNAZI
 	 nextping = timeofday;
+#endif
 	 if (!cptr->acpt)
 	    cptr->acpt = &me;
 	 continue;
@@ -2404,9 +2410,14 @@ int connect_server(aConfItem * aconf, aClient * by, struct hostent *hp)
    cptr->acpt = &me;
    SetConnecting(cptr);
 
+   /* sendq probably changed.. */
+   cptr->sendqlen = get_sendq(cptr);
+
    get_sockhost(cptr, aconf->host);
    add_client_to_list(cptr);
+#ifdef PINGNAZI
    nextping = timeofday;
+#endif
 
    return 0;
 }

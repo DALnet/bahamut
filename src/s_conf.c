@@ -1091,8 +1091,10 @@ rehash(aClient *cptr, aClient *sptr, int sig)
       /* our Y: lines could have changed, rendering our client ping
          cache invalid. Reset it here. - lucas */
 
-      if ((acptr = local[i]) && !IsMe(acptr) && IsRegistered(acptr)) 
-         acptr->pingval = get_client_ping(acptr);
+      if ((acptr = local[i]) && !IsMe(acptr))
+         if(IsRegistered(acptr)) 
+            acptr->pingval = get_client_ping(acptr);
+         acptr->sendqlen = get_sendq(acptr);
    }
 
 
