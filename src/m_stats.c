@@ -45,8 +45,6 @@ extern aCache *cachetop;
 #ifdef DEBUGMODE
 extern void report_fds(aClient *);
 #endif
-extern void sbuf_count(int *, int *, int *, int *, int *, int *, int *, int *,
-                       int *, int *, int *, int *, int *); 
 
 /* internal function defines */
 
