@@ -20,7 +20,7 @@
 #define MAX_EVENT_QUEUE 64
 
 static int kqueue_id = -1;
-static struct kevent eventQ[MAX_EVENT_QUEUE];
+static struct kevent eventQ[MAX_EVENT_QUEUE+1];
 static int numEvents = 0;
 
 static void kevent_add(struct kevent *e)
@@ -28,15 +28,13 @@ static void kevent_add(struct kevent *e)
    if(kqueue_id == -1)
       abort();
 
-   memcpy(&eventQ[numEvents], e, sizeof(struct kevent));
-   numEvents++;
-
-   if(numEvents == MAX_EVENT_QUEUE)
+   if(numEvents >= MAX_EVENT_QUEUE)
    {
       if(kevent(kqueue_id, eventQ, numEvents, NULL, 0, NULL) < 0)
          sendto_realops_lev(DEBUG_LEV, "kevent() returned error: %s", strerror(errno));
       numEvents = 0;
    }
+   memcpy(&eventQ[numEvents++], e, sizeof(struct kevent));
 }
 
 void engine_init()
@@ -121,8 +119,8 @@ void engine_change_fd_state(int fd, unsigned int stateplus)
    set_fd_internal(fd, (void *) stateplus);
 }
 
-#define ENGINE_MAX_EVENTS 128
-#define ENGINE_MAX_LOOPS 48
+#define ENGINE_MAX_EVENTS 512
+#define ENGINE_MAX_LOOPS (2 * (MAXCONNECTIONS / 512))
 
 int engine_read_message(time_t delay)
 {
