@@ -1656,7 +1656,7 @@ int         i;
 }
 
 char *exploits_2char[] = { "js", "pl", NULL };
-char *exploits_3char[] = { "exe", "com", "bat", "dll", "ini", "vbs", "pif", "mrc", "scr", "doc", "xls", "lnk", NULL };
+char *exploits_3char[] = { "exe", "com", "bat", "dll", "ini", "vbs", "pif", "mrc", "scr", "doc", "xls", "lnk", "shs", NULL };
 
 int check_dccsend(aClient *from, aClient *to, char *msg)
 {
