@@ -1025,9 +1025,11 @@ int main(int argc, char *argv[])
 void io_loop()
 {
     char to_send[200];
+#ifndef HUB
     time_t lasttime = 0;
     long lastrecvK = 0;
     int  lrv = 0;
+#endif
     time_t      lasttimeofday;
     int delay = 0;
 
