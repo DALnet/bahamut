@@ -300,7 +300,7 @@ void *dh_start_session()
    if(!DH_generate_key(si->dh))
    {
       DH_free(si->dh);
-      free(si);
+      MyFree(si);
       return NULL;
    }
 
@@ -320,11 +320,11 @@ void dh_end_session(void *session)
    if(si->session_shared)
    {
       memset(si->session_shared, 0, si->session_shared_length);
-      free(si->session_shared);
+      MyFree(si->session_shared);
       si->session_shared = NULL;
    }
 
-   free(si);
+   MyFree(si);
 }
 
 char *dh_get_s_public(char *buf, int maxlen, void *session)

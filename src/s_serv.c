@@ -1985,7 +1985,7 @@ int m_kline(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
     if ((k->comment = strdup(buffer)) == NULL) 
     {
-        free(k);
+        MyFree(k);
         sendto_one(sptr, ":%s NOTICE %s :Problem allocating memory",
                    me.name, parv[0]);
         return (0);
@@ -1999,8 +1999,8 @@ int m_kline(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
     if ((k->kline = strdup(buffer)) == NULL) 
     {
-        free(k->comment);
-        free(k);
+        MyFree(k->comment);
+        MyFree(k);
         sendto_one(sptr, ":%s NOTICE %s :Problem allocating memory",
                    me.name, parv[0]);
         return (0);
@@ -3279,11 +3279,11 @@ do_pending_klines()
     {
         write(fd, k->comment, strlen(k->comment));
         write(fd, k->kline, strlen(k->kline));
-        free(k->comment);
-        free(k->kline);
+        MyFree(k->comment);
+        MyFree(k->kline);
         ok = k;
         k = k->next;
-        free(ok);
+        MyFree(ok);
     }
     pending_klines = NULL;
     pending_kline_time = 0;

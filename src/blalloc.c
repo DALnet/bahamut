@@ -45,15 +45,15 @@ static int newblock(BlockHeap *bh)
     memset((void *) b->allocMap, '\0', (bh->numlongs + 1) * sizeof(unsigned long));
     if (b->allocMap == NULL)
     {
-	free(b);
+	MyFree(b);
 	return 1;
     }
     /* Now allocate the memory for the elems themselves. */
     b->elems = (void *) MyMalloc((bh->elemsPerBlock + 1) * bh->elemSize);
     if (b->elems == NULL)
     {
-	free(b->allocMap);
-	free(b);
+	MyFree(b->allocMap);
+	MyFree(b);
 	return 1;
     }
     b->endElem = (void *) ((unsigned long) b->elems +
@@ -112,7 +112,7 @@ BlockHeap *BlockHeapCreate(size_t elemsize, int elemsperblock)
     /* Be sure our malloc was successful */
     if (newblock(bh))
     {
-	free(bh);
+	MyFree(bh);
 	outofmemory();		/* die.. out of memory */
     }
     /* DEBUG */
@@ -311,18 +311,18 @@ int BlockHeapGarbageCollect(BlockHeap *bh)
 	if (i == bh->numlongs)
 	{
 	    /* This entire block is free.  Remove it. */
-	    free(walker->elems);
-	    free(walker->allocMap);
+	    MyFree(walker->elems);
+	    MyFree(walker->allocMap);
 	    if (last)
 	    {
 		last->next = walker->next;
-		free(walker);
+		MyFree(walker);
 		walker = last->next;
 	    }
 	    else
 	    {
 		bh->base = walker->next;
-		free(walker);
+		MyFree(walker);
 		walker = bh->base;
 	    }
 	    bh->blocksAllocated--;
@@ -355,10 +355,10 @@ int BlockHeapDestroy(BlockHeap *bh)
     for (walker = bh->base; walker != NULL; walker = next)
     {
 	next = walker->next;
-	free(walker->elems);
-	free(walker->allocMap);
-	free(walker);
+	MyFree(walker->elems);
+	MyFree(walker->allocMap);
+	MyFree(walker);
     }
-    free(bh);	
+    MyFree(bh);	
     return 0;
 }

@@ -149,8 +149,8 @@ void destroy_hash_table(hash_table *table) {
 	    hashent_free(hep);
 	}
     }
-    free(table->table);
-    free(table);
+    MyFree(table->table);
+    MyFree(table);
 }
 
 /* this is an expensive function.  it's not the sort of thing one should be
@@ -178,7 +178,7 @@ void resize_hash_table(hash_table *table, int elems) {
 	    hashent_free(hep);
 	}
     }
-    free(oldtable);
+    MyFree(oldtable);
 }
 
 /* get the hash of a given key.  really only useful for insert/delete */

@@ -265,7 +265,7 @@ void zip_destroy_output_session(void *session)
     struct zipped_link_out *z = (struct zipped_link_out *) session;
 
     deflateEnd(&z->stream);
-    free(session);
+    MyFree(session);
 }
 
 void zip_destroy_input_session(void *session)
@@ -273,6 +273,6 @@ void zip_destroy_input_session(void *session)
     struct zipped_link_in *z = (struct zipped_link_in *) session;
 
     inflateEnd(&z->stream);
-    free(session);
+    MyFree(session);
 }
 
