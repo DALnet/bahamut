@@ -244,6 +244,7 @@ extern aServer   *make_server(aClient *);
 extern aClient   *make_client(aClient *, aClient *);
 extern chanMember *find_user_member(chanMember *, aClient *);
 extern Link 	 *find_str_link(Link *, char *);
+extern DLink     *find_dlink(DLink *, void *);
 extern void 	  add_client_to_list(aClient *);
 extern void 	  checklist(void);
 extern void 	  remove_client_from_list(aClient *);

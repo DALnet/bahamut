@@ -482,11 +482,22 @@ DLink *make_dlink()
     
     if (lp == (DLink *) NULL)
 	outofmemory();
-    
-    lp->next = (DLink *) NULL;	/* just to be paranoid... */
-    lp->prev = (DLink *) NULL;	/* just to be paranoid... */
+
+    memset(lp, 0, sizeof(*lp));
 
     return lp;
+}
+
+DLink *find_dlink(DLink *lp, void *what)
+{
+    while (lp)
+    {
+        if (lp->value.cp == what)
+            return lp;
+        lp = lp->next;
+    }
+
+    return NULL;
 }
 
 void free_dlink(DLink *lp)

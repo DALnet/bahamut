@@ -939,10 +939,20 @@ void do_recvqs()
       lpn = lp->next;
       cptr = lp->value.cptr;
 
+      /* dlink is tagged for deletion, cptr is already gone */
+      if (lp->flags == -1)
+      {
+          remove_from_list(&recvq_clients, NULL, lp);
+          continue;
+      }
+
       if(SBufLength(&cptr->recvQ) && !NoNewLine(cptr))
       {
          if(do_client_queue(cptr) == FLUSH_BUFFER)
-            continue;
+         {
+             remove_from_list(&recvq_clients, NULL, lp);
+             continue;
+         }
       }
 
       if(!(SBufLength(&cptr->recvQ) && !NoNewLine(cptr)))

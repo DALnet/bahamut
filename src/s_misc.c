@@ -583,7 +583,12 @@ exit_client(aClient *cptr, aClient *sptr, aClient *from, char *comment)
         if (IsAnOper(sptr)) 
             remove_from_list(&oper_list, sptr, NULL);
         if (sptr->flags & FLAGS_HAVERECVQ)
-            remove_from_list(&recvq_clients, sptr, NULL);
+        {
+            /* mark invalid, will be deleted in do_recvqs() */
+            DLink *lp = find_dlink(recvq_clients, sptr);
+            if (lp)
+                lp->flags = -1;
+        }
         if (IsClient(sptr))
             Count.local--;
         if (IsNegoServer(sptr))
