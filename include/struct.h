@@ -561,6 +561,7 @@ struct Client {
 	long        flags;		  /* client flags */
 	long        umode;		  /* We can illeviate overflow this way */
 	aClient    *from;		    /* == self, if Local Client, *NEVER* NULL! */
+	aClient    *uplink;		    /* this client's uplink to the network */
 	int         fd;		      /* >= 0, for local clients */
   int         hopcount;	  /* number of servers to this 0 = local */
 	short       status;		  /* Client type */

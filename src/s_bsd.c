@@ -327,7 +327,7 @@ int add_listener(aConfItem * aconf)
    aClient *cptr;
    u_long vaddr;
 
-   cptr = make_client(NULL);
+   cptr = make_client(NULL, NULL);
    cptr->flags = FLAGS_LISTEN;
    cptr->acpt = cptr;
    cptr->from = cptr;
@@ -1205,7 +1205,7 @@ aClient *add_connection(aClient * cptr, int fd)
    aClient *acptr;
    aConfItem *aconf = NULL;
 
-   acptr = make_client(NULL);
+   acptr = make_client(NULL, &me);
 
    if (cptr != &me)
       aconf = cptr->confs->value.aconf;
@@ -2368,7 +2368,7 @@ int connect_server(aConfItem * aconf, aClient * by, struct hostent *hp)
 		sizeof(struct in_addr));
       }
    }
-   cptr = make_client(NULL);
+   cptr = make_client(NULL, &me);
    cptr->hostp = hp;
    /* 
     * Copy these in so we have something for error detection.

@@ -1595,7 +1595,7 @@ int         fd;
 aClient    *cptr;
 
    if (debuglevel >= 0) {
-      cptr = make_client(NULL);
+      cptr = make_client(NULL, NULL);
       cptr->fd = 2;
       SetLog(cptr);
       cptr->port = debuglevel;

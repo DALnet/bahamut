@@ -155,9 +155,10 @@ static int  was_here = 0;
  *      from,   create remote client (behind a socket *
  * ssociated with the client defined by *
  *  ('from' is a local client!!).
+ *
+ * uplink is this client's uplink connection to the network. - lucas
  */
-aClient    *
-make_client(aClient *from)
+aClient    *make_client(aClient *from, aClient *uplink)
 {
    Reg aClient *cptr = NULL;
 
@@ -200,6 +201,7 @@ make_client(aClient *from)
        */
       cptr->status = STAT_UNKNOWN;
       cptr->fd = -1;
+      cptr->uplink = uplink;
       (void) strcpy(cptr->username, "unknown");
       cptr->since = cptr->lasttime = cptr->firsttime = timeofday;
       /*
@@ -250,6 +252,7 @@ make_client(aClient *from)
        */
       cptr->status = STAT_UNKNOWN;
       cptr->fd = -1;
+      cptr->uplink = uplink;
       (void) strcpy(cptr->username, "unknown");
       return (cptr);
    }

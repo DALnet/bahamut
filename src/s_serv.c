@@ -637,7 +637,7 @@ m_server(aClient *cptr,
        * modern net.
        */
 		
-      acptr = make_client(cptr);
+      acptr = make_client(cptr, sptr);
       (void) make_server(acptr);
       acptr->hopcount = hop;
       strncpyzt(acptr->name, host, sizeof(acptr->name));

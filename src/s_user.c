@@ -992,11 +992,6 @@ register_user(aClient *cptr,
  * = optional username *        parv[6] = optional hostname *   parv[7]
  * = optional server * * parv[8] = optional serviceid parv[9] = optional 
  * ircname
- * 
- * Deal with df's way of doing this which appears to be... parv[0] =
- * sender prefix parv[1] = nickname parv[2] = hop count or TS on Nick
- * Change parv[3] = TS parv[4] = username parv[5] = hostname parv[6] =
- * server parv[7] = serviceinfo?  Dahell is this parv[8] = ircname
  */
 int
 m_nick(aClient *cptr,
@@ -1005,7 +1000,7 @@ m_nick(aClient *cptr,
        char *parv[])
 {
    aConfItem  *aconf;
-   aClient    *acptr;
+   aClient    *acptr, *uplink;
    char        nick[NICKLEN + 2], *s;
    ts_val      newts = 0;
    int         sameuser = 0, fromTS = 0;
@@ -1388,7 +1383,18 @@ m_nick(aClient *cptr,
 
  nickkilldone:
    if (IsServer(sptr)) {
-      sptr = make_client(cptr);
+
+      /* ack. if we can't find the remote server, something is *seriously* wrong.
+         complain loudly. */
+
+      uplink = find_server(parv[7], NULL);
+      if(!uplink)
+      {
+	 sendto_realops("Remote NICK on unknown server %s!", parv[7]);
+	 return 0;
+      }
+
+      sptr = make_client(cptr, uplink);
 		if ((find_uline(cptr->confs, parv[7])))
 		  sptr->flags|=FLAGS_ULINE;
 		

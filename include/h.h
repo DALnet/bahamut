@@ -261,7 +261,7 @@ extern anUser *make_user(aClient *);
 extern aConfItem *make_conf(void);
 extern aClass *make_class(void);
 extern aServer *make_server(aClient *);
-extern aClient *make_client(aClient *);
+extern aClient *make_client(aClient *, aClient *);
 extern Link *find_user_link(Link *, aClient *);
 extern Link *find_str_link(Link *, char *);
 extern void add_client_to_list(aClient *);
