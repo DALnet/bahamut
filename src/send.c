@@ -808,146 +808,208 @@ void send_chatops(char *pattern, ...)
  */
 void sendto_prefix_one(aClient *to, aClient *from, char *pattern, ...)
 {
-	static char sender[HOSTLEN + NICKLEN + USERLEN + 5];
-	anUser *user;
-	char       *par;
-	static char temp[1024];
-	int         flag = 0;
+   static char sender[HOSTLEN + NICKLEN + USERLEN + 5];
+   static char temp[1024];
+   anUser *user;
+   char *idx;
+   char *par;
+   int flag = 0, sidx = 0;
    va_list vl;
-	va_list vl2;
-	va_start(vl, pattern);
-	vl2=vl;
+
+   va_start(vl, pattern);
 	
-   par = va_arg(vl2, char *);
+   par = va_arg(vl, char *);
    /*
     * Optimize by checking if (from && to) before everything 
+    * uhh, there's _always_ going to be a to!
     */
-   if (to && from) {
-      if (!MyClient(from) && IsPerson(to) && (to->from == from->from)) {
-			if (IsServer(from)) {
-				(void) ircvsprintf(temp, pattern, vl);
-				sendto_ops("Send message (%s) to %s[%s] dropped from %s(Fake Dir)", temp,
-							  to->name, to->from->name, from->name);
-				return;
-			}
-			sendto_ops("Ghosted: %s[%s@%s] from %s[%s@%s] (%s)",
-						  to->name, to->user->username, to->user->host,
-						  from->name, from->user->username, from->user->host,
-						  to->from->name);
-			sendto_serv_butone(NULL, ":%s KILL %s :%s (%s[%s@%s] Ghosted %s)",
-									 me.name, to->name, me.name, to->name,
-									 to->user->username, to->user->host, to->from->name);
-			to->flags |= FLAGS_KILLED;
-			(void) exit_client(NULL, to, &me, "Ghosted client");
-			if (IsPerson(from))
-			  sendto_one(from, err_str(ERR_GHOSTEDCLIENT),
-							 me.name, from->name, to->name, to->user->username,
-							 to->user->host, to->from);
-			return;
+   if (from) 
+   {
+      if (!MyClient(from) && IsPerson(to) && (to->from == from->from)) 
+      {
+         if (IsServer(from)) 
+         {
+            ircvsprintf(temp, pattern, vl);
+	    sendto_ops("Send message (%s) to %s[%s] dropped from %s(Fake Dir)", temp,
+                      to->name, to->from->name, from->name);
+            va_end(vl);
+            return;
+         }
+
+         sendto_ops("Ghosted: %s[%s@%s] from %s[%s@%s] (%s)", to->name, to->user->username, 
+                    to->user->host, from->name, from->user->username, from->user->host, to->from->name);
+         sendto_serv_butone(NULL, ":%s KILL %s :%s (%s[%s@%s] Ghosted %s)", me.name, to->name, 
+                            me.name, to->name, to->user->username, to->user->host, to->from->name);
+
+         to->flags |= FLAGS_KILLED;
+         exit_client(NULL, to, &me, "Ghosted client");
+         if (IsPerson(from))
+            sendto_one(from, err_str(ERR_GHOSTEDCLIENT), me.name, from->name, to->name, 
+                       to->user->username, to->user->host, to->from);
+         va_end(vl);
+         return;
       }
-      if (MyClient(to) && IsPerson(from) && !mycmp(par, from->name)) {
-			user = from->user;
-			(void) strcpy(sender, from->name);
-			if (user) {
-				if (*user->username) {
-					(void) strcat(sender, "!");
-					(void) strcat(sender, user->username);
-				}
-				if (*user->host && !MyConnect(from)) {
-					(void) strcat(sender, "@");
-					(void) strcat(sender, user->host);
-					flag = 1;
-				}
-			}
-			/*
-			 * * flag is used instead of index(sender, '@') for speed and *
-			 * also since username/nick may have had a '@' in them.
-			 * -avalon
-			 */
-			if (!flag && MyConnect(from) && *user->host) {
-				(void) strcat(sender, "@");
-				(void) strcat(sender, from->sockhost);
-			}
-			par = sender;
+
+      if (MyClient(to) && IsPerson(from) && !mycmp(par, from->name)) 
+      {
+         user = from->user;
+
+         for(idx = from->name; *idx; idx++)
+            sender[sidx++] = *idx;
+
+         if (user)
+         {
+            if (*user->username) 
+            {
+               sender[sidx++] = '!';
+               for(idx = user->username; *idx; idx++)
+                  sender[sidx++] = *idx;
+	    }
+            if (*user->host && !MyConnect(from)) 
+            {
+               sender[sidx++] = '@';
+               for(idx = user->host; *idx; idx++)
+                  sender[sidx++] = *idx;
+               flag = 1;
+            }
+         }
+
+         /*
+          * flag is used instead of index(sender, '@') for speed and
+          * also since username/nick may have had a '@' in them.
+          * -avalon
+          */
+
+         if (!flag && MyConnect(from) && *user->host) 
+         {
+            sender[sidx++] = '@';
+            for(idx = from->sockhost; *idx; idx++)
+               sender[sidx++] = *idx;
+         }
+
+         sender[sidx] = '\0';
+         par = sender;
+
       }
-   }				/*
-					 * if (from && to) 
-					 */
-	/* okay, we more or less know that our sendto_prefix crap is going to be :%s <blah>,
-	 * so it's easy to fix these lame problems...joy */
-	ircsprintf(temp, ":%s%s", par, pattern+3);
-	vsendto_one(to, temp, vl2);
-	va_end(vl);
+   }
+
+   temp[0] = ':';
+   sidx = 1;
+
+   /* okay, we more or less know that our sendto_prefix crap is going to be :%s <blah>,
+    * so it's easy to fix these lame problems...joy */
+
+    for(idx = par; *idx; idx++)
+       temp[sidx++] = *idx;
+    for(idx = (pattern + 3); *idx; idx++)
+       temp[sidx++] = *idx;
+
+    temp[sidx] = '\0'; 
+
+    vsendto_one(to, temp, vl);
+    va_end(vl);
 }
+
+/* this is an incredibly expensive function. 
+ * removed all strcat() calls. - lucas */
+
 void vsendto_prefix_one(aClient *to, aClient *from, char *pattern, va_list vl)
 {
-	static char sender[HOSTLEN + NICKLEN + USERLEN + 5];
-	anUser *user;
-	char       *par;
-	static char temp[1024];
-	int         flag = 0;
-	va_list vl2;
-	vl2=vl;
+   static char sender[HOSTLEN + NICKLEN + USERLEN + 5];
+   static char temp[1024];
+   anUser *user;
+   char *idx;
+   char *par;
+   int flag = 0, sidx = 0;
+   va_list vl2 = vl;
 	
    par = va_arg(vl2, char *);
    /*
     * Optimize by checking if (from && to) before everything 
+    * uhh, there's _always_ going to be a to!
     */
-   if (to && from) {
-      if (!MyClient(from) && IsPerson(to) && (to->from == from->from)) {
-			if (IsServer(from)) {
-				(void) ircvsprintf(temp, pattern, vl);
-				sendto_ops("Send message (%s) to %s[%s] dropped from %s(Fake Dir)", temp,
-							  to->name, to->from->name, from->name);
-				return;
-			}
-			sendto_ops("Ghosted: %s[%s@%s] from %s[%s@%s] (%s)",
-						  to->name, to->user->username, to->user->host,
-						  from->name, from->user->username, from->user->host,
-						  to->from->name);
-			sendto_serv_butone(NULL, ":%s KILL %s :%s (%s[%s@%s] Ghosted %s)",
-									 me.name, to->name, me.name, to->name,
-									 to->user->username, to->user->host, to->from->name);
-			to->flags |= FLAGS_KILLED;
-			(void) exit_client(NULL, to, &me, "Ghosted client");
-			if (IsPerson(from))
-			  sendto_one(from, err_str(ERR_GHOSTEDCLIENT),
-							 me.name, from->name, to->name, to->user->username,
-							 to->user->host, to->from);
-			return;
+   if (from) 
+   {
+      if (!MyClient(from) && IsPerson(to) && (to->from == from->from)) 
+      {
+         if (IsServer(from)) 
+         {
+            ircvsprintf(temp, pattern, vl);
+	    sendto_ops("Send message (%s) to %s[%s] dropped from %s(Fake Dir)", temp,
+                      to->name, to->from->name, from->name);
+            return;
+         }
+
+         sendto_ops("Ghosted: %s[%s@%s] from %s[%s@%s] (%s)", to->name, to->user->username, 
+                    to->user->host, from->name, from->user->username, from->user->host, to->from->name);
+         sendto_serv_butone(NULL, ":%s KILL %s :%s (%s[%s@%s] Ghosted %s)", me.name, to->name, 
+                            me.name, to->name, to->user->username, to->user->host, to->from->name);
+
+         to->flags |= FLAGS_KILLED;
+         exit_client(NULL, to, &me, "Ghosted client");
+         if (IsPerson(from))
+            sendto_one(from, err_str(ERR_GHOSTEDCLIENT), me.name, from->name, to->name, 
+                       to->user->username, to->user->host, to->from);
+         return;
       }
-      if (MyClient(to) && IsPerson(from) && !mycmp(par, from->name)) {
-			user = from->user;
-			(void) strcpy(sender, from->name);
-			if (user) {
-				if (*user->username) {
-					(void) strcat(sender, "!");
-					(void) strcat(sender, user->username);
-				}
-				if (*user->host && !MyConnect(from)) {
-					(void) strcat(sender, "@");
-					(void) strcat(sender, user->host);
-					flag = 1;
-				}
-			}
-			/*
-			 * * flag is used instead of index(sender, '@') for speed and *
-			 * also since username/nick may have had a '@' in them.
-			 * -avalon
-			 */
-			if (!flag && MyConnect(from) && *user->host) {
-				(void) strcat(sender, "@");
-				(void) strcat(sender, from->sockhost);
-			}
-			par = sender;
+
+      if (MyClient(to) && IsPerson(from) && !mycmp(par, from->name)) 
+      {
+         user = from->user;
+
+         for(idx = from->name; *idx; idx++)
+            sender[sidx++] = *idx;
+
+         if (user)
+         {
+            if (*user->username) 
+            {
+               sender[sidx++] = '!';
+               for(idx = user->username; *idx; idx++)
+                  sender[sidx++] = *idx;
+	    }
+            if (*user->host && !MyConnect(from)) 
+            {
+               sender[sidx++] = '@';
+               for(idx = user->host; *idx; idx++)
+                  sender[sidx++] = *idx;
+               flag = 1;
+            }
+         }
+
+         /*
+          * flag is used instead of index(sender, '@') for speed and
+          * also since username/nick may have had a '@' in them.
+          * -avalon
+          */
+
+         if (!flag && MyConnect(from) && *user->host) 
+         {
+            sender[sidx++] = '@';
+            for(idx = from->sockhost; *idx; idx++)
+               sender[sidx++] = *idx;
+         }
+
+         sender[sidx] = '\0';
+         par = sender;
+
       }
-   }				/*
-					 * if (from && to) 
-					 */
-	/* okay, we more or less know that our sendto_prefix crap is going to be :%s <blah>,
-	 * so it's easy to fix these lame problems...joy */
-	ircsprintf(temp, ":%s%s", par, pattern+3);
-	vsendto_one(to, temp, vl2);
+   }
+
+   temp[0] = ':';
+   sidx = 1;
+
+   /* okay, we more or less know that our sendto_prefix crap is going to be :%s <blah>,
+    * so it's easy to fix these lame problems...joy */
+
+    for(idx = par; *idx; idx++)
+       temp[sidx++] = *idx;
+    for(idx = (pattern + 3); *idx; idx++)
+       temp[sidx++] = *idx;
+
+    temp[sidx] = '\0'; 
+
+    vsendto_one(to, temp, vl2);
 }
 
 void sendto_fdlist(fdlist *listp, char *pattern, ...)
