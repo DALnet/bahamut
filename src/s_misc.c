@@ -381,11 +381,12 @@ void exit_one_client_in_split(aClient *cptr, aClient *dead, char *reason)
  * dead: the actual server that split (if this belongs to us, we
  *       absolutely CANNOT send to it)
  * from: the client that caused this split
+ * lcptr: the local client that initiated this
  * spinfo: split reason, as generated in exit_server
  * comment: comment provided
  */
 
-void exit_one_server(aClient *cptr, aClient *dead, aClient *from, char *spinfo, char *comment)
+void exit_one_server(aClient *cptr, aClient *dead, aClient *from, aClient *lcptr, char *spinfo, char *comment)
 {
    aClient *acptr, *next;
    int i, j;
@@ -420,7 +421,7 @@ void exit_one_server(aClient *cptr, aClient *dead, aClient *from, char *spinfo, 
       if(acptr->uplink != cptr || !IsServer(acptr)) 
          continue;
 
-      exit_one_server(acptr, dead, from, spinfo, comment);
+      exit_one_server(acptr, dead, from, lcptr, spinfo, comment);
       next = client; /* restart the loop */
    }
 
@@ -428,7 +429,7 @@ void exit_one_server(aClient *cptr, aClient *dead, aClient *from, char *spinfo, 
 
    for (i = serv_fdlist.entry[j = 1]; j <= serv_fdlist.last_entry; i = serv_fdlist.entry[++j]) 
    {
-      if (!(acptr = local[i]) || acptr == cptr || IsMe(acptr) || acptr == dead)
+      if (!(acptr = local[i]) || acptr == cptr || IsMe(acptr) || acptr == dead || acptr == lcptr)
          continue;
 
       /* if the server is noquit, we only want to send it information about 'dead' */
@@ -450,13 +451,14 @@ void exit_one_server(aClient *cptr, aClient *dead, aClient *from, char *spinfo, 
 
 /* exit_server
  *
+ * lcptr: the local client that initiated this
  * cptr: the server that is being dropped.
  * from: the client/server that caused this to happen
  * comment: reason this is happening
  * we then call exit_one_server, the recursive function.
  */
 
-void exit_server(aClient *cptr, aClient *from, char *comment)
+void exit_server(aClient *lcptr, aClient *cptr, aClient *from, char *comment)
 {
    char splitname[HOSTLEN + HOSTLEN + 2];
 
@@ -464,7 +466,7 @@ void exit_server(aClient *cptr, aClient *from, char *comment)
 
    Debug((DEBUG_NOTICE, "exit_server(%s, %s, %s)", cptr->name, from->name, comment));
 
-   exit_one_server(cptr, cptr, from, splitname, comment);
+   exit_one_server(cptr, cptr, from, lcptr, splitname, comment);
 }
 
 #endif /* USE_NOQUIT */
@@ -742,7 +744,7 @@ exit_one_client(aClient *cptr,
       currently_processing_netsplit = YES;
 # endif
 
-      exit_server(sptr, from, comment);
+      exit_server(cptr, sptr, from, comment);
 
 # ifdef ALWAYS_SEND_DURING_SPLIT
       currently_processing_netsplit = NO;

@@ -269,7 +269,8 @@ int m_squit(aClient *cptr, aClient *sptr, int parc, char *parv[])
       syslog(LOG_DEBUG, "SQUIT From %s : %s (%s)",
 	     parv[0], server, comment);
 #endif
-      return exit_client(cptr, acptr, sptr, comment);
+      /* I am originating this squit! Not cptr! */
+      return exit_client(&me, acptr, sptr, comment);
    }
 
    /* the server is not connected to me. Determine whether this is an upstream
