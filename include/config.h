@@ -673,7 +673,7 @@
  * If you are actually a dalnet server, you should not change this.
  * The idea is to make it universal for the entire network.
  */
-#define STAFF_ADDRESS "staff.dal.net"
+#define STAFF_ADDRESS "DALnet"
 
 /******************************************************************
  * STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP

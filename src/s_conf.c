@@ -1780,7 +1780,7 @@ aConfItem  *
 find_kill(aClient *cptr)
 {
    char       *host, *name;
-
+   aConfItem  *ret;
    if (!cptr->user)
       return 0;
 
@@ -1792,7 +1792,10 @@ find_kill(aClient *cptr)
 
    if (find_eline(cptr))
       return 0;
-
+   
+   ret=find_is_klined(host, name);
+   if (ret!=NULL) return ret;
+   host=cptr->hostip;
    return (find_is_klined(host, name));
 }
 /*
