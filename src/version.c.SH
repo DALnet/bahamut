@@ -77,7 +77,7 @@ char *infotext[] =
 	 "MSofty              Mark Salerno        msofty@dal.net",
 	 "Raistlin_Mejere     Jason Slagle        raistlin@bahamut.net",
 	 "Rakarra             Ian Westcott        rakarra@dal.net",
-	 "sedition	      David Parton	  rparton@webcombo.net",
+	 "sedition            David Parton        sedition@dal.net",
 	 "White_Dragon        Chip Norkus         wd@dal.net",
 	 "",
 	 "The following people have contributed ideas or testing to the",
