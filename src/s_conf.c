@@ -301,11 +301,11 @@ find_aConnect(char *name)
 }
 
 static inline aPort *
-find_port(int port)
+find_port(int port, char *bind)
 {
     aPort *tmp;
     for(tmp = ports; tmp; tmp = tmp->next)
-        if(tmp->port == port)
+        if((tmp->port == port) && !mycmp(tmp->address, bind))
             break;
     return tmp;
 }
@@ -1865,14 +1865,11 @@ merge_ports()
         close_listeners();      /* marks ports for deletion */
     aport = new_ports;
     while(aport)
-        if((old_port = find_port(aport->port)))
+        if((old_port = find_port(aport->port, aport->address)))
         {
             MyFree(old_port->allow);
-            MyFree(old_port->address);
             if(aport->allow)
                 DupString(old_port->allow, aport->allow);
-            if(aport->address)
-                DupString(old_port->address, aport->address);
             old_port->legal = 1;
             aport->legal = -1;
             aport = aport->next;
