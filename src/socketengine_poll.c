@@ -19,6 +19,10 @@
 struct pollfd poll_fds[MAXCONNECTIONS];
 int last_pfd = -1;
 
+void engine_init()
+{
+}
+
 void engine_add_fd(int fd)
 {
    struct pollfd *pfd = &poll_fds[++last_pfd];

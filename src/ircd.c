@@ -90,6 +90,7 @@ extern struct pkl *pending_klines;
 extern void 	 do_pending_klines(void);
 #endif
 extern void      engine_read_message(int);
+extern void	 engine_init();
 
 void        	server_reboot();
 void        	restart(char *);
@@ -800,6 +801,7 @@ int main(int argc, char *argv[])
 
     /* init the file descriptor tracking system */
     init_fds();
+    engine_init();
 
     /* init the kline/akill system */
     init_userban();

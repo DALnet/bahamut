@@ -18,9 +18,12 @@ SOURCES = blalloc.c bsd.c channel.c class.c dbuf.c dich_conf.c fdlist.c \
           userban.c clientlist.c fds.c $(ENGINE_S) $(CONF_SRC)
 OBJECTS = $(SOURCES:.c=.o) version.o
 
-all: ircd
+all:
+	@echo ""
+	@echo "You're in the wrong directory. Make in ..!"
+	@echo ""
 
-build: all
+build: ircd
 
 # Yuck - don't use this.
 depend:
