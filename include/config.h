@@ -32,13 +32,12 @@
  * -Epi
  *******************************************************************/
 
+#define OPTIONS_H
 
 /* 
  * If you are using OPTIONS_H, you can ignore everything from here
  * until i tell you otherwise.  If not, go nuts. 
  */
-
-#define OPTIONS_H
 
 #ifdef OPTIONS_H
 #include "options.h"
@@ -93,29 +92,6 @@
  * this and save some CPU on the hub servers. - Raistlin
  */
 #define DF_COMPATIBILITY
-
-/*
- * FNAME_USERLOG and FNAME_OPERLOG - logs of local USERS and OPERS
- * Define this filename to maintain a list of persons who log into this
- * server. Logging will stop when the file does not exist. Logging will
- * be disable also if you do not define this. FNAME_USERLOG just logs
- * user connections, FNAME_OPERLOG logs every successful use of /oper.
- * These are either full paths or files within DPATH.
- * 
- * These need to be defined if you want to use SYSLOG logging, too.
- */
-#undef FNAME_USERLOG "/usr/local/ircd/users"	
-#undef FNAME_OPERLOG "/usr/local/ircd/opers"
-
-/*
- * CUSTOM_ERR - colorful notice/error/messages Defining this will use
- * custom notice/error/messages from include/s_err.h instead of stock
- * ones in ircd/s_err.c.  If you prefer the "colorful" messages that
- * Hybrid was known for, or if you wish to customize the messages,
- * define this.  Otherwise leave it undef'd for plain ole boring
- * messages.
- */
-#undef CUSTOM_ERR
 
 /* STATS_NOTICE - See a notice when a user does a /stats */
 #define STATS_NOTICE
@@ -261,6 +237,29 @@
 #define MemoServ "MemoServ"
 #define NickServ "NickServ"
 #define StatServ "StatServ"
+
+/*
+ * FNAME_USERLOG and FNAME_OPERLOG - logs of local USERS and OPERS
+ * Define this filename to maintain a list of persons who log into this
+ * server. Logging will stop when the file does not exist. Logging will
+ * be disable also if you do not define this. FNAME_USERLOG just logs
+ * user connections, FNAME_OPERLOG logs every successful use of /oper.
+ * These are either full paths or files within DPATH.
+ * 
+ * These need to be defined if you want to use SYSLOG logging, too.
+ */
+#undef FNAME_USERLOG "/usr/local/ircd/users"	
+#undef FNAME_OPERLOG "/usr/local/ircd/opers"
+
+/*
+ * CUSTOM_ERR - colorful notice/error/messages Defining this will use
+ * custom notice/error/messages from include/s_err.h instead of stock
+ * ones in ircd/s_err.c.  If you prefer the "colorful" messages that
+ * Hybrid was known for, or if you wish to customize the messages,
+ * define this.  Otherwise leave it undef'd for plain ole boring
+ * messages.
+ */
+#undef CUSTOM_ERR
 
 /* Don't change this... */
 #define HARD_FDLIMIT	(HARD_FDLIMIT_ - 10)

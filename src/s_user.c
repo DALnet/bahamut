@@ -96,10 +96,6 @@ unsigned long my_rand(void);	/*
  * externally defined functions 
  */
 void  send_svsmode_out (aClient*, aClient *, aClient *, int);
-extern int  find_bline(aClient *);	/*
-
-					 * defined in s_conf.c 
-					 */
 extern int  find_fline(aClient *);	/*
 
 					 * defined in s_conf.c 

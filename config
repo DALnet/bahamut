@@ -35,8 +35,6 @@ MAXUSERS="`grep 'INIT_MAXCLIENTS' $OPTIONS_H | sed s/'.define INIT_MAXCLIENTS '/
 MAXBUF="`grep 'MAX_BUFFER' $OPTIONS_H | sed s/'.define MAX_BUFFER '// | xargs echo -n`"
 DPATH="`grep 'DPATH' $OPTIONS_H | sed s/'.define DPATH '// | sed s/'\"'//g | xargs echo -n`"
 SPATH="`grep 'SPATH' $OPTIONS_H | sed s/'.define SPATH '// | sed s/'\"'//g | xargs echo -n`"
-ULOGPATH="`grep 'FNAME_USERLOG' $OPTIONS_H | sed s/'.define FNAME_USERLOG '// | sed s/'\"'//g | xargs echo -n`"
-OLOGPATH="`grep 'FNAME_OPERLOG' $OPTIONS_H | sed s/'.define FNAME_OPERLOG '// | sed s/'\"'//g | xargs echo -n`"
 MAXSENDQ="`grep 'define MAXSENDQLENGTH' $OPTIONS_H | sed s/'.define MAXSENDQLENGTH '// | xargs echo -n`"
 BUFPOOL="`grep 'define BUFFERPOOL' $OPTIONS_H | sed s/'.define BUFFERPOOL '// | xargs echo -n`"
 SERVICES_NAME="`grep 'SERVICES_NAME' $OPTIONS_H | sed s/'.define SERVICES_NAME '// | xargs echo -n`"
@@ -60,12 +58,6 @@ if [ -n "$DFCOMP" ] ; then
    DFCOMP=""
 else 
    DFCOMP="1"
-fi
-CERR="`grep 'CUSTOM_ERR' $OPTIONS_H | sed s/'.define CUSTOM_ERR'// | xargs echo -n`"
-if [ -n "$CERR" ] ; then
-   CERR=""
-else
-   CERR="1"
 fi
 STATSN="`grep 'STATS_NOTICE' $OPTIONS_H | sed s/'.define STATS_NOTICE'// | xargs echo -n`"
 if [ -n "$STATSN" ] ; then
@@ -143,14 +135,11 @@ SOLARIS=""
 DPATH="`pwd`"
 SPATH="`pwd`/src/ircd" 
 DFCOMP="1"
-CERR=""
 STATSN="1"
 SMOTD="0"
 DEFINVIS="1"
 HUB=""
 SYSLOG="1"
-ULOGPATH="none"
-OLOGPATH="none"
 LOGKILL=""
 LOGSQUIT="1"
 LOGCONN="1"
@@ -349,49 +338,6 @@ while [ -z "$FOO" ] ; do
     esac
 done
 
-
-
-
-FOO=""
-runonce=""
-while [ -z "$FOO" ] ; do
-    if [ -n "$CERR" ] ; then
-	FOO="Yes"
-    else
-	FOO="No"
-    fi
-    echo ""
-    echo "Do you want to have custom numerics compiled into your IRCD?"
-    echo "If you choose yes, alter include/s_err.h to set your numerics."
-    echo "If you dont know what this means, choose no."
-    echo -n "[$FOO] -> $c"
-    if [ -z "$AUTO_CONFIG" -o -n "$runonce" ] ; then
-	read cc
-	runonce=Yes
-    else
-	cc=""
-    fi
-    if [ -z "$cc" ] ; then
-	cc=$FOO
-    fi
-    case "$cc" in
-	[Yy]*)
-	    CERR="1"
-	    ;;
-	[Nn]*)
-	    CERR=""
-	    ;;
-	*)
-	    echo ""
-	    echo "You need to enter either Yes or No here..."
-	    echo ""
-	    FOO=""
-	    ;;
-    esac
-done
-
-##
-
 FOO=""
 runonce=""
 while [ -z "$FOO" ] ; do
@@ -539,47 +485,6 @@ while [ -z "$FOO" ] ; do
 	    ;;
     esac
 done
-
-	FOO=""
-	runonce=""
-while [ -z "$FOO" ] ; do
-    FOO="$ULOGPATH"
-    echo ""
-    echo "What file should the userlogs be stored?"
-    echo "This MUST be pointing to a file name."
-    echo -n "[$FOO] -> $c"
-    if [ -z "$AUTO_CONFIG" -o -n "$runonce" ] ; then
-	read cc
-    else
-	cc=""
-	runonce=Yes
-    fi
-    if [ -z "$cc" ] ; then
-	cc=$FOO
-    fi
-done
-ULOGPATH=$cc
-
-FOO=""
-runonce=""
-while [ -z "$FOO" ] ; do
-    FOO="$OLOGPATH"
-    echo ""
-    echo "What file should the opers be logged to?"
-    echo "This must also point directly at a file."
-    echo -n "[$FOO] -> $c"
-    if [ -z "$AUTO_CONFIG" -o -n "$runonce" ] ; then
-	read cc
-    else
-	cc=""
-	runonce=Yes
-    fi
-    if [ -z "$cc" ] ; then
-	cc=$FOO
-    fi
-done
-OLOGPATH=$cc
-
 
 
 FOO=""
@@ -926,25 +831,10 @@ cat > $OPTIONS_H << __EOF__
 #define MAX_BUFFER $MAXBUF
 #define SERVICES_NAME "$SERVICES_NAME"
 __EOF__
-if [ "$ULOGPATH" != "none" ] ; then
-	echo "#define FNAME_USERLOG \"$ULOGPATH\"" >> $OPTIONS_H
-else
-	echo "#undef FNAME_USERLOG" >> $OPTIONS_H
-fi
-if [ "$OLOGPATH" != "none" ] ; then
-	echo "#define FNAME_OPERLOG \"$OLOGPATH\"" >> $OPTIONS_H
-else
-	echo "#undef FNAME_OPERLOG" >> $OPTIONS_H
-fi
 if [ -n "$DFCOMP" ] ; then
     echo "#define DF_COMPATIBILITY" >> $OPTIONS_H
 else
     echo "#undef DF_COMPATIBILITY" >> $OPTIONS_H
-fi
-if [ -n "$CERR" ] ; then
-    echo "#define CUSTOM_ERR" >> $OPTIONS_H
-else
-    echo "#undef CUSTOM_ERR" >> $OPTIONS_H
 fi
 if [ -n "$STATSN" ] ; then
     echo "#define STATS_NOTICE" >> $OPTIONS_H
@@ -1021,10 +911,14 @@ echo "" >> $OPTIONS_H
 echo "#endif /* This is the endif for the ifdef at the top. */" >> $OPTIONS_H
 ### now insert the FDLIMIT in the makefile
 cat Makefile | sed s/'FDLIMIT=.*'/FDLIMIT=${FDLIMIT}/ | tee Makefile >/dev/null
+### Solaris compat?
+if [ -n "$SOLARIS" ] ; then
+cat Makefile | sed s/'XFLAGS='/XFLAGS=-DUSE_POLL/ | tee Makefile >/dev/null
+fi
 echo "Done."
 echo ""
 echo "Now your include/options.h is configured.  Please look over" 
-echo "include/config.h for more server specific options.  Now, to"
-echo "compile your server, type 'make'."
+echo "include/config.h for more server specific options."
+echo "To compile your server, type 'make'."
 
 

@@ -1221,13 +1221,6 @@ initconf(int opt, int fd)
 	    aconf->status = CONF_ADMIN;
 	    break;
 
-	 case 'B':		/*
-				 * Bots we know are ok 
-				 */
-	 case 'b':
-	    aconf->status = CONF_BLINE;
-	    break;
-
 	 case 'C':		/*
 				 * Server where I should try to connect 
 				 */
@@ -1527,25 +1520,6 @@ initconf(int opt, int fd)
 	 MyFree(host);
       }
 
-      if (aconf->host && (aconf->status & CONF_BLINE)) {
-   char       *host = host_field(aconf);
-
-	 dontadd = 1;
-	 switch (sortable(host)) {
-	    case 0:
-	       l_addto_conf_list(&BList3, aconf, host_field);
-	       break;
-	    case 1:
-	       addto_conf_list(&BList1, aconf, host_field);
-	       break;
-	    case -1:
-	       addto_conf_list(&BList2, aconf, rev_host_field);
-	       break;
-	 }
-
-	 MyFree(host);
-      }
-
       if (aconf->host && (aconf->status & CONF_ZLINE)) {
    char       *host = host_field(aconf);
 
@@ -1698,12 +1672,6 @@ is_comment(char *comment)
    return (*comment == '');
 }
 #endif
-
-int
-find_bline(aClient *cptr)
-{
-   return find_conf_match(cptr, &BList1, &BList2, &BList3);
-}
 
 int
 find_zline(char *host)
