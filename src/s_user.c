@@ -883,8 +883,7 @@ register_user(aClient *cptr,
       /*
        * * Don't mess with this one - IRCII needs it! -Avalon
        */
-      sendto_one(sptr,
-					  "NOTICE %s :*** Your host is %s, running version %s",
+      sendto_one(sptr, "NOTICE %s :*** Your host is %s, running version %s",
 					  nick, get_client_name(&me, TRUE), version);
 #endif
       sendto_one(sptr, rpl_str(RPL_CREATED), me.name, nick, creation);
@@ -893,12 +892,11 @@ register_user(aClient *cptr,
 		sendto_one(sptr, rpl_str(RPL_PROTOCTL), me.name, parv[0]);
       (void) send_lusers(sptr, sptr, 1, parv);
 		
-      sendto_one(sptr, "NOTICE %s :*** Notice -- motd was last changed at %s",
-					  nick, motd_last_changed_date);
+      sendto_one(sptr, ":%s NOTICE %s :*** Notice -- motd was last changed at %s",
+			me.name, nick, motd_last_changed_date);
 #ifdef SHORT_MOTD
-      sendto_one(sptr,
-					  "NOTICE %s :*** Notice -- Please read the motd if you haven't read it",
-					  nick);
+      sendto_one(sptr, ":%s NOTICE %s :*** Notice -- Please read the motd if you haven't read it",
+			me.name, nick);
 		
       sendto_one(sptr, rpl_str(RPL_MOTDSTART),
 					  me.name, parv[0], me.name);
@@ -923,18 +921,22 @@ register_user(aClient *cptr,
       (void) send_motd(sptr, sptr, 1, parv);
 #endif
 #ifdef WINGATE_NOTICE
-      sendto_one(sptr, "NOTICE %s :*** Notice -- This server runs a wingate detection monitor", nick);
-      sendto_one(sptr, "NOTICE %s :*** Notice -- If you see a port 1080, or port 23 connection from %s",nick, MONITOR_HOST);
-      sendto_one(sptr, "NOTICE %s :*** Notice -- Please disregard it.  It is the wingate scanner in action.",nick);
-      sendto_one(sptr, "NOTICE %s :*** Notice -- For more information please see http://www.mydesigns.net/dalnet/wingate.htm",nick);
+      sendto_one(sptr, ":%s NOTICE %s :*** Notice -- This server runs an open proxy/wingate detection monitor.", 
+		 me.name, nick);
+      sendto_one(sptr, ":%s NOTICE %s :*** Notice -- If you see a port 1080 or port 23 connection from %s", me.name, 
+		 nick, MONITOR_HOST);
+      sendto_one(sptr, ":%s NOTICE %s :*** Notice -- please disregard it, as it is the detector in action.",
+		 me.name, nick);
+      sendto_one(sptr, ":%s NOTICE %s :*** Notice -- For more information please see http://www.mydesigns.net/dalnet/wingate.htm", 
+		 me.name, nick);
 #endif
 #ifdef LITTLE_I_LINES
       if (sptr->confs && sptr->confs->value.aconf &&
 			 (sptr->confs->value.aconf->flags
 			  & CONF_FLAGS_LITTLE_I_LINE)) {
 			SetRestricted(sptr);
-			sendto_one(sptr, "NOTICE %s :*** Notice -- You are in a restricted access mode", nick);
-			sendto_one(sptr, "NOTICE %s :*** Notice -- You can not be chanopped", nick);
+			sendto_one(sptr, ":%s NOTICE %s :*** Notice -- You are in a restricted access mode", me.name, nick);
+			sendto_one(sptr, ":%s NOTICE %s :*** Notice -- You can not be chanopped", me.name, nick);
       }
 #endif
       nextping = timeofday;
