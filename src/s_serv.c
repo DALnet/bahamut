@@ -1274,11 +1274,6 @@ int m_info(aClient *cptr, aClient *sptr, int parc, char *parv[])
 #else
 	    strcat(outstr, " CLIENT_FLOOD=0");
 #endif
-#ifdef CLIENT_SERVER
-	    strcat(outstr, " CLIENT_SERVER=1");
-#else
-	    strcat(outstr, " CLIENT_SERVER=0");
-#endif
 	    sendto_one(sptr, rpl_str(RPL_INFO),
 		       me.name, parv[0], outstr);
 
@@ -1403,11 +1398,6 @@ int m_info(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	    strcpy(outstr, " OLD_Y_LIMIT=1");
 #else
 	    strcpy(outstr, " OLD_Y_LIMIT=0");
-#endif
-#ifdef REJECT_IPHONE
-	    strcat(outstr, " REJECT_IPHONE=1");
-#else
-	    strcat(outstr, " REJECT_IPHONE=0");
 #endif
 #ifdef RFC1035_ANAL
 	    strcat(outstr, " RFC1035_ANAL=1");

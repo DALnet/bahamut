@@ -369,8 +369,6 @@ int remove_dcc_references(aClient *sptr)
     return 0;
 }  
 
-#ifdef USE_NOQUIT
-
 /*
  * NOQUIT
  * a method of reducing the stress on the network during server splits
@@ -530,8 +528,6 @@ void exit_server(aClient *lcptr, aClient *cptr, aClient *from, char *comment)
     exit_one_server(cptr, cptr, from, lcptr, splitname, comment);
 }
 
-#endif /* USE_NOQUIT */
-
 /*
  *  exit_client 
  * This is old "m_bye". Name  changed, because this is not a
@@ -555,13 +551,6 @@ void exit_server(aClient *lcptr, aClient *cptr, aClient *from, char *comment)
  */
 int exit_client(aClient *cptr, aClient *sptr, aClient *from, char *comment)
 {
-    
-#ifndef USE_NOQUIT
-    aClient *acptr;
-    aClient *next;
-    char comment1[HOSTLEN + HOSTLEN + 2];
-#endif
-
 #ifdef	FNAME_USERLOG
     time_t on_for;
 
@@ -727,46 +716,6 @@ int exit_client(aClient *cptr, aClient *sptr, aClient *from, char *comment)
 	    
 	    sptr->sockerr = 0;
 	    sptr->flags |= FLAGS_DEADSOCKET;
-	    
-	    /*
-	     * First QUIT all NON-servers which are behind this link
-	     * 
-	     * Note:
-	     * There is no danger of 'cptr' being exited in the
-	     * following loops. 'cptr' is a *local* client, all
-	     * dependants are *remote* clients.
-	     */
-	    /*
-	     * This next bit is a a bit ugly but all it does is take the *
-	     * name of us.. me.name and tack it together with the name of *
-	     * the server sptr->name that just broke off and puts this *
-	     * together into exit_one_client() to provide some useful *
-	     * information about where the net is broken.      Ian
-	     */
-#ifndef USE_NOQUIT
-# ifdef ALWAYS_SEND_DURING_SPLIT
-	    currently_processing_netsplit = YES;
-# endif
-	    (void) strcpy(comment1, me.name);
-	    (void) strcat(comment1, " ");
-	    (void) strcat(comment1, sptr->name);
-	    for (acptr = client; acptr; acptr = next) 
-	    {
-		next = acptr->next;
-		if (!IsServer(acptr) && acptr->from == sptr)
-		    exit_one_client(sptr, acptr, &me, comment1);
-	    }
-	    /* Second SQUIT all servers behind this link */
-	    for (acptr = client; acptr; acptr = next) 
-	    {
-		next = acptr->next;
-		if (IsServer(acptr) && acptr->from == sptr)
-		    exit_one_client(sptr, acptr, &me, me.name);
-	    }
-# ifdef ALWAYS_SEND_DURING_SPLIT
-	    currently_processing_netsplit = NO;
-# endif
-#endif
 	}
 	else
 	{
@@ -787,10 +736,6 @@ int exit_client(aClient *cptr, aClient *sptr, aClient *from, char *comment)
 static void exit_one_client(aClient *cptr, aClient *sptr, aClient *from,
 			    char *comment)
 {
-#ifndef USE_NOQUIT
-    aClient *acptr;
-    int     i;
-#endif
     Link   *lp;
     
     /*
@@ -804,52 +749,16 @@ static void exit_one_client(aClient *cptr, aClient *sptr, aClient *from,
     }
     else if (IsServer(sptr))
     {
-#ifdef USE_NOQUIT
-# ifdef ALWAYS_SEND_DURING_SPLIT
+#ifdef ALWAYS_SEND_DURING_SPLIT
 	currently_processing_netsplit = YES;
-# endif
+#endif
 
 	exit_server(cptr, sptr, from, comment);
 	
-# ifdef ALWAYS_SEND_DURING_SPLIT
+#ifdef ALWAYS_SEND_DURING_SPLIT
 	currently_processing_netsplit = NO;
-# endif
+#endif
 	return;
-#else
-	/*
-	 * * Old sendto_serv_but_one() call removed because we now * need
-	 * to send different names to different servers * (domain name
-	 * matching)
-	 */
-	for (i = 0; i <= highest_fd; i++)
-	{
-	    aConfItem *aconf;
-	    
-	    if (!(acptr = local[i]) || !IsServer(acptr) ||
-		acptr == cptr || IsMe(acptr))
-		continue;
-	    if ((aconf = acptr->serv->nline) &&
-		(match(my_name_for_link(me.name, aconf),
-		       sptr->name) == 0))
-		continue;
-	    /*
-	     * SQUIT going "upstream". This is the remote squit still
-	     * hunting for the target. Use prefixed form. "from" will be
-	     * either the oper that issued the squit or some server
-	     * along the path that didn't have this fix installed. --msa
-	     */
-	    if (sptr->from == acptr)
-	    {
-		sendto_one(acptr, ":%s SQUIT %s :%s",
-			   from->name, sptr->name, comment);
-	    }
-	    else
-	    {
-		sendto_one(acptr, "SQUIT %s :%s",
-			   sptr->name, comment);
-	    }
-	}
-#endif /* USE_NOQUIT */
     }
     else if (!(IsPerson(sptr)))
 	/*

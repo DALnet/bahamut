@@ -308,19 +308,6 @@
 #include "defs.h"
 
 /*
- * USE_FAST_FD_ISSET - experimental! - crawl inside of FD_ISSET macro
- * This one is experimental, though it works on SUNOS and freebsd It is
- * NOT portable, and "crawls" carnally inside the FD_ISSET macro but
- * should be a faster way of doing select() in s_bsd.c
- * 
- * The idea is to pre-calculate the bit map mask needed shifting it over
- * as needed, the FD_ISSET calculates the bitmask and array offset
- * every single time.
- */
-/* Checked for by configure now. */
-/* #define USE_FAST_FD_ISSET */
-
-/*
  * TS_MAX_DELTA and TS_WARN_DELTA -  allowed delta for TS when another
  * server connects.
  * 
@@ -354,13 +341,6 @@
 #define NETWORK_BAN_NAME "autokill"
 #define LOCAL_BANNED_NAME "k-lined"
 #define NETWORK_BANNED_NAME "autokilled"
-
-/* CONNECTFAST
- *
- * if not defined, only allow 1 connection per listening socket 
- * every two seconds.
- */
-#define CONNECTFAST
 
 /*
  * LOCKFILE - Exclusive use of ircd.conf and kline.conf during writes
@@ -421,12 +401,6 @@
 #define RFC1035_ANAL
 
 /*
- * CLIENT_SERVER - Don't be so fascist about idle clients ;) changes
- * behaviour of HTM code to make clients lag less.
- */
-#define CLIENT_SERVER
-
-/*
  * NO_MIXED_CASE - reject mixed case usernames define this if you wish
  * to reject usernames like: FuckYou which don't have all one case
  */
@@ -437,12 +411,6 @@
  * ignore the first character
  */
 #define IGNORE_FIRST_CHAR
-
-/*
- * REJECT_IPHONE - reject I-phone clients Define if you want to reject
- * I-phoners
- */
-#define REJECT_IPHONE
 
 /*
  * USERNAMES_IN_TRACE - show usernames in trace Define this if you want
@@ -535,15 +503,6 @@
 #define MAXIMUM_LINKS 1
 
 /*
- * M4_PREPROC - run ircd.conf through m4 preprocessor To use m4 as a
- * preprocessor on the ircd.conf file, define M4_PREPROC. The server
- * will then call m4 each time it reads the ircd.conf file, reading m4
- * output as the server's ircd.conf file. m4 support is being moved
- * into viconf.c m4 will be run on ircd.conf.m4 producing ircd.conf
- */
-#undef	M4_PREPROC
-
-/*
  * IRCII_KLUDGE - leave it defined Define this if you want the server
  * to accomplish ircII standard Sends an extra NOTICE in the beginning
  * of client connection
@@ -583,22 +542,16 @@
 #define FAILED_OPER_NOTICE
 
 /*
- * RK_NOTICES - Show notices when rline/kline'd connections are denied.
- * This generates a TON of crap, I reccomend leaving it undef'd.
- */
-#undef RK_NOTICES
-
-/*
  * ANTI_NICK_FLOOD - prevents nick flooding define if you want to block
  * local clients from nickflooding
  */
 #define ANTI_NICK_FLOOD
 
 /*
- * defaults allow 5 nick changes in 20 seconds 
+ * defaults allow 4 nick changes in 20 seconds 
  */
 #define MAX_NICK_TIME 20
-#define MAX_NICK_CHANGES 5
+#define MAX_NICK_CHANGES 4
 
 /* NO_AWAY_FLUD
  * reallow propregation of AWAY messages, but do not allow AWAY flooding
@@ -835,12 +788,6 @@
  * You shouldn't change anything below this line, unless absolutely
  * needed.
  */
-
-/*
- * USE_NOQUIT use the noquit system to save bandwidth and network stress 
- * on netsplits. 
- */
-#define USE_NOQUIT
 
 /*
  * PING_NAZI
@@ -1119,24 +1066,12 @@
  * DEBUGMODE is used mostly for internal development, it is likely to
  * make your client server very sluggish. You usually shouldn't need
  * this. -Dianora
+ *
+ * Currently, DEBUGMODE is pretty much useless.
+ * Don't use it. - lucas
  */
 #undef  DEBUGMODE		/* define DEBUGMODE to enable */
 #undef DUMP_DEBUG
-
-/*
- * If your host supports varargs and has vsprintf(), vprintf() and
- * vscanf() C calls in its library, then you can define USE_VARARGS to
- * use varargs instead of imitation variable arg passing. #undef
- * USE_STDARGS
- * 
- * NOTE: with current server code, varargs doesn't survive because it
- * can't be used in a chain of 3 or more funtions which all have a
- * variable number of params.  If anyone has a solution to this, please
- * notify the maintainer.
- *
- * don't use this right now, in a future release it will (should) work, but
- * now it doesn't */
-#undef USE_STDARGS
 
 /* DONT_CHECK_QLINE_REMOTE
  * Don't check for Q:lines on remote clients.  We can't do anything
