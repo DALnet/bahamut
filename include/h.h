@@ -330,7 +330,7 @@ extern int     	  del_from_watch_hash_table(char *, aClient *);
 extern int     	  hash_check_watch(aClient *, int);
 extern int     	  hash_del_watch_list(aClient  *);
 extern aWatch 	 *hash_get_watch(char *);
-#define MAXWATCH       5
+#define MAXWATCH       128
 
 DLink *add_to_list(DLink **, void *);
 void remove_from_list(DLink **, void *, DLink *);
