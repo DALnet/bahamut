@@ -320,7 +320,7 @@ struct Message msgtab[] =
     {MSG_AKILL,    m_akill,    MAXPARA, 0,        0},
     {MSG_RAKILL,   m_rakill,   MAXPARA, 0,        0},
     {MSG_SILENCE,  m_silence,  MAXPARA, 0,        0},
-    {MSG_WATCH,    m_watch,    MAXPARA, 0,        0},
+    {MSG_WATCH,    m_watch,          1, 0,        0},
     {MSG_DCCALLOW, m_dccallow,       1, 0,        0},
     {MSG_SQLINE,   m_sqline,   MAXPARA, 0,        0},
     {MSG_UNSQLINE, m_unsqline, MAXPARA, 0,        0},
