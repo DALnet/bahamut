@@ -216,7 +216,7 @@ aClient    *make_client(aClient *from, aClient *uplink)
       cptr->status = STAT_UNKNOWN;
       cptr->fd = -1;
       cptr->uplink = uplink;
-      (void) strcpy(cptr->username, "unknown");
+      /* (void) strcpy(cptr->username, "unknown");  only in local structs now  */
       cptr->since = cptr->lasttime = cptr->firsttime = timeofday;
       /*
        * cptr->confs = NULL; 
@@ -342,17 +342,22 @@ make_user(aClient *cptr)
       if (user == (anUser *) NULL)
 	 outofmemory();
 
-      *user->username = '\0';
-      *user->host = '\0';
+      memset(user, 0, sizeof(anUser));
 
-      user->joined = 0;
+      /* the memset takes care of all of these.. 
+        *user->username = '\0';
+        *user->host = '\0';
 
-      user->channel = NULL;
-      user->invited = NULL;
-      user->away = NULL;
-      user->server = NULL;	/* scache server name */
-      user->silence = NULL;
-      user->lopt = NULL;
+        user->joined = 0;
+
+        user->channel = NULL;
+        user->invited = NULL;
+        user->away = NULL;
+        user->server = NULL;	// scache server name
+        user->silence = NULL;
+        user->lopt = NULL;
+        user->dccallow = NULL;
+      */
       cptr->user = user;
    }
    return user;

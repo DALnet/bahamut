@@ -324,6 +324,47 @@ my_name_for_link(char *name, aConfItem *aconf)
    return namebuf;
 }
 
+int remove_dcc_references(aClient *sptr)
+{  
+   aClient *acptr;
+   Link *lp, *nextlp;
+   Link **lpp, *tmp;
+   int found;
+            
+   lp = sptr->user->dccallow;
+            
+   while(lp)
+   {  
+      nextlp = lp->next;
+      acptr = lp->value.cptr;
+      for(found = 0, lpp = &(acptr->user->dccallow); *lpp; lpp=&((*lpp)->next))
+      {  
+         if(lp->flags == (*lpp)->flags)
+            continue; /* match only opposite types for sanity */
+         if((*lpp)->value.cptr == sptr)
+         {
+            if((*lpp)->flags == DCC_LINK_ME)
+            {  
+               sendto_one(acptr, ":%s %d %s :%s has been removed from your DCC allow list for signing off",
+                          me.name, RPL_DCCINFO, acptr->name, sptr->name);
+            }
+            tmp = *lpp;
+            *lpp = tmp->next;
+            free_link(tmp);
+            found++;
+            break;
+         }
+      }
+         
+      if(!found)
+         sendto_realops_lev(DEBUG_LEV, "rdr(): %s was in dccallowme list[%d] of %s but not in dccallowrem list!",
+                            acptr->name, lp->flags, sptr->name);
+      free_link(lp);
+      lp = nextlp;
+   }
+   return 0;
+}  
+
 #ifdef USE_NOQUIT
 
 /*
@@ -561,6 +602,7 @@ exit_client(
 				MyFree(sptr->user->lopt);
 				sptr->user->lopt = NULL;
 			}
+                        remove_dcc_references(sptr);
 			sendto_realops_lev(CCONN_LEV, "Client exiting: %s (%s@%s) [%s] [%s]",
 									 sptr->name, sptr->user->username,
 									 sptr->user->host,

@@ -345,7 +345,8 @@ void count_memory(aClient *cptr, char *nick)
    int         usc = 0;		/*
 				 * users in channels 
 				 */
-	 
+   int         usdm = 0;	/* dccallow local */
+   int         usdr = 0;	/* dccallow remote */ 
    int         uss = 0;         /* silenced users */
    int         aw = 0;		/*
 				 * aways set 
@@ -450,6 +451,14 @@ void count_memory(aClient *cptr, char *nick)
 	 for (link = acptr->user->channel; link;
 	      link = link->next)
 	    usc++;
+	 for (link = acptr->user->dccallow; link;
+	      link = link->next)
+         {
+            if(link->flags == DCC_LINK_ME)
+              usdm++;
+            else
+              usdr++;
+         }
 	 for (link = acptr->user->silence; link;
 	      link = link->next)
 	    uss++;
@@ -519,7 +528,7 @@ void count_memory(aClient *cptr, char *nick)
    fludallocsz = fludalloc * free_fludbots->elemSize;
 #endif
 
-   totallinks = lcc + usi +  uss + usc + chi + wle + fludlink;
+   totallinks = lcc + usi +  uss + usc + chi + wle + fludlink + usdm + usdr;
 
    sendto_one(cptr, ":%s %d %s :Memory Use Summary",
 	      me.name, RPL_STATSDEBUG, nick);
@@ -542,6 +551,8 @@ void count_memory(aClient *cptr, char *nick)
 	  me.name, RPL_STATSDEBUG, nick, usi, usi * sizeof(Link), chi, chi * sizeof(Link));
    sendto_one(cptr, ":%s %d %s :   UserChannels %d(%d)",
 	      me.name, RPL_STATSDEBUG, nick, usc, usc * sizeof(Link));
+   sendto_one(cptr, ":%s %d %s :   DCCAllow Local %d(%d) Remote %d(%d)",
+	      me.name, RPL_STATSDEBUG, nick, usdm, usdm * sizeof(Link), usdr, usdr * sizeof(Link));
    sendto_one(cptr, ":%s %d %s :   WATCH entries %d(%d)",
 	      me.name, RPL_STATSDEBUG, nick, wle, wle*sizeof(Link));
    sendto_one(cptr, ":%s %d %s :   Attached confs %d(%d)",

@@ -361,6 +361,8 @@
 #define ERR_SILELISTFULL     511
 #define ERR_TOOMANYWATCH     512
 
+#define ERR_TOOMANYDCC       514
+
 #define ERR_LISTSYNTAX       521
 #define ERR_WHOSYNTAX        522
 #define ERR_WHOLIMEXCEED     523
@@ -373,5 +375,10 @@
 #define RPL_NOWOFF           605
 #define RPL_WATCHLIST        606
 #define RPL_ENDOFWATCHLIST   607
+
+#define RPL_DCCSTATUS           617
+#define RPL_DCCLIST          618
+#define RPL_ENDOFDCCLIST     619
+#define RPL_DCCINFO          620
 
 #define ERR_NUMERIC_ERR      999

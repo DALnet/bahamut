@@ -113,6 +113,10 @@ typedef struct MotdItem aMotd;
 #define        MAXSILES        5
 #define        MAXSILELENGTH   128
 
+#define MAXDCCALLOW 5
+#define DCC_LINK_ME	0x01	/* This is my dcc allow */
+#define DCC_LINK_REMOTE 0x02    /* I need to remove these dcc allows from these clients when I die */
+
 #define	USERHOST_REPLYLEN	(NICKLEN+HOSTLEN+USERLEN+5)
 
 /*
@@ -241,7 +245,7 @@ typedef struct MotdItem aMotd;
 #define UMODE_h     0x20000 /* umode +h - Helper */
 #define UMODE_m     0x40000 /* umode +m - spambot notices */
 #define UMODE_R     0x80000 /* unmode +R - Routing staff */
-#define UMODE_D     0x100000   /* umode +D - accepting dcc sends */
+#define UMODE_D     0x100000   /* umode +D - pseudo/hidden, has seen dcc warning message */
 #define UMODE_e     0x200000   /* umode +e - oper notices for the above +D */
 
 /* for sendto_ops_lev */
@@ -258,7 +262,7 @@ typedef struct MotdItem aMotd;
 #define	SEND_UMODES (UMODE_i|UMODE_o|UMODE_w|UMODE_r|UMODE_a|UMODE_A|UMODE_h|UMODE_R)
 #define ALL_UMODES (SEND_UMODES|UMODE_s|UMODE_c|UMODE_r|UMODE_k|UMODE_f|\
 	UMODE_y|UMODE_d|UMODE_g|UMODE_b|UMODE_n|UMODE_h|UMODE_m|\
-	UMODE_O|UMODE_R|UMODE_D|UMODE_e)
+	UMODE_O|UMODE_R|UMODE_e)
 #ifdef DEFAULT_HELP_MODE
 #define OPER_UMODES (UMODE_o|UMODE_w|UMODE_s|UMODE_y|UMODE_d|UMODE_g|UMODE_n|UMODE_h)
 #else
@@ -285,9 +289,8 @@ typedef struct MotdItem aMotd;
 #define IsUmodeh(x)   ((x)->umode & UMODE_h)
 #define IsUmodee(x)   ((x)->umode & UMODE_e)
 #define IsRouting(x)  ((x)->umode & UMODE_R)
-#define GetDCC(x)      ((x)->umode & UMODE_D)
-#define SetGetDCC(x)   ((x)->umode |= UMODE_D)
-#define UnsetGetDCC(x) ((x)->umode &= ~UMODE_D)
+#define SeenDCCNotice(x)      ((x)->umode & UMODE_D)
+#define SetDCCNotice(x)   ((x)->umode |= UMODE_D)
 #define	IsPerson(x)		((x)->user && IsClient(x))
 #define	IsPrivileged(x)		(IsAnOper(x) || IsServer(x))
 #define	SendWallops(x)		((x)->umode & UMODE_w)
@@ -560,6 +563,7 @@ struct ConfItem {
 #ifdef LITTLE_I_LINES
 #define CONF_FLAGS_LITTLE_I_LINE	0x0001
 #endif
+
 /* Client structures */
 struct User {
 	Link       *channel;		/* chain of channel pointer blocks */
@@ -582,7 +586,8 @@ struct User {
     * USER is introduced... --msa
     */
 	Link       *silence;    /* chain of silenced users */
-	LOpts 	   *lopt;      /* Saved /list options */
+	LOpts 	   *lopt;       /* Saved /list options */
+        Link       *dccallow;   /* chain of dcc send allowed users */
 };
 
 struct Server {
@@ -611,8 +616,7 @@ struct Client {
 	short       status;		  /* Client type */
 	char        nicksent;
 	char        name[HOSTLEN + 1];	/* Unique name of the client, nick or host */
-	char        username[USERLEN + 1]; /* username here now for auth stuff */
-  char        info[REALLEN + 1];	   /* Free form additional client information */
+	char        info[REALLEN + 1];	   /* Free form additional client information */
 #ifdef FLUD
 	Link       *fludees;
 #endif
@@ -652,6 +656,7 @@ struct Client {
 	aClient    *acpt;		   /* listening client which we accepted from */
   	Link       *confs;		 /* Configuration record associated */
   	int         authfd;	   /* fd for rfc931 authentication */
+	char        username[USERLEN + 1]; /* username here now for auth stuff */
 	struct in_addr ip;		 /* keep real ip# too */
 	char        hostip[HOSTIPLEN + 1];	/* Keep real ip as string too - Dianora */
 	unsigned short port;	 /* and the remote port# too :-) */

@@ -83,7 +83,6 @@ static int  user_modes[] =
  UMODE_k, 'k',
  UMODE_y, 'y',
  UMODE_d, 'd',
- UMODE_D, 'D',
  UMODE_e, 'e',
  UMODE_g, 'g',
  UMODE_b, 'b',
@@ -131,6 +130,7 @@ void        free_fluders(aClient *, aChannel *);
 void        free_fludees(aClient *);
 #endif
 int      check_for_ctcp(char *, char **);
+int      allow_dcc(aClient *, aClient *);
 static int      is_silenced(aClient *, aClient *);
 
 #ifdef ANTI_SPAMBOT
@@ -1726,7 +1726,7 @@ int check_dccsend(aClient *from, aClient *to, char *msg)
    if(farray[i] == NULL)
       return 0;
 
-   if(!GetDCC(to))
+   if(!allow_dcc(to, from))
    {
       char tmpext[8];
       char tmpfn[128];
@@ -1746,15 +1746,24 @@ int check_dccsend(aClient *from, aClient *to, char *msg)
        *   server notices are not ignored by clients.
        */ 
 
-      sendto_one(from, ":%s NOTICE %s :The user %s does not accept DCC sends of filetype *.%s. Your file %s was not sent.",
+      sendto_one(from, ":%s NOTICE %s :The user %s is not accepting DCC sends of filetype *.%s from you."
+                       " Your file %s was not sent.",
          me.name, from->name, to->name, tmpext, tmpfn);
 
-      sendto_one(to, ":%s NOTICE %s :%s (%s@%s) has attempted to send you a file named %s.",
+      sendto_one(to, ":%s NOTICE %s :%s (%s@%s) has attempted to send you a file named %s, which was blocked.",
          me.name, to->name, from->name, from->user->username, from->user->host, tmpfn);
-      sendto_one(to, ":%s NOTICE %s :The majority of files sent of this type are malicious virii and trojan horses.",
-         me.name, to->name);
-      sendto_one(to, ":%s NOTICE %s :If you trust %s, and have asked him/her to send you this file, you may enable receiving of one file of this type by typing: /mode %s +D",
-         me.name, to->name, from->name, to->name);
+
+      if(!SeenDCCNotice(to))
+      {
+         SetDCCNotice(to);
+ 
+         sendto_one(to, ":%s NOTICE %s :The majority of files sent of this type are malicious virii and trojan horses."
+                        " In order to prevent the spread of this problem, we are blocking DCC sends of these types of"
+                        " files by default.", me.name, to->name);
+         sendto_one(to, ":%s NOTICE %s :If you trust %s, and want him/her to send you this file, you may obtain"
+                        " more information on using the dccallow system by typing /dccallow help",
+                        me.name, to->name, from->name, to->name);
+      }
 
       for(tlp = to->user->channel; tlp && !chptr; tlp = tlp->next)
       {
@@ -1773,13 +1782,6 @@ int check_dccsend(aClient *from, aClient *to, char *msg)
             from->user->username, from->user->host, tmpfn, to->name); 
 
       return 1;
-   }
-   else
-   {
-      unsigned long old = to->umode;
-
-      UnsetGetDCC(to);
-      send_umode(to, to, old, ALL_UMODES, buf);
    }
 
    return 0;
@@ -3918,12 +3920,6 @@ m_umode(aClient *cptr,
 		  delfrom_fdlist(sptr->fd, &oper_fdlist);
    }
 
-   if(!(setflags & UMODE_D) && GetDCC(sptr)) {
-      sendto_one(sptr, ":%s NOTICE %s :\002WARNING\002: by setting yourself +D, the server will no longer block DCC sends"
-                 " of known malicious filetypes. If you want the server to continue blocking these files, type /mode %s -D", 
-                 me.name, sptr->name, sptr->name);
-   }
-
   /*
     * We dont want non opers setting themselves +b - Raistlin
     */
@@ -4812,7 +4808,6 @@ static int add_silence(aClient *sptr,char *mask) {
 		  return -1;
 	}
 	lp = make_link();
-	memset((char *)lp, '\0', sizeof(Link));
 	lp->next = sptr->user->silence;
 	lp->value.cp = (char *)MyMalloc(strlen(mask)+1);
 	(void)strcpy(lp->value.cp, mask);
@@ -4849,7 +4844,7 @@ int m_silence(aClient *cptr,aClient *sptr,int parc,char *parv[]) {
 		else if (!(strchr(cp, '@') || strchr(cp, '.') ||
 					  strchr(cp, '!') || strchr(cp, '*'))) {
 			sendto_one(sptr, err_str(ERR_NOSUCHNICK), me.name, parv[0], parv[1]);
-			return -1;
+			return 0;
 		}
 		else c = '+';
 		cp = pretty_mask(cp);
@@ -4875,12 +4870,222 @@ int m_silence(aClient *cptr,aClient *sptr,int parc,char *parv[]) {
 		} 
 	} else {
 		sendto_one(sptr, err_str(ERR_NOSUCHNICK), me.name, parv[0], parv[1]);
-		return -1;
+		return 0;
 	}
 	return 0;
 }
-			
-		 
-				
-			
 
+int add_dccallow(aClient *sptr, aClient *optr)
+{
+   Link *lp;
+   int cnt = 0;
+
+   for(lp = sptr->user->dccallow; lp; lp = lp->next)
+   {
+      if(lp->flags != DCC_LINK_ME)
+         continue;
+      if(++cnt >= MAXDCCALLOW)
+      {
+         sendto_one(sptr, err_str(ERR_TOOMANYDCC), me.name, sptr->name, MAXDCCALLOW);
+         return 0;
+      }
+      else if(lp->value.cptr == optr)
+      {
+         /* silently return */
+         return 0;
+      }
+   }
+
+   lp = make_link();
+   lp->value.cptr = optr;
+   lp->flags = DCC_LINK_ME;
+   lp->next = sptr->user->dccallow;
+   sptr->user->dccallow = lp;
+
+   lp = make_link();
+   lp->value.cptr = sptr;
+   lp->flags = DCC_LINK_REMOTE;
+   lp->next = optr->user->dccallow;
+   optr->user->dccallow = lp;   
+
+   sendto_one(sptr, rpl_str(RPL_DCCSTATUS), me.name, sptr->name, optr->name, "added to");
+   return 0;
+}
+
+int del_dccallow(aClient *sptr, aClient *optr) 
+{
+   Link **lpp, *lp;
+   int found = 0;
+
+   for (lpp = &(sptr->user->dccallow); *lpp; lpp=&((*lpp)->next))
+   {
+      if((*lpp)->flags != DCC_LINK_ME)
+         continue;
+
+      if((*lpp)->value.cptr == optr)
+      {
+         lp = *lpp;
+         *lpp = lp->next;
+         free_link(lp);
+         found++;
+         break;
+      }
+   }
+
+   if(!found)
+   {
+      sendto_one(sptr, ":%s %d %s :%s is not in your DCC allow list", me.name, RPL_DCCINFO, sptr->name, optr->name);
+      return 0;
+   }
+
+   for (found = 0, lpp = &(optr->user->dccallow); *lpp; lpp=&((*lpp)->next))
+   {
+      if((*lpp)->flags != DCC_LINK_REMOTE)
+         continue;
+
+      if((*lpp)->value.cptr == sptr)
+      {
+         lp = *lpp;
+         *lpp = lp->next;
+         free_link(lp);
+         found++;
+         break;
+      }
+   }
+
+   if(!found)
+      sendto_realops_lev(DEBUG_LEV, "%s was in dccallowme list of %s but not in dccallowrem list!",
+                         optr->name, sptr->name);
+
+   sendto_one(sptr, rpl_str(RPL_DCCSTATUS), me.name, sptr->name, optr->name, "removed from");
+
+   return 0;
+}
+
+int allow_dcc(aClient *to, aClient *from)
+{
+   Link *lp;
+
+   for(lp = to->user->dccallow; lp; lp = lp->next)
+   {
+      if(lp->flags == DCC_LINK_ME && lp->value.cptr == from)
+         return 1;
+   }
+   return 0;
+}
+
+int m_dccallow(aClient *cptr, aClient *sptr, int parc, char *parv[])
+{
+   Link *lp;
+   char *p, *s;
+   char *cn;
+   aClient *acptr, *lastcptr = NULL;
+   int didlist = 0, didhelp = 0, didanything = 0;
+   char **ptr;
+   static char *dcc_help[] = {
+      "/DCCALLOW [<+|->nick[,<+|->nick, ...]] [list] [help]",
+      "You may allow DCCs of filetypes which are otherwise blocked by the IRC server",
+      "by specifying a DCC allow for the user you want to recieve files from.",
+      "For instance, to allow the user bob to send you file.exe, you would type:",
+      "/dccallow +bob",
+      "and bob would then be able to send you files. bob will have to resend the file",
+      "if the server gave him an error message before you added him to your allow list.",
+      "/dccallow -bob",
+      "Will do the exact opposite, removing him from your dcc allow list.",
+      "/dccallow list",
+      "Will list the users currently on your dcc allow list.",
+      NULL };
+
+   if(!MyClient(sptr)) return 0; /* don't accept dccallows from servers or clients that aren't mine.. */
+
+   if(parc < 2)
+   {
+      sendto_one(sptr, ":%s NOTICE %s :No command specified for DCCALLOW. Type /dccallow help for more information.",
+                 me.name, sptr->name);
+      return 0;
+   }
+
+   for (p = NULL, s = strtoken(&p, parv[1], ", "); s; s = strtoken(&p, NULL, ", "))
+   {
+      if(*s == '+')
+      {
+         didanything++;
+         cn = s + 1;
+         if(*cn == '\0')
+            continue;
+
+         acptr = find_person(cn, NULL);
+
+         if(acptr == sptr) continue;
+
+         if(!acptr)
+         {
+            sendto_one(sptr, err_str(ERR_NOSUCHNICK), me.name, sptr->name, cn);
+            continue;
+         }
+
+         if(lastcptr == acptr)
+            sendto_realops_lev(SPY_LEV, "User %s (%s@%s) may be flooding dccallow: add %s", 
+                               sptr->name, sptr->user->username, sptr->user->host, acptr->name);
+
+         lastcptr = acptr;
+         add_dccallow(sptr, acptr);
+      }
+      else if(*s == '-')
+      {
+         didanything++;
+         cn = s + 1;
+         if(*cn == '\0')
+            continue;
+
+         acptr = find_person(cn, NULL);
+
+         if(acptr == sptr) continue;
+
+         if(!acptr)
+         {
+            sendto_one(sptr, err_str(ERR_NOSUCHNICK), me.name, sptr->name, cn);
+            continue;
+         }
+
+         if(lastcptr == acptr)
+            sendto_realops_lev(SPY_LEV, "User %s (%s@%s) may be flooding dccallow: del %s", 
+                               sptr->name, sptr->user->username, sptr->user->host, acptr->name);
+
+         lastcptr = acptr;
+         del_dccallow(sptr, acptr);
+      }
+      else
+      {
+         if(!didlist && myncmp(s, "list", 4) == 0)
+         {
+            didanything++;
+            didlist++;
+            sendto_one(sptr, ":%s %d %s :The following users are on your dcc allow list:", 
+                       me.name, RPL_DCCINFO, sptr->name);
+            for(lp = sptr->user->dccallow; lp; lp = lp->next)
+               sendto_one(sptr, ":%s %d %s :%s %s", me.name, RPL_DCCLIST, sptr->name, lp->value.cptr->name, 
+                  (lp->flags == DCC_LINK_REMOTE) ? "is allowing you to send to them" :
+                  "is being allowed to send to you");
+            sendto_one(sptr, rpl_str(RPL_ENDOFDCCLIST), me.name, sptr->name, s);
+         }
+         else if(!didhelp && myncmp(s, "help", 4) == 0)
+         {
+            didanything++;
+            didhelp++;
+            for(ptr = dcc_help; *ptr; ptr++)
+               sendto_one(sptr, ":%s %d %s :%s", me.name, RPL_DCCINFO, sptr->name, *ptr);
+            sendto_one(sptr, rpl_str(RPL_ENDOFDCCLIST), me.name, sptr->name, s);
+         }
+      }
+   }
+
+   if(!didanything)
+   {
+      sendto_one(sptr, ":%s NOTICE %s :Invalid syntax for DCCALLOW. Type /dccallow help for more information.",
+                 me.name, sptr->name);
+      return 0;
+   }
+
+   return 0;
+}
