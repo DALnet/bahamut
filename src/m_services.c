@@ -274,7 +274,7 @@ int m_services(aClient *cptr, aClient *sptr, int parc, char *parv[])
 /* m_identify  df465+taz */
 int m_identify(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
-    char       buf[BUFSIZE];
+    char       buf[BUFSIZE+1];
     char       *myparv[parc];
 
     if (check_registered_user(sptr))
