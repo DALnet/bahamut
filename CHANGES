@@ -27,6 +27,8 @@ Changes for 1.4.35
 - /stats t shows more information
 - Various code cleanup and readability fixes
 - Users and opers will now recieve a different output to '/who ?'.
+- When 'HELP_FORWARD_HS' is defined, non-opers /quote help requests
+  will be forwarded to HelpServ.
 
 Changes for 1.4.34
 - Don't use FD_SETSIZE at all if USE_POLL is defined
