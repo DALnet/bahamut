@@ -271,6 +271,7 @@ extern int  	  dopacket(aClient *, char *, int);
 extern int  	  client_dopacket(aClient *, char *, int);
 
 extern int 	  is_a_drone(aClient *);
+extern void	  drone_init();
 
 /* VARARGS2 */
 

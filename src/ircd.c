@@ -804,6 +804,8 @@ int main(int argc, char *argv[])
 
     init_userban();
 
+    drone_init();
+
     initlists();
     initclass();
     initwhowas();

@@ -41,6 +41,13 @@
 /* Forward declarations go here. */
 int check_drone_PB(char *, char *);
 
+/*
+ * drone_init
+ * called once at ircd startup
+ */
+void drone_init()
+{
+}
 
 /* 
  * is_a_drone:
