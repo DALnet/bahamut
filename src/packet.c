@@ -184,9 +184,10 @@ zcontinue:
          }
          else
          {
-            sendto_realops("Overflowed zipInBuf %d times in the last %d seconds. "
+            sendto_realops("Overflowed zipInBuf %d time%s in the last %d minutes. "
                            "If you see this a lot, you should increase zipInBufSize in src/zlink.c.",
-                           numrepeat, last_complain);
+                           numrepeat, numrepeat == 1 ? "" : "s",
+                           (NOW - last_complain) / 60);
          }
          last_complain = NOW;
          numrepeat = 0;
