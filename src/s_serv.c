@@ -5139,16 +5139,18 @@ int m_sqline(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
    aConfItem *aconf;
 
-   if(!IsServer(sptr)||!IsULine(sptr))
+   if(!(IsServer(sptr) || IsULine(sptr)))
       return 0;
-   if(parc<2) 
+
+   if(parc < 2) 
    {
 	sendto_one(sptr, err_str(ERR_NEEDMOREPARAMS), me.name, parv[0], "SQLINE");
 	return 0;
    }
 	
    /* get rid of redundancies */
-   parv[1]=collapse(parv[1]);
+   parv[1] = collapse(parv[1]);
+
    /* if we have any Q:lines (SQ or Q) that match
     * this Q:line, just return (no need to waste cpu */
 
@@ -5169,24 +5171,26 @@ int m_sqline(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	
 int m_unsqline(aClient *cptr, aClient *sptr, int parc, char *parv[]) 
 {
-    int matchit=0;
+    int matchit = 0;
     char *mask;
     aConfItem *aconf, *ac2, *ac3;
     
-    if(!IsServer(sptr))
+    if(!(IsServer(sptr) || IsULine(sptr)))
 	return 0;
     
-    if(parc<2) 
+    if(parc < 2) 
     {
 	sendto_one(sptr, err_str(ERR_NEEDMOREPARAMS), me.name, parv[0], "UNSQLINE");
 	return 0;
     }
     
-    if (parc==3) {
+    if (parc == 3) 
+    {
 	matchit=atoi(parv[1]);
 	mask=parv[2];
     } else
 	mask=parv[1];
+
     /* find the sqline and remove it */
     /* this was way too complicated and ugly. Fixed. -lucas */
     /* Changed this to use match.  Seems to make more sense? */
@@ -5214,11 +5218,12 @@ int m_unsqline(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	    aconf=aconf->next;
 	}
     }
-    if (parc==3) 
+
+    if (parc == 3) 
 	sendto_serv_butone(cptr, ":%s UNSQLINE %d :%s", sptr->name, matchit,
 			   mask);
     else
-	sendto_serv_butone(cptr, ":%s UNSQLINE :%s",sptr->name,mask);
+	sendto_serv_butone(cptr, ":%s UNSQLINE :%s", sptr->name, mask);
     return 0;
 }
 
@@ -5228,8 +5233,9 @@ int m_sgline(aClient *cptr, aClient *sptr, int parc, char *parv[])
    int len;
    char *mask, *reason;
     
-   if(!IsServer(sptr)||!IsULine(sptr))
+   if(!(IsServer(sptr) || IsULine(sptr)))
       return 0;
+
    if(parc<3) 
    {
 	sendto_one(sptr, err_str(ERR_NEEDMOREPARAMS), me.name, parv[0], "SGLINE");
@@ -5238,10 +5244,13 @@ int m_sgline(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	
    len=atoi(parv[1]);
    mask=parv[2];
-   if ((mask[len])==':') {
-       mask[len]='\0';
-       reason=mask+len+1;
-   } else { /* Bogus */
+   if ((strlen(mask) > len) && (mask[len])==':') 
+   {
+       mask[len] = '\0';
+       reason = mask+len+1;
+   } 
+   else 
+   { /* Bogus */
        return 0;
    }
 
@@ -5270,7 +5279,7 @@ int m_unsgline(aClient *cptr, aClient *sptr, int parc, char *parv[])
     char *mask;
     aConfItem *aconf, *ac2, *ac3;
    
-   if(!IsServer(sptr)||!IsULine(sptr))
+   if(!(IsServer(sptr) || IsULine(sptr)))
       return 0;
    
    if(parc<2) 
@@ -5325,8 +5334,9 @@ int m_szline(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
    aConfItem *aconf;
 
-   if(!IsServer(sptr)||!IsULine(sptr))
+   if(!(IsServer(sptr) || IsULine(sptr)))
       return 0;
+
    if(parc<2) 
    {
 	sendto_one(sptr, err_str(ERR_NEEDMOREPARAMS), me.name, parv[0], "SZLINE");
