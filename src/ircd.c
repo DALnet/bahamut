@@ -359,16 +359,19 @@ Reg aClient *cptr;
 aConfItem  *aconf = (aConfItem *) NULL;
 Reg int     killflag, zkillflag;
 
-int         ping = 0, i, rflag = 0;
+int         ping = 0, i;
 time_t      oldest = 0, timeout;
 
-   for (i = 0; i <= highest_fd; i++) {
+   for (i = 0; i <= highest_fd; i++) 
+   {
       if (!(cptr = local[i]) || IsMe(cptr) || IsLog(cptr))
 	 continue;
+
       /*
        * * Note: No need to notify opers here. It's * already done when
        * "FLAGS_DEADSOCKET" is set.
        */
+
       if (cptr->flags & FLAGS_DEADSOCKET) {
 	 (void) exit_client(cptr, cptr, &me, (cptr->flags & FLAGS_SENDQEX) ?
 			    "SendQ exceeded" : "Dead socket");
@@ -381,25 +384,25 @@ time_t      oldest = 0, timeout;
 	 continue;
       }
 
+      killflag = NO;
+      zkillflag = NO;
+
       if (rehashed) {
 	 if (zline_in_progress) {
-	    killflag = NO;
-	    zkillflag = NO;
 	    if (IsPerson(cptr)) {
 	       if ((aconf = find_zkill(cptr)))	/*
 						 * if there is a
 						 * * returned 
 						 */
-		  zkillflag = 1;	/*
+		  zkillflag = YES;	/*
 					 * aConfItem.. then kill it 
 					 */
 	    }
 	 }
-	 else {
-	    killflag = NO;
-	    zkillflag = NO;
-	    if (IsPerson(cptr)) {
-	       if ((aconf = find_kill(cptr)))	/*
+	 else 
+	 {
+	    if(IsPerson(cptr)) {
+	       if((aconf = find_kill(cptr)))	/*
 						 * if there is a
 						 * * returned 
 						 */
@@ -409,20 +412,18 @@ time_t      oldest = 0, timeout;
 	    }
 	 }
       }
-      else {
-	 killflag = NO;
-	 zkillflag = NO;
-      }
+
       /*
        * * Added a bit of code here to differentiate * between K and
        * Z-lines. -ThemBones
        */
-      if ((!zkillflag) && (!killflag))
-	 ping = get_client_ping(cptr);
-      else {
-char       *reason;
 
-	 if (killflag) {
+      if (zkillflag || killflag)
+      {
+         char       *reason;
+
+	 if (killflag) 
+         {
 	    sendto_ops("K-line active for %s",
 		       get_client_name(cptr, FALSE));
 #ifdef K_COMMENT_ONLY
@@ -432,7 +433,8 @@ char       *reason;
 	       "K-lined" : aconf->passwd;
 #endif
 	 }
-	 else {			/*
+	 else 
+         {			/*
 				 * its a Z line 
 				 */
 	    sendto_ops("Z-line active for %s",
@@ -443,14 +445,16 @@ char       *reason;
 	 sendto_one(cptr, err_str(ERR_YOUREBANNEDCREEP),
 		    me.name, cptr->name, reason);
 
-	 if (killflag) {
+	 if (killflag) 
+	 {
 #ifdef KLINE_WITH_REASON
 	    (void) exit_client(cptr, cptr, &me, reason);
 #else
 	    (void) exit_client(cptr, cptr, &me, "you have been K-lined");
 #endif
 	 }
-	 else {
+	 else 
+	 {
 #ifdef KLINE_WITH_REASON
 	    (void) exit_client(cptr, cptr, &me, reason);
 #else
@@ -464,96 +468,100 @@ char       *reason;
 #endif
 	 continue;
       }
-      if (!IsRegistered(cptr))
+
+      if (IsRegistered(cptr))
+	 ping = get_client_ping(cptr);
+      else
 	 ping = CONNECTTIMEOUT;
+
       /*
        * Ok, so goto's are ugly and can be avoided here but this code
        * is already indented enough so I think its justified. -avalon
+       *
+       * justified by what? laziness? <g>
+       * If the client pingtime is fine (ie, not larger than the client ping) 
+       * skip over all the checks below. - lucas
        */
-      if (!rflag &&
-	  (ping >= currenttime - cptr->lasttime))
-	 goto ping_timeout;
-      /*
-       * If the server hasnt talked to us in 2*ping seconds and it has
-       * a ping time, then close its connection. If the client is a
-       * user and a KILL line was found to be active, close this
-       * connection too.
-       */
-      if (((currenttime - cptr->lasttime) >= (2 * ping) &&
-	   (cptr->flags & FLAGS_PINGSENT)) ||
-      ((!IsRegistered(cptr) && (currenttime - cptr->since) >= ping)) ||
-	  (rflag && !IsUnknown(cptr))) {
-	 if (!IsRegistered(cptr) &&
-	     (DoingDNS(cptr) || DoingAuth(cptr))) {
-	    if (cptr->authfd >= 0) {
-	       (void) close(cptr->authfd);
-	       cptr->authfd = -1;
-	       cptr->count = 0;
-	       *cptr->buffer = '\0';
-	    }
+
+      if (!(ping >= currenttime - cptr->lasttime))
+      {
+         /*
+          * If the server hasnt talked to us in 2*ping seconds and it has
+          * a ping time, then close its connection. If the client is a
+          * user and a KILL line was found to be active, close this
+          * connection too.
+          */
+         if (((currenttime - cptr->lasttime) >= (2 * ping) && (cptr->flags & FLAGS_PINGSENT)) ||
+             ((!IsRegistered(cptr) && (currenttime - cptr->since) >= ping)) ||
+	     (!IsUnknown(cptr))) 
+         {
+	    if (!IsRegistered(cptr) && (DoingDNS(cptr) || DoingAuth(cptr))) {
+	       if (cptr->authfd >= 0) {
+	          (void) close(cptr->authfd);
+	          cptr->authfd = -1;
+	          cptr->count = 0;
+	          *cptr->buffer = '\0';
+	       }
 #ifdef SHOW_HEADERS
-	    if (DoingDNS(cptr))
-	       send(cptr->fd, REPORT_FAIL_DNS, R_fail_dns, 0);
-	    else
-	       send(cptr->fd, REPORT_FAIL_ID, R_fail_id, 0);
+	       if (DoingDNS(cptr))
+	          send(cptr->fd, REPORT_FAIL_DNS, R_fail_dns, 0);
+	       else
+	          send(cptr->fd, REPORT_FAIL_ID, R_fail_id, 0);
 #endif
-	    Debug((DEBUG_NOTICE, "DNS/AUTH timeout %s",
-		   get_client_name(cptr, TRUE)));
-	    del_queries((char *) cptr);
-	    ClearAuth(cptr);
-	    ClearDNS(cptr);
-	    SetAccess(cptr);
-	    cptr->since = currenttime;
-	    continue;
-	 }
-	 if (IsServer(cptr) || IsConnecting(cptr) ||
-	     IsHandshake(cptr)) 
-	 {
-		char fbuf[512];
-		char *errtxt = "No response from %s, closing link";
+	       Debug((DEBUG_NOTICE, "DNS/AUTH timeout %s",
+	 	      get_client_name(cptr, TRUE)));
+	       del_queries((char *) cptr);
+	       ClearAuth(cptr);
+	       ClearDNS(cptr);
+	       SetAccess(cptr);
+	       cptr->since = currenttime;
+	       continue;
+	    }
+
+	    if (IsServer(cptr) || IsConnecting(cptr) || IsHandshake(cptr)) 
+	    {
+	       char fbuf[512];
+	       char *errtxt = "No response from %s, closing link";
        
-		ircsprintf(fbuf, "from %s: %s", me.name, errtxt);
-		sendto_gnotice(fbuf, get_client_name(cptr, HIDEME));
-		ircsprintf(fbuf, ":%s GNOTICE :%s", me.name, errtxt);                                
-		sendto_serv_butone(cptr, fbuf, get_client_name(cptr, HIDEME));
-	 }
-	 /*
-	  * this is used for KILL lines with time restrictions on them
-	  * - send a messgae to the user being killed first. *** Moved
-	  * up above  -taner ***
-	  */
+	       ircsprintf(fbuf, "from %s: %s", me.name, errtxt);
+	       sendto_gnotice(fbuf, get_client_name(cptr, HIDEME));
+	       ircsprintf(fbuf, ":%s GNOTICE :%s", me.name, errtxt);                                
+	       sendto_serv_butone(cptr, fbuf, get_client_name(cptr, HIDEME));
+	    }
 
-	 (void) exit_client(cptr, cptr, &me, "Ping timeout");
+	    (void) exit_client(cptr, cptr, &me, "Ping timeout");
+
 #ifdef EXPERIMENTAL_CHECKPINGS
-	 i--;			/* subtract out this fd so we check it again.. */			
+	    i--;			/* subtract out this fd so we check it again.. */			
 #else
-	 /*
-	  * need to start loop over because the close can affect the
-	  * ordering of the local[] array.- avalon
-	  */
-	 i = 0;
+	    /*
+	     * need to start loop over because the close can affect the
+	     * ordering of the local[] array.- avalon
+	     */
+	    i = 0;
 #endif
-	 continue;
-      }
-      else if ((cptr->flags & FLAGS_PINGSENT) == 0) {
-	 /*
-	  * if we havent PINGed the connection and we havent heard from
-	  * it in a while, PING it to make sure it is still alive.
-	  */
-	 cptr->flags |= FLAGS_PINGSENT;
-	 /*
-	  * not nice but does the job 
-	  */
-	 cptr->lasttime = currenttime - ping;
-	 sendto_one(cptr, "PING :%s", me.name);
+	    continue;
+         }
+         else if (!(cptr->flags & FLAGS_PINGSENT)) {
+	    /*
+	     * if we havent PINGed the connection and we havent heard from
+	     * it in a while, PING it to make sure it is still alive.
+	     */
+	    cptr->flags |= FLAGS_PINGSENT;
+	    /*
+	     * not nice but does the job 
+	     */
+	    cptr->lasttime = currenttime - ping;
+	    sendto_one(cptr, "PING :%s", me.name);
+         }
       }
 
-    ping_timeout:
       timeout = cptr->lasttime + ping;
       while (timeout <= currenttime)
 	 timeout += ping;
       if (timeout < oldest || !oldest)
 	 oldest = timeout;
+
       /*
        * Check UNKNOWN connections - if they have been in this state
        * for > 100s, close them.
