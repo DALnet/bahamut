@@ -1074,7 +1074,7 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr, int level, in
             else 
             {
 	      strncpy(chptr->mode.key,parv[args],KEYLEN);
-	      ADD_PARA(parv[args])
+	      ADD_PARA(chptr->mode.key)
 	      *chptr->mode.key = '\0';
             }
             *mbuf++='k';
