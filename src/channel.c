@@ -4198,6 +4198,12 @@ int m_sjoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
             strcpy(mode.key, oldmode->key);
         else if(*oldmode->key && *mode.key == '\0')
             strcpy(mode.key, oldmode->key);
+        if (oldmode->join_num && (oldmode->join_num > mode.join_num
+                                  || oldmode->join_time < mode.join_time))
+        {
+            mode.join_num = oldmode->join_num;
+            mode.join_time = oldmode->join_time;
+        }
     }
     
     pbpos = 0;
