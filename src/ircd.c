@@ -1028,6 +1028,7 @@ void send_safelists()
 void io_loop()
 {
     char to_send[200];
+    int lastexp=0;
 #ifndef HUB
     time_t lasttime = 0;
     long lastrecvK = 0;
@@ -1165,14 +1166,27 @@ void io_loop()
 	if (timeofday >= nextbanexpire)
 	{
             /*
-             * magic number: 31 seconds
+             * magic number: 13 seconds
              * space out these heavy tasks at semi-random intervals, so as not to coincide
              * with anything else ircd does regularly 
              */
-	    nextbanexpire = NOW + 31;
-	    expire_userbans();
-	    expire_simbans();
-	    throttle_timer(NOW);
+	    nextbanexpire = NOW + 13;
+	    
+	    if(lastexp == 0)
+	    {
+		expire_userbans();
+		lastexp++;
+	    }
+	    else if(lastexp == 1)
+	    {
+		expire_simbans();
+		lastexp++;
+	    }
+	    else
+	    {
+		throttle_timer(NOW);
+		lastexp = 0;
+	    }
 	}
 
 	if (timeofday >= next10sec)
