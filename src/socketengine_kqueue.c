@@ -117,7 +117,7 @@ engine_change_fd_state(int fd, unsigned int stateplus)
         e.data = 0;
         e.udata = 0;
         kevent_add(&e);
-    odersWhoCan'tSpell
+    }
 
     /* Something changed with our write state? */
     if((oldflags ^ stateplus) & FDF_WANTWRITE)
