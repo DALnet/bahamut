@@ -170,20 +170,39 @@ int user_match_ban(aClient *cptr, struct userBan *ban)
       char iptmp[HOSTIPLEN + 1];
 
       strncpyzt(iptmp, inetntoa((char *)&cptr->ip), HOSTIPLEN + 1);
-      if(mycmp(ban->h, iptmp) == 0)
-         return 1;
+      if(ban->flags & UBAN_WILD)
+      {
+         if(match(ban->h, iptmp) == 0)
+            return 1;
+      }
+      else
+      {
+         if(mycmp(ban->h, iptmp) == 0)
+            return 1;
+      }
+      return 0;
    }
 
    if(ban->flags & UBAN_HOST)
    {
-      if((ban->flags & UBAN_WILDHOST) || mycmp(ban->h, cptr->user->host) == 0)
-         return 1;
+      if(!(ban->flags & UBAN_WILD))
+      {
+         if((ban->flags & UBAN_WILDHOST) || match(ban->h, cptr->user->host) == 0)
+            return 1;
+      }
+      else
+      {
+         if(mycmp(ban->h, cptr->user->host) == 0)
+            return 1;
+      }
+      return 0;
    }
 
    if(ban->flags & (UBAN_CIDR4|UBAN_CIDR4BIG))
    {
       if((cptr->ip.s_addr & ban->cidr4mask) == ban->cidr4ip)
          return 1;
+      return 0;
    }
 
    return 0;
