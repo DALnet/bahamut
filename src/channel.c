@@ -4265,11 +4265,22 @@ int m_sjoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
             strcpy(mode.key, oldmode->key);
         else if(*oldmode->key && *mode.key == '\0')
             strcpy(mode.key, oldmode->key);
-        if (oldmode->join_num && (oldmode->join_num > mode.join_num
-                                  || oldmode->join_time < mode.join_time))
+        if ((oldmode->mode & MODE_JOINRATE) && mode.join_num)
         {
-            mode.join_num = oldmode->join_num;
-            mode.join_time = oldmode->join_time;
+            /* 0 wins */
+            if (!oldmode->join_num)
+            {
+                mode.join_num = oldmode->join_num;
+                mode.join_time = oldmode->join_time;
+            }
+            /* more joins or same joins in less time wins */
+            else if (oldmode->join_num > mode.join_num ||
+                     (oldmode->join_num == mode.join_num &&
+                      oldmode->join_time < mode.join_time))
+            {
+                mode.join_num = oldmode->join_num;
+                mode.join_time = oldmode->join_time;
+            }
         }
     }
     
