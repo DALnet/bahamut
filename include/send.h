@@ -66,6 +66,8 @@ extern void sendto_gnotice(char *pattern, ...);
 
 extern void ts_warn(char *pattern, ...);
 
+extern void sendto_noquit_servs_butone(int noquit, aClient *one, char *pattern, ...);
+
 extern void vsendto_fdlist(fdlist *listp, char *pattern, va_list vl);
 extern void vsendto_one(aClient *to, char *pattern, va_list vl);
 extern void vsendto_prefix_one(aClient *to, aClient *from, char *pattern, va_list vl);

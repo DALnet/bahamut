@@ -327,6 +327,99 @@ my_name_for_link(char *name, aConfItem *aconf)
    namebuf[HOSTLEN - 1] = '\0';
    return namebuf;
 }
+
+/* exit_server and exit_one_server 
+ * very gross recursive function
+ * exit_one_server is called for each server behind each link. yum. */
+
+void exit_one_client_in_split(aClient *cptr, aClient *dead, char *reason)
+{
+   Link *lp;
+
+   /* send all the quit reasons to all the non-noquit servers we have */
+   sendto_noquit_servs_butone(0, dead, ":%s QUIT :%s", cptr->name, reason);
+
+   sendto_common_channels(cptr, ":%s QUIT :%s", cptr->name, reason);
+
+   while ((lp = cptr->user->channel))
+      remove_user_from_channel(cptr, lp->value.chptr);
+   while ((lp = cptr->user->invited))
+      del_invite(cptr, lp->value.chptr);
+   while ((lp = cptr->user->silence))
+      del_silence(cptr, lp->value.cp);
+
+   del_from_client_hash_table(cptr->name, cptr); 
+
+   hash_check_watch(cptr, RPL_LOGOFF);
+
+   remove_client_from_list(cptr);
+}
+
+/* exit_one_server
+ *
+ * recursive function!
+ * therefore, we pass dead and reason to ourselves.
+ * in the beginning, dead == cptr, so it will be the one
+ * out of the loop last. therefore, dead should remain a good pointer.
+ * cptr: the server being exited
+ * dead: the actual server that split (if this belongs to us, we
+ *       absolutely CANNOT send to it)
+ * from: the client that caused this split
+ * spinfo: split reason, as generated in exit_server
+ * comment: comment provided
+ */
+
+void exit_one_server(aClient *cptr, aClient *dead, aClient *from, char *spinfo, char *comment)
+{
+   aClient *acptr, *next;
+
+   for (acptr = client; acptr; acptr = next) 
+   {
+      next = acptr->next; /* we might destroy this client record in the loop. */
+
+      /* we want to remove all things that are a downlink of cptr in this loop */
+
+      if(acptr->uplink != cptr) 
+         continue;
+
+      if (IsServer(acptr)) /* recursively exit this server */
+         exit_one_server(acptr, dead, from, spinfo, comment);   
+      else if (IsPerson(acptr))
+         exit_one_client_in_split(acptr, dead, spinfo);
+   }
+
+   if(cptr != dead)
+   {
+      /* todo: notify all non-noquit servs of the death of cptr */
+   }
+   else
+   {
+      /* todo: notify all servs of the death of cptr */
+   }
+
+   del_from_client_hash_table(cptr->name, cptr); 
+   hash_check_watch(cptr, RPL_LOGOFF);
+   remove_client_from_list(cptr);
+}
+
+/* exit_server
+ *
+ * cptr: the server that is being dropped.
+ * from: the client/server that caused this to happen
+ * comment: reason this is happening
+ * we then call exit_one_server, the recursive function.
+ */
+
+void exit_server(aClient *cptr, aClient *from, char *comment)
+{
+   char splitname[HOSTLEN + HOSTLEN + 2];
+
+   ircsprintf(splitname, "%s %s", cptr->uplink->name, cptr->name);
+
+   exit_one_server(cptr, cptr, from, splitname, comment);
+}
+
+
 /*
  * * exit_client *    This is old "m_bye". Name  changed, because
  * this is not a *      protocol function, but a general server utility

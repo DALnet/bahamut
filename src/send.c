@@ -311,12 +311,13 @@ void sendto_serv_butone(aClient *one, char *pattern, ...) {
 }
 
 /*
- * sendto_noquit_servs
+ * sendto_noquit_servs_butone
  * 
  * Send a message to all noquit servs if noquit = 1,
  * or all non-noquit servs if noquit = 0
+ * we omit "one", too.
  */
-void sendto_noquit_servs(int noquit, char *pattern, ...) {
+void sendto_noquit_servs_butone(int noquit, aClient *one, char *pattern, ...) {
 	int i;
 	aClient *cptr;
 	int j, k = 0;
@@ -326,7 +327,7 @@ void sendto_noquit_servs(int noquit, char *pattern, ...) {
 	va_start(vl, pattern);
    for (i = serv_fdlist.entry[j = 1];
 		  j <= serv_fdlist.last_entry; i = serv_fdlist.entry[++j]) {
-      if (!(cptr = local[i]) || (noquit ^ IsNoQuit(cptr)))
+      if (!(cptr = local[i]) || (noquit ^ IsNoQuit(cptr)) || one == cptr)
 		  continue;
 
                                    /* (noquit ^ IsNoQuit(cptr)
