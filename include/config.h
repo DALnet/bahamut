@@ -503,6 +503,12 @@
 #define	SHOW_INVISIBLE_LUSERS
 
 /*
+ * DEFAULT_HELP_MODE - default your opers to +h helper mode.  This
+ * is strongly recommended
+ */
+#define DEFAULT_HELP_MODE
+
+/*
  * MAXIMUM LINKS - max links for class 0 if no Y: line configured
  * 
  * This define is useful for leaf nodes and gateways. It keeps you from
@@ -868,7 +874,7 @@
  * make your client server very sluggish. You usually shouldn't need
  * this. -Dianora
  */
-#undef  DEBUGMODE		/* define DEBUGMODE to enable debugging mode. */
+#define  DEBUGMODE		/* define DEBUGMODE to enable */
 
 /*
  * If your host supports varargs and has vsprintf(), vprintf() and

@@ -872,11 +872,21 @@ show_opers(aClient *cptr, char *name)
 			delfrom_fdlist(cptr2->fd, &oper_fdlist);
 			continue;
 		}
-      j++;
-      sendto_one(cptr, ":%s %d %s :%s (%s@%s) Idle: %d",
-					  me.name, RPL_STATSDEBUG, name, cptr2->name,
-					  cptr2->user->username, cptr2->user->host,
-					  timeofday - cptr2->user->last);
+			if (!IsAnOper(cptr)) {
+				 if (cptr2->umode & UMODE_h) {
+						sendto_one(cptr, ":%s %d %s :%s (%s@%s) Idle: %d",
+											 me.name, RPL_STATSDEBUG, name, cptr2->name,
+											 cptr2->user->username, cptr2->user->host,
+											 timeofday - cptr2->user->last);
+						j++;
+				 }
+			} else {
+				 sendto_one(cptr, ":%s %d %s :%s (%s@%s) Idle: %d",
+										me.name, RPL_STATSDEBUG, name, cptr2->name,
+										cptr2->user->username, cptr2->user->host,
+										timeofday - cptr2->user->last);
+				 j++;
+			}
    }
    sendto_one(cptr, ":%s %d %s :%d OPER%s", me.name, RPL_STATSDEBUG,
 	      name, j, (j == 1) ? "" : "s");

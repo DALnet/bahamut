@@ -981,8 +981,10 @@ can_join(aClient *sptr, aChannel *chptr, char *key)
    if (*chptr->mode.key && (BadPtr(key) || mycmp(chptr->mode.key, key)))
       return (ERR_BADCHANNELKEY);
    if (chptr->mode.limit && chptr->users >= chptr->mode.limit) 
-	 return (ERR_CHANNELISFULL);
-   return 0;
+		 return (ERR_CHANNELISFULL);
+   if (chptr->users > 1000)
+		 return (ERR_CHANNELISFULL); 
+	 return 0;
 }
 /*
  * * Remove bells and commas from channel name

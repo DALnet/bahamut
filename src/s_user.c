@@ -83,6 +83,7 @@ static int  user_modes[] =
  UMODE_A, 'A',
  UMODE_f, 'f',
  UMODE_n, 'n',
+ UMODE_h, 'h',	 
  0, 0};
 
 /*
@@ -3134,9 +3135,15 @@ m_oper(aClient *cptr,
    /* if message arrived from server, trust it, and set to oper */
 
    if ((IsServer(cptr) || IsMe(cptr)) && !IsOper(sptr)) {
+#ifdef DEFAULT_HELP_MODE
       sptr->umode |= UMODE_o;
-      Count.oper++;
+			sptr->umode |= UMODE_h;
+      sendto_serv_butone(cptr, ":%s MODE %s :+oh", parv[0], parv[0]);
+#else
+			sptr->umode |= UMODE_o;
       sendto_serv_butone(cptr, ":%s MODE %s :+o", parv[0], parv[0]);
+#endif
+      Count.oper++;
       if (IsMe(cptr))
 		  sendto_one(sptr, rpl_str(RPL_YOUREOPER),
 						 me.name, parv[0]);
@@ -3184,15 +3191,19 @@ m_oper(aClient *cptr,
 		  SetLocOp(sptr);
 		else
 		  SetOper(sptr);
-		sptr->umode|=(UMODE_s|UMODE_g|UMODE_w|UMODE_n|UMODE_f);
-		sptr->oflag = aconf->port;
+#ifdef DEFAULT_HELP_MODE			
+			sptr->umode|=(UMODE_s|UMODE_g|UMODE_w|UMODE_n|UMODE_f|UMODE_h);
+#else			
+			sptr->umode|=(UMODE_s|UMODE_g|UMODE_w|UMODE_n|UMODE_f);
+#endif
+			sptr->oflag = aconf->port;
       Count.oper++;
       *--s = '@';
       addto_fdlist(sptr->fd, &oper_fdlist);
       sendto_ops("%s (%s@%s) is now operator (%c)", parv[0],
 					  sptr->user->username, sptr->sockhost,
 					  IsOper(sptr) ? 'O' : 'o');
-		send_umode_out(cptr, sptr, old);
+			send_umode_out(cptr, sptr, old);
       sendto_one(sptr, rpl_str(RPL_YOUREOPER), me.name, parv[0]);
 #if !defined(CRYPT_OPER_PASSWORD) && (defined(FNAME_OPERLOG) ||\
     (defined(USE_SYSLOG) && defined(SYSLOG_OPER)))
@@ -3544,6 +3555,10 @@ m_umode(aClient *cptr,
        && !IsServer(cptr))
           sptr->umode &= ~UMODE_d;
 
+   if (!(setflags & UMODE_h) && (!IsOper(sptr) && !IsLocOp(sptr))
+       && !IsServer(cptr))
+          sptr->umode &= ~UMODE_h;
+
    if (!(setflags & UMODE_i) && IsInvisible(sptr))
 	  Count.invisi++;
    if ((setflags & UMODE_i) && !IsInvisible(sptr))
@@ -3562,6 +3577,7 @@ m_umode(aClient *cptr,
 		if (IsUmoded(sptr)) ClearUmoded(sptr);
 		if (IsUmodeb(sptr)) ClearUmoded(sptr);
 		if (IsUmoden(sptr)) ClearUmoden(sptr);
+		if (IsUmodeh(sptr)) ClearUmodeh(sptr);
 	}
 	if(MyClient(sptr)) {
 		if (IsAdmin(sptr) && !OPIsAdmin(sptr)) ClearAdmin(sptr);
