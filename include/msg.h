@@ -108,9 +108,6 @@
 #define MSG_UNSQLINE "UNSQLINE" /* UNSQLINE */
 #define MAXPARA      15
 
-#ifdef DEBUG_DBUF
-extern int  m_dbuf(aClient *, aClient *, int, char **);
-#endif
 extern int  m_kline(aClient *, aClient *, int, char **);
 extern int  m_unkline(aClient *, aClient *, int, char **);
 extern int  m_zline(aClient *, aClient *, int, char **);

@@ -120,3 +120,52 @@ dopacket(aClient *cptr, char *buffer, int length)
    cptr->count = ch1 - cptrbuf;
    return 0;
 }
+
+int client_dopacket(struct Client *cptr, char *buffer, size_t length)
+{
+   assert(0 != cptr);
+   assert(0 != buffer);
+   
+   strncpy_irc(cptr->buffer, buffer, BUFSIZE);
+   length = strlen(cptr->buffer);
+   
+   /*
+    * Update messages received
+    */
+   ++me.receiveM;
+   ++cptr->receiveM;
+   
+   /*
+    * Update bytes received
+    */
+   cptr->receiveB += length;
+   
+   if (cptr->receiveB > 1023) {
+      cptr->receiveK += (cptr->receiveB >> 10);
+      cptr->receiveB &= 0x03ff; /* 2^10 = 1024, 3ff = 1023 */
+   }
+   me.receiveB += length;
+   
+   if (me.receiveB > 1023) {
+      me.receiveK += (me.receiveB >> 10);
+      me.receiveB &= 0x03ff;
+   }
+   
+   cptr->count = 0;    /* ...just in case parse returns with */
+   if (CLIENT_EXITED == parse(cptr, cptr->buffer, cptr->buffer + length)) {
+      /*
+       * CLIENT_EXITED means actually that cptr
+       * structure *does* not exist anymore!!! --msa
+       */
+      return CLIENT_EXITED;
+   }
+   else if (cptr->flags & FLAGS_DEADSOCKET) {
+      /*
+       * Socket is dead so exit (which always returns with
+       * CLIENT_EXITED here).  - avalon
+       */
+      return exit_client(cptr, cptr, &me,
+			 (cptr->flags & FLAGS_SENDQEX) ? "SendQ exceeded" : "Dead socket");
+   }
+   return 1;
+}

@@ -1490,7 +1490,7 @@ read_packet(aClient *cptr)
 	 }
 
 	 if (dolen > 0 &&
-	     (dopacket(cptr, readbuf, dolen) == FLUSH_BUFFER))
+	     (client_dopacket(cptr, readbuf, dolen) == FLUSH_BUFFER))
 	    return FLUSH_BUFFER;
       }
    }
