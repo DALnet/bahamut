@@ -1040,7 +1040,8 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr, int level, in
 
             /* do not allow keys to start with :! ack! - lucas */
             /* another ack: don't let people set null keys! */
-            if(*parv[args]==':' || *parv[args] == '\0') 
+	    /* and yet a third ack: no spaces in keys -epi  */
+            if(*parv[args]==':' || *parv[args] == '\0' || strchr(parv[args], ' '))
             {
                args++;
                break;
@@ -1067,9 +1068,9 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr, int level, in
              * any manner they like, we're not picky */
             if(change=='+') 
             {
-	      parv[args][KEYLEN]='\0';
-	      strncpy(chptr->mode.key,parv[args],KEYLEN);
-	      ADD_PARA(parv[args])
+               parv[args][KEYLEN]='\0';
+               strncpy(chptr->mode.key,parv[args],KEYLEN);
+               ADD_PARA(parv[args])
             }
             else 
             {

@@ -5,6 +5,10 @@ Outstanding bugs in 1.4.23
 - Source address support on /connect may not work under some conditions
 - Temp kline/akill matching on user connections is very slow with many klines
 
+Changes for 1.4.27
+- Fixed key bug
+- Fixed showstopper remoteclientsonlygetpiecesofaClient bug
+
 Changes for 1.4.25
 - Hide Nick Collisions (Revealing services location)
 - Make 005 show more info
