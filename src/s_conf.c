@@ -2075,6 +2075,16 @@ clear_newconfs()
         i++;
     }
     new_uservers[0] = NULL;
+    if(new_modules)
+    {
+        for(i = 0; new_modules->autoload[i]; i++)
+            MyFree(new_modules->autoload[i]);
+        for(i = 0; new_modules->optload[i]; i++)
+            MyFree(new_modules->optload[i]);
+        MyFree(new_modules->module_path);
+        MyFree(new_modules);
+        new_modules = NULL;
+    }
     return;
 }
 
