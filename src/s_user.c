@@ -4587,7 +4587,7 @@ static int add_silence(aClient *sptr,char *mask) {
 	int cnt=0, len=0;
 	for (lp=sptr->user->silence;lp;lp=lp->next) {
 		len += strlen(lp->value.cp);
-		if (MyClient(sptr))
+		if (MyClient(sptr)) {
 		  if ((len > MAXSILELENGTH) || (++cnt >= MAXSILES)) {
 			  sendto_one(sptr, err_str(ERR_SILELISTFULL), me.name, sptr->name, mask);
 			  return -1;
@@ -4595,6 +4595,7 @@ static int add_silence(aClient *sptr,char *mask) {
 			  if (!match(lp->value.cp, mask))
 				 return -1;
 		  }
+                }
 		else if (!mycmp(lp->value.cp, mask))
 		  return -1;
 	}

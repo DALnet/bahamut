@@ -122,12 +122,12 @@ collapse(char *pattern)
     * Collapse all \** into \*, \*[?]+\** into \*[?]+
     */
    for (; *s; s++)
-      if (*s == '\\')
+      if (*s == '\\') {
 	 if (!*(s + 1))
 	    break;
 	 else
 	    s++;
-      else if (*s == '*') {
+      } else if (*s == '*') {
 	 if (*(t = s1 = s + 1) == '*')
 	    while (*t == '*')
 	       t++;

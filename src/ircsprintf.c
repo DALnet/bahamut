@@ -6,14 +6,21 @@ char xtoa_tab[16] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
 	  'a', 'b', 'c', 'd', 'e', 'f'  };
 char nullstring[]="(null)";
 
-int irc_printf(char *str, size_t size, const char *pattern, va_list vl) {
+#ifdef WANT_SNPRINTF
+inline int irc_printf(char *str, size_t size, const char *pattern, va_list vl) 
+#else
+inline int irc_printf(char *str, const char *pattern, va_list vl) 
+#endif
+{
 	char *s;
 	char *buf=str;
 	const char *format=pattern;
 	va_list ap=vl;
 	unsigned long i, u;
 	int len=0;
+#ifdef WANT_SNPRINTF
 	if(!size) {
+#endif
 		while(*format) {
 			u = 0;
 			switch(*format) {
@@ -92,6 +99,7 @@ int irc_printf(char *str, size_t size, const char *pattern, va_list vl) {
 		}
 		buf[len]=0;
 		return len;
+#ifdef WANT_SNPRINTF
 	}
 	else {
 		while(*format && len<size) {
@@ -177,17 +185,23 @@ int irc_printf(char *str, size_t size, const char *pattern, va_list vl) {
 		buf[len]=0;
 		return len;
 	}
+#endif /* WANT_SNPRINTF */
 }
 
 int ircsprintf(char *str, const char *format, ...) {
 	int ret;
 	va_list vl;
 	va_start(vl, format);
+#ifdef WANT_SNPRINTF
 	ret=irc_printf(str, 0, format, vl);
+#else
+	ret=irc_printf(str, format, vl);
+#endif
 	va_end(vl);
 	return ret;
 }
 
+#ifdef WANT_SNPRINTF
 int ircsnprintf(char *str, size_t size, const char *format, ...) {
 	int ret;
 	va_list vl;
@@ -196,14 +210,22 @@ int ircsnprintf(char *str, size_t size, const char *format, ...) {
 	va_end(vl);
 	return ret;
 }
+#endif
+
 int ircvsprintf(char *str, const char *format, va_list ap) {
 	int ret;
+#ifdef WANT_SNPRINTF
 	ret=irc_printf(str, 0, format, ap);
+#else
+	ret=irc_printf(str, format, ap);
+#endif
 	return ret;
 }
 
+#ifdef WANT_SNPRINTF
 int ircvsnprintf(char *str, size_t size, const char *format, va_list ap) {
 	int ret;
 	ret=irc_printf(str, size, format, ap);
 	return ret;
 }
+#endif
