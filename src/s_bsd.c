@@ -1588,6 +1588,60 @@ void accept_connection(aClient *cptr)
     }
 }
 
+int readwrite_client(aClient *cptr, int isread, int iswrite)
+{
+   /*
+    * NOTE
+    * We now do this in a more logical way.
+    * We request a write poll on a socket for two reasons
+    * - the socket is waiting for a connect() call
+    * - the socket is blocked
+    */
+
+   if(iswrite)
+   {
+      if (IsConnecting(cptr) && completed_connection(cptr))
+      {
+         char errmsg[512];
+
+         ircsprintf(errmsg, "Connect Error: %s", irc_get_sockerr(cptr));
+         return exit_client(cptr, cptr, &me, errmsg);
+      }
+
+      if(cptr->flags & FLAGS_BLOCKED)
+      {
+         cptr->flags &= ~FLAGS_BLOCKED;
+         unset_fd_flags(cptr->fd, FDF_WANTWRITE);
+      }
+   }
+
+   if (isread)
+   {
+      int length = read_packet(cptr);
+
+      if(length == FLUSH_BUFFER)
+         return length;
+
+      if(length <= 0)
+      {
+         read_error_exit(cptr, length, cptr->sockerr);
+         return FLUSH_BUFFER;
+      }
+   }
+
+   if (IsDead(cptr))
+   {
+      char errmsg[512];
+
+      ircsprintf(errmsg, "Write Error: %s",
+                 (cptr->flags & FLAGS_SENDQEX) ?
+                 "SendQ Exceeded" : irc_get_sockerr(cptr));
+      return exit_client(cptr, cptr, &me, errmsg);
+   }
+
+   return 1;
+}
+
 /* connect_server */
 int connect_server(aConfItem * aconf, aClient * by, struct hostent *hp)
 {

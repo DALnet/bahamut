@@ -126,7 +126,6 @@ void engine_change_fd_state(int fd, unsigned int stateplus)
 
 int engine_read_message(time_t delay)
 {
-   static char errmsg[512];
    static struct kevent events[ENGINE_MAX_EVENTS];
 
    int nevs, length, i, numloops, eventsfull;
@@ -177,7 +176,7 @@ int engine_read_message(time_t delay)
          switch(fdtype)
          {
             case FDT_NONE:
-               continue;
+               break;
 
             case FDT_AUTH:
                cptr = (aClient *) fdvalue;
@@ -186,71 +185,22 @@ int engine_read_message(time_t delay)
                if (rw && cptr->authfd >= 0)
                   send_authports(cptr);
                check_client_fd(cptr);
-               continue;
+               break;
 
             case FDT_LISTENER:
                cptr = (aClient *) fdvalue;
                if(rr)
                   accept_connection(cptr);
-               continue;
+               break;
 
             case FDT_RESOLVER:
                do_dns_async();
-               continue;
+               break;
 
             case FDT_CLIENT:
                cptr = (aClient *) fdvalue;
-
-               /*
-                * NOTE
-                *
-                * We now do this in a more logical way.
-                * We request a write poll on a socket for two reasons
-                * - the socket is waiting for a connect() call
-                * - the socket is blocked
-                */
-               if (rw)
-               {
-                  if (IsConnecting(cptr) && completed_connection(cptr))
-                  {
-                     ircsprintf(errmsg, "Connect Error: %s", irc_get_sockerr(cptr));
-                     exit_client(cptr, cptr, &me, errmsg);
-                     continue;
-                  }
-
-                  if(cptr->flags & FLAGS_BLOCKED)
-                  {
-                     cptr->flags &= ~FLAGS_BLOCKED;
-                     unset_fd_flags(cptr->fd, FDF_WANTWRITE);
-                  }
-               }
-
-               length = 1; /* for fall through case */
-
-               if (rr)
-                 length = read_packet(cptr);
-               else if(DBufLength(&cptr->recvQ) && IsPerson(cptr) && !NoNewLine(cptr))
-                 length = do_client_queue(cptr);
-
-   
-               if (length == FLUSH_BUFFER)
-                  continue;
-	
-               if (IsDead(cptr)) 
-               {
-                  ircsprintf(errmsg, "Read/Dead Error: %s", 
-                             (cptr->flags & FLAGS_SENDQEX) ?
-                             "SendQ Exceeded" : irc_get_sockerr(cptr));
-                  exit_client(cptr, cptr, &me, errmsg);
-                  continue;
-               }
-	
-               if (length > 0)
-                  continue;
-	
-               /* An error has occured reading from cptr, drop it. */
-               read_error_exit(cptr, length, cptr->sockerr);
-               continue;
+               readwrite_client(cptr, rr, rw);
+               break;
 
             default:
                abort(); /* unknown client type? bail! */

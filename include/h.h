@@ -172,6 +172,7 @@ extern char *	irc_get_sockerr(aClient *);
 extern int 	read_packet(aClient *);
 extern int 	do_client_queue(aClient *);
 extern void 	read_error_exit(aClient *, int, int);
+extern int 	readwrite_client(aClient *, int, int);
 
 extern void 	  start_auth(aClient *);
 extern void 	  read_authports(aClient *);
