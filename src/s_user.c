@@ -83,6 +83,7 @@ static int  user_modes[] =
  UMODE_k, 'k',
  UMODE_y, 'y',
  UMODE_d, 'd',
+ UMODE_D, 'D',
  UMODE_g, 'g',
  UMODE_b, 'b',
  UMODE_a, 'a',
@@ -123,19 +124,26 @@ extern BlockHeap *free_Links;
 void        announce_fluder(aClient *, aClient *, aChannel *, int);
 struct fludbot *remove_fluder_reference(struct fludbot **, aClient *);
 Link       *remove_fludee_reference(Link **, void *);
-int         check_for_ctcp(char *);
 int         check_for_fludblock(aClient *, aClient *, aChannel *, int);
 int         check_for_flud(aClient *, aClient *, aChannel *, int);
 void        free_fluders(aClient *, aChannel *);
 void        free_fludees(aClient *);
 #endif
+static int      check_for_ctcp(char *, char **);
 static int      is_silenced(aClient *, aClient *);
 
 #ifdef ANTI_SPAMBOT
 int         spam_time = MIN_JOIN_LEAVE_TIME;
 int         spam_num = MAX_JOIN_LEAVE_COUNT;
-
 #endif
+
+/* defines for check_ctcp results */
+#define CTCP_NONE 	0
+#define CTCP_YES	1
+#define CTCP_DCC	2
+#define CTCP_DCCSEND 	3
+
+
 /*
  * * m_functions execute protocol messages on this server: *
  * 
@@ -1646,6 +1654,136 @@ int         i;
    return s;
 }
 
+char *exploits_2char[] = { "js", "pl", NULL };
+char *exploits_3char[] = { "exe", "com", "bat", "dll", "ini", "vbs", "pif", "mrc", "scr", "doc", "xls", "lnk", NULL };
+
+int check_dccsend(aClient *from, aClient *to, char *msg)
+{
+   /* we already know that msg will consist of "DCC SEND" so we can skip to the end */
+   char *filename = msg + 8;
+   char *ext;
+   char **farray;
+   int arraysz;
+   int len = 0, extlen = 0, i;
+
+   /* people can send themselves stuff all the like..
+    * opers need to be able to send cleaner files 
+    * sanity checks..
+    */
+
+   if(from == to || !IsPerson(from) || IsAnOper(from) || !MyClient(to)) 
+      return 0;
+
+   while(*filename == ' ')
+      filename++;
+
+   if(!(*filename)) return 0;
+
+   while(*(filename + len) != ' ')
+   {
+      if(!(*(filename + len))) break;
+      len++;
+   }
+
+   for(ext = filename + len;; ext--)
+   {
+      if(ext == filename)
+          return 0;
+
+      if(*ext == '.') 
+      {
+         ext++;
+         extlen--;
+         break;
+      }
+      extlen++;
+   }
+
+   switch(extlen)
+   {
+      case 2:
+         farray = exploits_2char;
+         arraysz = 2;
+         break;
+
+      case 3:
+         farray = exploits_3char;
+         arraysz = 3;
+         break;
+
+      /* no executable file here.. */
+      default:
+         return 0;
+   }
+
+   for(i = 0; farray[i]; i++)
+   {
+      if(myncmp(farray[i], ext, arraysz) == 0)
+         break;
+   }
+
+   if(farray[i] == NULL)
+      return 0;
+
+   if(NoDCC(to))
+   {
+      char tmpext[8];
+      char tmpfn[128];
+      Link *tlp, *flp;
+      aChannel *chptr = NULL;
+
+      strncpy(tmpext, ext, extlen);
+      tmpext[extlen] = '\0';
+
+      if(len > 127) 
+         len = 127;
+      strncpy(tmpfn, filename, len);
+      tmpfn[len] = '\0';
+
+      /* use notices! 
+       *   server notices are hard to script around.
+       *   server notices are not ignored by clients.
+       */ 
+
+      sendto_one(from, ":%s NOTICE %s :The user %s does not accept DCC sends of filetype %s. Your file %s was not sent.",
+         me.name, from->name, to->name, tmpext, tmpfn);
+
+      sendto_one(to, ":%s NOTICE %s :%s (%s@%s) has attempted to send you a file named %s.",
+         me.name, to->name, from->name, from->user->username, from->user->host, tmpfn);
+      sendto_one(to, ":%s NOTICE %s :The majority of files sent of this type are malicious virii and trojan horses.",
+         me.name, to->name);
+      sendto_one(to, ":%s NOTICE %s :If you trust %s, you may enable receiving of one file of this type by typing: /mode %s -D",
+         me.name, to->name, from->name, to->name);
+
+      for(tlp = to->user->channel; tlp && !chptr; tlp = tlp->next)
+      {
+         for(flp = from->user->channel; flp && !chptr; flp = flp->next)
+         {
+            if(tlp->value.chptr == flp->value.chptr)
+               chptr = tlp->value.chptr;
+         }
+      }
+      
+      if(chptr)
+         sendto_realops_lev(SPY_LEV, "%s (%s@%s) sending forbidden filetyped file %s to %s (channel %s)", from->name, 
+            from->user->username, from->user->host, tmpfn, to->name, chptr->chname); 
+      else
+         sendto_realops_lev(SPY_LEV, "%s (%s@%s) sending forbidden filetyped file %s to %s", from->name, 
+            from->user->username, from->user->host, tmpfn, to->name); 
+
+      return 1;
+   }
+   else
+   {
+      unsigned long old = to->umode;
+
+      SetNoDCC(to);
+      send_umode(to, to, old, ALL_UMODES, buf);
+   }
+
+   return 0;
+}
+
 /* check to see if the message has any color chars in it. */
 int msg_has_colors(char *msg)
 {
@@ -1683,7 +1821,7 @@ static inline int m_message(aClient *cptr, aClient *sptr, int parc, char *parv[]
    char *s;
    int i, ret, ischan;
    aChannel *chptr;
-   char *nick, *server, *p, *cmd;
+   char *nick, *server, *p, *cmd, *dccmsg;
 
    cmd = notice ? MSG_NOTICE : MSG_PRIVATE;
 
@@ -1734,11 +1872,24 @@ static inline int m_message(aClient *cptr, aClient *sptr, int parc, char *parv[]
       ischan = IsChannelName(nick);
       if (ischan && (chptr=find_channel(nick,NullChn))) 
       {
-#ifdef FLUD
          if (!notice)
-            if (check_for_ctcp(parv[2]))
-               check_for_flud(sptr, NULL, chptr, 1);
-#endif 
+            switch(check_for_ctcp(parv[2], NULL))
+            {
+               case CTCP_NONE:
+                  break;
+
+               case CTCP_DCCSEND:
+               case CTCP_DCC:
+                  sendto_one(sptr, "%s NOTICE %s :You may not send a DCC command to a channel (%s)", me.name, parv[0], nick);
+                  continue;
+
+               default:
+#ifdef FLUD
+                  if (check_for_flud(sptr, NULL, chptr, 1))
+                     return 0;
+#endif
+                  break;
+            }
          ret = IsULine(sptr) ? 0 : can_send(sptr, chptr);
          if(!ret && MyClient(sptr) && (chptr->mode.mode & MODE_NOCOLOR) && msg_has_colors(parv[2]))
          {
@@ -1764,10 +1915,35 @@ static inline int m_message(aClient *cptr, aClient *sptr, int parc, char *parv[]
       {
 #ifdef FLUD
          if (!notice && MyFludConnect(acptr))
-            if (check_for_ctcp(parv[2]))
-               if (check_for_flud(sptr, acptr, NULL, 1))
-                  return 0;
+#else
+         if (!notice && MyConnect(acptr))
 #endif
+         {
+
+            switch(check_for_ctcp(parv[2], &dccmsg))
+            {
+               case CTCP_NONE:
+                  break;
+
+               case CTCP_DCCSEND:
+#ifdef FLUD
+                  if (check_for_flud(sptr, acptr, NULL, 1))
+                     return 0;
+#endif
+
+                  if(check_dccsend(sptr, acptr, dccmsg))
+                     continue;
+                  break;
+                
+               default:
+#ifdef FLUD
+                  if (check_for_flud(sptr, acptr, NULL, 1))
+                     return 0;
+#endif
+                  break;
+            }
+         }
+
          if (!is_silenced(sptr, acptr)) 
          {				 
             if (!notice && MyClient(acptr) && acptr->user && acptr->user->away)
@@ -2884,6 +3060,7 @@ do_user(char *nick,
 						  me.name, nick);
 			return 0;
       }
+      sptr->umode |= UMODE_D; /* default nodcc to on */
 #ifndef	NO_DEFAULT_INVISIBLE
       sptr->umode |= UMODE_i;
 #endif
@@ -3944,6 +4121,45 @@ botwarn(char *host,
 #endif
    return 0;
 }
+
+/*
+ * This function checks to see if a CTCP message (other than ACTION) is
+ * contained in the passed string.  This might seem easier than I am
+ * doing it, but a CTCP message can be changed together, even after a
+ * normal message.
+ * 
+ * If the message is found, and it's a DCC message, pass it back in
+ * *dccptr.
+ *
+ * Unfortunately, this makes for a bit of extra processing in the
+ * server.
+ */
+
+static int check_for_ctcp(char *str, char **dccptr)
+{
+   char       *p = str;
+
+   while ((p = strchr(p, 1)) != NULL) 
+   {
+      if (strncasecmp(++p, "DCC", 3) == 0)
+      {
+         if(dccptr)
+            *dccptr = p;
+         if(strncasecmp(p+3, " SEND", 5) == 0)
+            return CTCP_DCCSEND;
+         else
+	    return CTCP_DCC;
+      }
+      if (strncasecmp(++p, "ACTION", 6) != 0)
+	 return CTCP_YES;
+      if ((p = strchr(p, 1)) == NULL)
+	 return CTCP_NONE;
+      if(!(*(++p)))
+         break;;
+   }
+   return CTCP_NONE;
+}
+
 /*
  * Shadowfax's FLUD code 
  */
@@ -4032,30 +4248,6 @@ remove_fludee_reference(Link **fludees, void *fludee)
    }
 
    return (*fludees);
-}
-
-/*
- * This function checks to see if a CTCP message (other than ACTION) is *
- * contained in the passed string.  This might seem easier than I am
- * doing it, * but a CTCP message can be changed together, even after a
- * normal message. *
- * 
- * Unfortunately, this makes for a bit of extra processing in the
- * server.
- */
-int
-check_for_ctcp(char *str)
-{
-   char       *p = str;
-
-   while ((p = strchr(p, 1)) != NULL) {
-      if (strncasecmp(++p, "ACTION", 6) != 0)
-	 return 1;
-      if ((p = strchr(p, 1)) == NULL)
-	 return 0;
-      p++;
-   }
-   return 0;
 }
 
 int

@@ -241,6 +241,7 @@ typedef struct MotdItem aMotd;
 #define UMODE_h     0x20000 /* umode +h - Helper */
 #define UMODE_m     0x40000 /* umode +m - spambot notices */
 #define UMODE_R     0x80000 /* unmode +R - Routing staff */
+#define UMODE_D     0x100000   /* pseudo-umode +D - not accepting dcc sends */
 
 /* for sendto_ops_lev */
 
@@ -255,7 +256,7 @@ typedef struct MotdItem aMotd;
 #define	SEND_UMODES (UMODE_i|UMODE_o|UMODE_w|UMODE_r|UMODE_a|UMODE_A|UMODE_h|UMODE_R)
 #define ALL_UMODES (SEND_UMODES|UMODE_s|UMODE_c|UMODE_r|UMODE_k|UMODE_f|\
 	UMODE_y|UMODE_d|UMODE_g|UMODE_b|UMODE_n|UMODE_h|UMODE_m|\
-	UMODE_O|UMODE_R)
+	UMODE_O|UMODE_R|UMODE_D)
 #ifdef DEFAULT_HELP_MODE
 #define OPER_UMODES (UMODE_o|UMODE_w|UMODE_s|UMODE_y|UMODE_d|UMODE_g|UMODE_n|UMODE_h)
 #else
@@ -281,6 +282,9 @@ typedef struct MotdItem aMotd;
 #define IsUmodem(x)   ((x)->umode & UMODE_m)
 #define IsUmodeh(x)   ((x)->umode & UMODE_h)
 #define IsRouting(x)  ((x)->umode & UMODE_R)
+#define NoDCC(x)      ((x)->umode & UMODE_D)
+#define SetNoDCC(x)   ((x)->umode |= UMODE_D)
+#define UnsetNoDCC(x) ((x)->umode &= ~UMODE_D)
 #define	IsPerson(x)		((x)->user && IsClient(x))
 #define	IsPrivileged(x)		(IsAnOper(x) || IsServer(x))
 #define	SendWallops(x)		((x)->umode & UMODE_w)
