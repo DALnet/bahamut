@@ -421,24 +421,24 @@ int
 attach_Iline(aClient *cptr, struct hostent *hp, char *sockhost)
 {
     aAllow *allow;
-    static char useriphost[HOSTLEN + USERLEN + 3];
-    static char usernamehost[HOSTLEN + USERLEN + 3];
+
+    static char useriphost[USERLEN + 1 + HOSTLEN + 1];
+    static char usernamehost[USERLEN + 1 + HOSTLEN + 1];
     char   *iphost;
     char   *namehost = NULL;    /* squish compiler warning */
     int     len;
 
     /* user@host in both buffers, plus pointers to host only */
-    len = strlen(cptr->username);
-    memcpy(useriphost, cptr->username, len+1);
-    useriphost[len++] = '@';
+    len = ircsprintf(useriphost, "%s@", cptr->username);
     iphost = useriphost + len;
     strcpy(iphost, sockhost);
     if (hp)
     {
-        memcpy(usernamehost, useriphost, USERLEN+2); /* compiler optimize */
+        memcpy(usernamehost, useriphost, USERLEN+2);
         namehost = usernamehost + len;
-        strncpyzt(namehost, hp->h_name, HOSTLEN+1);
-        add_local_domain(namehost, HOSTLEN+1 - strlen(namehost));
+        len = sizeof(usernamehost) - len;
+        strncpy(namehost, hp->h_name, len);
+        add_local_domain(namehost, len - strlen(namehost));
     }
 
     for (allow = allows; allow; allow = allow->next) 
@@ -485,7 +485,6 @@ attach_Iline(aClient *cptr, struct hostent *hp, char *sockhost)
             }
         }
     }
-
     return -1;          /* no match */
 }
 
@@ -496,13 +495,13 @@ attach_Iline(aClient *cptr, struct hostent *hp, char *sockhost)
 static int 
 attach_iline(aClient *cptr, aAllow *allow, char *uhost, int doid)
 {
-    
+    if(allow->clients >= allow->class->maxlinks)
+        return -3;
+
     if (doid)
         cptr->flags |= FLAGS_DOID;
     get_sockhost(cptr, uhost);
     
-    /* only check it if its non zero  */
-
     cptr->user->allow = allow;
     allow->clients++;
     allow->class->links++;

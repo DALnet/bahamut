@@ -135,6 +135,8 @@ void add_local_domain(char *hname, int size)
     /* try to fix up unqualified name */
     if (!strchr(hname, '.')) 
     {
+        if (size < 3)
+            return;
         if (!(_res.options & RES_INIT))
         {
             Debug((DEBUG_DNS, "res_init()"));

@@ -1,10 +1,16 @@
-Welcome to Bahamut
-^^^^^^^ ^^ ^^^^^^^
-For documentation regaurding Bahamut, please
-consult the /doc directory. Documentation is
-also available on the Bahamut website located
-at: http://bahamut.dal.net/
+Welcome to Bahamut 1.8
+----------------------
 
----------------------------------------------------
- $Id$
-===================================================
+Please refer to the INSTALL file for help instructions on building and
+installing ircd.  The doc/ directory may also be of interest.
+
+Please refer to the CHANGES file to see what has changed in the 1.8
+revision of Bahamut.
+
+*** IMPORTANT ***
+Please send any SECURITY RELATED bugs to coders@dal.net - any non-critical bugs can be sent to dalnet-src@dal.net - a public list for code discussion.
+
+Thanks!
+-Bahamut Team
+
+$Id$

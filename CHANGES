@@ -1,4 +1,5 @@
-Changes for 1.8.0:
+Changes for 1.8.0
+-----------------
 
 - Removed backwards compatibility for:
 	- NOQUIT
@@ -30,7 +31,7 @@ Changes for 1.8.0:
 - removed old High Traffic Mode (HTM) code
 - config option block added to outdate use of ./config script
 - fixes for solaris and OSX compatibility
-- Added support for /dev/poll and epoll socket engines - thats seddy.
+- Added support for /dev/poll and epoll socket engines - thanks seddy.
 - Moved m_server and m_dkey into m_server.c
 - Moved m_stats into m_stats.c
 - Fixed memory counting routines.  Thanks Quension!

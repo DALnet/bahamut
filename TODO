@@ -9,6 +9,7 @@ Future TODO List
 - Split up aClient into separate structures for local and remote users
 - Backport message tokenization from 1.6
 - Carve off throttling into its own hook module
+- Revamp hashing to use a generic hashing model (like throttling).
 - Implement IPV6
 
 List to Ponder

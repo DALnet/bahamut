@@ -479,7 +479,7 @@ register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
                 }
                 else if (i == -3)
                     sendto_realops_lev(REJ_LEV, "%s for %s [%s] ",
-                                       "I-line is full (server is full)",
+                                       "Allow class is full (server is full)",
                                        get_client_host(sptr),p);
                 else
                     sendto_realops_lev(REJ_LEV, "%s from %s [%s]",

@@ -10,15 +10,13 @@ Once a module has been built, hooking it into the system is fairly simple.
 The components that are used, are:
 
 1. A modules/ directory where the shared modules themselves are stored
-2. A modules.conf file where each module is listed 
-
-An example configuration file (example.modules.conf) is found in the doc/
-directory of the bahamut source tree.
 
 To enable the hook module system, you must issue --enable-hook-modules
 at configuration time. Example:
 
 ./configure --enable-hook-modules
+
+(As of bahamut 1.8, this is implicitely assumed.)
 
 ---
 
@@ -28,21 +26,6 @@ This directory stores the shared modules that you wish to hook into bahamut.
 The modules/ directory is found in the same directory as your server 
 configuration files (eg: bahamut-release/modules)
 
-2. modules.conf
-
-This file stores information on each module to be loaded. The format of the
-file is:
-
-[sectionname]
-name = filename
-
-Example:
-[DEFAULT]
-autoload = mymodule
-
-The above example would load "mymodule.so" from the modules/ directory when
-IRCD is started. 
-
 ---
 
 USER COMMANDS TO CONTROL MODULES
@@ -51,9 +34,11 @@ There are a few new commands to control modules. They are all accessed
 by using /quote module <command>.
 
 	/quote module LIST	List all modules loaded in memory
+    /quote module HOOKS List where modules are hooked into ircd
 	/quote module LOAD <name>	Load a module into memory
 	/quote module UNLOAD <name>	Unload a module from memory
 
-To use the above commands, you must be a Server Administrator at the time
-of issuing the command (umode +A).
+To use the above commands, you must be an IRC Operator at the time
+of issuing the command (umode +o).  To issue LOAD/UNLOAD commands, you must be
+a Server Adminstrator (umode +A)
 

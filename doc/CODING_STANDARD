@@ -1,7 +1,7 @@
 The following are the Coding Standards for Bahamut.
 
 1)  No C++ style comments are allowed in the code tree.
-2)  All indentations shall be 4 characters long.
+2)  All indentations shall be 4 characters long - no tab characters '\t'
 3)  All variable names shall begin with a lowercase letter.
 4)  All variables defined as macros shall be in all Upper Case
 5)  All preprocessor directive shall be at char posistion 0 with no

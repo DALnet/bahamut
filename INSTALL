@@ -1,0 +1,29 @@
+HOW TO BUILD:
+------------- 
+1.  Run the configure script.  It will setup include/setup.h and the
+    Makefiles to match your system:
+	./configure
+
+    Type ./configure --help to see different options.  Most people will not
+    need to alter these.
+
+2.  [DISCOURAGED] Edit the the "include/config.h" file.  This allows you to 
+    change various options of how the ircd will operate. Usually the defaults
+    are OK.
+
+3.  "make" should build ircd.
+
+4.  "make install" will install the ircd, config converter, and documents
+    to the directory set by ./configure
+
+5.  Edit example.conf in your install directory, and move it to "ircd.conf".
+
+6.  Run the binary!  ircd will look in the directory you are executing from
+    for an ircd.conf first, then it will look to the directory local to itself.
+    You may override these options by specifying a config file using:
+    ./ircd -f path/to/ircd.conf
+
+Best of luck!
+-The Bahamut Team
+
+$Id$
