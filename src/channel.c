@@ -35,13 +35,6 @@ int         server_was_split = YES;
 time_t      server_split_time = 0;
 int         server_split_recovery_time = (MAX_SERVER_SPLIT_RECOVERY_TIME * 60);
 
-#define USE_ALLOW_OP
-#endif
-
-#ifdef LITTLE_I_LINES
-#ifndef USE_ALLOW_OP
-#define USE_ALLOW_OP
-#endif
 #endif
 
 aChannel   *channel = NullChn;
@@ -71,6 +64,11 @@ unsigned long tsdms;
 
 static char *PartFmt = ":%s PART %s";
 static char *PartFmt2 = ":%s PART %s :%s";
+
+static char *oldSJOINFmt = ":%s SJOIN %ld %ld %s %s %s :%s";
+static char *newSJOINFmt = ":%s SJOIN %ld %s %s %s :%s";
+static char *oldCliSJOINFmt = ":%s SJOIN %ld %ld %s + :%s";
+static char *newCliSJOINFmt = ":%s SJOIN %ld %s";
 
 /* some buffers for rebuilding channel/nick lists with ,'s */
 static char nickbuf[BUFSIZE], buf[BUFSIZE];
@@ -475,8 +473,12 @@ send_channel_modes(aClient *cptr, aChannel *chptr)
    *modebuf = *parabuf = '\0';
    channel_modes(cptr, modebuf, parabuf, chptr);
 
-   sprintf(buf, ":%s SJOIN %ld %ld %s %s %s :", me.name,
-	   chptr->channelts, chptr->creationtime, chptr->chname, modebuf, parabuf);
+   if(IsSSJoin(cptr))
+      ircsprintf(buf, ":%s SJOIN %ld %s %s %s :", me.name,
+	   chptr->channelts, chptr->chname, modebuf, parabuf);
+   else
+      ircsprintf(buf, ":%s SJOIN %ld %ld %s %s %s :", me.name,
+	   chptr->channelts, chptr->channelts, chptr->chname, modebuf, parabuf);
    t = buf + strlen(buf);
    for (l = chptr->members; l && l->value.cptr; l = l->next)
       if (l->flags & MODE_CHANOP) {
@@ -516,10 +518,11 @@ send_channel_modes(aClient *cptr, aChannel *chptr)
 	 if (t[-1] == ' ')
 	    t[-1] = '\0';
 	 sendto_one(cptr, "%s", buf);
-	 sprintf(buf, ":%s SJOIN %ld %ld %s 0 :",
-				me.name, chptr->channelts,
-				chptr->creationtime,
-				chptr->chname);
+         if(IsSSJoin(cptr))
+	    sprintf(buf, ":%s SJOIN %ld %s 0 :", me.name, chptr->channelts, chptr->chname);
+         else
+	    sprintf(buf, ":%s SJOIN %ld %ld %s 0 :", me.name, chptr->channelts, chptr->channelts,
+                    chptr->chname);
 	 t = buf + strlen(buf);
 	 n = 0;
       }
@@ -579,7 +582,7 @@ m_mode(aClient *cptr,
       sendto_one(sptr, rpl_str(RPL_CHANNELMODEIS), me.name, parv[0],
 		 chptr->chname, modebuf, parabuf);
       sendto_one(sptr, rpl_str(RPL_CREATIONTIME), me.name, parv[0],
-		 chptr->chname, chptr->creationtime);
+		 chptr->chname, chptr->channelts);
       return 0;
    }
 
@@ -1039,7 +1042,7 @@ get_channel(aClient *cptr,
       chptr->prevch = NULL;
       chptr->nextch = channel;
       channel = chptr;
-		chptr->creationtime = chptr->channelts = timeofday;
+      chptr->channelts = timeofday;
       (void) add_to_channel_hash_table(chname, chptr);
       Count.chan++;
    }
@@ -1156,12 +1159,8 @@ m_join(aClient *cptr,
    Reg Link   *lp;
    Reg aChannel *chptr;
    Reg char   *name, *key = NULL;
-   int         i, flags = 0, chanlen=0;
-	
-#ifdef USE_ALLOW_OP
+   int         i, flags = 0, chanlen=0;	
    int         allow_op = YES;
-	
-#endif
    char       *p = NULL, *p2 = NULL;
 	
 #ifdef ANTI_SPAMBOT
@@ -1406,47 +1405,51 @@ m_join(aClient *cptr,
       /*
        * *  Complete user entry to the new channel (if any)
        */
-#ifdef USE_ALLOW_OP
       if (allow_op)
 		  add_user_to_channel(chptr, sptr, flags);
       else
 		  add_user_to_channel(chptr, sptr, 0);
-#else
-      add_user_to_channel(chptr, sptr, flags);
-#endif
       /*
        * *  Set timestamp if appropriate, and propagate
        */
-      if (MyClient(sptr) && flags == CHFL_CHANOP) {
-			chptr->channelts = timeofday;
-			
-#ifdef USE_ALLOW_OP
-			if (allow_op)
-			sendto_match_servs(chptr, cptr, ":%s SJOIN %ld %ld %s + :@%s",
-									 me.name, chptr->channelts, chptr->creationtime, name, parv[0]);
-			else
-			sendto_match_servs(chptr, cptr,
-									 ":%s SJOIN %ld %ld %s + :%s", me.name,
-									 chptr->channelts, chptr->creationtime, name, parv[0]);
-#else
-			sendto_match_servs(chptr, cptr, ":%s SJOIN %ld %ld %s + :@%s",
-									 me.name, chptr->channelts, chptr->creationtime, name, parv[0]);
-#endif
+      if (MyClient(sptr) && flags == CHFL_CHANOP) 
+      {
+         chptr->channelts = timeofday;
+
+         /* we keep channel "creations" to the server sjoin format,
+            so we can bounce modes and stuff if our ts is older. */
+
+         if (allow_op)
+         {
+            sendto_ssjoin_servs(0, chptr, cptr, ":%s SJOIN %ld %ld %s + :@%s",
+                               me.name, chptr->channelts, chptr->channelts, name, parv[0]);
+            sendto_ssjoin_servs(1, chptr, cptr, ":%s SJOIN %ld %s + :@%s",
+                               me.name, chptr->channelts, name, parv[0]);
+         }
+         else
+         {
+            sendto_ssjoin_servs(0, chptr, cptr, ":%s SJOIN %ld %ld %s + :%s",
+                               me.name, chptr->channelts, chptr->channelts, name, parv[0]);
+            sendto_ssjoin_servs(1, chptr, cptr, ":%s SJOIN %ld %s + :%s",
+                               me.name, chptr->channelts, name, parv[0]);
+         }
       }
-      else if (MyClient(sptr)) {
-			sendto_match_servs(chptr, cptr,
-									 ":%s SJOIN %ld %ld %s + :%s", me.name,
-									 chptr->channelts, chptr->creationtime, name, parv[0]);
+      else if (MyClient(sptr)) 
+      {
+            sendto_ssjoin_servs(0, chptr, cptr, oldCliSJOINFmt,
+                               me.name, chptr->channelts, chptr->channelts, name, parv[0]);
+            sendto_ssjoin_servs(1, chptr, cptr, newCliSJOINFmt,
+                               parv[0], chptr->channelts, name);
       }
-      else {
-			sendto_match_servs(chptr, cptr, ":%s JOIN :%s", parv[0],
-									 name);
-		}
-		/*
-       * * notify all other users on the new channel
+      else 
+      {
+         sendto_match_servs(chptr, cptr, ":%s JOIN :%s", parv[0], name);
+      }
+
+      /*
+       * notify all other users on the new channel
        */
-      sendto_channel_butserv(chptr, sptr, ":%s JOIN :%s",
-									  parv[0], name);
+      sendto_channel_butserv(chptr, sptr, ":%s JOIN :%s", parv[0], name);
 		
       if (MyClient(sptr)) {
 			del_invite(sptr, chptr);
@@ -1921,9 +1924,9 @@ send_list(aClient *cptr,
 		    continue;
 		if ((!lopt->showall) && ((chptr->users < lopt->usermin) ||
 			((lopt->usermax >= 0) && (chptr->users > lopt->usermax)) ||
-			((chptr->creationtime||1) < lopt->chantimemin) ||
+			((chptr->channelts||1) < lopt->chantimemin) ||
 			(chptr->topic_time < lopt->topictimemin) ||
-			(chptr->creationtime > lopt->chantimemax) ||
+			(chptr->channelts > lopt->chantimemax) ||
 			(chptr->topic_time > lopt->topictimemax) ||
 			(lopt->nolist && 
 				find_str_link(lopt->nolist, chptr->chname)) ||
@@ -2421,9 +2424,12 @@ sjoin_sendit(aClient *cptr,
 }
 
 /*
- * m_sjoin parv[0] - sender parv[1] - TS parv[2] - channel parv[3] -
- * modes + n arguments (key and/or limit) parv[4+n] - flags+nick list
- * (all in one parameter)
+ * m_sjoin 
+ * parv[0] - sender 
+ * parv[1] - TS 
+ * parv[2] - channel 
+ * parv[3] - modes + n arguments (key and/or limit) 
+ * parv[4+n] - flags+nick list (all in one parameter)
  * 
  * 
  * process a SJOIN, taking the TS's into account to either ignore the
@@ -2451,21 +2457,92 @@ m_sjoin(aClient *cptr,
    Link       *l;
    int         args = 0, haveops = 0, keepourmodes = 1, keepnewmodes = 1,
 	       doesop = 0, what = 0, pargs = 0, fl, people = 0,
-	       isnew;
+	       isnew, clientjoin = 0;
    Reg char   *s, *s0;
    static char numeric[16], sjbuf[BUFSIZE];
    char       *mbuf = modebuf, *t = sjbuf, *p;
-   time_t      creation=0;
-	
-   if (IsClient(sptr) || parc < 6)
+
+   /* if my client is SJOINing, it's just a local user being a dufus. 
+    *  Ignore him.
+    * parc >= 5 (new serv<->serv SJOIN format)
+    * parc >= 6 (old serv<->serv SJOIN format)
+    * parc == 3 (new serv<->serv cliSJOIN format)
+    */
+
+   if (MyClient(sptr) || (parc < 5 && IsServer(sptr)) || (parc < 3 && IsPerson(sptr)))
 	  return 0;
-   if (!IsChannelName(parv[3]))
+
+   if(parc == 3 && IsPerson(sptr))
+      clientjoin = 1;
+   else 
+   if(isdigit(parv[2][0]))
+   {
+      int i;
+
+      if(parc < 6) 
+         return 0;
+
+      for(i = 2; i < (parc - 1); i++)
+         parv[i] = parv[i+1];
+
+      parc--;
+   }
+
+   if (!IsChannelName(parv[2]))
 	  return 0;
+
    newts = atol(parv[1]);
-   creation = atol(parv[2]);
-   memset((char *) &mode, '\0', sizeof(mode));
 	
-   s = parv[4];
+   isnew = ChannelExists(parv[2]) ? 0 : 1;
+   chptr = get_channel(sptr, parv[2], CREATE);
+   oldts = chptr->channelts;
+
+   for (l = chptr->members; l && l->value.cptr; l = l->next)
+	  if (l->flags & MODE_CHANOP) {
+		  haveops++;
+		  break;
+	  }
+
+   if(clientjoin) /* we have a good old (new :) client sjoin, with timestamp */
+   {
+      if (isnew)
+	  chptr->channelts = tstosend = newts;
+      else if (newts == 0 || oldts == 0)
+	  chptr->channelts = tstosend = 0;
+      else if (newts == oldts)
+	  tstosend = oldts;
+      else if (newts < oldts) 
+      {
+         if (haveops)
+            tstosend = oldts;
+         else
+            chptr->channelts = tstosend = newts;
+      }
+      else 
+         tstosend = oldts;
+
+      /* parv[0] is the client that is joining. parv[0] == sptr->name */
+
+      if (!IsMember(sptr, chptr)) 
+      {
+         add_user_to_channel(chptr, sptr, 0);
+         sendto_channel_butserv(chptr, sptr, ":%s JOIN :%s", parv[0], parv[2]);
+      }
+
+      sendto_ssjoin_servs(0, chptr, cptr, oldCliSJOINFmt, me.name, tstosend, tstosend,
+			parv[2], parv[0]);
+
+      sendto_ssjoin_servs(1, chptr, cptr, newCliSJOINFmt, parv[0], tstosend, parv[2]);
+
+      return 0;
+   }
+
+   memset((char *) &mode, '\0', sizeof(mode));
+   *parabuf = '\0';
+
+   doesop = (parv[4 + args][0] == '@' || parv[4 + args][1] == '@');
+
+   s = parv[3];
    while (*s)
 	  switch (*(s++)) {
 		case 'i':
@@ -2493,34 +2570,19 @@ m_sjoin(aClient *cptr,
 		  mode.mode |= MODE_REGONLY;
 		  break;
 		case 'k':
-		  strncpyzt(mode.key, parv[5 + args], KEYLEN + 1);
+		  strncpyzt(mode.key, parv[4 + args], KEYLEN + 1);
 		  args++;
-		  if (parc < 6 + args)
+		  if (parc < 5 + args)
 	             return 0;
 		  break;
 		case 'l':
-		  mode.limit = atoi(parv[5 + args]);
+		  mode.limit = atoi(parv[4 + args]);
 		  args++;
-		  if (parc < 6 + args)
+		  if (parc < 5 + args)
 	             return 0;
 		  break;
 	  }
-	
-   *parabuf = '\0';
-	
-   isnew = ChannelExists(parv[3]) ? 0 : 1;
-   chptr = get_channel(sptr, parv[3], CREATE);
-   oldts = chptr->channelts;
-   doesop = (parv[5 + args][0] == '@' || parv[5 + args][1] == '@');
-	if(chptr->creationtime>creation) /* pick the oldest creation time, and set it */
-	  chptr->creationtime=creation;
-	
-   for (l = chptr->members; l && l->value.cptr; l = l->next)
-	  if (l->flags & MODE_CHANOP) {
-		  haveops++;
-		  break;
-	  }
-	
+
    oldmode = &chptr->mode;
 	
    if (isnew)
@@ -2726,23 +2788,25 @@ m_sjoin(aClient *cptr,
    }
 	
    *modebuf = *parabuf = '\0';
-   if (parv[4][0] != '0' && keepnewmodes)
+   if (parv[3][0] != '0' && keepnewmodes)
 	  channel_modes(sptr, modebuf, parabuf, chptr);
    else {
       modebuf[0] = '0';
       modebuf[1] = '\0';
    }
-	
-   sprintf(t, ":%s SJOIN %ld %ld %s %s %s :", parv[0], tstosend, creation,
-			  parv[3], modebuf, parabuf);
-   t += strlen(t);
-	
+
+   /* We do this down below now, so we can send out for two sjoin formats.	
+    * sprintf(t, ":%s SJOIN %ld %ld %s %s %s :", parv[0], tstosend, tstosend,
+    *			  parv[2], modebuf, parabuf);
+    * t += strlen(t);
+    */
+
    mbuf = modebuf;
    parabuf[0] = '\0';
    pargs = 0;
    *mbuf++ = '+';
 	
-   for (s = s0 = strtoken(&p, parv[args + 5], " "); s;
+   for (s = s0 = strtoken(&p, parv[args + 4], " "); s;
 		  s = s0 = strtoken(&p, (char *) NULL, " ")) {
       fl = 0;
       if (*s == '@' || s[1] == '@')
@@ -2765,7 +2829,7 @@ m_sjoin(aClient *cptr,
       if (!IsMember(acptr, chptr)) {
 			add_user_to_channel(chptr, acptr, fl);
 			sendto_channel_butserv(chptr, acptr, ":%s JOIN :%s",
-										  s, parv[3]);
+										  s, parv[2]);
       }
       if (keepnewmodes)
 		  strcpy(t, s0);
@@ -2813,7 +2877,11 @@ m_sjoin(aClient *cptr,
 		  t[-1] = '\0';
       else
 		  *t = '\0';
-      sendto_match_servs(chptr, cptr, "%s", sjbuf);
+
+      sendto_ssjoin_servs(1, chptr, cptr, newSJOINFmt, parv[0], tstosend,
+			parv[2], modebuf, parabuf, sjbuf);
+      sendto_ssjoin_servs(0, chptr, cptr, oldSJOINFmt, parv[0], tstosend, tstosend,
+			parv[2], modebuf, parabuf, sjbuf);
    }
    return 0;
 }

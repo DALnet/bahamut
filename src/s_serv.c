@@ -740,6 +740,7 @@ m_server_estab(aClient *cptr)
       if (bconf->passwd[0])
 	 sendto_one(cptr, "PASS %s :TS", bconf->passwd);
       /* Pass my info to the new server */
+      sendto_one(cptr, "CAPAB TS3 NOQUIT SSJOIN");
       sendto_one(cptr, "SERVER %s 1 :%s",
 		 my_name_for_link(me.name, aconf),
 		 (me.info[0]) ? (me.info) : "IRCers United");
@@ -763,7 +764,10 @@ m_server_estab(aClient *cptr)
    }
 
    sendto_one(cptr, "SVINFO %d %d 0 :%ld", TS_CURRENT, TS_MIN, (ts_val) timeofday);
-   sendto_one(cptr, "CAPAB TS3 NOQUIT");
+
+   /* sendto one(cptr, "CAPAB ...."); moved to after PASS but before SERVER
+    * now in two places.. up above and in s_bsd.c. - lucas
+    * This is to make sure we pass on our capabilities before we establish a server connection */
 
    det_confs_butmask(cptr, CONF_LEAF | CONF_HUB | CONF_NOCONNECT_SERVER | CONF_ULINE);
    /*
@@ -4593,27 +4597,36 @@ m_die(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
 
 /*
- * m_capab * Communicate what I can do to another server 
+ * m_capab 
+ * Communicate what I can do to another server 
+ * This has to be able to be sent and understood while
+ * the client is UNREGISTERED. Therefore, we
+ * absolutely positively must not check to see if
+ * this is a server or a client. It's probably an unknown!
  */
 int 
 m_capab(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
    int         i;
 
+   /* If it's not local, or it has already set capabilities, silently ignore it. */
+
+   if(cptr != sptr || cptr->capabilities)
+      return 0;
+
    for (i = 1; i < parc; i++) 
    {
-      if (IsServer(sptr))
-      {
-      	if (strcmp(parv[i], "TS3") == 0)
-	 	SetTS3(cptr);
-      	if (strcmp(parv[i], "NOQUIT") == 0)
-	 	SetNoQuit(cptr);
-      }
-      else 
-        if (strcmp(parv[i], "SPLIT") == 0)
-          	SetSplit(cptr);
+      if (strcmp(parv[i], "TS3") == 0)
+ 	SetTS3(cptr);
+      if (strcmp(parv[i], "NOQUIT") == 0)
+ 	SetNoQuit(cptr);
+      if (strcmp(parv[i], "SSJOIN") == 0)
+ 	SetSSJoin(cptr);
+      if (strcmp(parv[i], "SPLIT") == 0)
+       	SetSplit(cptr);
    }
-	return 0;
+
+   return 0;
 }
 
 /*

@@ -813,6 +813,10 @@ static int completed_connection(aClient * cptr)
    if (!BadPtr(aconf->passwd))
       sendto_one(cptr, "PASS %s :TS", aconf->passwd);
 
+   /* pass on our capabilities to the server we /connect'd */
+
+   sendto_one(cptr, "CAPAB TS3 NOQUIT SSJOIN");
+
    aconf = find_conf(cptr->confs, cptr->name, CONF_NOCONNECT_SERVER);
    if (!aconf) {
       sendto_realops("Lost N-Line for %s", get_client_name(cptr, HIDEME));

@@ -194,20 +194,24 @@ typedef struct MotdItem aMotd;
 #define FLAGS_CONNECTION_TIMEDOUT 0x800000
 #define FLAGS_ULINE 			0x2000000
 
-/* Capabilities of the ircd  */
+/* Capabilities of the ircd or clients */
 
 #define CAPAB_TS3     0x0000001	/* Supports the TS3 Protocal */
 #define CAPAB_NOQUIT  0x0000002 /* Supports NOQUIT */
 #define CAPAB_SPLIT   0x0000004 /* client supports SPLIT command */
+#define CAPAB_NSJOIN  0x0000008 /* server supports new smart sjoin */
 
-#define SetTS3(x)   do{if ((x)->serv) (x)->capabilities |= CAPAB_TS3;}while(0)
-#define IsTS3       ((x)->serv && (x)->capabilities & CAPAB_TS3)
+#define SetTS3(x)   	((x)->capabilities |= CAPAB_TS3)
+#define IsTS3       	((x)->capabilities & CAPAB_TS3)
 
-#define SetNoQuit(x) do{if ((x)->serv) (x)->capabilities |= CAPAB_NOQUIT;}while(0)
-#define IsNoQuit(x) ((x)->serv && (x)->capabilities & CAPAB_NOQUIT)
+#define SetNoQuit(x) 	((x)->capabilities |= CAPAB_NOQUIT)
+#define IsNoQuit(x) 	((x)->capabilities & CAPAB_NOQUIT)
 
-#define SetSplit(x) do{if ((x)->user) (x)->capabilities |= CAPAB_SPLIT;}while(0)
-#define IsSplit(x)  ((x)->user && (x)->capabilities & CAPAB_SPLIT)
+#define SetSplit(x) 	((x)->capabilities |= CAPAB_SPLIT)
+#define IsSplit(x)  	((x)->capabilities & CAPAB_SPLIT)
+
+#define SetSSJoin(x)	((x)->capabilities |= CAPAB_NSJOIN)
+#define IsSSJoin(x)	((x)->capabilities & CAPAB_NSJOIN)
 
 /* flag macros. */
 #define IsULine(x) ((x)->flags & FLAGS_ULINE)
@@ -751,7 +755,6 @@ struct Channel {
 	Link       *invites;
 	aBan       *banlist;
 	ts_val      channelts;
-	time_t      creationtime;
 #ifdef FLUD
 	time_t      fludblock;
 	struct fludbot *fluders;

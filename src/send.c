@@ -340,14 +340,11 @@ void sendto_noquit_servs_butone(int noquit, aClient *one, char *pattern, ...) {
 	va_start(vl, pattern);
    for (i = serv_fdlist.entry[j = 1];
 		  j <= serv_fdlist.last_entry; i = serv_fdlist.entry[++j]) {
-      if (!(cptr = local[i]) || (noquit ^ IsNoQuit(cptr)) || one == cptr)
+      if (!(cptr = local[i]) || 
+           (noquit && !IsNoQuit(cptr)) || 
+           (!noquit && IsNoQuit(cptr)) || 
+            one == cptr)
 		  continue;
-
-                                   /* (noquit ^ IsNoQuit(cptr)
-                                    * therefore, if they're both 0, or both 1, the result is 0.
-                                    * otherwise, the result is 1. Shoot me if I mixed up my logic.
-				    *       - lucas    */
-
 
       send_fdlist.entry[++k] = i;
    }
@@ -442,6 +439,43 @@ sendto_channel_butserv(aChannel *chptr, aClient *from, char *pattern, ...)
 	va_end(vl);
    return;
 }
+
+/*
+ * sendto_ssjoin_servs
+ * 
+ * send to all servers with ssjoin capability (or not)
+ * 
+ */
+void sendto_ssjoin_servs(int ssjoin, aChannel *chptr, aClient *from, char *pattern, ...)
+{
+	int j, k = 0;
+	fdlist      send_fdlist;
+	int     i;
+	aClient *cptr;
+	va_list vl;
+	
+   if (chptr) {
+      if (*chptr->chname == '&')
+		  return;
+   }
+	va_start(vl, pattern);
+   for (i = serv_fdlist.entry[j = 1]; j <= serv_fdlist.last_entry; i = serv_fdlist.entry[++j]) {
+      if (!(cptr = local[i]) || 
+           (cptr == from) ||
+           (ssjoin && !IsSSJoin(cptr)) ||
+           (!ssjoin && IsSSJoin(cptr)))
+		  continue;
+
+      send_fdlist.entry[++k] = i;
+   }
+   send_fdlist.last_entry = k;
+   if (k)
+	  vsendto_fdlist(&send_fdlist, pattern, vl);
+	va_end(vl);
+   return;
+}
+
+
 /*
  * * send a msg to all ppl on servers/hosts that match a specified mask *
  * (used for enhanced PRIVMSGs) *
