@@ -496,18 +496,18 @@ register_user(aClient *cptr,
 				if (i == -4) {
 					ircstp->is_ref++;
 					return exit_client(cptr, sptr, &me,
-											 "Too many connections from your hostname");
+					 "Too many connections from your hostname");
 				}
 				else if (i == -3)
 				  sendto_realops_lev(SPY_LEV, "%s for %s [%s] ",
-											"I-line is full", get_client_host(sptr),p);
+					"I-line is full (server is full)", get_client_host(sptr),p);
 				else
 				  sendto_realops_lev(CCONN_LEV, "%s from %s [%s]",
-											"Unauthorized client connection", get_client_host(sptr),p);
+					"Unauthorized client connection", get_client_host(sptr),p);
 				ircstp->is_ref++;
 				return exit_client(cptr, sptr, &me, i == -3 ?
-										 "No more connections allowed in your connection class" :
-										 "You are not authorized to use this server");
+					"No more connections allowed in your connection class (the server is full)" :
+					"You are not authorized to use this server");
 			}
 			else
 			  return exit_client(cptr, sptr, &me, "Socket Error");

@@ -1202,7 +1202,8 @@ aClient *add_connection(aClient * cptr, int fd)
       int len = sizeof(struct sockaddr_in);
 
       if (getpeername(fd, (struct sockaddr *) &addr, &len) == -1) {
-	 report_error("Failed in connecting to %s :%s", cptr);
+/* god, this error is annoying. - lucas                        */
+/*	 report_error("Failed in connecting to %s :%s", cptr); */
 	 ircstp->is_ref++;
 	 acptr->fd = -2;
 	 free_client(acptr);

@@ -46,8 +46,9 @@ static char zipOutBuf[zipOutBufSize];
  * 64k overflowed every now and then.
  * This isn't that important, an overflow is 
  * non-fatal, but causes more calls to deflate()
+ * 96k seems to overflow a lot now.
  */
-#define zipInBufSize (98304) /* 96K */
+#define zipInBufSize (131072) /* 128K */
 static char zipInBuf[zipInBufSize];
 
 /* opaque "out" data structure */
