@@ -995,8 +995,6 @@ can_join(aClient *sptr, aChannel *chptr, char *key)
       return (ERR_BADCHANNELKEY);
    if (chptr->mode.limit && chptr->users >= chptr->mode.limit) 
 		 return (ERR_CHANNELISFULL);
-   if (chptr->users > 1000)
-		 return (ERR_CHANNELISFULL); 
 	 return 0;
 }
 /*
