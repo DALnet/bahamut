@@ -1289,7 +1289,7 @@ confadd_class(cVar *vars[], int lnum)
             if(x->maxlinks > 0)
             {
                 confparse_error("Multiple maxusers/maxlinks definitions"
-				" (you can only have one or the other)",
+                " (you can only have one or the other)",
                                 lnum);
                 free_class(x);
                 return -1;
@@ -1968,12 +1968,13 @@ merge_ports()
 static void
 merge_classes()
 {
-    aClass  *class, *old_class, *ptr = NULL, *ptrn;
+    aClass  *class, *old_class, *ptr;
 
     for(old_class = classes; old_class; old_class = old_class->next)
         old_class->maxlinks = -1;
-    class = new_classes;
-    while(class)
+
+    for (class = new_classes; class; class = class->next)
+    {
         if((old_class = find_class(class->name)))
         {
             old_class->connfreq = class->connfreq;
@@ -1981,49 +1982,37 @@ merge_classes()
             old_class->maxlinks = class->maxlinks;
             old_class->maxsendq = class->maxsendq;
             class->maxlinks = -1;
-            class = class->next;
         }
+    }
+
+    /* add classes from new_classes that are not maxlinks = -1 */
+    for (class = new_classes; class; class = old_class)
+    {
+        old_class = class->next;
+        if (class->maxlinks == -1)
+            free_class(class);
         else
         {
-            ptr = class->next;
             class->next = classes;
             classes = class;
-            class = ptr;
         }
-    ptr = NULL;
-    class = new_classes;
-    while(class)
-    {
-        ptrn = class->next;
-        if(class->maxlinks == -1)
-        {
-            if(ptr)
-                ptr->next = class->next;
-            else
-                new_classes = class->next;
-            free_class(class);
-        }
-        else
-            ptr = class;
-        class = ptrn;
     }
     new_classes = NULL;
+
+    /* now remove any classes from the list marked and w/o links */
     ptr = NULL;
-    class = classes;
-    while(class)
+    for (class = classes; class; class = old_class)
     {
-        ptrn = class->next;
-        if((class->maxlinks == -1) && (class->links <= 0))
+        old_class = class->next;
+        if (class->maxlinks == -1 && class->links <= 0)
         {
-            if(ptr)
+            if (ptr)
                 ptr->next = class->next;
             else
                 classes = class->next;
-            free_class(class);  
+            free_class(class);
         }
-        else
-            ptr = class;
-        class = ptrn;
+        else ptr = class;
     }
     return;
 }
