@@ -79,6 +79,7 @@ static int  user_modes[] =
  UMODE_s, 's',
  UMODE_c, 'c',
  UMODE_r, 'r',
+ UMODE_R, 'R',
  UMODE_k, 'k',
  UMODE_y, 'y',
  UMODE_d, 'd',

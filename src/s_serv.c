@@ -1539,7 +1539,7 @@ report_configured_links(aClient *sptr, int mask)
 
                   if(tmp->status & CONF_SERVER_MASK)
                   {
-		     if(!IsRouting(sptr) || !IsAdmin(sptr) || find_is_ulined(name))
+		     if((!IsRouting(sptr) && !IsAdmin(sptr)) || find_is_ulined(name))
   		        host = "*";
                   }
 
