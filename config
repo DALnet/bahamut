@@ -788,6 +788,9 @@ while [ -z "$FOO" ] ; do
     FOO="$MAXSENDQ"
     echo ""
     echo "What sendq length do you wish to have?"
+    echo "This is the default sendQ that clients in class zero have."
+    echo "Clients in class zero include unknown clients and clients in"
+    echo "improperly configured I: lines. You probably don't need to touch this."
     echo -n "[$FOO] -> $c"
     if [ -z "$AUTO_CONFIG" -o -n "$runonce" ] ; then
 	read cc
@@ -811,37 +814,42 @@ while [ -z "$FOO" ] ; do
     esac
 done
 
-FOO=""
-runonce=""
-while [ -z "$FOO" ] ; do
-    FOO="$BUFPOOL"
-    echo ""
-    echo "What size of a bufferpool do you wish to have?"
-    echo "A bufferpool is a total of ALL sendq's in use"
-    echo -n "[$FOO] -> $c"
-    if [ -z "$AUTO_CONFIG" -o -n "$runonce" ] ; then
-	read cc
-    else
-	cc=""
-	runonce=Yes
-    fi
-    if [ -z "$cc" ] ; then
-	cc=$FOO
-    fi
-    case "$cc" in
-	\([1-9]*\))
-	    BUFPOOL="$cc"
-	    ;;
-	*)
-	    echo ""
-	    echo "You need to enter a number here, either based on"
-	    echo "MAXSENDQLENGTH or a literal value.  Also, this value"
-	    echo "MUST be enclosed in parens -- (4*MAXSENDQLENGTH), for example."
-	    echo ""
-	    FOO=""
-	    ;;
-    esac
-done
+# Bufpool isn't used. Don't ask, but keep it here for legacy purposes.
+if [ -n "$BUFPOOL" -o -z "$BUFPOOL" ] ; then
+   BUFPOOL="(4 * MAXSENDQLENGTH)"
+fi
+
+# FOO=""
+# runonce=""
+# while [ -z "$FOO" ] ; do
+#     FOO="$BUFPOOL"
+#     echo ""
+#     echo "What size of a bufferpool do you wish to have?"
+#     echo "A bufferpool is a total of ALL sendq's in use"
+#     echo -n "[$FOO] -> $c"
+#     if [ -z "$AUTO_CONFIG" -o -n "$runonce" ] ; then
+# 	read cc
+#     else
+# 	cc=""
+# 	runonce=Yes
+#     fi
+#     if [ -z "$cc" ] ; then
+# 	cc=$FOO
+#     fi
+#     case "$cc" in
+# 	\([1-9]*\))
+# 	BUFPOOL="$cc"
+# 	    ;;
+# 	*)
+# 	    echo ""
+# 	    echo "You need to enter a number here, either based on"
+# 	    echo "MAXSENDQLENGTH or a literal value.  Also, this value"
+# 	    echo "MUST be enclosed in parens -- (4*MAXSENDQLENGTH), for example."
+# 	    echo ""
+#	    FOO=""
+# 	    ;;
+#     esac
+# done
 
 FOO=""
 runonce=""
@@ -905,6 +913,10 @@ else
        echo "         however some systems do not support it. Linux 2.2 uses select to wrap poll."
        echo "kqueue - use the kqueue() system call. ONLY WORKS UNDER FREEBSD."
        echo "         However, it works with little to no system load -- highly optimal."
+       echo "epoll  - use the epoll() system call. Only works under Linux (with a kernel patch)."
+       echo "         Highly optimal for Linux machines. EXPERIMENTAL, you may have to link with"
+       echo "         the libepoll in order for this to work -- not for the faint of heart."
+       echo "         See http://www.xmailserver.org/linux-patches/nio-improve.html"
        echo -n "[$FOO] -> $c"
        if [ -z "$AUTO_CONFIG" -o -n "$runonce" ] ; then
           read cc
@@ -920,6 +932,10 @@ else
              SOCKETENGINE="poll"
              USESELECT=""
              ;;
+          [Ee][Pp][Oo][Ll][Ll])
+             SOCKETENGINE="epoll"
+             USESELECT=""
+             ;;
           [Kk][Qq][Uu][Ee][Uu][Ee])
              SOCKETENGINE="kqueue"
              USESELECT=""
@@ -930,7 +946,7 @@ else
              ;;
           *)
              echo ""
-             echo "You need to enter either poll, select, or kqueue here..."
+             echo "You need to enter either poll, select, kqueue, or epoll here..."
              echo ""
              FOO=""
              ;;

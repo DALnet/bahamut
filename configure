@@ -16,7 +16,7 @@ ac_help="$ac_help
   --disable-encryption    disable rc4 link encryption (removes openssl dependancy)"
 ac_help="$ac_help
 \
-  --enable-hookmodules    enable support for loadable hook modules"
+  --disable-hookmodules   disable support for loadable hook modules"
 ac_help="$ac_help
   --with-ssl-dir=PATH     Path to openssl installation "
 
@@ -547,9 +547,9 @@ fi
 # Check whether --enable-hookmodules or --disable-hookmodules was given.
 if test "${enable_hookmodules+set}" = set; then
   enableval="$enable_hookmodules"
-  enable_hmodules=yes
+  :
 else
-  enable_hmodules=no
+  enable_hmodules=yes
 fi
 
 
@@ -1924,7 +1924,7 @@ fi
 done
 
 
-if test $enable_hmodules = yes; then
+if test "$enable_hmodules" = "yes"; then
 echo $ac_n "checking for dlopen in -ldl""... $ac_c" 1>&6
 echo "configure:1930: checking for dlopen in -ldl" >&5
 ac_lib_var=`echo dl'_'dlopen | sed 'y%./+-%__p_%'`
@@ -2437,7 +2437,7 @@ fi
 
 
 
-if test $enable_encryption = no; then
+if test "$enable_encryption" = "no"; then
 echo "encryption disabled, skipping openssl checks..."
 ENCRYPT_SRC=""
 

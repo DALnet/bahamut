@@ -10,7 +10,7 @@ AC_ARG_ENABLE(encryption, \
 [  --disable-encryption    disable rc4 link encryption (removes openssl dependancy)],,enable_encryption=yes)
 
 AC_ARG_ENABLE(hookmodules, \
-[  --enable-hookmodules    enable support for loadable hook modules],enable_hmodules=yes,enable_hmodules=no)
+[  --disable-hookmodules   disable support for loadable hook modules],,enable_hmodules=yes)
 
 dnl Checks for programs.
 AC_PROG_CC
@@ -51,7 +51,7 @@ AC_CHECK_FUNCS(index strerror strtoken strtok inet_addr inet_ntoa inet_netof ine
 AC_CHECK_FUNCS(gettimeofday lrand48 sigaction bzero bcmp bcopy)
 AC_CHECK_FUNCS(dn_skipname __dn_skipname getrusage times, break)
 
-if test $enable_hmodules = yes; then
+if test "$enable_hmodules" = "yes"; then
 AC_CHECK_LIB(dl, dlopen)
 AC_CHECK_HEADER(dlfcn.h)
 AC_CHECK_FUNCS(dlopen dlsym)
@@ -270,7 +270,7 @@ AC_MSG_RESULT(can't tell))
 
 AC_SUBST(DFDSS)
 
-if test $enable_encryption = no; then
+if test "$enable_encryption" = "no"; then
 echo "encryption disabled, skipping openssl checks..."
 ENCRYPT_SRC=""
 AC_SUBST(ENCRYPT_SRC)
