@@ -5,7 +5,7 @@ Changes for 1.4.23
   out to another server; useful for servers which don't want to use the main
   IP in the M: line as the server<->server IP
   - To use: Add :<local IP> to the end of a C: line
-  - E.g.: C:192.168.0.1:pass:server.dal.net::10:192.168.10.200
+  - E.g.: C:192.168.0.1:pass:server.dal.net:7325:10:192.168.10.200
 - Block DCCs of .htm/.html files due to script viruses being spread in this
   way
 - Prompt for max channels per user and oper pw encryption in the config
@@ -13,7 +13,8 @@ Changes for 1.4.23
 - Example.conf brought up to date
 - Disabled ident on server<->server connections, to deal with "sux mode,"
   which happens when the ident port is filtered and the connection has to
-  time out
+  time out; this is done by delaying the ident lookup until USER is
+  received from a client
 
 Changes for 1.4.22
 - Fixed a bug where a server with a bad name trying to connect or trying
