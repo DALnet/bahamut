@@ -725,7 +725,7 @@ int register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
 				      username);
 		    return exit_client(cptr, sptr, &me, tmpstr2);
 		}
-#endif / * NO_MIXED_CASE */
+#endif /* NO_MIXED_CASE */
 		if (special) 
 		{
 		    sendto_realops_lev(REJ_LEV, "Invalid username: %s (%s@%s)",

@@ -293,17 +293,18 @@
  * These are either full paths or files within DPATH.
  * 
  */
-#undef FNAME_USERLOG "/usr/local/ircd/users"	
-#undef FNAME_OPERLOG "/usr/local/ircd/opers"
+
+#undef FNAME_USERLOG
+#undef FNAME_OPERLOG
+
+/*
+#define FNAME_USERLOG "/usr/local/ircd/users"	
+#define FNAME_OPERLOG "/usr/local/ircd/opers"
+*/
 
 /* Don't change this... */
 #define HARD_FDLIMIT	(HARD_FDLIMIT_ - 10)
 #define MASTER_MAX	(HARD_FDLIMIT - MAX_BUFFER)
-
-/* DONT_USE_REGISTER: this tells the compiler not to try to make
- * variables 'register', almost always a good idea on a modern
- * compiler */
-#define DONT_USE_REGISTER 
 
 #include "defs.h"
 
