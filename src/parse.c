@@ -244,7 +244,7 @@ int parse(aClient *cptr, char *buffer, char *bufend)
 
     /* Note initially true: s==NULL || *(s-1) == '\0' !! */
     
-    i = 0;
+    i = 1;
     if (s) 
     {
 	if (paramcount > MAXPARA)
@@ -259,10 +259,10 @@ int parse(aClient *cptr, char *buffer, char *bufend)
 	    if (*s == ':') 
 	    {
 		/* The rest is a single parameter */
-		para[++i] = s + 1;
+		para[i++] = s + 1;
 		break;
 	    }
-	    para[++i] = s;
+	    para[i++] = s;
 	    if (i >= paramcount)
 		break;
 	    
@@ -271,7 +271,7 @@ int parse(aClient *cptr, char *buffer, char *bufend)
 	}
     }
     
-    para[++i] = NULL;
+    para[i] = NULL;
     if (mptr == (struct Message *) NULL)
 	return (do_numeric(numeric, cptr, from, i, para));
     

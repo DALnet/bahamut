@@ -5150,7 +5150,8 @@ int m_svskill(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	    strcpy(reason, "SVSKilled: ");
 	    strncpy(reason + 11, comment, TOPICLEN - 11);
 	    reason[TOPICLEN] = '\0';
-	    return exit_client(acptr, acptr, sptr, reason);
+	    exit_client(acptr, acptr, sptr, reason);
+            return (acptr == cptr) ? FLUSH_BUFFER : 0;
 	}
 	if(acptr->from == cptr)
 	{

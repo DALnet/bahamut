@@ -200,81 +200,135 @@ static void authsenderr(aClient *cptr)
 
 /*
  * read_authports
- * 
+ *
  * read the reply (if any) from the ident server we connected to. The
  * actual read processing here is pretty weak - no handling of the
  * reply if it is fragmented by IP.
- * 
- * This is really broken and needs to be rewritten.  Somehow len is
- * nonzero on failed connects() on Solaris (and maybe others?).  I
- * relocated the REPORT_FIN_ID to hide the problem.  --Rodder
- * 
+ *
+ * Whoever wrote this code should be shot.
+ * Looks like it's trouncing on memory it shouldn't be.
+ * Rewriting, some credit goes to wd for saving me time with his code.
+ * - lucas
  */
+
+#define AUTHBUFLEN 128
+
 void read_authports(aClient *cptr)
 {
-    char   *s, *t;
-    int     len;
-    char        ruser[USERLEN + 1], tuser[USERLEN + 1];
-    u_short     remp = 0, locp = 0;
+   char buf[AUTHBUFLEN], usern[USERLEN + 1];
+   int len, userncnt;
+   char *userid = "", *s, *reply, *os, *tmp;
 
-    *ruser = '\0';
-    Debug((DEBUG_NOTICE, "read_authports(%x) fd %d authfd %d stat %d",
-	   cptr, cptr->fd, cptr->authfd, cptr->status));
-    /*
-     * Nasty.  Cant allow any other reads from client fd while we're
-     * waiting on the authfd to return a full valid string.  Use the
-     * client's input buffer to buffer the authd reply. Oh. this is
-     * needed because an authd reply may come back in more than 1 read!
-     * -avalon
-     */
-    if ((len = read(cptr->authfd, cptr->buffer + cptr->count,
-		    sizeof(cptr->buffer) - 1 - cptr->count)) >= 0)
-    {
-	cptr->count += len;
-	cptr->buffer[cptr->count] = '\0';
-    }
+   len = recv(cptr->authfd, buf, AUTHBUFLEN, 0);
 
-    if ((len > 0) && (cptr->count != sizeof(cptr->buffer) - 1) &&
-	(sscanf(cptr->buffer, "%hd , %hd : USERID : %*[^:]: %10s",
-		&remp, &locp, tuser) == 3) &&
-	(s = strrchr(cptr->buffer, ':')))
-    {
-	for (++s, t = ruser; *s && (t < ruser + sizeof(ruser)); s++)
-	    if (!isspace(*s) && *s != ':' && *s != '@')
-		*t++ = *s;
-	*t = '\0';
-	Debug((DEBUG_INFO, "auth reply ok"));
-    }
-    else if (len != 0) 
-    {
-	*ruser = '\0';
-    }
+   if(len > 0)
+   {
+      do
+      {
+         if(buf[len - 1] != '\n')
+            break;
 
-    (void) close(cptr->authfd);
-    if (cptr->authfd == highest_fd)
-	while (!local[highest_fd])
-	    highest_fd--;
-    cptr->count = 0;
-    cptr->authfd = -1;
-    ClearAuth(cptr);
-    if (!DoingDNS(cptr))
-	SetAccess(cptr);
-    if (len > 0)
-	Debug((DEBUG_INFO, "ident reply: [%s]", cptr->buffer));
-    if (!locp || !remp || !*ruser)
-    {
-	ircstp->is_abad++;
-	(void) strcpy(cptr->username, "unknown");
-	return;
-    }
+         buf[--len] = '\0';
+
+         if(len == 0)
+            break;
+
+         if(buf[len - 1] == '\r')
+            buf[--len] = '\0';
+
+         if(len == 0)
+            break;
+
+         s = strchr(buf, ':');
+         if(!s)
+            break;
+         s++;
+
+         while(isspace(*s))
+            s++;
+
+         reply = s;
+         if(strncmp(reply, "USERID", 6))
+            break;
+
+         s = strchr(reply, ':');
+         if(!s)
+            break;
+         s++;
+
+         while(isspace(*s))
+            s++;
+
+         os = s;
+         if(strncmp(os, "OTHER", 5) == 0)
+            break;
+
+
+         /*
+          * From RFC1413:
+          *
+          * "OTHER" indicates the identifier is an unformatted
+          * character string consisting of printable characters in
+          * the specified character set.  "OTHER" should be
+          * specified if the user identifier does not meet the
+          * constraints of the previous paragraph.  Sending an
+          * encrypted audit token, or returning other non-userid
+          * information about a user (such as the real name and
+          * phone number of a user from a UNIX passwd file) are
+          * both examples of when "OTHER" should be used.
+          *
+          * If it's "OTHER", we don't want it. -  lucas
+          */
+
+         s = strchr(os, ':');
+         if(!s)
+            break;
+         s++;
+
+         while(isspace(*s))
+            s++;
+
+         userid = tmp = usern;
+         /* s is the pointer to the beginning of the userid field */
+         for(userncnt = USERLEN; *s && userncnt; s++)
+         {
+            if(*s == '@')
+               break;
+
+            if(!isspace(*s) && *s != ':')
+            {
+               *tmp++ = *s;
+               userncnt--;
+            }
+         }
+         *tmp = '\0';
+
+      } while(0);
+   }
+
+   close(cptr->authfd);
+   if (cptr->authfd == highest_fd)
+      while (!local[highest_fd])
+         highest_fd--;
+   cptr->authfd = -1;
+   ClearAuth(cptr);
+   if (!DoingDNS(cptr))
+      SetAccess(cptr);
+
+   if (!*userid)
+   {
+      ircstp->is_abad++;
+      (void) strcpy(cptr->username, "unknown");
+      return;
+   }
 #ifdef SHOW_HEADERS
-    else
-	send(cptr->fd, REPORT_FIN_ID, R_fin_id, 0);
+   else
+      sendto_one(cptr, REPORT_FIN_ID);
 #endif
 
-    ircstp->is_asuc++;
-    strncpyzt(cptr->username, ruser, USERLEN + 1);
-    cptr->flags |= FLAGS_GOTID;
-    Debug((DEBUG_INFO, "got username [%s]", ruser));
-    return;
+   ircstp->is_asuc++;
+   strncpyzt(cptr->username, userid, USERLEN + 1);
+   cptr->flags |= FLAGS_GOTID;
+   return;
 }
+

@@ -515,7 +515,7 @@ int register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
 	else if (sptr->flags & FLAGS_GOTID && *sptr->username != '-')
 	    strncpyzt(user->username, sptr->username, USERLEN + 1);
 #endif
-	else
+	else if(username != user->username) /* don't overlap */
 	    strncpyzt(user->username, username, USERLEN + 1);
 
 	if (!BadPtr(pwaconf->passwd))
@@ -886,7 +886,7 @@ int register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
 		    sptr->user->real_oper_ip = 
 			MyMalloc(strlen(sptr->hostip) + 1);
 		    strcpy(sptr->user->real_oper_host, sptr->user->host);
-		    strcpy(sptr->user->real_oper_username, sptr->username);
+		    strcpy(sptr->user->real_oper_username, sptr->user->username);
 		    strcpy(sptr->user->real_oper_ip, sptr->hostip);
 		    strncpyzt(sptr->user->host, STAFF_ADDRESS, HOSTLEN + 1);
 		    strncpyzt(sptr->user->username, onick, USERLEN + 1);

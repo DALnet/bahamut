@@ -260,8 +260,8 @@ unsigned char char_atribs[] =
     PRINT | ALPHA, PRINT | ALPHA, PRINT | ALPHA,
     /* \]^ */
     PRINT | ALPHA, PRINT | ALPHA, PRINT | ALPHA,
-    /* _ */
-    PRINT,
+    /* _` */
+    PRINT, PRINT,
     /* abc */
     PRINT | ALPHA, PRINT | ALPHA, PRINT | ALPHA,
     /* def */
