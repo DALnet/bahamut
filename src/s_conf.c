@@ -47,6 +47,7 @@ static int          attach_iline(aClient *, aAllow *, char *, int);
 
 /* externally defined functions  */
 
+extern aClass       *make_class();
 extern aOper        *make_oper();
 extern aConnect     *make_connect();
 extern aAllow       *make_allow();
@@ -86,7 +87,7 @@ extern void confparse_error(char *, int);
 
 void initclass()
 {
-    new_classes = (aClass *) make_class();
+    new_classes = make_class();
 
     DupString(new_classes->name, "default");
     new_classes->connfreq = CONNECTFREQUENCY;

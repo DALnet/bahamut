@@ -33,3 +33,4 @@ Changes for 1.8.0:
 - Added support for /dev/poll and epoll socket engines - thats seddy.
 - Moved m_server and m_dkey into m_server.c
 - Moved m_stats into m_stats.c
+- Fixed memory counting routines.  Thanks Quension!

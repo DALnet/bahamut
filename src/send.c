@@ -338,7 +338,7 @@ int send_queued(aClient *to)
    
     while (SBufLength(&to->sendQ) > 0) 
     {
-        msg = sbuf_map(&to->sendQ, (size_t *) &len);
+        msg = sbuf_map(&to->sendQ, &len);
         if ((rlen = deliver_it(to, msg, len)) < 0)
             return dead_link(to, "Write error to %s, closing link (%s)", errno);
         sbuf_delete(&to->sendQ, rlen);
