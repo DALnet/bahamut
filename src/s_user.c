@@ -4208,21 +4208,39 @@ void send_svsmode_out(aClient *cptr, aClient *sptr, aClient *bsptr, int old) {
 	 
 /* m_svsmode - df function integrated
  *  - Raistlin
+ * -- Behaviour changed - Epi (11/30/99)
  * parv[0] - sender
- * parv[1] - nickname to change mode for
- * parv[2] - modes to change
- * parv[3] - Service Stamp (if mode == d)
+ * parv[1] - nick
+ * parv[2] - TS (or mode, depending on svs version)
+ * parv[3] - mode (or services id if old svs version)
+ * parv[4] - optional arguement (services id)
  */
 int m_svsmode(aClient *cptr, aClient *sptr, int parc, char *parv[]) {
-	 int flag;
-	 int *s, what, setflags;
-	 char **p, *m;
-	 aClient *acptr;
-	 if (!IsULine(sptr)) return 0;
+	 int 		flag, *s, what, setflags;
+	 char 	      **p, *m;
+	 aClient       *acptr;
+	 time_t         ts = NULL;
+
+	 if (!IsULine(sptr) || (parc < 3))
+	    	return 0;
+
+	 if ((parc >= 4) && ((parv[3][0] == '+') || (parv[3][0] == '-')))
+		ts = *parv[2];
+
 	 what = MODE_ADD;
-	 if (parc < 3) return 0;
-	 if (!(acptr = find_person(parv[1], NULL))) return 0;
+
+	 if (!(acptr = find_person(parv[1], NULL))) 
+		return 0;
 	 setflags = 0;
+
+	 /* if the services timestamp doesnt match our nick creation time,
+	  * then we should be dropping this entirely.  someone is toying
+	  * with us };>  -Epi
+	  */
+
+	 if ((ts) && (ts != acptr->firsttime))
+		return 0;
+
 	 for (s = user_modes; (flag = *s); s += 2)
 		 if (acptr->umode & flag)
 			 setflags |= flag;
@@ -4240,14 +4258,18 @@ int m_svsmode(aClient *cptr, aClient *sptr, int parc, char *parv[]) {
 				 case '\r':
 				 case '\t':
 					break;
-/* We don't do this yes
+/* We don't do this yet (i broke this, and am too lazy to fix it -epi)
 				 case 'l':
-					if(parv[3] && isdigit(*parv[3])) max_global_count = atoi(parv[3]);
+					if(parv[3] && isdigit(*parv[4])) max_global_count = atoi(parv[3]);
 					break;
  */ 
 				 case 'd':
-					if(parv[3] && isdigit(*parv[3])) 
-						acptr->user->servicestamp = strtoul(parv[3], NULL, 0);
+					if (ts) 
+					    if(parv[4] && isdigit(*parv[4])) 
+						acptr->user->servicestamp = strtoul(parv[4], NULL, 0);
+					else
+  			                    if(parv[3] && isdigit(*parv[3]))
+                        			acptr->user->servicestamp = strtoul(parv[3], NULL, 0);  
 					break;
 				 default:
 					for (s = user_modes; (flag = *s); s += 2)
@@ -4258,10 +4280,16 @@ int m_svsmode(aClient *cptr, aClient *sptr, int parc, char *parv[]) {
 						}
 					break;
 			 }
-	 if(parc > 3) sendto_serv_butone(cptr, ":%s SVSMODE %s %s %s",
-																	 parv[0], parv[1], parv[2], parv[3]);
-	 else sendto_serv_butone(cptr, ":%s SVSMODE %s %s", parv[0],
-													 parv[1], parv[2]);
+	 if (ts && parv[4])
+		sendto_serv_butone(cptr, ":%s SVSMODE %s %s %s %s",
+			parv[0], parv[1], parv[2], parv[3], parv[4]);
+	 else if ((ts) || (parv[3]))
+		sendto_serv_butone(cptr, ":%s SVSMODE %s %s %s", 
+			parv[0], parv[1], parv[2], parv[3]);
+	 else
+		sendto_serv_butone(cptr, ":%s SVSMODE %s %s",
+			parv[0], parv[1], parv[2]);
+
 	 return 0;
 }
 
