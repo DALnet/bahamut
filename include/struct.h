@@ -817,6 +817,7 @@ struct Client
     int capabilities;           /* what this server/client supports */
     int pingval;	        /* cache client class ping value here */
     int sendqlen;	        /* cache client max sendq here */
+    int yclass;                 /* what this server/clients Y:class is */
 
 #ifdef MSG_TARGET_LIMIT
     struct {
@@ -1178,6 +1179,8 @@ typedef struct SearchOptions
     char *host;
     char *gcos;
     char *ip;
+    int class;
+    int class_value;
     int ts;
     int ts_value;
     aChannel *channel;

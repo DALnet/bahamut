@@ -48,7 +48,7 @@ int build_searchopts(aClient *sptr, int parc, char *parv[])
 {
   static char *who_oper_help[] =
   {
-      "/WHO [+|-][acghimnsuCM] [args]",
+      "/WHO [+|-][acghilmnstuCM] [args]",
       "Flags are specified like channel modes,",
       "The flags cghimnsu all have arguments",
       "Flags are set to a positive check by +, a negative check by -",
@@ -61,13 +61,14 @@ int build_searchopts(aClient *sptr, int parc, char *parv[])
       "Flag h <host>: user has string <host> in their hostname,",
       "               wildcards accepted",
       "Flag i <ip>: user is from <ip> wildcards accepted,",
+      "Flag l <class>: show users in a specific <class>",
       "Flag m <usermodes>: user has <usermodes> set on them",
       "Flag n <nick>: user has string <nick> in their nickname,",
       "               wildcards accepted",
       "Flag s <server>: user is on server <server>,",
       "                 wildcards not accepted",
-      "Flag +t <seconds>: show users on for more than <seconds> seconds,",
-      "Flag -t <seconds>: show users on for less than <seconds> seconds,",
+      "Flag t <seconds>: (+t) show users on for more than <seconds> seconds",
+      "                  (-t) show users on for less than <seconds> seconds",
       "Flag u <user>: user has string <user> in their username,",
       "               wildcards accepted",
       "Behavior flags:",
@@ -256,7 +257,18 @@ int build_searchopts(aClient *sptr, int parc, char *parv[])
 	  wsopts.host_plus=change;
 	  args++;
 	  break;
-      case 't': 
+      case 'l':
+          if(parv[args]==NULL || !IsAnOper(sptr))
+          {
+              sendto_one(sptr, getreply(ERR_WHOSYNTAX), me.name,
+                         sptr->name);
+              return 0;
+          }
+          wsopts.class=strtol(parv[args], NULL, 0);
+          wsopts.class_value=change ? 2 :1;
+          args++;
+          break;
+       case 't': 
 	  if(parv[args]==NULL || !IsAnOper(sptr) || 
              strtol(parv[args], &err, 0) == 0 || *err != '\0')
 	  {
@@ -356,7 +368,7 @@ int build_searchopts(aClient *sptr, int parc, char *parv[])
   
   if(wsopts.search_chan && !(wsopts.check_away || wsopts.gcos || wsopts.host ||
 			     wsopts.check_umode || wsopts.server ||
-			     wsopts.user))
+			     wsopts.user || wsopts.class))
   {
       if(parv[args]==NULL || wsopts.channel || wsopts.nick ||
 	 parv[args][0] == '#' || parv[args][0] == '&')
@@ -380,7 +392,7 @@ int build_searchopts(aClient *sptr, int parc, char *parv[])
       if(wsopts.show_chan && !(wsopts.check_away || wsopts.gcos ||
 			       wsopts.host || wsopts.check_umode ||
 			       wsopts.server || wsopts.user || wsopts.nick ||
-			       wsopts.ip || wsopts.channel))
+			       wsopts.ip || wsopts.channel || wsopts.class))
       {
 	  if(parv[args]==NULL)
 	  {
@@ -405,7 +417,9 @@ int build_searchopts(aClient *sptr, int parc, char *parv[])
 }
 
 /* these four are used by chk_who to check gcos/nick/user/host
- * respectively */
+ * respectively 
+ * as well as ip/Yline class -srd */
+
 int (*gchkfn)(char *, char *);
 int (*nchkfn)(char *, char *);
 int (*uchkfn)(char *, char *);
@@ -467,6 +481,13 @@ int chk_who(aClient *ac, int showall)
 	if((wsopts.gcos_plus && gchkfn(wsopts.gcos, ac->info)) ||
 	   (!wsopts.gcos_plus && !gchkfn(wsopts.gcos, ac->info)))
 	    return 0;
+
+    if(wsopts.class_value == 2 &&
+        ac->yclass != wsopts.class)
+        return 0;
+    else if(wsopts.class_value == 1 &&
+        ac->yclass == wsopts.class)
+        return 0;
 
     if(wsopts.ts_value == 2 && /* +t */
         NOW - ac->tsinfo < wsopts.ts)
@@ -560,7 +581,6 @@ int m_who(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	ichkfn=mycmp;
     else
 	ichkfn=match;
-
 
     if(wsopts.channel!=NULL)
     {

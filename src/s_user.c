@@ -851,6 +851,7 @@ int register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
     {
 	sptr->pingval = get_client_ping(sptr);
 	sptr->sendqlen = get_sendq(sptr);
+        sptr->yclass = get_client_class(sptr);
 #ifdef MAXBUFFERS
 	/* Let's try changing the socket options for the client here... */
 	reset_sock_opts(sptr->fd, 0);
@@ -2704,6 +2705,7 @@ int m_oper(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	sendto_one(sptr, rpl_str(RPL_YOUREOPER), me.name, parv[0]);
 	sptr->pingval = get_client_ping(sptr);
 	sptr->sendqlen = get_sendq(sptr);
+        sptr->yclass = get_client_class(sptr);
 #if !defined(CRYPT_OPER_PASSWORD) && (defined(FNAME_OPERLOG) ||\
     (defined(USE_SYSLOG) && defined(SYSLOG_OPER)))
 	encr = "";
@@ -3037,6 +3039,15 @@ int m_umode(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	Count.oper--;
 	if (MyConnect(sptr))
 	    delfrom_fdlist(sptr->fd, &oper_fdlist);
+
+        /*
+         * Now that the user is no longer opered, let's return
+         * them back to the appropriate Y:class -srd
+         */
+
+        sptr->pingval = get_client_ping(sptr);
+        sptr->sendqlen = get_sendq(sptr);
+        sptr->yclass = get_client_class(sptr);
     }
     
     if (!(setflags & UMODE_i) && IsInvisible(sptr))
