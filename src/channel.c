@@ -1417,6 +1417,10 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
     /* :cptr-name MODE chptr->chname [MBUF] [PBUF] (buflen - 3 max and NULL) */
     /* added another 11 bytes to this, for TSMODE -epi */
     int prelen = strlen(cptr->name) + strlen(chptr->chname) + 27;
+    /* drop duplicates in the same mode change -- yeah, this is cheap, but real
+       duplicate checking will have to wait for a protocol change to kill
+       desyncs */
+    int seenalready = 0;
 
 
     args=1;
@@ -1941,6 +1945,9 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
             break;
 
         case 'r':
+            if (MyClient(sptr) && (seenalready & MODE_REGISTERED))
+                break;
+            seenalready |= MODE_REGISTERED;
             if (!IsServer(sptr) && !IsULine(sptr)) 
             {
                 sendto_one(sptr, err_str(ERR_ONLYSERVERSCANCHANGE),
@@ -1962,6 +1969,9 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
             break;
 
         case 'L':
+            if (MyClient(sptr) && (seenalready & MODE_LISTED))
+                break;
+            seenalready |= MODE_LISTED;
             if (!IsServer(sptr) && !IsULine(sptr))
             {
                 sendto_one(sptr, err_str(ERR_ONLYSERVERSCANCHANGE),
@@ -2009,6 +2019,10 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
                 
                 if(*modes==(char)flags[i]) 
                 {
+                    if (MyClient(sptr) && (seenalready & flags[i-1]))
+                        break;
+                    seenalready |= flags[i-1];
+                    
                     if(change=='+')
                         chptr->mode.mode |= flags[i-1];
                     else
