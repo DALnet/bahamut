@@ -914,10 +914,8 @@ m_server_estab(aClient *cptr)
 	}
 
    /* Bursts are about to start.. send a BURST */
-   sendto_one(cptr, "BURST"); 
-   cptr->flags |= FLAGS_SOBSENT;
-   /* SOBSENT has to be set TWICE.. before each burst so we don't prematurely say 
-    * hey joeuser on joeserver.. we're synched. -sedition */
+   if (IsBurst(cptr))
+     sendto_one(cptr, "BURST"); 
     
 	
    /*
@@ -965,6 +963,7 @@ m_server_estab(aClient *cptr)
    /* stuff a PING at the end of this burst so we can figure out when
       the other side has finished processing it. */
    cptr->flags |= FLAGS_BURST|FLAGS_PINGSENT;
+   if (IsBurst(cptr)) cptr->flags |= FLAGS_SOBSENT;
    sendto_one(cptr, "PING :%s", me.name);
 
    /* now fill out the servers info so nobody knows dink about it. */
@@ -980,10 +979,10 @@ m_server_estab(aClient *cptr)
 */
 int m_burst(aClient *cptr, aClient *sptr, int parc, char *parv[]) {
   
-  if (!IsServer(sptr) || sptr != cptr || parc > 2) return 0;
+  if (!IsServer(sptr) || sptr != cptr || parc > 2 || !IsBurst(sptr)) return 0;
   if (parc == 2) { /* This is an EOB */
     sptr->flags &= ~(FLAGS_EOBRECV);
-    if (sptr->flags & FLAGS_SOBSENT || sptr->flags & FLAGS_BURST) return 0;
+    if (sptr->flags & (FLAGS_SOBSENT|FLAGS_BURST)) return 0;
 
  /* we've already sent our EOB.. we synched first
   * no need to check IsBurst because we shouldn't receive a BURST if they're not BURST capab */
