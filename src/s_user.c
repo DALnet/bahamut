@@ -94,6 +94,8 @@ int  user_modes[] =
 #ifdef NO_OPER_FLOOD
     UMODE_F, 'F',
 #endif
+    UMODE_x, 'x',
+    UMODE_X, 'X',
     0, 0
 };
 

@@ -1217,6 +1217,10 @@ int m_info(aClient *cptr, aClient *sptr, int parc, char *parv[])
 			
 	if (!IsAnOper(sptr)) 
 	{
+	    if (IsSquelch(sptr)) {
+		sendto_one(sptr, rpl_str(RPL_ENDOFINFO), me.name, parv[0]);
+		return 0;
+	    }
 	    if (!MyConnect(sptr))
 		return 0;
 	    if ((last_used + MOTD_WAIT) > NOW) 
@@ -4783,6 +4787,10 @@ int m_motd(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	return 0;
     if(!IsAnOper(sptr)) 
     {
+	if (IsSquelch(sptr)) {
+	    sendto_one(sptr, rpl_str(RPL_ENDOFMOTD), me.name, parv[0]);
+	    return 0;
+	}
 	if ((last_used + MOTD_WAIT) > NOW)
 	    return 0;
 	else
