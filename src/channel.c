@@ -1893,7 +1893,7 @@ int m_sajoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		    break;
 	    }
 
-	    send_globops("from %s :%s used SAJOIN (%s +%c)",
+	    send_globops("from %s: %s used SAJOIN (%s +%c)",
 			 me.name, sptr->name, chptr->chname, bchar);
 	    sendto_serv_butone(NULL, ":%s GLOBOPS :%s used SAJOIN (%s +%c)",
 			       me.name, sptr->name, chptr->chname, bchar);
