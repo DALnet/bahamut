@@ -369,7 +369,7 @@ static time_t check_pings(time_t currenttime)
 {
     aClient 	*cptr;
     aConfItem 	*aconf = (aConfItem *) NULL;
-    int     	 killflag, zkillflag, ping = 0, i;
+    int     	 zkillflag, ping = 0, i;
     time_t       oldest = 0; /* timeout removed, see EXPLANATION below */
     char       	*reason, *ktype, fbuf[512];
     char 		*errtxt = "No response from %s, closing link";
@@ -392,7 +392,6 @@ static time_t check_pings(time_t currenttime)
 	    continue;
 	}
 
-	killflag = NO;
 	zkillflag = NO;
 
 	if (rehashed) 
@@ -405,39 +404,20 @@ static time_t check_pings(time_t currenttime)
 			zkillflag = YES;
 		}
 	    }
-	    else 
-	    {
-		if(IsPerson(cptr)) 
-		{
-		    if((aconf = find_kill(cptr)))	
-			killflag = YES;	
-		}
-	    }
 	}
 
 	/* Added a bit of code here to differentiate 
 	 * between K and Z-lines. -ThemBones
 	 */
 
-	if (zkillflag || killflag)
+	if (zkillflag)
 	{
 	    ktype = zkillflag ? "Z-lined" : 
 		((aconf->status == CONF_KILL) ? "K-lined" : "Autokilled");
 
-	    if (killflag) 
-	    {
-		sendto_ops("%s active for %s",
-			   (aconf->status == CONF_KILL) ? "K-line" :
-			   "Autokill",
-			   get_client_name(cptr, FALSE));
-		reason = aconf->passwd ? aconf->passwd : ktype;
-	    }
-	    else 
-	    {			/* its a Z line */
 		sendto_ops("Z-line active for %s",
 			   get_client_name(cptr, FALSE));
 		reason = aconf->passwd ? aconf->passwd : "Z-lined";
-	    }
 	    
 	    sendto_one(cptr, err_str(ERR_YOUREBANNEDCREEP),
 		       me.name, cptr->name, ktype);
@@ -607,7 +587,11 @@ static int bad_command()
 #define LOADCFREQ 5		/* every 5s */
 #define LOADRECV 40		/* 40k/s    */
 
+#ifndef HUB
 int         lifesux = 1;
+#else
+int         lifesux = 0;
+#endif
 int         LRV = LOADRECV;
 time_t      LCF = LOADCFREQ;
 int currlife = 0;

@@ -3216,6 +3216,8 @@ int m_kline(aClient *cptr, aClient *sptr, int parc, char *parv[])
     time_t      temporary_kline_time_seconds = 0;
     int         time_specified = 0;
     char       *argv;
+    int         i;
+    char       fbuf[512];
 
     if (!MyClient(sptr) || !OPCanKline(sptr)) 
     {
@@ -3399,7 +3401,29 @@ int m_kline(aClient *cptr, aClient *sptr, int parc, char *parv[])
     {
 	aconf->hold = timeofday + temporary_kline_time_seconds;
 	add_temp_kline(aconf);
-	rehashed = YES;
+	for (i = 0; i <= highest_fd; i++)
+	{
+	    if (!(acptr = local[i]) || IsMe(cptr) || IsLog(cptr))
+		continue;
+	    if (IsPerson(acptr)) {
+		if ((acptr->user->username)&&(((acptr->sockhost)&&
+					       (!match(acptr->sockhost,host)&&
+						!match(acptr->user->username,
+						       user )))||
+					      ((acptr->hostip)&&
+					       (!match(acptr->hostip,host)&&
+						!match(acptr->user->username,
+						       user)))))
+		    
+		{
+		    sendto_ops("K-Line active for %s",
+			       get_client_name(acptr, FALSE));
+		    ircsprintf(fbuf,"K-Lined: %s",reason);
+		    (void) exit_client(acptr,acptr,&me,fbuf);
+		}
+	    }
+	}
+	
 	zline_in_progress = NO;
 	sendto_realops("%s added temporary %d min. K-Line for [%s@%s] [%s]",
 		       parv[0], temporary_kline_time, user, host, reason);
@@ -5053,8 +5077,11 @@ int m_svskill(aClient *cptr, aClient *sptr, int parc, char *parv[])
 int m_akill(aClient *cptr, aClient *sptr, int parc, char *parv[]) 
 {
     aConfItem *aconf, *ac2;
-    char *user, *host, *reason, *akiller, buffer[1024], *current_date;   
+    aClient *acptr;
+    char *user, *host, *reason, *akiller, buffer[1024], *current_date, 
+	fbuf[512];
     time_t length=0, timeset=0;
+    int i;
 
     if(!IsServer(sptr) || (parc < 6))
 	return 0;
@@ -5112,7 +5139,30 @@ int m_akill(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	aconf->hold=timeset+length;
 	
     add_temp_kline(aconf);
-    rehashed=YES;
+    rehashed=NO;
+    /* Check local users against it */
+    for (i = 0; i <= highest_fd; i++)
+    {
+	if (!(acptr = local[i]) || IsMe(cptr) || IsLog(cptr))
+            continue;
+	if (IsPerson(acptr)) {
+	    if ((acptr->user->username)&&(((acptr->sockhost)&& 
+					   (!match(acptr->sockhost,host)&&
+					    !match(acptr->user->username,
+						   user )))||
+					  ((acptr->hostip)&&
+					   (!match(acptr->hostip,host)&&
+					    !match(acptr->user->username,
+						   user)))))
+		
+	    {
+		sendto_ops("Autokill active for %s",
+			   get_client_name(acptr, FALSE));
+		ircsprintf(fbuf,"Autokilled: %s",reason);
+		(void) exit_client(acptr,acptr,&me,fbuf);
+	    }
+	}
+    }
     zline_in_progress=NO;
 	
     /* now finally send it off to any other servers! */
