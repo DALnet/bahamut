@@ -874,7 +874,7 @@
  * make your client server very sluggish. You usually shouldn't need
  * this. -Dianora
  */
-#define  DEBUGMODE		/* define DEBUGMODE to enable */
+#undef  DEBUGMODE		/* define DEBUGMODE to enable */
 
 /*
  * If your host supports varargs and has vsprintf(), vprintf() and
