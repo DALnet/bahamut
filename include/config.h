@@ -710,6 +710,7 @@
  */
 #define HELP_FORWARD_HS
 #ifdef HELP_FORWARD_HS
+# define HS_UNAME "stats"
 # define DEF_HELP_CMD "?"
 #endif
 
