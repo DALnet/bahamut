@@ -2094,8 +2094,13 @@ int m_error(aClient *cptr, aClient *sptr, int parc, char *parv[])
 }
 
 /*
- * m_help 
+ * m_help
  * parv[0] = sender prefix
+ * 
+ * Forward help requests to HelpServ if defined, and is invoked
+ * by non-opers, otherwise sends opers.txt to opers (if present),
+ * or sends a big list of commands to non-opers (and opers if
+ * opers.txt is not present). -srd
  */
 int m_help(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
@@ -2104,33 +2109,48 @@ int m_help(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
     static time_t last_used = 0L;
 
+#ifdef HELP_FORWARD_HS
     if (!IsAnOper(sptr))
     {
-	/* reject non local requests */
-	if ((last_used + MOTD_WAIT) > NOW)
-	    return 0;
-	else
-	    last_used = NOW;
-
+       if (parc < 2 || *parv[1] == '\0')
+       {
+          sendto_one(sptr, ":%s!service@%s NOTICE %s :For a list of help "
+                     "topics, type /%s %s", HELPSERV, STATS_NAME, sptr->name
+                     ,HELPSERV, DEF_HELP_CMD);
+          return -1;
+       }
+       return m_hs(cptr, sptr, parc, parv);
+ 
+       return 0;
     }
-
-    if (!IsAnOper(sptr) || (helpfile == (aMotd *) NULL)) 
+#endif
+    
+    if (!IsAnOper(sptr))
     {
-	for (i = 0; msgtab[i].cmd; i++)
-	    sendto_one(sptr, ":%s NOTICE %s :%s",
-		       me.name, parv[0], msgtab[i].cmd);
-	return 0;
+       /* reject non local requests */
+       if ((last_used + MOTD_WAIT) > NOW)
+          return 0;   
+       else
+          last_used = NOW;
     }
 
+    if (!IsAnOper(sptr) || (helpfile == (aMotd *) NULL))
+    {
+        for (i = 0; msgtab[i].cmd; i++)
+            sendto_one(sptr, ":%s NOTICE %s :%s",
+                       me.name, parv[0], msgtab[i].cmd);
+        return 0;
+    }
+       
     helpfile_ptr = helpfile;
-    while (helpfile_ptr) 
+    while (helpfile_ptr)
     {
-	sendto_one(sptr,
-		   ":%s NOTICE %s :%s",
-		   me.name, parv[0], helpfile_ptr->line);
-	helpfile_ptr = helpfile_ptr->next;
+        sendto_one(sptr,
+                   ":%s NOTICE %s :%s",
+                   me.name, parv[0], helpfile_ptr->line);
+        helpfile_ptr = helpfile_ptr->next;
     }
-
+       
     return 0;
 }
 

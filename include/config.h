@@ -701,6 +701,18 @@
 #endif
 #endif
 
+/*
+ * Forward /quote help to HelpServ
+ *
+ * If defined, any /quote help requests from users sent to the ircd
+ * will forward the help message over to HelpServ if defined, as
+ * well as the default HelpServ topic request command. -srd
+ */
+#define HELP_FORWARD_HS
+#ifdef HELP_FORWARD_HS
+# define DEF_HELP_CMD "?"
+#endif
+
 /******************************************************************
  * STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP
  *
