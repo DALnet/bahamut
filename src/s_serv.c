@@ -273,7 +273,7 @@ m_squit(aClient *cptr, aClient *sptr, int parc, char *parv[])
    {
       sendto_gnotice("from %s: Recieved SQUIT %s from %s (%s)",
 		 me.name, acptr->name, get_client_name(sptr, HIDEME), comment);
-      sendto_serv_butone(&me,
+      sendto_serv_butone(acptr,
 			 ":%s GNOTICE :Recieved SQUIT %s from %s (%s)",
 		me.name, server, get_client_name(sptr, HIDEME), comment);
 
@@ -339,7 +339,7 @@ m_svinfo(aClient *cptr, aClient *sptr, int parc, char *parv[])
    {
       sendto_gnotice("from %s: Link %s dropped, excessive TS delta (my TS=%d, their TS=%d, delta=%d)",
 		me.name, get_client_name(sptr, HIDEME), tmptime, theirtime, deltat);
-      sendto_serv_butone(&me, ":%s GNOTICE :Link %s dropped, excessive TS delta (delta=%d)",
+      sendto_serv_butone(sptr, ":%s GNOTICE :Link %s dropped, excessive TS delta (delta=%d)",
 		me.name, get_client_name(sptr, HIDEME), deltat);
       return exit_client(sptr, sptr, sptr, "Excessive TS delta");
    }
@@ -508,7 +508,7 @@ m_server(aClient *cptr, aClient *sptr, int parc, char *parv[])
       strcpy(nbuf, get_client_name(bcptr, HIDEME));
       sendto_gnotice("from %s: Link %s cancelled, server %s reintroduced by %s",
 		me.name, nbuf, host, get_client_name(cptr, HIDEME));
-      sendto_serv_butone(cptr, ":%s GNOTICE :Link %s cancelled, server %s reintroduced by %s",
+      sendto_serv_butone(bcptr, ":%s GNOTICE :Link %s cancelled, server %s reintroduced by %s",
 		me.name, nbuf, host, get_client_name(cptr, HIDEME));
       (void) exit_client(bcptr, bcptr, &me, "Server Exists");
    }
@@ -560,7 +560,7 @@ m_server(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	  sendto_gnotice("from %s: Leaf-only link %s->%s - Closing", 
 		me.name, get_client_name(cptr, HIDEME),
 		aconf->host ? aconf->host : "*");
-	  sendto_serv_butone(&me, ":%s GNOTICE :Leaf-only link %s->%s - closing",
+	  sendto_serv_butone(cptr, ":%s GNOTICE :Leaf-only link %s->%s - Closing",
 		me.name, get_client_name(cptr, HIDEME),
 		aconf->host ? aconf->host : "*");
 	  sendto_one(cptr, "ERROR :Leaf-only link, sorry.");
@@ -807,9 +807,11 @@ m_server_estab(aClient *cptr)
 
    sendto_gnotice("Link with %s established: %s %s", inpath, IsULine(cptr) ? "ULined" : "Normal", 
 		DoesTS(cptr) ? "TS link" : "Non-TS link!"); 
-   /* dont send to remove server connection has just been established
-    * with, they should send the notice to their servers. -Epi */
-   sendto_serv_butone(cptr, ":%s GNOTICE :Link with %s established: %s",
+
+   /* Notify everyone of the fact that this has just linked: the entire network should get two
+      of these, one explaining the link between me->serv and the other between serv->me */
+
+   sendto_serv_butone(NULL, ":%s GNOTICE :Link with %s established: %s",
 		me.name, inpath, DoesTS(cptr) ? "TS link" : "Non-TS link!");
    (void) add_to_client_hash_table(cptr->name, cptr);
 
@@ -2185,7 +2187,7 @@ m_connect(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		me.name,  IsAnOper(cptr) ? "Local" : "Remote", 
 		parv[1], parv[2] ? parv[2] : "",
 		get_client_name(sptr, HIDEME));
-      sendto_serv_butone(&me, ":%s GNOTICE :%s CONNECT %s %s from %s", 
+      sendto_serv_butone(NULL, ":%s GNOTICE :%s CONNECT %s %s from %s", 
 		me.name, IsAnOper(cptr) ? "Local" : "Remote",
 		parv[1], parv[2] ? parv[2] : "",
 		get_client_name(sptr, HIDEME));
