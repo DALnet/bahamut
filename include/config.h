@@ -209,6 +209,19 @@
 /* Services Name */
 #define SERVICES_NAME "services.dal.net"	/* DALnet services */
 
+/*
+ * CRYPT_OPER_PASSWORD - use crypted oper passwords in the ircd.conf
+ * define this if you want to use crypted passwords for operators in
+ * your ircd.conf file.
+ */
+#undef	CRYPT_OPER_PASSWORD
+
+/*
+ * MAXCHANNELSPERUSER - Max number of channels a user is allowed to
+ * join.
+ */
+#define MAXCHANNELSPERUSER  10	/* Recommended value: 10 */
+
 /*******************************************************/
 
 #endif /** OPTIONS_H **/
@@ -561,13 +574,6 @@
 #define NO_CHANOPS_WHEN_SPLIT
 
 /*
- * CRYPT_OPER_PASSWORD - use crypted oper passwords in the ircd.conf
- * define this if you want to use crypted passwords for operators in
- * your ircd.conf file.
- */
-#undef	CRYPT_OPER_PASSWORD
-
-/*
  * CMDLINE_CONFIG - allow conf-file to be specified on command line
  * NOTE: defining CMDLINE_CONFIG and installing ircd SUID or SGID is a
  * MAJOR security problem - they can use the "-f" option to read any
@@ -801,14 +807,6 @@
  * (seconds)
  */
 #define KILLCHASETIMELIMIT 90	/* Recommended value: 90 */
-
-/*
- * MAXCHANNELSPERUSER - Max number of channels a user is allowed to
- * join.
- */
-#ifndef MAXCHANNELSPERUSER
-#define MAXCHANNELSPERUSER  10	/* Recommended value: 10 */
-#endif
 
 /*
  * FLUD - CTCP Flood Detection and Protection
