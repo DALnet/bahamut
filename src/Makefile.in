@@ -1,19 +1,20 @@
 CC=@CC@
 RM=@RM@
 IRCDLIBS=@LIBS@
-INCLUDEDIR=-I../include
+INCLUDEDIR=-I../include -I../zlib
 
 SRC_1 = bsd.c channel.c class.c dbuf.c dich_conf.c
 SRC_2 = fdlist.c hash.c inet_addr.c ircd.c ircsprintf.c
 SRC_3 = list.c match.c packet.c parse.c res.c
 SRC_4 = s_auth.c s_bsd.c s_conf.c s_debug.c s_err.c s_misc.c s_numeric.c
-SRC_5 = s_serv.c s_user.c send.c support.c whowas.c scache.c blalloc.c dh.c rc4.c
+SRC_5 = s_serv.c s_user.c send.c support.c whowas.c scache.c blalloc.c dh.c
+SRC_6 = rc4.c zlink.c
 RES_SRC =
 
 #This is only for very old systems that NEED this
 #RES_SRC = res_mkquery.c res_init.c res_comp.c
 
-SOURCES = $(SRC_1) $(SRC_2) $(SRC_3) $(SRC_4) $(SRC_5) $(RES_SRC)
+SOURCES = $(SRC_1) $(SRC_2) $(SRC_3) $(SRC_4) $(SRC_5) $(SRC_6) $(RES_SRC)
 OBJECTS = $(SOURCES:.c=.o) version.o
 
 all: ircd
@@ -192,4 +193,5 @@ dh.o: dh.c \
  ../include/patchlevel.h
 rc4.o: rc4.c \
  ../include/patchlevel.h
-
+zlink.o: zlink.c \
+ ../include/patchlevel.h

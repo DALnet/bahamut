@@ -1126,6 +1126,11 @@ openconf(char *filename)
 
 extern char *getfield();
 
+static int server_info[] = {
+	CAPAB_DOZIP, 'Z',
+	0, 0
+};
+
 static int oper_access[] = {
 	~(OFLAG_ADMIN|OFLAG_SADMIN|OFLAG_ZLINE|OFLAG_ADMIN|OFLAG_RSTAFF), '*',
 	  OFLAG_LOCAL,   'o',
@@ -1402,6 +1407,20 @@ initconf(int opt, int fd)
 	        if (!(aconf->port & OFLAG_ISGLOBAL)) 
 			aconf->status = CONF_LOCOP;
 	 } 
+         else if(aconf->status & CONF_NOCONNECT_SERVER)
+         {
+            	int *i, flag;
+		char *m = "*";
+		for (m=(*tmp) ? tmp : m; *m; m++) 
+		{
+		    for (i=server_info; (flag = *i); i+=2)
+			 if (*m==(char)(*(i+1))) 
+			 {
+				aconf->port |= flag;
+					break;
+			 }
+		}
+         }
 	 else 
 	 {
 		 aconf->port=atoi(tmp);

@@ -27,6 +27,7 @@
 #include <stdio.h>
 #include "numeric.h"
 #include "dh.h"
+#include "zlink.h"
 
 #ifdef ALWAYS_SEND_DURING_SPLIT
 extern int currently_processing_netsplit;
@@ -151,9 +152,6 @@ static int send_message(aClient *to, char *msg, int len) {
    if (IsDead(to))
      return 0;
 
-   if(IsRC4OUT(to))
-      rc4_process_stream(to->serv->rc4_out, msg, len);
-
    if (DBufLength(&to->sendQ) > to->sendqlen) {
       /* this would be a duplicate notice, but it contains some useful information that
          would be spamming the rest of the network. Kept in. - lucas */
@@ -163,7 +161,26 @@ static int send_message(aClient *to, char *msg, int len) {
       to->flags |= FLAGS_SENDQEX;
       return dead_link(to, "Max Sendq exceeded for %s, closing link");
    }
-   else if (dbuf_put(&to->sendQ, msg, len) < 0)
+
+   if(ZipOut(to))
+   {
+      int ldata = 0;
+
+      msg = zip_output(to->serv->zip_out, msg, &len, 0, &ldata);
+      if(len == -1)
+      {
+         sendto_realops("Zipout error for %s: (%d) %s\n", to->name, ldata, msg);
+         return dead_link(to, "Zip output error for %s");
+      }
+
+      if(len == 0)
+         return 0;
+   }
+
+   if(IsRC4OUT(to))
+      rc4_process_stream(to->serv->rc4_out, msg, len);
+
+   if (dbuf_put(&to->sendQ, msg, len) < 0)
      return dead_link(to, "Buffer allocation error for %s, closing link");
    /*
     * * Update statistics. The following is slightly incorrect *
@@ -218,6 +235,7 @@ static int send_message(aClient *to, char *msg, int len) {
 int send_queued(aClient *to) {
    char       *msg;
    int         len, rlen;
+   int more_data = 0; /* the hybrid approach.. */
 	
    /*
     * * Once socket is marked dead, we cannot start writing to it, *
@@ -231,8 +249,30 @@ int send_queued(aClient *to) {
        */
       return -1;
    }
+
+   if(ZipOut(to) && zip_is_data_out(to->serv->zip_out))
+   {
+      if(DBufLength(&to->sendQ))
+         more_data = 1;
+      else
+      {
+         int ldata = 0;
+
+         msg = zip_output(to->serv->zip_out, NULL, &len, 1, &ldata);
+         if(len == -1)
+         {
+            sendto_realops("Zipout error for %s: (%d) %s\n", to->name, ldata, msg);
+            return dead_link(to, "Zip output error for %s");
+         }
+
+         /* silently stick this on the sendq... */
+         if (!dbuf_put(&to->sendQ, msg, len))
+            return dead_link(to, "Buffer allocation error for %s");
+      }
+   }
    
-   while (DBufLength(&to->sendQ) > 0) {
+   while (DBufLength(&to->sendQ) > 0) 
+   {
       msg = dbuf_map(&to->sendQ, &len);
       /*
        * Returns always len > 0 
@@ -245,6 +285,24 @@ int send_queued(aClient *to) {
 	/* ..or should I continue until rlen==0? */
 	/* no... rlen==0 means the send returned EWOULDBLOCK... */
 	break;
+
+      if(more_data && DBufLength(&to->sendQ) == 0)
+      {
+         int ldata = 0;
+
+         more_data = 0;
+
+         msg = zip_output(to->serv->zip_out, NULL, &len, 1, &ldata);
+         if(len == -1)
+         {
+            sendto_realops("Zipout error for %s: (%d) %s\n", to->name, ldata, msg);
+            return dead_link(to, "Zip output error for %s");
+         }
+
+         /* silently stick this on the sendq... */
+         if (!dbuf_put(&to->sendQ, msg, len))
+            return dead_link(to, "Buffer allocation error for %s");        
+      }
    }
 
    if ((to->flags & FLAGS_SOBSENT) && IsBurst(to) && DBufLength(&to->sendQ) < 20480) { /* 20k */

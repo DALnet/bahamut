@@ -32,6 +32,7 @@
 #include "nameser.h"
 #include "resolv.h"
 #include "dh.h"
+#include "zlink.h"
 
 #if defined(AIX) || defined(DYNIXPTX) || defined(SVR3)
 # include <time.h>
@@ -334,7 +335,17 @@ m_svinfo(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
    time_t      deltat, tmptime, theirtime;
 
-   if (!IsServer(sptr) || !MyConnect(sptr) || !DoesTS(sptr) || parc < 5)
+   if (!IsServer(sptr) || !MyConnect(sptr))
+      return 0;
+
+   if(parc == 2 && mycmp(parv[1], "ZIP") == 0)
+   {
+      SetZipIn(sptr);
+      sptr->serv->zip_in = zip_create_input_session();
+      return ZIP_NEXT_BUFFER;
+   }
+
+   if(parc < 5 || !DoesTS(sptr))
       return 0;
 
    if (TS_CURRENT < atoi(parv[2]) || atoi(parv[1]) < TS_MIN) 
@@ -712,6 +723,13 @@ int do_server_estab(aClient *cptr)
    Count.server++;
    Count.myserver++;
 
+   if(IsZipCapable(cptr) && DoZipThis(cptr))
+   {
+      sendto_one(cptr, "SVINFO ZIP");
+      SetZipOut(cptr);
+      cptr->serv->zip_out = zip_create_output_session();
+   }
+
 #ifdef MAXBUFFERS
   /* let's try to bump up server sock_opts... -Taner */
    reset_sock_opts(cptr->fd, 1);
@@ -924,12 +942,15 @@ m_server_estab(aClient *cptr)
 	 return exit_client(cptr, cptr, cptr, "I'm a leaf");
       }
 #endif
+
+   /* aconf->port is a CAPAB field, kind-of. kludge. mm, mm. */
+   cptr->capabilities |= aconf->port;
    if (IsUnknown(cptr)) 
    {
       if (bconf->passwd[0])
 	 sendto_one(cptr, "PASS %s :TS", bconf->passwd);
       /* Pass my info to the new server */
-      sendto_one(cptr, "CAPAB TS3 NOQUIT SSJOIN BURST UNCONNECT DKEY");
+      sendto_one(cptr, "CAPAB TS3 NOQUIT SSJOIN BURST UNCONNECT ADKEY ZIP");
       sendto_one(cptr, "SERVER %s 1 :%s",
 		 my_name_for_link(me.name, aconf),
 		 (me.info[0]) ? (me.info) : "IRCers United");
@@ -4783,6 +4804,8 @@ m_capab(aClient *cptr, aClient *sptr, int parc, char *parv[])
         SetUnconnect(cptr);
       else if (strcmp(parv[i], "DKEY") == 0)
         SetDKEY(cptr);
+      else if (strcmp(parv[i], "ZIP") == 0)
+        SetZipCapable(cptr);
    }
 
    return 0;

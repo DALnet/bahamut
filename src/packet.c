@@ -26,6 +26,7 @@
 #include "msg.h"
 #include "h.h"
 #include "dh.h"
+#include "zlink.h"
 
 /*
  * * dopacket *       cptr - pointer to client structure for which the buffer
@@ -76,6 +77,18 @@ dopacket(aClient *cptr, char *buffer, int length)
    ch1 = cptrbuf + cptr->count;
    ch2 = buffer;   
 
+   if(ZipIn(cptr))
+   {
+      int err;
+      ch2 = zip_input(cptr, ch2, &length, &err);
+
+      if(length == -1)
+      {
+         sendto_realops("Zipout error for %s: (%d) %s\n", cptr->name, err, ch2);
+         return exit_client(cptr, cptr, &me, "fatal error in zip_input!");
+      }
+   }
+
    while (--length >= 0) 
    {
       char g;
@@ -109,6 +122,20 @@ dopacket(aClient *cptr, char *buffer, int length)
          {
             case FLUSH_BUFFER:
                return FLUSH_BUFFER;
+
+            case ZIP_NEXT_BUFFER:
+               if(length)
+               {
+                  int err;
+                  ch2 = zip_input(cptr, ch2, &length, &err);
+
+                  if(length == -1)
+                  {
+                     sendto_realops("Zipout error for %s: (%d) %s\n", cptr->name, err, ch2);
+                     return exit_client(cptr, cptr, &me, "fatal error in zip_input!");
+                  }
+               }
+               break;
 
             case RC4_NEXT_BUFFER:
                if(length)

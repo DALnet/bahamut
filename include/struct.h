@@ -203,6 +203,8 @@ typedef struct MotdItem aMotd;
                                            but is a stat < 0 for handshake purposes */
 #define FLAGS_RC4IN        0x2000000    /* This link is rc4 encrypted. */
 #define FLAGS_RC4OUT       0x4000000    /* This link is rc4 encrypted. */
+#define FLAGS_ZIPPED_IN	   0x8000000    /* This link is gzipped. */
+#define FLAGS_ZIPPED_OUT   0x10000000    /* This link is gzipped. */
 
 /* Capabilities of the ircd or clients */
 
@@ -212,6 +214,8 @@ typedef struct MotdItem aMotd;
 #define CAPAB_BURST   0x0000008 /* server supports BURST command */
 #define CAPAB_UNCONN  0x0000010 /* server supports UNCONNECT */
 #define CAPAB_DKEY    0x0000020 /* server supports dh-key exchange using "DKEY" */
+#define CAPAB_ZIP     0x0000040 /* server supports gz'd links */
+#define CAPAB_DOZIP   0x0000080 /* output to this link shall be gzipped */
 
 #define SetTS3(x)   	((x)->capabilities |= CAPAB_TS3)
 #define IsTS3       	((x)->capabilities & CAPAB_TS3)
@@ -230,6 +234,10 @@ typedef struct MotdItem aMotd;
 
 #define SetDKEY(x)	((x)->capabilities |= CAPAB_DKEY)
 #define CanDoDKEY(x)    ((x)->capabilities & CAPAB_DKEY)
+
+#define SetZipCapable(x) ((x)->capabilities |= CAPAB_ZIP)
+#define IsZipCapable(x)	((x)->capabilities & CAPAB_ZIP)
+#define DoZipThis(x) 	((x)->capabilities & CAPAB_DOZIP) /* this is set in N: line, flag Z */
 
 /* flag macros. */
 #define IsULine(x) ((x)->flags & FLAGS_ULINE)
@@ -341,7 +349,12 @@ typedef struct MotdItem aMotd;
 #define SetRC4OUT(x)		((x)->flags |= FLAGS_RC4OUT)
 #define IsRC4IN(x)		((x)->flags & FLAGS_RC4IN)
 #define SetRC4IN(x)		((x)->flags |= FLAGS_RC4IN)
-#define RC4EncLink(x)		((x)->flags & (FLAGS_RC4IN|FLAGS_RC4OUT) == (FLAGS_RC4IN|FLAGS_RC4OUT))
+#define RC4EncLink(x)		(((x)->flags & (FLAGS_RC4IN|FLAGS_RC4OUT)) == (FLAGS_RC4IN|FLAGS_RC4OUT))
+
+#define ZipIn(x)		((x)->flags & FLAGS_ZIPPED_IN)
+#define SetZipIn(x)		((x)->flags |= FLAGS_ZIPPED_IN)
+#define ZipOut(x)		((x)->flags & FLAGS_ZIPPED_OUT)
+#define SetZipOut(x)		((x)->flags |= FLAGS_ZIPPED_OUT)
 
 #define ClearSAdmin(x)  ((x)->umode &= ~UMODE_a)
 #define ClearAdmin(x)   ((x)->umode &= ~UMODE_A)
@@ -624,6 +637,8 @@ struct Server {
    void       *sessioninfo_out; /* pointer to opaque sessioninfo structure */
    void       *rc4_in;        /* etc */
    void       *rc4_out;       /* etc */
+   void       *zip_out;
+   void       *zip_in;
 };
 
 struct Client {
@@ -972,6 +987,7 @@ extern char *generation, *creation;
 
 /* misc defines */
 
+#define ZIP_NEXT_BUFFER -4
 #define RC4_NEXT_BUFFER -3
 #define	FLUSH_BUFFER	-2
 #define	UTMP		"/etc/utmp"
