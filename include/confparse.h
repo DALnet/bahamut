@@ -63,6 +63,8 @@ struct ConfVar
 #define CONFF_ADMIN                 0x000200
 #define CONFT_PORT      "PORT"
 #define CONFF_PORT                  0x000400
+#define CONFT_MODULES   "MODULES"
+#define CONFF_MODULES               0x000800
 
 /* subtokens */
 
@@ -147,6 +149,15 @@ struct ConfVar
 #define OPTT_TSWARNDELTA "TS_WARN_DELTA"
 #define OPTF_TSWARNDELTA            0x008000
 
+/* module block definitions */
+
+#define MBTT_PATH       "PATH"
+#define MBTF_PATH                   0x0001
+#define MBTT_AUTOLOAD   "AUTOLOAD"
+#define MBTF_AUTOLOAD               0x0002
+#define MBTT_OPTLOAD    "OPTLOAD"
+#define MBTF_OPTLOAD                0x0004
+
 /* our variable types */
 
 #define VARTYPE_INT     0x0001  /* integers             */
@@ -183,6 +194,14 @@ sConf confopttab[] =
     {OPTT_TSMAXDELTA, OPTF_TSMAXDELTA, VARTYPE_INT},
     {OPTT_TSWARNDELTA, OPTF_TSWARNDELTA, VARTYPE_INT},
     {OPTT_STAFFADDY, OPTF_STAFFADDY, VARTYPE_NAME},
+    {(char *) 0, 0, 0}
+};
+
+sConf confmoduletab[] =
+{
+    {MBTT_PATH, MBTF_PATH, VARTYPE_NAME},
+    {MBTT_AUTOLOAD, MBTF_AUTOLOAD, VARTYPE_NAME},
+    {MBTT_OPTLOAD, MBTF_OPTLOAD, VARTYPE_NAME},
     {(char *) 0, 0, 0}
 };
 
@@ -272,6 +291,7 @@ extern int confadd_super(cVar **, int);
 extern int confadd_kill(cVar **, int);
 extern int confadd_admin(cVar **, int);
 extern int confadd_port(cVar **, int);
+extern int confadd_modules(cVar **, int);
 
 struct TopConf tconftab[] = 
 {
@@ -286,6 +306,7 @@ struct TopConf tconftab[] =
     {CONFT_ADMIN, CONFF_ADMIN, 0, confopentab, confadd_admin},
     {CONFT_SUPER, CONFF_SUPER, 0, confopentab, confadd_super},
     {CONFT_PORT, CONFF_PORT, 0, confporttab, confadd_port},
+    {CONFT_MODULES, CONFF_MODULES, 0, confmoduletab, confadd_modules},
     {(char *) 0, 0, 0, 0}
 };
 

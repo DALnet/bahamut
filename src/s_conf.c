@@ -65,6 +65,7 @@ aOper      *opers     = NULL;       /* opers - Olines       */
 aPort      *ports     = NULL;       /* ports - P/M lines    */
 aClass     *classes   = NULL;;      /* classes - Ylines     */
 char       *uservers[MAXUSERVS];    /* uservers = Ulines    */
+Conf_Modules *modules = NULL;
 
 /* this set of lists is used for loading and rehashing the config file */
 
@@ -75,6 +76,7 @@ aOper       *new_opers      = NULL;
 aPort       *new_ports      = NULL;
 aClass      *new_classes    = NULL;
 char        *new_uservers[MAXUSERVS+1];    /* null terminated array */
+Conf_Modules *new_modules       = NULL;
 
 #ifdef LOCKFILE
 extern void do_pending_klines(void);
@@ -1484,6 +1486,74 @@ confadd_restrict(cVar *vars[], int lnum)
     return lnum;
 }
 
+int
+confadd_modules(cVar *vars[], int lnum)
+{
+    cVar *tmp;
+    Conf_Modules *x = new_modules;
+    int c = 0, ac = 0, oc = 0;
+
+    /* this is like the global block - we dont free here because we do
+     * it if we fail
+     */
+
+    if(!x)
+    {
+        x = (Conf_Modules *) MyMalloc(sizeof(Conf_Modules));
+        memset((char *) x, '\0', sizeof(Conf_Modules));
+        new_modules = x;
+    }
+    else
+    {
+        confparse_error("Multiple module blocks in config file", lnum);
+        return -1;
+    }
+
+    for(tmp = vars[c]; tmp; tmp = vars[++c])
+    {
+        if(tmp->type && (tmp->type->flag & MBTF_PATH))
+        {
+            if(!x->module_path)
+            {
+                confparse_error("Multiple module paths defined", lnum);
+                return -1;
+            }
+            tmp->type = NULL;
+            DupString(x->module_path, tmp->value);
+        }
+        else if(tmp->type && (tmp->type->flag & MBTF_AUTOLOAD))
+        {
+            if((ac+1) > 128)
+            {
+                confparse_error("Excessive autoloading modules (max 128)",
+                                 lnum);
+                return -1;
+            }
+            tmp->type = NULL;
+            DupString(x->autoload[ac], tmp->value);
+            ac++;
+        }
+        else if(tmp->type && (tmp->type->flag & MBTF_OPTLOAD))
+        {
+            if((oc+1) > 128)
+            {
+                confparse_error("Excessive optional modules (max 128)", lnum);
+                return -1;
+            }
+            tmp->type = NULL;
+            DupString(x->optload[oc], tmp->value);
+            oc++;
+        }
+    }
+    if(!x->autoload[0] && !x->optload[0])
+    {
+        confparse_error("No modules defined in module block", lnum);
+        return -1;
+    }
+    return lnum;
+}
+    
+
 /* set_classes
  * after loading the config into temporary lists, we must
  * set the appropriate classes for each conf.  If we run into
@@ -1909,7 +1979,7 @@ merge_classes()
 void
 merge_confs()
 {
-    int i = 0;
+    int i;
 
     merge_classes();        /* this should always be done first */
     merge_me();
@@ -1917,19 +1987,27 @@ merge_confs()
     merge_allows();
     merge_opers();
     merge_ports();
-    while(uservers[i])
-    {
+    for(i = 0; uservers[i]; i++)
         MyFree(uservers[i]);
-        i++;
-    }
-    i = 0;
-    while(new_uservers[i])
+    for(i = 0; new_uservers[i]; i++)
     {
         DupString(uservers[i], new_uservers[i]);
         MyFree(new_uservers[i]);
-        i++;
     }
     new_uservers[0] = NULL;
+    /* dont worry about accually merging module data - its fairly
+     * inactive and static data.  Just replace it.
+     */
+    if(modules)
+    {
+        MyFree(modules->module_path);
+        for(i = 0; modules->autoload[i]; i++)
+            MyFree(modules->autoload[i]);
+        for(i = 0; modules->optload[i]; i++)
+            MyFree(modules->optload[i]);
+        MyFree(modules);
+    }
+    modules = new_modules;
     return;
 }
 

@@ -89,6 +89,7 @@ typedef struct Conf_Oper aOper;
 typedef struct Conf_Me Conf_Me;
 typedef struct Conf_Port aPort;
 typedef struct Conf_Class aClass;
+typedef struct Conf_Modules Conf_Modules;
 typedef long ts_val;
 
 typedef struct MotdItem aMotd;
@@ -692,6 +693,13 @@ struct Conf_Oper
     char *class_name;
 	aClass *class;
 	aOper *next;
+};
+
+struct Conf_Modules
+{
+    char *module_path;
+    char *autoload[128];
+    char *optload[128];
 };
 
 struct Conf_Port
