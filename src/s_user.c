@@ -59,7 +59,9 @@ extern void outofmemory(void);	/*
 #ifdef MAXBUFFERS
 extern void reset_sock_opts();
 extern int send_lusers(aClient *,aClient *,int, char **);
-
+#endif
+#ifdef NO_CHANOPS_WHEN_SPLIT
+extern int server_was_split;
 #endif
 extern int  lifesux;
 
@@ -870,14 +872,15 @@ int register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
 	sendto_one(sptr, rpl_str(RPL_MYINFO), me.name, parv[0],
 		   me.name, version);
 
-	ircsprintf(tmpstr2,"NOQUIT WATCH=%i SAFELIST MODES=%i "
+	ircsprintf(tmpstr2,"NOQUIT SAFELIST MODES=%i "
 		   "MAXCHANNELS=%i MAXBANS=%i NICKLEN=%i "
 		   "TOPICLEN=%i KICKLEN=%i CHANTYPES=# "
 		   "PREFIX=(ov)@+ NETWORK=DALnet SILENCE=%i",
-		   MAXWATCH,MAXMODEPARAMSUSER,MAXCHANNELSPERUSER,MAXBANS,
+		   MAXMODEPARAMSUSER,MAXCHANNELSPERUSER,MAXBANS,
 		   NICKLEN,TOPICLEN,TOPICLEN,MAXSILES);
 	sendto_one(sptr, rpl_str(RPL_PROTOCTL), me.name, parv[0], tmpstr2);
-	ircsprintf(tmpstr2,"CASEMAPPING=ascii CHANMODES=b,k,l,ciLmMnOprRst");
+	ircsprintf(tmpstr2,"WATCH=128 CASEMAPPING=ascii "
+		   "CHANMODES=b,k,l,ciLmMnOprRst",MAXWATCH);
 	sendto_one(sptr, rpl_str(RPL_PROTOCTL), me.name, parv[0], tmpstr2);
 
 #ifdef FORCE_EVERYONE_HIDDEN
@@ -2495,6 +2498,10 @@ int m_pong(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	    sptr->flags &= ~FLAGS_TOPICBURST;
 	    sendto_gnotice("from %s: %s has processed topic burst (synched "
 			   "to network data).", me.name, sptr->name);
+#ifdef NO_CHANOPS_WHEN_SPLIT
+        if(server_was_split)
+            server_was_split = NO;
+#endif
 #ifdef HUB
 	    sendto_serv_butone(sptr, ":%s GNOTICE :%s has synched to network "
 			       "data.", me.name, sptr->name);

@@ -34,25 +34,7 @@
 #define MINOR 4
 #define PATCH 36
 
-#define PATCH1 ".RC2"
-
-#define PATCH2 ""
-
-#define PATCH3 ""
-
-#define PATCH4 ""
-
-#define PATCH5 ""
-
-#define PATCH6 ""
-
-#define PATCH7 ""
-
-#define PATCH8 ""
-
-#define PATCH9 ""
-
-#define PATCHES PATCH1 PATCH2 PATCH3 PATCH4 PATCH5 PATCH6 PATCH7 PATCH8 PATCH9
+#define PATCHES "p3"
 
 void build_version(void);
 

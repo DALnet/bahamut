@@ -29,12 +29,7 @@
 #include "userban.h"
 
 #ifdef NO_CHANOPS_WHEN_SPLIT
-#include "fdlist.h"
-
 int         server_was_split = YES;
-time_t      server_split_time = 0;
-int         server_split_recovery_time = (MAX_SERVER_SPLIT_RECOVERY_TIME * 60);
-
 #endif
 
 aChannel   *channel = NullChn;
@@ -1859,24 +1854,8 @@ int m_join(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	    flags = (ChannelExists(name)) ? 0 : CHFL_CHANOP;
 
 #ifdef NO_CHANOPS_WHEN_SPLIT
-	    if (!IsAnOper(sptr) && server_was_split &&
-		server_split_recovery_time)
-	    {
-		if ((server_split_time + server_split_recovery_time) < NOW)
-		{
-		    if (server_list != NULL)
-			server_was_split = NO;
-		    else
-		    {
-			server_split_time = NOW;	/* still split */
+	    if (!IsAnOper(sptr) && server_was_split)
 			allow_op = NO;
-		    }
-		}
-		else
-		{
-		    allow_op = NO;
-		}
-	    }
 #endif
 	    
 	    if ((sptr->user->joined >= MAXCHANNELSPERUSER) &&
