@@ -1360,80 +1360,68 @@ add_connection(aClient *cptr, int fd)
  * do * any flooding >:-) -avalon
  */
 
-#ifndef USE_POLL
-static int
-read_packet(aClient *cptr, fd_set * rfd)
-#else /*
-       * USE_POLL 
-       */
-int
-read_packet(aClient *cptr, int msg_ready)
-#endif
+read_packet(aClient *cptr)
 {
    Reg int     dolen = 0, length = 0, done;
-
-#ifdef USE_POLL
-   if (msg_ready &&
-#else
-   if (FD_ISSET(cptr->fd, rfd) &&
-#endif
-       !(IsPerson(cptr) && DBufLength(&cptr->recvQ) > 6090)) {
-      errno = 0;
-
+   if (!(IsPerson(cptr) && DBufLength(&cptr->recvQ) > 6090)) {
+	  errno = 0;
+	  
 #if defined(MAXBUFFERS) && !defined(SEQUENT)
-      if (IsPerson(cptr))
-	 length = recv(cptr->fd, readbuf, 8192 * sizeof(char), 0);
-
-      else
-	 length = recv(cptr->fd, readbuf, rcvbufmax * sizeof(char), 0);
-
+	  if (IsPerson(cptr))
+	    length = recv(cptr->fd, readbuf, 8192 * sizeof(char), 0);
+	  
+	  else
+	    length = recv(cptr->fd, readbuf, rcvbufmax * sizeof(char), 0);
+	  
 #else
-      length = recv(cptr->fd, readbuf, sizeof(readbuf), 0);
+	  length = recv(cptr->fd, readbuf, sizeof(readbuf), 0);
 #endif
-
+	  
 #ifdef USE_REJECT_HOLD
-      /*
-       * If client has been marked as rejected i.e. it is a client that
-       * is trying to connect again after a k-line, pretend to read it
-       * but don't actually. -Dianora
-       */
-
-      if (cptr->flags & FLAGS_REJECT_HOLD) {
-	 if ((cptr->firsttime + REJECT_HOLD_TIME) > timeofday)
-	    exit_client(cptr, cptr, cptr, "reject held client");
-	 else
-	    return 1;
-      }
+	  /*
+	   * If client has been marked as rejected i.e. it is a client that
+	   * is trying to connect again after a k-line, pretend to read it
+	   * but don't actually. -Dianora
+	   */
+	  
+	  if (cptr->flags & FLAGS_REJECT_HOLD) {
+	     if ((cptr->firsttime + REJECT_HOLD_TIME) > timeofday)
+	       exit_client(cptr, cptr, cptr, "reject held client");
+	     else
+	       return 1;
+	  }
 #endif
-
-      cptr->lasttime = timeofday;
-      if (cptr->lasttime > cptr->since)
-	 cptr->since = cptr->lasttime;
-      cptr->flags &= ~(FLAGS_PINGSENT | FLAGS_NONL);
-      /*
-       * If not ready, fake it so it isnt closed
-       */
-      if (length == -1 &&
-	  ((errno == EWOULDBLOCK) || (errno == EAGAIN)))
-	 return 1;
-      if (length <= 0)
-	 return length;
-   }
+	  
+	  cptr->lasttime = timeofday;
+	  if (cptr->lasttime > cptr->since)
+	    cptr->since = cptr->lasttime;
+	  cptr->flags &= ~(FLAGS_PINGSENT | FLAGS_NONL);
+	  /*
+	   * If not ready, fake it so it isnt closed
+	   */
+	  if (length == -1 &&
+	      ((errno == EWOULDBLOCK) || (errno == EAGAIN)))
+	    return 1;
+	  if (length <= 0)
+	    return length;
+       }
+       if (length==0) return length;
+       
    /*
     * * For server connections, we process as many as we can without *
     * worrying about the time of day or anything :)
     */
-   if (IsServer(cptr) || IsConnecting(cptr) || IsHandshake(cptr)) {
-      if (length > 0)
-	 if ((done = dopacket(cptr, readbuf, length)))
-	    return done;
-   }
-   else {
-      /*
+       if (IsServer(cptr) || IsConnecting(cptr) || IsHandshake(cptr)) {
+	  if (length > 0)
+	    if ((done = dopacket(cptr, readbuf, length)))
+	      return done;
+       }
+       else {
+	  /*
        * * Before we even think of parsing what we just read, stick *
-       * it on the end of the receive queue and do it when its * turn
-       * comes around.
-       */
+	   * it on the end of the receive queue and do it when its * turn
+	   * comes around.
+	   */
       if (dbuf_put(&cptr->recvQ, readbuf, length) < 0)
 	 return exit_client(cptr, cptr, cptr, "dbuf_put fail");
 
@@ -1902,10 +1890,10 @@ read_message(time_t delay,
 # ifdef USE_FAST_FD_ISSET
 		  if (!NoNewLine(cptr) ||
 				(read_set->fds_bits[fd_read_offset] & fd_read_mask))
-			 length = read_packet(cptr, read_set);
+			 length = read_packet(cptr);
 # else
 		  if (!NoNewLine(cptr) || FD_ISSET(i, read_set))
-			 length = read_packet(cptr, read_set);
+			 length = read_packet(cptr);
 # endif
 # ifdef DEBUGMODE
 		  readcalls++;
@@ -2314,7 +2302,7 @@ read_message(time_t delay, fdlist * listp)
 							 * for fall through case 
 							 */
       if (!NoNewLine(cptr) || rr)
-		  length = read_packet(cptr, rr);
+		  length = read_packet(cptr);
 #ifdef DEBUGMODE
       readcalls++;
 #endif
