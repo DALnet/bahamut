@@ -2523,6 +2523,7 @@ m_sjoin(aClient *cptr,
 	       isnew, clientjoin = 0;
    Reg char   *s, *s0;
    static char numeric[16], sjbuf[BUFSIZE];
+   char        keep_modebuf[REALMODEBUFLEN], keep_parabuf[REALMODEBUFLEN];
    char       *mbuf = modebuf, *t = sjbuf, *p;
 
    /* if my client is SJOINing, it's just a local user being a dufus. 
@@ -2879,6 +2880,9 @@ m_sjoin(aClient *cptr,
     * t += strlen(t);
     */
 
+   strcpy(keep_modebuf, modebuf);
+   strcpy(keep_parabuf, parabuf);
+
    mbuf = modebuf;
    parabuf[0] = '\0';
    pargs = 0;
@@ -2957,9 +2961,9 @@ m_sjoin(aClient *cptr,
 		  *t = '\0';
 
       sendto_ssjoin_servs(1, chptr, cptr, newSJOINFmt, parv[0], tstosend,
-			parv[2], modebuf, parabuf, sjbuf);
+			parv[2], keep_modebuf, keep_parabuf, sjbuf);
       sendto_ssjoin_servs(0, chptr, cptr, oldSJOINFmt, parv[0], tstosend, tstosend,
-			parv[2], modebuf, parabuf, sjbuf);
+			parv[2], keep_modebuf, keep_parabuf, sjbuf);
    }
    return 0;
 }

@@ -983,7 +983,7 @@ typedef struct SearchOptions {
 	char spare:6; /* spare space for more stuff(?) */
 } SOpts;
 
-#define IsSendable(x)      (DBufLength(&x->sendQ) < 2048)
+#define IsSendable(x)      (DBufLength(&x->sendQ) < 16384)
 #define DoList(x)    (((x)->user) && ((x)->user->lopt))
 
 #endif /* __struct_include__ */
