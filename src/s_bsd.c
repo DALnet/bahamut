@@ -1429,7 +1429,7 @@ aClient    *
  * do * any flooding >:-) -avalon
  */
 
-read_packet(aClient *cptr, int dataready)
+static int read_packet(aClient *cptr, int dataready)
 {
    Reg int     dolen = 0, length = 0, done;
    if (dataready && !(IsPerson(cptr) && DBufLength(&cptr->recvQ) > 6090))
