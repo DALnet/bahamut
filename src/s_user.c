@@ -4280,7 +4280,7 @@ int m_svsmode(aClient *cptr, aClient *sptr, int parc, char *parv[]) {
 	 int 		flag, *s, what, setflags;
 	 char 	      **p, *m;
 	 aClient       *acptr;
-	 time_t         ts = 0;
+	 ts_val         ts = 0;
 
 	 if (!IsULine(sptr) || (parc < 3))
 	    	return 0;
@@ -4299,7 +4299,7 @@ int m_svsmode(aClient *cptr, aClient *sptr, int parc, char *parv[]) {
 	  * with us };>  -Epi
 	  */
 
-	 if ((ts) && (ts != acptr->firsttime))
+	 if ((ts) && (ts != acptr->tsinfo))
 		return 0;
 
 	 for (s = user_modes; (flag = *s); s += 2)

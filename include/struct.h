@@ -277,7 +277,7 @@ typedef struct MotdItem aMotd;
 #define	SendWallops(x)		((x)->umode & UMODE_w)
 #define	SendServNotice(x)	((x)->umode & UMODE_s)
 #define SendCConnNotice(x)	((x)->umode & UMODE_c)
-#define SendRejNotice(x)	((x)->umode & UMODE_r)
+#define SendRejNotice(x)	((x)->umode & UMODE_c)
 #define SendSkillNotice(x)	((x)->umode & UMODE_k)
 #define SendSpyNotice(x)	((x)->umode & UMODE_y)
 #define SendFloodNotice(x)  ((x)->umode & UMODE_f)

@@ -333,7 +333,7 @@ static char *replies[] = {
 	/* 304 */	NULL,
 	/* 305 RPL_UNAWAY */		":%s 305 %s :You are no longer marked as being away",
 	/* 306 RPL_NOWAWAY */		":%s 306 %s :You have been marked as being away",
-	/* 307 RPL_WHOISREGNICK */	":%s 307 %s %s :is a registered nick",
+	/* 307 RPL_WHOISREGNICK */	":%s 307 %s %s :has identified for this nick",
 	/* 308 RPL_WHOISADMIN */	":%s 308 %s %s :is an IRC Server Administrator",
 	/* 309 RPL_WHOISSADMIN */	":%s 309 %s %s :is a Services Administrator",
 	/* 310 RPL_WHOISSVCMSG */	":%s 310 %s %s",
