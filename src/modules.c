@@ -3,6 +3,8 @@
  *   Copyright (C) 2003, Lucas Madar
  */
 
+/* $Id$ */
+
 #include "struct.h"
 #include "common.h"
 #include "sys.h"
