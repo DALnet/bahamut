@@ -327,7 +327,7 @@ m_squit(aClient *cptr,
       sendto_ops("Received SQUIT %s from %s (%s)",
 		 acptr->name, get_client_name(sptr, HIDEME), comment);
       sendto_serv_butone(&me,
-			 ":%s GNOTICE :Received SQUIT %s from %s (%s)",
+			 ":%s GLOBOPS :Received SQUIT %s from %s (%s)",
 	      me.name, server, get_client_name(sptr, HIDEME), comment);
 #
 #if defined(USE_SYSLOG) && defined(SYSLOG_SQUIT)
@@ -893,7 +893,7 @@ m_server_estab(aClient *cptr)
    sendto_ops("Link with %s established: %s %s", inpath, IsULine(cptr) ? "ULined" : "Normal",
 		DoesTS(cptr) ? "TS link" : "Non-TS link!");
  
-   sendto_serv_butone(&me, ":%s GNOTICE :Link with %s established: %s", 
+   sendto_serv_butone(&me, ":%s GLOBOPS :Link with %s established: %s", 
 							 me.name, inpath, DoesTS(cptr) ? "TS link" : "Non-TS link!");
    (void) add_to_client_hash_table(cptr->name, cptr);
    /*
@@ -2365,7 +2365,7 @@ m_connect(aClient *cptr,
     */
    if (!IsAnOper(cptr)) {
       sendto_serv_butone(&me,
-			 ":%s GNOTICE :Remote CONNECT %s %s from %s",
+			 ":%s GLOBOPS :Remote CONNECT %s %s from %s",
 			 me.name, parv[1], parv[2] ? parv[2] : "",
 			 get_client_name(sptr, HIDEME));
 #if defined(USE_SYSLOG) && defined(SYSLOG_CONNECT)
