@@ -122,7 +122,7 @@ void engine_change_fd_state(int fd, unsigned int stateplus)
 }
 
 #define ENGINE_MAX_EVENTS 128
-#define ENGINE_MAX_LOOPS 10
+#define ENGINE_MAX_LOOPS 48
 
 int engine_read_message(time_t delay)
 {
