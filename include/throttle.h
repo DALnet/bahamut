@@ -68,12 +68,12 @@ void throttle_stats(aClient *cptr, char *name);
 #else
 
 #define throttle_check(x,y,z) ((int)1)
-#define throttle_remove() ((void)0)
-#define throttle_timer() ((void)0)
+#define throttle_remove(x) ((void)0)
+#define throttle_timer(x) ((void)0)
 
 #define throttle_init() ((void)0)
 #define throttle_rehash() ((void)0)
-#define throttle_resize() ((void)0)
+#define throttle_resize(x) ((void)0)
 #define throttle_stats(x,y) ((void)0)
 #endif
 
