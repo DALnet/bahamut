@@ -1,0 +1,40 @@
+Read "ChangeLog.th" for latest updates!
+Extra stuff in +th:
+
+ * DO_IDENTD - should we bother doing identd lookups at ALL?
+ * K_COMMENT_ONLY - Define this if you will ONLY use the second field in the
+	K-line as a comment - no ^O needed.
+ * EXTRA_UMODES - adds umodes +crk:
+		+c = (don't)see client connections  (OPER only)
+		+r = (don't)see client rejections
+		+k = (don't)see Server Kills
+ * BOTCHECK - perform rudimentary Bot Checks
+ * IDENTD_COMPLAIN - Yell at people who aren't running IDENTD.
+ * CLIENT_COUNT - Keep a running tally of local and global users,
+	Remaps /USERS to show this info.  (loses count sometimes)
+ * E_LINES - Exemption lines
+ * LUSERS_CACHE_TIME - how long to cache m_lusers info (set in ircd/s_serv.c,
+	will move it)
+ * RPL_ENDOFTRACE
+ * FORCE_MOTD - use a different numeric so users cannot /set suppress_motd on
+ * QUOTE_HTM - High Traffic Mode stuff
+ * QUOTE_SET - on-the-fly adjustment of MAXCLIENTS
+ * NO_OPER_FLOOD - OPERs are not subjected to flood control
+ * SHOW_UH - show user@host whenever only host was going to be given, used
+	with USERNAMES_IN_TRACE.
+ * FLAGS_NORMALEX - used when EXTRA_UMODES is defined: sets a flag as to whether
+	or not the user exited via m_quit, or otherwise (hides a users quit
+	comment unless it's an error.)
+
+Other modifications:
+ * K-line checking fixed (and optimized) [ircd.c]
+ * 'timeofday' was not initially set, fixed [ircd.c]
+ * Minor speedups in ircd.c:check_fdlists()
+ * in common/send.c:send_message(), set the buffering to 4k, rather than
+	callin send_queued() every 1k, for clients.  Servers are still at
+	1k.  This was done because when slow links use /list, etc, they
+	cause the server to spin its wheels sending to a BLOCKED fd.
+
+Questions about theses modifications should be sent to:
+ Taner Halicioglu (taner@SDSC.EDU)
+

@@ -1,0 +1,139 @@
+#!/bin/sh
+#
+# ircd install sh script
+# to be called from the toplevel Makefile, in install:
+
+DPATH=`grep '#define.DPATH' include/options.h|awk '{print $3}'|tr -d \"`;
+if [ "x$DPATH" = "x" ] ; then
+DPATH=`grep '#define.DPATH' include/config.h|awk '{print $3}'|tr -d \"`;
+fi
+SPATH=`grep '#define.SPATH' include/options.h|awk '{print $3}'|tr -d \"`;
+if [ "x$SPATH" = "x" ] ; then
+SPATH=`grep '#define.SPATH' include/config.h|awk '{print $3}'|tr -d \"`;
+fi
+CPATH=`grep '#define.CPATH' include/config.h|awk '{print $3}'|tr -d \"`;
+KPATH=`grep '#define.KPATH' include/config.h|awk '{print $3}'|tr -d \"`;
+MPATH=`grep '#define.MPATH' include/config.h|awk '{print $3}'|tr -d \"`;
+LPATH=`grep '#define.LPATH' include/config.h|awk '{print $3}'|tr -d \"`;
+PPATH=`grep '#define.PPATH' include/config.h|awk '{print $3}'|tr -d \"`;
+HPATH=`grep '#define.HPATH' include/config.h|awk '{print $3}'|tr -d \"`;
+
+base_SPATH=`basename $SPATH`;
+base_CPATH=`basename $CPATH`;
+base_KPATH=`basename $KPATH`;
+base_MPATH=`basename $MPATH`;
+base_LPATH=`basename $LPATH`;
+base_PPATH=`basename $PPATH`;
+base_HPATH=`basename $HPATH`;
+
+#   DPATH = directory,
+#   SPATH = server executable,
+#   CPATH = conf file,
+#   MPATH = MOTD
+#   KPATH = kline conf file
+#   leave KPATH undefined if you want klines in main conf file
+#   HPATH is the opers help file, seen by opers on /quote help
+
+# install ircd, save old one as ircd.old
+
+if [ $base_SPATH = $SPATH ] ; then
+  if [ ! -f ${DPATH}${SPATH} ] ; then
+    echo installing ircd as ${DPATH}${SPATH};
+    ./install-sh -c src/ircd ${DPATH}$;
+  else
+    echo installing ircd as ${DPATH}${SPATH};
+    echo previous ircd saved as ircd.old;
+    mv ${DPATH}${SPATH} ${DPATH}${SPATH}.old;
+    ./install-sh -c src/ircd ${DPATH};
+  fi;
+else 
+  if [ ! -f $SPATH ] ; then
+     echo installing ircd as ${SPATH};
+     ./install-sh -c src/ircd `dirname $SPATH`;
+  else
+     echo installing ircd as ${SPATH};
+     echo previous ircd saved as ircd.old;
+     mv ${SPATH} ${SPATH}.old;
+     ./install-sh -c src/ircd `dirname $SPATH`;
+  fi;
+fi;  
+
+# try to install their ircd.conf file, unless it already exists.
+
+if [ $base_CPATH = $CPATH ] ; then
+  if [ ! -f ${DPATH}${CPATH} ] ; then
+    echo installing example.conf as your ${DPATH}${CPATH};
+    ./install-sh -c doc/example.conf ${DPATH}${CPATH};
+  else
+    echo You already have an ${DPATH}${CPATH}....;
+  fi;
+else
+  if [ ! -f $CPATH ] ; then
+     echo installing example.conf as your ${CPATH};
+     ./install-sh -c doc/example.conf $CPATH;
+  else
+    echo You already have an ${CPATH} file...;
+  fi;
+fi;
+
+
+# try to install their motd file, unless it already exists.
+ 
+if [ $base_MPATH = $MPATH ] ; then
+  if [ ! -f ${DPATH}${MPATH} ] ; then
+    echo installing a sample ${DPATH}${MPATH};
+    echo "This is ircd-hybrid MOTD replace it with something better" > ${DPATH}${MPATH};
+  else
+    echo You already have an ${DPATH}${MPATH}.....;
+  fi;
+else
+  if [ ! -f $MPATH ] ; then
+    echo installing a sample ${MPATH};
+    echo "This is ircd-hybrid MOTD replace it with something better" > ${MPATH};
+  else
+    echo You already have an $MPATH file ....;
+  fi;
+fi;
+
+# try to install their kpath file unless it already exists.
+ 
+if [ $base_KPATH = $KPATH ] ; then
+  if [ ! -f ${DPATH}${KPATH} ] ; then
+    echo touching ${DPATH}$KPATH;
+    touch ${DPATH}$KPATH;
+  else
+    echo You already have an ${DPATH}${KPATH}....;
+  fi;
+else
+  if [ ! -f $KPATH ] ; then
+    echo touching $KPATH;
+    touch $KPATH;
+  else
+    echo You already have an ${KPATH} file...;
+  fi;
+fi;
+
+# try to install their opers.txt file, in all cases 
+ 
+if [ $base_HPATH = $HPATH ] ; then
+  if [ ! -f ${DPATH}${HPATH} ] ; then
+    echo installing opers.txt as ${DPATH}${HPATH};
+    ./install-sh -c opers.txt ${DPATH};
+  else
+     echo installing opers.txt as ${DPATH}${HPATH};
+     echo previous opers.txt saved as opers.txt.old;
+     mv ${DPATH}${HPATH} ${DPATH}${HPATH}.old;
+     ./install-sh -c opers.txt ${DPATH};
+  fi;
+else
+  if [ ! -f $HPATH ] ; then
+     echo installing opers.txt as ${HPATH};
+     ./install-sh -c opers.txt `dirname $HPATH`;
+  else
+     echo installing opers.txt as ${HPATH};
+     echo previous opers.txt saved as opers.txt.old;
+     mv ${HPATH} ${HPATH}.old;
+     ./install-sh -c opers.txt `dirname $HPATH`;
+  fi;
+fi;
+

@@ -1,0 +1,12 @@
+If you don't read this first, we won't help you.
+:-)
+
+See the INSTALL document for info on configuring and compiling
+Bahamut.
+
+THIS IS A BETA RELEASE.  NOT ALL BUGS HAVE BEEN IRONED OUT.
+
+DEBUGGING MODE: if you run ircd with the -s flag, it will send
+errors that are normally syslogged to stderr.  This is very useful
+if you don't have syslogging set up and ircd won't run.
+

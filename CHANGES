@@ -1,0 +1,18 @@
+1.0.7	More fixes to UNSQLINE, which was guaranteed to crash. - lucas
+1.0.6	Fixed naughty UNSQLINE bug that would corrupt stuff (I think).
+	If it's not fixed, at least the code looks cleaner. 
+	Added a patch to default /klines to temp (see config.h) - lucas
+1.0.4	Whoops! Non-opers could see a % in /who, that wasn't good.
+1.0.3	Changed default for m_who(). If the arg has a . in it, it will be 
+	treated as a hostname, otherwise, it will be treated as a nick. -Rak
+1.0.2	Screwed around a lot with /stats l/L. I hope it still works. -Rak.
+1.0.1	A whole slew of fixes, courtesy of Lucas:
+	Moved the calls to send_list() around so the /list output doesn't stall.
+	/operserv works again! See OPERSERV_OTHER_HOST in config.h
+	Fixed a DF Compatibility typo in channel.c
+	removed comma_count from m_names.
+	Better UNZLINE support.
+	Fix to stop people from putting spaces in hostnames for klines.
+	A few misc bugfixes.        
+1.0.0	Fixed address and "since time" in /stats l/L
+	Added a CHANGES file -Rak

@@ -1,0 +1,44 @@
+CC=@CC@
+RM=@RM@
+IRCDLIBS=@LIBS@
+INCLUDEDIR=-I../include
+
+mkpasswd_SOURCES = mkpasswd.c
+mkpasswd_OBJECTS = mkpasswd.o
+chkconf_SOURCES = chkconf.c
+chkconf_OBJECTS = chkconf.o
+viconf_SOURCES = viconf.c
+viconf_OBJECTS = viconf.o
+fixklines_SOURCES = fixklines.c
+fixklines_OBJECT = fixklines.o
+
+all_OBJECTS = $(viconf_OBJECTS) $(mkpasswd_OBJECTS) $(chkconf_OBJECTS) ${fixklines_OBJECT}
+
+all: viconf chkconf mkpasswd fixklines
+
+build: all
+
+chkconf: $(chkconf_OBJECTS)
+	$(CC) -o chkconf $(chkconf_OBJECTS) ${IRCDLIBS}
+
+mkpasswd: $(mkpasswd_OBJECTS)
+	$(CC) -o mkpasswd $(mkpasswd_OBJECTS) $(IRCDLIBS)
+
+viconf: viconf.o
+	$(CC) -o viconf viconf.o ${IRCDLIBS}
+
+fixklines: fixklines.o
+	$(CC) -o fixklines fixklines.o
+
+clean:
+	$(RM) -f $(all_OBJECTS) fixklines viconf chkconf mkpasswd *~ core
+
+distclean: clean
+	$(RM) -f Makefile
+
+.c.o:
+	$(CC) $(CFLAGS) $(INCLUDEDIR) -c $<
+
+install: build
+	@echo "Please do a make install from the top level directory"
+

@@ -1,0 +1,36 @@
+  ircd-hybrid has been primarily geared for EFnet, where 40k clients
+is becoming the norm. But for smaller non EFnet nets, thats going
+to cost your server memory, because it will be expecting the large numbers
+of clients on EFnet that will never happen on a smaller net.
+
+  You can easily tune your hybrid to use less memory on startup
+by modifying the file "list.c" in src
+
+  These comments will be found in list.c
+
+/* Number of Link's to pre-allocate at a time 
+   for Efnet 1000 seems reasonable, 
+   for smaller nets who knows? -Dianora
+   */
+
+#define LINK_PREALLOCATE 1024
+
+/* Number of aClient structures to preallocate at a time
+   for Efnet 1024 is reasonable 
+   for smaller nets who knows? -Dianora
+   */
+
+/* This means you call MyMalloc 30 some odd times,
+   rather than 30k times -Dianora
+*/
+
+#define CLIENTS_PREALLOCATE 1024
+
+  I suggest you trim these numbers as needed, to fit your estimated
+needs. You could use 64 for each for example, on a server that 
+normally never saw more than 60 people on the entire network.
+Keeping it a multiple of 2 is advisable, but not absolutely
+necessary. You will just waste a tiny bit of memory in one of the
+bit maps.
+
+  - Dianora

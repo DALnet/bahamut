@@ -1,0 +1,42 @@
+Bahamut was taken on by a group of loosely nit coders that decided that
+Dreamforge just was eating up too much CPU to handle DALnet's growing user
+base.  Originally starting out as the DFhybrid project, it slowly grew
+into the Bahamut project as the peices started falling together.
+
+Bahamut is based upon the hybrid IRCd, developed for EFnet, and we most
+surely wouldn't be where we are today without the dedication of the coders
+that developed that IRCd.  The Hybrid team is outlined in the file
+included with this distribution, in doc/Hybrid-team.  Please look over
+that file, those people are as much to credit for this as the people
+listed here.
+
+People who have supported the Bahamut project with code, support, or
+testing are, in alphabetical order:
+
+Aaron Wiebe         epiphani@solarz.net
+Chip Norkus         wd@dal.net
+David Friedman      driz@dal.net
+David Knepper       dakal@dal.net
+Diane Bruce         db@koruna.varner.com
+Ian Westcott        rakarra@dal.net
+Jason Slagle        raistlin@bahamut.net
+Kevin Turner        kevin@dal.net
+Lucas Madar         lucas@negaverse.org
+Mark Salerno        msofty@dal.net
+Sven Nielsen        dalvenjah@dal.net
+
+Thanks goes out to all those not listed here, your help is much
+appreciated.
+
+
+Feel free to contact the Bahamut team with any bugs, bug fixes, and the
+like at: bahamut-bugs@bahamut.net
+
+Also, there is a public mailing list for bahamut: bahamut@bahamut.net.
+This list would be the place to send suggestions and comments regarding
+Bahamut.
+
+And, last but not least, the Bahamut website is at www.bahamut.net
+
+Thanks for the Support,
+The Bahamut Coding Team

@@ -1,0 +1,218 @@
+dnl Process this file with autoconf to produce a configure script.
+AC_INIT(include/class.h)
+AC_CONFIG_HEADER(include/setup.h)
+PACKAGE=ircd-hybrid
+VERSION=4.2
+AC_SUBST(PACKAGE)
+AC_SUBST(VERSION)
+
+dnl Checks for programs.
+AC_PROG_CC
+AC_ISC_POSIX
+AC_CANONICAL_SYSTEM
+AC_AIX
+AC_PROG_MAKE_SET
+AC_PATH_PROG(RM,rm)
+AC_PATH_PROG(CP,cp)
+AC_PROG_INSTALL
+
+dnl Checks for libraries.
+dnl Replace `main' with a function in -lnsl:
+AC_CHECK_LIB(nsl, gethostbyname)
+AC_CHECK_FUNC(res_mkquery,, AC_CHECK_LIB(resolv, res_mkquery))
+AC_CHECK_LIB(socket, socket)
+AC_CHECK_FUNC(crypt,, AC_CHECK_LIB(descrypt, crypt,,AC_CHECK_LIB(crypt, crypt,,)))
+
+dnl Checks for header files.
+AC_HEADER_STDC
+AC_CHECK_HEADERS(sys/param.h unistd.h string.h strings.h sys/syslog.h stdlib.h stddef.h) 
+AC_CHECK_HEADER(malloc.h, AC_DEFINE(MALLOCH, <malloc.h>)) 
+AC_MSG_CHECKING(MIN and MAX definition)
+AC_EGREP_CPP(yes,
+[
+#if defined( HAVE_SYS_PARAM_H )
+#include <sys/param.h>
+#ifdef MIN
+  yes
+#endif
+#endif
+], AC_DEFINE(HAVE_MINMAX) AC_MSG_RESULT(yes), AC_MSG_RESULT(no))
+
+
+dnl Checks for library functions.
+AC_PROG_GCC_TRADITIONAL
+AC_CHECK_FUNCS(index strerror strtoken strtok inet_addr inet_ntoa inet_netof inet_aton)
+AC_CHECK_FUNCS(gettimeofday lrand48 sigaction bzero bcmp bcopy)
+AC_CHECK_FUNCS(dn_skipname __dn_skipname getrusage times, break)
+dnl taken from ircd's Config script
+AC_MSG_CHECKING(for non-blocking socket implementation)
+AC_TRY_RUN(
+[
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <fcntl.h>
+#include <sys/ioctl.h>
+#include <sys/file.h>
+#include <signal.h>
+alarmed()
+{
+	exit(1);
+}
+int main()
+{
+#if defined(O_NONBLOCK)
+	char b[12], x[32];
+	int f, l = sizeof(x);
+	f = socket(AF_INET, SOCK_DGRAM, 0);
+	if (f >= 0 && !(fcntl(f, F_SETFL, O_NONBLOCK))) {
+		signal(SIGALRM, alarmed);
+		alarm(3);
+		recvfrom(f, b, 12, 0, x, &l);
+		alarm(0);
+		exit(0);
+	}
+#endif
+	exit(1);
+}
+], AC_DEFINE(NBLOCK_POSIX) AC_MSG_RESULT( O_NONBLOCK ),, AC_MSG_RESULT( cross compiling ))
+
+AC_TRY_RUN(
+[
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <fcntl.h>
+#include <sys/ioctl.h>
+#include <sys/file.h>
+#include <signal.h>
+alarmed()
+{
+	exit(1);
+}
+int main()
+{
+#if defined( O_NDELAY ) && !defined( NBLOCK_POSIX )
+	char b[12], x[32];
+	int f, l = sizeof(x);
+	f = socket(AF_INET, SOCK_DGRAM, 0);
+	if (f >= 0 && !(fcntl(f, F_SETFL, O_NDELAY))) {
+		signal(SIGALRM, alarmed);
+		alarm(3);
+		recvfrom(f, b, 12, 0, x, &l);
+		alarm(0);
+		exit(0);
+	}
+#endif
+	exit(1);
+}
+], AC_DEFINE(NBLOCK_BSD) AC_MSG_RESULT( O_NDELAY ),, AC_MSG_RESULT(unable to test))
+
+AC_TRY_RUN(
+[
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <fcntl.h>
+#include <sys/ioctl.h>
+#include <sys/file.h>
+#include <signal.h>
+alarmed()
+{
+	exit(1);
+}
+int main()
+{
+#if !defined(NBLOCK_BSD) && !defined(NBLOCK_POSIX) && defined(FIONBIO)
+	char b[12], x[32];
+	int f, l = sizeof(x);
+	f = socket(AF_INET, SOCK_DGRAM, 0);
+	if (f >= 0 && !(fcntl(f, F_SETFL, FIONBIO))) {
+		signal(SIGALRM, alarmed);
+		alarm(3);
+		recvfrom(f, b, 12, 0, x, &l);
+		alarm(0);
+		exit(0);
+	}
+#endif /* !NBLOCK_POSIX && !NBLOCK_BSD && FIONBIO */
+	exit(1);
+}
+], AC_DEFINE(NBLOCK_SYSV) AC_MSG_RESULT(FIONBIO),, AC_MSG_RESULT(unable to test))
+
+dnl taken from ircd's Config script
+AC_MSG_CHECKING(signal implementation)
+AC_TRY_RUN(
+[
+int main()
+{
+#if defined(HAVE_SIGACTION)
+	exit(0);
+#else
+	exit(1);
+#endif
+}
+], AC_DEFINE(POSIX_SIGNALS) AC_MSG_RESULT(posix),
+    AC_TRY_RUN(
+[
+#include <signal.h>
+int calls = 0;
+void handler()
+{
+	if (calls) return;
+ 	calls++;
+	kill(getpid(), SIGTERM);
+	sleep(1);
+}
+int main()
+{
+	signal(SIGTERM, handler);
+	kill(getpid(), SIGTERM);
+	exit (0);
+}
+], AC_DEFINE(BSD_RELIABLE_SIGNALS) AC_MSG_RESULT(bsd),
+    AC_DEFINE(SYSV_UNRELIABLE_SIGNALS) AC_MSG_RESULT(sysv), AC_MSG_RESULT(uknown)),
+AC_MSG_RESULT(unknown))
+dnl Check for sys_errlist
+dnl Stolen from BitchX
+AC_MSG_CHECKING(for sys_errlist declaration)
+AC_TRY_RUN([
+#include <sys/types.h>
+#include <stdio.h>
+#include <errno.h>
+main()
+{
+  char *s = sys_errlist[0];
+	  exit(0);
+}
+],
+  AC_MSG_RESULT(yes)
+  AC_DEFINE(SYS_ERRLIST_DECLARED),
+  AC_MSG_RESULT(no))
+
+dnl Check to see if we should set USE_FAST_FD_ISSET
+AC_MSG_CHECKING(to see if we should enable fast FD_ISSET code)
+AC_TRY_COMPILE(, [
+#include <sys/types.h>
+
+int main()
+{
+  fd_set read_set;
+  read_set.fds_bits;
+  exit(0);
+}
+], 
+  AC_MSG_RESULT(yes)
+  AC_DEFINE(USE_FAST_FD_ISSET),
+  AC_MSG_RESULT(no))
+
+dnl don't add more of these unless it's critical.  Trying to get rid of them.
+AC_MSG_CHECKING(operating system)
+case "$target" in
+*-solaris2*) AC_DEFINE(OS_SOLARIS2) AC_MSG_RESULT(Solaris 2.x) ;;
+*-aix*) AC_DEFINE(OS_AIX) AC_MSG_RESULT(AIX) ;;
+*-esix*) AC_DEFINE(OS_ESIX) AC_MSG_RESULT(ESIX) ;;
+*-next*) AC_DEFINE(OS_NEXT) AC_MSG_RESULT(NeXT something) ;;
+*-mips*) AC_DEFINE(OS_MIPS) AC_MSG_RESULT(MIPS something) ;;
+*-sequent-ptx*) AC_DEFINE(OS_DYNIXPTX) AC_MSG_RESULT(Dynix PTX) ;;
+*-hpux*) AC_DEFINE(OS_HPUX) AC_MSG_RESULT(HP-UX) ;;
+*) AC_MSG_RESULT(nothing special required) ;;
+esac
+
+AC_OUTPUT(Makefile src/Makefile tools/Makefile)

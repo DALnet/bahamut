@@ -1,0 +1,33 @@
+These routines form a robust, block allocation mechanism that is somewhat
+tweakable for specific applications.
+
+BlockHeap * BlockHeapCreate (size_t elemsize, int elemsperblock)
+
+     Creates a new block heap, from which elements can be allocated.  The
+     size of each block of memory can be tuned by changing elemsperblock.
+     elemsize should contain the size of elements you will be allocating
+     from this block.
+
+void * BlockHeapAlloc (BlockHeap *bh)
+
+     Allocates a single element from the passed block heap.  Be sure to
+     cast the returned pointer to the type you expect.  Alternately,
+     you can use the #defined macro BlockHeapALLOC (BlockHeap *bh, type)
+     where "type" is your element type (int, double, struct, etc.)
+
+int BlockHeapGarbageCollect (BlockHeap *bh)
+
+     Cleans up all blocks that are completely free in the blockheap.
+     Used as a general-purpose garbage collection routine.
+
+int BlockHeapFree (BlockHeap *bh, void *ptr)
+
+     Frees the element pointed to by *ptr.  The memory is not returned to
+     the system -- just the block heap itself.  Returns 0 if successful, or
+     1 if the element is not contained within the given blockheap.
+
+int BlockHeapDestroy (BlockHeap *bh)
+
+     Destroys the entire block heap, including free()ing all associated
+     memory.  Use as a cleanup function; all pointers to memory allocated
+     using BlockHeapAlloc() will become invalid.

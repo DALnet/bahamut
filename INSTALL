@@ -1,0 +1,41 @@
+HOW TO BUILD:
+-------------
+As of hybrid-4, the distribution uses gnu autoconf instead of the old
+Config script.  The Makefile has also been updated to include CFLAGS
+defines for popular modern OSes.
+
+You now have two choices in how you will go about configuring and
+installing your new IRCd.
+
+Choice One: The Easy way.
+
+1. Run the ./config script.
+2. Look over include/config.h to make sure everything is set as you like.
+3. Make
+4. Make install
+
+Choice Two: The Hard way.
+
+1.  Run the configure script.  It will setup include/setup.h and the
+Makefiles to match your system:
+	./configure
+
+2.  Edit the top level Makefile.  You WILL need to modify the CFLAGS.
+If you want "make install" to work, be sure to change IRCDDIR.
+
+3.  Edit the the "include/config.h" file.  This allows you to change
+various options of how the ircd will operate.  Notes: "HARD_FDLIMIT_"
+and "INIT_MAXCLIENTS" must be less than the maximum file descriptors
+per process allowed by your kernel, and must be <= FD_SETSIZE (usually
+defined in system includes, but may need to overridden in the Makefile.
+Note that the old OS definitions are gone, autoconf handles this now.
+Finally set the various PATH's to where you are going to stick this stuff.
+
+4.  "make" should build ircd.
+
+5.  "make install" should sorta work now if you defined the IRCDDIR
+in the Makefile.
+
+
+Best of luck!
+

@@ -1,0 +1,42 @@
+When you type /version you will often see something like this:
+*** Server cs-pub.bu.edu: 2.8.21. AHiKmMptXY
+
+Ever wondered what those funny chars mean after the version number? Well
+here they are:
+
+'A'	SENDQ_ALWAYS
+'c'	CHROOTDIR
+'C'	CMDLINE_CONFIG
+'d'	DO_ID
+'D'	DEBUGMODE
+'e'	LOCOP_REHASH
+'E'	OPER_REHASH
+'f'	FOLLOW_IDENT_RFC
+'F'	HIDE_FAKES
+'g'	SUN_GSO_BUG
+'G'	SHOW_GHOSTS
+'H'	HUB
+'i'	SHOW_INVISIBLE_LUSERS
+'I'	NO_DEFAULT_INVISIBLE
+'K'	OPER_KILL
+'k'	LOCAL_KILL_ONLY
+'L'	LEAST_IDLE
+'m'	M4_PREPROC
+'M'	IDLE_FROM_MSG
+'N'	DELAY_NICKS
+'p'	CRYPT_OPER_PASSWORD
+'P'	CRYPT_LINK_PASSWORD
+'N'	NPATH
+'r'	LOCOP_RESTART
+'R'	OPER_RESTART
+'s'	SECUNREG
+'S'	ENABLE_SUMMON
+'t'	OPER_REMOTE
+'T'	TRACE_STATS
+'u'	IRCII_KLUDGE
+'U'	ENABLE_USERS
+'V'	VALLOC
+'w'	NOWRITEALARM
+'X'	UNIXPORT
+'Y'	USE_SYSLOG
+'8'	V28PlusOnly

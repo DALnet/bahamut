@@ -1,0 +1,132 @@
+- Not complete
+* Complete
+
+Features:
+* See bans regardless (/mode #ch b)
+   Already covered in Hybrid - Raistlin
+* AWAY propogation (we may want to change this in some way, its a waste of
+  bw/mem in alot of cases.
+   Most already in hybrid, just a few changes about how it is propogated
+   when a client does /away - Raistlin
+* /part comments.
+   Done.  Easy code in m_part.  Needs multi server testing - Raistlin
+* temp K:lines
+   Covered much nicer then ours in hybrid
+* show +i users on /who for opers
+   Added code to do this, see CVS not about who - Raistlin
+* addresses in kill messages - cosmetic
+   Changes to s_user.c Nothing big - Raistlin
+* Quit: before quit message
+   This code was so easy I couldnt help it - Raistlin
+* allow list of nicks for /kill
+   See CVS comment on my commit of it.  Version 1.6
+* Q:lines
+   Most of the code came from old server, but I reworked it
+   I removed little q's from the conf file as they break the net
+   and arent used anyways - Raistlin
+* U:lines
+   Not really tested, but they display right.  Should handle all cases
+   that dalnet ircd handles for U, and perhaps some more like clients on U
+   line servers join through bans and stuff - Raistlin
+* invite through anything
+   This was a breeze.  We do not allow invite through +k though - Raistlin
+* flags seperated (aclient->umodes, aclient->flags)
+   This wasnt TOO bad.. Mostly tedious work.  See my commit comments
+   for info on adding usermodes - Raistlin
+* umode k - server kills
+   Already in hybrid
+* umode c - client connects
+   Already in hybrid
+* /chanserv, /nickserv, /memoserv, /operserv, /identify, /services (more?)
+   Done. Added SERVICES_NAME to config.h in ./include, and basically
+   ported over all of taz's alias code. -mjs 
+* Globops
+   Not TOO bad..  First code of mine adding a server<-->server or user
+   command to the ircd. - Raistlin
+   Amended to allow servers to also globop. -mjs
+   Amended to prevent regular users from seeing any GLOBOPS when
+   !IsAnOper, like in df465. -mjs
+* locops
+   Simple once the globop code above (+g) was added. -mjs
+* GOPER
+   Small change to sendto_ops (looks for IsAnOper, same way as in df465) -mjs
+* restart/die password protection 
+   Adds Xline to ircd.conf. crypt() to come later. -mjs 
+* umode b / Chatops
+   Code is almost exactly like globops.  Easy once it was in - Raistlin
+* GNOTICE
+   No oper flags -- just added GNOTICE to send.c, did includes, and added
+   m_gnotice to s_serv.c. Restricted to IsServer. -mjs
+* Protocol
+   Started Protocol change workarounds.  See Cvs Comment. - Raistlin
+* Protocol
+   Cleaned up netburst to df servers - Raistlin
+* notice/msg @#channel
+   Fairly easy.  Improved on design and added +#channel
+* Protocol
+   We have base level compatibility - Raistlin
+   Also added a CAPAB so we can communicate what we support.  At this time
+   Only TS3 is a supported CAPAB option - Raistlin
+* SVS* patches
+   Most of these came right out of df.  With few changes that seemed
+   to make sense.  Only thing we don't have yet is svsmode +l which
+   synchronizes max user count over the network - Raistlin
+* dfhybrid should honor servicestamps in respect to dfhybrid AND df
+   servers - Raistlin
+* umode f - flood stuff 
+   I don't know what the hell I just did???? - darken 
+* Z: lines
+   Were basically the same thing as D lines in current hybrid.  Just fixed
+   to have the correct name
+   - Raistlin
+* operflags
+   Done with all existing oper flags.
+   Trivial.  samode isn't used for anything yet but a pretty whois tho
+   - Raistlin
+* umode A - cosmetic
+   Done with oper flags.  Not used for anything but a whois display
+   - Raistlin
+* umode a - more samode
+   Done with oper gflags.  Not used for anything but whois.  samode needs
+   to be done yet.  WD expressed an intrest
+   - Raistlin
+* SAMODE
+   Completed what was left to do for SAMODE (msg.h, channel.c). Also
+   changed set_mode() so that IsSAdmin() would be able to remove a -k 
+   without knowing the key. Should be safe since an SAdmin can only send a
+   mode using SAMODE, therefore avoiding the bulky mess of code from
+   before. Also disabled the "crypt oper password" default. -mjs
+* IP address hiding for server protection.
+   Used mostly HIDEME in instances of get_client_name(). Otherwise,
+   protected stats c, l, /trace, initial login, etc, from showing IP
+   address. -mjs
+* Autokills
+* WATCH
+* Rakarra's /list patch
+
+- socks detection
+- /stats L cosmetic stuff
+
+Wish list: (mine, add to it all of you)
+* opers can see +s channels in whois
+   Added this, along with +p.  Really no reason NOT to - Raistlin
+   Keyed this to Admin
+* [taz(~NOham4us@tnt1-26.colint.com)] An extra (char *) for each user that
+   shows up in whois [12:58am] - Set with svsmode +x - 64 chars.
+* akill reasons (I have a patch for this too, along with timed akills..)
+* Q: line code fixed (Q:/q: separation is dumb)
+
+- fix m_who to show a channel in host/nick other requests, ala old who.
+- scratch ident (it's pretty much worthless)
+- format for /zline, /kline the same
+- when services are down, +a people can add network-wide autokills
+- redo/rewrite/rethink the resolver code (more on this below)
+- network wide propogation of all server<->server link dropped errors
+	(we don't do this for max sendq, and a lot of stuff)
+- Correct error given instead of "dead socket"
+- Merge Akills and klines to one command(?)
+- network-wide Z: lines
+- /mode channel +b only works if person meets any of these criteria
+	a) person is an oper
+	b) person is not banned on channel
+

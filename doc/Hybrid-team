@@ -1,0 +1,35 @@
+
+The hybrid team is a group of ircd coders who were frustrated
+with the instability and all-out "dirtiness" of the efnet ircd's
+available. "hybrid" is the name for the collective efforts of a group
+of people, all of us.
+
+Anyone is welcome to contribute to this effort..
+
+We have run the code through "purify", a commercial program designed
+to find memory leaks. The code has been mostly prototyped. Profiling has also
+been done to catch slow portions of the code. Portions of "crufty" code have
+been re-written. We have also looked at making the code as easy to setup
+up and run as possible using configure, checking header files etc.
+Finally speed enhancements and other enhancements have been made to this ircd. 
+
+That is not to say that there are still not bugs, There are always bugs.
+But we have reviewed each others work on this project, and are open
+to bug reports.
+
+The following people have contributed blood, sweat, and/or code to
+this release of hybrid, in nick alphabetical order.
+
+cbongo, Chris A. Bongaarts (cab@tc.umn.edu)
+comstud, Chris Behrens (cbehrens@concentric.net)
+Dianora, Diane Bruce (db@db.net)
+johan, Johannes Erdfelt (jerdfelt@eng.mindspring.net)
+orabidoo, Roger Espel LLima (espel@unix.bigots.org)
+Rodder, Jon Lusky (lusky@vol.com)
+Shadowfax, Michael Pearce (mpearce@varner.com)
+ThemBones, Brian Kraemer (kraemer@u.washington.edu)
+Wohali, Joan Touzet (joant@cadence.com)
+
+Others are welcome.
+
+email bug fixes/complaints/rotten tomatoes to ircd-hybrid@vol.com

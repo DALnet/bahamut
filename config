@@ -1,0 +1,1030 @@
+#!/bin/sh
+#
+# Copyright 1999 Aaron Wiebe <epiphani@solarz.net>
+# Based roughly on configure for Dreamforge, by Michael Graff <explorer@flame.org>
+# You may distribute this file without changes freely providing this notice
+# remains intact. 
+#
+if [ ! -f Makefile ] ; then  
+echo "You've not run configure, running it for you..."
+./configure
+fi
+
+##############   SET THESE VARIABLES CORRECTLY!@ ##############
+#
+BASENAME=`grep 'BASENAME' include/patchlevel.h | sed s/'.define BASENAME '// | sed s/'\"'//g | xargs echo -n`
+BRANCH=`grep 'BRANCH ' include/patchlevel.h | sed s/'.define BRANCH '// | sed s/'\"'//g | xargs echo -n`
+MAJOR=`grep 'MAJOR' include/patchlevel.h | sed s/'.define MAJOR '// | xargs echo -n`
+MINOR=`grep 'MINOR' include/patchlevel.h | sed s/'.define MINOR '// | xargs echo -n`
+PATCH=`grep 'PATCH ' include/patchlevel.h | sed s/'.define PATCH '// | xargs echo -n`
+IRCD=`printf '%s(%s)-%i.%.2i(%.4i)' ${BASENAME} ${BRANCH} ${MAJOR} ${MINOR} ${PATCH}`
+OPTIONS_H="include/options.h"
+##
+##
+# Now we look to options.h, and if it exists (has been run already)
+# then we pull the defaults from there.  If not, we continue with the 
+# script defaults.
+#
+
+if [ -f $OPTIONS_H ] ; then  
+#
+# First off, the things that accually have settings.
+#
+FDLIMIT="`grep 'HARD_FDLIMIT_' $OPTIONS_H | sed s/'.define HARD_FDLIMIT_  '// | xargs echo -n`"
+MAXUSERS="`grep 'INIT_MAXCLIENTS' $OPTIONS_H | sed s/'.define INIT_MAXCLIENTS '// | xargs echo -n`"
+MAXBUF="`grep 'MAX_BUFFER' $OPTIONS_H | sed s/'.define MAX_BUFFER '// | xargs echo -n`"
+DPATH="`grep 'DPATH' $OPTIONS_H | sed s/'.define DPATH '// | sed s/'\"'//g | xargs echo -n`"
+SPATH="`grep 'SPATH' $OPTIONS_H | sed s/'.define SPATH '// | sed s/'\"'//g | xargs echo -n`"
+ULOGPATH="`grep 'FNAME_USERLOG' $OPTIONS_H | sed s/'.define FNAME_USERLOG '// | sed s/'\"'//g | xargs echo -n`"
+OLOGPATH="`grep 'FNAME_OPERLOG' $OPTIONS_H | sed s/'.define FNAME_OPERLOG '// | sed s/'\"'//g | xargs echo -n`"
+MAXSENDQ="`grep 'define MAXSENDQLENGTH' $OPTIONS_H | sed s/'.define MAXSENDQLENGTH '// | xargs echo -n`"
+BUFPOOL="`grep 'define BUFFERPOOL' $OPTIONS_H | sed s/'.define BUFFERPOOL '// | xargs echo -n`"
+SERVICES_NAME="`grep 'SERVICES_NAME' $OPTIONS_H | sed s/'.define SERVICES_NAME '// | xargs echo -n`"
+#
+# Now to pull yucky defaults out.
+#
+SUNOS="`grep 'SUNDBE' $OPTIONS_H | sed s/'.define SUNDBE'// | xargs echo -n`"
+if [ -n "$SUNOS" ] ; then
+   SUNOS=""
+else
+   SUNOS="1"
+fi
+SOLARIS="`grep 'OS_SOLARIS' $OPTIONS_H | sed s/'.define OS_SOLARIS'// | xargs echo -n`"
+if [ -n "$SOLARIS" ] ; then
+   SOLARIS=""
+else
+   SOLARIS="1"
+fi
+DFCOMP="`grep 'DF_COMPATIBILITY' $OPTIONS_H | sed s/'.define DF_COMPATIBILITY'// | xargs echo -n`"
+if [ -n "$DFCOMP" ] ; then
+   DFCOMP=""
+else 
+   DFCOMP="1"
+fi
+CERR="`grep 'CUSTOM_ERR' $OPTIONS_H | sed s/'.define CUSTOM_ERR'// | xargs echo -n`"
+if [ -n "$CERR" ] ; then
+   CERR=""
+else
+   CERR="1"
+fi
+STATSN="`grep 'STATS_NOTICE' $OPTIONS_H | sed s/'.define STATS_NOTICE'// | xargs echo -n`"
+if [ -n "$STATSN" ] ; then
+   STATSN=""
+else 
+   STATSN="1"
+fi
+SMOTD="`grep 'SHORT_MOTD' $OPTIONS_H | sed s/'.define SHORT_MOTD'// | xargs echo -n`"
+if [ -n "$SMOTD" ] ; then
+   SMOTD=""
+else
+   SMOTD="1"
+fi
+DEFINVIS="`grep 'NO_DEFAULT_INVISIBLE' $OPTIONS_H | sed s/'.define NO_DEFAULT_INVISIBLE'// | xargs echo -n`"
+if [ -n "$DEFINVIS" ] ; then
+   DEFINVIS="1"
+else
+   DEFINVIS=""
+fi
+HUB="`grep 'HUB' $OPTIONS_H | sed s/'.define HUB'// | xargs echo -n`"
+if [ -n "$HUB" ] ; then
+   HUB=""
+else
+   HUB="1"
+fi
+SYSLOG="`grep 'USE_SYSLOG' $OPTIONS_H | sed s/'.define USE_SYSLOG'// | xargs echo -n`"
+if [ -n "$SYSLOG" ] ; then
+   SYSLOG="1"
+else
+   SYSLOG=""
+fi
+LOGKILL="`grep 'SYSLOG_KILL' $OPTIONS_H | sed s/'.define SYSLOG_KILL'// | xargs echo -n`"
+if [ -n "$LOGKILL" ] ; then
+   LOGKILL=""
+else
+   LOGKILL="1"
+fi
+LOGSQUIT="`grep 'SYSLOG_SQUIT' $OPTIONS_H | sed s/'.define SYSLOG_SQUIT'// | xargs echo -n`"
+if [ -n "$LOGSQUIT" ] ; then
+   LOGSQUIT=""
+else
+   LOGSQUIT="1"
+fi
+LOGCONN="`grep 'SYSLOG_CONNECT' $OPTIONS_H | sed s/'.define SYSLOG_CONNECT'// | xargs echo -n`"
+if [ -n "$LOGCONN" ] ; then
+   LOGCONN=""
+else
+   LOGCONN="1"
+fi 
+SOPER="`grep 'SYSLOG_OPER' $OPTIONS_H | sed s/'.define SYSLOG_OPER'// | xargs echo -n`"
+if [ -n "$SOPER" ] ; then
+   SOPER=""
+else
+   SOPER="1"
+fi
+HULINED="`grep 'HIDEULINEDSERVS' $OPTIONS_H | sed s/'.define HIDEULINEDSERVS 1'// | xargs echo -n`"
+if [ -n "$HULINED" ] ; then
+   HULINED=""
+else
+   HULINED="1"
+fi
+
+### Thats the end of grabbing there.
+fi
+
+#
+
+if [ ! -f $OPTIONS_H ] ; then
+
+FDLIMIT="1024"
+MAXUSERS="1000"
+MAXBUF="24" 
+SUNOS=""
+SOLARIS=""
+DPATH="`pwd`"
+SPATH="`pwd`/src/ircd" 
+DFCOMP="1"
+CERR=""
+STATSN="1"
+SMOTD="0"
+DEFINVIS="1"
+HUB=""
+SYSLOG="1"
+ULOGPATH="none"
+OLOGPATH="none"
+LOGKILL=""
+LOGSQUIT="1"
+LOGCONN="1"
+SOPER=""
+MAXSENDQ="5050000"
+BUFPOOL="(4 * MAXSENDQLENGTH)"
+HULINED="1" 
+SERVICES_NAME="services.whatever.net"
+
+fi # ENDIF $OPTIONS_H
+###############################
+#
+#  Ok, Now we Get into the accual configurations...
+
+echo " "
+echo "Welcome to Config for DALnet IRCD, Version:  $IRCD."
+echo " "
+
+FOO=""
+runonce=""
+while [ -z "$FOO" ] ; do
+    FOO="$FDLIMIT"
+    echo ""
+    echo "What are the maximum File Descriptors that the IRCD can use?"
+    echo -n "[$FOO] -> $c"
+    if [ -z "$AUTO_CONFIG" -o -n "$runonce" ] ; then
+	read cc
+    else
+	cc=""
+	runonce=Yes
+    fi
+    if [ -z "$cc" ] ; then
+	cc=$FOO
+    fi
+    case "$cc" in
+	[1-9]*)
+	    FDLIMIT="$cc"
+	    ;;
+	*)
+	    echo ""
+	    echo "You need to enter a number here."
+	    echo ""
+	    FOO=""
+	    ;;
+    esac
+done
+
+FOO=""
+runonce=""
+while [ -z "$FOO" ] ; do
+    FOO="$MAXUSERS"
+    echo ""
+    echo "What are the maximum number of Users you"
+    echo "intend to allow on your IRC server?"
+    echo "Note that you can now change this number"
+    echo "on the fly with with /set command."
+    echo -n "[$FOO] -> $c"
+    if [ -z "$AUTO_CONFIG" -o -n "$runonce" ] ; then
+	read cc
+    else
+	cc=""
+	runonce=Yes
+    fi
+    if [ -z "$cc" ] ; then
+	cc=$FOO
+    fi
+    case "$cc" in
+	[1-9]*)
+	    MAXUSERS="$cc"
+	    ;;
+	*)
+	    echo ""
+	    echo "You need to enter a number here."
+	    echo ""
+	    FOO=""
+	    ;;
+    esac
+done
+
+FOO=""
+runonce=""
+while [ -z "$FOO" ] ; do
+    FOO="$MAXBUF"
+    echo ""
+    echo "What is the maximum connection buffer amount?"
+    echo "Note, this CANNOT exceed the number of file descriptors"
+    echo "minus the maximum clients."
+    echo -n "[$FOO] -> $c"
+    if [ -z "$AUTO_CONFIG" -o -n "$runonce" ] ; then
+	read cc
+    else
+	cc=""
+	runonce=Yes
+    fi
+    if [ -z "$cc" ] ; then
+	cc=$FOO
+    fi
+    case "$cc" in
+	[1-9]*)
+	    MAXBUF="$cc"
+	    ;;
+	*)
+	    echo ""
+	    echo "You need to enter a number here."
+	    echo ""
+	    FOO=""
+	    ;;
+    esac
+done
+
+OS=`uname -a`
+case "$OS" in
+    *SunOS*4.*DBE*)
+ 	SUNOS="1"
+   	echo "You are using Sun DBE, Compatibility code loaded..."
+	;;
+    *SunOS*5.*)
+	SOLARIS="1"
+	echo "You are using Sun/Solaris, Compatibility code loaded..."
+	;;
+esac
+
+FOO=""
+runonce=""
+while [ -z "$FOO" ] ; do
+    FOO="$DPATH"
+    echo ""
+    echo "What directory are all the server configuration files in?"
+    echo "Note, this directory name needs to end with a /"
+    echo -n "[$FOO] -> $c"
+    if [ -z "$AUTO_CONFIG" -o -n "$runonce" ] ; then
+	read cc
+    else
+	cc=""
+	runonce=Yes
+    fi
+    if [ -z "$cc" ] ; then
+	cc=$FOO
+    fi
+done
+DPATH=$cc
+
+FOO=""
+runonce=""
+while [ -z "$FOO" ] ; do
+    FOO="$SPATH"
+    echo ""
+    echo "What is the explicit path to where the ircd binary will be"
+    echo "installed?  This should point to a file, not a directory."
+    echo -n "[$FOO] -> $c"
+    if [ -z "$AUTO_CONFIG" -o -n "$runonce" ] ; then
+	read cc
+    else
+	cc=""
+	runonce=Yes
+    fi
+    if [ -z "$cc" ] ; then
+	cc=$FOO
+    fi
+done
+SPATH=$cc
+
+FOO=""
+runonce=""
+while [ -z "$FOO" ] ; do
+    if [ -n "$DFCOMP" ] ; then
+	FOO="Yes"
+    else
+	FOO="No"
+    fi
+    echo ""
+    echo "Do you want Dreamforge Compatibility?"
+    echo -n "[$FOO] -> $c"
+    if [ -z "$AUTO_CONFIG" -o -n "$runonce" ] ; then
+	read cc
+	runonce=Yes
+    else
+	cc=""
+    fi
+    if [ -z "$cc" ] ; then
+	cc=$FOO
+    fi
+    case "$cc" in
+	[Yy]*)
+	    DFCOMP="1"
+	    ;;
+	[Nn]*)
+	    DFCOMP=""
+	    ;;
+	*)
+	    echo ""
+	    echo "You need to enter either Yes or No here..."
+	    echo ""
+	    FOO=""
+	    ;;
+    esac
+done
+
+
+
+
+FOO=""
+runonce=""
+while [ -z "$FOO" ] ; do
+    if [ -n "$CERR" ] ; then
+	FOO="Yes"
+    else
+	FOO="No"
+    fi
+    echo ""
+    echo "Do you want to have custom numerics compiled into your IRCD?"
+    echo "If you choose yes, alter include/s_err.h to set your numerics."
+    echo "If you dont know what this means, choose no."
+    echo -n "[$FOO] -> $c"
+    if [ -z "$AUTO_CONFIG" -o -n "$runonce" ] ; then
+	read cc
+	runonce=Yes
+    else
+	cc=""
+    fi
+    if [ -z "$cc" ] ; then
+	cc=$FOO
+    fi
+    case "$cc" in
+	[Yy]*)
+	    CERR="1"
+	    ;;
+	[Nn]*)
+	    CERR=""
+	    ;;
+	*)
+	    echo ""
+	    echo "You need to enter either Yes or No here..."
+	    echo ""
+	    FOO=""
+	    ;;
+    esac
+done
+
+##
+
+FOO=""
+runonce=""
+while [ -z "$FOO" ] ; do
+    if [ -n "$STATSN" ] ; then
+	FOO="Yes"
+    else
+	FOO="No"
+    fi
+    echo ""
+    echo "Would you like to see when a /stats is requested?"
+    echo "This only applys for +y users."
+    echo -n "[$FOO] -> $c"
+    if [ -z "$AUTO_CONFIG" -o -n "$runonce" ] ; then
+	read cc
+	runonce=Yes
+    else
+	cc=""
+    fi
+    if [ -z "$cc" ] ; then
+	cc=$FOO
+    fi
+    case "$cc" in
+	[Yy]*)
+	    STATSN="1"
+	    ;;
+	[Nn]*)
+	    STATSN=""
+	    ;;
+	*)
+	    echo ""
+	    echo "You need to enter either Yes or No here..."
+	    echo ""
+	    FOO=""
+	    ;;
+    esac
+done
+
+FOO=""
+runonce=""
+while [ -z "$FOO" ] ; do
+    if [ -n "$SMOTD" ] ; then
+	FOO="Yes"
+    else
+	FOO="No"
+    fi
+    echo ""
+    echo "There are clients out there ignoring the MOTD numeric, so"
+    echo "there is no point forcing MOTD on connecting clients. Instead of"
+    echo "sending the MOTD, enabling this will just send a short notice to the"
+    echo "connecting client asking them to read the motd."
+    echo -n "[$FOO] -> $c"
+    if [ -z "$AUTO_CONFIG" -o -n "$runonce" ] ; then
+	read cc
+	runonce=Yes
+    else
+	cc=""
+    fi
+    if [ -z "$cc" ] ; then
+	cc=$FOO
+    fi
+    case "$cc" in
+	[Yy]*)
+	    SMOTD="1"
+	    ;;
+	[Nn]*)
+	    SMOTD=""
+	    ;;
+	*)
+	    echo ""
+	    echo "You need to enter either Yes or No here..."
+	    echo ""
+	    FOO=""
+	    ;;
+    esac
+done
+
+FOO=""
+runonce=""
+while [ -z "$FOO" ] ; do
+    if [ -n "$DEFINVIS" ] ; then
+	FOO="Yes"
+    else
+	FOO="No"
+    fi
+    echo ""
+    echo "Would you like Connecting Clients to by automatically set +i?"
+    echo -n "[$FOO] -> $c"
+    if [ -z "$AUTO_CONFIG" -o -n "$runonce" ] ; then
+	read cc
+	runonce=Yes
+    else
+	cc=""
+    fi
+    if [ -z "$cc" ] ; then
+	cc=$FOO
+    fi
+    case "$cc" in
+	[Yy]*)
+	    DEFINVIS=""
+	    ;;
+	[Nn]*)
+	    DEFINVIS="1"
+	    ;;
+	*)
+	    echo ""
+	    echo "You need to enter either Yes or No here..."
+	    echo ""
+	    FOO=""
+	    ;;
+    esac
+done
+
+FOO=""
+runonce=""
+while [ -z "$FOO" ] ; do
+    if [ -n "$HUB" ] ; then
+	FOO="Yes"
+    else
+	FOO="No"
+    fi
+    echo ""
+    echo "Would you like to compile as a HUB?"
+    echo -n "[$FOO] -> $c"
+    if [ -z "$AUTO_CONFIG" -o -n "$runonce" ] ; then
+	read cc
+	runonce=Yes
+    else
+	cc=""
+    fi
+    if [ -z "$cc" ] ; then
+	cc=$FOO
+    fi
+    case "$cc" in
+	[Yy]*)
+	    HUB="1"
+	    ;;
+	[Nn]*)
+	    HUB=""
+	    ;;
+	*)
+	    echo ""
+	    echo "You need to enter either Yes or No here..."
+	    echo ""
+	    FOO=""
+	    ;;
+    esac
+done
+
+	FOO=""
+	runonce=""
+while [ -z "$FOO" ] ; do
+    FOO="$ULOGPATH"
+    echo ""
+    echo "What file should the userlogs be stored?"
+    echo "This MUST be pointing to a file name."
+    echo -n "[$FOO] -> $c"
+    if [ -z "$AUTO_CONFIG" -o -n "$runonce" ] ; then
+	read cc
+    else
+	cc=""
+	runonce=Yes
+    fi
+    if [ -z "$cc" ] ; then
+	cc=$FOO
+    fi
+done
+ULOGPATH=$cc
+
+FOO=""
+runonce=""
+while [ -z "$FOO" ] ; do
+    FOO="$OLOGPATH"
+    echo ""
+    echo "What file should the opers be logged to?"
+    echo "This must also point directly at a file."
+    echo -n "[$FOO] -> $c"
+    if [ -z "$AUTO_CONFIG" -o -n "$runonce" ] ; then
+	read cc
+    else
+	cc=""
+	runonce=Yes
+    fi
+    if [ -z "$cc" ] ; then
+	cc=$FOO
+    fi
+done
+OLOGPATH=$cc
+
+
+
+FOO=""
+runonce=""
+while [ -z "$FOO" ] ; do
+    if [ -n "$SYSLOG" ] ; then
+	FOO="Yes"
+    else
+	FOO="No"
+    fi
+    echo ""
+    echo "Would you like to use syslog for server logging?"
+    echo "This is STRONGLY reccomended, many errors can be caught by syslog."
+    echo -n "[$FOO] -> $c"
+    if [ -z "$AUTO_CONFIG" -o -n "$runonce" ] ; then
+	read cc
+	runonce=Yes
+    else
+	cc=""
+    fi
+    if [ -z "$cc" ] ; then
+	cc=$FOO
+    fi
+    case "$cc" in
+	[Yy]*)
+	    SYSLOG="1"
+	    ;;
+	[Nn]*)
+	    SYSLOG=""
+	    ;;
+	*)
+	    echo ""
+	    echo "You need to enter either Yes or No here..."
+	    echo ""
+	    FOO=""
+	    ;;
+    esac
+done
+
+
+
+# syslog configuration...
+case "$SYSLOG" in
+     1)
+
+	FOO=""
+	runonce=""
+while [ -z "$FOO" ] ; do
+    if [ -n "$LOGKILL" ] ; then
+	FOO="Yes"
+    else
+	FOO="No"
+    fi
+    echo ""
+    echo "Would you like syslog to log ALL /KILL commands?"
+    echo -n "[$FOO] -> $c"
+    if [ -z "$AUTO_CONFIG" -o -n "$runonce" ] ; then
+	read cc
+	runonce=Yes
+    else
+	cc=""
+    fi
+    if [ -z "$cc" ] ; then
+	cc=$FOO
+    fi
+    case "$cc" in
+	[Yy]*)
+	    LOGKILL="1"
+	    ;;
+	[Nn]*)
+	    LOGKILL=""
+	    ;;
+	*)
+	    echo ""
+	    echo "You need to enter either Yes or No here..."
+	    echo ""
+	    FOO=""
+	    ;;
+    esac
+done
+
+FOO=""
+runonce=""
+while [ -z "$FOO" ] ; do
+    if [ -n "$LOGSQUIT" ] ; then
+	FOO="Yes"
+    else
+	FOO="No"
+    fi
+    echo ""
+    echo "Would you like syslog to log all remote /squit commands?"
+    echo -n "[$FOO] -> $c"
+    if [ -z "$AUTO_CONFIG" -o -n "$runonce" ] ; then
+	read cc
+	runonce=Yes
+    else
+	cc=""
+    fi
+    if [ -z "$cc" ] ; then
+	cc=$FOO
+    fi
+    case "$cc" in
+	[Yy]*)
+	    LOGSQUIT="1"
+	    ;;
+	[Nn]*)
+	    LOGSQUIT=""
+	    ;;
+	*)
+	    echo ""
+	    echo "You need to enter either Yes or No here..."
+	    echo ""
+	    FOO=""
+	    ;;
+    esac
+done
+FOO=""
+runonce=""
+while [ -z "$FOO" ] ; do
+    if [ -n "$LOGCONN" ] ; then
+	FOO="Yes"
+    else
+	FOO="No"
+    fi
+    echo ""
+    echo "Would you like syslog to log remote connects?"
+    echo -n "[$FOO] -> $c"
+    if [ -z "$AUTO_CONFIG" -o -n "$runonce" ] ; then
+	read cc
+	runonce=Yes
+    else
+	cc=""
+    fi
+    if [ -z "$cc" ] ; then
+	cc=$FOO
+    fi
+    case "$cc" in
+	[Yy]*)
+	    LOGCONN="1"
+	    ;;
+	[Nn]*)
+	    LOGCONN=""
+	    ;;
+	*)
+	    echo ""
+	    echo "You need to enter either Yes or No here..."
+	    echo ""
+	    FOO=""
+	    ;;
+    esac
+done
+
+FOO=""
+runonce=""
+while [ -z "$FOO" ] ; do
+    if [ -n "$SOPER" ] ; then
+	FOO="Yes"
+    else
+	FOO="No"
+    fi
+    echo ""
+    echo "Would you like to log everyone who successfully opers?"
+    echo -n "[$FOO] -> $c"
+    if [ -z "$AUTO_CONFIG" -o -n "$runonce" ] ; then
+	read cc
+	runonce=Yes
+    else
+	cc=""
+    fi
+    if [ -z "$cc" ] ; then
+	cc=$FOO
+    fi
+    case "$cc" in
+	[Yy]*)
+	    SOPER="1"
+	    ;;
+	[Nn]*)
+	    SOPER=""
+	    ;;
+	*)
+	    echo ""
+	    echo "You need to enter either Yes or No here..."
+	    echo ""
+	    FOO=""
+	    ;;
+    esac
+done
+esac
+# Thats the end of syslog crap...
+
+FOO=""
+runonce=""
+while [ -z "$FOO" ] ; do
+    FOO="$MAXSENDQ"
+    echo ""
+    echo "What sendq length do you wish to have?"
+    echo -n "[$FOO] -> $c"
+    if [ -z "$AUTO_CONFIG" -o -n "$runonce" ] ; then
+	read cc
+    else
+	cc=""
+	runonce=Yes
+    fi
+    if [ -z "$cc" ] ; then
+	cc=$FOO
+    fi
+    case "$cc" in
+	[1-9]*)
+	    MAXSENDQ="$cc"
+	    ;;
+	*)
+	    echo ""
+	    echo "You need to enter a number here."
+	    echo ""
+	    FOO=""
+	    ;;
+    esac
+done
+
+FOO=""
+runonce=""
+while [ -z "$FOO" ] ; do
+    FOO="$BUFPOOL"
+    echo ""
+    echo "What size of a bufferpool do you wish to have?"
+    echo "A bufferpool is a total of ALL sendq's in use"
+    echo -n "[$FOO] -> $c"
+    if [ -z "$AUTO_CONFIG" -o -n "$runonce" ] ; then
+	read cc
+    else
+	cc=""
+	runonce=Yes
+    fi
+    if [ -z "$cc" ] ; then
+	cc=$FOO
+    fi
+    case "$cc" in
+	\([1-9]*\))
+	    BUFPOOL="$cc"
+	    ;;
+	*)
+	    echo ""
+	    echo "You need to enter a number here, either based on"
+	    echo "MAXSENDQLENGTH or a literal value.  Also, this value"
+	    echo "MUST be enclosed in parens -- (4*MAXSENDQLENGTH), for example."
+	    echo ""
+	    FOO=""
+	    ;;
+    esac
+done
+
+FOO=""
+runonce=""
+while [ -z "$FOO" ] ; do
+    if [ -n "$HULINED" ] ; then
+	FOO="Yes"
+    else
+	FOO="No"
+    fi
+    echo ""
+    echo "Do you want your server to hide U:lined servers in a /links?"
+    echo "If you are planning to link to DALnet, this MUST be defined."
+    echo -n "[$FOO] -> $c"
+    if [ -z "$AUTO_CONFIG" -o -n "$runonce" ] ; then
+	read cc
+	runonce=Yes
+    else
+	cc=""
+    fi
+    if [ -z "$cc" ] ; then
+	cc=$FOO
+    fi
+    case "$cc" in
+	[Yy]*)
+	    HULINED="1"
+	    ;;
+	[Nn]*)
+	    HULINED=""
+	    ;;
+	*)
+	    echo ""
+	    echo "You need to enter either Yes or No here..."
+	    echo ""
+	    FOO=""
+	    ;;
+    esac
+done
+
+FOO=""
+runonce=""
+while [ -z "$FOO" ] ; do
+    FOO="$SERVICES_NAME"
+    echo " "
+    echo "If you have network services and would like to make use of "
+    echo "the built in secure services aliasing features, type in the "
+    echo "name of your network services server here. If you are a "
+    echo "DALnet admin, you would type in \"services.dal.net\" below."
+    echo -n "[$FOO] -> $c"
+    if [ -z "$AUTO_CONFIG" -o -n "$runonce" -o -z "$SERVICES_NAME" ] ; then
+	read cc
+	runonce=Yes
+    else
+	cc=""
+    fi
+    if [ -z "$cc" ] ; then
+	cc=$FOO
+    fi
+    case "$cc" in
+        *)
+            SERVICES_NAME="$cc"
+    esac
+done
+
+
+
+#############
+# Thats all for the user part, now to write to a file...
+
+echo ""
+echo "Thats all folks.."
+echo -n "Writing include/options.h..."
+
+##################################################################################
+rm -f $OPTIONS_H
+cat > $OPTIONS_H << __EOF__
+/*
+ * include/options.h
+ * VERSION: $IRCD
+ *
+ * This file is automatically generated and will be updated each time you
+ * run Config.  YOU SHOULD NOT EDIT THIS FILE UNLESS YOU KNOW WHAT YOU ARE DOING. 
+ */
+/* This ifdef is here to make sure that the config.h doesnt fuck up because of
+ * multiple #defines
+ */
+#ifdef OPTIONS_H
+
+#define DPATH "$DPATH"
+#define SPATH "$SPATH"
+#define MAXSENDQLENGTH $MAXSENDQ
+#define BUFFERPOOL $BUFPOOL
+#define HARD_FDLIMIT_  $FDLIMIT
+#define INIT_MAXCLIENTS $MAXUSERS
+#define MAX_BUFFER $MAXBUF
+#define SERVICES_NAME "$SERVICES_NAME"
+__EOF__
+if [ "$ULOGPATH" != "none" ] ; then
+	echo "#define FNAME_USERLOG \"$ULOGPATH\"" >> $OPTIONS_H
+else
+	echo "#undef FNAME_USERLOG" >> $OPTIONS_H
+fi
+if [ "$OLOGPATH" != "none" ] ; then
+	echo "#define FNAME_OPERLOG \"$OLOGPATH\"" >> $OPTIONS_H
+else
+	echo "#undef FNAME_OPERLOG" >> $OPTIONS_H
+fi
+if [ -n "$DFCOMP" ] ; then
+    echo "#define DF_COMPATIBILITY" >> $OPTIONS_H
+else
+    echo "#undef DF_COMPATIBILITY" >> $OPTIONS_H
+fi
+if [ -n "$CERR" ] ; then
+    echo "#define CUSTOM_ERR" >> $OPTIONS_H
+else
+    echo "#undef CUSTOM_ERR" >> $OPTIONS_H
+fi
+if [ -n "$STATSN" ] ; then
+    echo "#define STATS_NOTICE" >> $OPTIONS_H
+else
+    echo "#undef STATS_NOTICE" >> $OPTIONS_H
+fi
+if [ -n "$SMOTD" ] ; then
+    echo "#define SHORT_MOTD" >> $OPTIONS_H
+else
+    echo "#undef SHORT_MOTD" >> $OPTIONS_H
+fi
+if [ -n "$DEFINVIS" ] ; then
+    echo "#define NO_DEFAULT_INVISIBLE" >> $OPTIONS_H
+else
+    echo "#undef NO_DEFAULT_INVISIBLE" >> $OPTIONS_H
+fi
+if [ -n "$HUB" ] ; then
+    echo "#define HUB" >> $OPTIONS_H
+else
+    echo "#undef HUB" >> $OPTIONS_H
+fi
+if [ -n "$SYSLOG" ] ; then
+    echo "#define USE_SYSLOG" >> $OPTIONS_H
+else
+    echo "#undef USE_SYSLOG" >> $OPTIONS_H
+fi
+if [ -n "$HULINED" ] ; then
+    echo "#define HIDEULINEDSERVS 1" >> $OPTIONS_H
+else
+    echo "#undef HIDEULINEDSERVS" >> $OPTIONS_H
+fi
+if [ -n "$SUNOS" ] ; then
+    echo "#define SUNDBE" >> $OPTIONS_H
+else
+    echo "#undef SUNDBE" >> $OPTIONS_H
+fi
+if [ -n "$SOLARIS" ] ; then
+    echo "#define OS_SOLARIS" >> $OPTIONS_H
+else
+    echo "#undef OS_SOLARIS" >> $OPTIONS_H
+fi
+cat >> $OPTIONS_H << __EOF__
+
+/* Now that the simple stuff is done, we have to add some ifdef's */
+
+
+#ifdef	USE_SYSLOG
+#undef	SYSLOG_USERS
+#undef   SYSLOG_BLOCK_ALLOCATOR 
+#define LOG_FACILITY LOG_LOCAL4
+__EOF__
+if [ -n "$LOGKILL" ] ; then
+    echo "#define SYSLOG_KILL" >> $OPTIONS_H
+else
+    echo "#undef SYSLOG_KILL" >> $OPTIONS_H
+fi
+if [ -n "$LOGSQUIT" ] ; then
+    echo "#define SYSLOG_SQUIT" >> $OPTIONS_H
+else
+    echo "#undef SYSLOG_SQUIT" >> $OPTIONS_H
+fi
+if [ -n "$LOGCONN" ] ; then
+    echo "#define SYSLOG_CONNECT" >> $OPTIONS_H
+else
+    echo "#undef SYSLOG_CONNECT" >> $OPTIONS_H
+fi
+if [ -n "$SOPER" ] ; then
+    echo "#define SYSLOG_OPER" >> $OPTIONS_H
+else
+    echo "#undef SYSLOG_OPER" >> $OPTIONS_H
+fi
+echo "#endif" >> $OPTIONS_H
+echo "" >> $OPTIONS_H
+echo "#endif /* This is the endif for the ifdef at the top. */" >> $OPTIONS_H
+### now insert the FDLIMIT in the makefile
+cat Makefile | sed s/'FDLIMIT=.*'/FDLIMIT=${FDLIMIT}/ | tee Makefile >/dev/null
+echo "Done."
+echo ""
+echo "Now your include/options.h is configured.  Please look over" 
+echo "include/config.h for more server specific options.  Now, to"
+echo "compile your server, type 'make'."
+
+

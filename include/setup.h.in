@@ -1,0 +1,137 @@
+/*
+ * include/setup.h.in.  Generated automatically from configure.in by
+ * autoheader.
+ */
+
+/* Define if you have the ANSI C header files.  */
+#undef STDC_HEADERS
+
+/* Define to <malloc.h> if you need it */
+#if !defined(STDC_HEADERS)
+#undef MALLOCH
+#endif
+
+/* Chose only one of POSIX, BSD, or SYSV signals */
+/* Define if you have reliable posix signals */
+#undef POSIX_SIGNALS
+
+/* Define if you have reliable BSD signals */
+#undef BSD_RELIABLE_SIGNALS
+
+/* Define if you have unreliable SYSV signals */
+#undef SYSV_UNRELIABLE_SIGNALS
+
+/* Chose only one of NBLOCK_POSIX, NBLOCK_BSD, and NBLOCK_SYSV */
+/* Define if you have posix non-blocking sockets (O_NONBLOCK) */
+#undef NBLOCK_POSIX
+
+/* Define if you have BSD non-blocking sockets (O_NDELAY) */
+#undef NBLOCK_BSD
+
+/* Define if you have SYSV non-blocking sockets (FIONBIO) */
+#undef NBLOCK_SYSV
+
+/* Define if you have the getrusage function.  */
+#undef HAVE_GETRUSAGE
+
+/* Define if you have the gettimeofday function.  */
+#undef HAVE_GETTIMEOFDAY
+
+/* Define if you have the index function.  */
+#undef HAVE_INDEX
+
+/* Define if you have the inet_aton function.  */
+#undef HAVE_INET_ATON
+
+/* Define if you have the inet_addr function.  */
+#undef HAVE_INET_ADDR
+
+/* Define if you have the inet_netof function.  */
+#undef HAVE_INET_NETOF
+
+/* Define if you have the inet_ntoa function.  */
+#undef HAVE_INET_NTOA
+
+/* Define if you have the lrand48 function.  */
+#undef HAVE_LRAND48
+
+/* Define if you have the strerror function.  */
+#undef HAVE_STRERROR
+
+/* Define if you have the strtok function.  */
+#undef HAVE_STRTOK
+
+/* Define if you have the strtoken function.  */
+#undef HAVE_STRTOKEN
+
+/* Define if you have the dn_skipname function.  */
+#undef HAVE_DN_SKIPNAME
+
+/* Define if you have the __dn_skipname function.  */
+#undef HAVE___DN_SKIPNAME
+
+/* Define if you have the times function.  */
+#undef HAVE_TIMES
+
+/* Define if you have the bcopy function.  */
+#undef HAVE_BCOPY
+
+/* Define if you have the bcmp function.  */
+#undef HAVE_BCMP
+
+/* Define if you have the bzero function.  */
+#undef HAVE_BZERO
+
+/* Define if you have the <param.h> header file.  */
+#undef HAVE_SYS_PARAM_H
+
+/* Define if you have MIN and MAX in sys/param.h */
+#if defined( HAVE_SYS_PARAM_H )
+#undef HAVE_MINMAX
+#endif
+
+/* Define if you have the <stddef.h> header file.  */
+#undef HAVE_STDDEF_H
+
+/* Define if you have the <stdlib.h> header file.  */
+#undef HAVE_STDLIB_H
+
+/* Define if you have the <string.h> header file.  */
+#undef HAVE_STRING_H
+
+/* Define if you have the <strings.h> header file.  */
+#undef HAVE_STRINGS_H
+
+/* Define if you have the <sys/syslog.h> header file.  */
+#undef HAVE_SYS_SYSLOG_H
+
+/* Define if you have the <unistd.h> header file.  */
+#undef HAVE_UNISTD_H
+
+/* Define this if we have a sys_errlist */
+#undef SYS_ERRLIST_DECLARED
+
+/* Define this if we have (fd_set *)->read_bits */
+#undef USE_FAST_FD_ISSET
+
+/* Obviously only define one of these.  */
+/* Define for Solaris 2.x.  */
+#undef OS_SOLARIS2
+
+/* Define for AIX.  */
+#undef OS_AIX
+
+/* Define for a MIPS machine.  */
+#undef OS_MIPS
+
+/* Define for Sequent Dynix/PTX.  */
+#undef OS_DYNIXPTX
+
+/* Define for ESIX.  */
+#undef OS_ESIX
+
+/* Define for a NeXT OS.  */
+#undef OS_NEXT
+
+/* Define if using HPUX.  */
+#undef OS_HPUX
