@@ -73,7 +73,7 @@ int do_numeric(int numeric, aClient *cptr, aClient *sptr, int parc,
 
 	for (i = 2; i < (parc - 1); i++)
 	{
-	    buffer[bpos++] = '\0';
+	    buffer[bpos++] = ' ';
 	    for(p = parv[i]; *p; p++)
 		buffer[bpos++] = *p;
 	}

@@ -1976,7 +1976,7 @@ int m_whois(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		       me.name, parv[0], name, buf);
 	
 	/* don't give away that this oper is on this server if they're hidden! */
-	if (acptr->user && MyConnect(acptr) && !(IsUmodeI(acptr) && (!IsAnOper(sptr) || parc < 3)))
+	if (acptr->user && MyConnect(acptr) && (!IsUmodeI(acptr) || (parc > 2 || IsAnOper(sptr))))
 	    sendto_one(sptr, rpl_str(RPL_WHOISIDLE),
 		       me.name, parv[0], name,
 		       timeofday - user->last,
