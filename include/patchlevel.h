@@ -32,11 +32,11 @@
 #define BASENAME "bahamut"
 #define MAJOR 1
 #define MINOR 4
-#define PATCH 34
+#define PATCH 35
 
-#define PATCH1 ".rhashfix"
+#define PATCH1 ".RC0"
 
-#define PATCH2 ".tlimitfix"
+#define PATCH2 ""
 
 #define PATCH3 ""
 
