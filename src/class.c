@@ -224,7 +224,10 @@ get_sendq(aClient *cptr)
 	     !(cl = tmp->value.aconf->class))
 	    continue;
 	 if (Class (cl) > retc)
+         {
+	    retc = Class (cl);
 	    sendq = MaxSendq(cl);
+         }
       }
    return sendq;
 }
