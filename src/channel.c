@@ -1289,17 +1289,20 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
 static int can_join(aClient *sptr, aChannel *chptr, char *key)
 {
     Link   *lp;
-    int invited=0;
-    for(lp=sptr->user->invited;lp;lp=lp->next) {
-	if(lp->value.chptr==chptr) {
-	    invited=1;
+    int invited = 0;
+
+    for(lp = sptr->user->invited; lp; lp = lp->next) 
+    {
+	if(lp->value.chptr == chptr) 
+        {
+	    invited = 1;
 	    break;
 	}
     }
+
     if (invited || IsULine(sptr))
 	return 0;
-    if (is_banned(sptr, chptr))
-	return (ERR_BANNEDFROMCHAN);
+
     if (chptr->mode.mode & MODE_INVITEONLY)
 	return (ERR_INVITEONLYCHAN);
     if (chptr->mode.mode & MODE_REGONLY && !IsRegNick(sptr))
@@ -1310,12 +1313,54 @@ static int can_join(aClient *sptr, aChannel *chptr, char *key)
 	return (ERR_BADCHANNELKEY);
     if (chptr->mode.limit && chptr->users >= chptr->mode.limit) 
 	return (ERR_CHANNELISFULL);
+    if (is_banned(sptr, chptr))
+	return (ERR_BANNEDFROMCHAN);
     return 0;
 }
-/*
- * * Remove bells and commas from channel name
- */
 
+/*
+ * can_join_whynot:
+ * puts a list of the modes preventing us from joining in reasonbuf
+ * ret is number of matched modes
+ */
+static int can_join_whynot(aClient *sptr, aChannel *chptr, char *key, char *reasonbuf)
+{
+    Link   *lp;
+    int invited = 0;
+    int rbufpos = 0;
+
+    for(lp = sptr->user->invited; lp; lp = lp->next) 
+    {
+	if(lp->value.chptr == chptr) 
+        {
+	    invited = 1;
+	    break;
+	}
+    }
+
+    if (invited || IsULine(sptr))
+	return 0;
+
+    if (chptr->mode.mode & MODE_INVITEONLY)
+        reasonbuf[rbufpos++] = 'i';
+    if (chptr->mode.mode & MODE_REGONLY && !IsRegNick(sptr))
+        reasonbuf[rbufpos++] = 'R';
+    if (chptr->mode.mode & MODE_OPERONLY && !IsOper(sptr))
+        reasonbuf[rbufpos++] = 'O';
+    if (*chptr->mode.key && (BadPtr(key) || mycmp(chptr->mode.key, key)))
+        reasonbuf[rbufpos++] = 'k';
+    if (chptr->mode.limit && chptr->users >= chptr->mode.limit) 
+        reasonbuf[rbufpos++] = 'l';
+    if (is_banned(sptr, chptr))
+        reasonbuf[rbufpos++] = 'b';
+
+    reasonbuf[rbufpos] = '\0';
+    return rbufpos;
+}
+
+/*
+ * Remove bells and commas from channel name
+ */
 void clean_channelname(unsigned char *cn)
 {
     for (; *cn; cn++)
@@ -1830,6 +1875,7 @@ int m_sajoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	aChannel 	*chptr;
 	char 		*name;
 	int 		 i;
+	char		errmodebuf[128];
 
 	/* Remote sajoin? nope. */
 	if(!MyClient(sptr))
@@ -1859,44 +1905,15 @@ int m_sajoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	}
 
 	/* bail if they're already in the channel */
-	if(chptr && IsMember(sptr, chptr))
+	if(IsMember(sptr, chptr))
 		return 0;
 
-	if((i = can_join(sptr, chptr, NULL)))
+	if((i = can_join_whynot(sptr, chptr, NULL, errmodebuf)))
 	{
-	    char bchar;
-
-	    switch(i)
-	    {
-		case ERR_BANNEDFROMCHAN:
-		    bchar = 'b';
-		    break;
-
-		case ERR_INVITEONLYCHAN:
-		    bchar = 'i';
-		    break;
-
-		case ERR_BADCHANNELKEY:
-		    bchar = 'k';
-		    break;
-
-		case ERR_NEEDREGGEDNICK:
-		    bchar = 'R';
-		    break;
-
-		case ERR_CHANNELISFULL:
-		    bchar = 'l';
-		    break;
-
-		default:
-		    bchar = '?';
-		    break;
-	    }
-
-	    send_globops("from %s: %s used SAJOIN (%s +%c)",
-			 me.name, sptr->name, chptr->chname, bchar);
-	    sendto_serv_butone(NULL, ":%s GLOBOPS :%s used SAJOIN (%s +%c)",
-			       me.name, sptr->name, chptr->chname, bchar);
+	    send_globops("from %s: %s used SAJOIN (%s +%s)",
+			 me.name, sptr->name, chptr->chname, errmodebuf);
+	    sendto_serv_butone(NULL, ":%s GLOBOPS :%s used SAJOIN (%s +%s)",
+			       me.name, sptr->name, chptr->chname, errmodebuf);
 	}
 	else
 	    sendto_one(sptr, ":%s NOTICE %s :You didn't need to use /SAJOIN for %s",
@@ -3112,8 +3129,8 @@ int m_sjoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	/* if the channel is created in client sjoin, we lost some channel modes. */
 	if(created)
 	{
-	    sendto_realops_lev(DEBUG_LEV, "Requesting resynch of %s from %s",
-			       chptr->chname, cptr->name);
+	    sendto_realops_lev(DEBUG_LEV, "Requesting resynch of %s from %s (%s created)",
+			       chptr->chname, cptr->name, get_client_name(sptr, FALSE));
 	    sendto_one(cptr, "RESYNCH %s", chptr->chname);
 	}
 

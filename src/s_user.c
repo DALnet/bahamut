@@ -1791,20 +1791,6 @@ int m_notice(aClient *cptr, aClient *sptr, int parc, char *parv[])
  */
 int m_whois(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
-    static anUser UnknownUser =
-    {
-	NULL,			/* channel */
-	NULL,			/* invited */
-	NULL,			/* away */
-	0,			/* last */
-	0,			/* joined */
-	"<Unknown>",		/* user */
-	"<Unknown>",		/* host */
-	"<Unknown>",		/* server */
-	0,  /* servicestamp */
-	NULL /* silenced */
-    };
-    
     Link   *lp;
     anUser *user;
     aClient    *acptr, *a2cptr;
@@ -1868,7 +1854,7 @@ int m_whois(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	    continue;
 	}
 		
-	user = acptr->user ? acptr->user : &UnknownUser;
+	user = acptr->user;
 	name = (!*acptr->name) ? "?" : acptr->name;
 	invis = IsInvisible(acptr);
 	member = (user->channel) ? 1 : 0;

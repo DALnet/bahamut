@@ -640,7 +640,8 @@ struct User
     char        username[USERLEN + 1];
     char        host[HOSTLEN + 1];
     char       *server;        /* pointer to scached server name */
-#ifdef OS_SOLARIS
+    unsigned int servicetype;  /* set by SVSMODE +T */
+#ifdef OS_SOLARIS              /* SVSMODE +d */
     uint_t    servicestamp;    /* solaris is gay -epi */
 #else
     u_int32_t servicestamp;    /* Services id - Raistlin */

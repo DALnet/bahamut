@@ -500,6 +500,10 @@ int m_svsmode(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	    if (optarg && isdigit(*optarg))
 		acptr->user->servicestamp = strtoul(optarg, NULL, 0);
 	    break;
+	case 'T':
+	    if (optarg && isdigit(*optarg))
+		acptr->user->servicetype = strtoul(optarg, NULL, 0);
+	    break;
 	default:
 	    for (s = user_modes; (flag = *s); s += 2)
 	    {
