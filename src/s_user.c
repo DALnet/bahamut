@@ -1509,7 +1509,7 @@ m_nick(aClient *cptr,
              sptr->last_nick_change = NOW;
              sptr->number_of_nick_changes++;
                                 
-             if (sptr->number_of_nick_changes <= MAX_NICK_CHANGES)
+             if (sptr->number_of_nick_changes <= MAX_NICK_CHANGES || IsAnOper(sptr))
              {
 #endif
                 sendto_common_channels(sptr, ":%s NICK :%s", parv[0], nick);
