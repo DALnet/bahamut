@@ -306,7 +306,10 @@ void read_authports(aClient *cptr)
    if (!*userid)
    {
       ircstp->is_abad++;
-      (void) strcpy(cptr->username, "unknown");
+      strcpy(cptr->username, "unknown");
+#ifdef SHOW_HEADERS
+      sendto_one(cptr, REPORT_FAIL_ID);
+#endif
       return;
    }
 #ifdef SHOW_HEADERS
