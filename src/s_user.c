@@ -966,23 +966,10 @@ register_user(aClient *cptr,
 #ifdef USE_WATCH
 	hash_check_watch(sptr, RPL_LOGON);
 #endif
-#ifdef DF_COMPATIBILITY
-   sendto_hybrid_butone(cptr, "NICK %s %d %ld %s %s %s %s %lu :%s",
-								nick, sptr->hopcount + 1, sptr->tsinfo, ubuf,
-								user->username, user->host, user->server, sptr->user->servicestamp, 
-								sptr->info);
-   sendto_df_butone(cptr, "NICK %s %d %ld %s %s %s %lu :%s",
-						  nick, sptr->hopcount + 1, sptr->tsinfo,
-						  user->username, user->host, user->server, sptr->user->servicestamp,
-						  sptr->info);
-   if (ubuf[1])
-	  sendto_df_butone(cptr, ":%s MODE %s :%s", nick, nick, ubuf);
-#else
    sendto_serv_butone(cptr, "NICK %s %d %ld %s %s %s %s %lu :%s",
 							 nick, sptr->hopcount + 1, sptr->tsinfo, ubuf,
 							 user->username, user->host, user->server, sptr->user->servicestamp,
 							 sptr->info);
-#endif
 	if(ubuf[1])
 	  send_umode_out(cptr, sptr, 0);
    return 0;
@@ -1013,10 +1000,6 @@ m_nick(aClient *cptr,
    ts_val      newts = 0;
    int         sameuser = 0, fromTS = 0;
 	
-#ifdef DF_COMPATIBILITY
-   int         hybrid = IsHybrid(cptr);
-	
-#endif
    if (parc < 2) {
       sendto_one(sptr, err_str(ERR_NONICKNAMEGIVEN),
 					  me.name, parv[0]);
@@ -1396,22 +1379,9 @@ m_nick(aClient *cptr,
  nickkilldone:
    if (IsServer(sptr)) {
       sptr = make_client(cptr);
-#ifdef DF_COMPATIBILITY
-		if (hybrid) {
-		  if ((find_uline(cptr->confs, parv[7]))) {
-			 sptr->flags|=FLAGS_ULINE;
-		  }
-		} 
-		else {
-		  if ((find_uline(cptr->confs, parv[6]))) {
-			 sptr->flags|=FLAGS_ULINE;
-		  }
-		}
-#else
 		if ((find_uline(cptr->confs, parv[7])))
 		  sptr->flags|=FLAGS_ULINE;
 		
-#endif
       add_client_to_list(sptr);
       if (parc > 2)
 		  sptr->hopcount = atoi(parv[2]);
@@ -1433,9 +1403,6 @@ m_nick(aClient *cptr,
 			/*
 			 * * parse the usermodes -orabidoo
 			 */
-#ifdef DF_COMPATIBILITY
-			if (hybrid) {
-#endif
 				m = &parv[4][1];
 				while (*m) {
 					for (s = user_modes; (flag = *s); s += 2)
@@ -1453,13 +1420,6 @@ m_nick(aClient *cptr,
 				
 				return do_user(nick, cptr, sptr, parv[5], parv[6],
 									parv[7], (int)parv[8], parv[9]);
-#ifdef DF_COMPATIBILITY
-			}
-			else {
-				return do_user(nick, cptr, sptr, parv[4], parv[5],
-									parv[6], (int)parv[7], parv[8]);
-			}
-#endif
       }
    }
    else if (sptr->name[0]) {
@@ -3307,10 +3267,6 @@ m_pass(aClient *cptr,
        */
       if (parv[2][0] == 'T' && parv[2][1] == 'S')
 	 cptr->tsinfo = (ts_val) TS_DOESTS;
-      #ifdef DF_COMPATIBILITY
-         else
-           cptr->flags |= FLAGS_DF;
-      #endif
    }
    return 0;
 }

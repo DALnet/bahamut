@@ -196,9 +196,6 @@ typedef struct MotdItem aMotd;
 #define FLAGS_GKILLFLAG    0x200000
 #define FLAGS_ZKILLFLAG    0x400000
 #define FLAGS_CONNECTION_TIMEDOUT 0x800000
-#ifdef DF_COMPATIBILITY
-#define FLAGS_DF           0x1000000
-#endif
 #define FLAGS_ULINE 			0x2000000
 
 /* User Modes */
@@ -244,11 +241,6 @@ typedef struct MotdItem aMotd;
 #define IsTS3       ((x)->flags & CAPAB_TS3)
 #define IsULine(x) ((x)->flags & FLAGS_ULINE)
 
-
-#ifdef DF_COMPATIBILITY
-#define IsDf(x)     ((x)->flags & FLAGS_DF)
-#define IsHybrid(x) (!((x)->flags & FLAGS_DF))
-#endif
 
 #define	IsOper(x)		((x)->umode & UMODE_o)
 #define	IsLocOp(x)		((x)->umode & UMODE_O)

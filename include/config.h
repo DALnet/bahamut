@@ -86,13 +86,6 @@
 #define DPATH   "/usr/home/ircd/ircd/"
 #define SPATH   "/usr/home/ircd/ircd/ircd"
 
-/*
- * DF_COMPATIBILITY This allows compatibility with Dalnets dreamforge
- * servers.  If we can get all the leaves running this, we can undef
- * this and save some CPU on the hub servers. - Raistlin
- */
-#define DF_COMPATIBILITY
-
 /* STATS_NOTICE - See a notice when a user does a /stats */
 #define STATS_NOTICE
 

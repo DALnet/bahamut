@@ -94,12 +94,6 @@ build:
 		${MAKE} build; cd ..;\
 	done
 	@echo "******************************************************************************"
-	@echo "*                Warning! Warning! Danger Will Robinson!                     *"
-	@echo "* Bahamut/DfHybrid has NOT been approved for general use on the main DALnet  *"
-	@echo "* IRC network yet. Do not run it on the main network unless you have prior   *"
-	@echo "* permission from the dfhybrid team. If you ignore this warning, you risk    *"
-	@echo "* having your machine juped until you are back on old code.                  *"
-	@echo "******************************************************************************"
 	@echo "* Note: Please do not send bug reports or feature inquiries to the mailing   *"
 	@echo "* lists or to the Bahamut coders. Instead, go to                             *"
 	@echo "* http://www.bahamut.net/contact.html and FOLLOW the                         *"

@@ -53,12 +53,6 @@ if [ -n "$SOLARIS" ] ; then
 else
    SOLARIS="1"
 fi
-DFCOMP="`grep 'DF_COMPATIBILITY' $OPTIONS_H | sed s/'.define DF_COMPATIBILITY'// | xargs echo -n`"
-if [ -n "$DFCOMP" ] ; then
-   DFCOMP=""
-else 
-   DFCOMP="1"
-fi
 STATSN="`grep 'STATS_NOTICE' $OPTIONS_H | sed s/'.define STATS_NOTICE'// | xargs echo -n`"
 if [ -n "$STATSN" ] ; then
    STATSN=""
@@ -134,7 +128,6 @@ SUNOS=""
 SOLARIS=""
 DPATH="`pwd`"
 SPATH="`pwd`/src/ircd" 
-DFCOMP="1"
 STATSN="1"
 SMOTD="0"
 DEFINVIS="1"
@@ -301,42 +294,6 @@ while [ -z "$FOO" ] ; do
     fi
 done
 SPATH=$cc
-
-FOO=""
-runonce=""
-while [ -z "$FOO" ] ; do
-    if [ -n "$DFCOMP" ] ; then
-	FOO="Yes"
-    else
-	FOO="No"
-    fi
-    echo ""
-    echo "Do you want Dreamforge Compatibility?"
-    echo -n "[$FOO] -> $c"
-    if [ -z "$AUTO_CONFIG" -o -n "$runonce" ] ; then
-	read cc
-	runonce=Yes
-    else
-	cc=""
-    fi
-    if [ -z "$cc" ] ; then
-	cc=$FOO
-    fi
-    case "$cc" in
-	[Yy]*)
-	    DFCOMP="1"
-	    ;;
-	[Nn]*)
-	    DFCOMP=""
-	    ;;
-	*)
-	    echo ""
-	    echo "You need to enter either Yes or No here..."
-	    echo ""
-	    FOO=""
-	    ;;
-    esac
-done
 
 FOO=""
 runonce=""
@@ -831,11 +788,6 @@ cat > $OPTIONS_H << __EOF__
 #define MAX_BUFFER $MAXBUF
 #define SERVICES_NAME "$SERVICES_NAME"
 __EOF__
-if [ -n "$DFCOMP" ] ; then
-    echo "#define DF_COMPATIBILITY" >> $OPTIONS_H
-else
-    echo "#undef DF_COMPATIBILITY" >> $OPTIONS_H
-fi
 if [ -n "$STATSN" ] ; then
     echo "#define STATS_NOTICE" >> $OPTIONS_H
 else

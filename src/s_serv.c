@@ -73,12 +73,6 @@ int         max_connection_count = 1, max_client_count = 1;
 extern void reset_sock_opts();
 
 #endif
-#ifdef DF_COMPATIBILITY
-extern void send_user_joins(aClient *, aClient *);	/*
-
-							 * in channel.c 
-							 */
-#endif
 extern char *smalldate(time_t);	/*
 
 				 * defined in s_misc.c 
@@ -735,28 +729,10 @@ sendnick_TS(aClient *cptr, aClient *acptr)
 	  * original was        strcpy(ubuf, "+"); 
 	  */
       }
-#ifdef DF_COMPATIBILITY
-      if (!IsDf(cptr))
-				sendto_one(cptr, "NICK %s %d %ld %s %s %s %s %lu :%s",
-									 acptr->name, acptr->hopcount + 1,
-									 acptr->tsinfo, ubuf,
-									 acptr->user->username, acptr->user->host,
-									 acptr->user->server, acptr->user->servicestamp,
-									 acptr->info);
-      else {
-				 sendto_one(cptr, "NICK %s %d %ld %s %s %s %lu :%s",
-										acptr->name, acptr->hopcount + 1, acptr->tsinfo,
-										acptr->user->username, acptr->user->host,
-										acptr->user->server, acptr->user->servicestamp,
-										acptr->info);
-				 sendto_one(cptr, ":%s MODE %s :%s", acptr->name, acptr->name, ubuf);
-			}
-#else
       sendto_one(cptr, "NICK %s %d %ld %s %s %s %s %lu :%s", acptr->name,
 		 acptr->hopcount + 1, acptr->tsinfo, ubuf,
 		 acptr->user->username, acptr->user->host,
 		 acptr->user->server, acptr->user->servicestamp, acptr->info);
-#endif
    }
 }
 
@@ -1010,10 +986,6 @@ m_server_estab(aClient *cptr)
 	       acptr->nicksent = nickissent;
 	       if (acptr->from != cptr) {
 		  sendnick_TS(cptr, acptr);
-#ifdef DF_COMPATIBILITY
-		  if (IsDf(cptr))
-		     send_user_joins(cptr, acptr);
-#endif
 	       }
 	    }
 	 }
@@ -2019,15 +1991,6 @@ m_help(aClient *cptr,
 	 last_used = NOW;
 
    }
-
-    	/* Deny remote requests for /help
-    	 * DF's helpops tends to flood a client
-    	 * pretty damn good otherwise.
-    	 * -Epi */ 
-    #ifdef DF_COMPATIBILITY    
-	if (!MyClient(sptr)) 
-	   return 0;
-    #endif
 
    if (!IsAnOper(sptr) || (helpfile == (aMotd *) NULL)) {
       for (i = 0; msgtab[i].cmd; i++)
@@ -4804,16 +4767,6 @@ m_die(aClient *cptr,
    return 0;
 }
 
-#ifdef DF_COMPATIBILITY
-int
-m_protoctl(aClient *cptr, aClient *sptr, int parc, char *parv[])
-{
-   sptr->flags |= FLAGS_DF;
-   send_globops("Server %s is Dreamforge.  Using compatibility code.\n",
-		sptr->name);
-   return 0;
-}
-#endif
 
 /*
  * m_capab * Communicate what I can do to another server 
@@ -4939,16 +4892,6 @@ int m_akill(aClient *cptr, aClient *sptr, int parc, char *parv[]) {
 
 	if(!IsServer(sptr))
 	  return 0;
-#ifdef DF_COMPATIBILITY  
-	if(IsDf(cptr) && parc<3) {
-		sendto_one(sptr, err_str(ERR_NEEDMOREPARAMS), me.name, parv[0], "AKILL");
-		return 0;
-	}
-	if(IsHybrid(cptr) && parc<6) {   
-		sendto_one(sptr, err_str(ERR_NEEDMOREPARAMS), me.name, parv[0], "AKILL");
-		return 0;
-	}
-#endif   
 	
 	if(!IsULine(sptr)) {
 		sendto_serv_butone(&me, ":%s GLOBOPS :Non-ULined server %s trying to AKILL!", 
@@ -4960,21 +4903,11 @@ int m_akill(aClient *cptr, aClient *sptr, int parc, char *parv[]) {
 	
 	host=parv[1];
 	user=parv[2];
-	
-	  
-	/* if our uplink is DF, we're not getting the whole story, FITB. */
-#ifdef DF_COMPATIBILITY
-	if(IsDf(cptr))
-	  reason=(parv[3] ? parv[3] : "<no reason>");
-	else {
-#endif
-		akiller=parv[4];
-		length=atoi(parv[3]);
-		timeset=atoi(parv[5]);
-		reason=(parv[6] ? parv[6] : "<no reason>");
-#ifdef DF_COMPATIBILITY
-	}
-#endif   
+	akiller=parv[4];
+	length=atoi(parv[3]);
+	timeset=atoi(parv[5]);
+	reason=(parv[6] ? parv[6] : "<no reason>");
+
 	current_date=smalldate((time_t)timeset);
 	/* cut reason down a little, eh? */
 	/* 250 chars max */
