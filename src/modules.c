@@ -13,9 +13,34 @@
 #include "h.h"
 #include "hooks.h"
 
+#define MODULE_INTERFACE_VERSION 1006 /* the interface version, specified below. */
+
 #ifndef USE_HOOKMODULES
 int m_module(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
+   int localaccess = 1;
+
+   if(MyClient(sptr) && !(IsAnOper(sptr) && IsAdmin(sptr)))
+   {
+      sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name, parv[0]);
+      return 0;
+   }
+
+   if(!MyClient(sptr) && !(IsULine(sptr) || IsServer(sptr)))
+      return 0;
+
+   if(!MyClient(sptr))
+      localaccess = 0;
+
+   if(!localaccess && parc > 2 && mycmp(parv[1], "CGLOBAL") == 0)
+   {
+      char pbuf[512];
+
+      /* Pass this on to all servers! */
+      make_parv_copy(pbuf, parc, parv);
+      sendto_serv_butone(cptr, ":%s MODULE %s", parv[0], pbuf);
+   }
+
    return 0;
 }
 
@@ -42,6 +67,7 @@ typedef struct loaded_module {
    void (*module_shutdown) (void);
    void (*module_getinfo) (char **, char **);
    int (*module_command) (aClient *, int, char **);
+   int (*module_globalcommand) (aClient *, aClient *, int, char **);
 } aModule;
 
 /* Forward decls */
@@ -159,13 +185,15 @@ int load_module(aClient *sptr, char *modname)
       return -1;
    if(!modsym_load(sptr, modname, "bircmodule_command", tmpmod.handle, (void **) &tmpmod.module_command))
       return -1;
+   if(!modsym_load(sptr, modname, "bircmodule_globalcommand", tmpmod.handle, (void **) &tmpmod.module_globalcommand))
+      return -1;
 
    (*tmpmod.module_check)(&acsz);
-   if(acsz != ACLIENT_SERIAL)
+   if(acsz != MODULE_INTERFACE_VERSION)
    {
       sendto_one(sptr, ":%s NOTICE %s :Module load error for %s: Incompatible module ("
-                 "My serial: %d Module serial: %d)",
-                 me.name, sptr->name, modname, ACLIENT_SERIAL, acsz);
+                 "My interface version: %d Module version: %d)",
+                 me.name, sptr->name, modname, MODULE_INTERFACE_VERSION, acsz);
       dlclose(tmpmod.handle);
       return -1;
    }
@@ -187,6 +215,7 @@ int load_module(aClient *sptr, char *modname)
    {
       sendto_one(sptr, ":%s NOTICE %s :Module %s successfully loaded [version: %s]",
                  me.name, sptr->name, modname, themod->version);
+      call_hooks(MHOOK_LOAD, modname, (void *) themod);
    }
    else
    {
@@ -212,6 +241,7 @@ int unload_module(aClient *sptr, char *modname)
    }
 
    drop_all_hooks(themod);
+   call_hooks(MHOOK_UNLOAD, themod->name, (void *) themod);
    destroy_module(themod);
 
    sendto_one(sptr, ":%s NOTICE %s :Module %s successfully unloaded",
@@ -222,20 +252,26 @@ int unload_module(aClient *sptr, char *modname)
 
 int m_module(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
-   if(!MyClient(sptr))
-      return 0;
+   int localaccess = 1;
 
-   if(!(IsAnOper(sptr) && IsAdmin(sptr)))
+   if(MyClient(sptr) && !(IsAnOper(sptr) && IsAdmin(sptr)))
    {
       sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name, parv[0]);
       return 0;
    }
-   else if(parc > 2 && mycmp(parv[1], "LOAD") == 0)
+
+   if(!MyClient(sptr) && !(IsULine(sptr) || IsServer(sptr)))
+      return 0;
+
+   if(!MyClient(sptr))
+      localaccess = 0;
+
+   if(localaccess && parc > 2 && mycmp(parv[1], "LOAD") == 0)
    {
       if(!BadPtr(parv[2]))
          load_module(sptr, parv[2]);
    }
-   else if(parc > 2 && mycmp(parv[1], "UNLOAD") == 0)
+   else if(localaccess && parc > 2 && mycmp(parv[1], "UNLOAD") == 0)
    {
       if(!BadPtr(parv[2]))
          unload_module(sptr, parv[2]);
@@ -262,6 +298,18 @@ int m_module(aClient *cptr, aClient *sptr, int parc, char *parv[])
          return 0;
       }
       return (*themod->module_command) (sptr, parc - 2, parv + 2);
+   }
+   else if(!localaccess && parc > 2 && mycmp(parv[1], "CGLOBAL") == 0)
+   {
+      char pbuf[512];
+      aModule *themod = find_module(parv[2]);
+
+      /* Pass this on to all servers! */
+      make_parv_copy(pbuf, parc, parv);
+      sendto_serv_butone(cptr, ":%s MODULE %s", parv[0], pbuf);
+
+      if(themod)
+         return (*themod->module_globalcommand) (cptr, sptr, parc - 2, parv + 2);
    }
 
    return 0;
@@ -302,6 +350,8 @@ static DLink *msg_hooks = NULL;
 static DLink *mymsg_hooks = NULL;
 static DLink *every10_hooks = NULL;
 static DLink *signoff_hooks = NULL;
+static DLink *mload_hooks = NULL;
+static DLink *munload_hooks = NULL;
 
 static DLink *all_hooks = NULL;
 
@@ -331,6 +381,12 @@ char *get_texthooktype(enum c_hooktype hooktype)
 
       case CHOOK_SIGNOFF:
          return "Signoff";
+
+      case MHOOK_LOAD:
+         return "Module load";
+
+      case MHOOK_UNLOAD:
+         return "Module unload";
 
       default:
          ircsnprintf(ubuf, 32, "Unknown (%d)", hooktype);
@@ -370,6 +426,14 @@ DLink **get_hooklist(enum c_hooktype hooktype)
 
       case CHOOK_SIGNOFF:
          hooklist = &signoff_hooks;
+         break;
+
+      case MHOOK_LOAD:
+         hooklist = &mload_hooks;
+         break;
+
+      case MHOOK_UNLOAD:
+         hooklist = &munload_hooks;
          break;
 
       default:
@@ -459,6 +523,7 @@ int call_hooks(enum c_hooktype hooktype, ...)
    char *txtptr;
    int aint;
    DLink *lp;
+   void *avoid;
 
    va_start(vl, hooktype);
 
@@ -534,6 +599,27 @@ int call_hooks(enum c_hooktype hooktype, ...)
             (*rfunc)(acptr);
          }
          break;
+
+      case MHOOK_LOAD:
+         txtptr = va_arg(vl, char *);
+         avoid = va_arg(vl, void *);
+         for(lp = mload_hooks; lp; lp = lp->next)
+         {
+            int (*rfunc) (char *, void *) = ((aHook *)lp->value.cp)->funcptr;
+            (*rfunc)(txtptr, avoid);
+         }
+         break;
+
+      case MHOOK_UNLOAD:
+         txtptr = va_arg(vl, char *);
+         avoid = va_arg(vl, void *);
+         for(lp = munload_hooks; lp; lp = lp->next)
+         {
+            int (*rfunc) (char *, void *) = ((aHook *)lp->value.cp)->funcptr;
+            (*rfunc)(txtptr, avoid);
+         }
+         break;
+
       
       default:
          sendto_realops_lev(DEBUG_LEV, "Call for unknown hook type %d", hooktype);

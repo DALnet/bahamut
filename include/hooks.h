@@ -24,8 +24,11 @@ enum c_hooktype {
    CHOOK_MYMSG,       /* called for every privmsg or notice to 'me.name' */
                       /* Params: 3: (aClient *, int isnotice, char *msgtext), returns int */
 
-   CHOOK_SIGNOFF      /* called on client exit (exit_client) */
+   CHOOK_SIGNOFF,     /* called on client exit (exit_client) */
                       /* Params: 1: (aClient *), returns void */
+
+   MHOOK_LOAD,        /* Called for modules loading and unloading */
+   MHOOK_UNLOAD       /* Params: 2: (char *modulename, void *moduleopaque) */
 };
 
 extern int call_hooks(enum c_hooktype hooktype, ...);

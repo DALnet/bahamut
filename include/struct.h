@@ -674,9 +674,6 @@ struct Server
     void       *zip_in;
 };
 
-/* Increment this number every time you change order or number of things in aclient */
-#define ACLIENT_SERIAL 100001
-
 struct Client 
 {
     struct Client *next, *prev, *hnext;
