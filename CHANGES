@@ -56,11 +56,13 @@ Changes for 1.8.2
 - Rewrote m_invite(), behaves logically now
 - Enabled cmode +j (joins:secs rate limit)
 - Fixed resolver cache corruption (and crash), mostly affected newer RedHat
+  thanks huni and Sarcast for patience, analysis, and cores
 - More conf documentation clarity
 - Unresolved class reference in conf now reports class name
 - Updated RPL_VERSION, RPL_ISUPPORT; now running from a cache in s_debug.c
 - Removed sockhost data from RPL_YOURHOST, since it was always zeroed
 - Squished more memory corruption bugs
+  thanks Glitch and dev0 for more patience and cores
 - Module support is now unconditionally disabled under OS X
 - Build system now handles FD_SETSIZE properly when using the select engine
 - Internal maxconnections and SET MAX handling is rational again
@@ -69,6 +71,8 @@ Changes for 1.8.2
 - Added support for non-noquit servers in #define NOQUIT
 - Updated zlib to version 1.2.1
 - Restricted stats q/Q/g to opers
+- Show IPs in stats C to services and local +A
+- Added RWHO, see /rwho ? and doc/pcrepattern.html for info
 
 
 Changes for 1.8.0
