@@ -1296,7 +1296,7 @@ m_join(aClient *cptr,
 			
 			if (MyConnect(sptr) && !IsAnOper(sptr)) {
 				if (sptr->join_leave_count >= spam_num) {
-					sendto_ops_lev(FLOOD_LEV, "User %s (%s@%s) is a possible spambot",
+					sendto_ops_lev(SPAM_LEV, "User %s (%s@%s) is a possible spambot",
 										sptr->name,
 										sptr->user->username, sptr->user->host);
 					sptr->oper_warn_count_down = OPER_SPAM_COUNTDOWN;
@@ -1394,7 +1394,7 @@ m_join(aClient *cptr,
 				  sptr->oper_warn_count_down = 0;
 				
 				if (sptr->oper_warn_count_down == 0) {
-					sendto_ops_lev(FLOOD_LEV, "User %s (%s@%s) trying to join %s is a possible spambot",
+					sendto_ops_lev(SPAM_LEV, "User %s (%s@%s) trying to join %s is a possible spambot",
 										sptr->name,
 										sptr->user->username,
 										sptr->user->host,
@@ -1545,7 +1545,7 @@ m_part(aClient *cptr,
 
    if (name && MyConnect(sptr) && !IsAnOper(sptr)) {
       if (sptr->join_leave_count >= spam_num) {
-	 sendto_ops_lev(FLOOD_LEV, "User %s (%s@%s) is a possible spambot",
+	 sendto_ops_lev(SPAM_LEV, "User %s (%s@%s) is a possible spambot",
 			sptr->name,
 			sptr->user->username, sptr->user->host);
 	 sptr->oper_warn_count_down = OPER_SPAM_COUNTDOWN;

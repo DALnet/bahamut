@@ -1677,12 +1677,10 @@ m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		break;
 		
 	 case 'k':
+                if(IsAnOper(sptr))
+		   report_temp_klines(sptr);
+
 	 case 'K':
-		report_temp_klines(sptr);
-		/*
-		 * sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name,
-						  * parv[0]);
-		 */
 		if (parc > 3)
 		  report_matching_host_klines(sptr, parv[3]);
 		else if (IsAnOper(sptr)) {
@@ -1690,8 +1688,8 @@ m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
 			report_conf_links(sptr, &KList2, RPL_STATSKLINE, 'K');
 			report_conf_links(sptr, &KList3, RPL_STATSKLINE, 'K');
 		}
-		else
-		  report_matching_host_klines(sptr, sptr->sockhost);
+		else if(sptr->user)
+		  report_matching_host_klines(sptr, sptr->user->host);
 		break;
 		
 	 case 'M':

@@ -233,6 +233,7 @@ typedef struct MotdItem aMotd;
 #define UMODE_A     0x08000 /* umode +A - Server Admin */
 #define UMODE_n     0x10000	/* umode +n - Routing Notices */
 #define UMODE_h     0x20000 /* umode +h - Helper */
+#define UMODE_m     0x40000 /* umode +m - spambot notices */
 
 /* for sendto_ops_lev */
 
@@ -242,9 +243,11 @@ typedef struct MotdItem aMotd;
 #define SPY_LEV		4
 #define DEBUG_LEV	5
 #define FLOOD_LEV 	6
+#define SPAM_LEV 	7
 
 #define	SEND_UMODES	(UMODE_i|UMODE_o|UMODE_w|UMODE_r|UMODE_a|UMODE_A|UMODE_h)
-#define ALL_UMODES (SEND_UMODES|UMODE_s|UMODE_c|UMODE_r|UMODE_k|UMODE_f|UMODE_y|UMODE_d|UMODE_g|UMODE_b|UMODE_n|UMODE_h)
+#define ALL_UMODES (SEND_UMODES|UMODE_s|UMODE_c|UMODE_r|UMODE_k|UMODE_f|\
+		    UMODE_y|UMODE_d|UMODE_g|UMODE_b|UMODE_n|UMODE_h|UMODE_m)
 #ifdef DEFAULT_HELP_MODE
 #define OPER_UMODES (UMODE_o|UMODE_w|UMODE_s|UMODE_y|UMODE_d|UMODE_g|UMODE_n|UMODE_h)
 #else
@@ -267,6 +270,7 @@ typedef struct MotdItem aMotd;
 #define IsUmoded(x)   ((x)->umode & UMODE_d)
 #define IsUmodeb(x)   ((x)->umode & UMODE_b)
 #define IsUmoden(x)   ((x)->umode & UMODE_n)
+#define IsUmodem(x)   ((x)->umode & UMODE_m)
 #define IsUmodeh(x)   ((x)->umode & UMODE_h)
 #define	IsPerson(x)		((x)->user && IsClient(x))
 #define	IsPrivileged(x)		(IsAnOper(x) || IsServer(x))
@@ -277,6 +281,7 @@ typedef struct MotdItem aMotd;
 #define SendSkillNotice(x)	((x)->umode & UMODE_k)
 #define SendSpyNotice(x)	((x)->umode & UMODE_y)
 #define SendFloodNotice(x)  ((x)->umode & UMODE_f)
+#define SendSpamNotice(x)  ((x)->umode & UMODE_m)
 #define SendDebugNotice(x)	((x)->umode & UMODE_d)
 #define SendGlobops(x) ((x)->umode & UMODE_g)
 #define SendChatops(x) ((x)->umode & UMODE_b)
@@ -301,6 +306,7 @@ typedef struct MotdItem aMotd;
 #define ClearSAdmin(x)  ((x)->umode &= ~UMODE_a)
 #define ClearAdmin(x)   ((x)->umode &= ~UMODE_A)
 #define ClearUmodef(x)  ((x)->umode &= ~UMODE_f)
+#define ClearUmodem(x)  ((x)->umode &= ~UMODE_m)
 #define ClearUmodec(x)  ((x)->umode &= ~UMODE_c)
 #define ClearUmodey(x)  ((x)->umode &= ~UMODE_y)
 #define ClearUmoded(x)  ((x)->umode &= ~UMODE_d)

@@ -83,6 +83,7 @@ static int  user_modes[] =
  UMODE_A, 'A',
  UMODE_f, 'f',
  UMODE_n, 'n',
+ UMODE_m, 'm',
  UMODE_h, 'h',	 
  0, 0};
 
@@ -3658,6 +3659,7 @@ m_umode(aClient *cptr,
 		if (IsUmoded(sptr)) ClearUmoded(sptr);
 		if (IsUmodeb(sptr)) ClearUmodeb(sptr);
 		if (IsUmoden(sptr)) ClearUmoden(sptr);
+		if (IsUmodem(sptr)) ClearUmodem(sptr);
 		if (IsUmodeh(sptr)) ClearUmodeh(sptr);
 	}
 	if(MyClient(sptr)) {

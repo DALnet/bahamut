@@ -635,6 +635,10 @@ void sendto_ops_lev(int lev, char *pattern, ...)
 			  if (!SendFloodNotice(cptr) || !IsAnOper(cptr))
 				 continue;
 			  break;
+			case SPAM_LEV:
+			  if (!SendSpamNotice(cptr) || !IsAnOper(cptr))
+				 continue;
+			  break;
 			case DEBUG_LEV:
 			  if (!SendDebugNotice(cptr) || !IsAnOper(cptr))
 				 continue;
@@ -1044,6 +1048,10 @@ void sendto_realops_lev(int lev, char *pattern, ...)
 			break;
 		 case FLOOD_LEV:
 			if (!SendFloodNotice(cptr))
+			  continue;
+			break;
+		 case SPAM_LEV:
+			if (!SendSpamNotice(cptr))
 			  continue;
 			break;
 		 case DEBUG_LEV:

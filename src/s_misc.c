@@ -345,14 +345,15 @@ void exit_one_client_in_split(aClient *cptr, aClient *dead, char *reason)
 
    /* send all the quit reasons to all the non-noquit servers we have */
 
-   /* yikes. We only want to do this if dead was OUR server. However,
-      close_connection sets dead->from to NULL, so we can't do a MyConnect().
-      This only happens, however, if this is a LOCAL client, so dead->from == 
-      NULL if dead was a local client. There are other conditions where
-      cptr->from == NULL, but not when they're from established servers. */
+   /* yikes. We only want to do this if dead was OUR server. */
+   /* erm, no, that's not true. Doing that breaks things. 
+    * If a non-noquit server is telling us a server has split,
+    * we will have already recieved hundreds of QUIT messages
+    * from it, which will be passed anyway, and this procedure
+    * will never be called. - lucas
+    */
 
-   if(dead->from == NULL)
-      sendto_noquit_servs_butone(0, dead, ":%s QUIT :%s", cptr->name, reason);
+   sendto_noquit_servs_butone(0, dead, ":%s QUIT :%s", cptr->name, reason);
 
    sendto_common_channels(cptr, ":%s QUIT :%s", cptr->name, reason);
 
