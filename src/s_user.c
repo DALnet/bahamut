@@ -905,11 +905,6 @@ int register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
 		    strncpyzt(sptr->user->username, onick, USERLEN + 1);
 		    strncpyzt(sptr->username, onick, USERLEN + 1);
 		    sptr->flags |= FLAGS_GOTID; /* fake ident */
-		    if(sptr->flags & FLAGS_IPHASH)
-		    {
-			remove_one_ip(sptr->ip.s_addr);
-			sptr->flags &= ~FLAGS_IPHASH;
-		    }
 		    sptr->ip.s_addr = 0;
 		    strcpy(sptr->hostip, "0.0.0.0");
 		    strncpy(sptr->sockhost, STAFF_ADDRESS, HOSTLEN + 1);

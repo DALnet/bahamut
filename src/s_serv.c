@@ -3793,14 +3793,6 @@ int m_rehash(aClient *cptr, aClient *sptr, int parc, char *parv[])
 #endif
 	    return (0);
 	}
-	else if (mycmp(parv[1], "IP") == 0) 
-	{
-	    sendto_one(sptr, rpl_str(RPL_REHASHING), me.name, parv[0],
-		       "ip hash");
-	    rehash_ip_hash();
-	    sendto_ops("%s is rehashing iphash while whistling innocently",
-		       parv[0]);
-	}
 	else if(mycmp(parv[1], "AKILLS") == 0) 
 	{
 	    sendto_one(sptr, rpl_str(RPL_REHASHING), me.name, parv[0],

@@ -537,7 +537,6 @@ void count_memory(aClient *cptr, char *nick)
 	       number_servers_cached,
 	       mem_servers_cached);
 
-    count_ip_hash(&number_ips_stored, &mem_ips_stored);
     sendto_one(cptr, ":%s %d %s :iphash %d(%d)",
 	       me.name, RPL_STATSDEBUG, nick,
 	       number_ips_stored,

@@ -60,8 +60,6 @@ extern aAllow       *make_allow();
 extern struct Conf_Me   *make_me();
 extern aPort        *make_port();
 extern aUserv       *make_userv();
-extern IP_ENTRY *find_or_add_ip(unsigned long);
-
 
 /* externally defined routines */
 
@@ -81,6 +79,66 @@ aUserv     *uservers  = ((aUserv *) NULL);  /* Uservs - Ulined  */
 #ifdef LOCKFILE
 extern void do_pending_klines(void);
 #endif
+
+/* free_ routines
+ * free the requested conf structure
+ * feb.04 -epi
+ */
+
+void
+free_connect(aConnect *ptr)
+{
+    if(ptr->host)
+        MyFree(ptr->host);
+    if(ptr->apasswd)
+        MyFree(ptr->apasswd);
+    if(ptr->cpasswd)
+        MyFree(ptr->cpasswd);
+    if(ptr->source)
+        MyFree(ptr->source);
+    if(ptr->name)
+        MyFree(ptr->name);
+    MyFree(ptr);
+    return;
+}
+
+void
+free_allow(aAllow *ptr)
+{
+    if(ptr->ipmask)
+        MyFree(ptr->ipmask);
+    if(ptr->passwd)
+        MyFree(ptr->passwd);
+    if(ptr->hostmask)
+        MyFree(ptr->hostmask);
+    MyFree(ptr);
+    return;
+}
+
+void
+free_oper(aOper *ptr)
+{
+    if(ptr->hostmask)
+        MyFree(ptr->hostmask);
+    if(ptr->passwd)
+        MyFree(ptr->passwd);
+    if(ptr->nick)
+        MyFree(ptr->nick);
+    MyFree(ptr);
+    return;
+}
+
+void
+free_port(aPort *ptr)
+{
+    if(ptr->allow)
+        MyFree(ptr->allow);
+    if(ptr->address)
+        MyFree(ptr->address);
+    MyFree(ptr);
+    return;
+}
+
 
 /* clear_conflinks()
  * remove associated confs from this client
@@ -109,7 +167,7 @@ clear_conflinks(aClient *cptr)
                         aconn->next = aconnl->next;
                     else
                         connects = aconnl->next;
-                    MyFree(aconnl);
+                    free_connect(aconnl);
                     break;
                 }
                 aconn = aconnl;
@@ -132,7 +190,7 @@ clear_conflinks(aClient *cptr)
                         allow->next = allowl->next;
                     else
                         allows = allowl->next;
-                    MyFree(allowl);
+                    free_allow(allowl);
                     break;
                 }
                 allow = allowl;
@@ -154,7 +212,7 @@ clear_conflinks(aClient *cptr)
                         oper->next = operl->next;
                     else
                         opers = operl->next;
-                    MyFree(operl);
+                    free_oper(operl);
                     break;
                 }
                 oper = operl;
@@ -164,6 +222,8 @@ clear_conflinks(aClient *cptr)
     MyFree(clp);
     return;
 }
+
+/* find the appropriate conf and return it */
 
 aConnect *
 find_aConnect(char *name)
@@ -346,7 +406,7 @@ clear_allows()
     int keep = 0;
 
     allow = allows;
-
+    allows = NULL;
     while(allow)
     {
         if(allow->clients > 0)
@@ -354,9 +414,11 @@ clear_allows()
             allow->legal = -1;
             if(!keep)
             {
+                ptr = allow->next;
                 allows = allow;
+                allows->next = NULL;    /* last in this list */
                 keep++;
-                allow = allow->next;
+                allow = ptr;
                 continue;
             }
             ptr = allow->next;
@@ -367,7 +429,7 @@ clear_allows()
         else
         {
             ptr = allow->next;
-            MyFree(allow);
+            free_allow(allow);
             allow = ptr;
         }
     }
@@ -381,6 +443,7 @@ clear_connects()
     int keep = 0;
 
     aconn = connects;
+    connects = NULL;
     while(aconn)
         if(aconn->acpt)
         {
@@ -388,9 +451,11 @@ clear_connects()
             aconn->legal = -1;
             if(!keep)
             {
+                ptr = aconn->next;
                 connects = aconn;
+                connects->next = NULL;
                 keep++;
-                aconn = aconn->next;
+                aconn = ptr;
                 continue;
             }
             ptr = aconn->next;
@@ -401,7 +466,7 @@ clear_connects()
         else
         {
             ptr = aconn->next;
-            MyFree(aconn);
+            free_connect(aconn);
             aconn = ptr;
         }
     return;
@@ -414,16 +479,18 @@ clear_opers()
     int keep = 0;
 
     aoper = opers;
-
+    opers = NULL;
     while(aoper)
         if(aoper->acpt)
         {
             aoper->legal = -1;
             if(!keep)
             {
+                ptr = aoper->next;
                 opers = aoper;
+                opers->next = NULL;     /* last in the list */
                 keep++;
-                aoper = aoper->next;
+                aoper = ptr;
                 continue;
             }
             ptr = aoper->next;
@@ -434,7 +501,7 @@ clear_opers()
         else
         {
             ptr = aoper->next;
-            MyFree(aoper);
+            free_oper(aoper);
             aoper = ptr;
         }
     return;

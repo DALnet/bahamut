@@ -570,8 +570,6 @@ int exit_client(aClient *cptr, aClient *sptr, aClient *from, char *comment)
     {
 	call_hooks(CHOOK_SIGNOFF, sptr);
 
-	if (sptr->flags & FLAGS_IPHASH)
-	    remove_one_ip(sptr->ip.s_addr);
 	if (IsAnOper(sptr)) 
 	    remove_from_list(&oper_list, sptr, NULL);
 	if (sptr->flags & FLAGS_HAVERECVQ)

@@ -204,7 +204,6 @@ typedef struct MotdItem aMotd;
 #define	FLAGS_NONL	   0x002000   /* No \n in buffer */
 #define FLAGS_NORMALEX     0x004000   /* Client exited normally */
 #define FLAGS_SENDQEX      0x008000   /* Sendq exceeded */
-#define FLAGS_IPHASH       0x010000   /* iphashed this client */
 #define FLAGS_ULINE 	   0x020000   /* client is U-lined */
 #define FLAGS_USERBURST	   0x040000   /* server in nick/channel netburst */
 #define FLAGS_TOPICBURST   0x080000   /* server in topic netburst */

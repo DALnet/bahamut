@@ -783,7 +783,6 @@ int main(int argc, char *argv[])
     clear_client_hash_table();
     clear_channel_hash_table();
     clear_scache_hash_table();	/* server cache name table */
-    clear_ip_hash_table();	/* client host ip hash table */
 
     /* init the throttle system -wd */
     throttle_init();
