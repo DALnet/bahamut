@@ -707,6 +707,7 @@ exit_client(
 #endif
 			close_connection(sptr);
 
+			sptr->sockerr = 0;
 			sptr->flags |= FLAGS_DEADSOCKET;
 
 			/*
@@ -751,6 +752,7 @@ exit_client(
       else
       {
 		  close_connection(sptr);
+		  sptr->sockerr = 0;
 		  sptr->flags |= FLAGS_DEADSOCKET;
       }
 		

@@ -1126,6 +1126,30 @@ int get_sockerr(aClient * cptr)
    return errtmp;
 }
 
+char *irc_get_sockerr(aClient *cptr)
+{
+   if(cptr->sockerr == 0)
+      return "No error";
+
+   if(cptr->sockerr > 0)
+      return strerror(cptr->sockerr);
+
+   switch(cptr->sockerr)
+   { 
+      case -1: /* this is the default */
+         return "Unset error message [this is a bug!]";
+      case IRCERR_BUFALLOC:
+         return "dbuf allocation error";
+      case IRCERR_ZIP:
+         return "compression general failure";
+      default:
+         return "Unknown error!";
+   }
+   
+   /* unreachable code, but the compiler is complaining.. */
+   return NULL;
+}
+
 /*
  * * set_non_blocking *       Set the client connection into non-blocking
  * mode. If your *      system doesn't support this, you can make this
@@ -1388,7 +1412,10 @@ static int read_packet(aClient * cptr)
       if (length == -1 && ((errno == EWOULDBLOCK) || (errno == EAGAIN)))
 	 return 1;
       if (length <= 0)
+      {
+         cptr->sockerr = length ? errno : 0;
 	 return length;
+      }
    }
 
    /* 
@@ -1762,7 +1789,7 @@ int read_message(time_t delay, fdlist * listp)
                MYFD_CLR_READ
             }
             ircsprintf(errmsg, "Write Error: %s", (cptr->flags & FLAGS_SENDQEX) ?
-                       "SendQ Exceeded" : strerror(get_sockerr(cptr)));
+                       "SendQ Exceeded" : irc_get_sockerr(cptr));
             exit_client(cptr, cptr, &me, errmsg);
             FAST_FD_INC
             continue;
@@ -1787,7 +1814,7 @@ int read_message(time_t delay, fdlist * listp)
             MYFD_CLR_READ
          }
          ircsprintf(errmsg, "Read/Dead Error: %s", (cptr->flags & FLAGS_SENDQEX) ?
-                    "SendQ Exceeded" : strerror(get_sockerr(cptr)));
+                    "SendQ Exceeded" : irc_get_sockerr(cptr));
          exit_client(cptr, cptr, &me, errmsg);
          FAST_FD_INC
          continue;
@@ -1804,7 +1831,7 @@ int read_message(time_t delay, fdlist * listp)
       if(length != FLUSH_BUFFER)
       {
          Debug((DEBUG_ERROR, "READ ERROR: fd = %d %d %d", i, errno, length));
-         read_error_exit(cptr, length, errno);
+         read_error_exit(cptr, length, cptr->sockerr);
       }
       FAST_FD_INC
    }
@@ -2024,7 +2051,7 @@ int read_message(time_t delay, fdlist * listp)
          if (IsDead(cptr) || write_err) 
          {
             ircsprintf(errmsg, "Write Error: %s", (cptr->flags & FLAGS_SENDQEX) ?
-                       "SendQ Exceeded" : strerror(get_sockerr(cptr)));
+                       "SendQ Exceeded" : irc_get_sockerr(cptr));
             (void) exit_client(cptr, cptr, &me, errmsg);
 
             continue;
@@ -2047,7 +2074,7 @@ int read_message(time_t delay, fdlist * listp)
       if (IsDead(cptr)) 
       {
          ircsprintf(errmsg, "Read/Dead Error: %s", (cptr->flags & FLAGS_SENDQEX) ?
-                    "SendQ Exceeded" : strerror(get_sockerr(cptr)));
+                    "SendQ Exceeded" : irc_get_sockerr(cptr));
          exit_client(cptr, cptr, &me, errmsg);
          continue;
       }
@@ -2056,7 +2083,7 @@ int read_message(time_t delay, fdlist * listp)
          continue;
 
       /* An error has occured reading from cptr, drop it. */
-      read_error_exit(cptr, length, errno);
+      read_error_exit(cptr, length, cptr->sockerr);
    }
    return 0;
 }

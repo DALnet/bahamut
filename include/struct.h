@@ -732,6 +732,7 @@ struct Client {
 	/* try moving this down here to prevent weird problems... ? */
 	int         oflag;    /* Operator Flags */
 	Link *watch; /* user's watch list */
+        int sockerr; /* what was the last error returned for this socket? */
 	int watches; /* how many watches this user has set */
         int capabilities; /* what this server/client supports */
 	int pingval;	  /* cache client class ping value here */
@@ -1089,6 +1090,10 @@ typedef struct SearchOptions {
 
 #define IsSendable(x)      (DBufLength(&x->sendQ) < 16384)
 #define DoList(x)    (((x)->user) && ((x)->user->lopt))
+
+/* internal defines for cptr->sockerr */
+#define IRCERR_BUFALLOC		-11
+#define IRCERR_ZIP		-12
 
 #endif /* __struct_include__ */
 

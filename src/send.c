@@ -74,10 +74,11 @@ void init_send()
  * if this link is a server, tell routing people.
  */
 
-static int dead_link(aClient *to, char *notice) {
-
+static int dead_link(aClient *to, char *notice, int sockerr) 
+{
    int errtmp = errno;  /* so we don't munge this later */
 
+   to->sockerr = sockerr;
    to->flags |= FLAGS_DEADSOCKET;
    /*
     * If because of BUFFERPOOL problem then clean dbuf's now so that
@@ -163,7 +164,7 @@ static int send_message(aClient *to, char *msg, int len) {
 	sendto_ops("Max SendQ limit exceeded for %s: %d > %d",
 		get_client_name(to, HIDEME), DBufLength(&to->sendQ), get_sendq(to));
       to->flags |= FLAGS_SENDQEX;
-      return dead_link(to, "Max Sendq exceeded for %s, closing link");
+      return dead_link(to, "Max Sendq exceeded for %s, closing link", 0);
    }
 
    if(ZipOut(to))
@@ -174,7 +175,7 @@ static int send_message(aClient *to, char *msg, int len) {
       if(len == -1)
       {
          sendto_realops("Zipout error for %s: (%d) %s\n", to->name, ldata, msg);
-         return dead_link(to, "Zip output error for %s");
+         return dead_link(to, "Zip output error for %s", IRCERR_ZIP);
       }
 
       if(len == 0)
@@ -191,7 +192,7 @@ static int send_message(aClient *to, char *msg, int len) {
 #endif
 
    if (dbuf_put(&to->sendQ, msg, len) < 0)
-     return dead_link(to, "Buffer allocation error for %s, closing link");
+     return dead_link(to, "Buffer allocation error for %s, closing link", IRCERR_BUFALLOC);
    /*
     * * Update statistics. The following is slightly incorrect *
     * because it counts messages even if queued, but bytes * only
@@ -272,7 +273,7 @@ int send_queued(aClient *to) {
          if(len == -1)
          {
             sendto_realops("Zipout error for %s: (%d) %s\n", to->name, ldata, msg);
-            return dead_link(to, "Zip output error for %s");
+            return dead_link(to, "Zip output error for %s", IRCERR_ZIP);
          }
 
 #ifdef HAVE_ENCRYPTION_ON
@@ -281,7 +282,7 @@ int send_queued(aClient *to) {
 #endif
          /* silently stick this on the sendq... */
          if (!dbuf_put(&to->sendQ, msg, len))
-            return dead_link(to, "Buffer allocation error for %s");
+            return dead_link(to, "Buffer allocation error for %s", IRCERR_BUFALLOC);
       }
    }
    
@@ -292,7 +293,7 @@ int send_queued(aClient *to) {
        * Returns always len > 0 
        */
       if ((rlen = deliver_it(to, msg, len)) < 0)
-	return dead_link(to, "Write error to %s, closing link (%s)");
+	return dead_link(to, "Write error to %s, closing link (%s)", errno);
       (void) dbuf_delete(&to->sendQ, rlen);
       to->lastsq = (DBufLength(&to->sendQ) >> 10);
       if (rlen < len)
@@ -310,7 +311,7 @@ int send_queued(aClient *to) {
          if(len == -1)
          {
             sendto_realops("Zipout error for %s: (%d) %s\n", to->name, ldata, msg);
-            return dead_link(to, "Zip output error for %s");
+            return dead_link(to, "Zip output error for %s", IRCERR_ZIP);
          }
 
 #ifdef HAVE_ENCRYPTION_ON
@@ -319,7 +320,7 @@ int send_queued(aClient *to) {
 #endif
          /* silently stick this on the sendq... */
          if (!dbuf_put(&to->sendQ, msg, len))
-            return dead_link(to, "Buffer allocation error for %s");        
+            return dead_link(to, "Buffer allocation error for %s", IRCERR_BUFALLOC);        
       }
    }
 
