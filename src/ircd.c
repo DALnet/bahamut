@@ -598,7 +598,6 @@ int
 main(int argc, char *argv[])
 {
    uid_t         uid, euid;
-   time_t        delay = 0;
    int           portarg = 0,  fd;
 #ifdef SAVE_MAXCLIENT_STATS
    FILE 	*mcsfp;
@@ -990,19 +989,20 @@ main(int argc, char *argv[])
    dumpfp=fopen("dump.log", "w");
 #endif
 
-   while (1)
-	  delay = io_loop(delay);
+   io_loop();
 }
 
-time_t
-io_loop(time_t delay)
+void io_loop()
 {
-static char to_send[200];
-static time_t lasttime = 0;
-static long lastrecvK = 0;
-static int  lrv = 0;
+char to_send[200];
+time_t lasttime = 0;
+long lastrecvK = 0;
+int  lrv = 0;
 time_t      lasttimeofday;
+int delay = 0;
 
+ while(1)
+ {
    lasttimeofday = timeofday;
 
    if ((timeofday = time(NULL)) == -1) 
@@ -1244,8 +1244,7 @@ static time_t lasttime = 0;
 			    >= (CHECK_PENDING_KLINES * 60)))
       do_pending_klines();
 #endif
-
-   return delay;
+ }
 }
 /*
  * open_debugfile
