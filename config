@@ -508,9 +508,9 @@ while [ -z "$FOO" ] ; do
     echo -n "[$FOO] -> $c"
     if [ -z "$AUTO_CONFIG" -o -n "$runonce" ] ; then
         read cc
+        runonce=Yes
     else
         cc=""
-        runonce=Yes
     fi
     if [ -z "$cc" ] ; then
         cc=$FOO
@@ -531,9 +531,9 @@ while [ -z "$FOO" ] ; do
     echo -n "[$FOO] -> $c"
     if [ -z "$AUTO_CONFIG" -o -n "$runonce" ] ; then
         read cc
+        runonce=Yes
     else
         cc=""
-        runonce=Yes
     fi
     if [ -z "$cc" ] ; then
         cc=$FOO
@@ -553,9 +553,9 @@ while [ -z "$FOO" ] ; do
     echo -n "[$FOO] -> $c"
     if [ -z "$AUTO_CONFIG" -o -n "$runonce" ] ; then
         read cc
+        runonce=Yes
     else
         cc=""
-        runonce=Yes
     fi
     if [ -z "$cc" ] ; then
         cc=$FOO
