@@ -102,6 +102,8 @@ static char *readbuf;
 static char readbuf[8192];
 #endif
 
+/* Silly macro to ignore certain report error statements;
+#define silent_report_error(x,y) {x;}
 
 
 /*
@@ -1057,21 +1059,21 @@ static void set_sock_opts(int fd, aClient * cptr)
     opt = 1;
     if (setsockopt (fd, SOL_SOCKET, SO_REUSEADDR, (char *) &opt,
 		    sizeof(opt)) < 0)
-	report_error("setsockopt(SO_REUSEADDR) %s:%s", cptr);
+	silent_report_error("setsockopt(SO_REUSEADDR) %s:%s", cptr);
 #endif
 #if  defined(SO_DEBUG) && defined(DEBUGMODE) && 0
     /* Solaris with SO_DEBUG writes to syslog by default */
 #if !defined(SOL20) || defined(USE_SYSLOG)
     opt = 1;
     if (setsockopt(fd, SOL_SOCKET, SO_DEBUG, (char *) &opt, sizeof(opt)) < 0)
-	report_error("setsockopt(SO_DEBUG) %s:%s", cptr);
+	silent_report_error("setsockopt(SO_DEBUG) %s:%s", cptr);
 #endif				/* SOL20 */
 #endif
 #ifdef	SO_USELOOPBACK
     opt = 1;
     if (setsockopt(fd, SOL_SOCKET, SO_USELOOPBACK, (char *) &opt,
 		   sizeof(opt)) < 0)
-	report_error("setsockopt(SO_USELOOPBACK) %s:%s", cptr);
+	silent_report_error("setsockopt(SO_USELOOPBACK) %s:%s", cptr);
 #endif
 #ifdef	SO_RCVBUF
 #if defined(MAXBUFFERS)
@@ -1096,7 +1098,7 @@ static void set_sock_opts(int fd, aClient * cptr)
     opt = 8192;
 #endif
     if (setsockopt(fd, SOL_SOCKET, SO_RCVBUF, (char *) &opt, sizeof(opt)) < 0)
-	report_error("setsockopt(SO_RCVBUF) %s:%s", cptr);
+	silent_report_error("setsockopt(SO_RCVBUF) %s:%s", cptr);
 #endif
 #ifdef	SO_SNDBUF
 #if defined(MAXBUFFERS)
@@ -1120,7 +1122,7 @@ static void set_sock_opts(int fd, aClient * cptr)
     opt = 8192;
 #endif
     if (setsockopt(fd, SOL_SOCKET, SO_SNDBUF, (char *) &opt, sizeof(opt)) < 0)
-	report_error("setsockopt(SO_SNDBUF) %s:%s", cptr);
+	silent_report_error("setsockopt(SO_SNDBUF) %s:%s", cptr);
 #endif
 #if defined(IP_OPTIONS) && defined(IPPROTO_IP)
     {
@@ -1133,7 +1135,7 @@ static void set_sock_opts(int fd, aClient * cptr)
 	opt = sizeof(readbuf) / 8;
 #endif
 	if (getsockopt(fd, IPPROTO_IP, IP_OPTIONS, t, &opt) < 0)
-	    report_error("getsockopt(IP_OPTIONS) %s:%s", cptr);
+	    silent_report_error("getsockopt(IP_OPTIONS) %s:%s", cptr);
 	else if (opt > 0)
 	{
 	    for (*readbuf = '\0'; opt > 0; opt--, s += 3)
@@ -1143,7 +1145,7 @@ static void set_sock_opts(int fd, aClient * cptr)
 			   get_client_name(cptr, HIDEME), readbuf);
 	}
 	if (setsockopt(fd, IPPROTO_IP, IP_OPTIONS, (char *) NULL, 0) < 0)
-	    report_error("setsockopt(IP_OPTIONS) %s:%s", cptr);
+	    silent_report_error("setsockopt(IP_OPTIONS) %s:%s", cptr);
     }
 #endif
 }
@@ -1215,12 +1217,12 @@ void set_non_blocking(int fd, aClient * cptr)
     res = 1;
 
     if (ioctl(fd, FIONBIO, &res) < 0)
-	report_error("ioctl(fd,FIONBIO) failed for %s:%s", cptr);
+	silent_report_error("ioctl(fd,FIONBIO) failed for %s:%s", cptr);
 #else
     if ((res = fcntl(fd, F_GETFL, 0)) == -1)
-	report_error("fcntl(fd, F_GETFL) failed for %s:%s", cptr);
+	silent_report_error("fcntl(fd, F_GETFL) failed for %s:%s", cptr);
     else if (fcntl(fd, F_SETFL, res | nonb) == -1)
-	report_error("fcntl(fd, F_SETL, nonb) failed for %s:%s", cptr);
+	silent_report_error("fcntl(fd, F_SETL, nonb) failed for %s:%s", cptr);
 #endif
     return;
 }
@@ -1536,14 +1538,20 @@ void accept_connection(aClient *cptr)
     cptr->lasttime = timeofday;
     if ((newfd = accept(cptr->fd, (struct sockaddr *) &addr, &addrlen)) < 0) 
     {
-#ifdef EPROTO
-	/* 
-	 * If a connection is closed before the accept(), it
-	 * returns EPROTO on Solaris.
-	 */
-	if (errno != EPROTO)
+	switch(errno)
+	{
+#ifdef EMFILE
+	   case EMFILE:
+	      report_error("Cannot accept connections %s:%s", cptr);
+	      break;
 #endif
-	    report_error("Cannot accept connections %s:%s", cptr);
+#ifdef ENFILE
+	   case ENFILE:
+	      report_error("Cannot accept connections %s:%s", cptr);
+	      break;
+#endif
+	}
+
 	return;
     }
 
