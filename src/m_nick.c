@@ -495,15 +495,6 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	 * With the advent of UMODE_R we need to spam the network.
 	 */
      
-	if (mycmp(parv[0], nick))
-	{
-	    sptr->tsinfo = newts ? newts : (ts_val) timeofday;
-	    sptr->umode&=~UMODE_r;
-	    sendto_serv_butone(cptr, ":%s MODE %s -r",
-			       parv[0], parv[0]);
-
-	}
-     
 	if (MyConnect(sptr))
 	{
 	    if (IsRegisteredUser(sptr))
@@ -571,6 +562,12 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		sendto_serv_butone(cptr, ":%s NICK %s :%ld",
 				   parv[0], nick, sptr->tsinfo);
 	    }
+	}
+	if (mycmp(parv[0], nick))
+	{
+	    sptr->tsinfo = newts ? newts : (ts_val) timeofday;
+	    sptr->umode&=~UMODE_r;
+
 	}
     } 
     else
