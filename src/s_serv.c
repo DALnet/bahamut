@@ -261,7 +261,7 @@ int m_squit(aClient *cptr, aClient *sptr, int parc, char *parv[])
    {
       sendto_gnotice("from %s: Received SQUIT %s from %s (%s)",
 		 me.name, acptr->name, get_client_name(sptr, HIDEME), comment);
-      sendto_serv_butone(acptr,
+      sendto_serv_butone(NULL,
 			 ":%s GNOTICE :Received SQUIT %s from %s (%s)",
 		me.name, server, get_client_name(sptr, HIDEME), comment);
 
@@ -270,6 +270,12 @@ int m_squit(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	     parv[0], server, comment);
 #endif
       /* I am originating this squit! Not cptr! */
+      /* ack, but if cptr is squitting itself.. */
+      if(cptr == sptr)
+      {
+         exit_client(&me, acptr, sptr, comment);
+         return FLUSH_BUFFER; /* kludge */
+      }
       return exit_client(&me, acptr, sptr, comment);
    }
 
