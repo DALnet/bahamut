@@ -2004,7 +2004,7 @@ m_topic(aClient *cptr,
 						  me.name, parv[0], name);
 			return 0;
 		}
-		 if (parc>3 && (IsULine(sptr) || IsServer(sptr))) {
+		 if (parc>3 && (!MyConnect(sptr) || IsULine(sptr) || IsServer(sptr))) {
 				topic=(parc>4 ? parv[4] : "");
 				tnick=parv[2];
 				ts=atoi(parv[3]);
