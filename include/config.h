@@ -67,13 +67,13 @@
 #undef	SYSLOG_CONNECT	        /* log remote connect messages */
 #undef	SYSLOG_USERS		/* send userlog stuff to syslog */
 #undef	SYSLOG_OPER		/* log all users who successfully oper */
-#undef   SYSLOG_BLOCK_ALLOCATOR /* debug block allocator */
+#undef  SYSLOG_BLOCK_ALLOCATOR /* debug block allocator */
 
 /*
  * LOG_FACILITY - facility to use for syslog() Define the facility you
  * want to use for syslog().  Ask your sysadmin which one you should
  * use.
-e*/
+ */
 #define LOG_FACILITY LOG_LOCAL4
 #endif /* HAVE_SYSLOG_H  */
 
@@ -82,18 +82,24 @@ e*/
 /* WGMON notices are sent to users to warn them about the proxy scans. */
 #define DEFAULT_WGMON_URL "http://kline.dal.net/proxy"
 #define DEFAULT_WGMON_HOST "some.bot.host"
+
 /* Hostmasking address */
 #define DEFAULT_STAFF_ADDRESS "staff.dalnet"
+
 /* Sent to users in 001 and 005 numerics */
 #define DEFAULT_NETWORK "DALnet"
+
 /* used for services aliases */
 #define DEFAULT_SERVICES_NAME "services.dal.net"
 #define DEFAULT_STATS_NAME "stats.dal.net"
+
 /* sent to users when they have been klined from the server */
 #define DEFAULT_NKLINE_ADDY "admin@badly.configured.server"
 #define DEFAULT_LKLINE_ADDY "admin@badly.configured.server"
+
 /* self explanitory */
 #define DEFAULT_MAXCHANNELSPERUSER 10
+
 /* Default difference in time sync between servers before we complain */
 #define DEFAULT_TSMAXDELTA 120
 #define DEFAULT_TSWARNDELTA 15
@@ -549,11 +555,9 @@ e*/
 
 /* EXEMPT_LISTS and INVITE_LISTS
  * Written by Sedition, Feb.04
- * Both working, but are disabled until services
- * can be made to interact with them. -epi
  */
-#undef EXEMPT_LISTS
-#undef INVITE_LISTS
+#define EXEMPT_LISTS
+#define INVITE_LISTS
 
 /******************************************************************
  * STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP
