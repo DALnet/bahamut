@@ -669,6 +669,30 @@
  */
 #define STAFF_ADDRESS "DALnet"
 
+/*
+ * RIDICULOUS_PARANOIA_LEVEL
+ *
+ * This indicates the level of ridiculous paranoia the admin has.
+ * The settings are as follows:
+ *
+ * 0 - No hostmasking is available.
+ * 1 - All +A users can see the real IP.
+ * 2 - Local +A can see the real IP.
+ * 3 - Noone can see the real IP.  It is still logged.
+ *
+ * WARNING:
+ * Running levels above 1 on DALnet will result in your server being juped
+ * from the network if a security breech is suspected.
+ *
+ * If level 3 is selected, USE_SYSLOG must be defined.
+ */
+#define RIDICULOUS_PARANOIA_LEVEL 3
+#if (RIDICULOUS_PARANOIA_LEVEL==3)
+#ifndef USE_SYSLOG
+#error "USE_SYSLOG MUST BE DEFINED FOR LEVEL 3"
+#endif
+#endif
+
 /******************************************************************
  * STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP
  *

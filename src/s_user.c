@@ -861,6 +861,7 @@ int register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
 		   MAXMODEPARAMS, MAXCHANNELSPERUSER, MAXBANS, NICKLEN,
 		   TOPICLEN, TOPICLEN, MAXSILES);
 
+#if (RIDICULOUS_PARANOIA_LEVEL>=1)
 	if(!BadPtr(sptr->passwd) && (pwaconf->flags & CONF_FLAGS_I_OPERPORT))
 	    do 
 	    {
@@ -876,7 +877,6 @@ int register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
 		*opptr++ = '\0';
 		if((tmpptr = strchr(opptr, ':')))
 		    *tmpptr++ = '\0';
-		
 		if(check_oper_can_mask(sptr, onptr, opptr, &onick) != 0)
 		{
 		    sendto_one(sptr, ":%s NOTICE %s :*** Your hostname has "
@@ -892,7 +892,6 @@ int register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
 		    strcpy(sptr->user->real_oper_host, sptr->user->host);
 		    strcpy(sptr->user->real_oper_username, sptr->username);
 		    strcpy(sptr->user->real_oper_ip, sptr->hostip);
-		    
 		    strncpyzt(sptr->user->host, STAFF_ADDRESS, HOSTLEN + 1);
 		    strncpyzt(sptr->user->username, onick, USERLEN + 1);
 		    strncpyzt(sptr->username, onick, USERLEN + 1);
@@ -915,7 +914,7 @@ int register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
 		else
 		    sptr->passwd[0] = '\0';
 	    } while(0);
-
+#endif
 	(void) send_lusers(sptr, sptr, 1, parv);
 		
 	sendto_one(sptr,
@@ -1743,15 +1742,27 @@ int m_whois(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	sendto_one(sptr, rpl_str(RPL_WHOISUSER), me.name,
 		   parv[0], name,
 		   user->username, user->host, acptr->info);
-
-	if(user->real_oper_host && (IsAdmin(sptr) || (sptr == acptr)) )
+#if (RIDICULOUS_PARANOIA_LEVEL>=1)
+#if (RIDICULOUS_PARANOIA_LEVEL==1)
+	if(user->real_oper_host && (IsAdmin(sptr) || (sptr == acptr)))
 	{
 	    sendto_one(sptr, rpl_str(RPL_WHOISACTUALLY),
 		       me.name, sptr->name, name, 
 		       user->real_oper_username, user->real_oper_host, 
 		       user->real_oper_ip);
 	}
-		
+#endif
+#if (RIDICULOUS_PARANOIA_LEVEL==2)
+	if(user->real_oper_host && (IsAdmin(sptr) || (sptr == acptr)) &&
+	    IsLocal(sptr))
+        {
+            sendto_one(sptr, rpl_str(RPL_WHOISACTUALLY),
+                       me.name, sptr->name, name,
+                       user->real_oper_username, user->real_oper_host,
+                       user->real_oper_ip);
+        }
+#endif
+#endif		
 	mlen = strlen(me.name) + strlen(parv[0]) + 6 +
 	    strlen(name);
 	for (len = 0, *buf = '\0', lp = user->channel; lp;
@@ -2347,6 +2358,7 @@ int m_pong(aClient *cptr, aClient *sptr, int parc, char *parv[])
     return 0;
 }
 
+#if (RIDICULOUS_PARANOIA_LEVEL>=1)
 int check_oper_can_mask(aClient *sptr, char *name, char *password,
 			char **onick)
 {
@@ -2396,6 +2408,7 @@ int check_oper_can_mask(aClient *sptr, char *name, char *password,
 
     return 0;
 }
+#endif
 
 /*
  * m_oper 
@@ -2448,9 +2461,10 @@ int m_oper(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		       me.name, parv[0]);
 	return 0;
     }
-
+#if (RIDICULOUS_PARANOIA_LEVEL>=1)
     if(!(sptr->user && sptr->user->real_oper_host))
     {
+#endif
 	if (!(aconf = find_conf_exact(name, sptr->username,
 				      sptr->sockhost, CONF_OPS)) && 
 	    !(aconf = find_conf_exact(name, sptr->username, cptr->hostip,
@@ -2461,6 +2475,7 @@ int m_oper(aClient *cptr, aClient *sptr, int parc, char *parv[])
 			   sptr->user->username, sptr->user->host);
 	    return 0;
 	}
+#if (RIDICULOUS_PARANOIA_LEVEL>=1)
     }
     else
     {
@@ -2475,6 +2490,7 @@ int m_oper(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	    return 0;
 	}
     }
+#endif
 #ifdef CRYPT_OPER_PASSWORD
     /* use first two chars of the password they send in as salt */
     /* passwd may be NULL pointer. Head it off at the pass... */

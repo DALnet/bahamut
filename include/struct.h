@@ -647,9 +647,11 @@ struct User
     Link       *silence;      /* chain of silenced users */
     LOpts 	   *lopt;     /* Saved /list options */
     Link       *dccallow;     /* chain of dcc send allowed users */
+#if (RIDICULOUS_PARANOIA_LEVEL>=1)
     char       *real_oper_host;
     char       *real_oper_username;
     char       *real_oper_ip;
+#endif
 };
 
 struct Server

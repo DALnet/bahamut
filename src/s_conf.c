@@ -1448,6 +1448,7 @@ initconf(int opt, int fd)
 		aconf->flags |= CONF_FLAGS_I_HOST_HAS_AT;
 	    if(strchr(aconf->name, '@'))
 		aconf->flags |= CONF_FLAGS_I_NAME_HAS_AT;
+#if (RIDICULOUS_PARANOIA_LEVEL>=1)
 	    if(myncmp(aconf->passwd, "oper", 4) == 0)
 	    {
 		if((aconf->passwd[4] == '.') || (aconf->passwd[4] == '\0'))
@@ -1462,6 +1463,7 @@ initconf(int opt, int fd)
 		    MyFree(tmpd);
 		}
 	    }
+#endif
 	}
 
 	if (aconf->status & (CONF_LISTEN_PORT | CONF_CLIENT)) 

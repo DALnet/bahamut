@@ -301,12 +301,14 @@ void free_user(anUser *user, aClient *cptr)
 {
     if (user->away)
 	MyFree((char *) user->away);
+#if (RIDICULOUS_PARANOIA_LEVEL>=1)
     if (user->real_oper_host)
 	MyFree(user->real_oper_host);
     if (user->real_oper_username)
 	MyFree(user->real_oper_username);
     if (user->real_oper_ip)
 	MyFree(user->real_oper_ip);
+#endif
     /* sanity check */
     if (user->joined || user->invited || user->channel)
 	sendto_ops("* %#x user (%s!%s@%s) %#x %#x %#x %d *",
