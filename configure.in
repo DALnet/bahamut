@@ -254,7 +254,7 @@ if test "$check_sengine" = "yes"; then
     if test "$freebsd" = "yes"; then
         AC_CHECK_FUNC(kevent, [ engine="kqueue" ], )
     elif test "$solaris2" = "yes"; then
-        AC_CHECK_FUNC(poll, [ engine="poll" ], )
+        engine="poll"
     elif test "$linux" = "yes"; then
         AC_CHECK_FUNC(poll, [ engine="poll" ], )
     else
