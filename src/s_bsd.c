@@ -27,6 +27,7 @@
 #include "res.h"
 #include "numeric.h"
 #include "patchlevel.h"
+#include "zlink.h"
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/file.h>
@@ -1623,7 +1624,7 @@ int read_message(time_t delay, fdlist * listp)
          }
          if (DoingDNS(cptr) || DoingAuth(cptr))
             continue;
-         if ((IsMe(cptr) && IsListening(cptr)) || IsConnecting(cptr)) 
+         if ((IsMe(cptr) && IsListening(cptr)) || IsConnecting(cptr))
          {
             FD_SET(i, read_set);
          } 
@@ -1645,7 +1646,8 @@ int read_message(time_t delay, fdlist * listp)
             length = DBufLength(&cptr->sendQ);
          }
 
-         if (length || IsConnecting(cptr)) 
+         if (length || IsConnecting(cptr) ||
+             (ZipOut(cptr) && zip_is_data_out(cptr->serv->zip_out)) ) 
             FD_SET(i, write_set);
       }
 
@@ -1936,7 +1938,8 @@ int read_message(time_t delay, fdlist * listp)
             length = DBufLength(&cptr->sendQ);
          }
 
-         if (length || IsConnecting(cptr))
+         if (length || IsConnecting(cptr) ||
+             (ZipOut(cptr) && zip_is_data_out(cptr->serv->zip_out)) ) 
             PFD_SETW(i);
       }
 
