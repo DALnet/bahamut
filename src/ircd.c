@@ -29,6 +29,7 @@
 #include <sys/file.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <sys/resource.h>
 #include <sys/socket.h>
 #include <pwd.h>
 #include <signal.h>
@@ -528,6 +529,22 @@ static int bad_command()
 #define TRUE 1
 #endif
 
+/* ripped this out of hybrid7 out of lazyness. */
+static void
+setup_corefile()
+{
+#ifdef HAVE_SYS_RESOURCE_H
+  struct rlimit rlim; /* resource limits */
+
+  /* Set corefilesize to maximum */
+  if (!getrlimit(RLIMIT_CORE, &rlim))
+    {
+      rlim.rlim_cur = rlim.rlim_max;
+      setrlimit(RLIMIT_CORE, &rlim);
+    }
+#endif
+}
+
 /*
  * code added by mika nystrom (mnystrom@mit.edu) 
  * this flag is used to signal globally that the server is heavily
@@ -575,6 +592,8 @@ int main(int argc, char *argv[])
     printf("\n%s booting...\n", version);
     printf("Security related issues should be sent to coders@dal.net\n");
     printf("All other issues should be sent to dalnet-src@dal.net\n\n");
+
+    setup_corefile();
 
     Count.server = 1;		/* us */
     Count.oper = 0;
