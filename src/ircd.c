@@ -145,6 +145,10 @@ time_t      nextbanexpire = 1;     /* next time to expire the throttles/userbans
 #if defined PROFILING && defined __GLIBC__ && (__GLIBC__ >= 2)
 extern void _start, etext;
 
+static int profiling_state = 1;
+static int profiling_newmsg = 0;
+static char profiling_msg[512];
+
 VOIDSIG s_dumpprof()
 {
     char buf[32];
@@ -154,7 +158,32 @@ VOIDSIG s_dumpprof()
     _mcleanup();
     __monstartup ((u_long) &_start, (u_long) &etext);
     setenv("GMON_OUT_PREFIX", "gmon.auto", 1);
+    sprintf(profiling_msg, "Reset profile, saved past profile data to %s", buf);
+    profiling_newmsg = 1;
 }
+
+VOIDSIG s_toggleprof()
+{
+    char buf[32];
+
+    if(profiling_state == 1)
+    {
+       sprintf(buf, "gmon.%d", (int)time(NULL));
+       setenv("GMON_OUT_PREFIX", buf, 1);
+       _mcleanup();
+       sprintf(profiling_msg, "Turned profiling OFF, saved profile data to %s", buf);
+       profiling_state = 0;
+    }
+    else
+    {
+       __monstartup ((u_long) &_start, (u_long) &etext);
+       setenv("GMON_OUT_PREFIX", "gmon.auto", 1);
+       profiling_state = 1;
+       sprintf(profiling_msg, "Turned profiling ON");
+    } 
+    profiling_newmsg = 1;
+}
+
 #endif
 
 VOIDSIG s_die() 
@@ -626,6 +655,7 @@ int main(int argc, char *argv[])
 #if defined PROFILING && defined __GLIBC__ && (__GLIBC__ >= 2)
     setenv("GMON_OUT_PREFIX", "gmon.out", 1);
     (void) signal(SIGUSR1, s_dumpprof);
+    (void) signal(SIGUSR2, s_toggleprof);
 #endif
 	
     myargv = argv;
@@ -1216,6 +1246,14 @@ void io_loop()
 	
 	if ((timeofday >= nextping))
 	    nextping = check_pings(timeofday);
+
+#if defined PROFILING && defined __GLIBC__ && (__GLIBC__ >= 2)
+	if (profiling_newmsg)
+	{
+	    sendto_realops("PROFILING: %s", profiling_msg);
+	    profiling_newmsg = 0;
+	}
+#endif
 	
 	if (dorehash && !lifesux) 
 	{
