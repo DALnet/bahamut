@@ -446,7 +446,7 @@ register_user(aClient *cptr,
 	      char *username)
 {
 	aClient *nsptr;
-   Reg aConfItem *aconf;
+   Reg aConfItem *aconf=NULL;
    char       *parv[3];
    static char ubuf[12];
    char       *p;

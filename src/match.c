@@ -370,7 +370,7 @@ myncmp(char *str1, char *str2, int n)
    return (-1);
 }
  
-int match(const char *string, const char *wild) {
+int match(char *string, char *wild) {
    /* the *! in a match is such a common case that we optimize
 	 * for it inherently */
 	if(wild[0]=='*' && wild[1]=='!') {
@@ -422,7 +422,7 @@ int match(const char *string, const char *wild) {
 			  continue;
 			while(*string) {
 				if(touppertab[(u_char)*string]==touppertab[(u_char)*wild] &&
-					!wdmatch((string+1), (wild+1)))
+					!match((string+1), (wild+1)))
 				  return 0;
 				string++;
 			}
