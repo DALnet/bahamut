@@ -1958,7 +1958,7 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	sendto_one(sptr, rpl_str(RPL_STATSCOUNT), me.name, parv[0],
 		   "User Connects past month: ", Count.monthly);
 	sendto_one(sptr, rpl_str(RPL_STATSCOUNT), me.name, parv[0],
-		   "User Conects past year: ", Count.yearly);
+		   "User Connects past year: ", Count.yearly);
 	break;
     case 'o':
     case 'O':
