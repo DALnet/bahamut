@@ -933,7 +933,6 @@ register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
 #endif
 
                     throttle_remove(sptr->hostip);
-                    clones_remove(sptr);
                     sptr->user->real_oper_host = 
                         MyMalloc(strlen(sptr->user->host) + 1);
                     sptr->user->real_oper_username = 
