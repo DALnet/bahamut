@@ -4301,30 +4301,31 @@ int m_sjoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
         mode = *oldmode;
     else if (keepourmodes)
     {
-        mode.mode |= oldmode->mode;
+        /* check overriding modes first */
         if (oldmode->limit > mode.limit)
             mode.limit = oldmode->limit;
         if(*oldmode->key && *mode.key && strcmp(mode.key, oldmode->key) > 0)
             strcpy(mode.key, oldmode->key);
         else if(*oldmode->key && *mode.key == '\0')
             strcpy(mode.key, oldmode->key);
-        if ((oldmode->mode & MODE_JOINRATE) && mode.join_num)
+        if (oldmode->mode & MODE_JOINRATE)
         {
-            /* 0 wins */
-            if (!oldmode->join_num)
+            if ((mode.mode & MODE_JOINRATE) && !mode.join_num)
+                /* 0 wins */ ;
+            else if ((oldmode->join_num && mode.join_num > oldmode->join_num)
+                     || (mode.join_num == oldmode->join_num &&
+                         mode.join_time < oldmode->join_time))
+                /* more joins, or same joins in less time, wins */ ;
+            else
             {
-                mode.join_num = oldmode->join_num;
-                mode.join_time = oldmode->join_time;
-            }
-            /* more joins or same joins in less time wins */
-            else if (oldmode->join_num > mode.join_num ||
-                     (oldmode->join_num == mode.join_num &&
-                      oldmode->join_time < mode.join_time))
-            {
+                /* our settings win */
                 mode.join_num = oldmode->join_num;
                 mode.join_time = oldmode->join_time;
             }
         }
+
+        /* now merge */
+        mode.mode |= oldmode->mode;
     }
     
     pbpos = 0;
