@@ -357,6 +357,13 @@ void remove_client_from_list(aClient *cptr)
 	add_history(cptr, 0);
 	off_history(cptr);
     }
+
+#ifdef FLUD
+    if (MyFludConnect(cptr))
+	free_fluders(cptr, NULL);
+    free_fludees(cptr);
+#endif
+
     if (cptr->user)
 	(void) free_user(cptr->user, cptr);	/* try this here */
     if (cptr->serv) 
@@ -386,12 +393,6 @@ void remove_client_from_list(aClient *cptr)
      * 
      */
 
-#ifdef FLUD
-    if (MyFludConnect(cptr))
-	free_fluders(cptr, NULL);
-    free_fludees(cptr);
-#endif
-    
     (void) free_client(cptr);
     return;
 }
