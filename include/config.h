@@ -658,7 +658,7 @@
  * Rather self explanitory. If not specified in T: line,
  * we tell clients to go to "http://<this>"
  */
-#define DEFAULT_PROXY_INFO_URL "kline.dal.net/proxy/wingate.htm"
+#define DEFAULT_PROXY_INFO_URL "kline.dal.net/proxy"
 
 /*
  * STAFF_ADDRESS
