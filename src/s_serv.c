@@ -717,10 +717,19 @@ sendnick_TS(aClient *cptr, aClient *acptr)
 	 ubuf[0] = '+';
 	 ubuf[1] = '\0';
       }
-      sendto_one(cptr, "NICK %s %d %ld %s %s %s %s %lu :%s", acptr->name,
-		 acptr->hopcount + 1, acptr->tsinfo, ubuf,
-		 acptr->user->username, acptr->user->host,
-		 acptr->user->server, acptr->user->servicestamp, acptr->info);
+      if (IsNICKIP(cptr)) {
+	sendto_one(cptr, "NICK %s %d %ld %s %s %s %s %lu %lu :%s", acptr->name,
+		   acptr->hopcount + 1, acptr->tsinfo, ubuf,
+		   acptr->user->username, acptr->user->host,
+		   acptr->user->server, acptr->user->servicestamp,
+		   htonl(acptr->ip.s_addr), acptr->info);
+      } else {
+	sendto_one(cptr, "NICK %s %d %ld %s %s %s %s %lu :%s", acptr->name,
+		   acptr->hopcount + 1, acptr->tsinfo, ubuf,
+		   acptr->user->username, acptr->user->host,
+		   acptr->user->server, acptr->user->servicestamp,
+		   acptr->info);
+      }
    }
 }
 

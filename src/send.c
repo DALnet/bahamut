@@ -576,6 +576,38 @@ void sendto_noquit_servs_butone(int noquit, aClient *one, char *pattern, ...) {
    return;
 }
 
+/*
+ * sendto_nickip_servs_butone
+ * 
+ * Send a message to all nickip servs if nickip = 1,
+ * or all non-nickip servs if nickip = 0
+ * we omit "one", too.
+ * Lame reuse of code because the current system blows.
+ */
+void sendto_nickip_servs_butone(int nickip, aClient *one, char *pattern, ...) {
+	int i;
+	aClient *cptr;
+	int j, k = 0;
+	fdlist send_fdlist;
+	va_list vl;
+	
+	va_start(vl, pattern);
+   for (i = serv_fdlist.entry[j = 1];
+		  j <= serv_fdlist.last_entry; i = serv_fdlist.entry[++j]) {
+      if (!(cptr = local[i]) || 
+           (nickip && !IsNICKIP(cptr)) || 
+           (!nickip && IsNICKIP(cptr)) || 
+            one == cptr)
+		  continue;
+
+      send_fdlist.entry[++k] = i;
+   }
+   send_fdlist.last_entry = k;
+   if (k)
+	  vsendto_fdlist(&send_fdlist, pattern, vl);
+	va_end(vl);
+   return;
+}
 
 /*
  * sendto_common_channels()
