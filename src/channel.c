@@ -2701,7 +2701,7 @@ m_sjoin(aClient *cptr,
 				strcat(parabuf, l->value.cptr->name);
 				strcat(parabuf, " ");
 				pargs++;
-				if (pargs >= (MAXMODEPARAMS - 2)) {
+				if (pargs >= MAXMODEPARAMS) {
 					*mbuf = '\0';
 					sjoin_sendit(cptr, sptr, chptr,
 									 parv[0]);
@@ -2717,7 +2717,7 @@ m_sjoin(aClient *cptr,
 				strcat(parabuf, l->value.cptr->name);
 				strcat(parabuf, " ");
 				pargs++;
-				if (pargs >= (MAXMODEPARAMS - 2)) {
+				if (pargs >= MAXMODEPARAMS) {
 					*mbuf = '\0';
 					sjoin_sendit(cptr, sptr, chptr,
 									 parv[0]);
@@ -2790,7 +2790,7 @@ m_sjoin(aClient *cptr,
 			strcat(parabuf, s);
 			strcat(parabuf, " ");
 			pargs++;
-			if (pargs >= (MAXMODEPARAMS - 3)) {
+			if (pargs >= MAXMODEPARAMS) {
 				*mbuf = '\0';
 				sjoin_sendit(cptr, sptr, chptr, parv[0]);
 				mbuf = modebuf;
@@ -2804,7 +2804,7 @@ m_sjoin(aClient *cptr,
 			strcat(parabuf, s);
 			strcat(parabuf, " ");
 			pargs++;
-			if (pargs >= (MAXMODEPARAMS - 3)) {
+			if (pargs >= MAXMODEPARAMS) {
 				*mbuf = '\0';
 				sjoin_sendit(cptr, sptr, chptr, parv[0]);
 				mbuf = modebuf;
