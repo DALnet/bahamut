@@ -3303,6 +3303,11 @@ int m_sjoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	    INSERTSIGN(1,'+')
 		*mbuf++='c';
 	}
+	if((MODE_OPERONLY & mode.mode) && !(MODE_OPERONLY & oldmode->mode))
+	{
+	    INSERTSIGN(1,'+')
+		*mbuf++='O';
+	}
 #ifdef USE_CHANMODE_L
         if((MODE_LISTED & mode.mode) && !(MODE_LISTED & oldmode->mode))
         {
@@ -3361,6 +3366,11 @@ int m_sjoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	{
 	    INSERTSIGN(-1,'-')
 		*mbuf++='c';
+	}
+	if((MODE_OPERONLY & oldmode->mode) && !(MODE_OPERONLY & mode.mode))
+	{
+	    INSERTSIGN(-1,'-')
+		*mbuf++='O';
 	}
 #ifdef USE_CHANMODE_L
         if((MODE_LISTED & oldmode->mode) && !(MODE_LISTED & mode.mode))
