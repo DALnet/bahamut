@@ -270,7 +270,6 @@ PACKAGE_VERSION=
 PACKAGE_STRING=
 PACKAGE_BUGREPORT=
 
-ac_unique_file="include/struct.h"
 # Factoring default headers for most tests.
 ac_includes_default="\
 #include <stdio.h>
@@ -308,7 +307,7 @@ ac_includes_default="\
 # include <unistd.h>
 #endif"
 
-ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS PACKAGE VERSION CC CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT build build_cpu build_vendor build_os host host_cpu host_vendor host_os target target_cpu target_vendor target_os CPP EGREP SET_MAKE RM CP INSTALL_PROGRAM INSTALL_SCRIPT INSTALL_DATA DFDSS ENCRYPT_SRC SSLINC LIBOBJS LTLIBOBJS'
+ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS PACKAGE VERSION CC CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT build build_cpu build_vendor build_os host host_cpu host_vendor host_os target target_cpu target_vendor target_os CPP EGREP SET_MAKE RM CP INSTALL_PROGRAM INSTALL_SCRIPT INSTALL_DATA DFDSS LIBOBJS LTLIBOBJS'
 ac_subst_files=''
 
 # Initialize some variables set by options.
@@ -845,14 +844,9 @@ Optional Features:
   --disable-FEATURE       do not include FEATURE (same as --enable-FEATURE=no)
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
 \
-  --disable-encryption    disable rc4 link encryption (removes openssl dependancy)
-\
   --disable-hookmodules   disable support for loadable hook modules
-
-Optional Packages:
-  --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
-  --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
-  --with-ssl-dir=PATH     Path to openssl installation
+  --enable-openssl=DIR       Enable OpenSSL support (DIR optional).
+  --disable-openssl            Disable OpenSSL support.
 
 Some influential environment variables:
   CC          C compiler command
@@ -1275,14 +1269,6 @@ PACKAGE=bahamut-release
 VERSION=1.4
 
 
-
-# Check whether --enable-encryption or --disable-encryption was given.
-if test "${enable_encryption+set}" = set; then
-  enableval="$enable_encryption"
-
-else
-  enable_encryption=yes
-fi;
 
 # Check whether --enable-hookmodules or --disable-hookmodules was given.
 if test "${enable_hookmodules+set}" = set; then
@@ -4466,235 +4452,6 @@ _ACEOF
 LIBS="$LIBS -Wl,-export-dynamic"
 fi
 
-
-nonblock=no
-
-echo "$as_me:$LINENO: checking for posix (O_NONBLOCK) nonblocking sockets" >&5
-echo $ECHO_N "checking for posix (O_NONBLOCK) nonblocking sockets... $ECHO_C" >&6
-if test "$cross_compiling" = yes; then
-  echo "$as_me:$LINENO: result: can't tell" >&5
-echo "${ECHO_T}can't tell" >&6
-else
-  cat >conftest.$ac_ext <<_ACEOF
-#line $LINENO "configure"
-/* confdefs.h.  */
-_ACEOF
-cat confdefs.h >>conftest.$ac_ext
-cat >>conftest.$ac_ext <<_ACEOF
-/* end confdefs.h.  */
-
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <fcntl.h>
-#include <sys/ioctl.h>
-#include <sys/file.h>
-#include <signal.h>
-alarmed()
-{
-	exit(1);
-}
-int main()
-{
-#if defined(O_NONBLOCK)
-	char b[12], x[32];
-	int f, l = sizeof(x);
-	f = socket(AF_INET, SOCK_DGRAM, 0);
-	if (f >= 0 && !(fcntl(f, F_SETFL, O_NONBLOCK))) {
-		signal(SIGALRM, alarmed);
-		alarm(3);
-		recvfrom(f, b, 12, 0, (struct sockaddr *)x, &l);
-		alarm(0);
-		exit(0);
-	}
-#endif
-	exit(1);
-}
-
-_ACEOF
-rm -f conftest$ac_exeext
-if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
-  (eval $ac_link) 2>&5
-  ac_status=$?
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); } && { ac_try='./conftest$ac_exeext'
-  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
-  (eval $ac_try) 2>&5
-  ac_status=$?
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); }; }; then
-  cat >>confdefs.h <<\_ACEOF
-#define NBLOCK_POSIX 1
-_ACEOF
-
-nonblock=yes
-echo "$as_me:$LINENO: result: O_NONBLOCK" >&5
-echo "${ECHO_T}O_NONBLOCK" >&6
-else
-  echo "$as_me: program exited with status $ac_status" >&5
-echo "$as_me: failed program was:" >&5
-sed 's/^/| /' conftest.$ac_ext >&5
-
-( exit $ac_status )
-echo "$as_me:$LINENO: result: no" >&5
-echo "${ECHO_T}no" >&6
-fi
-rm -f core core.* *.core gmon.out bb.out conftest$ac_exeext conftest.$ac_objext conftest.$ac_ext
-fi
-
-if test $nonblock = no; then
-echo "$as_me:$LINENO: checking for bsd (O_NDELAY) nonblocking sockets" >&5
-echo $ECHO_N "checking for bsd (O_NDELAY) nonblocking sockets... $ECHO_C" >&6
-if test "$cross_compiling" = yes; then
-  echo "$as_me:$LINENO: result: can't tell" >&5
-echo "${ECHO_T}can't tell" >&6
-else
-  cat >conftest.$ac_ext <<_ACEOF
-#line $LINENO "configure"
-/* confdefs.h.  */
-_ACEOF
-cat confdefs.h >>conftest.$ac_ext
-cat >>conftest.$ac_ext <<_ACEOF
-/* end confdefs.h.  */
-
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <fcntl.h>
-#include <sys/ioctl.h>
-#include <sys/file.h>
-#include <signal.h>
-alarmed()
-{
-	exit(1);
-}
-int main()
-{
-#if defined( O_NDELAY ) && !defined( NBLOCK_POSIX )
-	char b[12], x[32];
-	int f, l = sizeof(x);
-	f = socket(AF_INET, SOCK_DGRAM, 0);
-	if (f >= 0 && !(fcntl(f, F_SETFL, O_NDELAY))) {
-		signal(SIGALRM, alarmed);
-		alarm(3);
-		recvfrom(f, b, 12, 0, (struct sockaddr *)x, &l);
-		alarm(0);
-		exit(0);
-	}
-#endif
-	exit(1);
-}
-
-_ACEOF
-rm -f conftest$ac_exeext
-if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
-  (eval $ac_link) 2>&5
-  ac_status=$?
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); } && { ac_try='./conftest$ac_exeext'
-  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
-  (eval $ac_try) 2>&5
-  ac_status=$?
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); }; }; then
-  cat >>confdefs.h <<\_ACEOF
-#define NBLOCK_BSD 1
-_ACEOF
-
-nonblock=yes
-echo "$as_me:$LINENO: result: O_NDELAY" >&5
-echo "${ECHO_T}O_NDELAY" >&6
-else
-  echo "$as_me: program exited with status $ac_status" >&5
-echo "$as_me: failed program was:" >&5
-sed 's/^/| /' conftest.$ac_ext >&5
-
-( exit $ac_status )
-echo "$as_me:$LINENO: result: no" >&5
-echo "${ECHO_T}no" >&6
-fi
-rm -f core core.* *.core gmon.out bb.out conftest$ac_exeext conftest.$ac_objext conftest.$ac_ext
-fi
-fi
-
-if test $nonblock = no; then
-echo "$as_me:$LINENO: checking for sysv (FIONBIO) nonblocking sockets" >&5
-echo $ECHO_N "checking for sysv (FIONBIO) nonblocking sockets... $ECHO_C" >&6
-if test "$cross_compiling" = yes; then
-  echo "$as_me:$LINENO: result: unable to test" >&5
-echo "${ECHO_T}unable to test" >&6
-else
-  cat >conftest.$ac_ext <<_ACEOF
-#line $LINENO "configure"
-/* confdefs.h.  */
-_ACEOF
-cat confdefs.h >>conftest.$ac_ext
-cat >>conftest.$ac_ext <<_ACEOF
-/* end confdefs.h.  */
-
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <fcntl.h>
-#include <sys/ioctl.h>
-#include <sys/file.h>
-#include <signal.h>
-alarmed()
-{
-	exit(1);
-}
-int main()
-{
-#if !defined(NBLOCK_BSD) && !defined(NBLOCK_POSIX) && defined(FIONBIO)
-	char b[12], x[32];
-	int f, l = sizeof(x);
-	f = socket(AF_INET, SOCK_DGRAM, 0);
-	if (f >= 0 && !(fcntl(f, F_SETFL, FIONBIO))) {
-		signal(SIGALRM, alarmed);
-		alarm(3);
-		recvfrom(f, b, 12, 0, (struct sockaddr *)x, &l);
-		alarm(0);
-		exit(0);
-	}
-#endif /* !NBLOCK_POSIX && !NBLOCK_BSD && FIONBIO */
-	exit(1);
-}
-
-_ACEOF
-rm -f conftest$ac_exeext
-if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
-  (eval $ac_link) 2>&5
-  ac_status=$?
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); } && { ac_try='./conftest$ac_exeext'
-  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
-  (eval $ac_try) 2>&5
-  ac_status=$?
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); }; }; then
-  cat >>confdefs.h <<\_ACEOF
-#define NBLOCK_SYSV 1
-_ACEOF
-
-nonblock=yes
-echo "$as_me:$LINENO: result: FIONBIO" >&5
-echo "${ECHO_T}FIONBIO" >&6
-else
-  echo "$as_me: program exited with status $ac_status" >&5
-echo "$as_me: failed program was:" >&5
-sed 's/^/| /' conftest.$ac_ext >&5
-
-( exit $ac_status )
-echo "$as_me:$LINENO: result: no" >&5
-echo "${ECHO_T}no" >&6
-fi
-rm -f core core.* *.core gmon.out bb.out conftest$ac_exeext conftest.$ac_objext conftest.$ac_ext
-fi
-fi
-
-if test $nonblock = no; then
-{ { echo "$as_me:$LINENO: error: No nonblocking socket implementation found. ircd requires nonblocking sockets." >&5
-echo "$as_me: error: No nonblocking socket implementation found. ircd requires nonblocking sockets." >&2;}
-   { (exit 1); exit 1; }; }
-fi
-
 echo "$as_me:$LINENO: checking signal implementation" >&5
 echo $ECHO_N "checking signal implementation... $ECHO_C" >&6
 if test "$cross_compiling" = yes; then
@@ -4979,71 +4736,68 @@ fi
 
 
 
-if test "$enable_encryption" = "no"; then
-echo "encryption disabled, skipping openssl checks..."
-ENCRYPT_SRC=""
 
+echo "$as_me:$LINENO: checking for OpenSSL" >&5
+echo $ECHO_N "checking for OpenSSL... $ECHO_C" >&6
+# Check whether --enable-openssl or --disable-openssl was given.
+if test "${enable_openssl+set}" = set; then
+  enableval="$enable_openssl"
+   cf_enable_openssl=$enableval
 else
-echo "encryption enabled, looking for openssl library..."
-ENCRYPT_SRC="rc4.c dh.c"
-
-cat >>confdefs.h <<\_ACEOF
-#define HAVE_ENCRYPTION_ON 1
-_ACEOF
-
-
-# ---------- check for openssl, half stolen from openssh
-
-tryssl=""
-
-
-# Check whether --with-ssl-dir or --without-ssl-dir was given.
-if test "${with_ssl_dir+set}" = set; then
-  withval="$with_ssl_dir"
-   tryssl=$withval
-
+   cf_enable_openssl="auto"
 fi;
 
-save_SSLINC=""
-save_LIBS="$LIBS"
+if test "X$cf_enable_openssl" != "Xno" ; then
+  cf_openssl_basedir=""
+  if test "X$cf_enable_openssl" != "Xauto" &&
+     test "X$cf_enable_openssl" != "Xyes" ; then
+          cf_openssl_basedir="${cf_enable_openssl}"
+  else
+        for dirs in /usr/local/ssl /usr/pkg /usr/local \
+                /usr/local/openssl ; do
+      if test -f "${dirs}/include/openssl/opensslv.h" ; then
+        cf_openssl_basedir="${dirs}"
+        break
+      fi
+    done
+    unset dirs
+  fi
+    if test "X$cf_openssl_basedir" != "X" ; then
+    if test -f "${cf_openssl_basedir}/include/openssl/opensslv.h" ; then
+      SSL_INCLUDES="-I${cf_openssl_basedir}/include"
+      SSL_LIBS="-L${cf_openssl_basedir}/lib"
+    else
+                  cf_openssl_basedir=""
+    fi
+  else
+                            if test -f "/usr/include/openssl/opensslv.h" ; then
+      cf_openssl_basedir="/usr"
+    fi
+  fi
+      if test "X$cf_openssl_basedir" != "X" ; then
+    echo "$as_me:$LINENO: result: $cf_openssl_basedir" >&5
+echo "${ECHO_T}$cf_openssl_basedir" >&6
+    cf_enable_openssl="yes"
+  else
+    echo "$as_me:$LINENO: result: not found.  Please check your path." >&5
+echo "${ECHO_T}not found.  Please check your path." >&6
+    cf_enable_openssl="no"
+  fi
+  unset cf_openssl_basedir
+else
+    echo "$as_me:$LINENO: result: disabled" >&5
+echo "${ECHO_T}disabled" >&6
+fi
+
 save_CPPFLAGS="$CPPFLAGS"
-save_CFLAGS="$CFLAGS"
-
-found_openssl=""
-
-   for ssldir in $tryssl "" /usr/local/openssl /usr/lib/openssl \
-       /usr/local/ssl /usr/lib/ssl /usr/local /usr/pkg /opt \
-       /opt/openssl ; do
-      LIBS="$save_LIBS -lcrypto"
-      SSLINC="$save_SSLINC"
-
-      # if the directory isn't null, but doesn't exist, skip it
-      if test ! -z "$ssldir" -a ! -d "$ssldir" ; then
-         continue
-      fi
-
-      # this test is in openssh, I guess there's a good reason?
-      if test ! -z "$ssldir" -a "z$ssldir" != "z/usr"; then
-         # try to use ssldir/lib for libraries, if it exists
-         if test -d "$ssldir/lib" ; then
-            LIBS="-L$ssldir/lib -lcrypto $save_LIBS"
-         else
-            LIBS="-L$ssldir -lcrypto $save_LIBS"
-         fi
-
-         if test -d "$ssldir/include" ; then
-            SSLINC="-I$ssldir/include"
-            CPPFLAGS="$SSLINC $save_CPPFLAGS"
-         else
-            SSLINC="-I$ssldir"
-            CPPFLAGS="$SSLINC $save_CPPFLAGS"
-         fi
-      fi
-
-      if test "$cross_compiling" = yes; then
-  echo "$as_me:$LINENO: result: cross compiler" >&5
-echo "${ECHO_T}cross compiler" >&6
-
+CPPFLAGS="$CPPFLAGS $SSL_INCLUDES"
+save_LIBS="$LIBS"
+LIBS="$LIBS $SSL_LIBS"
+if test "X$cf_enable_openssl" != "Xno"; then
+        echo "$as_me:$LINENO: checking for OpenSSL 0.9.6 or above" >&5
+echo $ECHO_N "checking for OpenSSL 0.9.6 or above... $ECHO_C" >&6
+    if test "$cross_compiling" = yes; then
+  cf_openssl_version_ok='no'
 else
   cat >conftest.$ac_ext <<_ACEOF
 #line $LINENO "configure"
@@ -5053,35 +4807,14 @@ cat confdefs.h >>conftest.$ac_ext
 cat >>conftest.$ac_ext <<_ACEOF
 /* end confdefs.h.  */
 
-#include <stdio.h>
-#include <string.h>
-#include <openssl/rand.h>
 #include <openssl/opensslv.h>
-#include <openssl/crypto.h>
-int main(void)
-{
-   FILE *fp;
-   char a[2048];
-
-   fp = fopen(".openssl_h_version", "w");
-   if(fp)
-   {
-      fprintf(fp, "%s\n", OPENSSL_VERSION_TEXT);
-      fclose(fp);
-   }
-
-   fp = fopen(".openssl_l_version", "w");
-   if(fp)
-   {
-      fprintf(fp, "%s\n", SSLeay_version(SSLEAY_VERSION));
-      fclose(fp);
-   }
-
-   memset(a, 0, 2048);
-   RAND_add(a, 2048, 2048);
-   if(RAND_status() <= 0)
-      return 1;
-   return 0;
+#include <stdlib.h>
+int main(void) {
+  if ( (OPENSSL_VERSION_NUMBER & 0x00906000) == 0x00906000)
+  {
+    exit(0);
+  }
+  exit(1);
 }
 
 _ACEOF
@@ -5096,53 +4829,608 @@ if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
   ac_status=$?
   echo "$as_me:$LINENO: \$? = $ac_status" >&5
   (exit $ac_status); }; }; then
-
-                    found_openssl=1;
-
+  cf_openssl_version_ok='yes'
 else
   echo "$as_me: program exited with status $ac_status" >&5
 echo "$as_me: failed program was:" >&5
 sed 's/^/| /' conftest.$ac_ext >&5
 
+( exit $ac_status )
+cf_openssl_version_ok='no'
 fi
 rm -f core core.* *.core gmon.out bb.out conftest$ac_exeext conftest.$ac_objext conftest.$ac_ext
 fi
-      if test ! -z "$found_openssl" ; then
-         break;
-      fi
 
-   done
+    if test "X$cf_openssl_version_ok" = "Xyes"; then
+        echo "$as_me:$LINENO: result: ok" >&5
+echo "${ECHO_T}ok" >&6
+                save_CPPFLAGS="$CPPFLAGS"
+        CPPFLAGS="$CPPFLAGS $SSL_LIBS"
 
-if test -z "$found_openssl"; then
-  echo ""
-  echo "I can't find OpenSSL on this system, or I found an older version."
-  echo ""
-  echo "bahamut requires OpenSSL version 0.9.5 or later to compile with"
-  echo "encryption enabled."
-  echo ""
-  echo "If you wish to disable server link encryption, run configure with"
-  echo "the option --disable-encryption."
-  echo ""
-  echo "If you have openssl, you may wish to run configure with the"
-  echo "--with-ssl-dir=DIR option to specify the OpenSSL installation"
-  echo "directory."
-  echo ""
-  echo "You can download openssl at http://www.openssl.org/"
-  exit 1
+echo "$as_me:$LINENO: checking for RSA_free in -lcrypto" >&5
+echo $ECHO_N "checking for RSA_free in -lcrypto... $ECHO_C" >&6
+if test "${ac_cv_lib_crypto_RSA_free+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lcrypto  $LIBS"
+cat >conftest.$ac_ext <<_ACEOF
+#line $LINENO "configure"
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+
+/* Override any gcc2 internal prototype to avoid an error.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+/* We use char because int might match the return type of a gcc2
+   builtin and then its argument prototype would still apply.  */
+char RSA_free ();
+int
+main ()
+{
+RSA_free ();
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+  (eval $ac_link) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+         { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_cv_lib_crypto_RSA_free=yes
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+ac_cv_lib_crypto_RSA_free=no
+fi
+rm -f conftest.$ac_objext conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+echo "$as_me:$LINENO: result: $ac_cv_lib_crypto_RSA_free" >&5
+echo "${ECHO_T}$ac_cv_lib_crypto_RSA_free" >&6
+if test $ac_cv_lib_crypto_RSA_free = yes; then
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_LIBCRYPTO 1
+_ACEOF
+
+  LIBS="-lcrypto $LIBS"
+
 fi
 
-   if test -z "$ssldir" ; then
-      ssldir="(system)"
-   fi
-   ac_cv_openssldir=$ssldir
+        if test "X$ac_cv_lib_crypto_RSA_free" = "Xyes"; then
+            cf_openssl_ciphers=''
+
+for ac_func in EVP_bf_cfb
+do
+as_ac_var=`echo "ac_cv_func_$ac_func" | $as_tr_sh`
+echo "$as_me:$LINENO: checking for $ac_func" >&5
+echo $ECHO_N "checking for $ac_func... $ECHO_C" >&6
+if eval "test \"\${$as_ac_var+set}\" = set"; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  cat >conftest.$ac_ext <<_ACEOF
+#line $LINENO "configure"
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+/* System header to define __stub macros and hopefully few prototypes,
+    which can conflict with char $ac_func (); below.
+    Prefer <limits.h> to <assert.h> if __STDC__ is defined, since
+    <limits.h> exists even on freestanding compilers.  */
+#ifdef __STDC__
+# include <limits.h>
+#else
+# include <assert.h>
+#endif
+/* Override any gcc2 internal prototype to avoid an error.  */
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+/* We use char because int might match the return type of a gcc2
+   builtin and then its argument prototype would still apply.  */
+char $ac_func ();
+/* The GNU C library defines this for functions which it implements
+    to always fail with ENOSYS.  Some functions are actually named
+    something starting with __ and the normal name is an alias.  */
+#if defined (__stub_$ac_func) || defined (__stub___$ac_func)
+choke me
+#else
+char (*f) () = $ac_func;
+#endif
+#ifdef __cplusplus
+}
+#endif
+
+int
+main ()
+{
+return f != $ac_func;
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+  (eval $ac_link) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+         { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  eval "$as_ac_var=yes"
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+eval "$as_ac_var=no"
+fi
+rm -f conftest.$ac_objext conftest$ac_exeext conftest.$ac_ext
+fi
+echo "$as_me:$LINENO: result: `eval echo '${'$as_ac_var'}'`" >&5
+echo "${ECHO_T}`eval echo '${'$as_ac_var'}'`" >&6
+if test `eval echo '${'$as_ac_var'}'` = yes; then
+  cat >>confdefs.h <<_ACEOF
+#define `echo "HAVE_$ac_func" | $as_tr_cpp` 1
+_ACEOF
+ cf_openssl_ciphers="${cf_openssl_ciphers}BF/168 BF/128 "
+fi
+done
 
 
+for ac_func in EVP_cast5_cfb
+do
+as_ac_var=`echo "ac_cv_func_$ac_func" | $as_tr_sh`
+echo "$as_me:$LINENO: checking for $ac_func" >&5
+echo $ECHO_N "checking for $ac_func... $ECHO_C" >&6
+if eval "test \"\${$as_ac_var+set}\" = set"; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  cat >conftest.$ac_ext <<_ACEOF
+#line $LINENO "configure"
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+/* System header to define __stub macros and hopefully few prototypes,
+    which can conflict with char $ac_func (); below.
+    Prefer <limits.h> to <assert.h> if __STDC__ is defined, since
+    <limits.h> exists even on freestanding compilers.  */
+#ifdef __STDC__
+# include <limits.h>
+#else
+# include <assert.h>
+#endif
+/* Override any gcc2 internal prototype to avoid an error.  */
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+/* We use char because int might match the return type of a gcc2
+   builtin and then its argument prototype would still apply.  */
+char $ac_func ();
+/* The GNU C library defines this for functions which it implements
+    to always fail with ENOSYS.  Some functions are actually named
+    something starting with __ and the normal name is an alias.  */
+#if defined (__stub_$ac_func) || defined (__stub___$ac_func)
+choke me
+#else
+char (*f) () = $ac_func;
+#endif
+#ifdef __cplusplus
+}
+#endif
+
+int
+main ()
+{
+return f != $ac_func;
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+  (eval $ac_link) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+         { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  eval "$as_ac_var=yes"
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+eval "$as_ac_var=no"
+fi
+rm -f conftest.$ac_objext conftest$ac_exeext conftest.$ac_ext
+fi
+echo "$as_me:$LINENO: result: `eval echo '${'$as_ac_var'}'`" >&5
+echo "${ECHO_T}`eval echo '${'$as_ac_var'}'`" >&6
+if test `eval echo '${'$as_ac_var'}'` = yes; then
+  cat >>confdefs.h <<_ACEOF
+#define `echo "HAVE_$ac_func" | $as_tr_cpp` 1
+_ACEOF
+ cf_openssl_ciphers="${cf_openssl_ciphers}CAST/128 "
+fi
+done
+
+
+for ac_func in EVP_idea_cfb
+do
+as_ac_var=`echo "ac_cv_func_$ac_func" | $as_tr_sh`
+echo "$as_me:$LINENO: checking for $ac_func" >&5
+echo $ECHO_N "checking for $ac_func... $ECHO_C" >&6
+if eval "test \"\${$as_ac_var+set}\" = set"; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  cat >conftest.$ac_ext <<_ACEOF
+#line $LINENO "configure"
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+/* System header to define __stub macros and hopefully few prototypes,
+    which can conflict with char $ac_func (); below.
+    Prefer <limits.h> to <assert.h> if __STDC__ is defined, since
+    <limits.h> exists even on freestanding compilers.  */
+#ifdef __STDC__
+# include <limits.h>
+#else
+# include <assert.h>
+#endif
+/* Override any gcc2 internal prototype to avoid an error.  */
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+/* We use char because int might match the return type of a gcc2
+   builtin and then its argument prototype would still apply.  */
+char $ac_func ();
+/* The GNU C library defines this for functions which it implements
+    to always fail with ENOSYS.  Some functions are actually named
+    something starting with __ and the normal name is an alias.  */
+#if defined (__stub_$ac_func) || defined (__stub___$ac_func)
+choke me
+#else
+char (*f) () = $ac_func;
+#endif
+#ifdef __cplusplus
+}
+#endif
+
+int
+main ()
+{
+return f != $ac_func;
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+  (eval $ac_link) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+         { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  eval "$as_ac_var=yes"
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+eval "$as_ac_var=no"
+fi
+rm -f conftest.$ac_objext conftest$ac_exeext conftest.$ac_ext
+fi
+echo "$as_me:$LINENO: result: `eval echo '${'$as_ac_var'}'`" >&5
+echo "${ECHO_T}`eval echo '${'$as_ac_var'}'`" >&6
+if test `eval echo '${'$as_ac_var'}'` = yes; then
+  cat >>confdefs.h <<_ACEOF
+#define `echo "HAVE_$ac_func" | $as_tr_cpp` 1
+_ACEOF
+ cf_openssl_ciphers="${cf_openssl_ciphers}IDEA/128 "
+fi
+done
+
+
+for ac_func in EVP_rc5_32_12_16_cfb
+do
+as_ac_var=`echo "ac_cv_func_$ac_func" | $as_tr_sh`
+echo "$as_me:$LINENO: checking for $ac_func" >&5
+echo $ECHO_N "checking for $ac_func... $ECHO_C" >&6
+if eval "test \"\${$as_ac_var+set}\" = set"; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  cat >conftest.$ac_ext <<_ACEOF
+#line $LINENO "configure"
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+/* System header to define __stub macros and hopefully few prototypes,
+    which can conflict with char $ac_func (); below.
+    Prefer <limits.h> to <assert.h> if __STDC__ is defined, since
+    <limits.h> exists even on freestanding compilers.  */
+#ifdef __STDC__
+# include <limits.h>
+#else
+# include <assert.h>
+#endif
+/* Override any gcc2 internal prototype to avoid an error.  */
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+/* We use char because int might match the return type of a gcc2
+   builtin and then its argument prototype would still apply.  */
+char $ac_func ();
+/* The GNU C library defines this for functions which it implements
+    to always fail with ENOSYS.  Some functions are actually named
+    something starting with __ and the normal name is an alias.  */
+#if defined (__stub_$ac_func) || defined (__stub___$ac_func)
+choke me
+#else
+char (*f) () = $ac_func;
+#endif
+#ifdef __cplusplus
+}
+#endif
+
+int
+main ()
+{
+return f != $ac_func;
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+  (eval $ac_link) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+         { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  eval "$as_ac_var=yes"
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+eval "$as_ac_var=no"
+fi
+rm -f conftest.$ac_objext conftest$ac_exeext conftest.$ac_ext
+fi
+echo "$as_me:$LINENO: result: `eval echo '${'$as_ac_var'}'`" >&5
+echo "${ECHO_T}`eval echo '${'$as_ac_var'}'`" >&6
+if test `eval echo '${'$as_ac_var'}'` = yes; then
+  cat >>confdefs.h <<_ACEOF
+#define `echo "HAVE_$ac_func" | $as_tr_cpp` 1
+_ACEOF
+ cf_openssl_ciphers="${cf_openssl_ciphers}RC5.16/128 RC5.12/128 RC5.8/128 "
+fi
+done
+
+
+for ac_func in EVP_des_ede3_cfb
+do
+as_ac_var=`echo "ac_cv_func_$ac_func" | $as_tr_sh`
+echo "$as_me:$LINENO: checking for $ac_func" >&5
+echo $ECHO_N "checking for $ac_func... $ECHO_C" >&6
+if eval "test \"\${$as_ac_var+set}\" = set"; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  cat >conftest.$ac_ext <<_ACEOF
+#line $LINENO "configure"
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+/* System header to define __stub macros and hopefully few prototypes,
+    which can conflict with char $ac_func (); below.
+    Prefer <limits.h> to <assert.h> if __STDC__ is defined, since
+    <limits.h> exists even on freestanding compilers.  */
+#ifdef __STDC__
+# include <limits.h>
+#else
+# include <assert.h>
+#endif
+/* Override any gcc2 internal prototype to avoid an error.  */
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+/* We use char because int might match the return type of a gcc2
+   builtin and then its argument prototype would still apply.  */
+char $ac_func ();
+/* The GNU C library defines this for functions which it implements
+    to always fail with ENOSYS.  Some functions are actually named
+    something starting with __ and the normal name is an alias.  */
+#if defined (__stub_$ac_func) || defined (__stub___$ac_func)
+choke me
+#else
+char (*f) () = $ac_func;
+#endif
+#ifdef __cplusplus
+}
+#endif
+
+int
+main ()
+{
+return f != $ac_func;
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+  (eval $ac_link) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+         { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  eval "$as_ac_var=yes"
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+eval "$as_ac_var=no"
+fi
+rm -f conftest.$ac_objext conftest$ac_exeext conftest.$ac_ext
+fi
+echo "$as_me:$LINENO: result: `eval echo '${'$as_ac_var'}'`" >&5
+echo "${ECHO_T}`eval echo '${'$as_ac_var'}'`" >&6
+if test `eval echo '${'$as_ac_var'}'` = yes; then
+  cat >>confdefs.h <<_ACEOF
+#define `echo "HAVE_$ac_func" | $as_tr_cpp` 1
+_ACEOF
+ cf_openssl_ciphers="${cf_openssl_ciphers}3DES/168 "
+fi
+done
+
+
+for ac_func in EVP_des_cfb
+do
+as_ac_var=`echo "ac_cv_func_$ac_func" | $as_tr_sh`
+echo "$as_me:$LINENO: checking for $ac_func" >&5
+echo $ECHO_N "checking for $ac_func... $ECHO_C" >&6
+if eval "test \"\${$as_ac_var+set}\" = set"; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  cat >conftest.$ac_ext <<_ACEOF
+#line $LINENO "configure"
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+/* System header to define __stub macros and hopefully few prototypes,
+    which can conflict with char $ac_func (); below.
+    Prefer <limits.h> to <assert.h> if __STDC__ is defined, since
+    <limits.h> exists even on freestanding compilers.  */
+#ifdef __STDC__
+# include <limits.h>
+#else
+# include <assert.h>
+#endif
+/* Override any gcc2 internal prototype to avoid an error.  */
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+/* We use char because int might match the return type of a gcc2
+   builtin and then its argument prototype would still apply.  */
+char $ac_func ();
+/* The GNU C library defines this for functions which it implements
+    to always fail with ENOSYS.  Some functions are actually named
+    something starting with __ and the normal name is an alias.  */
+#if defined (__stub_$ac_func) || defined (__stub___$ac_func)
+choke me
+#else
+char (*f) () = $ac_func;
+#endif
+#ifdef __cplusplus
+}
+#endif
+
+int
+main ()
+{
+return f != $ac_func;
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+  (eval $ac_link) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+         { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  eval "$as_ac_var=yes"
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+eval "$as_ac_var=no"
+fi
+rm -f conftest.$ac_objext conftest$ac_exeext conftest.$ac_ext
+fi
+echo "$as_me:$LINENO: result: `eval echo '${'$as_ac_var'}'`" >&5
+echo "${ECHO_T}`eval echo '${'$as_ac_var'}'`" >&6
+if test `eval echo '${'$as_ac_var'}'` = yes; then
+  cat >>confdefs.h <<_ACEOF
+#define `echo "HAVE_$ac_func" | $as_tr_cpp` 1
+_ACEOF
+ cf_openssl_ciphers="${cf_openssl_ciphers}DES/56 "
+fi
+done
+
+        fi
+        CPPFLAGS="$save_CPPFLAGS"
+        SSL_LIBS="$SSL_LIBS -lcrypto"
+    else
+        echo "$as_me:$LINENO: result: no - OpenSSL support disabled" >&5
+echo "${ECHO_T}no - OpenSSL support disabled" >&6
+    fi
+fi
 CPPFLAGS="$save_CPPFLAGS"
-CFLAGS="$save_CFLAGS"
-echo " - openssl library version: `cat .openssl_l_version`"
-echo " - openssl header version : `cat .openssl_h_version`"
-$RM -f .openssl_l_version .openssl_h_version
-fi
+LIBS="$save_LIBS"
+
+   if test -z "$cf_openssl_basedir" ; then
+      cf_openssl_basedir="(system)"
+   fi
+   ac_cv_openssldir=$cf_openssl_basedir
 
 
 echo "$as_me:$LINENO: checking operating system" >&5
@@ -5830,8 +6118,6 @@ s,@INSTALL_PROGRAM@,$INSTALL_PROGRAM,;t t
 s,@INSTALL_SCRIPT@,$INSTALL_SCRIPT,;t t
 s,@INSTALL_DATA@,$INSTALL_DATA,;t t
 s,@DFDSS@,$DFDSS,;t t
-s,@ENCRYPT_SRC@,$ENCRYPT_SRC,;t t
-s,@SSLINC@,$SSLINC,;t t
 s,@LIBOBJS@,$LIBOBJS,;t t
 s,@LTLIBOBJS@,$LTLIBOBJS,;t t
 CEOF

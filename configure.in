@@ -1,13 +1,10 @@
 dnl Process this file with autoconf to produce a configure script.
-AC_INIT(include/struct.h)
+AC_INIT
 AC_CONFIG_HEADER(include/setup.h)
 PACKAGE=bahamut-release
 VERSION=1.4
 AC_SUBST(PACKAGE)
 AC_SUBST(VERSION)
-
-AC_ARG_ENABLE(encryption, \
-[  --disable-encryption    disable rc4 link encryption (removes openssl dependancy)],,enable_encryption=yes)
 
 AC_ARG_ENABLE(hookmodules, \
 [  --disable-hookmodules   disable support for loadable hook modules],,enable_hmodules=yes)
@@ -57,121 +54,6 @@ AC_CHECK_HEADER(dlfcn.h)
 AC_CHECK_FUNCS(dlopen dlsym)
 AC_DEFINE(USE_HOOKMODULES)
 LIBS="$LIBS -Wl,-export-dynamic"
-fi
-
-dnl taken from ircd's Config script
-
-nonblock=no
-
-AC_MSG_CHECKING(for posix (O_NONBLOCK) nonblocking sockets)
-AC_TRY_RUN(
-[
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <fcntl.h>
-#include <sys/ioctl.h>
-#include <sys/file.h>
-#include <signal.h>
-alarmed()
-{
-	exit(1);
-}
-int main()
-{
-#if defined(O_NONBLOCK)
-	char b[12], x[32];
-	int f, l = sizeof(x);
-	f = socket(AF_INET, SOCK_DGRAM, 0);
-	if (f >= 0 && !(fcntl(f, F_SETFL, O_NONBLOCK))) {
-		signal(SIGALRM, alarmed);
-		alarm(3);
-		recvfrom(f, b, 12, 0, (struct sockaddr *)x, &l);
-		alarm(0);
-		exit(0);
-	}
-#endif
-	exit(1);
-}
-], AC_DEFINE(NBLOCK_POSIX)
-nonblock=yes
-AC_MSG_RESULT(O_NONBLOCK),
-AC_MSG_RESULT(no), AC_MSG_RESULT(can't tell))
-
-if test $nonblock = no; then
-AC_MSG_CHECKING(for bsd (O_NDELAY) nonblocking sockets)
-AC_TRY_RUN(
-[
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <fcntl.h>
-#include <sys/ioctl.h>
-#include <sys/file.h>
-#include <signal.h>
-alarmed()
-{
-	exit(1);
-}
-int main()
-{
-#if defined( O_NDELAY ) && !defined( NBLOCK_POSIX )
-	char b[12], x[32];
-	int f, l = sizeof(x);
-	f = socket(AF_INET, SOCK_DGRAM, 0);
-	if (f >= 0 && !(fcntl(f, F_SETFL, O_NDELAY))) {
-		signal(SIGALRM, alarmed);
-		alarm(3);
-		recvfrom(f, b, 12, 0, (struct sockaddr *)x, &l);
-		alarm(0);
-		exit(0);
-	}
-#endif
-	exit(1);
-}
-], AC_DEFINE(NBLOCK_BSD)
-nonblock=yes
-AC_MSG_RESULT(O_NDELAY),
-AC_MSG_RESULT(no), AC_MSG_RESULT(can't tell))
-fi
-
-if test $nonblock = no; then
-AC_MSG_CHECKING(for sysv (FIONBIO) nonblocking sockets)
-AC_TRY_RUN(
-[
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <fcntl.h>
-#include <sys/ioctl.h>
-#include <sys/file.h>
-#include <signal.h>
-alarmed()
-{
-	exit(1);
-}
-int main()
-{
-#if !defined(NBLOCK_BSD) && !defined(NBLOCK_POSIX) && defined(FIONBIO)
-	char b[12], x[32];
-	int f, l = sizeof(x);
-	f = socket(AF_INET, SOCK_DGRAM, 0);
-	if (f >= 0 && !(fcntl(f, F_SETFL, FIONBIO))) {
-		signal(SIGALRM, alarmed);
-		alarm(3);
-		recvfrom(f, b, 12, 0, (struct sockaddr *)x, &l);
-		alarm(0);
-		exit(0);
-	}
-#endif /* !NBLOCK_POSIX && !NBLOCK_BSD && FIONBIO */
-	exit(1);
-}
-], AC_DEFINE(NBLOCK_SYSV)
-nonblock=yes
-AC_MSG_RESULT(FIONBIO),
-AC_MSG_RESULT(no),
-AC_MSG_RESULT(unable to test))
-fi
-
-if test $nonblock = no; then
-AC_MSG_ERROR(No nonblocking socket implementation found. ircd requires nonblocking sockets.)
 fi
 
 dnl taken from ircd's Config script
@@ -270,134 +152,124 @@ AC_MSG_RESULT(can't tell))
 
 AC_SUBST(DFDSS)
 
-if test "$enable_encryption" = "no"; then
-echo "encryption disabled, skipping openssl checks..."
-ENCRYPT_SRC=""
-AC_SUBST(ENCRYPT_SRC)
+dnl Openssl checks - stolen from hybrid7
+
+AC_MSG_CHECKING(for OpenSSL)
+AC_ARG_ENABLE(openssl,
+[  --enable-openssl[=DIR]       Enable OpenSSL support (DIR optional).
+  --disable-openssl            Disable OpenSSL support. ],
+[ cf_enable_openssl=$enableval ],
+[ cf_enable_openssl="auto" ])
+
+if test "X$cf_enable_openssl" != "Xno" ; then
+  cf_openssl_basedir=""
+  if test "X$cf_enable_openssl" != "Xauto" &&
+     test "X$cf_enable_openssl" != "Xyes" ; then
+     dnl Support for --enable-openssl=/some/place
+     cf_openssl_basedir="${cf_enable_openssl}"
+  else
+    dnl Do the auto-probe here.  Check some common directory paths.
+    for dirs in /usr/local/ssl /usr/pkg /usr/local \
+                /usr/local/openssl ; do
+      if test -f "${dirs}/include/openssl/opensslv.h" ; then
+        cf_openssl_basedir="${dirs}"
+        break
+      fi
+    done
+    unset dirs
+  fi
+  dnl Now check cf_openssl_found to see if we found anything.
+  if test "X$cf_openssl_basedir" != "X" ; then
+    if test -f "${cf_openssl_basedir}/include/openssl/opensslv.h" ; then
+      SSL_INCLUDES="-I${cf_openssl_basedir}/include"
+      SSL_LIBS="-L${cf_openssl_basedir}/lib"
+    else
+      dnl OpenSSL wasn't found in the directory specified.  Naughty
+      dnl administrator...
+      cf_openssl_basedir=""
+    fi
+  else
+    dnl Check for stock FreeBSD 4.x and 5.x systems, since their files
+    dnl are in /usr/include and /usr/lib.  In this case, we don't want to
+    dnl change INCLUDES or LIBS, but still want to enable OpenSSL.
+    dnl We can't do this check above, because some people want two versions
+    dnl of OpenSSL installed (stock FreeBSD 4.x/5.x and /usr/local/ssl)
+    dnl and they want /usr/local/ssl to have preference.
+    if test -f "/usr/include/openssl/opensslv.h" ; then
+      cf_openssl_basedir="/usr"
+    fi
+  fi
+  dnl If we have a basedir defined, then everything is okay.  Otherwise,
+  dnl we have a problem.
+  if test "X$cf_openssl_basedir" != "X" ; then
+    AC_MSG_RESULT($cf_openssl_basedir)
+    cf_enable_openssl="yes"
+  else
+    AC_MSG_RESULT(not found.  Please check your path.)
+    cf_enable_openssl="no"
+  fi
+  unset cf_openssl_basedir
 else
-echo "encryption enabled, looking for openssl library..."
-ENCRYPT_SRC="rc4.c dh.c"
-AC_SUBST(ENCRYPT_SRC)
-AC_DEFINE(HAVE_ENCRYPTION_ON)
+  dnl If --disable-openssl was specified
+  AC_MSG_RESULT(disabled)
+fi
 
-# ---------- check for openssl, half stolen from openssh
-
-tryssl=""
-
-AC_ARG_WITH(ssl-dir, 
-[  --with-ssl-dir=PATH     Path to openssl installation ],
-[ tryssl=$withval ]
-)
-
-save_SSLINC=""
-save_LIBS="$LIBS"
 save_CPPFLAGS="$CPPFLAGS"
-save_CFLAGS="$CFLAGS"
-
-found_openssl=""
-
-   for ssldir in $tryssl "" /usr/local/openssl /usr/lib/openssl \
-       /usr/local/ssl /usr/lib/ssl /usr/local /usr/pkg /opt \
-       /opt/openssl ; do
-      LIBS="$save_LIBS -lcrypto"
-      SSLINC="$save_SSLINC"
-
-      # if the directory isn't null, but doesn't exist, skip it
-      if test ! -z "$ssldir" -a ! -d "$ssldir" ; then
-         continue
-      fi
-
-      # this test is in openssh, I guess there's a good reason?
-      if test ! -z "$ssldir" -a "z$ssldir" != "z/usr"; then
-         # try to use ssldir/lib for libraries, if it exists
-         if test -d "$ssldir/lib" ; then
-            LIBS="-L$ssldir/lib -lcrypto $save_LIBS"
-         else
-            LIBS="-L$ssldir -lcrypto $save_LIBS"
-         fi
-
-         if test -d "$ssldir/include" ; then
-            SSLINC="-I$ssldir/include"
-            CPPFLAGS="$SSLINC $save_CPPFLAGS"
-         else
-            SSLINC="-I$ssldir"
-            CPPFLAGS="$SSLINC $save_CPPFLAGS"
-         fi
-      fi
-
-      AC_TRY_RUN(
-                 [
-#include <stdio.h>
-#include <string.h>
-#include <openssl/rand.h>
+CPPFLAGS="$CPPFLAGS $SSL_INCLUDES"
+save_LIBS="$LIBS"
+LIBS="$LIBS $SSL_LIBS"
+if test "X$cf_enable_openssl" != "Xno"; then
+    dnl Check OpenSSL version (must be 0.9.6 or above!)
+    AC_MSG_CHECKING(for OpenSSL 0.9.6 or above)
+    AC_TRY_RUN(
+    [
 #include <openssl/opensslv.h>
-#include <openssl/crypto.h>
-int main(void)
-{
-   FILE *fp;
-   char a[2048];
-
-   fp = fopen(".openssl_h_version", "w");
-   if(fp)
-   {
-      fprintf(fp, "%s\n", OPENSSL_VERSION_TEXT);
-      fclose(fp);
-   }
-
-   fp = fopen(".openssl_l_version", "w");
-   if(fp)
-   {
-      fprintf(fp, "%s\n", SSLeay_version(SSLEAY_VERSION));
-      fclose(fp);
-   }
-
-   memset(a, 0, 2048);
-   RAND_add(a, 2048, 2048);
-   if(RAND_status() <= 0)
-      return 1;
-   return 0;
+#include <stdlib.h>
+int main(void) {
+  if ( (OPENSSL_VERSION_NUMBER & 0x00906000) == 0x00906000)
+  {
+    exit(0);
+  }
+  exit(1);
 }
-                 ],
-                 [
-                    found_openssl=1;
-                 ], [], AC_MSG_RESULT(cross compiler)
-      )
-      if test ! -z "$found_openssl" ; then
-         break;
-      fi
+    ], cf_openssl_version_ok='yes',
+       cf_openssl_version_ok='no',
+       cf_openssl_version_ok='no')
 
-   done
-
-if test -z "$found_openssl"; then
-  echo ""
-  echo "I can't find OpenSSL on this system, or I found an older version."
-  echo ""
-  echo "bahamut requires OpenSSL version 0.9.5 or later to compile with"
-  echo "encryption enabled."
-  echo ""
-  echo "If you wish to disable server link encryption, run configure with"
-  echo "the option --disable-encryption."
-  echo ""
-  echo "If you have openssl, you may wish to run configure with the"
-  echo "--with-ssl-dir=DIR option to specify the OpenSSL installation"
-  echo "directory."
-  echo ""
-  echo "You can download openssl at http://www.openssl.org/"
-  exit 1
+    if test "X$cf_openssl_version_ok" = "Xyes"; then
+        AC_MSG_RESULT(ok)
+        dnl Do all the HAVE_LIBCRYPTO magic -- and check for ciphers
+        save_CPPFLAGS="$CPPFLAGS"
+        CPPFLAGS="$CPPFLAGS $SSL_LIBS"
+        AC_CHECK_LIB(crypto, RSA_free)
+        if test "X$ac_cv_lib_crypto_RSA_free" = "Xyes"; then
+            cf_openssl_ciphers=''
+            AC_CHECK_FUNCS(EVP_bf_cfb,
+                cf_openssl_ciphers="${cf_openssl_ciphers}BF/168 BF/128 ")
+            AC_CHECK_FUNCS(EVP_cast5_cfb,
+                cf_openssl_ciphers="${cf_openssl_ciphers}CAST/128 ")
+            AC_CHECK_FUNCS(EVP_idea_cfb,
+                cf_openssl_ciphers="${cf_openssl_ciphers}IDEA/128 ")
+            AC_CHECK_FUNCS(EVP_rc5_32_12_16_cfb,
+                cf_openssl_ciphers="${cf_openssl_ciphers}RC5.16/128 RC5.12/128 RC5.8/128 ")
+            AC_CHECK_FUNCS(EVP_des_ede3_cfb,
+                cf_openssl_ciphers="${cf_openssl_ciphers}3DES/168 ")
+            AC_CHECK_FUNCS(EVP_des_cfb,
+                cf_openssl_ciphers="${cf_openssl_ciphers}DES/56 ")
+        fi
+        CPPFLAGS="$save_CPPFLAGS"
+        SSL_LIBS="$SSL_LIBS -lcrypto"
+    else
+        AC_MSG_RESULT(no - OpenSSL support disabled)
+    fi
 fi
-
-   if test -z "$ssldir" ; then
-      ssldir="(system)"
-   fi
-   ac_cv_openssldir=$ssldir
-
-AC_SUBST(SSLINC)
 CPPFLAGS="$save_CPPFLAGS"
-CFLAGS="$save_CFLAGS"
-echo " - openssl library version: `cat .openssl_l_version`"
-echo " - openssl header version : `cat .openssl_h_version`"
-$RM -f .openssl_l_version .openssl_h_version
-fi
+LIBS="$save_LIBS"
+
+   if test -z "$cf_openssl_basedir" ; then
+      cf_openssl_basedir="(system)"
+   fi
+   ac_cv_openssldir=$cf_openssl_basedir
 
 dnl end of openssl library test
 

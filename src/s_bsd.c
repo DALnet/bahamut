@@ -1338,32 +1338,11 @@ void set_non_blocking(int fd, aClient * cptr)
 {
     int res, nonb = 0;
 
-    /* 
-     * * NOTE: consult ALL your relevant manual pages *BEFORE* changing *
-     * hese ioctl's.  There are quite a few variations on them, *
-     * s can be seen by the PCS one.  They are *NOT* all the same. *
-     * eed this well. - Avalon.
-     */
-#ifdef  NBLOCK_POSIX
     nonb |= O_NONBLOCK;
-#endif
-#ifdef  NBLOCK_BSD
-    nonb |= O_NDELAY;
-#endif
-#ifdef  NBLOCK_SYSV
-    /* 
-     * This portion of code might also apply to NeXT.  -LynX
-     */
-    res = 1;
-
-    if (ioctl(fd, FIONBIO, &res) < 0)
-    silent_report_error("ioctl(fd,FIONBIO) failed for %s:%s", cptr);
-#else
     if ((res = fcntl(fd, F_GETFL, 0)) == -1)
     silent_report_error("fcntl(fd, F_GETFL) failed for %s:%s", cptr);
     else if (fcntl(fd, F_SETFL, res | nonb) == -1)
     silent_report_error("fcntl(fd, F_SETL, nonb) failed for %s:%s", cptr);
-#endif
     return;
 }
 
@@ -1371,31 +1350,11 @@ void set_listener_non_blocking(int fd, aListener *lptr)
 {
    int res, nonb = 0;
 
-   /*
-    * * NOTE: consult ALL your relevant manual pages *BEFORE* changing *
-    * hese ioctl's.  There are quite a few variations on them, *
-    * s can be seen by the PCS one.  They are *NOT* all the same. *
-    * eed this well. - Avalon.
-    */
-#ifdef  NBLOCK_POSIX
    nonb |= O_NONBLOCK;
-#endif
-#ifdef  NBLOCK_BSD
-   nonb |= O_NDELAY;
-#endif
-#ifdef  NBLOCK_SYSV
-   /*
-    * This portion of code might also apply to NeXT.  -LynX
-    */
-   res = 1;
-   if (ioctl(fd, FIONBIO, &res) < 0)
-      report_listener_error("ioctl(fd,FIONBIO) failed for %s:%s", lptr);
-#else
    if ((res = fcntl(fd, F_GETFL, 0)) == -1)
       report_listener_error("fcntl(fd, F_GETFL) failed for %s:%s", lptr);
    else if (fcntl(fd, F_SETFL, res | nonb) == -1)
       report_listener_error("fcntl(fd, F_SETL, nonb) failed for %s:%s", lptr);
-#endif
    return;
 }
 
