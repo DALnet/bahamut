@@ -373,9 +373,8 @@ time_t timeout_query_list(time_t now)
 		    sendto_one(cptr, REPORT_FAIL_DNS);
 #endif
 		    ClearDNS(cptr);
-		    if (!DoingAuth(cptr))
-			SetAccess(cptr);
 		    break;
+
 		case ASYNC_CONNECT:
 		    sendto_ops("Host %s unknown",
 			       rptr->name);

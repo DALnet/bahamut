@@ -576,7 +576,6 @@ int check_client(aClient * cptr)
     struct hostent *hp = NULL;
     int i;
 
-    ClearAccess(cptr);
     Debug((DEBUG_DNS, "ch_cl: check access for %s[%s]",
 	   cptr->name, inetntoa((char *) &cptr->ip)));
 
@@ -687,7 +686,6 @@ int check_server_init(aClient * cptr)
 	     * takes a SERVER message to * get us here and we cant
 	     * interrupt that very * well.
 	     */
-	    ClearAccess(cptr);
 	    lin.value.aconf = aconf;
 	    lin.flags = ASYNC_CONF;
 	    nextdnscheck = 1;
@@ -711,7 +709,6 @@ int check_server(aClient * cptr, struct hostent *hp, aConfItem * c_conf,
     Link *lp = cptr->confs;
     int i;
 
-    ClearAccess(cptr);
     if (check_init(cptr, sockname))
 	return -2;
 
@@ -2471,8 +2468,6 @@ static void do_dns_async()
 #endif
 		ClearDNS(cptr);
 		cptr->hostp = hp;
-		if (!DoingAuth(cptr))
-		    SetAccess(cptr);
 	    }
 	    break;
 	case ASYNC_CONNECT:
@@ -2480,7 +2475,6 @@ static void do_dns_async()
 	    if (hp && aconf)
 	    {
 		memcpy((char *) &aconf->ipnum, hp->h_addr,
-		       
 		       sizeof(struct in_addr));
 		
 		(void) connect_server(aconf, NULL, hp);

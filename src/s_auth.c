@@ -63,8 +63,6 @@ void start_auth(aClient *cptr)
 	syslog(LOG_ERR, "Unable to create auth socket for %s:%m",
 	       get_client_name(cptr, TRUE));
 #endif
-	if (!DoingDNS(cptr))
-	    SetAccess(cptr);
 	ircstp->is_abad++;
 	return;
     }
@@ -115,8 +113,6 @@ void start_auth(aClient *cptr)
 	/* No error report from this... */
 	close(cptr->authfd);
 	cptr->authfd = -1;
-	if (!DoingDNS(cptr))
-	    SetAccess(cptr);
 #ifdef SHOW_HEADERS
 	sendto_one(cptr, REPORT_FAIL_ID);
 #endif
@@ -193,9 +189,6 @@ static void authsenderr(aClient *cptr)
 #ifdef SHOW_HEADERS
     sendto_one(cptr, REPORT_FAIL_ID);
 #endif
-
-    if (!DoingDNS(cptr))
-	SetAccess(cptr);
 
     return;
 }
@@ -300,8 +293,6 @@ void read_authports(aClient *cptr)
          highest_fd--;
    cptr->authfd = -1;
    ClearAuth(cptr);
-   if (!DoingDNS(cptr))
-      SetAccess(cptr);
 
    if (!*userid)
    {

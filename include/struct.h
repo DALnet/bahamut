@@ -184,7 +184,7 @@ typedef struct MotdItem aMotd;
 #define	FLAGS_CLOSING      0x000020   /* set when closing to suppress errors */
 #define	FLAGS_LISTEN       0x000040   /* used to mark clients which we listen()
 				       * on */
-#define	FLAGS_CHKACCESS    0x000080   /* ok to check clients access if set */
+/* Flag 0x80 is free */
 #define	FLAGS_DOINGDNS	   0x000100   /* client is waiting for a DNS 
 				       * response */
 #define	FLAGS_AUTH	   0x000200   /* client is waiting on rfc931 
@@ -365,7 +365,6 @@ typedef struct MotdItem aMotd;
 #define SendRnotice(x)          ((x)->umode & UMODE_n)
 #define NoMsgThrottle(x)	((x)->umode & UMODE_F)
 #define	IsListening(x)		((x)->flags & FLAGS_LISTEN)
-#define	DoAccess(x)		((x)->flags & FLAGS_CHKACCESS)
 #define	IsLocal(x)		((x)->flags & FLAGS_LOCAL)
 #define	IsDead(x)		((x)->flags & FLAGS_DEADSOCKET)
 #define	SetOper(x)		((x)->umode |= UMODE_o)
@@ -380,7 +379,6 @@ typedef struct MotdItem aMotd;
 #define SetNoMsgThrottle(x)	((x)->umode |= UMODE_F)
 #define	SetDNS(x)		((x)->flags |= FLAGS_DOINGDNS)
 #define	DoingDNS(x)		((x)->flags & FLAGS_DOINGDNS)
-#define	SetAccess(x)		((x)->flags |= FLAGS_CHKACCESS)
 #define	DoingAuth(x)		((x)->flags & FLAGS_AUTH)
 #define	NoNewLine(x)		((x)->flags & FLAGS_NONL)
 #define SeenDCCNotice(x)        ((x)->umode & UMODE_D)
@@ -427,9 +425,6 @@ typedef struct MotdItem aMotd;
 #define ClearNoMsgThrottle(x)	((x)->umode &= ~UMODE_F)
 #define	ClearDNS(x)		((x)->flags &= ~FLAGS_DOINGDNS)
 #define	ClearAuth(x)		((x)->flags &= ~FLAGS_AUTH)
-#define	ClearAccess(x)		((x)->flags &= ~FLAGS_CHKACCESS)
-
-/* flags2 macros. */
 
 /* Oper flags */
 

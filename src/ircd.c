@@ -456,7 +456,6 @@ static time_t check_pings(time_t currenttime)
 		    del_queries((char *) cptr);
 		    ClearAuth(cptr);
 		    ClearDNS(cptr);
-		    SetAccess(cptr);
 		    cptr->since = currenttime;
 		    continue;
 		}
