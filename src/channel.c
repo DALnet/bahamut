@@ -897,8 +897,8 @@ set_mode(aClient *cptr, aClient *sptr, aChannel *chptr, int level, int parc,
 				banlsent = 1;
 				break; /* we don't pass this along, either.. */
 			}
-			/* do not allow : in bans */
-			if(*parv[args]==':') {
+			/* do not allow : in bans, or a null ban */
+			if(*parv[args]==':' || *parv[args] == '\0') {
 				args++;
 				break;
 			}
@@ -977,7 +977,8 @@ set_mode(aClient *cptr, aClient *sptr, aChannel *chptr, int level, int parc,
 			  break;
 
 			/* do not allow keys to start with :! ack! - lucas */
-			if(*parv[args]==':') {
+                        /* another ack: don't let people set null keys! */
+			if(*parv[args]==':' || *parv[args] == '\0') {
 				args++;
 				break;
 			}
