@@ -1360,10 +1360,10 @@ add_connection(aClient *cptr, int fd)
  * do * any flooding >:-) -avalon
  */
 
-read_packet(aClient *cptr)
+read_packet(aClient *cptr, int dataready)
 {
    Reg int     dolen = 0, length = 0, done;
-   if (!(IsPerson(cptr) && DBufLength(&cptr->recvQ) > 6090)) {
+   if (dataready && !(IsPerson(cptr) && DBufLength(&cptr->recvQ) > 6090)) {
 	  errno = 0;
 	  
 #if defined(MAXBUFFERS) && !defined(SEQUENT)
@@ -1561,6 +1561,7 @@ read_message(time_t delay,
 	time_t      delay2 = delay, now;
 	u_long      usec = 0;
 	int         res, length, fd;
+	int	    isdata;
 	int         auth = 0;
 	register int i, j;
 	
@@ -1888,12 +1889,13 @@ read_message(time_t delay,
 								 * for fall through case 
 								 */
 # ifdef USE_FAST_FD_ISSET
-		  if (!NoNewLine(cptr) ||
-				(read_set->fds_bits[fd_read_offset] & fd_read_mask))
-			 length = read_packet(cptr);
+		  isdata = (read_set->fds_bits[fd_read_offset] & fd_read_mask);
+		  if (!NoNewLine(cptr) || isdata)
+			 length = read_packet(cptr, isdata);
 # else
-		  if (!NoNewLine(cptr) || FD_ISSET(i, read_set))
-			 length = read_packet(cptr);
+		  isdata = FD_ISSET(i, read_set);
+		  if (!NoNewLine(cptr) || isdata)
+			 length = read_packet(cptr, isdata);
 # endif
 # ifdef DEBUGMODE
 		  readcalls++;
@@ -2302,7 +2304,7 @@ read_message(time_t delay, fdlist * listp)
 							 * for fall through case 
 							 */
       if (!NoNewLine(cptr) || rr)
-		  length = read_packet(cptr);
+		  length = read_packet(cptr, rr);
 #ifdef DEBUGMODE
       readcalls++;
 #endif
