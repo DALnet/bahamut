@@ -1733,6 +1733,9 @@ int m_join(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	}
 
 	chptr = get_channel(sptr, name, CREATE, NULL);
+
+	if (chptr && IsMember(sptr, chptr))
+	    continue;
 	
 	if (!chptr || (MyConnect(sptr) && (i = can_join(sptr, chptr, key))))
 	{
@@ -1747,8 +1750,6 @@ int m_join(aClient *cptr, aClient *sptr, int parc, char *parv[])
 #endif
 	    continue;
 	}
-	if (IsMember(sptr, chptr))
-	    continue;
 	
 /* only complain when the user can join the channel, the channel is
  * being created by this user, and this user is not allowed to be an op.
