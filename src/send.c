@@ -1284,7 +1284,7 @@ void send_chatops(char *pattern, ...)
     l = &oper_fdlist;
     for (fd = l->entry[i = 1]; i <= l->last_entry; fd = l->entry[++i])
     {
-	if (!(cptr = local[fd]) || !SendGlobops(cptr) || !IsAnOper(cptr))
+	if (!(cptr = local[fd]) || !SendChatops(cptr) || !IsAnOper(cptr))
 	    continue;
 	if (IsAnOper(cptr))
 	{
