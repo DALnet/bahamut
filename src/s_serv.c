@@ -2716,7 +2716,7 @@ m_htm(aClient *cptr, aClient *sptr, int parc, char *parv[])
    char       *command;
 
    extern int  lifesux, LRV, LCF, noisy_htm;	/* in ircd.c */
-   extern float currlife;
+   extern int currlife;
 
    if (!MyClient(sptr) || !IsOper(sptr)) 
    {

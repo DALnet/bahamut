@@ -613,7 +613,7 @@ bad_command()
 int         lifesux = 1;
 int         LRV = LOADRECV;
 time_t      LCF = LOADCFREQ;
-float       currlife = 0.0;
+int currlife = 0;
 
 char REPORT_DO_DNS[256], REPORT_FIN_DNS[256], REPORT_FIN_DNSC[256], 
   REPORT_FAIL_DNS[256], REPORT_DO_ID[256], REPORT_FIN_ID[256], 
@@ -1046,7 +1046,7 @@ time_t      lasttimeofday;
    if ((timeofday - lasttime) >= LCF) {
       lrv = LRV * LCF;
       lasttime = timeofday;
-      currlife = (float) (me.receiveK - lastrecvK) / (float) LCF;
+      currlife = (me.receiveK - lastrecvK) / int LCF;
       if ((me.receiveK - lrv) > lastrecvK) {
 	 if (!lifesux) {
 	    /*
@@ -1071,8 +1071,8 @@ time_t      lasttimeofday;
 
 	    if (noisy_htm) {
 	       (void) sprintf(to_send,
-		     "Entering high-traffic mode - (%.1fk/s > %dk/s)",
-			      (float) currlife, LRV);
+		     "Entering high-traffic mode - (%dk/s > %dk/s)",
+			      currlife, LRV);
 	       sendto_ops(to_send);
 	    }
 	 }
@@ -1085,10 +1085,21 @@ time_t      lasttimeofday;
 				 */
 	    if (noisy_htm) {
 	       (void) sprintf(to_send,
-		   "Still high-traffic mode %d%s (%d delay): %.1fk/s",
+		   "Still high-traffic mode %d%s (%d delay): %dk/s",
 			  lifesux, (lifesux & 0x04) ? " (TURBO)" : "",
-			      (int) LCF, (float) currlife);
+			      (int) LCF, currlife);
 	       sendto_ops(to_send);
+	    }
+	    if (lifesux>15) {
+	       if (noisy_htm) {
+		  (void) sprintf(to_send,
+				 "Resetting HTM and raising limit to: %dk/s\n",
+				 LRV + 5);
+		  sendto_ops(to_send);
+	       }
+	       LCF=LOADCFREQ;
+	       lifesux=0;
+	       LRV+=5;
 	    }
 	 }
       }
