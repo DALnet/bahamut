@@ -3920,7 +3920,7 @@ m_umode(aClient *cptr,
 
    if(!(setflags & UMODE_D) && GetDCC(sptr)) {
       sendto_one(sptr, ":%s NOTICE %s :\002WARNING\002: by setting yourself +D, the server will no longer block DCC sends"
-                 " of known malicious filetypes. If you do not wish to turn this off, type /mode %s -D", 
+                 " of known malicious filetypes. If you want the server to continue blocking these files, type /mode %s -D", 
                  me.name, sptr->name, sptr->name);
    }
 
