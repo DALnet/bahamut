@@ -277,7 +277,7 @@ int m_services(aClient *cptr, aClient *sptr, int parc, char *parv[])
 int m_identify(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     char       buf[BUFSIZE+1];
-    char       *myparv[parc];
+    char       *myparv[MAXPARA + 1];
 
     if (check_registered_user(sptr))
 	return 0;
