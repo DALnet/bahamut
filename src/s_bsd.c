@@ -46,9 +46,6 @@
 /* Stuff for poll() */
 
 #ifdef USE_POLL
-# ifdef HAVE_STROPTS_H
-#  include <stropts.h>
-# endif
 # include <poll.h>
 #endif				/* USE_POLL */
 
@@ -1289,29 +1286,84 @@ aClient *add_connection(aClient * cptr, int fd)
    return acptr;
 }
 
+/* handle taking care of the client's recvq here */
+static int do_client_queue(aClient *cptr)
+{
+   int dolen = 0, done;
+
+   while (DBufLength(&cptr->recvQ) && !NoNewLine(cptr) &&
+	  ((cptr->status < STAT_UNKNOWN) || (cptr->since - timeofday < 10))) 
+   {
+      /* If it's become registered as a server, just parse the whole block */
+      if (IsServer(cptr)) 
+      {
+#if defined(MAXBUFFERS) && !defined(SEQUENT)
+         dolen = dbuf_get(&cptr->recvQ, readbuf, rcvbufmax * sizeof(char));
+#else
+         dolen = dbuf_get(&cptr->recvQ, readbuf, sizeof(readbuf));
+#endif
+         if (dolen <= 0)
+            break;
+         if ((done = dopacket(cptr, readbuf, dolen)))
+            return done;
+         break;
+      }
+
+#if defined(MAXBUFFERS) && !defined(SEQUENT)
+      dolen = dbuf_getmsg(&cptr->recvQ, readbuf, rcvbufmax * sizeof(char));
+#else
+      dolen = dbuf_getmsg(&cptr->recvQ, readbuf, sizeof(readbuf));
+#endif
+
+      if (dolen <= 0) 
+      {
+         if (dolen < 0)
+            return exit_client(cptr, cptr, cptr, "dbuf_getmsg fail");
+
+         if (DBufLength(&cptr->recvQ) < 510) 
+         {
+            cptr->flags |= FLAGS_NONL;
+            break;
+         }
+         /* The buffer is full (more than 512 bytes) and it has no \n
+          * Some user is trying to trick us. Kill their recvq. */
+         DBufClear(&cptr->recvQ);
+         break;
+      }
+      else if(client_dopacket(cptr, readbuf, dolen) == FLUSH_BUFFER)
+         return FLUSH_BUFFER;
+   }
+   return 1;
+}
+
 /*
- * * read_packet *
+ * read_packet
  *
- * Read a 'packet' of data from a connection and process it.  Read in 8k *
- * chunks to give a better performance rating (for server connections). *
+ * Read a 'packet' of data from a connection and process it.  Read in 8k 
+ * chunks to give a better performance rating (for server connections). 
  * Do some tricky stuff for client connections to make sure they don't
- * do * any flooding >:-) -avalon
+ * do any flooding >:-) -avalon
  */
 
-static int read_packet(aClient * cptr, int dataready)
-{
-   Reg int dolen = 0, length = 0, done;
+#define MAX_CLIENT_RECVQ 8192	/* 4 dbufs */
 
-   if (dataready && !(IsPerson(cptr) && DBufLength(&cptr->recvQ) > 6090)) {
+static int read_packet(aClient * cptr)
+{
+   int length = 0, done;
+
+   /* If data is ready, and the user is either not a person or
+    * is a person and has a recvq of less than MAX_CLIENT_RECVQ,
+    * read from this client
+    */ 
+   if (!(IsPerson(cptr) && DBufLength(&cptr->recvQ) > MAX_CLIENT_RECVQ)) 
+   {
       errno = 0;
 
 #if defined(MAXBUFFERS) && !defined(SEQUENT)
       if (IsPerson(cptr))
 	 length = recv(cptr->fd, readbuf, 8192 * sizeof(char), 0);
-
       else
 	 length = recv(cptr->fd, readbuf, rcvbufmax * sizeof(char), 0);
-
 #else
       length = recv(cptr->fd, readbuf, sizeof(readbuf), 0);
 #endif
@@ -1345,17 +1397,20 @@ static int read_packet(aClient * cptr, int dataready)
    }
 
    /* 
-    * * For server connections, we process as many as we can without *
+    * For server connections, we process as many as we can without
     * worrying about the time of day or anything :)
     */
-   if (IsServer(cptr) || IsConnecting(cptr) || IsHandshake(cptr)) {
+   if (IsServer(cptr) || IsConnecting(cptr) || IsHandshake(cptr)) 
+   {
       if (length > 0)
 	 if ((done = dopacket(cptr, readbuf, length)))
 	    return done;
-   } else {
+   } 
+   else 
+   {
       /* 
-       * * * Before we even think of parsing what we just read, stick * *
-       * it on the end of the receive queue and do it when its * turn *
+       * Before we even think of parsing what we just read, stick 
+       * it on the end of the receive queue and do it when its turn
        * comes around. */
       if (dbuf_put(&cptr->recvQ, readbuf, length) < 0)
 	 return exit_client(cptr, cptr, cptr, "dbuf_put fail");
@@ -1373,63 +1428,92 @@ static int read_packet(aClient * cptr, int dataready)
 			    DBufLength(&cptr->recvQ), CLIENT_FLOOD);
 	 return exit_client(cptr, cptr, cptr, "Excess Flood");
       }
-
-      while (DBufLength(&cptr->recvQ) && !NoNewLine(cptr) &&
-	     ((cptr->status < STAT_UNKNOWN) ||
-	      (cptr->since - timeofday < 10))) {
-	 /* 
-	  * * If it has become registered as a Server * then skip the
-	  * per-message parsing below.
-	  */
-	 if (IsServer(cptr)) {
-
-#if defined(MAXBUFFERS) && !defined(SEQUENT)
-	    dolen = dbuf_get(&cptr->recvQ, readbuf,
-
-			     rcvbufmax * sizeof(char));
-
-#else
-	    dolen = dbuf_get(&cptr->recvQ, readbuf, sizeof(readbuf));
-#endif
-	    if (dolen <= 0)
-	       break;
-	    if ((done = dopacket(cptr, readbuf, dolen)))
-	       return done;
-	    break;
-	 }
-#if defined(MAXBUFFERS) && !defined(SEQUENT)
-	 dolen = dbuf_getmsg(&cptr->recvQ, readbuf,
-
-			     rcvbufmax * sizeof(char));
-
-#else
-	 dolen = dbuf_getmsg(&cptr->recvQ, readbuf, sizeof(readbuf));
-#endif
-	 /* 
-	  * * Devious looking...whats it do ? well..if a client * sends
-	  * a *long* message without any CR or LF, then * dbuf_getmsg
-	  * fails and we pull it out using this * loop which just gets
-	  * the next 512 bytes and then * deletes the rest of the
-	  * buffer contents. * -avalon
-	  */
-	 while (dolen <= 0) {
-	    if (dolen < 0)
-	       return exit_client(cptr, cptr, cptr, "dbuf_getmsg fail");
-	    if (DBufLength(&cptr->recvQ) < 510) {
-	       cptr->flags |= FLAGS_NONL;
-	       break;
-	    }
-	    dolen = dbuf_get(&cptr->recvQ, readbuf, 511);
-	    if (dolen > 0 && DBufLength(&cptr->recvQ))
-	       DBufClear(&cptr->recvQ);
-	 }
-
-	 if (dolen > 0 &&
-	     (client_dopacket(cptr, readbuf, dolen) == FLUSH_BUFFER))
-		return FLUSH_BUFFER;
-      }
+      return do_client_queue(cptr);
    }
    return 1;
+}
+
+static void read_error_exit(aClient *cptr, int length, int err)
+{
+   char fbuf[512];
+   char errmsg[512];
+
+   if (IsServer(cptr) || IsHandshake(cptr) || IsConnecting(cptr)) 
+   {
+      if (length == 0) 
+      {
+         char *errtxt = "Server %s closed the connection";
+
+         ircsprintf(fbuf, "from %s: %s", me.name, errtxt);
+         sendto_gnotice(fbuf, get_client_name(cptr, HIDEME));
+         ircsprintf(fbuf, ":%s GNOTICE :%s", me.name, errtxt);
+	 sendto_serv_butone(cptr, fbuf, get_client_name(cptr, HIDEME));
+      }
+      else 
+      {
+         char *errtxt = "Read error from %s, closing link (%s)";
+
+         ircsprintf(fbuf, "from %s: %s", me.name, errtxt);
+         sendto_gnotice(fbuf, get_client_name(cptr, HIDEME), strerror(err));
+	 ircsprintf(fbuf, ":%s GNOTICE :%s", me.name, errtxt);
+	 sendto_serv_butone(cptr, fbuf, get_client_name(cptr, HIDEME), strerror(err));
+      }
+   }
+
+   if (err)
+      ircsprintf(errmsg, "Read error: %s", strerror(err));
+   else
+      ircsprintf(errmsg, "Client closed connection");
+
+   exit_client(cptr, cptr, &me, errmsg);
+}
+
+void accept_connection(aClient *cptr)
+{
+   static struct sockaddr_in addr;
+   int addrlen = sizeof(struct sockaddr_in);
+   char host[HOSTLEN + 2];
+   int newfd;
+
+   cptr->lasttime = timeofday;
+   if ((newfd = accept(cptr->fd, (struct sockaddr *) &addr, &addrlen)) < 0) 
+   {
+# ifdef EPROTO
+      /* 
+       * If a connection is closed before the accept(), it
+       * returns EPROTO on Solaris.
+       */
+      if (errno != EPROTO)
+# endif
+      report_error("Cannot accept connections %s:%s", cptr);
+      return;
+   }
+
+   strncpyzt(host, (char *) inetntoa((char *) &addr.sin_addr), sizeof(host));
+
+   if (find_zline(host)) 
+   {
+      ircstp->is_ref++;
+      close(newfd);
+      return;
+   }
+
+   if (newfd >= HARD_FDLIMIT - 10) 
+   {
+      ircstp->is_ref++;
+      sendto_ops("All connections in use. (%s)", get_client_name(cptr, HIDEME));
+      send(newfd, "ERROR :All connections in use\r\n", 32, 0);
+      close(newfd);
+      return;
+   }
+   ircstp->is_ac++;
+
+   add_connection(cptr, newfd);
+#ifdef PINGNAZI
+   nextping = timeofday;
+#endif
+   if (!cptr->acpt)
+      cptr->acpt = &me;
 }
 
 /*
@@ -1464,22 +1548,36 @@ static int read_packet(aClient * cptr, int dataready)
  * -Dianora
  */
 
+#ifdef FAST_FD_ISSET
+# define MYFD_ISSET_READ (read_set->fds_bits[fd_read_offset] & fd_read_mask)
+# define MYFD_ISSET_WRITE (write_set->fds_bits[fd_write_offset] & fd_write_mask)
+# define MYFD_CLR_READ read_set->fds_bits[fd_read_offset] &= ~fd_read_mask;
+# define FAST_FD_INC 
+    fd_read_mask <<= 1;		\
+    if (!fd_read_mask) {	\
+       fd_read_offset++;	\
+       fd_read_mask = 1;	\
+    }				\
+    fd_write_mask <<= 1;	\
+    if (!fd_write_mask) {	\
+       fd_write_offset++;	\
+       fd_write_mask = 1;	\
+    }
+#else
+# define MYFD_ISSET_READ (FD_ISSET(i, read_set))
+# define MYFD_ISSET_WRITE (FD_ISSET(i, write_set))
+# define MYFD_CLR_READ FD_CLR(i, read_set);
+# define FAST_FD_INC
+#endif
+
 /*
  * Check all connections for new connections and input data that is to
  * be processed. Also check for connections with data queued and
  * whether we can write it out.
  */
 #ifndef USE_POLL
-int read_message(time_t delay,
-
-/*
- * Don't ever use ZERO here, unless you mean to poll and then you have
- * to have sleep/wait somewhere else in the code.--msa
- */
-		 fdlist * listp)
-{				/* 
-				 * mika
-				 */
+int read_message(time_t delay, fdlist * listp)
+{                        
    Reg aClient *cptr;
    Reg int nfds;
    struct timeval wait;
@@ -1487,12 +1585,9 @@ int read_message(time_t delay,
 # ifndef HAVE_FD_ALLOC
    fd_set readset, writeset;
    fd_set *read_set, *write_set;
-
 # endif
    time_t delay2 = delay, now;
-   u_long usec = 0;
-   int res, length, fd;
-   int isdata;
+   int res, length;
    int auth = 0;
    register int i, j;
    char errmsg[256];
@@ -1502,105 +1597,104 @@ int read_message(time_t delay,
    int fd_read_offset;
    int fd_write_mask;
    int fd_write_offset;
-
 # endif
+
 # ifndef HAVE_FD_ALLOC
    read_set = &readset;
    write_set = &writeset;
 # endif
 
-   /* 
-    * if it is called with NULL we check all active fd's
-    */
-   if (!listp) {
+   /* if it is called with NULL we check all active fd's */
+   if (!listp) 
+   {
       listp = &default_fdlist;
-      listp->last_entry = highest_fd + 1;	/* 
-						 * remember the 0th
-						 * * entry isnt used
-						 */
+      listp->last_entry = highest_fd + 1;
    }
+
    now = timeofday;
 
-   for (res = 0;;) {
+   for (res = 0;;) 
+   {
       FD_ZERO(read_set);
       FD_ZERO(write_set);
       for (i = listp->entry[j = 1]; j <= listp->last_entry;
-	   i = listp->entry[++j]) {
-	 if (!(cptr = local[i]))
-	    continue;
-	 if (IsLog(cptr))
-	    continue;
-	 if (DoingAuth(cptr)) {
-	    auth++;
-	    Debug((DEBUG_NOTICE, "auth on %x %d", cptr, i));
-	    FD_SET(cptr->authfd, read_set);
-	    if (cptr->flags & FLAGS_WRAUTH)
-	       FD_SET(cptr->authfd, write_set);
-	 }
-	 if (DoingDNS(cptr) || DoingAuth(cptr))
-	    continue;
-	 if ((IsMe(cptr) && IsListening(cptr)) || IsConnecting(cptr)) {
-	    FD_SET(i, read_set);
-	 } else if (!IsMe(cptr)) {
-	    if (DBufLength(&cptr->recvQ) && delay2 > 2)
-	       delay2 = 1;
-	    if (DBufLength(&cptr->recvQ) < 4088) {
-	       FD_SET(i, read_set);
-	    }
-	 }
+           i = listp->entry[++j]) 
+      {
+         if (!(cptr = local[i]))
+            continue;
+         if (IsLog(cptr))
+            continue;
+         if (DoingAuth(cptr)) 
+         {
+            auth++;
+            Debug((DEBUG_NOTICE, "auth on %x %d", cptr, i));
+            FD_SET(cptr->authfd, read_set);
+            if (cptr->flags & FLAGS_WRAUTH)
+               FD_SET(cptr->authfd, write_set);
+         }
+         if (DoingDNS(cptr) || DoingAuth(cptr))
+            continue;
+         if ((IsMe(cptr) && IsListening(cptr)) || IsConnecting(cptr)) 
+         {
+            FD_SET(i, read_set);
+         } 
+         else if (!IsMe(cptr)) 
+         {
+            if (DBufLength(&cptr->recvQ) && delay2 > 2)
+               delay2 = 1;
+            if (DBufLength(&cptr->recvQ) < 4088) 
+            {
+               FD_SET(i, read_set);
+            }
+         }
 
-	 length = DBufLength(&cptr->sendQ);
+         length = DBufLength(&cptr->sendQ);
 
-	 /* 
-	  * Thanks to Lucas, this should stop /list from
-	  * transmitting so slowly.
-	  */
+         if (DoList(cptr) && IsSendable(cptr)) 
+         {
+            send_list(cptr, 64);
+            length = DBufLength(&cptr->sendQ);
+         }
 
-	 if (DoList(cptr) && IsSendable(cptr)) {
-	    send_list(cptr, 64);
-	    length = DBufLength(&cptr->sendQ);
-	 }
-
-	 if (length || IsConnecting(cptr)) 
-	    FD_SET(i, write_set);
+         if (length || IsConnecting(cptr)) 
+            FD_SET(i, write_set);
       }
 
       if (resfd >= 0) {
-	 FD_SET(resfd, read_set);
+         FD_SET(resfd, read_set);
       }
       wait.tv_sec = MIN(delay2, delay);
-      wait.tv_usec = usec;
-# ifdef	HPUX
-      nfds =
-	  select(FD_SETSIZE, (fd_set *) read_set, (fd_set *) write_set,
-		 (fd_set *) 0, &wait);
+      wait.tv_usec = 0;
+# ifdef HPUX
+      nfds = select(FD_SETSIZE, (fd_set *) read_set, (fd_set *) write_set, (fd_set *) 0, &wait);
 # else
       nfds = select(MAXCONNECTIONS, read_set, write_set, 0, &wait);
 # endif
       if ((timeofday = time(NULL)) == -1) {
 # ifdef USE_SYSLOG
-	 syslog(LOG_WARNING, "Clock Failure (%d), TS can be corrupted",
-		errno);
+         syslog(LOG_WARNING, "Clock Failure (%d), TS can be corrupted", errno);
 # endif
-	 sendto_ops("Clock Failure (%d), TS can be corrupted", errno);
+         sendto_ops("Clock Failure (%d), TS can be corrupted", errno);
       }
 
       if (nfds == -1 && errno == EINTR) {
-	 return -1;
+         return -1;
       } else if (nfds >= 0)
-	 break;
+         break;
       report_error("select %s:%s", &me);
       res++;
       if (res > 5)
-	 restart("too many select errors");
+         restart("too many select errors");
       sleep(10);
    }
 
-   if (resfd >= 0 && FD_ISSET(resfd, read_set)) {
+   if (resfd >= 0 && FD_ISSET(resfd, read_set)) 
+   {
       do_dns_async();
       nfds--;
       FD_CLR(resfd, read_set);
    }
+
 # ifdef USE_FAST_FD_ISSET
    fd_read_mask = 1;
    fd_read_offset = 0;
@@ -1609,328 +1703,119 @@ int read_message(time_t delay,
 
    for (i = 0; i <= highest_fd; i++)
 # else
-      for (i = listp->entry[j = 1]; j <= listp->last_entry;
-	   i = listp->entry[++j])
+   for (i = listp->entry[j = 1]; j <= listp->last_entry; i = listp->entry[++j])
 # endif
+   { 
+      if (!(cptr = local[i])) 
       {
-	 if (!(cptr = local[i])) {
-# ifdef USE_FAST_FD_ISSET
-	    fd_read_mask <<= 1;
-	    if (!fd_read_mask) {
-	       fd_read_offset++;
-	       fd_read_mask = 1;
-	    }
-
-	    fd_write_mask <<= 1;
-	    if (!fd_write_mask) {
-	       fd_write_offset++;
-	       fd_write_mask = 1;
-	    }
-# endif
-	    continue;
-	 }
-	 /* 
-	  * * Check the auth fd's first... */
-	 if ((auth > 0) && (cptr->authfd >= 0)) {
-	    auth--;
-	    if ((nfds > 0) && FD_ISSET(cptr->authfd, write_set)) {
-	       nfds--;
-	       send_authports(cptr);
-	    } else if ((nfds > 0) && FD_ISSET(cptr->authfd, read_set)) {
-	       nfds--;
-	       read_authports(cptr);
-	    }
-	 }
-	 /* 
-	  * * Now see if there's a connection pending... */
-# ifdef USE_FAST_FD_ISSET
-	 if (IsListening(cptr) &&
-	     (read_set->fds_bits[fd_read_offset] & fd_read_mask))
-# else
-	    if (IsListening(cptr) && FD_ISSET(i, read_set))
-# endif
-	    {
-	       static struct sockaddr_in addr;
-	       int addrlen = sizeof(struct sockaddr_in);
-	       char host[HOSTLEN + 2];
-
-# ifdef USE_FAST_FD_ISSET
-	       read_set->fds_bits[fd_read_offset] &= ~fd_read_mask;
-# else
-	       FD_CLR(i, read_set);
-# endif
-	       nfds--;
-	       cptr->lasttime = timeofday;
-	       /* 
-	        * * There may be many reasons for error return, but * in
-	        * otherwise correctly working environment the * probable
-	        * cause is running out of file descriptors * (EMFILE, ENFILE
-	        * or others?). The man pages for * accept don't seem to list
-	        * these as possible, * although it's obvious that it may
-	        * happen here. * Thus no specific errors are tested at this *
-	        * point, just assume that connections cannot * be accepted
-	        * until some old is closed first.
-	        */
-	       if (
-		   (fd =
-		    accept(i, (struct sockaddr *) &addr, &addrlen)) < 0) {
-		  report_error("Cannot accept connections %s:%s", cptr);
-		  break;
-	       }
-	       strncpyzt(host,
-			 (char *) inetntoa((char *) &addr.sin_addr),
-			 sizeof(host));
-
-	       if (find_zline(host)) {
-		  ircstp->is_ref++;
-		  (void) close(fd);
-# ifdef USE_FAST_FD_ISSET
-		  fd_read_mask <<= 1;
-		  if (!fd_read_mask) {
-		     fd_read_offset++;
-		     fd_read_mask = 1;
-		  }
-
-		  fd_write_mask <<= 1;
-		  if (!fd_write_mask) {
-		     fd_write_offset++;
-		     fd_write_mask = 1;
-		  }
-# endif
-		  continue;
-	       }
-	       if (fd >= (HARD_FDLIMIT - 10)) {
-		  ircstp->is_ref++;
-		  sendto_realops("All connections in use. (%s)",
-				 get_client_name(cptr, HIDEME));
-		  (void) send(fd,
-			      "ERROR :All connections in use\r\n", 32, 0);
-		  (void) close(fd);
-		  break;
-	       }
-	       ircstp->is_ac++;
-	       /* 
-	        * Use of add_connection (which never fails :) meLazy
-	        */
-	       (void) add_connection(cptr, fd);
-#ifdef PINGNAZI
-	       nextping = timeofday;
-#endif
-	       if (!cptr->acpt)
-		  cptr->acpt = &me;
-	    }
-# ifdef USE_FAST_FD_ISSET
-	 if (IsMe(cptr)) {
-	    fd_read_mask <<= 1;
-	    if (!fd_read_mask) {
-	       fd_read_offset++;
-	       fd_read_mask = 1;
-	    }
-
-	    fd_write_mask <<= 1;
-	    if (!fd_write_mask) {
-	       fd_write_offset++;
-	       fd_write_mask = 1;
-	    }
-	    continue;
-	 }
-# else
-	 if (IsMe(cptr))
-	    continue;
-# endif
-	 /* 
-	  * * See if we can write... */
-# ifdef USE_FAST_FD_ISSET
-	 if (write_set->fds_bits[fd_write_offset] & fd_write_mask)
-# else
-	    if (FD_ISSET(i, write_set))
-# endif
-	    {
-	       int write_err = 0;
-
-	       nfds--;
-	       /* 
-	        * * ...room for writing, empty some queue then...
-	        */
-	       if (IsConnecting(cptr))
-		  write_err = completed_connection(cptr);
-	       if (!write_err)
-		  (void) send_queued(cptr);
-	       if (IsDead(cptr) || write_err) {
-# ifdef USE_FAST_FD_ISSET
-		  if (read_set->fds_bits[fd_read_offset] & fd_read_mask) {
-		     nfds--;
-		     read_set->fds_bits[fd_read_offset] &= ~fd_read_mask;
-		  }
-# else
-		  if (FD_ISSET(i, read_set)) {
-		     nfds--;
-		     FD_CLR(i, read_set);
-		  }
-# endif
-		  ircsprintf(errmsg, "Write Error: %s", (cptr->flags & FLAGS_SENDQEX) ?
-			"SendQ Exceeded" : strerror(get_sockerr(cptr)));
-		  (void) exit_client(cptr, cptr, &me, errmsg);
-# ifdef USE_FAST_FD_ISSET
-		  fd_read_mask <<= 1;
-		  if (!fd_read_mask) {
-		     fd_read_offset++;
-		     fd_read_mask = 1;
-		  }
-
-		  fd_write_mask <<= 1;
-		  if (!fd_write_mask) {
-		     fd_write_offset++;
-		     fd_write_mask = 1;
-		  }
-# endif
-		  continue;
-	       }
-	    }
-	 length = 1;		/* 
-				 * for fall through case
-				 */
-# ifdef USE_FAST_FD_ISSET
-	 isdata = (read_set->fds_bits[fd_read_offset] & fd_read_mask);
-	 if (!NoNewLine(cptr) || isdata)
-	    length = read_packet(cptr, isdata);
-# else
-	 isdata = FD_ISSET(i, read_set);
-	 if (!NoNewLine(cptr) || isdata)
-	    length = read_packet(cptr, isdata);
-# endif
-# ifdef DEBUGMODE
-	 readcalls++;
-# endif
-
-	 if ((length != FLUSH_BUFFER) && IsDead(cptr)) {
-# ifdef USE_FAST_FD_ISSET
-	    if (read_set->fds_bits[fd_read_offset] & fd_read_mask) {
-	       nfds--;
-	       read_set->fds_bits[fd_read_offset] &= ~fd_read_mask;
-	    }
-# else
-	    if (FD_ISSET(i, read_set)) {
-	       nfds--;
-	       FD_CLR(i, read_set);
-	    }
-# endif
-	    ircsprintf(errmsg, "Read/Dead Error: %s", (cptr->flags & FLAGS_SENDQEX) ?
-			 "SendQ Exceeded" : strerror(get_sockerr(cptr)));
-	    (void) exit_client(cptr, cptr, &me, errmsg);
-
-# ifdef USE_FAST_FD_ISSET
-	    fd_read_mask <<= 1;
-	    if (!fd_read_mask) {
-	       fd_read_offset++;
-	       fd_read_mask = 1;
-	    }
-
-	    fd_write_mask <<= 1;
-	    if (!fd_write_mask) {
-	       fd_write_offset++;
-	       fd_write_mask = 1;
-	    }
-# endif
-	    continue;
-	 }
-# ifdef USE_FAST_FD_ISSET
-	 if ((read_set->fds_bits[fd_read_offset] & fd_read_mask)
-	     && length > 0)
-# else
-	    if (!FD_ISSET(i, read_set) && length > 0)
-	       continue;
-# endif
-	 nfds--;
-# ifdef USE_FAST_FD_ISSET
-	 if (length > 0) {
-	    fd_read_mask <<= 1;
-	    if (!fd_read_mask) {
-	       fd_read_offset++;
-	       fd_read_mask = 1;
-	    }
-
-	    fd_write_mask <<= 1;
-	    if (!fd_write_mask) {
-	       fd_write_offset++;
-	       fd_write_mask = 1;
-	    }
-
-	    continue;
-	 }
-# else
-	 if (length > 0)
-	    continue;
-# endif
-	 /* 
-	  * ...hmm, with non-blocking sockets we might get
-	  * here from quite valid reasons, although.. why
-	  * would select report "data available" when there
-	  * wasn't... so, this must be an error anyway...  --msa
-	  * actually, EOF occurs when read() returns 0 and
-	  * in due course, select() returns that fd as ready
-	  * for reading even though it ends up being an EOF.
-	  * -avalon
-	  */
-	 Debug((DEBUG_ERROR, "READ ERROR: fd = %d %d %d",
-		i, errno, length));
-	 /* 
-	  * NOTE: if length == -2 then cptr has already been freed!
-	  */
-	 if (length != -2 && (IsServer(cptr) || IsHandshake(cptr) || IsConnecting(cptr))) {
-	    char fbuf[512];
-
-	    if (length == 0) {
-	       char *errtxt = "Server %s closed the connection";
-
-	       ircsprintf(fbuf, "from %s: %s", me.name, errtxt);
-	       sendto_gnotice(fbuf, get_client_name(cptr, HIDEME));
-	       ircsprintf(fbuf, ":%s GNOTICE :%s", me.name, errtxt);
-	       sendto_serv_butone(cptr, fbuf,
-				  get_client_name(cptr, HIDEME));
-	    } else {
-	       char *errtxt = "Read error from %s, closing link (%s)";
-	       int errtmp = errno;
-
-	       ircsprintf(fbuf, "from %s: %s", me.name, errtxt);
-	       sendto_gnotice(fbuf, get_client_name(cptr, HIDEME),
-			    strerror(errtmp));
-	       ircsprintf(fbuf, ":%s GNOTICE :%s", me.name, errtxt);
-	       sendto_serv_butone(cptr, fbuf,
-				  get_client_name(cptr, HIDEME),
-				  strerror(errtmp));
-	    }
-	 }
-	 if (length != FLUSH_BUFFER) {
-	    if (errno)
-	       (void) ircsprintf(errmsg, "Read error: %s", strerror(errno));
-	    else
-	       (void) ircsprintf(errmsg, "Client closed connection");
-
-	    (void) exit_client(cptr, cptr, &me, errmsg);
-	 }
-# ifdef USE_FAST_FD_ISSET
-
-	 fd_read_mask <<= 1;
-	 if (!fd_read_mask) {
-	    fd_read_offset++;
-	    fd_read_mask = 1;
-	 }
-
-	 fd_write_mask <<= 1;
-	 if (!fd_write_mask) {
-	    fd_write_offset++;
-	    fd_write_mask = 1;
-	 }
-# endif
-
+         FAST_FD_INC
+         continue;
       }
+
+      /* Check the auth fd's first... */
+      if ((auth > 0) && (cptr->authfd >= 0))        
+      {
+         auth--;
+         if ((nfds > 0) && FD_ISSET(cptr->authfd, write_set)) 
+         {
+            nfds--;
+            send_authports(cptr);
+         }
+         else if ((nfds > 0) && FD_ISSET(cptr->authfd, read_set)) 
+         {
+            nfds--;
+            read_authports(cptr);
+         }
+      }
+
+      /* Now see if there's a connection pending... */
+      if (IsListening(cptr) && MYFD_ISSET_READ)
+      {
+         MYFD_CLR_READ
+
+         nfds--;
+         accept_connection(cptr);
+
+         FAST_FD_INC
+
+         continue;
+      }
+
+      if (IsMe(cptr))
+      {
+         FAST_FD_INC
+         continue;
+      }
+
+      /* See if we can write... */
+      if(MYFD_ISSET_WRITE)
+      {
+         int write_err = 0;
+
+         nfds--;
+
+         if (IsConnecting(cptr))
+            write_err = completed_connection(cptr);
+         if (!write_err)
+            send_queued(cptr);
+
+         if (IsDead(cptr) || write_err) 
+         {
+            if(MYFD_ISSET_READ)
+            {
+               MYFD_CLR_READ
+            }
+            ircsprintf(errmsg, "Write Error: %s", (cptr->flags & FLAGS_SENDQEX) ?
+                       "SendQ Exceeded" : strerror(get_sockerr(cptr)));
+            exit_client(cptr, cptr, &me, errmsg);
+            FAST_FD_INC
+            continue;
+         }
+      }
+
+      length = 1;                /* for fall through case */
+
+      if(MYFD_ISSET_READ)
+         length = read_packet(cptr);
+      else if(IsPerson(cptr) && !NoNewLine(cptr))
+         length = do_client_queue(cptr);
+
+# ifdef DEBUGMODE
+      readcalls++;
+# endif
+
+      if ((length != FLUSH_BUFFER) && IsDead(cptr)) 
+      {
+         if(MYFD_ISSET_READ)
+         {
+            MYFD_CLR_READ
+         }
+         ircsprintf(errmsg, "Read/Dead Error: %s", (cptr->flags & FLAGS_SENDQEX) ?
+                    "SendQ Exceeded" : strerror(get_sockerr(cptr)));
+         exit_client(cptr, cptr, &me, errmsg);
+         FAST_FD_INC
+         continue;
+      }
+
+      if(length > 0)
+      {
+         if(MYFD_ISSET_READ)
+            nfds--;
+         FAST_FD_INC
+         continue;
+      }
+
+      if(length != FLUSH_BUFFER)
+      {
+         Debug((DEBUG_ERROR, "READ ERROR: fd = %d %d %d", i, errno, length));
+         read_error_exit(cptr, length, errno);
+      }
+      FAST_FD_INC
+   }
    return 0;
 }
 
-#else				/* 
-				 * USE_POLL
-				 */
+#else   /* USE_POLL */
 
 # ifdef AIX
 #  define POLLREADFLAGS (POLLIN|POLLMSG)
@@ -1966,47 +1851,42 @@ int read_message(time_t delay,
 #  define POLLERRORS POLLERR
 # endif
 
-# define PFD_SETR( thisfd ){	CHECK_PFD( thisfd );\
-				pfd->events |= POLLREADFLAGS;}
-# define PFD_SETW( thisfd ){	CHECK_PFD( thisfd );\
-				pfd->events |= POLLWRITEFLAGS;}
-# define CHECK_PFD( thisfd )                     \
-	if ( pfd->fd != thisfd ) {              \
-		pfd = &poll_fdarray[nbr_pfds++];\
-		pfd->fd     = thisfd;           \
-		pfd->events = 0;                \
-	}
+# define PFD_SETR(thisfd) { CHECK_PFD(thisfd);\
+                            pfd->events |= POLLREADFLAGS; }
+# define PFD_SETW(thisfd) { CHECK_PFD(thisfd);\
+                            pfd->events |= POLLWRITEFLAGS; }
+# define CHECK_PFD( thisfd )                    \
+        if ( pfd->fd != thisfd ) {              \
+                pfd = &poll_fdarray[nbr_pfds++];\
+                pfd->fd     = thisfd;           \
+                pfd->events = 0;                \
+        }
 
 int read_message(time_t delay, fdlist * listp)
 {
-   Reg aClient *cptr;
-   Reg int nfds;
-   struct timeval wait;
-
+   aClient *cptr;
+   int nfds;
    static struct pollfd poll_fdarray[MAXCONNECTIONS];
    struct pollfd *pfd = poll_fdarray;
    struct pollfd *res_pfd = NULL;
    int nbr_pfds = 0;
+   u_long waittime;
    time_t delay2 = delay;
-   u_long usec = 0;
-   int res, length, fd, newfd;
+   int res, length, fd;
    int auth, rr, rw;
-   register int i, j;
+   int i, j;
+   static char errmsg[512];
    static aClient *authclnts[MAXCONNECTIONS];
-   char errmsg[256];
 
-   /* 
-    * if it is called with NULL we check all active fd's
-    */
-   if (!listp) {
+   /* if it is called with NULL we check all active fd's */
+   if (!listp) 
+   {
       listp = &default_fdlist;
-      listp->last_entry = highest_fd + 1;	/* 
-						 * remember the 0th
-						 * * entry isnt used
-						 */
+      listp->last_entry = highest_fd + 1;
    }
 
-   for (res = 0;;) {
+   for (res = 0;;) 
+   {
       nbr_pfds = 0;
       pfd = poll_fdarray;
       pfd->fd = -1;
@@ -2014,269 +1894,177 @@ int read_message(time_t delay, fdlist * listp)
       auth = 0;
 
       for (i = listp->entry[j = 1]; j <= listp->last_entry;
-	   i = listp->entry[++j]) {
-	 if (!(cptr = local[i]))
-	    continue;
-	 if (IsLog(cptr))
-	    continue;
-	 if (DoingAuth(cptr)) {
-	    if (auth == 0)
-	       memset((char *) &authclnts, '\0', sizeof(authclnts));
-	    auth++;
-	    Debug((DEBUG_NOTICE, "auth on %x %d", cptr, i));
-	    PFD_SETR(cptr->authfd);
-	    if (cptr->flags & FLAGS_WRAUTH)
-	       PFD_SETW(cptr->authfd);
-	    authclnts[cptr->authfd] = cptr;
-	    continue;
-	 }
-	 if (DoingDNS(cptr) || DoingAuth(cptr))
-	    continue;
-	 if (IsMe(cptr) && IsListening(cptr)) {
+           i = listp->entry[++j]) 
+      {
+         if (!(cptr = local[i]))
+            continue;
+         if (IsLog(cptr))
+            continue;
+         if (DoingAuth(cptr)) 
+         {
+            if (auth == 0)
+               memset((char *) &authclnts, '\0', sizeof(authclnts));
+            auth++;
+            Debug((DEBUG_NOTICE, "auth on %x %d", cptr, i));
+            PFD_SETR(cptr->authfd);
+            if (cptr->flags & FLAGS_WRAUTH)
+               PFD_SETW(cptr->authfd);
+            authclnts[cptr->authfd] = cptr;
+            continue;
+         }
+         if (DoingDNS(cptr) || DoingAuth(cptr))
+            continue;
+         if (IsMe(cptr) && IsListening(cptr)) 
+         {
 # if defined(SOL20) || defined(AIX)
 #  define CONNECTFAST
 # endif
 
 # ifdef CONNECTFAST
-	    /* 
-	     * next line was 2, changing to 1
-	     */
-	    /* 
-	     * if we dont have many clients just let em on
-	     */
-	    /* 
-	     * This is VERY bad if someone tries to send a lot of
-	     * clones to the server though, as mbuf's can't be
-	     * allocated quickly enough... - Comstud
-	     */
-	    if (1)
+            /* 
+             * This is VERY bad if someone tries to send a lot of
+             * clones to the server though, as mbuf's can't be
+             * allocated quickly enough... - Comstud
+             */
+            PFD_SETR(i);
 # else
-	       if (timeofday > (cptr->lasttime + 2))
+            if (timeofday > (cptr->lasttime + 2))
+            {
+               PFD_SETR(i);
+            } 
+            else if (delay2 > 2)
+               delay2 = 2;
 # endif
-	       {
-		  PFD_SETR(i);
-	       } else if (delay2 > 2)
-		  delay2 = 2;
-	 } else if (!IsMe(cptr)) {
-	    if (DBufLength(&cptr->recvQ) && delay2 > 2)
-	       delay2 = 1;
-	    if (DBufLength(&cptr->recvQ) < 4088)
-	       PFD_SETR(i);
-	 }
+         } 
+         else if (!IsMe(cptr)) 
+         {
+            if (DBufLength(&cptr->recvQ) && delay2 > 2)
+               delay2 = 1;
+            if (DBufLength(&cptr->recvQ) < 4088)
+               PFD_SETR(i);
+         }
 
-	 length = DBufLength(&cptr->sendQ);
-	 if (DoList(cptr) && IsSendable(cptr)) {
-	    send_list(cptr, 64);
-	    length = DBufLength(&cptr->sendQ);
-	 }
+         length = DBufLength(&cptr->sendQ);
+         if (DoList(cptr) && IsSendable(cptr)) 
+         {
+            send_list(cptr, 64);
+            length = DBufLength(&cptr->sendQ);
+         }
 
-	 if (length || IsConnecting(cptr))
-	    PFD_SETW(i);
+         if (length || IsConnecting(cptr))
+            PFD_SETW(i);
       }
 
-      if (resfd >= 0) {
-	 PFD_SETR(resfd);
-	 res_pfd = pfd;
+      if (resfd >= 0) 
+      {
+         PFD_SETR(resfd);
+         res_pfd = pfd;
       }
-      wait.tv_sec = MIN(delay2, delay);
-      wait.tv_usec = usec;
-      nfds = poll(poll_fdarray, nbr_pfds,
-		  wait.tv_sec * 1000 + wait.tv_usec / 1000);
+
+      waittime = MIN(delay2, delay) * 1000;
+      nfds = poll(poll_fdarray, nbr_pfds, waittime);
       if (nfds == -1 && ((errno == EINTR) || (errno == EAGAIN)))
-	 return -1;
+         return -1;
       else if (nfds >= 0)
-	 break;
+         break;
       report_error("poll %s:%s", &me);
       res++;
       if (res > 5)
-	 restart("too many poll errors");
+         restart("too many poll errors");
       sleep(10);
    }
-   if (res_pfd && (res_pfd->revents & (POLLREADFLAGS | POLLERRORS))) {
+
+   if (res_pfd && (res_pfd->revents & (POLLREADFLAGS | POLLERRORS))) 
+   {
       do_dns_async();
       nfds--;
    }
-   for (pfd = poll_fdarray, i = 0; (nfds > 0) && (i < nbr_pfds);
-	i++, pfd++) {
+
+   for (pfd = poll_fdarray, i = 0; (nfds > 0) && (i < nbr_pfds); i++, pfd++) 
+   {
       if (!pfd->revents)
-	 continue;
+         continue;
       if (pfd == res_pfd)
-	 continue;
+         continue;
       nfds--;
       fd = pfd->fd;
       rr = pfd->revents & POLLREADFLAGS;
       rw = pfd->revents & POLLWRITEFLAGS;
-      if (pfd->revents & POLLERRORS) {
-	 if (pfd->events & POLLREADFLAGS)
-	    rr++;
-	 if (pfd->events & POLLWRITEFLAGS)
-	    rw++;
+      if (pfd->revents & POLLERRORS) 
+      {
+         if (pfd->events & POLLREADFLAGS)
+            rr++;
+         if (pfd->events & POLLWRITEFLAGS)
+            rw++;
       }
       if ((auth > 0) && ((cptr = authclnts[fd]) != NULL) &&
-	  (cptr->authfd == fd)) {
-	 auth--;
-	 if (rr)
-	    read_authports(cptr);
-	 if (rw)
-	    send_authports(cptr);
-	 continue;
+          (cptr->authfd == fd)) 
+      {
+         auth--;
+         if (rr)
+            read_authports(cptr);
+         if (rw)
+            send_authports(cptr);
+         continue;
       }
       if (!(cptr = local[fd]))
-	 continue;
-      if (rr && IsListening(cptr)) {
-	 static struct sockaddr_in addr;
-	 int addrlen = sizeof(struct sockaddr_in);
-	 char host[HOSTLEN + 2];
-
-	 rr = 0;
-	 cptr->lasttime = timeofday;
-	 /* 
-	  * * There may be many reasons for error return, but * in
-	  * otherwise correctly working environment the * probable
-	  * cause is running out of file descriptors * (EMFILE, ENFILE
-	  * or others?). The man pages for * accept don't seem to list
-	  * these as possible, * although it's obvious that it may
-	  * happen here. * Thus no specific errors are tested at this *
-	  * point, just assume that connections cannot * be accepted
-	  * until some old is closed first.
-	  */
-	 if ((newfd = accept(fd, (struct sockaddr *) &addr, &addrlen)) < 0) {
-# ifdef EPROTO
-	    /* 
-	     * If a connection is closed before the accept(), it
-	     * returns EPROTO on Solaris.
-	     */
-	    if (errno != EPROTO)
-# endif
-	       report_error("Cannot accept connections %s:%s", cptr);
-	    break;
-	 }
-	 strncpyzt(host,
-		   (char *) inetntoa((char *) &addr.sin_addr),
-		   sizeof(host));
-
-	 if (find_zline(host)) {
-	    ircstp->is_ref++;
-	    (void) close(newfd);
-	    continue;
-	 }
-
-	 if (newfd >= HARD_FDLIMIT - 10) {
-	    ircstp->is_ref++;
-	    sendto_ops("All connections in use. (%s)",
-		       get_client_name(cptr, HIDEME));
-	    (void) send(newfd, "ERROR :All connections in use\r\n", 32, 0);
-	    (void) close(newfd);
-	    break;
-	 }
-	 ircstp->is_ac++;
-	 /* 
-	  * Use of add_connection (which never fails :) meLazy
-	  */
-	 (void) add_connection(cptr, newfd);
-#ifdef PINGNAZI
-	 nextping = timeofday;
-#endif
-	 if (!cptr->acpt)
-	    cptr->acpt = &me;
-	 continue;
+         continue;
+      if (rr && IsListening(cptr)) 
+      {
+         accept_connection(cptr);
+         continue;
       }
       if (IsMe(cptr))
-	 continue;
-      if (rw) {
-	 int write_err = 0;
+         continue;
+      if (rw) /* socket is marked for writing.. */
+      {
+         int write_err = 0;
 
-	 /* 
-	  * * ...room for writing, empty some queue then...
-	  */
-	 if (IsConnecting(cptr))
-	    write_err = completed_connection(cptr);
-	 if (!write_err)
-	    (void) send_queued(cptr);
-	 if (IsDead(cptr) || write_err) {
-	    ircsprintf(errmsg, "Write Error: %s", (cptr->flags & FLAGS_SENDQEX) ?
-		       "SendQ Exceeded" : strerror(get_sockerr(cptr)));
-	    (void) exit_client(cptr, cptr, &me, errmsg);
+         if (IsConnecting(cptr))
+            write_err = completed_connection(cptr);
+         if (!write_err)
+            (void) send_queued(cptr);
+         if (IsDead(cptr) || write_err) 
+         {
+            ircsprintf(errmsg, "Write Error: %s", (cptr->flags & FLAGS_SENDQEX) ?
+                       "SendQ Exceeded" : strerror(get_sockerr(cptr)));
+            (void) exit_client(cptr, cptr, &me, errmsg);
 
-	    continue;
-	 }
+            continue;
+         }
       }
-      length = 1;		/* 
-				 * for fall through case
-				 */
-      if (!NoNewLine(cptr) || rr)
-	 length = read_packet(cptr, rr);
+
+      length = 1; /* for fall through case */
+
+      if (rr)
+         length = read_packet(cptr);
+      else if(IsPerson(cptr) && !NoNewLine(cptr))
+         length = do_client_queue(cptr);
+
 # ifdef DEBUGMODE
       readcalls++;
 # endif
       if (length == FLUSH_BUFFER)
-	 continue;
-      if (IsDead(cptr)) {
-	 ircsprintf(errmsg, "Read/Dead Error: %s", (cptr->flags & FLAGS_SENDQEX) ?
-		    "SendQ Exceeded" : strerror(get_sockerr(cptr)));
-	 (void) exit_client(cptr, cptr, &me, errmsg);
-	 continue;
+         continue;
+
+      if (IsDead(cptr)) 
+      {
+         ircsprintf(errmsg, "Read/Dead Error: %s", (cptr->flags & FLAGS_SENDQEX) ?
+                    "SendQ Exceeded" : strerror(get_sockerr(cptr)));
+         exit_client(cptr, cptr, &me, errmsg);
+         continue;
       }
+
       if (length > 0)
-	 continue;
-      /* 
-       * * ...hmm, with non-blocking sockets we might get * here from
-       * quite valid reasons, although.. why * would select report
-       * "data available" when there * wasn't... so, this must be an
-       * error anyway...  --msa * actually, EOF occurs when read()
-       * returns 0 and * in due course, select() returns that fd as
-       * ready * for reading even though it ends up being an EOF.
-       * -avalon
-       */
-      Debug((DEBUG_ERROR, "READ ERROR: fd = %d %d %d", fd, errno, length));
-      if (IsServer(cptr) || IsHandshake(cptr) || IsConnecting(cptr)) {
-	 /* see below.. * *        int         connected = timeofday - * *
-	  * cptr->firsttime; */
-	 char fbuf[512];
+         continue;
 
-	 if (length == 0) {
-	    char *errtxt = "Server %s closed the connection";
-
-	    ircsprintf(fbuf, "from %s: %s", me.name, errtxt);
-	    sendto_gnotice(fbuf, get_client_name(cptr, HIDEME));
-	    ircsprintf(fbuf, ":%s GNOTICE :%s", me.name, errtxt);
-	    sendto_serv_butone(cptr, fbuf, get_client_name(cptr, HIDEME));
-	 } else {
-	    char *errtxt = "Read error from %s, closing link (%s)";
-	    int errtmp = errno;
-
-	    ircsprintf(fbuf, "from %s: %s", me.name, errtxt);
-	    sendto_gnotice(fbuf, get_client_name(cptr, HIDEME),
-			 strerror(errtmp));
-	    ircsprintf(fbuf, ":%s GNOTICE :%s", me.name, errtxt);
-	    sendto_serv_butone(cptr, fbuf,
-			       get_client_name(cptr, HIDEME),
-			       strerror(errtmp));
-	 }
-
-/*
- * eh, this is only in the poll() side.. I'm gonna comment it out for now. - lucas
- *			sendto_ops("%s had been connected for %d day%s, %2d:%02d:%02d",
- *						  cptr->name, connected / 86400,
- *						  (connected / 86400 == 1) ? "" : "s",
- *						  (connected % 86400) / 3600, (connected % 3600) / 60,
- *						  connected % 60);
- */
-      }
-
-      if (errno)
-        (void) ircsprintf(errmsg, "Read error: %s", strerror(errno));
-      else
-	(void) ircsprintf(errmsg, "Client closed connection");
-
-      (void) exit_client(cptr, cptr, &me, errmsg);
+      /* An error has occured reading from cptr, drop it. */
+      read_error_exit(cptr, length, errno);
    }
    return 0;
 }
 
-#endif				/* 
-				 * USE_POLL
-				 */
+#endif /* USE_POLL */
 
 /*
  * connect_server
