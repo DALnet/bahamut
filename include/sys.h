@@ -63,8 +63,9 @@
 #ifdef AIX
 #include <sys/select.h>
 #include <time.h>
-#include <sys/time.h>
 #endif
+
+#include <sys/time.h>
 
 #if ((__GNU_LIBRARY__ == 6) && (__GLIBC__ >=2) && (__GLIBC_MINOR__ >= 2))
 #include <time.h>
