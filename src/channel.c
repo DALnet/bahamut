@@ -469,12 +469,10 @@ int can_send(aClient *cptr, aChannel *chptr) {
 
    member = (cm = find_user_member(chptr->members, cptr)) ? 1 : 0;
 
-   if (chptr->mode.mode & MODE_MODERATED &&
-       (!cm || !(cm->flags & (CHFL_CHANOP | CHFL_VOICE))))
-      return (MODE_MODERATED);
-
    if(!member)
    {
+      if (chptr->mode.mode & MODE_MODERATED)
+         return (MODE_MODERATED);
       if(chptr->mode.mode & MODE_NOPRIVMSGS)
          return (MODE_NOPRIVMSGS);
       if (MyClient(cptr) && is_banned(cptr, chptr))
@@ -482,6 +480,8 @@ int can_send(aClient *cptr, aChannel *chptr) {
    }
    else
    {
+      if (chptr->mode.mode & MODE_MODERATED && !(cm->flags & (CHFL_CHANOP | CHFL_VOICE)))
+         return (MODE_MODERATED);
       if(cm->bans && !(cm->flags & (CHFL_CHANOP | CHFL_VOICE)))
          return (MODE_BAN);
    }
@@ -489,9 +489,6 @@ int can_send(aClient *cptr, aChannel *chptr) {
    return 0;
 }
 
-aChannel   *find_channel(char *chname, aChannel *chptr) {
-   return hash_find_channel(chname, chptr);
-}
 /*
  * write the "simple" list of channel modes for channel chptr onto
  * buffer mbuf with the parameters in pbuf.
@@ -2349,188 +2346,102 @@ m_list(aClient *cptr,
 
 /************************************************************************
  * m_names() - Added by Jto 27 Apr 1989
+ * 12 Feb 2000 - geesh, time for a rewrite -lucas
  ************************************************************************/
 /*
- * * m_names *        parv[0] = sender prefix *       parv[1] = channel
+ * m_names 
+ * parv[0] = sender prefix 
+ * parv[1] = channel
  */
+
 /* maximum names para to show to opers when abuse occurs */
 #define TRUNCATED_NAMES 64
-int
-m_names(aClient *cptr,
-	aClient *sptr,
-	int parc,
-	char *parv[])
+
+int m_names(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
-   Reg aChannel *chptr;
-   Reg aClient *c2ptr;
-   Reg Link   *lp;
-   Reg chanMember *cm;
-   aChannel   *ch2ptr = NULL;
-   int         idx, flag, len, mlen;
-   char       *s, *para = parc > 1 ? parv[1] : NULL;
-	 int char_count=0;
-	 
-	 
-	 if (!MyConnect(sptr)) {
-			sendto_one(sptr, rpl_str(RPL_ENDOFNAMES), me.name, parv[0], "*");
-			return 0;
-	 }
-   mlen = strlen(me.name) + NICKLEN + 7;
+   int mlen = strlen(me.name) + NICKLEN + 7;
+   aChannel *chptr;
+   aClient *acptr;
+   int member;
+   chanMember *cm;
+   int idx, flag = 1, spos;
+   char *s, *para = parv[1];
 
-   if (!BadPtr(para)) {
-/* Here is the lamer detection code
- * P.S. meta, GROW UP
- * -Dianora
- */
-		for(s = para; *s; s++) {
-			char_count++;
-			if(*s == ',') {
-				if(char_count > TRUNCATED_NAMES)
-				  para[TRUNCATED_NAMES] = '\0';
-				else {
-					s++;
-					*s = '\0';
-				}
-				sendto_realops("/names abuser %s [%s]",
-									para, get_client_name(sptr,FALSE));
-				sendto_one(sptr, err_str(ERR_TOOMANYTARGETS),
-							  me.name, sptr->name, "NAMES");
-				return 0;
-			}
-		}
-		s = strchr(para, ',');
-		if (s)
-		  *s = '\0';
-		if(!check_channelname(sptr, (unsigned char *)para))
-		  return 0;
-		ch2ptr = find_channel(para, (aChannel *) NULL);
-	}
+   if (parc < 2 || !MyConnect(sptr)) 
+   {
+      sendto_one(sptr, rpl_str(RPL_ENDOFNAMES), me.name, parv[0], "*");
+      return 0;
+   }
 
-   *buf = '\0';
-   /*
-    * Allow NAMES without registering
-    * 
-    * First, do all visible channels (public and the one user self is)
-    */
+   for(s = para; *s; s++) 
+   {
+      if(*s == ',') 
+      {
+         para[TRUNCATED_NAMES] = '\0';
+         sendto_realops("names abuser %s %s", get_client_name(sptr, FALSE), para);
+         sendto_one(sptr, err_str(ERR_TOOMANYTARGETS), me.name, sptr->name, "NAMES");
+         return 0;
+      }
+   }
 
-   for (chptr = channel; chptr; chptr = chptr->nextch) {
-      if ((chptr != ch2ptr) && !BadPtr(para))
-	 continue;		/*
-				 * -- wanted a specific channel 
-				 */
-      if (!MyConnect(sptr) && BadPtr(para))
-	 continue;
-      if (!ShowChannel(sptr, chptr))
-	 continue;		/*
-				 * -- users on this are not listed 
-				 */
+   if(!check_channelname(sptr, (unsigned char *)para))
+      return 0;
+     
+   chptr = find_channel(para, (aChannel *) NULL);
 
-      /*
-       * Find users on same channel (defined by chptr) 
-       */
+   if (!chptr || !ShowChannel(sptr, chptr))
+   {
+      sendto_one(sptr, rpl_str(RPL_ENDOFNAMES), me.name, parv[0], para);
+      return 0;
+   }
 
-      (void) strcpy(buf, "* ");
-      len = strlen(chptr->chname);
-      (void) strcpy(buf + 2, chptr->chname);
-      (void) strcpy(buf + 2 + len, " :");
+   /* cache whether this user is a member of this channel or not */
+   member = IsMember(sptr, chptr) ? 1 : 0;
 
-      if (PubChannel(chptr))
-	 *buf = '=';
-      else if (SecretChannel(chptr))
-	 *buf = '@';
-      idx = len + 4;
+   if(PubChannel(chptr))
+      buf[0] = '=';
+   else if(SecretChannel(chptr))
+      buf[0] = '@';
+   else
+      buf[0] = '*';
+
+   idx = 1;
+   buf[idx++] = ' ';
+   for(s = chptr->chname; *s; s++)
+      buf[idx++] = *s;
+   buf[idx++] = ' ';
+   buf[idx++] = ':';
+
+   spos = idx; /* starting point in buffer for names!*/
+
+   for (cm = chptr->members; cm; cm = cm->next) 
+   {
+      acptr = cm->cptr;
+      if(IsInvisible(acptr) && !member)
+         continue;
+      if(cm->flags & CHFL_CHANOP)
+         buf[idx++] = '@';
+      else if(cm->flags & CHFL_VOICE)
+         buf[idx++] = '+';
+      for(s = acptr->name; *s; s++)
+         buf[idx++] = *s;
+      buf[idx++] = ' ';
+      buf[idx] = '\0';
       flag = 1;
-      for (cm = chptr->members; cm; cm = cm->next) {
-	 c2ptr = cm->cptr;
-	 if (IsInvisible(c2ptr) && !IsMember(sptr, chptr))
-	    continue;
-	 if (cm->flags & CHFL_CHANOP) {
-	    (void) strcat(buf, "@");
-	    idx++;
-	 }
-	 else if (cm->flags & CHFL_VOICE) {
-	    (void) strcat(buf, "+");
-	    idx++;
-	 }
-	 (void) strncat(buf, c2ptr->name, NICKLEN);
-	 idx += strlen(c2ptr->name) + 1;
-	 flag = 1;
-	 (void) strcat(buf, " ");
-	 if (mlen + idx + NICKLEN > BUFSIZE - 3) {
-	    sendto_one(sptr, rpl_str(RPL_NAMREPLY),
-		       me.name, parv[0], buf);
-	    (void) strncpy(buf, "* ", 3);
-	    (void) strncpy(buf + 2, chptr->chname, len + 1);
-	    (void) strcat(buf, " :");
-	    if (PubChannel(chptr))
-	       *buf = '=';
-	    else if (SecretChannel(chptr))
-	       *buf = '@';
-	    idx = len + 4;
-	    flag = 0;
-	 }
-      }
-      if (flag)
-	 sendto_one(sptr, rpl_str(RPL_NAMREPLY),
-		    me.name, parv[0], buf);
-   }
-   if (!BadPtr(para)) {
-      sendto_one(sptr, rpl_str(RPL_ENDOFNAMES), me.name, parv[0],
-		 para);
-      return (1);
-   }
-
-   /*
-    * Second, do all non-public, non-secret channels in one big sweep 
-    */
-
-   (void) strncpy(buf, "* * :", 6);
-   idx = 5;
-   flag = 0;
-   for (c2ptr = client; c2ptr; c2ptr = c2ptr->next) {
-   aChannel   *ch3ptr;
-   int         showflag = 0, secret = 0;
-
-      if (!IsPerson(c2ptr) || IsInvisible(c2ptr))
-	 continue;
-      lp = c2ptr->user->channel;
-      /*
-       * dont show a client if they are on a secret channel or they are
-       * on a channel sptr is on since they have already been show
-       * earlier. -avalon
-       */
-      while (lp) {
-	 ch3ptr = lp->value.chptr;
-	 if (PubChannel(ch3ptr) || IsMember(sptr, ch3ptr))
-	    showflag = 1;
-	 if (SecretChannel(ch3ptr))
-	    secret = 1;
-	 lp = lp->next;
-      }
-      if (showflag)		/*
-				 * have we already shown them ? 
-				 */
-	 continue;
-      if (secret)		/*
-				 * on any secret channels ? 
-				 */
-	 continue;
-      (void) strncat(buf, c2ptr->name, NICKLEN);
-      idx += strlen(c2ptr->name) + 1;
-      (void) strcat(buf, " ");
-      flag = 1;
-      if (mlen + idx + NICKLEN > BUFSIZE - 3) {
-	 sendto_one(sptr, rpl_str(RPL_NAMREPLY),
-		    me.name, parv[0], buf);
-	 (void) strncpy(buf, "* * :", 6);
-	 idx = 5;
-	 flag = 0;
+      if(mlen + idx + NICKLEN > BUFSIZE - 3)
+      {
+         sendto_one(sptr, rpl_str(RPL_NAMREPLY), me.name, parv[0], buf);
+         idx = spos;
+         flag = 0;
       }
    }
-   if (flag)
+
+   if (flag) 
       sendto_one(sptr, rpl_str(RPL_NAMREPLY), me.name, parv[0], buf);
-   sendto_one(sptr, rpl_str(RPL_ENDOFNAMES), me.name, parv[0], "*");
-   return (1);
+
+   sendto_one(sptr, rpl_str(RPL_ENDOFNAMES), me.name, parv[0], para);
+
+   return 0;
 }
 
 void

@@ -21,13 +21,13 @@
 
 #ifndef	__channel_include__
 # define __channel_include__
+# define find_channel(chname, chptr) (hash_find_channel(chname, chptr))
 # define CREATE 1		/* whether a channel should be created or just
-                      * tested for existance 
-							 */
-# define	MODEBUFLEN	200	/* max modebuf we consider from users */
-# define	REALMODEBUFLEN	512	/* max actual modebuf */
-# define NullChn	((aChannel *)0)
-# define ChannelExists(n)	(find_channel(n, NullChn) != NullChn)
+                                 * tested for existance */
+# define MODEBUFLEN		200	/* max modebuf we consider from users */
+# define REALMODEBUFLEN		512	/* max actual modebuf */
+# define NullChn 		((aChannel *) NULL)
+# define ChannelExists(n) 	(find_channel(n, NullChn) != NullChn)
 # ifndef	V28PlusOnly
 #	define	MAXMODEPARAMS	6
 # else
