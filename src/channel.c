@@ -74,7 +74,7 @@ static char *PartFmt2 = ":%s PART %s :%s";
 
 /* some buffers for rebuilding channel/nick lists with ,'s */
 static char nickbuf[BUFSIZE], buf[BUFSIZE];
-static char modebuf[MODEBUFLEN], parabuf[MODEBUFLEN];
+static char modebuf[REALMODEBUFLEN], parabuf[REALMODEBUFLEN];
 
 /* htm ... */
 extern int lifesux;
@@ -171,7 +171,7 @@ static int add_banid(aClient *cptr, aChannel *chptr, char *banid) {
    for (ban = chptr->banlist; ban; ban = ban->next) {
       if (MyClient(cptr) && (++cnt >= MAXBANS)) {
 			sendto_one(cptr, getreply(ERR_BANLISTFULL), me.name, cptr->name,
-						  chptr->chname);
+						  chptr->chname, banid);
 			return -1;
 		}
 		/* yikes, we were doing all sorts of weird crap here before, now
