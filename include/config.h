@@ -329,6 +329,13 @@
  */
 #define DEFAULT_KLINE_TIME 30
 
+/* CONNECTFAST
+ *
+ * if not defined, only allow 1 connection per listening socket 
+ * every two seconds.
+ */
+#define CONNECTFAST
+
 /*
  * LOCKFILE - Exclusive use of ircd.conf and kline.conf during writes
  * 
