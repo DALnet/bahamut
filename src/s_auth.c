@@ -166,7 +166,7 @@ void send_authports(aClient *cptr)
     Debug((DEBUG_SEND, "sending [%s] to auth port %s.113",
 	   authbuf, inetntoa((char *) &them.sin_addr)));
 
-    if (send(cptr->authfd, authbuf, strlen(authbuf)) != strlen(authbuf), 0) {
+    if (send(cptr->authfd, authbuf, strlen(authbuf), 0) != strlen(authbuf)) {
 	authsenderr(cptr);
 	return;
     }
