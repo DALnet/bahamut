@@ -1,0 +1,17 @@
+Changes for 1.4.15
+- Crash in res.c fixed (due to wrong question received under heavy load)
+- name resolution prevents ircd dns cache pollution
+
+Changes for 1.4.14 (previous release was 1.4.12)
+- RC4 streaming encryption added, diffie hellman key exchange
+  - Requires GMP library
+  - Vulnerable to man-in-the-middle attacks
+  - Requires 'E' flag in the N: line on both servers.
+- zlib-compressed links added
+  - Requires 'Z' flag in the N: line of a server
+    that wishes to zip outgoing links to that link.
+
+Changes for 1.4.12 (previous release was 1.4.8):
+- /stats ?, v fixed to hide u-lined servers
+- /lusers fixed to hide u-lined servers
+- name resolution is more strict
