@@ -430,7 +430,7 @@ static void send_ban_list(aClient *cptr, aChannel *chptr)
 
    for (bp = chptr->banlist; bp; bp = bp->next) 
    {
-      if (strlen(parabuf) + strlen(name) + 10 < (size_t) MODEBUFLEN) 
+      if (strlen(parabuf) + strlen(bp->banstr) + 10 < (size_t) MODEBUFLEN) 
       {
          if(*parabuf)
 	    strcat(parabuf, " ");
@@ -453,7 +453,7 @@ static void send_ban_list(aClient *cptr, aChannel *chptr)
 	 *cp++ = '+';
 	 if (count != MAXMODEPARAMS) {
 	    strcpy(parabuf, bp->banstr);
-	    *cp++ = flag;
+	    *cp++ = 'b';
 	 }
 	 count = 0;
 	 *cp = '\0';
@@ -1111,7 +1111,6 @@ static void
 sub1_from_channel(aChannel *chptr)
 {
    Reg Link   *tmp;
-   Link       *obtmp;
    aBan	      *bp, *bprem;
 
    if (--chptr->users <= 0) {
