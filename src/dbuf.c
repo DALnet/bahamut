@@ -359,11 +359,12 @@ getmsg_init:
 
 #ifdef DEBUG_DBUF
 int m_dbuf(aClient *cptr, aClient *sptr, int parc, char *parv[]) {
-   int i;
+   int i,j;
    FILE *f;
    if (!IsOper(sptr)) return 0;
    f=fopen("dbuf.out", "a");
-   for (i=1;i<=dbuftableused;i++) {
+   j=dbuftableused;
+   for (i=1;i<=j;i++) {
       fprintf(f, "%i - %p - %s - %i - %s\n", 
 		 i, dbuftable[i].ptr, dbuftable[i].file,
 		 dbuftable[i].line, dbuftable[i].function);
