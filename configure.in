@@ -396,9 +396,10 @@ if test "$GMPLIB" = ""; then
   echo "You can download gmp at http://www.swox.com/gmp, or any of the"
   echo "GNU distribution sites (http://www.gnu.org for more information)"
   exit 1
-else
-  echo Checking $GMPINC/$GMPINCFN directory for gmp version
-  AC_MSG_CHECKING(for gmp version)
+fi
+
+echo Checking $GMPINC/$GMPINCFN directory for gmp version
+AC_MSG_CHECKING(for gmp.h version)
 AC_TRY_RUN([
 #include <stdio.h>
 #include "$GMPINC/$GMPINCFN"
@@ -412,10 +413,23 @@ int main()
 }
 ], 
 AC_MSG_RESULT(ok),
+[
 AC_MSG_RESULT(too old)
-AC_MSG_ERROR(Invalid or too old gmp.h),
+echo "I found a version of gmp.h, but it was either not the gmp I know of,"
+echo "or it was not recent enough (I need gmp version 3.0 or later!)"
+echo ""
+echo "You should upgrade gmp from the URL below."
+echo ""
+echo "If you do not want to upgrade gmp system wide:"
+echo "You may make a directory \"gmp\" in the current directory"
+echo "and place libgmp.a and gmp.h in that directory, and I will"
+echo "autodetect it next time you run configure."
+echo ""
+echo "You can download gmp at http://www.swox.com/gmp, or any of the"
+echo "GNU distribution sites (http://www.gnu.org for more information)"
+AC_MSG_ERROR(Invalid or too old gmp.h (pre-version 3?))
+],
 AC_MSG_RESULT(can't tell))
-fi # option 
 
 AC_MSG_CHECKING(how to link to the gmp library)
 AC_TRY_RUN([
@@ -446,6 +460,148 @@ AC_MSG_RESULT(static)
 GMP_LIBS="$GMPLIB/lib$GMPLIBFN"
 ], 
 AC_MSG_RESULT(grr cross compiler blah!))
+
+BKLIBS="$LIBS"
+LIBS="$LIBS $GMP_LIBS"
+
+AC_MSG_CHECKING(for gmp library matching with header)
+AC_TRY_RUN([
+#include <stdio.h>
+#include <stdlib.h>
+#include "$GMPINC/$GMPINCFN"
+
+extern const char *gmp_version;
+
+char *str_next_period(char *x)
+{
+   while(*x && *x != '.')
+      x++;
+
+   if(*x)
+   {
+      *x = '\0';
+      return x + 1;
+   }
+
+   return NULL;
+}
+
+void *my_lame_strcpy(char *x, char *y, int ml)
+{
+   while(*x && ml--)
+   {
+      *x++ = *y++;
+   }
+   *x = '\0';
+}
+
+int main()
+{
+  int major_h = 0;
+  int minor_h = 0;
+  int plevel_h = 0;
+  int major_l = 0;
+  int minor_l = 0;
+  int plevel_l = 0;
+  char gv[128], *x, *z;
+  FILE *fp;
+
+  my_lame_strcpy(gv, gmp_version, 128);
+
+#ifdef __GNU_MP_VERSION
+  major_h = __GNU_MP_VERSION;
+#endif
+#ifdef __GNU_MP_VERSION_MINOR
+  minor_h = __GNU_MP_VERSION_MINOR;
+#endif
+#ifdef __GNU_MP_VERSION_PATCHLEVEL
+  plevel_h = __GNU_MP_VERSION_PATCHLEVEL;
+#endif
+
+  fp = fopen(".gmp_h_version", "w");
+  if(fp)
+  {
+     fprintf(fp, "%d.%d.%d", major_h, minor_h, plevel_h);
+     fclose(fp);
+  }
+
+  z = gv;
+  x = str_next_period(z);
+  major_l = atoi(z);
+  if(x)
+  {
+     z = x;
+     x = str_next_period(z);
+     minor_l = atoi(z);
+     if(x)
+     {
+        z = x;
+        x = str_next_period(z);
+        plevel_l = atoi(z);
+     }
+  }
+
+  fp = fopen(".gmp_l_version", "w");
+  if(fp)
+  {
+     fprintf(fp, "%d.%d.%d", major_l, minor_l, plevel_l);
+     fclose(fp);
+  }
+
+  if(major_l != major_h)
+     exit(1);
+
+  exit(0);
+}
+], 
+[
+AC_MSG_RESULT(no problems)
+],
+[
+AC_MSG_RESULT(problem!)
+echo "Your gmp library either has no version symbols, is not the correct 'gmp',"
+echo "or the major versions of your gmp library and gmp header differ."
+echo "You cannot have two versions of the gmp library in your dynamic (.so)"
+echo "library search path, this may be your problem."
+echo ""
+echo "You should upgrade gmp from the URL below."
+echo ""
+echo "If you do not want to upgrade gmp system wide:"
+echo "You may make a directory \"gmp\" in the current directory"
+echo "and place libgmp.a and gmp.h in that directory, and I will"
+echo "autodetect it next time you run configure."
+echo ""
+echo "You can download gmp at http://www.swox.com/gmp, or any of the"
+echo "GNU distribution sites (http://www.gnu.org for more information)"
+AC_MSG_ERROR("bad library/header match")
+],
+AC_MSG_RESULT(cross compile))
+
+LIBS="$BKLIBS"
+
+GMPHV=`cat .gmp_h_version`
+GMPLV=`cat .gmp_l_version`
+echo " - gmp header version: $GMPHV"
+echo " - gmp library version: $GMPLV"
+$RM -f .gmp_h_version .gmp_l_version
+
+if test "$GMPHV" != "$GMPLV"; then
+   echo ""
+   echo "Warning!"
+   echo "Your gmp.h and gmp library versions seem to differ!"
+   echo "If you get any linking errors regarding gmp functions (mpz_*),"
+   echo "this is probably the source of your problem!"
+   echo ""
+   echo "You can upgrade gmp from the URL below."
+   echo ""
+   echo "If you do not want to upgrade gmp system wide:"
+   echo "You may make a directory \"gmp\" in the current directory"
+   echo "and place libgmp.a and gmp.h in that directory, and I will"
+   echo "autodetect it next time you run configure."
+   echo ""
+   echo "You can download gmp at http://www.swox.com/gmp, or any of the"
+   echo "GNU distribution sites (http://www.gnu.org for more information)"
+fi
 
    AC_SUBST(GMPINC)
    AC_SUBST(GMPINCFN)
