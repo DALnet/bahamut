@@ -1619,7 +1619,7 @@ m_nick(aClient *cptr,
    if (sptr->name[0])
    {
       (void) del_from_client_hash_table(sptr->name, sptr);
-      if (IsPerson(sptr))
+      if (IsPerson(sptr) && mycmp(sptr->name, nick))
          hash_check_watch(sptr, RPL_LOGOFF);
    }
    (void) strcpy(sptr->name, nick);
