@@ -234,14 +234,14 @@ dnl end of openssl library test
 dnl check for various OSes
 
 case "$target" in
-    *-solaris2)
+    *-solaris2*)
         solaris2="yes"
         AC_DEFINE(OS_SOLARIS2)
         ;;
-    *-freebsd)
+    *-freebsd*)
         freebsd="yes"
         ;;
-    *-linux)
+    *-linux*)
         linux="yes"
         ;;
 esac
@@ -254,7 +254,7 @@ if test "$check_sengine" = "yes"; then
     if test "$freebsd" = "yes"; then
         AC_CHECK_FUNC(kevent, [ engine="kqueue" ], )
     elif test "$solaris2" = "yes"; then
-        engine="poll"
+        AC_CHECK_FUNC(poll, [ engine="poll" ], )
     elif test "$linux" = "yes"; then
         AC_CHECK_FUNC(poll, [ engine="poll" ], )
     else
