@@ -967,7 +967,7 @@ m_server_estab(aClient *cptr)
       if (bconf->passwd[0])
 	 sendto_one(cptr, "PASS %s :TS", bconf->passwd);
       /* Pass my info to the new server */
-      sendto_one(cptr, "CAPAB TS3 NOQUIT SSJOIN BURST UNCONNECT ADKEY ZIP");
+      sendto_one(cptr, "CAPAB TS3 NOQUIT SSJOIN BURST UNCONNECT DKEY ZIP");
       sendto_one(cptr, "SERVER %s 1 :%s",
 		 my_name_for_link(me.name, aconf),
 		 (me.info[0]) ? (me.info) : "IRCers United");
