@@ -820,7 +820,7 @@ set_mode(aClient *cptr, aClient *sptr, aChannel *chptr, int level, int parc,
 			 * the buffer returned by pretty_mask is from 
 			 * make_nick_user_host. This buffer is eaten by add/del banid.
 			 * Thus, some poor schmuck gets himself on the banlist. Fixed. - lucas */
-			strcpy(nuhbuf, collapse(pretty_mask(parv[args]));
+			strcpy(nuhbuf, collapse(pretty_mask(parv[args])));
 			parv[args] = nuhbuf;
 			/* if we're going to overflow our mode buffer,
 			 * drop the change instead */
