@@ -543,8 +543,9 @@ static char *replies[] =
                                         "operator",
     /* 483 ERR_CANTKILLSERVER */	":%s 483 %s :You cant kill a server!",
     /* 484 */	                NULL,	/* In use by Undernet */
-    /* 485 */	                ":%s 485 %s %s :Cannot join channel (%s)",
-    /* 486 */	                NULL,
+    /* 485 ERR_CHANBANREASON */	":%s 485 %s %s :Cannot join channel (%s)",
+    /* 486 ERR_NONONREG */	":%s 486 %s :You must be identified to a "
+                                "registered nick to private message %s",
     /* 487 */	                NULL,
     /* 488 */	                NULL,
     /* 489 */	                NULL,	/* In use by Undernet */

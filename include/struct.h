@@ -278,7 +278,7 @@ typedef struct MotdItem aMotd;
 #define UMODE_n     0x10000	/* umode +n - Routing Notices */
 #define UMODE_h     0x20000     /* umode +h - Helper */
 #define UMODE_m     0x40000     /* umode +m - spambot notices */
-#define UMODE_R     0x80000     /* unmode +R - Routing staff */
+#define UMODE_R     0x80000     /* unmode +R - No non registered msgs */
 #define UMODE_D     0x100000    /* umode +D - pseudo/hidden, has seen dcc
 				 * warning message */
 #define UMODE_e     0x200000    /* umode +e - oper notices for the above +D */
@@ -326,7 +326,7 @@ typedef struct MotdItem aMotd;
 #define IsUmodem(x)             ((x)->umode & UMODE_m)
 #define IsUmodeh(x)             ((x)->umode & UMODE_h)
 #define IsUmodee(x)             ((x)->umode & UMODE_e)
-#define IsRouting(x)            ((x)->umode & UMODE_R)
+#define IsNoNonReg(x)           ((x)->umode & UMODE_R)
 #define SeenDCCNotice(x)        ((x)->umode & UMODE_D)
 #define SetDCCNotice(x)         ((x)->umode |= UMODE_D)
 #define	IsPerson(x)		((x)->user && IsClient(x))
@@ -350,7 +350,7 @@ typedef struct MotdItem aMotd;
 #define	IsDead(x)		((x)->flags & FLAGS_DEADSOCKET)
 #define	SetOper(x)		((x)->umode |= UMODE_o)
 #define SetRegNick(x)           ((x)->umode |= UMODE_r)
-#define SetRouting(x)           ((x)->umode |= UMODE_R)
+#define SetNoNonReg(x)          ((x)->umode |= UMODE_R)
 #define SetSAdmin(x)            ((x)->umode |= UMODE_a)
 #define	SetLocOp(x)    		((x)->umode |= UMODE_O)
 #define	SetInvisible(x)		((x)->umode |= UMODE_i)
@@ -387,7 +387,7 @@ typedef struct MotdItem aMotd;
 #define ClearUmoden(x)          ((x)->umode &= ~UMODE_n)
 #define ClearUmodeh(x)          ((x)->umode &= ~UMODE_h)
 #define ClearUmodee(x)          ((x)->umode &= ~UMODE_e)
-#define ClearRouting(x)         ((x)->umode &= ~UMODE_R)
+#define ClearNoNonReg(x)        ((x)->umode &= ~UMODE_R)
 #define	ClearOper(x)		((x)->umode &= ~UMODE_o)
 #define ClearLocOp(x)		((x)->umode &= ~UMODE_O)
 #define	ClearInvisible(x)	((x)->umode &= ~UMODE_i)
@@ -424,8 +424,6 @@ typedef struct MotdItem aMotd;
 #define OFLAG_UMODEY    0x00200000  /* Oper can set umode +y */
 #define OFLAG_UMODED    0x00400000  /* Oper can set umode +d */
 #define OFLAG_UMODEB    0x00800000  /* Oper can set umode +b */
-#define OFLAG_RSTAFF    0x01000000  /* Oper can view server IPs 
-				     * (routing staff) */
 #define OFLAG_LOCAL	(OFLAG_REHASH|OFLAG_HELPOP|OFLAG_GLOBOP|OFLAG_WALLOP|\
                          OFLAG_LOCOP|OFLAG_LROUTE|OFLAG_LKILL|OFLAG_KLINE|\
                          OFLAG_UNKLINE|OFLAG_LNOTICE|OFLAG_UMODEC|OFLAG_UMODEF)
@@ -449,7 +447,6 @@ typedef struct MotdItem aMotd;
 #define OPCanGNotice(x)	        ((x)->oflag & OFLAG_GNOTICE)
 #define OPIsAdmin(x)	        ((x)->oflag & OFLAG_ADMIN)
 #define OPIsSAdmin(x)	        ((x)->oflag & OFLAG_SADMIN)
-#define OPIsRStaff(x)           ((x)->oflag & OFLAG_RSTAFF)
 #define OPCanUModeC(x)	        ((x)->oflag & OFLAG_UMODEC)
 #define OPCanUModeF(x)	        ((x)->oflag & OFLAG_UMODEF)
 #define OPCanUModeY(x)          ((x)->oflag & OFLAG_UMODEY)     
@@ -472,7 +469,6 @@ typedef struct MotdItem aMotd;
 #define OPSetGNotice(x)	        ((x)->oflag |= OFLAG_GNOTICE)
 #define OPSSetAdmin(x)	        ((x)->oflag |= OFLAG_ADMIN)
 #define OPSSetSAdmin(x)         ((x)->oflag |= OFLAG_SADMIN)
-#define OPSetRStaff(x)          ((x)->oflag |= OFLAG_RSTAFF)
 #define OPSetUModeC(x)	        ((x)->oflag |= OFLAG_UMODEC)
 #define OPSetUModeF(x)	        ((x)->oflag |= OFLAG_UMODEF)
 #define OPSetUModeY(x)          ((x)->oflag |= OFLAG_UMODEY)
@@ -496,7 +492,6 @@ typedef struct MotdItem aMotd;
 #define OPClearGNotice(x)	((x)->oflag &= ~OFLAG_GNOTICE)
 #define OPClearAdmin(x)		((x)->oflag &= ~OFLAG_ADMIN)
 #define OPClearSAdmin(x)	((x)->oflag &= ~OFLAG_SADMIN)
-#define OPClearRStaff(x) 	((x)->oflag &= ~OFLAG_RSTAFF)
 #define OPClearUModeC(x)	((x)->oflag &= ~OFLAG_UMODEC)
 #define OPClearUModeF(x)	((x)->oflag &= ~OFLAG_UMODEF)
 #define OPClearUModeY(x)        ((x)->oflag &= ~OFLAG_UMODEY) 

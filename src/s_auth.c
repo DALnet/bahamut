@@ -70,7 +70,7 @@ void start_auth(aClient *cptr)
     }
     if (cptr->authfd >= MAXCONNECTIONS)
     {
-	sendto_ops("Can't allocate fd for auth on %s",
+	sendto_realops_lev(DEBUG_LEV,"Can't allocate fd for auth on %s",
 		   get_client_name(cptr, (IsServer(cptr) ? HIDEME : TRUE)));
 	(void) close(cptr->authfd);
 	return;

@@ -89,7 +89,7 @@ int  user_modes[] =
     UMODE_f, 'f',
     UMODE_n, 'n',
     UMODE_m, 'm',
-    UMODE_h, 'h',	 
+    UMODE_h, 'h',
     0, 0
 };
 
@@ -421,7 +421,7 @@ int register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
 				       "hostname");
 		}
 		else if (i == -3)
-		    sendto_realops_lev(SPY_LEV, "%s for %s [%s] ",
+		    sendto_realops_lev(CCONN_LEV, "%s for %s [%s] ",
 				       "I-line is full (server is full)",
 				       get_client_host(sptr),p);
 		else
@@ -1403,7 +1403,11 @@ static inline int m_message(aClient *cptr, aClient *sptr, int parc,
 			break;
 		    }
 		}
-
+	    if (IsNoNonReg(acptr) && !IsRegNick(sptr)) {
+		sendto_one(sptr, rpl_str(ERR_NONONREG), me.name, parv[0],
+			   acptr->name);
+		return 0;
+	    }
 	    if (!is_silenced(sptr, acptr)) 
 	    {				 
 		if (!notice && MyClient(acptr) && acptr->user &&
@@ -2721,10 +2725,6 @@ int m_umode(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	!IsServer(cptr))
 	sptr->umode &= ~UMODE_b;
     
-    if (!(setflags & UMODE_R) && (!IsOper(sptr) && !IsLocOp(sptr)) &&
-	!IsServer(cptr))
-	sptr->umode &= ~UMODE_R;
-    
     if (!(setflags & UMODE_e) && (!IsOper(sptr) && !IsLocOp(sptr)) &&
 	!IsServer(cptr))
 	sptr->umode &= ~UMODE_e;
@@ -2765,7 +2765,6 @@ int m_umode(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	if (IsUmodeb(sptr)) ClearUmodeb(sptr);
 	if (IsUmoden(sptr)) ClearUmoden(sptr);
 	if (IsUmodem(sptr)) ClearUmodem(sptr);
-	if (IsRouting(sptr)) ClearRouting(sptr);
 	if (IsUmodee(sptr)) ClearUmodee(sptr);
     }
     if(MyClient(sptr))
@@ -2777,7 +2776,6 @@ int m_umode(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	if (IsUmodey(sptr) && !OPSetUModeY(sptr)) ClearUmodey(sptr);
 	if (IsUmoded(sptr) && !OPSetUModeD(sptr)) ClearUmoded(sptr);
 	if (IsUmodeb(sptr) && !OPSetUModeB(sptr)) ClearUmodeb(sptr);
-	if (IsRouting(sptr) && !OPIsRStaff(sptr)) ClearRouting(sptr);
     }
     send_umode_out(cptr, sptr, setflags);
     

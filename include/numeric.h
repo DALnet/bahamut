@@ -354,6 +354,7 @@
 #define	ERR_CANTKILLSERVER   483
 #define ERR_DESYNC	     484
 #define ERR_CHANBANREASON    485
+#define ERR_NONONREG         486
 
 #define ERR_NOOPERHOST       491
 
