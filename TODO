@@ -17,7 +17,6 @@ TODO LIST
 - Split up aClient into separate structures for local and remote users
 - Outdate the use of config script within configuration file
 - Backport message tokenization from 1.6
-- Switch internal queuing system to shared queues.
 
 List to Ponder
 --------------

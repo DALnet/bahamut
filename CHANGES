@@ -26,3 +26,4 @@ Changes for 1.4.37:
 - Ports now can be opened and closed on /rehash
 - config file format changed to bind-style
 - klinefile outdated
+- replaced dbufs with sbufs - shared buffers.
