@@ -1890,8 +1890,7 @@ m_invite(aClient *cptr,
 		    acptr->name, acptr->user->away);
    }
    if (MyConnect(acptr))
-      if ((chptr && (chptr->mode.mode & MODE_INVITEONLY) &&
-			  sptr->user && is_chan_op(sptr, chptr)) || IsULine(sptr)) {
+      if ((chptr && sptr->user && is_chan_op(sptr, chptr)) || IsULine(sptr)) {
 			add_invite(acptr, chptr);
 			sendto_channelops_butone(NULL, &me, chptr, ":%s NOTICE @%s :%s invited %s into channel %s.",
 											 me.name, chptr->chname, sptr->name, acptr->name, chptr->chname);
