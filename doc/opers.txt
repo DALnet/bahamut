@@ -169,29 +169,6 @@ COMMAND         - USAGE and DESCRIPTION
                   -- If compiled with UNKLINE --
                   Will attempt to unkline the given <user@host>
 
-+ HTM           - HTM [option]
-                  When no [option] is given, HTM shows the current 
-                  High Traffic Mode rate and whether HTM is on or off.
-
-                  [option] can be one of the following:
-                    ON        - Forces High Traffic Mode to be on.  With
-                                this on, ircd is more efficient in
-                                reading server-to-server traffic and
-                                oper traffic, but will be less efficient
-                                than normal with normal client traffic.
-                    OFF       - Forces High Traffic Mode to be off.
-                                (see above)
-                    TO <rate> - Sets the High Traffic Mode rate to
-                                <rate>.  Ircd will automatically go
-                                into High Traffic Mode when <rate>
-                                is reached, and will automatically turn
-                                it off when things calm down.
-                    QUIET     - When set, ircd will not notify opers
-                                when it goes into and out of High
-                                Traffic Mode.
-                    NOISY     - When set, ircd will notify opers
-                                when it goes into and out of High
-                                Traffic Mode.
 + SET           - SET <option> <value>
                   <option> can be one of the following:
                     MAX       - Sets the number of max connections
