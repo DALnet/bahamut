@@ -1313,9 +1313,9 @@ fi;
 # Check whether --enable-openssl or --disable-openssl was given.
 if test "${enable_openssl+set}" = set; then
   enableval="$enable_openssl"
-   check_openssl=$enableval
+   cf_enable_openssl=$enableval
 else
-   check_openssl="auto"
+   cf_enable_openssl="auto"
 fi;
 
 
@@ -5591,7 +5591,8 @@ echo $ECHO_N "checking for OpenSSL... $ECHO_C" >&6
 
 if test "X$cf_enable_openssl" != "Xno" ; then
   cf_openssl_basedir=""
-  if test "X$cf_enable_openssl" = "Xyes" ; then
+  if test "X$cf_enable_openssl" != "Xauto" &&
+     test "X$cf_enable_openssl" != "Xyes"; then
           cf_openssl_basedir="${cf_enable_openssl}"
   else
         for dirs in /usr/local/ssl /usr/pkg /usr/local /usr/lib /usr/lib/ssl\

@@ -790,7 +790,7 @@ confadd_options(cVar *vars[], int lnum)
 {
     cVar *tmp;
     int c = 0;
-    char *ctmp = NULL;
+    char ctmp[512];
 
     /* here, because none of the option peice are interdependent
      * all the items are added immediately.   Makes life easier
