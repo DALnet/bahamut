@@ -889,6 +889,13 @@ set_mode(aClient *cptr, aClient *sptr, aChannel *chptr, int level, int parc,
 			}
 			if(parv[args]==NULL)
 			  break;
+
+			/* do not allow keys to start with :! ack! - lucas */
+			if(*parv[args]==':') {
+				args++;
+				break;
+			}
+
 			/* if we're going to overflow our mode buffer,
 			 * drop the change instead */
 			i=strlen(parv[args]);
@@ -1849,7 +1856,7 @@ m_topic(aClient *cptr,
 
 		/* local topic is newer than remote topic and we have a topic
 		   and we're in a synch (server setting topic) */
-		if(IsServer(sptr) && !IsULine(sptr) && chptr->topic_time > ts && chptr->topic[0])
+		if(IsServer(sptr) && !IsULine(sptr) && chptr->topic_time >= ts && chptr->topic[0])
 		   return 0;
 
 		strncpyzt(chptr->topic, topic, sizeof(chptr->topic));
