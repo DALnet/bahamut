@@ -26,6 +26,7 @@
 #include "common.h"
 #include "sys.h"
 #include "numeric.h"
+#include "inet.h"
 #include "msg.h"
 #include "channel.h"
 #include <sys/stat.h>
@@ -43,6 +44,7 @@ extern int lifesux;
 extern int user_modes[];
 
 extern Link *find_channel_link(Link *, aChannel *);
+extern unsigned int cidr_to_netmask(unsigned int);
 
 int build_searchopts(aClient *sptr, int parc, char *parv[])
 {
@@ -60,7 +62,7 @@ int build_searchopts(aClient *sptr, int parc, char *parv[])
       "                        wildcards accepted, oper only",
       "Flag h <host>: user has string <host> in their hostname,",
       "               wildcards accepted",
-      "Flag i <ip>: user is from <ip> wildcards accepted,",
+      "Flag i <ip>: user is from <ip>, wildcards and cidr accepted,",
       "Flag l <class>: show users in a specific <class>",
       "Flag m <usermodes>: user has <usermodes> set on them",
       "Flag n <nick>: user has string <nick> in their nickname,",
@@ -74,6 +76,7 @@ int build_searchopts(aClient *sptr, int parc, char *parv[])
       "Behavior flags:",
       "Flag C: show first visible channel user is in",
       "Flag M: check for user in channels I am a member of",
+      "Flag I: always show IPs instead of hosts",
       NULL
   };
 
@@ -280,6 +283,15 @@ int build_searchopts(aClient *sptr, int parc, char *parv[])
 	  wsopts.ts_value=change ? 2 : 1;
 	  args++;
 	  break;
+      case 'I':
+	  if(!IsAnOper(sptr))
+	  {
+	      sendto_one(sptr, getreply(ERR_WHOSYNTAX), me.name,
+			 sptr->name);
+	      return 0;
+	  }
+	  wsopts.ip_show = change;
+	  break;
       case 'i':
 	  if(parv[args]==NULL || !IsAnOper(sptr))
 	  {
@@ -287,9 +299,41 @@ int build_searchopts(aClient *sptr, int parc, char *parv[])
 			 sptr->name);
 	      return 0;
 	  }
-	  wsopts.ip=parv[args];
-	  wsopts.ip_plus=change;
-	  args++;
+          else
+          {
+	      char *cpos;
+
+   	      if((cpos = strchr(parv[args], '/')))
+	      {
+		  char *err;
+		  unsigned int maskval, ipval;
+
+		  *(cpos++) = '\0';
+
+		  ipval = inet_addr(parv[args]);
+		  maskval = strtol(cpos, &err, 10);
+                  if(ipval == 0xFFFFFFFF || *err != '\0' || 
+		     maskval < 1 || maskval > 32)
+		  {
+		      sendto_one(sptr, getreply(ERR_WHOSYNTAX), me.name, sptr->name);
+		      return 0;
+		  }
+
+		  maskval = htonl(cidr_to_netmask(maskval));
+		  ipval &= maskval;
+
+		  wsopts.cidr4_plus = change;
+		  wsopts.cidr4_mask = maskval;
+		  wsopts.cidr4_ip = ipval;
+		  args++;
+	      }
+	      else
+	      {
+		  wsopts.ip=parv[args];
+		  wsopts.ip_plus=change;
+		  args++;
+	      }
+	  }
 	  break;
       case 'm':
 	  if(parv[args]==NULL)
@@ -471,10 +515,13 @@ int chk_who(aClient *ac, int showall)
 	if((wsopts.host_plus && hchkfn(wsopts.host, ac->user->host)) ||
 	   (!wsopts.host_plus && !hchkfn(wsopts.host, ac->user->host)))
 	    return 0;
+
+    if(wsopts.cidr4_plus)
+	if((ac->ip.s_addr & wsopts.cidr4_mask) != wsopts.cidr4_ip)
+	    return 0;
     
-    if(wsopts.ip!=NULL)
-	if((wsopts.ip_plus && ichkfn(wsopts.ip, ac->hostip)) ||
-	   (!wsopts.ip_plus && !ichkfn(wsopts.ip, ac->hostip)))
+    if(wsopts.ip_plus)
+	if(ichkfn(wsopts.ip, ac->hostip))
 	    return 0;
     
     if(wsopts.gcos!=NULL)
@@ -546,6 +593,7 @@ inline char *first_visible_channel(aClient *cptr, aClient *sptr)
 #define MAXWHOREPLIES 200
 #define WHO_HOPCOUNT(s, a) ( ( (IsULine((a)) || IsUmodeI((a))) && !IsAnOper((s)) ) ? 0 : a->hopcount)
 #define WHO_SERVER(s ,a) ((IsUmodeI((a)) && !IsAnOper((s))) ? HIDDEN_SERVER_NAME : a->user->server)
+#define WHO_HOST(a) ((wsopts.ip_show) ? (a)->hostip : (a)->user->host)
 int m_who(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     aClient *ac;
@@ -621,7 +669,7 @@ int m_who(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		status[++i]=0;
 		sendto_one(sptr, getreply(RPL_WHOREPLY), me.name, sptr->name,
 			   wsopts.channel->chname, ac->user->username,
-			   ac->user->host,WHO_SERVER(sptr, ac), ac->name, status,
+			   WHO_HOST(ac), WHO_SERVER(sptr, ac), ac->name, status,
 			   WHO_HOPCOUNT(sptr, ac),
 			   ac->info);
 	    }
@@ -651,7 +699,7 @@ int m_who(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		status[2]=0;
 		sendto_one(sptr, getreply(RPL_WHOREPLY), me.name, sptr->name,
 			   wsopts.show_chan ? first_visible_channel(ac, sptr)
-			   : "*", ac->user->username, ac->user->host,
+			   : "*", ac->user->username, WHO_HOST(ac),
 			   WHO_SERVER(sptr, ac), ac->name, status,
 			   WHO_HOPCOUNT(sptr, ac),
 			   ac->info);
@@ -698,7 +746,7 @@ int m_who(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		status[++i]=0;
 		sendto_one(sptr, getreply(RPL_WHOREPLY), me.name, sptr->name,
 			   lp->value.chptr->chname, ac->user->username,
-			   ac->user->host,WHO_SERVER(sptr, ac), ac->name,
+			   WHO_HOST(ac),WHO_SERVER(sptr, ac), ac->name,
 			   status, WHO_HOPCOUNT(sptr, ac), ac->info);
 		shown++;
 	    }
@@ -724,7 +772,7 @@ int m_who(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	    status[2]=0;
 	    sendto_one(sptr, getreply(RPL_WHOREPLY), me.name, sptr->name,
 		       wsopts.show_chan ? first_visible_channel(ac, sptr) :
-		       "*", ac->user->username, ac->user->host,
+		       "*", ac->user->username, WHO_HOST(ac),
 		       WHO_SERVER(sptr, ac), ac->name, status,
 		       WHO_HOPCOUNT(sptr, ac), ac->info);
 	    shown++;

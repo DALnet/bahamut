@@ -1192,6 +1192,8 @@ typedef struct SearchOptions
     char *ip;
     int class;
     int class_value;
+    unsigned int cidr4_ip;
+    unsigned int cidr4_mask;
     int ts;
     int ts_value;
     aChannel *channel;
@@ -1203,6 +1205,7 @@ typedef struct SearchOptions
     char host_plus:1;
     char gcos_plus:1;
     char ip_plus:1;
+    char cidr4_plus:1;
     char chan_plus:1;
     char serv_plus:1;
     char away_plus:1;
@@ -1210,7 +1213,8 @@ typedef struct SearchOptions
     char check_umode:1;
     char show_chan:1;
     char search_chan:1;
-    char spare:3; /* spare space for more stuff(?) */
+    char ip_show:1;
+    char spare:1; /* spare space for more stuff(?) */
 } SOpts;
 
 /*
