@@ -19,6 +19,7 @@ Changes for 1.4.35
 - Fix a bug where we'd try to target limit messages by a server and
   write to locations of memory that weren't ours :)
 - Fix O: flags that just didn't work as advertised
+- Moved rejection notices to umode +j (re_j_ection)
 - Various code cleanup and readability fixes
 
 Changes for 1.4.34
