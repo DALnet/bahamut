@@ -455,7 +455,7 @@ static char *replies[] = {
 	/* 426 */	NULL,
 	/* 427 */	NULL,
 	/* 428 */	NULL,
-	/* 429 */	NULL,
+	/* 429 ERR_TOOMANYAWAY */	":%s 429 %s :Too Many aways - Flood Protection activated",
 	/* 430 */	NULL,
 	/* 431 ERR_NONICKNAMEGIVEN */	":%s 431 %s :No nickname given",
 	/* 432 ERR_ERRONEOUSNICKNAME */	":%s 432 %s %s :Erroneus Nickname",

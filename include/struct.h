@@ -572,7 +572,7 @@ struct Client {
 	aClient    *from;		    /* == self, if Local Client, *NEVER* NULL! */
 	aClient    *uplink;		    /* this client's uplink to the network */
 	int         fd;		      /* >= 0, for local clients */
-  int         hopcount;	  /* number of servers to this 0 = local */
+  	int         hopcount;	  /* number of servers to this 0 = local */
 	short       status;		  /* Client type */
 	char        nicksent;
 	char        name[HOSTLEN + 1];	/* Unique name of the client, nick or host */
@@ -615,8 +615,8 @@ struct Client {
 	long        lastrecvM; /* to check for activity --Mika */
 	int         priority;
 	aClient    *acpt;		   /* listening client which we accepted from */
-  Link       *confs;		 /* Configuration record associated */
-  int         authfd;	   /* fd for rfc931 authentication */
+  	Link       *confs;		 /* Configuration record associated */
+  	int         authfd;	   /* fd for rfc931 authentication */
 	struct in_addr ip;		 /* keep real ip# too */
 	char        hostip[HOSTIPLEN + 1];	/* Keep real ip as string too - Dianora */
 	unsigned short port;	 /* and the remote port# too :-) */
@@ -625,6 +625,11 @@ struct Client {
 	time_t      last_nick_change;
 	int         number_of_nick_changes;
 #endif
+#ifdef NO_AWAY_FLUD
+        time_t	    alas;	/* last time of away set */
+	int	    acount;	/* count of away settings */
+#endif
+
 	char        sockhost[HOSTLEN + 1];	/*
 																			 * This is the host name from
 																			 * the socket and after which the 

@@ -2949,6 +2949,8 @@ m_kill(aClient *cptr,
  *	      but perhaps it's worth the load it causes to net.
  *	      This requires flooding of the whole net like NICK,
  *	      USER, MODE, etc messages...  --msa
+ *
+ * 	      Added FLUD-style limiting for those lame scripts out there.
  ***********************************************************************/
 /*
  * * m_away * parv[0] = sender prefix *       parv[1] = away message
@@ -2959,8 +2961,7 @@ m_away(aClient *cptr,
        int parc,
        char *parv[])
 {
-   Reg char   *away, *awy2 = parv[1];
-
+   char   *away, *awy2 = parv[1];
    /*
     * make sure the user exists 
     */
@@ -2970,6 +2971,13 @@ m_away(aClient *cptr,
    }
 
    away = sptr->user->away;
+
+#ifdef NO_AWAY_FLUD
+      if ((sptr->alas + MAX_AWAY_TIME) < NOW)
+		sptr->acount = 0;
+      sptr->alas = NOW;
+      sptr->acount++;
+#endif 
 
    if (parc < 2 || !*awy2) {
       /*
@@ -2986,7 +2994,7 @@ m_away(aClient *cptr,
        * commented out this sendto_serv_butone() call -Dianora
        */
       sendto_serv_butone(cptr, ":%s AWAY", parv[0]);
-
+ 
       if (MyConnect(sptr))
 	 sendto_one(sptr, rpl_str(RPL_UNAWAY),
 		    me.name, parv[0]);
@@ -2996,17 +3004,24 @@ m_away(aClient *cptr,
    /*
     * Marking as away 
     */
-
+#ifdef NO_AWAY_FLUD
+   /* we dont care if they are just unsetting away, hence this is here */
+   if ((sptr->acount > MAX_AWAY_COUNT)) {
+	sendto_one(sptr, err_str(ERR_TOOMANYAWAY), me.name, parv[0]);
+	return 0;
+   }
+#endif
    if (strlen(awy2) > (size_t) TOPICLEN)
       awy2[TOPICLEN] = '\0';
    /*
     * some lamers scripts continually do a /away, hence making a lot of
     * unnecessary traffic. *sigh* so... as comstud has done, I've
     * commented out this sendto_serv_butone() call -Dianora
+    * readded because of anti-flud stuffs -epi
     */
 
    if (away == NULL)
-      sendto_serv_butone(cptr, ":%s AWAY : ", parv[0]);
+      sendto_serv_butone(cptr, ":%s AWAY :%s ", parv[0], parv[1]);
    /*
     * This is a bad, as it breaks who and stuff on the OTHER end.  How
     * bout We make a deal and only send an away message if the user is

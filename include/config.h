@@ -591,16 +591,25 @@
 #define MAX_NICK_TIME 20
 #define MAX_NICK_CHANGES 5
 
+/* NO_AWAY_FLUD
+ * reallow propregation of AWAY messages, but do not allow AWAY flooding
+ * I reccomend a max of 5 AWAY's in 3 Minutes
+ */
+#define NO_AWAY_FLUD
+
+#ifdef NO_AWAY_FLUD
+# define MAX_AWAY_TIME 180  /* time in seconds */
+# define MAX_AWAY_COUNT 5
+#endif
+
 /*
  * X_LINES_OPER_ONLY - Allow only local opers to see these stats
  * 
- * B_LINES - ComStud's B-lines (bot exemption lines) E_LINES - ComStud's
- * E-lines (exception lines) F_LINES - Taner's F-lines (super-exception
- * lines) Any one with an F line can almost always get on the server,
- * as some file descriptors are reserved for people with this F line
- * especially useful for your opers
+ * E_LINES - ComStud's E-lines (exception lines) 
+ * F_LINES - Taner's F-lines (super-exception  lines) Any one with an F
+ * line can almost always get on the server, as some file descriptors are
+ * reserved for people with this F line especially useful for your opers
  */
-#define B_LINES_OPER_ONLY
 #define E_LINES_OPER_ONLY
 #define F_LINES_OPER_ONLY
 
