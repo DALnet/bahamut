@@ -348,7 +348,7 @@ if test $engine = "select"; then
     AC_MSG_RESULT(can't tell))
 fi
 
-if test "$solaris2" != "yes" && test "set_hmodules" = "enabled"; then
+if test "$solaris2" != "yes" && test "$set_hmodules" = "enabled"; then
     LIBS="$LIBS $MOD_LIBS"
 fi
 
@@ -419,6 +419,7 @@ AC_SUBST(LIBS)
 AC_SUBST(SENGINE)
 AC_SUBST(FDSETSIZE)
 AC_SUBST(INSTALL_DIR)
+AC_SUBST(IRCD_LDFLAGS)
 
 AC_OUTPUT(Makefile src/Makefile tools/Makefile doc/Makefile)
 
