@@ -762,7 +762,6 @@ int main(int argc, char *argv[])
     init_userban();
 
     initlists();
-    initclass();
     initwhowas();
     initstats();
     init_tree_parse(msgtab);
@@ -772,7 +771,17 @@ int main(int argc, char *argv[])
     NOW = time(NULL);
 
     if(initconf(configfile) == -1)
-        abort();
+    {
+        printf("Server not started\n");
+        exit(-1);
+    }
+    if(!new_ports)
+    {
+        printf("ERROR:  No ports defined\nServer not started\n");
+        exit(-1);
+    }
+    merge_confs();
+
 
     printf("Configuration Loaded.\n");
 

@@ -22,9 +22,10 @@
 #include "struct.h"
 #include "common.h"
 #include "sys.h"
-#include "confparse.h"
 #include "h.h"
 #include "userban.h"
+#define CONF_TABS
+#include "confparse.h"
 
 /* notes on confparse.c
  * While this initial revision requires a fair bit of trimming down,
@@ -67,17 +68,6 @@
 
 extern int forked;
 
-extern void confadd_oper(char *, char *, char *, char *, char *);
-extern void confadd_connect(char *, char *, char *, char *, int, char *,
-                            char *, char *);
-extern void confadd_allow(char *, char *, char *, int, char *);
-extern void confadd_port(int, char *, char *);
-extern void confadd_me(char *, char *, char *, char *, char *, char *, char *);
-extern void confadd_class(char *, int, int, int, long);
-extern void confadd_restrict(int, char *, char *);
-extern void confadd_kill(char *, char *, char *);
-extern void confadd_uline(char *);
-
 /* free_vars()
  * clear our temp variable array used by parse_block and children
  */
@@ -97,7 +87,7 @@ free_vars(cVar *vars[])
 
 /* error handler */
 
-static void
+void
 confparse_error(char *problem, int line)
 {
     if(!forked)
@@ -106,514 +96,6 @@ confparse_error(char *problem, int line)
         sendto_realops("Conf Error:  %s near line %d", problem, line);
     return;
 }
-
-/* confparse_ functions
- * for each major block (see tconftab[] in confparse.h)
- * we have a function called to check the sanity of the block
- * after its read and before we add it to our lists
- */
-
-static void
-confparse_global(cVar *vars[], int lnum)
-{
-    cVar *tmp;
-    int i = 0;
-    char *name = NULL, *info = NULL, *dpass = NULL, *rpass = NULL;
-
-    for(tmp = vars[i]; tmp; tmp = vars[++i])
-        if(tmp->type->flag & SCONFF_NAME)
-        {
-            name = tmp->value;
-            break;
-        }
-    i = 0;
-    for(tmp = vars[i]; tmp; tmp = vars[++i])
-        if(tmp->type->flag & SCONFF_INFO)
-        {
-            info = tmp->value;
-            break;
-        }
-    i = 0;
-    for(tmp = vars[i]; tmp; tmp = vars[++i])
-        if(tmp->type->flag & SCONFF_DPASS)
-        {
-            dpass = tmp->value;
-            break;
-        }
-    i = 0;
-    for(tmp = vars[i]; tmp; tmp = vars[++i])
-        if(tmp->type->flag & SCONFF_RPASS)
-        {
-            rpass = tmp->value;
-            break;
-        }
-    if(!name)
-    {
-        confparse_error("Missing 'name' in global block", lnum);
-        return;
-    }
-    if(!info)
-    {
-        confparse_error("Missing 'info' in global block", lnum);
-        return;
-    }
-    confadd_me(name, info, dpass, rpass, 0, 0, 0);
-    free_vars(vars);
-    return;
-}
-
-static void
-confparse_options(cVar *vars[], int lnum)
-{
-    free_vars(vars);
-    return;
-}
-
-static void
-confparse_class(cVar *vars[], int lnum)
-{
-    cVar *tmp;
-    char *name = NULL;
-    int pingfreq = 0, connfreq = 0, maxusers = 0;
-    long maxsendq = 0;
-    int i = 0;
-
-    for(tmp = vars[i]; tmp; tmp = vars[++i])
-        if(tmp->type->flag & SCONFF_NAME)
-        {
-            name = tmp->value;
-            break;
-        }
-    i = 0;
-    for(tmp = vars[i]; tmp; tmp = vars[++i])
-        if(tmp->type->flag & SCONFF_PINGFREQ)
-        {
-            pingfreq = atoi(tmp->value);
-            break;
-        }
-    i = 0;
-    for(tmp = vars[i]; tmp; tmp = vars[++i])
-        if(tmp->type->flag & SCONFF_CONNFREQ)
-        {
-            connfreq = atoi(tmp->value);
-            break;
-        }
-    i = 0;
-    for(tmp = vars[i]; tmp; tmp = vars[++i])
-        if(tmp->type->flag & SCONFF_MAXUSERS)
-        {
-            maxusers = atoi(tmp->value);
-            break;
-        }
-    i = 0;
-    for(tmp = vars[i]; tmp; tmp = vars[++i])
-        if(tmp->type->flag & SCONFF_MAXSENDQ)
-        {
-            maxsendq = atoi(tmp->value);
-            break;
-        }
-    if(!name)
-    {
-        confparse_error("Missing 'name' in class block", lnum);
-        return;
-    }
-    if(pingfreq == 0)
-    {
-        confparse_error("Missing 'pingfreq' in class block", lnum);
-        return;
-    }
-    confadd_class(name, pingfreq, connfreq, maxusers, maxsendq);
-    free_vars(vars);
-    return;
-}
-
-static void
-confparse_allow(cVar *vars[], int lnum)
-{
-    cVar *tmp;
-    char *host = NULL, *passwd = NULL, *class = NULL, *ipmask = NULL;
-    int   port = 0, i = 0;
-
-    for(tmp = vars[i]; tmp; tmp = vars[++i])
-        if(tmp->type->flag & SCONFF_HOST)
-        {
-            host = tmp->value;
-            break;
-        }
-
-    for(tmp = vars[i]; tmp; tmp = vars[++i])
-        if(tmp->type->flag & SCONFF_IPMASK)
-        {
-            ipmask = tmp->value;
-            break;
-        }
-
-    i = 0;
-    for(tmp = vars[i]; tmp; tmp = vars[++i])
-        if(tmp->type->flag & SCONFF_PASSWD)
-        {
-            passwd = tmp->value;
-            break;
-        }
-
-    i = 0;
-    for(tmp = vars[i]; tmp; tmp = vars[++i])
-        if(tmp->type->flag & SCONFF_CLASS)
-        {
-            class = tmp->value;
-            break;
-        }
-
-    i = 0;
-    for(tmp = vars[i]; tmp; tmp = vars[++i])
-        if(tmp->type->flag & SCONFF_PORT)
-        {
-            port = atoi(tmp->value);
-            break;
-        }
-    if(!host && !ipmask)
-    {
-        confparse_error("Missing 'host' or 'ipmask' in allow block", lnum);
-        return;
-    }
-    if(!class)
-        class = "default";
-    confadd_allow(ipmask, passwd, host, port, class);
-    free_vars(vars);
-    return;
-}
-
-static void
-confparse_oper(cVar *vars[], int lnum)
-{
-    cVar *tmp;
-    int i;
-    char *name = NULL, *host = NULL, *passwd = NULL, *access = NULL, 
-         *class = NULL;
-
-    i = 0;
-    for(tmp = vars[i]; tmp; tmp = vars[++i])
-        if(tmp->type->flag & SCONFF_NAME)
-        {
-            name = tmp->value;
-            break;
-        }
-
-    i = 0;
-    for(tmp = vars[i]; tmp; tmp = vars[++i])
-        if(tmp->type->flag & SCONFF_HOST)
-        {
-            host = tmp->value;
-            break;
-        }
-    i = 0;
-    for(tmp = vars[i]; tmp; tmp = vars[++i])
-        if(tmp->type->flag & SCONFF_PASSWD)
-        {
-            passwd = tmp->value;
-            break;
-        }
-    i = 0;
-    for(tmp = vars[i]; tmp; tmp = vars[++i])
-        if(tmp->type->flag & SCONFF_ACCESS)
-        {
-            access = tmp->value;
-            break;
-        }
-    i = 0;
-    for(tmp = vars[i]; tmp; tmp = vars[++i])
-        if(tmp->type->flag & SCONFF_CLASS)
-        {
-            class = tmp->value;
-            break;
-        }
-
-    if(!name)
-    {
-        confparse_error("Missing 'name' in oper block", lnum);
-        return;
-    }
-    if(!host)
-    {
-        confparse_error("Missing 'host' in oper block", lnum);
-        return;
-    }
-    if(!passwd)
-    {
-        confparse_error("Missing 'passwd' in oper block", lnum);
-        return;
-    }
-    if(!access)
-    {
-        confparse_error("Missing 'access' in oper block", lnum);
-        return;
-    }
-    if(!class)
-        class = "default";
-    confadd_oper(name, host, passwd, access, class);
-    free_vars(vars);
-    return;
-}
-    
-static void
-confparse_connect(cVar *vars[], int lnum)
-{
-    cVar *tmp;
-    int i, port = 0;
-    char *name = NULL, *host = NULL, *apasswd = NULL, *cpasswd = NULL, 
-         *flags = NULL, *class = NULL, *bind = NULL;
-
-    i = 0;
-    for(tmp = vars[i]; tmp; tmp = vars[++i])
-        if(tmp->type->flag & SCONFF_NAME)
-        {
-            name = tmp->value;
-            break;
-        }
-    i = 0;
-    for(tmp = vars[i]; tmp; tmp = vars[++i])
-        if(tmp->type->flag & SCONFF_HOST)
-        {
-            host = tmp->value;
-            break;
-        }
-    i = 0;
-    for(tmp = vars[i]; tmp; tmp = vars[++i])
-        if(tmp->type->flag & SCONFF_APASSWD)
-        {
-            apasswd = tmp->value;
-            break;
-        }
-    i = 0;
-    for(tmp = vars[i]; tmp; tmp = vars[++i])
-        if(tmp->type->flag & SCONFF_CPASSWD)
-        {
-            cpasswd = tmp->value;
-            break;
-        }
-    i = 0;
-    for(tmp = vars[i]; tmp; tmp = vars[++i])
-        if(tmp->type->flag & SCONFF_FLAGS)
-        {
-            flags = tmp->value;
-            break;
-        }
-    i = 0;
-    for(tmp = vars[i]; tmp; tmp = vars[++i])
-        if(tmp->type->flag & SCONFF_CLASS)
-        {
-            class = tmp->value;
-            break;
-        }
-    i = 0;
-    for(tmp = vars[i]; tmp; tmp = vars[++i])
-        if(tmp->type->flag & SCONFF_PORT)
-        {
-            port = atoi(tmp->value);
-            break;
-        }
-    i = 0;
-    for(tmp = vars[i]; tmp; tmp = vars[++i])
-        if(tmp->type->flag & SCONFF_BIND)
-        {
-            bind = tmp->value;
-            break;
-        }
-    if(!name)
-    {
-        confparse_error("Missing 'name' in connect block", lnum);
-        return;
-    }
-    if(!host)
-    {
-        confparse_error("Missing 'host' in connect block", lnum);
-        return;
-    }
-    if(!apasswd)
-    {
-        confparse_error("Missing 'apasswd' in connect block", lnum);
-        return;
-    }
-    if(!cpasswd)
-    {
-        confparse_error("Missing 'cpasswd' in connect block", lnum);
-        return;
-    }
-    if(!class)
-        class = "default";
-    confadd_connect(name, host, apasswd, cpasswd, port, flags, bind, class);
-    free_vars(vars);
-    return;
-}
-
-static void
-confparse_port(cVar *vars[], int lnum)
-{
-    cVar *tmp;
-    int port = 0, i;
-    char *bind = NULL, *ipmask = NULL;
-    i = 0;
-    for(tmp = vars[i]; tmp; tmp = vars[++i])
-        if(tmp->type->flag & SCONFF_IPMASK)
-        {
-            ipmask = tmp->value;
-            break;
-        }
-    i = 0;
-    for(tmp = vars[i]; tmp; tmp = vars[++i])
-        if(tmp->type->flag & SCONFF_BIND)
-        {
-            bind = tmp->value;
-            break;
-        }
-    i = 0;
-    for(tmp = vars[i]; tmp; tmp = vars[++i])
-        if(tmp->type->flag & SCONFF_PORT)
-        {
-            port = atoi(tmp->value);
-            break;
-        }
-    if(port == 0)
-    {
-        confparse_error("Lacking 'port' in port block", lnum);
-        return;
-    }
-    confadd_port(port, ipmask, bind);
-    free_vars(vars);
-    return;
-}
-
-
-static void
-confparse_kill(cVar *vars[], int lnum)
-{
-    cVar *tmp;
-    int i;
-    char *user = NULL, *host = NULL, *reason = NULL;
-
-    i = 0;
-    for(tmp = vars[i]; tmp; tmp = vars[++i])
-        if(tmp->type->flag & SCONFF_MASK)
-        {
-            if((host = strchr(tmp->value, '@')))
-            {
-                host = '\0';
-                host++;
-                user = tmp->value;
-            }   
-            else
-                host = tmp->value;
-            break;
-        }
-    i = 0;
-    for(tmp = vars[i]; tmp; tmp = vars[++i])
-        if(tmp->type->flag & SCONFF_REASON)
-        {
-            reason = tmp->value;
-            break;
-        }
-    if(!host)
-    {
-        confparse_error("Missing 'mask' in kill block", lnum);
-        return;
-    }
-    confadd_kill(user, host, reason);
-    free_vars(vars);
-    return;
-}
-
-static void
-confparse_restrict(cVar *vars[], int lnum)
-{
-    cVar *tmp;
-    int i, t2 = 0;
-    char *type = NULL, *mask = NULL, *reason = NULL;
-
-    i = 0;
-    for(tmp = vars[i]; tmp; tmp = vars[++i])
-        if(tmp->type->flag & SCONFF_TYPE)
-        {
-            type = tmp->value;
-            break;
-        }
-    i = 0;
-    for(tmp = vars[i]; tmp; tmp = vars[++i])
-        if(tmp->type->flag & SCONFF_MASK)
-        {
-            mask = tmp->value;
-            break;
-        }
-    i = 0;
-    for(tmp = vars[i]; tmp; tmp = vars[++i])
-        if(tmp->type->flag & SCONFF_REASON)
-        {
-            reason = tmp->value;
-            break;
-        }
-    if(!type)
-    {
-        confparse_error("Missing 'type' in restrict block", lnum);
-        return;
-    }
-    else if(!strcmp("CHAN", type))
-        t2 |= SBAN_CHAN;
-    else if(!strcmp("NICK", type))
-        t2 |= SBAN_NICK;
-    else if(!strcmp("GCOS", type))
-        t2 |= SBAN_GCOS;
-    else
-    {
-        confparse_error("Unknown 'type' in restrict block", lnum);
-        return;
-    }
-    t2 |= SBAN_LOCAL;
-    if(!mask)
-    {
-        confparse_error("Missing 'mask' in oper block", lnum);
-        return;
-    }
-    confadd_restrict(t2, mask, reason);
-    free_vars(vars);
-    return;
-}
-
-static void
-confparse_admin(cVar *vars[], int lnum)
-{
-    char *l1 = NULL, *l2 = NULL, *l3 = NULL;
-
-    if(vars[0]->value)
-        l1 = vars[0]->value;
-    else
-        l1 = "";
-    if(vars[1]->value)
-        l2 = vars[1]->value;
-    else
-        l2 = "";
-    if(vars[2]->value)
-        l3 = vars[2]->value;
-    else
-        l3 = "";
-
-    confadd_me(0, 0, 0, 0, l1, l2, l3);
-    free_vars(vars);
-    return;
-}
-
-static void
-confparse_super(cVar *vars[], int lnum)
-{
-    int i = 0;
-
-    while(vars[i] && vars[i]->value)
-    {
-        confadd_uline(vars[i]->value);
-        i++;
-    }
-    free_vars(vars);
-    return;
-}
-        
 
 /* check_quote
  * this routine skips over any ignored items inside our file
@@ -686,8 +168,11 @@ parse_block(tConf *block, char *cur, FILE *file, int *lnum)
             if(clear)
             {
                 if(*cur != ';')
-                    confparse_error("Missing semicolon (attempting to ignore)",
-                                 *lnum);
+                {
+                    confparse_error("Missing semicolon", *lnum);
+                    free_vars(vars);
+                    return NULL;
+                }
                 else
                     cur++;
                 clear = 0;
@@ -698,11 +183,24 @@ parse_block(tConf *block, char *cur, FILE *file, int *lnum)
             if(done)
             {
                 if(*cur != ';')
-                    confparse_error("Missing block end semicolon (attempting"
-                                    " to ignore)", *lnum);
+                {
+                    confparse_error("Missing block end semicolon", *lnum);
+                    free_vars(vars);
+                    return NULL;
+                }
                 else
                     cur++;
-                (*block->func) (vars, *lnum);
+                if(((*block->func) (vars, *lnum)) == -1)
+                {
+                    free_vars(vars);
+                    return NULL;
+                }
+                if(BadPtr(cur))
+                    *cur = '#';     /* we cant return a bad pointer because
+                                     * that will pull us out of the conf read
+                                     * so this will just get ignored
+                                     * kludgy, but effective */
+                free_vars(vars);
                 return cur;
             }
             cur = check_quote(cur);
@@ -716,11 +214,24 @@ parse_block(tConf *block, char *cur, FILE *file, int *lnum)
                 if(BadPtr(cur))
                     continue;
                 if(*cur != ';')
-                    confparse_error("Missing block end semicolon (attempting"
-                                    " to ignore)", *lnum);
+                {
+                    confparse_error("Missing block end semicolon", *lnum);
+                    free_vars(vars);
+                    return NULL;
+                }
                 else
                     cur++;
-                (*block->func) (vars, *lnum);
+                if(((*block->func) (vars, *lnum)) == -1)
+                {
+                    free_vars(vars);
+                    return NULL;
+                }
+                if(BadPtr(cur))
+                    *cur = '#';     /* we cant return a bad pointer because
+                                     * that will pull us out of the conf read
+                                     * so this will just get ignored
+                                     * kludgy, but effective */
+                free_vars(vars);
                 return cur;
             }
             vars[vnum] = (cVar *) MyMalloc(sizeof(cVar));
@@ -740,9 +251,9 @@ parse_block(tConf *block, char *cur, FILE *file, int *lnum)
                     cur++;
                 if(BadPtr(cur))
                 {
-                    confparse_error("Cant find closequote (attempting to"
-                                    " ignore)", *lnum);
-                    continue;
+                    confparse_error("Cant find closequote", *lnum);
+                    free_vars(vars);
+                    return NULL;
                 }
                 *cur = '\0';
                 cur++;
@@ -764,9 +275,9 @@ parse_block(tConf *block, char *cur, FILE *file, int *lnum)
                     }
                     else if(vars[vnum]->loaded == 2)
                     {
-                        confparse_error("Junk after value (attempting to"
-                                " ignore)", *lnum);
-                        continue;
+                        confparse_error("Junk after value", *lnum);
+                        free_vars(vars);
+                        return NULL;
                     }
                     cur++;
                 }
@@ -784,6 +295,7 @@ parse_block(tConf *block, char *cur, FILE *file, int *lnum)
             vnum++;
         }
         confparse_error("Unexpected EOF: Syntax Error", tlnum);
+        free_vars(vars);
         return NULL;
     }
 
@@ -799,8 +311,11 @@ parse_block(tConf *block, char *cur, FILE *file, int *lnum)
              * if we cant find it, ignore it and hope for the best
              */
             if(*cur != ';')
-                confparse_error("Missing semicolon (attempting to ignore)",
-                                 *lnum);
+            {
+                confparse_error("Missing semicolon ", *lnum);
+                free_vars(vars);
+                return NULL;
+            }
             else
                 cur++;
             clear = 0;
@@ -821,11 +336,24 @@ parse_block(tConf *block, char *cur, FILE *file, int *lnum)
              * hope for the best
              */
             if(*cur != ';')
-                confparse_error("Missing block end semicolon (attempting to"
-                                " ignore)", *lnum);
+            {
+                confparse_error("Missing block end semicolon", *lnum);
+                free_vars(vars);
+                return NULL;
+            }
             else
                 cur++;
-            (*block->func) (vars, *lnum);
+            if(((*block->func) (vars, *lnum)) == -1)
+            {
+                free_vars(vars);
+                return NULL;
+            }
+            if(BadPtr(cur))
+                *cur = '#';     /* we cant return a bad pointer because
+                                 * that will pull us out of the conf read
+                                 * so this will just get ignored
+                                 * kludgy, but effective */
+            free_vars(vars);
             return cur;
         }
         if(b2 && b2->tok)
@@ -836,11 +364,9 @@ parse_block(tConf *block, char *cur, FILE *file, int *lnum)
              */
             if(*cur != '{')
             {
-                confparse_error("Junk after nested block token (attempting "
-                                "to ignore)", *lnum);
-                cur = strchr(cur, '{');
-                if(BadPtr(cur))
-                    continue;
+                confparse_error("Junk after nested block token", *lnum);
+                free_vars(vars);
+                return NULL;
             }
             cur++;
             cur = check_quote(cur);
@@ -869,11 +395,24 @@ parse_block(tConf *block, char *cur, FILE *file, int *lnum)
                 if(BadPtr(cur))
                     continue;
                 if(*cur != ';')
-                    confparse_error("Missing block end semicolon (attempting"
-                                    " to ignore)", *lnum);
+                {
+                    confparse_error("Missing block end semicolon", *lnum);
+                    free_vars(vars);
+                    return NULL;
+                }
                 else
                     cur++;
-                (*block->func) (vars, *lnum);
+                if(((*block->func) (vars, *lnum)) == -1)
+                {
+                    free_vars(vars);
+                    return NULL;
+                }
+                if(BadPtr(cur))
+                    *cur = '#';     /* we cant return a bad pointer because
+                                     * that will pull us out of the conf read
+                                     * so this will just get ignored
+                                     * kludgy, but effective */
+                free_vars(vars);
                 return cur;
 
             }
@@ -883,8 +422,9 @@ parse_block(tConf *block, char *cur, FILE *file, int *lnum)
                 cur++;
             if(BadPtr(cur))
             {
-                confparse_error("Unterminated token (attempting to ignore)", 
-                                 *lnum);
+                confparse_error("Unterminated token", *lnum);
+                free_vars(vars);
+                return NULL;
             }
             else 
             {
@@ -924,15 +464,15 @@ parse_block(tConf *block, char *cur, FILE *file, int *lnum)
                     break;
             if(!item->tok)
             {
-                confparse_error("Unknown token(ignored)", *lnum);
-                clear = 0;
-                continue;
+                confparse_error("Unknown token", *lnum);
+                free_vars(vars);
+                return NULL;
             }
             if(!(block->subtok & item->flag))
             {
-                confparse_error("token not permitted in block(ignored)", *lnum);
-                clear = 1;
-                continue;
+                confparse_error("Token not permitted in block", *lnum);
+                free_vars(vars);
+                return NULL;
             }
             /* create our variable */
             vars[vnum] = (cVar *) MyMalloc(sizeof(cVar));
@@ -981,18 +521,9 @@ parse_block(tConf *block, char *cur, FILE *file, int *lnum)
                 cur++;
             if(BadPtr(cur))
             {
-                int x = 0;
-                confparse_error("Unterminated quote (attempting to ignore)", 
-                                *lnum);
-                /* try to back up to most recent non-whitespace value */
-                while(BadPtr(cur) || ((*cur == ' ') || *cur == '\t' ||
-                        (*cur == '\n')))
-                {
-                    x++;
-                    if(x > 80)  /* just in case */
-                        break;
-                    cur--;  
-                }
+                confparse_error("Unterminated quote", *lnum);
+                free_vars(vars);
+                return NULL;
             }
             *cur = '\0';
             cur++;
@@ -1034,12 +565,9 @@ parse_block(tConf *block, char *cur, FILE *file, int *lnum)
                     var++;
                 else
                 {
-                    confparse_error("Non-Numeric value in integer"
-                                    " token(line skipped)", *lnum);
-                    item = NULL;
-                    MyFree(vars[vnum]);
-                    vars[vnum] = NULL;
-                    break;
+                    confparse_error("Expecting integer value", *lnum);
+                    free_vars(vars);
+                    return NULL;
                 }
             }
             if(!item)
@@ -1084,9 +612,11 @@ parse_block(tConf *block, char *cur, FILE *file, int *lnum)
             continue;
         }
         confparse_error("Unexpected EOF:  Syntax Error", tlnum);
+        free_vars(vars);
         return NULL;
     }
     confparse_error("Unexpected EOF:  Syntax Error", tlnum);
+    free_vars(vars);
     return NULL;
 }
             
@@ -1110,6 +640,8 @@ initconf(char *filename)
             printf("Unable to open config file %s\n", filename);
         return -1;
     }
+
+    initclass();
     
     while(!BadPtr(cur) || ((fgets(line, LINE_MAX, file) != NULL) && ++lnum
              && (cur = line)))
@@ -1142,14 +674,13 @@ initconf(char *filename)
                     cur++;
                 if(BadPtr(cur))
                 {
-                    confparse_error("Bad include line(ignored)", lnum);
-                    cur = strchr(cur, ';');
-                    cur++;
-                    continue;
+                    confparse_error("Bad include line", lnum);
+                    return -1;
                 }
                 *cur = '\0';
                 cur++;
-                initconf(var);
+                if(initconf(var) == -1)
+                    return -1;
                 continue;
             }    
             for(block = tconftab; block->tok; block++)
@@ -1158,7 +689,7 @@ initconf(char *filename)
             if(!block->tok)
             {
                 confparse_error("Unknown block type", lnum);
-                continue;
+                return -1;
             }
             blnum = lnum;
         }
@@ -1169,17 +700,13 @@ initconf(char *filename)
             cur++;
         else
         {
-            confparse_error("Junk after block name (attempting to ignore)", 
-                             lnum);
-            if(!(cur = strchr(cur, '{')))
-            {
-                clear = 0;
-                continue;
-            }
-            cur++;
+            confparse_error("Junk after block name", lnum);
+            return -1;
         }
-        printf("parsing block %s\n", block->tok);
-        cur = parse_block(block, cur, file, &lnum);
+        if((cur = parse_block(block, cur, file, &lnum)) == NULL)
+        {
+            return -1;
+        }
         clear = 0;
         block = NULL;
         continue;

@@ -28,6 +28,7 @@
 #include <signal.h>
 #include "h.h"
 #include "userban.h"
+#include "confparse.h"
 
 /* This entire file has basically been rewritten from scratch with the
  * exception of lookup_confhost and attach_Iline/attach_iline fucntions
@@ -36,10 +37,8 @@
 
 extern int  rehashed;
 extern int  forked;
-
-struct sockaddr_in vserv;
-char        specific_virtual_host;
-
+extern tConf tconftab[];
+extern sConf sconftab[];
 
 /* internally defined functions  */
 
@@ -61,19 +60,32 @@ extern char ProxyMonURL[TOPICLEN+1];
 extern char ProxyMonHost[HOSTLEN+1];
 #endif
 
+/* these are our global lists of ACTIVE conf entries */
+
 #define MAXUSERVS 24
 
-aConnect   *connects  = ((aConnect *) NULL);    /* connects, C/N pairs  */
-aAllow     *allows    = ((aAllow *) NULL);  /* allows  - I lines    */
-Conf_Me    *MeLine    = ((Conf_Me *) NULL); /* meline - only one    */
-aOper      *opers     = ((aOper *) NULL);   /* opers - Olines   */
-aPort      *ports     = ((aPort *) NULL);   /* ports - P/M lines    */
-aClass     *classes;
-char       *uservers[MAXUSERVS];
+aConnect   *connects  = NULL;       /* connects, C/N pairs  */
+aAllow     *allows    = NULL;       /* allows  - I lines    */
+Conf_Me    *MeLine    = NULL;       /* meline - only one    */
+aOper      *opers     = NULL;       /* opers - Olines       */
+aPort      *ports     = NULL;       /* ports - P/M lines    */
+aClass     *classes   = NULL;;      /* classes - Ylines     */
+char       *uservers[MAXUSERVS];    /* uservers = Ulines    */
+
+/* this set of lists is used for loading and rehashing the config file */
+
+aConnect    *new_connects   = NULL;
+aAllow      *new_allows     = NULL;
+Conf_Me     *new_MeLine     = NULL;
+aOper       *new_opers      = NULL;
+aPort       *new_ports      = NULL;
+aClass      *new_classes    = NULL;
+char        *new_uservers[MAXUSERVS]; 
 
 #ifdef LOCKFILE
 extern void do_pending_klines(void);
 #endif
+extern void confparse_error(char *, int);
 
 /* initclass()
  * initialize the default class
@@ -81,15 +93,14 @@ extern void do_pending_klines(void);
 
 void initclass()
 {
-    classes = (aClass *) make_class();
+    new_classes = (aClass *) make_class();
 
-    DupString(classes->name, "default");
-    classes->connfreq = CONNECTFREQUENCY;
-    classes->pingfreq = PINGFREQUENCY;
-    classes->maxlinks = MAXIMUM_LINKS;
-    classes->maxsendq = MAXSENDQLENGTH;
-    classes->links = 0;
-    classes->next = NULL;
+    DupString(new_classes->name, "default");
+    new_classes->connfreq = CONNECTFREQUENCY;
+    new_classes->pingfreq = PINGFREQUENCY;
+    new_classes->maxlinks = MAXIMUM_LINKS;
+    new_classes->maxsendq = MAXSENDQLENGTH;
+    new_classes->links = 0;
 }
 
 /* free_ routines
@@ -143,6 +154,13 @@ free_port(aPort *ptr)
     return;
 }
 
+void
+free_class(aClass *ptr)
+{
+    MyFree(ptr->name);
+    MyFree(ptr);
+    return;
+}
 
 /* clear_conflinks()
  * remove associated confs from this client
@@ -326,12 +344,22 @@ find_oper_byname(char *name)
 }
 
 aClass *
-find_class(char *name)
+find_class(char *name, int i)
 {
     aClass *tmp;
-    for(tmp = classes; tmp; tmp = tmp->next)
-        if(!mycmp(name, tmp->name))
-            break;
+    if(i == 1)
+    {
+        for(tmp = new_classes; tmp; tmp = tmp->next)
+            if(!mycmp(name, tmp->name))
+                break;
+    }
+    else
+    {
+        for(tmp = classes; tmp; tmp = tmp->next)
+            if(!mycmp(name, tmp->name))
+                break;
+    }
+
     return tmp;
 }
 
@@ -347,7 +375,7 @@ set_effective_class(aClient *cptr)
         if(cptr->serv->aconn->class)
             cptr->class = cptr->serv->aconn->class;
         else
-            cptr->class = find_class("default");
+            cptr->class = find_class("default", 0);
     }
     else
     {
@@ -356,7 +384,7 @@ set_effective_class(aClient *cptr)
         else if(cptr->user->allow)
             cptr->class = cptr->user->allow->class;
         else
-            cptr->class = find_class("default");
+            cptr->class = find_class("default", 0);
     }
     return;
 }
@@ -452,142 +480,6 @@ static int attach_iline(aClient *cptr, aAllow *allow, char *uhost, int doid)
     return 0;
 }
 
-/* rehasing routines
- * clear_* removes currently unused entries and
- * sets used ones for removal.
- */
-
-void
-clear_allows()
-{
-    aAllow *allow, *ptr;
-    int keep = 0;
-
-    allow = allows;
-    allows = NULL;
-    while(allow)
-    {
-        if(allow->clients > 0)
-        {
-            allow->legal = -1;
-            if(!keep)
-            {
-                ptr = allow->next;
-                allows = allow;
-                allows->next = NULL;    /* last in this list */
-                keep++;
-                allow = ptr;
-                continue;
-            }
-            ptr = allow->next;
-            allow->next = allows;
-            allows = allow;
-            allow = ptr;
-        }
-        else
-        {
-            ptr = allow->next;
-            free_allow(allow);
-            allow = ptr;
-        }
-    }
-    return;
-}
-
-void
-clear_connects()
-{
-    aConnect *aconn, *ptr;
-    int keep = 0;
-
-    aconn = connects;
-    connects = NULL;
-    while(aconn)
-        if(aconn->acpt)
-        {
-            /* in use */
-            aconn->legal = -1;
-            if(!keep)
-            {
-                ptr = aconn->next;
-                connects = aconn;
-                connects->next = NULL;
-                keep++;
-                aconn = ptr;
-                continue;
-            }
-            ptr = aconn->next;
-            aconn->next = connects;
-            connects = aconn;
-            aconn = ptr;
-        }
-        else
-        {
-            ptr = aconn->next;
-            free_connect(aconn);
-            aconn = ptr;
-        }
-    return;
-}
-
-void
-clear_opers()
-{
-    aOper *aoper, *ptr;
-    int keep = 0;
-
-    aoper = opers;
-    opers = NULL;
-    while(aoper)
-        if((aoper->opers > 0))
-        {
-            aoper->legal = -1;
-            if(!keep)
-            {
-                ptr = aoper->next;
-                opers = aoper;
-                opers->next = NULL;     /* last in the list */
-                keep++;
-                aoper = ptr;
-                continue;
-            }
-            ptr = aoper->next;
-            aoper->next = opers;
-            opers = aoper;
-            aoper = ptr;
-        }
-        else
-        {
-            ptr = aoper->next;
-            free_oper(aoper);
-            aoper = ptr;
-        }
-    return;
-}
-
-/* this used to be check_class - revamped and moved here 
- * to rip out all those shitty obfuscation macros that whoever
- * whote it was so fond of.
- * -epi
- */
-
-void 
-clear_classes()
-{
-    aClass *cltmp, *cltmp2;
-
-    for (cltmp2 = cltmp = classes; cltmp; cltmp = cltmp2->next)
-        if (cltmp->maxlinks < 0)
-        {
-            cltmp2->next = cltmp->next;;
-            if (cltmp->links <= 0)
-                free_class(cltmp);
-        }
-        else
-            cltmp2 = cltmp;
-}
-
-
 /* confadd_ functions
  * add a config item
  * Feb.15/04 -epi
@@ -619,59 +511,95 @@ static int oper_access[] =
     OFLAG_UMODEF,  'F',
     0, 0 };
 
-
-void
-confadd_oper(char *name, char *host, char *passwd, char *flags, char *class)
+int
+confadd_oper(cVar *vars[], int lnum)
 {
-    aOper *x;
-    int *i, flag, new;
+    cVar *tmp;
+    aOper *x = make_oper();
+    int *i, flag, c = 0, hc = 0;
     char *m = "*";
 
-    if((x = find_oper_byname(name)))
+    for(tmp = vars[c]; tmp; tmp = vars[++c])
     {
-        MyFree(x->hosts[0]);
-        MyFree(x->passwd);
-        x->flags = 0;
-        new = 0;
-    }
-    else
-    {
-        x = make_oper();
-        DupString(x->nick, name);
-        new = 1;
-    }
-    x->legal = 1;
-    DupString(x->hosts[0], host);
-    DupString(x->passwd, passwd);
-    for (m=(*flags) ? flags : m; *m; m++)
-    {
-        for (i=oper_access; (flag = *i); i+=2)
-            if (*m==(char)(*(i+1)))
+        if(tmp->type && (tmp->type->flag & SCONFF_NAME))
+        {
+            if(x->nick)
             {
-                x->flags |= flag;
-                break;
+                confparse_error("Multiple name definitions", lnum);
+                free_oper(x);
+                return -1;
             }
+            tmp->type = NULL;
+            DupString(x->nick, tmp->value);
+        }
+        else if(tmp->type && (tmp->type->flag & SCONFF_HOST))
+        {
+            if((hc+1) > MAXHOSTS)
+            {
+                confparse_error("Excessive host definitions", lnum);
+                free_oper(x);
+                return -1;
+            }
+            tmp->type = NULL;
+            if (!strchr(tmp->value, '@') && *tmp->value != '/')
+            {
+                char       *newhost;
+                int         len = 3;
+                len += strlen(tmp->value);
+                newhost = (char *) MyMalloc(len);
+                (void) ircsprintf(newhost, "*@%s", tmp->value);
+                x->hosts[hc] = newhost;
+            }
+            else
+                DupString(x->hosts[hc], tmp->value);
+            hc++;
+        }
+        else if(tmp->type && (tmp->type->flag & SCONFF_PASSWD))
+        {
+            if(x->passwd)
+            {
+                confparse_error("Multiple password definitions", lnum);
+                free_oper(x);
+                return -1;
+            }
+            tmp->type = NULL;
+            DupString(x->passwd, tmp->value);
+        }
+        else if(tmp->type && (tmp->type->flag & SCONFF_ACCESS))
+        {
+            for (m=(*tmp->value) ? tmp->value : m; *m; m++)
+            {
+                for (i=oper_access; (flag = *i); i+=2)
+                    if (*m==(char)(*(i+1)))
+                    {
+                        x->flags |= flag;
+                        break;
+                    }
+            }
+        }
+        else if(tmp->type && (tmp->type->flag & SCONFF_CLASS))
+        {
+            if(!(x->class = find_class(tmp->value, 1)))
+                x->class = find_class("default", 1);
+        }
     }
-    if(class)
-        x->class = find_class(class);
-    else
-        x->class = find_class("default");
-    if (!strchr(x->hosts[0], '@') && *x->hosts[0] != '/')
+    if(!x->hosts[0])
     {
-        char       *newhost;
-        int         len = 3;
-        len += strlen(x->hosts[0]);
-        newhost = (char *) MyMalloc(len);
-        (void) ircsprintf(newhost, "*@%s", x->hosts[0]);
-        MyFree(x->hosts[0]);
-        x->hosts[0] = newhost;
+        confparse_error("Lacking host in oper block", lnum);
+        free_oper(x);
+        return -1;
     }
-    if(new)
+    if(!x->passwd)
     {
-        x->next = opers;
-        opers = x;
+        confparse_error("Lacking passwd in oper block", lnum);
+        free_oper(x);
+        return -1;
     }
-    return;
+    if(!x->class)
+        x->class = find_class("default", 1);
+    x->next = new_opers;
+    new_opers = x;
+    return lnum;
 }
 
 static int server_info[] =
@@ -682,255 +610,552 @@ static int server_info[] =
     0, 0
 };
 
-void
-confadd_connect(char *name, char *host, char *apasswd, char *cpasswd,
-                int port, char *flags, char *source, char *class)
+int
+confadd_connect(cVar *vars[], int lnum)
 {
-    aConnect *x;
-    int *i, flag, new = 0;
+    cVar *tmp;
+    aConnect *x = make_connect();
+    int *i, flag, new = 1, c = 0;
     char *m = "*";
 
-    if(!(x = find_aConnect(name)))
+    for(tmp = vars[c]; tmp; tmp = vars[++c])
     {
-        x = make_connect();
-        DupString(x->name, name);
-        x->port = 0;
-        new = 1;
-    }
-    x->legal = 1;
-    if(host)
-    {
-        MyFree(x->host);
-        DupString(x->host, host);
-        if (!strchr(x->host, '@') && *x->host != '/')
+        if(tmp->type && (tmp->type->flag & SCONFF_NAME))
         {
-            char       *newhost;
-            int         len = 3;
-            len += strlen(x->host);
-            newhost = (char *) MyMalloc(len);
-            (void) ircsprintf(newhost, "*@%s", x->host);
-            MyFree(x->host);
-            x->host = newhost;
-        }
-        (void) lookup_confhost(x);
-    }
-    if(class)
-        x->class = find_class(class);
-    else
-        x->class = find_class("default");
-    if(port)
-        x->port = port;
-    if(apasswd)
-    {
-        MyFree(x->apasswd);
-        DupString(x->apasswd, apasswd);
-    }
-    if(cpasswd)
-    {
-        MyFree(x->cpasswd);
-        DupString(x->cpasswd, cpasswd);
-    }
-    if(flags)
-    {
-        x->flags = 0;
-        for (m=(*flags) ? flags : m; *m; m++)
-        {
-            for (i=server_info; (flag = *i); i+=2)
-            if (*m==(char)(*(i+1)))
+            if(x->name)
             {
-                x->flags |= flag;
-                break;
+                confparse_error("Multiple name definitions", lnum);
+                free_connect(x);
+                return -1;
+            }
+            tmp->type = NULL;
+            DupString(x->name, tmp->value);
+        }
+        else if(tmp->type && (tmp->type->flag & SCONFF_HOST))
+        {
+            if(x->host)
+            {
+                confparse_error("Multiple host definitions", lnum);
+                free_connect(x);
+                return -1;
+            }
+            tmp->type = NULL;
+            if (!strchr(tmp->value, '@') && *tmp->value != '/')
+            {
+                char       *newhost;
+                int         len = 3;
+                len += strlen(tmp->value);
+                newhost = (char *) MyMalloc(len);
+                (void) ircsprintf(newhost, "*@%s", tmp->value);
+                x->host = newhost;
+            }
+            else
+                DupString(x->host, tmp->value);
+            (void) lookup_confhost(x);
+        }
+        else if(tmp->type && (tmp->type->flag & SCONFF_APASSWD))
+        {
+            if(x->apasswd)
+            {
+                confparse_error("Multiple apasswd definitions", lnum);
+                free_connect(x);
+                return -1;
+            }
+            tmp->type = NULL;
+            DupString(x->apasswd, tmp->value);
+        }
+        else if(tmp->type && (tmp->type->flag & SCONFF_CPASSWD))
+        {
+            if(x->cpasswd)
+            {
+                confparse_error("Multiple cpasswd definitions", lnum);
+                free_connect(x);
+                return -1;
+            }
+            tmp->type = NULL;
+            DupString(x->cpasswd, tmp->value);
+        }
+        else if(tmp->type && (tmp->type->flag & SCONFF_FLAGS))
+        {
+            if(x->flags > 0)
+            {
+                confparse_error("Multiple flag definitions", lnum);
+                free_connect(x);
+                return -1;
+            }
+            tmp->type = NULL;
+            x->flags = 0;
+            for (m=(*tmp->value) ? tmp->value : m; *m; m++)
+            {
+                for (i=server_info; (flag = *i); i+=2)
+                if (*m==(char)(*(i+1)))
+                {
+                    x->flags |= flag;
+                    break;
+                }
             }
         }
+        else if(tmp->type && (tmp->type->flag & SCONFF_PORT))
+        {
+            if(x->port > 0)
+            {
+                confparse_error("Multiple port definitions", lnum);
+                free_connect(x);
+                return -1;
+            }
+            tmp->type = NULL;
+            x->port = atoi(tmp->value);
+        }
+        else if(tmp->type && (tmp->type->flag & SCONFF_BIND))
+        {
+            if(x->source)
+            {
+                confparse_error("Multiple source definitions", lnum);
+                free_connect(x);
+                return -1;
+            }
+            tmp->type = NULL;
+            DupString(x->source, tmp->value);
+        }
+        else if(tmp->type && (tmp->type->flag & SCONFF_CLASS))
+        {
+            if(new && x->class)
+            {
+                confparse_error("Multiple class definitions", lnum);
+                free_connect(x);
+                return -1;
+            }
+            tmp->type = NULL;
+            x->class = find_class(tmp->value, 1);
+        }
     }
-    if(source)
+    if(!x->name)
     {
-        MyFree(x->source);
-        DupString(x->source, source);
+        confparse_error("Lacking name in connect block", lnum);
+        free_connect(x);
+        return -1;
     }
-    if(new)
+    if(!x->apasswd)
     {
-        x->next = connects;
-        connects = x;
+        confparse_error("Lacking apasswd in connect block", lnum);
+        free_connect(x);
+        return -1;
     }
-    return;
+    if(!x->cpasswd)
+    {
+        confparse_error("Lacking cpasswd in connect block", lnum);
+        free_connect(x);
+        return -1;
+    }
+    if(!x->host)
+    {
+        confparse_error("Lacking host in connect block", lnum);
+        free_connect(x);
+        return -1;
+    }
+    if(!x->class)
+        x->class = find_class("default", 1);
+    x->next = new_connects;
+    new_connects = x;
+    return lnum;
 }
 
-void
-confadd_allow(char *ipmask, char *passwd, char *hostmask, int port, char *class)
+int
+confadd_options(cVar *vars[], int lnum)
 {
-    aAllow *x;
+    return lnum;
+}
+
+int
+confadd_allow(cVar *vars[], int lnum)
+{
+    cVar *tmp;
+    aAllow *x = make_allow();
+    int c = 0;
     /* Currently, Allows are the only config types without
      * easy identifiers - so we dont worry about duplicate types.
      * -epi
      */
 
-    x = make_allow();
-    if(ipmask)
-        DupString(x->ipmask, ipmask);
-    else
-        DupString(x->ipmask, "*@*");
-    if(passwd)
-        DupString(x->passwd, passwd);
-    else
-        DupString(x->passwd, "");
-    if(hostmask)
-        DupString(x->hostmask, hostmask);
-    else
-        DupString(x->hostmask, "*@*");
-    if(port)
-        x->port = port;
-    else
-        x->port = 0;
-    if(class)
-        x->class = find_class(class);
-    else
-        x->class = find_class("default");
-    if(strchr(x->ipmask, '@'))
-        x->flags |= CONF_FLAGS_I_HOST_HAS_AT;
-    if(strchr(x->hostmask, '@'))
-        x->flags |= CONF_FLAGS_I_NAME_HAS_AT;
-#if (RIDICULOUS_PARANOIA_LEVEL>=1)
-    if(myncmp(x->passwd, "oper", 4) == 0)
+    for(tmp = vars[c]; tmp; tmp = vars[++c])
     {
-        if((x->passwd[4] == '.') || (x->passwd[4] == '\0'))
+        if(tmp->type && (tmp->type->flag & SCONFF_IPMASK))
         {
-            char *tmpd = x->passwd;
-            char *tmp = x->passwd + 4;
+            if(x->ipmask)
+            {
+                confparse_error("Multiple ipmask definitions", lnum);
+                free_allow(x);
+                return -1;
+            }
+            tmp->type = NULL;
+            DupString(x->ipmask, tmp->value);
+            if(strchr(x->ipmask, '@'))
+                x->flags |= CONF_FLAGS_I_HOST_HAS_AT;
+        }
+        else if(tmp->type && (tmp->type->flag & SCONFF_HOST))
+        {
+            if(x->hostmask)
+            {
+                confparse_error("Multiple host definitions", lnum);
+                free_allow(x);
+                return -1;
+            }
+            tmp->type = NULL;
+            DupString(x->hostmask, tmp->value);
+            if(strchr(x->hostmask, '@'))
+                x->flags |= CONF_FLAGS_I_NAME_HAS_AT;
+        }
+        else if(tmp->type && (tmp->type->flag & SCONFF_PASSWD))
+        {
+            if(x->passwd)
+            {
+                confparse_error("Multiple passwd definitions", lnum);
+                free_allow(x);
+                return -1;
+            }
+            tmp->type = NULL;
+            DupString(x->passwd, tmp->value);
+#if (RIDICULOUS_PARANOIA_LEVEL>=1)
+            if(myncmp(x->passwd, "oper", 4) == 0)
+            {
+                if((x->passwd[4] == '.') || (x->passwd[4] == '\0'))
+                {
+                    char *tmpd = x->passwd;
+                    char *tmp = x->passwd + 4;
 
-            x->flags |= CONF_FLAGS_I_OPERPORT;
-            if(*tmp)
-                tmp++;
-            DupString(x->passwd, tmp);
-            MyFree(tmpd);
+                    x->flags |= CONF_FLAGS_I_OPERPORT;
+                    if(*tmp)
+                        tmp++;
+                    DupString(x->passwd, tmp);
+                    MyFree(tmpd);
+                }
+            }
+#endif
+        }
+        else if(tmp->type && (tmp->type->flag & SCONFF_PORT))
+        {
+            if(x->port > 0)
+            {
+                confparse_error("Multiple host definitions", lnum);
+                free_allow(x);
+                return -1;
+            }
+            tmp->type = NULL;
+            x->port = atoi(tmp->value);
+        }
+        else if(tmp->type && (tmp->type->flag & SCONFF_CLASS))
+        {
+            if(x->class)
+            {
+                confparse_error("Multiple class definitions", lnum);
+                free_allow(x);
+                return -1;
+            }
+            tmp->type = NULL;
+            x->class = find_class(tmp->value, 1);
         }
     }
-#endif
-    /* would help if we added it to our list, eh */
-    x->next = allows;
-    allows = x;
-    return;
+    if(!x->ipmask && !x->hostmask)
+    {
+        confparse_error("Lacking both ipmask and host for allow", lnum);
+        free_allow(x);
+        return -1;
+    }
+    if(!x->ipmask)
+    {
+        DupString(x->ipmask, "*@*");
+        x->flags |= CONF_FLAGS_I_HOST_HAS_AT;
+    }
+    if(!x->passwd)
+        DupString(x->passwd, "");
+    if(!x->hostmask)
+    {
+        DupString(x->hostmask, "*@*");
+        x->flags |= CONF_FLAGS_I_NAME_HAS_AT;
+    }
+    if(!x->class)
+        x->class = find_class("default", 1);
+    x->next = new_allows;
+    new_allows = x;
+    return lnum;
 }
 
-void
-confadd_port(int port, char *allow, char *address)
+int
+confadd_port(cVar *vars[], int lnum)
 {
+    cVar *tmp;
     aPort *x;
-    int    new;
+    int    c = 0;
 
-    if((x = find_port(port)))
+    x = make_port();
+    for(tmp = vars[c]; tmp; tmp = vars[++c])
     {
-        MyFree(x->allow);
-        MyFree(x->address);
-        x->legal = 1;
-        new = 0;
+        if(tmp->type && (tmp->type->flag & SCONFF_IPMASK))
+        {
+            if(x->allow)
+            {
+                confparse_error("Multiple ipmask definitions", lnum);
+                free_port(x);
+                return -1;
+            }
+            tmp->type = NULL;
+            DupString(x->allow, tmp->value);
+        }
+        else if(tmp->type && (tmp->type->flag & SCONFF_BIND))
+        {
+            if(x->address)
+            {
+                confparse_error("Multiple bind definitions", lnum);
+                free_port(x);
+                return -1;
+            }
+            tmp->type = NULL;
+            DupString(x->address, tmp->value);
+        }
+        else if(tmp->type && (tmp->type->flag & SCONFF_PORT))
+        {
+            if(x->port > 0)
+            {
+                confparse_error("Multiple port definitions", lnum);
+                free_port(x);
+                return -1;
+            }
+            tmp->type = NULL;
+            x->port = atoi(tmp->value);
+        }
     }
-    else
+    if(!(x->port > 0))
     {
-        x = make_port();
-        x->port = port;
-        new = 1;
+        confparse_error("Lacking port in port block", lnum);
+        free_port(x);
+        return -1;
     }
-    if(allow)
-        DupString(x->allow, allow);
-    else
+    if(!x->allow)
         DupString(x->allow, "");
-    if(address)
-        DupString(x->address, address);
-    else
+    if(!x->address)
         DupString(x->address, "");
-    if(new)
-    {
-        x->next = ports;
-        ports = x;
-    }
-    return;
+    x->next = new_ports;
+    new_ports = x;
+    return lnum;
 }
 
-void
-confadd_me(char *servername, char *info, char *dpass, char *rpass, 
-            char *aline1, char *aline2, char *aline3)
+int
+confadd_global(cVar *vars[], int lnum)
 {
-    if(!MeLine)
-        MeLine = make_me();
-    if(me.name[0] == '\0' && servername)
+    cVar *tmp;
+    Conf_Me *x = new_MeLine;
+    int c = 0;
+
+    /* note:
+     * we dont free this here because we'll do that if we pull out
+     */
+
+    if(!x)
+        x = make_me();
+
+    for(tmp = vars[c]; tmp; tmp = vars[++c])
     {
-        DupString(MeLine->servername, servername);
-        strncpyzt(me.name, servername, sizeof(me.name));
+        if(tmp->type && (tmp->type->flag & SCONFF_NAME))
+        {
+            if(x->servername)
+            {
+                confparse_error("Multiple name definitions", lnum);
+                return -1;
+            }
+            tmp->type = NULL;
+            DupString(x->servername, tmp->value);
+        }
+        else if(tmp->type && (tmp->type->flag & SCONFF_INFO))
+        {
+            if(x->info)
+            {
+                confparse_error("Multiple info definitions", lnum);
+                return -1;
+            }
+            tmp->type = NULL;
+            DupString(x->info, tmp->value);
+        }
+        else if(tmp->type && (tmp->type->flag & SCONFF_DPASS))
+        {
+            if(x->diepass)
+            {
+                confparse_error("Multiple dpass definitions", lnum);
+                return -1;
+            }
+            tmp->type = NULL;
+            DupString(x->diepass, tmp->value);
+        }
+        else if(tmp->type && (tmp->type->flag & SCONFF_RPASS))
+        {
+            if(x->restartpass)
+            {
+                confparse_error("Multiple rpass definitions", lnum);
+                return -1;
+            }
+            tmp->type = NULL;
+            DupString(x->restartpass, tmp->value);
+        }
     }
-    if(info)
+    if(!x->servername)
     {
-        MyFree(MeLine->info);
-        DupString(MeLine->info, info);
-        strncpyzt(me.info, MeLine->info, sizeof(me.info));
+        confparse_error("Lacking name definition in global block", lnum);
+        return -1;
     }
-    if(aline1)
+    if(!x->info)
     {
-        MyFree(MeLine->admin[0]);
-        DupString(MeLine->admin[0], aline1);
+        confparse_error("Lacking info definition in global block", lnum);
+        return -1;
     }
-    if(aline2)
-    {
-        MyFree(MeLine->admin[1]);
-        DupString(MeLine->admin[1], aline2);
-    }
-    if(aline3)
-    {
-        MyFree(MeLine->admin[2]);
-        DupString(MeLine->admin[2], aline3);
-    }
-    if(dpass)
-    {
-        MyFree(MeLine->diepass);
-        DupString(MeLine->diepass, dpass);
-    }
-    if(rpass)
-    {
-        MyFree(MeLine->restartpass);
-        DupString(MeLine->restartpass, rpass);
-    }
-    return;
+    new_MeLine = x;
+    return lnum;
 }
 
-void
-confadd_class(char *name, int ping, int connfreq, int maxlinks, long sendq)
+int
+confadd_admin(cVar *vars[], int lnum)
 {
-    aClass *x;
-    int new = 0;
+    cVar *tmp;
+    Conf_Me *x = new_MeLine;
+    int c = 0;
 
-    if(!(x = find_class(name)))
-    {
-        x = make_class();
-        DupString(x->name, name);
-        new = 1;
-    }
-    x->pingfreq = ping;
-    x->connfreq = connfreq;
-    x->maxlinks = maxlinks;
-    x->maxsendq = (sendq > 0) ? sendq : MAXSENDQLENGTH;
-    if(new)
-    {
-        x->next = classes;
-        classes = x;
-    }
-    return;
+    if(!x)
+        x = make_me();
+
+    for(tmp = vars[c]; tmp && (c != 3); tmp = vars[++c])
+        DupString(x->admin[c], tmp->value);
+
+    new_MeLine = x;
+    return lnum;
 }
 
-void
-confadd_kill(char *user, char *host, char *reason)
+int
+confadd_class(cVar *vars[], int lnum)
 {
+    cVar *tmp;
+    aClass *x = make_class();
+    int c = 0;
+
+    for(tmp = vars[c]; tmp; tmp = vars[++c])
+    {
+        if(tmp->type && (tmp->type->flag & SCONFF_NAME))
+        {
+            if(x->name)
+            {
+                confparse_error("Multiple name definitions", lnum);
+                free_class(x);
+                return -1;
+            }
+            tmp->type = NULL;
+            DupString(x->name, tmp->value);
+        }
+        else if(tmp->type && (tmp->type->flag & SCONFF_PINGFREQ))
+        {
+            if(x->pingfreq > 0)
+            {
+                confparse_error("Multiple pingfreq definitions", lnum);
+                free_class(x);
+                return -1;
+            }
+            tmp->type = NULL;
+            x->pingfreq = atoi(tmp->value);
+        }
+        else if(tmp->type && (tmp->type->flag & SCONFF_CONNFREQ))
+        {
+            if(x->connfreq > 0)
+            {
+                confparse_error("Multiple connfreq definitions", lnum);
+                free_class(x);
+                return -1;
+            }
+            tmp->type = NULL;
+            x->connfreq = atoi(tmp->value);
+        }
+        else if(tmp->type && (tmp->type->flag & SCONFF_MAXUSERS))
+        {
+            if(x->maxlinks > 0)
+            {
+                confparse_error("Multiple maxusers definitions", lnum);
+                free_class(x);
+                return -1;
+            }
+            tmp->type = NULL;
+            x->maxlinks = atoi(tmp->value);
+        }
+        else if(tmp->type && (tmp->type->flag & SCONFF_MAXSENDQ))
+        {
+            if(x->maxsendq > 0)
+            {
+                confparse_error("Multiple maxsendq definitions", lnum);
+                free_class(x);
+                return -1;
+            }
+            tmp->type = NULL;
+            x->maxsendq = atoi(tmp->value);
+        }
+    }
+    if(!x->name)
+    {
+        confparse_error("Lacking name definition", lnum);
+        free_class(x);
+        return -1;
+    }
+    if(!(x->maxsendq > 0))
+    {
+        confparse_error("Lacking maxsendq definition", lnum);
+        free_class(x);
+        return -1;
+    }
+    x->next = new_classes;
+    new_classes = x;
+    return lnum;
+}
+
+int
+confadd_kill(cVar *vars[], int lnum)
+{
+    cVar *tmp;
     struct userBan *ban;
-    int i;
-    char *ub_u, *ub_r;
+    int i, c = 0;
+    char *ub_u, *ub_r, *host;
     char fbuf[512];
     aClient *ub_acptr;
 
-    ub_u = BadPtr(user) ? "*" : user;
-    ub_r = BadPtr(reason) ? "<No Reason>" : reason;
+    for(tmp = vars[c]; tmp; tmp = vars[++c])
+    {
+        if(tmp->type && (tmp->type->flag & SCONFF_MASK))
+        {
+            if(host)
+            {
+                confparse_error("Multiple mask definitions", lnum);
+                return -1;
+            }
+            tmp->type = NULL;
+            if((host = strchr(tmp->value, '@')))
+            {
+                host = '\0';
+                host++;
+                ub_u = tmp->value;
+            }
+            else
+                host = tmp->value;
+        }
+        if(tmp->type && (tmp->type->flag & SCONFF_REASON))
+        {
+            if(ub_r)
+            {
+                confparse_error("Multiple reason definitions", lnum);
+                return -1;
+            }
+            tmp->type = NULL;
+            ub_r = tmp->value;
+            break;
+        }
+    }
+    ub_u = BadPtr(ub_u) ? "*" : ub_u;
+    ub_r = BadPtr(ub_r) ? "<No Reason>" : ub_r;
 
     ban = make_hostbased_ban(ub_u, host);
     if(!ban)
-        return;
+        return lnum;    /* this isnt a parser problem - dont pull out */
 
     ban->flags |= UBAN_LOCAL;
     DupString(ban->reason, ub_r);
@@ -954,33 +1179,86 @@ confadd_kill(char *user, char *host, char *reason)
             i--;
         }
     }
-    return;
+    return lnum;
 }
 
-void
-confadd_uline(char *host)
+int
+confadd_super(cVar *vars[], int lnum)
 {
-    int i;
-    if(!find_aUserver(host))
-    {
-        i = 0;
-        while(uservers[i])
-            i++;
-        DupString(uservers[i], host);
-        uservers[i+1] = NULL;
-    }
-    return;
+    cVar *tmp;
+    int c = 0;
+
+    for(tmp = vars[c]; tmp; tmp = vars[++c])
+        DupString(new_uservers[c], tmp->value);
+    new_uservers[++c] = NULL;
+    return lnum;
 }
 
-void
-confadd_restrict(int type, char *mask, char *reason)
+int
+confadd_restrict(cVar *vars[], int lnum)
 {
+    cVar *tmp;
+    int c = 0, type = 0;
+    char *mask = NULL, *reason = NULL;
     struct simBan *ban;
 
+    for(tmp = vars[c]; tmp; tmp = vars[++c])
+    {
+        if(tmp->type && (tmp->type->flag & SCONFF_TYPE))
+        {
+            if(type > 0)
+            {
+                confparse_error("Multiple type definitions", lnum);
+                return -1;
+            }
+            tmp->type = NULL;
+            if(!strcmp("CHAN", tmp->value))
+                type = SBAN_CHAN;
+            else if(!strcmp("NICK", tmp->value))
+                type = SBAN_NICK;
+            else if(!strcmp("GCOS", tmp->value))
+                type = SBAN_GCOS;
+            else
+            {
+                confparse_error("Unknown type in restrict block", lnum);
+                return -1;
+            }
+            type |= SBAN_LOCAL;
+        }
+        else if(tmp->type && (tmp->type->flag & SCONFF_MASK))
+        {
+            if(mask)
+            {
+                confparse_error("Mutliple mask definitions", lnum);
+                return -1;
+            }
+            tmp->type = NULL;
+            mask = tmp->value;
+        }
+        else if(tmp->type && (tmp->type->flag & SCONFF_REASON))
+        {
+            if(reason)
+            {
+                confparse_error("Multiple reason definitions", lnum);
+                return -1;
+            }
+            tmp->type = NULL;
+            reason = tmp->value;
+        }
+    }
+    if(!mask)
+    {
+        confparse_error("Missing mask in restrict block", lnum);
+        return -1;
+    }
+    if(!(type > 0))
+    {
+        confparse_error("Missing type in restrict block", lnum);
+        return -1;
+    }
     ban = make_simpleban(type, mask);
     if(!ban)
-        return;
-    
+        return lnum;
     if(!reason)
     {
         if(type & SBAN_CHAN)
@@ -989,17 +1267,428 @@ confadd_restrict(int type, char *mask, char *reason)
             reason = "Reserved Nick";
         else if(type & SBAN_GCOS)
             reason = "Bad GCOS";
-        else
-            return;
     }
     DupString(ban->reason, reason);
     ban->timeset = NOW;
 
     add_simban(ban);
+    return lnum;
+}
+
+/* merge routines.  used to mirge together new lists and old lists
+ * after a rehash. Feb27/04 -epi
+ */
+
+static void
+merge_me()
+{
+    if(MeLine)
+    {
+        MyFree(MeLine->info);
+        MyFree(MeLine->diepass);
+        MyFree(MeLine->restartpass);
+        MyFree(MeLine->admin[0]);
+        MyFree(MeLine->admin[1]);
+        MyFree(MeLine->admin[2]);
+    }
+    else
+    {
+        MeLine = new_MeLine;
+        strncpyzt(me.name, MeLine->servername, sizeof(me.name));
+        strncpyzt(me.info, MeLine->info, sizeof(me.info));
+        new_MeLine = NULL;
+        return;
+    }
+    DupString(MeLine->info, new_MeLine->info);
+    strncpyzt(me.info, MeLine->info, sizeof(me.info));
+    if(new_MeLine->diepass)
+        DupString(MeLine->diepass, new_MeLine->diepass);
+    if(new_MeLine->restartpass)
+        DupString(MeLine->restartpass, new_MeLine->restartpass);
+    if(new_MeLine->admin[0])
+        DupString(MeLine->admin[0], new_MeLine->admin[0]);
+    if(new_MeLine->admin[1])
+        DupString(MeLine->admin[1], new_MeLine->admin[1]);
+    if(new_MeLine->admin[2])
+        DupString(MeLine->admin[2], new_MeLine->admin[2]);
+    MyFree(new_MeLine->servername);
+    MyFree(new_MeLine->info);
+    MyFree(new_MeLine->diepass);
+    MyFree(new_MeLine->restartpass);
+    MyFree(new_MeLine->admin[0]);
+    MyFree(new_MeLine->admin[1]);
+    MyFree(new_MeLine->admin[2]);
+    MyFree(new_MeLine);
+    new_MeLine = NULL;
     return;
 }
 
+static void
+merge_connects()
+{
+    aConnect    *aconn, *old_aconn, *ptr = NULL;
+
+    /* first merge the list, then prune the list */
+
+    /* set old as deletable */
+    for(old_aconn = connects; old_aconn; old_aconn = old_aconn->next)
+        old_aconn->legal = -1;
+    /* update or add new */
+    for(aconn = new_connects; aconn; )
+        if((old_aconn = find_aConnect(aconn->name)))
+        {
+            /* update the old entry */
+            MyFree(old_aconn->host);
+            MyFree(old_aconn->apasswd);
+            MyFree(old_aconn->cpasswd);
+            MyFree(old_aconn->source);
+            DupString(old_aconn->host, aconn->host);
+            DupString(old_aconn->apasswd, aconn->apasswd);
+            DupString(old_aconn->cpasswd, aconn->cpasswd);
+            if(aconn->source)
+                DupString(old_aconn->source, aconn->source);
+            old_aconn->port = aconn->port;
+            old_aconn->flags = aconn->flags;
+            old_aconn->class = aconn->class;
+            old_aconn->legal = 1;       /* the old entry is ok now */
+            aconn->legal = -1;          /* new new entry is not */
+            aconn = aconn->next;
+        }
+        else
+        {   
+            /* tag the new entry onto the begining of the list */
+            ptr = aconn->next;
+            aconn->legal = 1;
+            aconn->next = connects;
+            connects = aconn;
+            aconn = ptr;
+        }
+    /* and prune old list */
+    ptr = NULL;
+    for(aconn = new_connects; aconn; aconn = aconn->next)
+    {
+        if(aconn->legal == -1)
+        {
+            if(ptr)
+                ptr->next = aconn->next;
+            else
+                new_connects = aconn->next;
+            free_connect(aconn);
+        }
+        ptr = aconn;
+    }
+    new_connects = NULL;
+    ptr = NULL;
+    /* and prune the active list */
+    for(aconn = connects; aconn; aconn = aconn->next)
+    {
+        if((aconn->legal == -1) && !aconn->acpt)
+        {
+            if(ptr)
+                ptr->next = aconn->next;
+            else
+                connects = aconn->next;
+            free_connect(aconn);
+        }
+        ptr = aconn;
+    }
+    return;
+}
+
+static void
+merge_allows()
+{
+    aAllow *allow, *ptr = NULL;
+
+    for(allow = allows; allow; allow = allow->next)
+        allow->legal = -1;
+    for(allow = new_allows; allow; )
+    {
+        /* we dont really have to merge anything here.. */
+        ptr = allow->next;
+        allow->next = allows;
+        allows = allow;
+        allow = ptr;
+    }
+    new_allows = NULL;
+    for(allow = allows; allow; allow = allow->next)
+    {
+        if((allow->legal == -1) && (allow->clients <= 0))
+        {
+            if(ptr)
+                ptr->next = allow->next;
+            else
+                allows = allow->next;
+            free_allow(allow);
+        }
+        ptr = allow;
+    }
+    return;     /* this one is easy */
+}
     
+static void
+merge_opers()
+{
+    aOper *aoper, *old_oper, *ptr = NULL;
+
+    for(old_oper = opers; old_oper; old_oper = old_oper->next)
+        old_oper->legal = -1;
+    for(aoper = new_opers; aoper; )
+        if((old_oper = find_oper_byname(aoper->nick)))
+        {
+            int i = 0;
+            while(old_oper->hosts[i])
+            {
+                MyFree(old_oper->hosts[i]);
+                i++;
+            }
+            MyFree(old_oper->passwd);
+            i = 0;
+            while(aoper->hosts[i])
+            {
+                DupString(old_oper->hosts[i], aoper->hosts[i]);
+                i++;
+            }
+            aoper->hosts[i] = NULL;
+            DupString(old_oper->passwd, aoper->passwd);
+            old_oper->flags = aoper->flags;
+            old_oper->class = aoper->class;
+            old_oper->legal = 1;
+            aoper->legal = -1;
+            aoper = aoper->next;
+        }
+        else
+        {
+            ptr = aoper->next;
+            aoper->legal = 1;
+            aoper->next = opers;
+            opers = aoper;
+            aoper = ptr;
+        }
+    ptr = NULL;
+    for(aoper = new_opers; aoper; aoper = aoper->next)
+    {
+        if((aoper->legal == -1) && (aoper->opers <= 0))
+        {
+            if(ptr)
+                ptr->next = aoper->next;
+            else
+                new_opers = aoper->next;
+            free_oper(aoper);
+        }
+        ptr = aoper;
+    }
+
+    new_opers = NULL;
+    ptr = NULL;
+    for(aoper = opers; aoper; aoper = aoper->next)
+    {
+        if((aoper->legal == -1) && (aoper->opers <= 0))
+        {
+            if(ptr)
+                ptr->next = aoper->next;
+            else
+                opers = aoper->next;
+            free_oper(aoper);
+        }
+        ptr = aoper;
+    }
+    return;
+}
+
+static void
+merge_ports()
+{
+    aPort *aport, *old_port, *ptr = NULL;
+    
+    if(forked)
+        close_listeners();      /* marks ports for deletion */
+    for(aport = new_ports; aport; )
+        if((old_port = find_port(aport->port)))
+        {
+            MyFree(old_port->allow);
+            MyFree(old_port->address);
+            DupString(old_port->allow, aport->allow);
+            DupString(old_port->address, aport->address);
+            old_port->legal = 1;
+            aport->legal = -1;
+            aport = aport->next;
+        }
+        else
+        {
+            ptr = aport->next;
+            aport->legal = 1;
+            aport->next = ports;
+            ports = aport;
+            aport = ptr;
+        }
+    ptr = NULL;
+    for(aport = new_ports; aport; aport = aport->next);
+    {
+        if(aport && (aport->legal == -1))
+        {
+            if(ptr)
+                ptr->next = aport->next;
+            else
+                ports = aport->next;
+            free_port(aport);
+        }
+        ptr = aport;
+    }
+    new_ports = NULL;
+    if(forked)
+        open_listeners();
+    return;
+}
+
+static void
+merge_classes()
+{
+    aClass  *class, *old_class, *ptr = NULL;
+
+    for(old_class = classes; old_class; old_class = old_class->next)
+        old_class->maxlinks = -1;
+    for(class = new_classes; class; )
+        if((old_class = find_class(class->name, 0)))
+        {
+            old_class->connfreq = class->connfreq;
+            old_class->pingfreq = class->pingfreq;
+            old_class->maxlinks = class->maxlinks;
+            old_class->maxsendq = class->maxsendq;
+            class->maxlinks = -1;
+            class = class->next;
+        }
+        else
+        {
+            ptr = class->next;
+            class->next = classes;
+            classes = class;
+            class = ptr;
+        }
+    ptr = NULL;
+    for(class = new_classes; class; class = class->next)
+    {
+        if(class->maxlinks == -1)
+        {
+            if(ptr)
+                ptr->next = class->next;
+            else
+                new_classes = class->next;
+            free_class(class);
+        }
+        ptr = class;
+    }
+    new_classes = NULL;
+    ptr = NULL;
+    for(class = classes; class; class = class->next)
+    {
+        if((class->maxlinks == -1) && (class->links <= 0))
+        {
+            if(ptr)
+                ptr->next = class->next;
+            else
+                classes = class->next;
+            free_class(class);  
+        }
+        ptr = class;
+    }
+    return;
+}
+
+void
+merge_confs()
+{
+    int i = 0;
+
+    merge_me();
+    merge_connects();
+    merge_allows();
+    merge_opers();
+    merge_ports();
+    merge_classes();
+    while(uservers[i])
+    {
+        MyFree(uservers[i]);
+        i++;
+    }
+    i = 0;
+    while(new_uservers[i])
+    {
+        DupString(uservers[i], new_uservers[i]);
+        MyFree(new_uservers[i]);
+        i++;
+    }
+    new_uservers[0] = NULL;
+    return;
+}
+
+static void
+clear_newconfs()
+{
+    aConnect *aconn = new_connects, *aconn_p;
+    aClass   *class = new_classes, *class_p;
+    aOper    *aoper = new_opers, *aoper_p;
+    aPort    *aport = new_ports, *aport_p;
+    aAllow   *allow = new_allows, *allow_p;
+    int i = 0;
+
+    while(aconn)
+    {
+        aconn_p = aconn->next;
+        free_connect(aconn);
+        aconn = aconn_p;
+    }
+    new_connects = NULL;
+    while(class)
+    {
+        class_p = class->next;
+        free_class(class);
+        class = class_p;
+    }
+    new_classes = NULL;
+    while(aoper)
+    {
+        aoper_p = aoper->next;
+        free_oper(aoper);
+        aoper = aoper_p;
+    }
+    new_opers = NULL;
+    while(aport)
+    {
+        aport_p = aport->next;
+        free_port(aport);
+        aport = aport_p;
+    }
+    new_ports = NULL;
+    while(allow)
+    {
+        allow_p = allow->next;
+        free_allow(allow);
+        allow = allow_p;
+    }
+    new_allows = NULL;
+    if(new_MeLine)
+    {
+        MyFree(new_MeLine->servername);
+        MyFree(new_MeLine->info);
+        MyFree(new_MeLine->diepass);
+        MyFree(new_MeLine->restartpass);
+        MyFree(new_MeLine->admin[0]);
+        MyFree(new_MeLine->admin[1]);
+        MyFree(new_MeLine->admin[2]);
+        MyFree(new_MeLine);
+        new_MeLine = NULL;
+    }
+    while(new_uservers[i])
+    {
+        DupString(uservers[i], new_uservers[i]);
+        MyFree(new_uservers[i]);
+        i++;
+    }
+    new_uservers[0] = NULL;
+    return;
+}
+
 /*
  * rehash
  * 
@@ -1009,9 +1698,8 @@ confadd_restrict(int type, char *mask, char *reason)
  */
 int rehash(aClient *cptr, aClient *sptr, int sig)
 {
-    aClass     *cltmp;
     aClient    *acptr;
-    int         i,  ret = 0;
+    int         i;
 
     if (sig == SIGHUP) 
     {
@@ -1036,35 +1724,31 @@ int rehash(aClient *cptr, aClient *sptr, int sig)
             acptr->hostp = NULL;
         }
 
-    clear_allows();
-    clear_connects();
-    clear_opers();
-    close_listeners();
-
-    /*
-     * We don't delete the class table, rather mark all entries for
-     * deletion. The table is cleaned up by check_class. - avalon
-     */
-
-    for (cltmp = classes->next; cltmp; cltmp = cltmp->next)
-        cltmp->maxlinks = -1;
-
-    clear_classes();
-    initclass();
-
     if (sig != SIGINT)
-    flush_cache();      /* Flush DNS cache */
+        flush_cache();      /* Flush DNS cache */
 
     /* remove perm klines */
     remove_userbans_match_flags(UBAN_LOCAL, UBAN_TEMPORARY);
 
-    initconf(configfile);
+    if(initconf(configfile) == -1)
+    {
+        sendto_realops("Rehash Aborted");
+        clear_newconfs();
+        return 1;
+    }
 
-    open_listeners();
+    if(!new_ports)
+    {
+        sendto_one(sptr, "Rehash Aborted:  No ports defined");
+        clear_newconfs();
+        return 1;
+    }
+    
+    merge_confs();
 
     rehashed = 1;
 
-    return ret;
+    return 1;
 }
 
 /*

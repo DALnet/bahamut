@@ -64,6 +64,7 @@
 extern void      engine_init();
 extern fdlist default_fdlist;
 extern int forked;
+extern void free_port(aPort *);
 
 #ifndef IN_LOOPBACKNET
 #define IN_LOOPBACKNET  0x7f
@@ -526,7 +527,7 @@ void close_listener(aListener *lptr)
                 aportn->next = aportl->next;
             else
                 ports = aportl->next;
-            MyFree(aportl);
+            free_port(aportl);
             break;
         }
         aportn = aportl;

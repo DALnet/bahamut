@@ -50,6 +50,7 @@ extern DLink *recvq_clients;
 extern aConnect *connects;
 extern aAllow *allows;
 extern aPort *ports;
+extern aPort *new_ports;
 extern Conf_Me *MeLine;
 extern aOper *opers;
 extern char  *uservers[];
@@ -93,7 +94,7 @@ extern aClient 	*find_chasing(aClient *, char *, int *);
 extern int  	  find_restrict(aClient *);
 extern int  	  rehash(aClient *, aClient *, int);
 extern int  	  initconf(char *);
-extern int   	  openconf(char *);
+extern void       merge_confs();
 extern int  	  lock_kline_file();
 
 extern void 	  clear_scache_hash_table(void);

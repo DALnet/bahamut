@@ -19,7 +19,7 @@ struct TopConf
     unsigned int   flag;    /* our token flag               */
     unsigned int   nest;    /* tokens we allow to nest here */
     unsigned long  subtok;  /* sub-tokens allowed in here   */
-    void         (*func) (); /* function to call to add this */
+    int         (*func) (); /* function to call to add this */
 };
 
 /* sub-token options */
@@ -38,7 +38,6 @@ struct ConfVar
                              * 2 - variable loaded
                              * 3 - delimited cleared */
 };
-        
 
 /* tokens allowing subtokens */
 
@@ -119,45 +118,47 @@ struct ConfVar
 #define VARTYPE_NAME    0x0004  /* non-free name        */
 #define VARTYPE_NONE    0x0008  /* doesnt take any var  */
 
-/* functions for pre-parsing variables into appropriate variables */
+/* functions for parsing variables into appropriate variables */
 
-static void confparse_global(cVar **, int);
-static void confparse_options(cVar **, int);
-static void confparse_class(cVar **, int);
-static void confparse_allow(cVar **, int);
-static void confparse_oper(cVar **, int);
-static void confparse_connect(cVar **, int);
-static void confparse_restrict(cVar **, int);
-static void confparse_super(cVar **, int);
-static void confparse_kill(cVar **, int);
-static void confparse_admin(cVar **, int);
-static void confparse_port(cVar **, int);
+#ifdef CONF_TABS
+
+extern int confadd_global(cVar **, int);
+extern int confadd_options(cVar **, int);
+extern int confadd_class(cVar **, int);
+extern int confadd_allow(cVar **, int);
+extern int confadd_oper(cVar **, int);
+extern int confadd_connect(cVar **, int);
+extern int confadd_restrict(cVar **, int);
+extern int confadd_super(cVar **, int);
+extern int confadd_kill(cVar **, int);
+extern int confadd_admin(cVar **, int);
+extern int confadd_port(cVar **, int);
 
 struct TopConf tconftab[] = 
 {
     {CONFT_GLOBAL, CONFF_GLOBAL, CONFF_ADMIN,
-      (SCONFF_NAME|SCONFF_INFO|SCONFF_DPASS|SCONFF_RPASS), confparse_global},
-    {CONFT_OPTIONS, CONFF_OPTIONS, 0, 0, confparse_options},
+      (SCONFF_NAME|SCONFF_INFO|SCONFF_DPASS|SCONFF_RPASS), confadd_global},
+    {CONFT_OPTIONS, CONFF_OPTIONS, 0, 0, confadd_options},
     {CONFT_CLASS, CONFF_CLASS, 0, (SCONFF_NAME|SCONFF_PINGFREQ|SCONFF_CONNFREQ
                                     |SCONFF_MAXUSERS|SCONFF_MAXSENDQ),
-                                    confparse_class},
+                                    confadd_class},
     {CONFT_ALLOW, CONFF_ALLOW, 0, (SCONFF_HOST|SCONFF_IPMASK|SCONFF_PORT
                                     |SCONFF_PASSWD|SCONFF_CLASS),
-                                    confparse_allow},
+                                    confadd_allow},
     {CONFT_OPER, CONFF_OPER, 0, (SCONFF_NAME|SCONFF_HOST
                                     |SCONFF_PASSWD|SCONFF_ACCESS|SCONFF_CLASS),
-                                    confparse_oper},
+                                    confadd_oper},
     {CONFT_CONNECT, CONFF_CONNECT, 0, (SCONFF_NAME|SCONFF_HOST|SCONFF_BIND
                                     |SCONFF_APASSWD|SCONFF_CPASSWD|SCONFF_FLAGS
                                     |SCONFF_PORT|SCONFF_CLASS),
-                                    confparse_connect},
+                                    confadd_connect},
     {CONFT_RESTRICT, CONFF_RESTRICT, 0, (SCONFF_TYPE|SCONFF_MASK
-                                    |SCONFF_REASON), confparse_restrict},
-    {CONFT_KILL, CONFF_KILL, 0, (SCONFF_MASK|SCONFF_REASON), confparse_kill},
-    {CONFT_ADMIN, CONFF_ADMIN, 0, SCONFF_STRING, confparse_admin},
-    {CONFT_SUPER, CONFF_SUPER, 0, 0, confparse_super},
+                                    |SCONFF_REASON), confadd_restrict},
+    {CONFT_KILL, CONFF_KILL, 0, (SCONFF_MASK|SCONFF_REASON), confadd_kill},
+    {CONFT_ADMIN, CONFF_ADMIN, 0, SCONFF_STRING, confadd_admin},
+    {CONFT_SUPER, CONFF_SUPER, 0, 0, confadd_super},
     {CONFT_PORT, CONFF_PORT, 0, (SCONFF_PORT|SCONFF_BIND|SCONFF_IPMASK),
-                                confparse_port},
+                                confadd_port},
     {(char *) 0, 0, 0, 0}
 };
 
@@ -186,3 +187,5 @@ struct SubConf sconftab[] =
     {SCONFT_MASK, SCONFF_MASK, VARTYPE_NAME},
     {(char *) 0, 0, 0}
 };
+
+#endif

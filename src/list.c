@@ -516,13 +516,8 @@ aClass *make_class()
     aClass *tmp;
     
     tmp = (aClass *) MyMalloc(sizeof(aClass));
+    memset((char *) tmp, '\0', sizeof(aClass));
     return tmp;
-}
-
-void free_class(tmp)
-    aClass *tmp;
-{
-    MyFree((char *) tmp);
 }
 
 aOper *make_oper()
