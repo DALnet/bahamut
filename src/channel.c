@@ -2462,7 +2462,8 @@ int m_names(aClient *cptr, aClient *sptr, int parc, char *parv[])
    {
       if(*s == ',') 
       {
-         para[TRUNCATED_NAMES] = '\0';
+         if(strlen(para) > TRUNCATED_NAMES)
+            para[TRUNCATED_NAMES] = '\0';
          sendto_realops("names abuser %s %s", get_client_name(sptr, FALSE), para);
          sendto_one(sptr, err_str(ERR_TOOMANYTARGETS), me.name, sptr->name, "NAMES");
          return 0;
