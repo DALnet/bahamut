@@ -5218,7 +5218,7 @@ int m_sgline(aClient *cptr, aClient *sptr, int parc, char *parv[])
    int len;
    char *mask, *reason;
     
-   if(!IsServer(sptr))
+   if(!IsServer(sptr)||!IsULine(sptr))
       return 0;
    if(parc<3) 
    {
@@ -5260,7 +5260,7 @@ int m_unsgline(aClient *cptr, aClient *sptr, int parc, char *parv[])
     char *mask;
     aConfItem *aconf, *ac2, *ac3;
    
-   if(!IsServer(sptr))
+   if(!IsServer(sptr)||!IsULine(sptr))
       return 0;
    
    if(parc<2) 
@@ -5269,6 +5269,13 @@ int m_unsgline(aClient *cptr, aClient *sptr, int parc, char *parv[])
       return 0;
    }
    
+
+   if (parc==3) {
+       matchit=atoi(parv[1]);
+       mask=parv[2];
+   } else
+       mask=parv[1];
+
    /* find the sgline and remove it */
    /* this was way too complicated and ugly. Fixed. -lucas */
    /* Changed this to use match.  Seems to make more sense? */
@@ -5278,9 +5285,9 @@ int m_unsgline(aClient *cptr, aClient *sptr, int parc, char *parv[])
     {
 	if((aconf->status & (CONF_GCOS))
 	   && (aconf->status & (CONF_SGLINE)) && 
-	   aconf->name && ((parc==3 && atoi(parv[2])==1) 
-			   ? !match(parv[1], aconf->name) 
-			   : !mycmp(parv[1], aconf->name))) 
+	   aconf->name && (matchit 
+			   ? !match(mask, aconf->name) 
+			   : !mycmp(mask, aconf->name))) 
 	{
 	    if (conf==aconf) 
 		ac2 = ac3 = conf = aconf->next;
@@ -5296,8 +5303,11 @@ int m_unsgline(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	}
     }   
 
-   sendto_serv_butone(cptr, ":%s UNSGLINE %s :%s", sptr->name, parv[1],
-		      (parc==3) ? parv[2] : "");
+    if (parc==3)
+	sendto_serv_butone(cptr, ":%s UNSGLINE %d :%s", sptr->name, matchit,
+		      mask);
+    else
+	sendto_serv_butone(cptr, ":%s UNSGLINE :%s",sptr->name,mask);
    return 0;
 }
 
@@ -5305,7 +5315,7 @@ int m_szline(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
    aConfItem *aconf;
 
-   if(!IsServer(sptr)||!IsUline(sptr))
+   if(!IsServer(sptr)||!IsULine(sptr))
       return 0;
    if(parc<2) 
    {
@@ -5333,7 +5343,7 @@ int m_unszline(aClient *cptr, aClient *sptr, int parc, char *parv[])
     int matchit = 0;
     char *mask;
 
-    if(!IsServer(sptr) || !IsUline(sptr))
+    if(!IsServer(sptr) || !IsULine(sptr))
 	return 0;
     
     if(parc<2) 
