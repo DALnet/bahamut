@@ -79,7 +79,7 @@ CFLAGS= -Wall -g -O2 ${FDLIMIT} ${XFLAGS}
 
 
 SHELL=/bin/sh
-SUBDIRS=src tools zlib
+SUBDIRS=zlib src tools
 
 MAKE=make 'CFLAGS=${CFLAGS}' 'INSTALL=${INSTALL}' 'LDFLAGS=${LDFLAGS}'
 MAKEPROFILE=make 'CFLAGS=${CFLAGS} -pg' 'INSTALL=${INSTALL}' 'LDFLAGS=${LDFLAGS} -pg'
