@@ -451,8 +451,6 @@ confadd_oper(char *name, char *host, char *passwd, char *flags, char *class)
     DupString(x->class_name, flags);
     if(class)
         x->class = find_class(class);
-    else
-        x->class = find_class("default");
     if(new)
     {
         x->next = opers;
@@ -502,8 +500,6 @@ confadd_connect(char *name, char *host, char *apasswd, char *cpasswd,
     }
     if(class)
         x->class = find_class(class);
-    else
-        x->class = find_class("default");
     if(port)
         x->port = port;
     if(apasswd)
@@ -531,8 +527,20 @@ confadd_connect(char *name, char *host, char *apasswd, char *cpasswd,
     }
     if(source)
     {
-        MyFree(x->source);
-        DupString(x->source, source);
+        int dots;
+        char *n = source;
+        while(*n)
+        {
+            if(*n == '.')
+                dots++;
+            n++;
+        }
+        if(dots == 3)       /* make sure we dont add a class, since that
+                             * worked in the old method */
+        {
+            MyFree(x->source);
+            DupString(x->source, source);
+        }
     }
     if(new)
     {
@@ -555,7 +563,7 @@ confadd_allow(char *ipmask, char *passwd, char *hostmask, int port, char *class)
     x = make_allow();
     if(ipmask)
         DupString(x->ipmask, ipmask);
-    if(passwd)
+    if(passwd && passwd != "")
         DupString(x->passwd, passwd);
     if(hostmask)
         DupString(x->hostmask, hostmask);
@@ -565,8 +573,6 @@ confadd_allow(char *ipmask, char *passwd, char *hostmask, int port, char *class)
         x->port = 0;
     if(class)
         x->class = find_class(class);
-    else
-        x->class = find_class("default");
     if(strchr(x->ipmask, '@'))
         x->flags |= CONF_FLAGS_I_HOST_HAS_AT;
     if(strchr(x->hostmask, '@'))
@@ -1128,23 +1134,34 @@ printconf()
     printf("    name \"%s\";\n", MeLine->servername);
     printf("    info \"%s\";\n", MeLine->info);
     printf("    admin {\n");
-    printf("        \"%s\";\n", MeLine->admin[0]);
-    printf("        \"%s\";\n", MeLine->admin[1]);
-    printf("        \"%s\";\n", MeLine->admin[2]);
+    if(MeLine->admin[0] && strcmp(MeLine->admin[0], ""))
+        printf("        \"%s\";\n", MeLine->admin[0]);
+    if(MeLine->admin[1] && strcmp(MeLine->admin[1], ""))
+        printf("        \"%s\";\n", MeLine->admin[1]);
+    if(MeLine->admin[2] && strcmp(MeLine->admin[2], ""))
+        printf("        \"%s\";\n", MeLine->admin[2]);
     printf("    };\n");
     if(MeLine->diepass && MeLine->diepass != "")
         printf("    dpass \"%s\";\n", MeLine->diepass);
     if(MeLine->restartpass && MeLine->restartpass != "")
         printf("    rpass \"%s\";\n", MeLine->restartpass);
     printf("};\n\n");
+    printf("/* Option Definitions */\n\n");
+    printf("options {\n");
+    printf("    servtype client;  //  MAKE SURE THIS IS CORRECT\n");
+    printf("    network_kline \"kline@dal.net\";\n");
+    printf("    local_kline \"poorly@configure.server\";\n");
     if(do_tline)
     {
-        printf("/* Option Definitions */\n\n");
-        printf("options {\n");
         printf("    wgmonhost \"%s\";\n", ProxyMonHost);
         printf("    wgmonurl \"%s\";\n", ProxyMonURL);
-        printf("};\n\n");
     }
+    printf("/********* other options worth reviewing *********/\n");
+    printf("#    maxchannels 10;\n");
+    printf("#    short_motd;\n");
+    printf("#    crypt_oper_pass;\n");
+    printf("#    staff_address staff.dalnet;\n");
+    printf("};\n\n");
     printf("/* Class Definitions */\n\n");
     for(class = classes; class; class = class->next)
     {
@@ -1152,7 +1169,8 @@ printconf()
         printf("    name %s;\n", class->name);
         printf("    pingfreq %d;\n", class->pingfreq);
         printf("    maxusers %d;\n", class->maxlinks);
-        printf("    connfreq %d;\n", class->connfreq);
+        if(class->connfreq > 0)
+            printf("    connfreq %d;\n", class->connfreq);
         printf("    maxsendq %d;\n", class->maxsendq);
         printf("};\n\n");
     }
@@ -1162,10 +1180,14 @@ printconf()
         printf("allow {\n");
         printf("    ipmask \"%s\";\n", allow->ipmask);
         printf("    host \"%s\";\n", allow->hostmask);
-        if(allow->passwd && allow->passwd != "")
+        if(allow->passwd && strcmp(allow->passwd, ""))
             printf("    passwd \"%s\";\n", allow->passwd);
         if(allow->port != 0)
             printf("    port %d;\n", allow->port);
+        if(allow->class)
+            printf("    class \"%s\";\n", allow->class->name);
+        else
+            printf("    /** YOU SHOULD HAVE A CLASS HERE **/\n");
         printf("};\n\n");
     }
     printf("/* Oper definitions */\n\n");
@@ -1178,7 +1200,10 @@ printconf()
             printf("    host \"%s\";\n", aoper->hosts[i]);
         printf("    passwd \"%s\";\n", aoper->passwd);
         printf("    access %s;\n", aoper->class_name); /* kludge! */
-        printf("    class \"%s\";\n", aoper->class->name);
+        if(aoper->class)
+            printf("    class \"%s\";\n", aoper->class->name);
+        else
+            printf("    /** YOU SHOULD HAVE A CLASS HERE **/\n");
         printf("};\n\n");
     }
     printf("/* Connection Definitions */\n\n");
@@ -1205,7 +1230,10 @@ printconf()
             printf("H");
         if(aconn->flags != 0)
             printf(";\n");
-        printf("    class \"%s\";\n", aconn->class->name);
+        if(aconn->class)
+            printf("    class \"%s\";\n", aconn->class->name);
+        else
+            printf("    /** YOU SHOULD HAVE A CLASS HERE **/\n");
         printf("};\n\n");
     }
     if (uservers[0])
@@ -1216,22 +1244,23 @@ printconf()
         for (i = 0; uservers[i]; ++i)
         {
             if (i != 0) printf(";\n");
-            printf("    %s;", uservers[i]);
+            printf("    %s", uservers[i]);
         }
-        printf("\n};\n\n");
+        printf(";\n};\n\n");
     }
     printf("/* port configurations */\n\n");
     for(aport = ports; aport; aport = aport->next)
     {
         printf("port {\n");
         printf("    port %d;\n", aport->port);
-        if(aport->allow && aport->allow != "")
+        if(aport->allow && strcmp(aport->allow, "") && aport->allow != "*")
             printf("    ipmask \"%s\";\n", aport->allow);
-        if(aport->address && aport->address != "")
+        if(aport->address && strcmp(aport->address, "") && aport->address != "*")
             printf("    bind \"%s\";\n", aport->address);
         printf("};\n\n");
     }
-    printf("/* Quarantines */\n\n");
+    if(sbans)
+        printf("/* Quarantines */\n\n");
     for(sban = sbans; sban; sban = sban->next)
     {
         printf("restrict {\n");
@@ -1251,7 +1280,8 @@ printconf()
         printf("    reason \"%s\";\n", sban->reason);
         printf("};\n\n");
     }
-    printf("/* kill definitions */\n\n");
+    if(hbans)
+        printf("/* kill definitions */\n\n");
     for(hban = hbans; hban; hban = hban->next)
     {
         printf("kill {\n");
@@ -1263,8 +1293,6 @@ printconf()
     return;
 }
     
-
-
 int main(int argc, char *argv[])
 {
     char *file;
