@@ -1,6 +1,92 @@
 Outstanding bugs
 - "Sux mode," where a server<->server connection can take a long time to
   establish if one or both sides filters ident connections
+  - This isn't really a bug!
+
+Changes for 1.4.36
+- Fix bug that caused bans to be expired ~1 million times on startup
+- Remove opers from fdlists that are set -o via SVSMODE
+- Only show IPs of unknowns or clients to opers in /trace
+- Use OpenSSL instead of GMP for encryption (much cleaner! :)
+- Remove non-SSJOIN support
+- Allow for a server to detect it is out of synch, and request a 
+  channel resynch from an upstream hub
+- Fix remote /stats k/K/a bug (it works now :)
+- Optimize some sendto() things that are used a lot
+- Add usermode +I (server hiding)
+  - Fix /whois, /admin, /who, etc to not allow a user to discover which 
+    server a +I user is on
+- Don't let *MY* opers /kill U: lined things (but pass on kills destined for them already)
+- Chatops don't require you to be +gb (now, just +b)
+- Various typos fixed
+- No longer complain if a user is already on a +i channel, and they /join it
+- Use hash tables for very common res functions, which were taking up
+  as much as 80% of CPU time in a pooled server
+- add a command, /userip, for opers. Works just like /userhost.
+- Allow /who +c @#channel +#channel @+#channel for more refined /who listings
+- Add a /who flag for opers, +/-t, clients who have been on for more/less than <param> seconds
+- Don't let opers get stuck in weird anti-flooding bugs (oper recvq lock bug)
+- When an oper deopers, they are returned to the appropriate client class
+- Allow opers to /who +l <class> for local clients (class = Y: class)
+- Send optimizations for high-volume server connections
+- Remove fdlists for lists of clients and instead use linked lists for things:
+  - recvq clients, instead of searching through *all* clients
+  - listing clients, ditto
+- Remove certain things which actually caused poor server operation:
+  - HTM - relax sending out when we have high incoming traffic. 
+    This actually causes a nasty bursty cycle.
+  - busy clients
+    This was taking up a great deal of CPU time to save CPU time. Hmm.
+- Rewrite the entire base socket engine; now supports kqueue on freebsd.
+  - Poll() and select() use persistant states, so these should be twice as fast as well.
+  - Stop remapping fds. What's the point?
+- /stats w reports fd map (don't use this on a large server! :)
+- /stats z is more informative
+- Hide the source servers of numerics (mask them with me.name)
+- Hide /kill sources in quit messages (still in +s, though) and in messages
+  sent to killed client
+- Hide split sources in quit messages
+- Add a LINKSCONTROL command which allows a services-controlled /links list
+- Better server traffic accounting in /stats ? (uses a moving average instead of a plain average)
+- Fix a bug in which connecting servers will always remove a key if the channel exists (argh!)
+- Correctly propogate cmode +O
+- Show more squelched info in /whois to opers
+- Be smarter about broken FD_SETSIZE implementations
+- Crash if we try to free something twice in the block allocator, produces a useful coredump
+  instead of confused opers and an unrelated crash hours later.
+- ability to lock /lusers output via services for a dynamic amount of time
+- Fix 'ghost channels' where I create a channel but none of the users in it exist to me
+- Allow /who +i ip/cidr and /who +I (show IPs only) for opers
+- SAJOIN, like SAMODE for joining channels. Joins through all modes, sends a globop.
+- Local servers notify the channel of an invite, not the server the invitee is on
+- Remove the drone module, replace it with a powerful and generic module system that
+  has event-based hooks.
+- Streamline some privmsg stuff, fix a few bugs.
+- Fix a bug in which an IP ban on 1.2.3.4* wouldn't work.
+- Dehybridize some things.
+- SVSMODE +T, which sets a "client type" that can be seen in a /who +T <clienttype>
+- Don't allow ',' in channel keys
+- Fix umode +r/-r notification to clients
+- Pretty print some things in /stats ?
+- Remove support for non-NOQUIT servers
+- Modes sent from servers come from the local server now
+- Complain about /who +<flag>, where <flag> isn't valid, instead of sending the entire client list
+- Move SQLINES and SGLINES into another hash-based structure for fast lookups
+- Add SVSHOLD, which adds a local temp qline for a nick for N seconds, intended to replace
+  enforcers in services.
+- Make HTM work on outgoing traffic (the part of HTM that limits sending lots of expensive 
+  things like /list)
+- Don't complain about servers relinking that look 'juped'
+  (don't complain if the server that already exists is U: lined, unless I actually have a 
+   .conf U: line for it!)
+- Compile with GCC3!
+- Nicer umode separation, ie what used to come in as *** Notice -- comes in as:
+  +d : *** Debug --
+  +y : *** Spy --
+  +c : *** Client --
+- Channel join throttling (cmode +j, but disabled for user changes by default to be compatible with
+  pre-1.4.36), defaults to 8 network non-split joins in 4 seconds before saying channel is full.
+- Fix the DEBUGMODE pattern string exploit
 
 Changes for 1.4.35
 - Source address support on /connect problem fixed
