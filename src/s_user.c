@@ -3142,13 +3142,12 @@ m_pong(aClient *cptr,
          sendto_gnotice("from %s: %s has processed user/channel burst, sending topic burst.",
 			me.name, sptr->name);
          send_topic_burst(sptr);
-	 sptr->flags |= FLAGS_PINGSENT;
+	 sptr->flags |= FLAGS_PINGSENT|FLAGS_SOBSENT;
 	 sendto_one(sptr, "PING :%s", me.name);
       }
       else if(sptr->flags & FLAGS_TOPICBURST)
       {
          sptr->flags &= ~FLAGS_TOPICBURST;
-         sptr->flags |= FLAGS_SOBSENT;
          sendto_gnotice("from %s: %s has processed topic burst (synched to network data).",
 			me.name, sptr->name);
 #ifdef HUB

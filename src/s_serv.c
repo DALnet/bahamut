@@ -900,8 +900,9 @@ m_server_estab(aClient *cptr)
 
    /* Bursts are about to start.. send a BURST */
    sendto_one(cptr, "BURST"); 
-   /* we're not going to set SOBSENT until after the TOPIC burst has been processed
-    * we don't want a premature EOB sent to the server */
+   cptr->flags |= FLAGS_SOBSENT;
+   /* SOBSENT has to be set TWICE.. before each burst so we don't prematurely say 
+    * hey joeuser on joeserver.. we're synched. -sedition */
     
 	
    /*
@@ -967,7 +968,7 @@ int m_burst(aClient *cptr, aClient *sptr, int parc, char *parv[]) {
   if (!IsServer(sptr) || sptr != cptr || parc > 2) return 0;
   if (parc == 2) { /* This is an EOB */
     sptr->flags &= ~(FLAGS_EOBRECV);
-    if (sptr->flags & FLAGS_SOBSENT) return 0;
+    if (sptr->flags & FLAGS_SOBSENT || sptr->flags & FLAGS_BURST) return 0;
 
  /* we've already sent our EOB.. we synched first */
  #ifdef HTM_LOCK_ON_NETBURST
@@ -2789,9 +2790,9 @@ m_htm(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	    else
 	       LRV = new_value;
 
-	    sendto_one(sptr, ":%s NOTICE %s :NEW Max rate = %dk/s. Current = %.1fk/s",
+	    sendto_one(sptr, ":%s NOTICE %s :NEW Max rate = %dk/s. Current = %dk/s",
 		       me.name, parv[0], LRV, currlife);
-	    sendto_realops("%s!%s@%s set new HTM rate to %dk/s (%.1fk/s current)",
+	    sendto_realops("%s!%s@%s set new HTM rate to %dk/s (%dk/s current)",
 			parv[0], sptr->user->username, sptr->sockhost,
 			   LRV, currlife);
 	 }
