@@ -644,7 +644,8 @@ struct Conf_Connect
 	int   legal;
 	aClient *acpt;  /* whos using this! */
 	time_t   hold;	/* used for autoconnections */
-	aClass   *class;
+    char *class_name;   /* the accual name of our class */
+	aClass   *class;    /* pointer to the class */
 	aConnect *next;
 };
 
@@ -658,6 +659,7 @@ struct Conf_Allow
 	int   flags;
 	int   clients;
 	int   legal;
+    char *class_name;
 	aClass *class;
 	aAllow *next;
 };
@@ -683,6 +685,7 @@ struct Conf_Oper
 	int   flags;
 	int   legal;
     int   opers;    /* number of opers currently using this */
+    char *class_name;
 	aClass *class;
 	aOper *next;
 };

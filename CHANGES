@@ -1,4 +1,4 @@
-Changes for 1.4.37:
+Changes for 2.0:
 
 - Removed backwards compatibility for:
 	- NOQUIT
@@ -30,3 +30,4 @@ Changes for 1.4.37:
 - removed old High Traffic Mode (HTM) code
 - config option block added to outdate use of ./config script
 - fixes for solaris and OSX compatibility
+- Added support for /dev/poll and epoll socket engines - thats seddy.

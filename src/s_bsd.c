@@ -93,8 +93,6 @@ static struct sockaddr_in mysk;
 static struct sockaddr *connect_inet(aConnect *, aClient *, int *);
 static int check_init(aClient *, char *);
 static void set_sock_opts(int, aClient *);
-struct sockaddr_in vserv;
-char specific_virtual_host;
 
 #if defined(MAXBUFFERS)
 static char *readbuf;
@@ -237,131 +235,6 @@ void report_listener_error(char *text, aListener *lptr)
    return;
 }
 
-
-/* inetport
- *
- * Create a socket in the AF_INET domain, bind it to the port given in
- * 'port' and listen to it.  Connections are accepted to this socket
- * depending on the IP# mask given by 'name'.  Returns the fd of the
- * socket created or -1 on error.
- */
-
-int inetport(aClient * cptr, char *name, int port, u_long bind_addr)
-{
-    static struct sockaddr_in server;
-    int ad[4], len = sizeof(server);
-    char ipname[20];
-
-    ad[0] = ad[1] = ad[2] = ad[3] = 0;
-    /* 
-     * do it this way because building ip# from separate values for each
-     * byte requires endian knowledge or some nasty messing. Also means
-     * easy conversion of "*" 0.0.0.0 or 134.* to 134.0.0.0 :-)
-     */
-    (void) sscanf(name, "%d.%d.%d.%d", &ad[0], &ad[1], &ad[2], &ad[3]);
-    (void) ircsprintf(ipname, "%d.%d.%d.%d", ad[0], ad[1], ad[2], ad[3]);
-
-    if (cptr != &me)
-    {
-    (void) ircsprintf(cptr->sockhost, "%-.42s.%.u",
-              name, (unsigned int) port);
-    (void) strcpy(cptr->name, me.name);
-    }
-    
-    /* At first, open a new socket */
-    
-    if (cptr->fd < 0)
-    {
-    cptr->fd = socket(AF_INET, SOCK_STREAM, 0);
-    if (cptr->fd < 0 && errno == EAGAIN)
-    {
-        sendto_realops("opening stream socket %s: No more sockets",
-               get_client_name(cptr, HIDEME));
-        cptr->fd = -2;
-        return -1;
-    }
-    }
-    if (cptr->fd < 0)
-    {
-    report_error("opening stream socket %s:%s", cptr);
-    cptr->fd = -2;
-    return -1;
-    } 
-    else if (cptr->fd >= (HARD_FDLIMIT - 10)) 
-    {
-    sendto_realops("No more connections allowed (%s)", cptr->name);
-    close(cptr->fd);
-    cptr->fd = -2;
-    return -1;
-    }
-    set_sock_opts(cptr->fd, cptr);
-
-    /* 
-     * Bind a port to listen for new connections if port is non-null,
-     * else assume it is already open and try get something from it.
-     */
-    if (port)
-    {
-    memset((char *) &server, '\0', sizeof(server));
-    server.sin_family = AF_INET;
-
-    if (bind_addr)
-        server.sin_addr.s_addr = bind_addr;
-    else
-        server.sin_addr.s_addr = INADDR_ANY;
-
-    server.sin_port = htons(port);
-    /* 
-     * Try 10 times to bind the socket with an interval of 20
-     * seconds. Do this so we dont have to keepp trying manually to
-     * bind. Why ? Because a port that has closed often lingers
-     * around for a short time. This used to be the case.  Now it no
-     * longer is. Could cause the server to hang for too long -
-     * avalon
-     */
-    if (bind(cptr->fd, (struct sockaddr *) &server,
-         sizeof(server)) == -1)
-    {
-        report_error("binding stream socket %s:%s", cptr);
-        (void) close(cptr->fd);
-        return -1;
-    }
-    }
-    if (getsockname(cptr->fd, (struct sockaddr *) &server, &len))
-    {
-    report_error("getsockname failed for %s:%s", cptr);
-    (void) close(cptr->fd);
-    return -1;
-    }
-
-    if (cptr == &me)
-    {
-    /* KLUDGE to get it work... */
-    char buf[1024];
-
-    (void) ircsprintf(buf, rpl_str(RPL_MYPORTIS), me.name, "*",
-              ntohs(server.sin_port));
-    (void) write(0, buf, strlen(buf));
-    }
-    if (cptr->fd > highest_fd)
-    highest_fd = cptr->fd;
-    cptr->ip.s_addr = inet_addr(ipname);
-    cptr->port = (int) ntohs(server.sin_port);
-    /* 
-     * If the operating system has a define for SOMAXCONN, use it,
-     * otherwise use HYBRID_SOMAXCONN -Dianora
-     */
-
-#ifdef SOMAXCONN
-    (void) listen(cptr->fd, SOMAXCONN);
-#else
-    (void) listen(cptr->fd, HYBRID_SOMAXCONN);
-#endif
-    local[cptr->fd] = cptr;
-
-    return 0;
-}
-
 /*
  * open_listeners()
  *
@@ -433,12 +306,6 @@ int add_listener(aPort *aport)
    lstn.allow_ip.s_addr = inet_addr(ipname);
 
    lstn.fd = socket(AF_INET, SOCK_STREAM, 0);
-   if (lstn.fd < 0 && errno == EAGAIN)
-   {
-      sendto_realops("error opening stream socket listenport %d: No more sockets", lstn.port);
-       return -1;
-   }
-
    if (lstn.fd < 0)
    {
       report_listener_error("opening stream socket %s:%s", &lstn);
@@ -464,7 +331,8 @@ int add_listener(aPort *aport)
          return -1;
    }
 
-   if (getsockname(lstn.fd, (struct sockaddr *) &server, &len)) {
+   if (getsockname(lstn.fd, (struct sockaddr *) &server, &len)) 
+   {
       report_listener_error("getsockname failed for %s:%s", &lstn);
       close(lstn.fd);
       return -1;
@@ -474,10 +342,16 @@ int add_listener(aPort *aport)
       highest_fd = lstn.fd;
 
 #ifdef SOMAXCONN
-   (void) listen(lstn.fd, SOMAXCONN);
+   if(listen(lstn.fd, SOMAXCONN))
 #else
-   (void) listen(lstn.fd, HYBRID_SOMAXCONN);
+   if(listen(lstn.fd, HYBRID_SOMAXCONN))
 #endif
+   {
+        report_listener_error("error listening on FD %s:%s", &lstn);
+        close(lstn.fd);
+        return -1;
+   }
+
 
    lptr = (aListener *) MyMalloc(sizeof(aListener));
    memcpy(lptr, &lstn, sizeof(aListener));
@@ -1897,8 +1771,8 @@ connect_inet(aConnect *aconn, aClient *cptr, int *lenp)
     cptr->fd = socket(AF_INET, SOCK_STREAM, 0);
     if (cptr->fd >= (HARD_FDLIMIT - 10))
     {
-    sendto_realops("No more connections allowed (%s)", cptr->name);
-    return NULL;
+        sendto_realops("No more connections allowed (%s)", cptr->name);
+        return NULL;
     }
     memset((char *) &server, '\0', sizeof(server));
     memset((char *) &sin, '\0', sizeof(sin));
@@ -1906,15 +1780,13 @@ connect_inet(aConnect *aconn, aClient *cptr, int *lenp)
     get_sockhost(cptr, aconn->host);
 
     if (aconn->source)
-    sin.sin_addr.s_addr = inet_addr(aconn->source);
-    else if (specific_virtual_host == 1)
-    sin.sin_addr = vserv.sin_addr;
+        sin.sin_addr.s_addr = inet_addr(aconn->source);
 
     if (cptr->fd < 0)
     {
-    report_error("opening stream socket to server %s:%s", cptr);
+        report_error("opening stream socket to server %s:%s", cptr);
         cptr->fd = -2;
-    return NULL;
+        return NULL;
     }
     /* 
      * Bind to a local IP# (with unknown port - let unix decide) so *
@@ -1925,7 +1797,7 @@ connect_inet(aConnect *aconn, aClient *cptr, int *lenp)
      * already bound socket, different ip# might occur anyway leading to
      * a freezing select() on this side for some time.
      */
-    if (specific_virtual_host || aconn->source)
+    if (aconn->source)
     {
     /* 
      * * No, we do bind it if we have virtual host support. If we
@@ -1933,11 +1805,11 @@ connect_inet(aConnect *aconn, aClient *cptr, int *lenp)
      * we lose due to the other server not allowing our base IP
      * --smg
      */
-    if (bind(cptr->fd, (struct sockaddr *) &sin, sizeof(sin)) == -1)
-    {
-        report_error("error binding to local port for %s:%s", cptr);
-        return NULL;
-    }
+        if (bind(cptr->fd, (struct sockaddr *) &sin, sizeof(sin)) == -1)
+        {
+            report_error("error binding to local port for %s:%s", cptr);
+            return NULL;
+        }
     }
     /* 
      * By this point we should know the IP# of the host listed in the
@@ -1946,22 +1818,22 @@ connect_inet(aConnect *aconn, aClient *cptr, int *lenp)
      * fails.
      */
     if (isdigit(*aconn->host) && (aconn->ipnum.s_addr == -1))
-    aconn->ipnum.s_addr = inet_addr(aconn->host);
+        aconn->ipnum.s_addr = inet_addr(aconn->host);
     if (aconn->ipnum.s_addr == -1)
     {
-    hp = cptr->hostp;
-    if (!hp)
-    {
-        Debug((DEBUG_FATAL, "%s: unknown host", aconn->host));
-        return NULL;
+        hp = cptr->hostp;
+        if (!hp)
+        {
+            Debug((DEBUG_FATAL, "%s: unknown host", aconn->host));
+            return NULL;
+        }
+        memcpy((char *) &aconn->ipnum, hp->h_addr, sizeof(struct in_addr));
     }
-    memcpy((char *) &aconn->ipnum, hp->h_addr, sizeof(struct in_addr));
-    }
-    memcpy((char *) &server.sin_addr, (char *) &aconn->ipnum,
-       sizeof(struct in_addr));
+    memcpy((char *) &server.sin_addr, (char *) &aconn->ipnum, 
+            sizeof(struct in_addr));
     
     memcpy((char *) &cptr->ip, (char *) &aconn->ipnum,
-       sizeof(struct in_addr));
+            sizeof(struct in_addr));
 
     server.sin_port = htons((aconn->port > 0) ? aconn->port : PORTNUM);
     *lenp = sizeof(server);

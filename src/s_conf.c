@@ -145,6 +145,7 @@ free_connect(aConnect *ptr)
     MyFree(ptr->cpasswd);
     MyFree(ptr->source);
     MyFree(ptr->name);
+    MyFree(ptr->class_name);
     MyFree(ptr);
     return;
 }
@@ -155,6 +156,7 @@ free_allow(aAllow *ptr)
     MyFree(ptr->ipmask);
     MyFree(ptr->passwd);
     MyFree(ptr->hostmask);
+    MyFree(ptr->class_name);
     MyFree(ptr);
     return;
 }
@@ -170,6 +172,7 @@ free_oper(aOper *ptr)
     }
     MyFree(ptr->passwd);
     MyFree(ptr->nick);
+    MyFree(ptr->class_name);
     MyFree(ptr);
     return;
 }
@@ -373,22 +376,12 @@ find_oper_byname(char *name)
 }
 
 aClass *
-find_class(char *name, int i)
+find_class(char *name)
 {
     aClass *tmp;
-    if(i == 1)
-    {
-        for(tmp = new_classes; tmp; tmp = tmp->next)
-            if(!mycmp(name, tmp->name))
-                break;
-    }
-    else
-    {
-        for(tmp = classes; tmp; tmp = tmp->next)
-            if(!mycmp(name, tmp->name))
-                break;
-    }
-
+    for(tmp = classes; tmp; tmp = tmp->next)
+        if(!mycmp(name, tmp->name))
+            break;
     return tmp;
 }
 
@@ -404,16 +397,16 @@ set_effective_class(aClient *cptr)
         if(cptr->serv->aconn->class)
             cptr->class = cptr->serv->aconn->class;
         else
-            cptr->class = find_class("default", 0);
+            cptr->class = find_class("default");
     }
     else
     {
-        if(cptr->user->oper)
+        if(cptr->user && cptr->user->oper)
             cptr->class = cptr->user->oper->class;
-        else if(cptr->user->allow)
+        else if(cptr->user && cptr->user->allow)
             cptr->class = cptr->user->allow->class;
         else
-            cptr->class = find_class("default", 0);
+            cptr->class = find_class("default");
     }
     return;
 }
@@ -608,8 +601,14 @@ confadd_oper(cVar *vars[], int lnum)
         }
         else if(tmp->type && (tmp->type->flag & SCONFF_CLASS))
         {
-            if(!(x->class = find_class(tmp->value, 1)))
-                x->class = find_class("default", 1);
+            if(x->class_name)
+            {
+                confparse_error("Multiple class definitions", lnum);
+                free_oper(x);
+                return -1;
+            }
+            tmp->type = NULL;
+            DupString(x->class_name, tmp->value);
         }
     }
     if(!x->hosts[0])
@@ -624,8 +623,6 @@ confadd_oper(cVar *vars[], int lnum)
         free_oper(x);
         return -1;
     }
-    if(!x->class)
-        x->class = find_class("default", 1);
     x->next = new_opers;
     new_opers = x;
     return lnum;
@@ -644,7 +641,7 @@ confadd_connect(cVar *vars[], int lnum)
 {
     cVar *tmp;
     aConnect *x = make_connect();
-    int *i, flag, new = 1, c = 0;
+    int *i, flag, c = 0;
     char *m = "*";
 
     for(tmp = vars[c]; tmp; tmp = vars[++c])
@@ -748,14 +745,14 @@ confadd_connect(cVar *vars[], int lnum)
         }
         else if(tmp->type && (tmp->type->flag & SCONFF_CLASS))
         {
-            if(new && x->class)
+            if(x->class_name)
             {
                 confparse_error("Multiple class definitions", lnum);
                 free_connect(x);
                 return -1;
             }
             tmp->type = NULL;
-            x->class = find_class(tmp->value, 1);
+            DupString(x->class_name, tmp->value);
         }
     }
     if(!x->name)
@@ -782,8 +779,6 @@ confadd_connect(cVar *vars[], int lnum)
         free_connect(x);
         return -1;
     }
-    if(!x->class)
-        x->class = find_class("default", 1);
     x->next = new_connects;
     new_connects = x;
     return lnum;
@@ -988,14 +983,14 @@ confadd_allow(cVar *vars[], int lnum)
         }
         else if(tmp->type && (tmp->type->flag & SCONFF_CLASS))
         {
-            if(x->class)
+            if(x->class_name)
             {
                 confparse_error("Multiple class definitions", lnum);
                 free_allow(x);
                 return -1;
             }
             tmp->type = NULL;
-            x->class = find_class(tmp->value, 1);
+            DupString(x->class_name, tmp->value);
         }
     }
     if(!x->ipmask && !x->hostmask)
@@ -1016,8 +1011,6 @@ confadd_allow(cVar *vars[], int lnum)
         DupString(x->hostmask, "*@*");
         x->flags |= CONF_FLAGS_I_NAME_HAS_AT;
     }
-    if(!x->class)
-        x->class = find_class("default", 1);
     x->next = new_allows;
     new_allows = x;
     return lnum;
@@ -1469,7 +1462,7 @@ merge_me()
 static void
 merge_connects()
 {
-    aConnect    *aconn, *old_aconn, *ptr = NULL;
+    aConnect    *aconn, *old_aconn, *ptr = NULL, *ptrn;
 
     /* first merge the list, then prune the list */
 
@@ -1477,7 +1470,8 @@ merge_connects()
     for(old_aconn = connects; old_aconn; old_aconn = old_aconn->next)
         old_aconn->legal = -1;
     /* update or add new */
-    for(aconn = new_connects; aconn; )
+    aconn = new_connects;
+    while(aconn)
         if((old_aconn = find_aConnect(aconn->name)))
         {
             /* update the old entry */
@@ -1492,13 +1486,14 @@ merge_connects()
                 DupString(old_aconn->source, aconn->source);
             old_aconn->port = aconn->port;
             old_aconn->flags = aconn->flags;
-            old_aconn->class = aconn->class;
+            old_aconn->class = find_class(aconn->class_name);
             old_aconn->legal = 1;       /* the old entry is ok now */
             aconn->legal = -1;          /* new new entry is not */
             aconn = aconn->next;
         }
         else
         {   
+            aconn->class = find_class(aconn->class_name);
             /* tag the new entry onto the begining of the list */
             ptr = aconn->next;
             aconn->legal = 1;
@@ -1508,8 +1503,10 @@ merge_connects()
         }
     /* and prune old list */
     ptr = NULL;
-    for(aconn = new_connects; aconn; aconn = aconn->next)
+    aconn = new_connects;
+    while(aconn)
     {
+        ptrn = aconn->next;
         if(aconn->legal == -1)
         {
             if(ptr)
@@ -1518,13 +1515,17 @@ merge_connects()
                 new_connects = aconn->next;
             free_connect(aconn);
         }
-        ptr = aconn;
+        else
+            ptr = aconn;
+        aconn = ptrn;
     }
     new_connects = NULL;
     ptr = NULL;
     /* and prune the active list */
-    for(aconn = connects; aconn; aconn = aconn->next)
+    aconn = connects;
+    while(aconn)
     {
+        ptrn = aconn->next;
         if((aconn->legal == -1) && !aconn->acpt)
         {
             if(ptr)
@@ -1533,7 +1534,9 @@ merge_connects()
                 connects = aconn->next;
             free_connect(aconn);
         }
-        ptr = aconn;
+        else
+            ptr = aconn;
+        aconn = ptrn;
     }
     return;
 }
@@ -1541,21 +1544,25 @@ merge_connects()
 static void
 merge_allows()
 {
-    aAllow *allow, *ptr = NULL;
+    aAllow *allow, *ptr = NULL, *ptrn;
 
     for(allow = allows; allow; allow = allow->next)
         allow->legal = -1;
-    for(allow = new_allows; allow; )
+    allow = new_allows;
+    while(allow)
     {
         /* we dont really have to merge anything here.. */
+        allow->class = find_class(allow->class_name);
         ptr = allow->next;
         allow->next = allows;
         allows = allow;
         allow = ptr;
     }
     new_allows = NULL;
-    for(allow = allows; allow; allow = allow->next)
+    allow = allows;
+    while(allow)
     {
+        ptrn = allow->next;
         if((allow->legal == -1) && (allow->clients <= 0))
         {
             if(ptr)
@@ -1564,7 +1571,9 @@ merge_allows()
                 allows = allow->next;
             free_allow(allow);
         }
-        ptr = allow;
+        else
+            ptr = allow;
+        allow = ptrn;
     }
     return;     /* this one is easy */
 }
@@ -1572,11 +1581,12 @@ merge_allows()
 static void
 merge_opers()
 {
-    aOper *aoper, *old_oper, *ptr = NULL;
+    aOper *aoper, *old_oper, *ptrn = NULL, *ptr = NULL;
 
     for(old_oper = opers; old_oper; old_oper = old_oper->next)
         old_oper->legal = -1;
-    for(aoper = new_opers; aoper; )
+    aoper = new_opers;
+    while(aoper)
         if((old_oper = find_oper_byname(aoper->nick)))
         {
             int i = 0;
@@ -1595,22 +1605,25 @@ merge_opers()
             aoper->hosts[i] = NULL;
             DupString(old_oper->passwd, aoper->passwd);
             old_oper->flags = aoper->flags;
-            old_oper->class = aoper->class;
+            old_oper->class = find_class(aoper->class_name);
             old_oper->legal = 1;
             aoper->legal = -1;
             aoper = aoper->next;
         }
         else
         {
+            aoper->class = find_class(aoper->class_name);
             ptr = aoper->next;
             aoper->legal = 1;
             aoper->next = opers;
             opers = aoper;
             aoper = ptr;
         }
-    ptr = NULL;
-    for(aoper = new_opers; aoper; aoper = aoper->next)
+    ptr = NULL;     /* reusing this pointer */
+    aoper = new_opers;
+    while(aoper)
     {
+        ptrn = aoper->next;
         if((aoper->legal == -1) && (aoper->opers <= 0))
         {
             if(ptr)
@@ -1618,14 +1631,19 @@ merge_opers()
             else
                 new_opers = aoper->next;
             free_oper(aoper);
+            aoper = NULL;
         }
-        ptr = aoper;
+        else
+            ptr = aoper;
+        aoper = ptrn;
     }
 
     new_opers = NULL;
-    ptr = NULL;
-    for(aoper = opers; aoper; aoper = aoper->next)
+    ptr = NULL;     /* and again */
+    aoper = opers;
+    while(aoper)
     {
+        ptrn = aoper->next;
         if((aoper->legal == -1) && (aoper->opers <= 0))
         {
             if(ptr)
@@ -1634,7 +1652,9 @@ merge_opers()
                 opers = aoper->next;
             free_oper(aoper);
         }
-        ptr = aoper;
+        else
+            ptr = aoper;
+        aoper = ptrn;
     }
     return;
 }
@@ -1642,11 +1662,12 @@ merge_opers()
 static void
 merge_ports()
 {
-    aPort *aport, *old_port, *ptr = NULL;
+    aPort *aport, *old_port, *ptr = NULL, *ptrn;
     
     if(forked)
         close_listeners();      /* marks ports for deletion */
-    for(aport = new_ports; aport; )
+    aport = new_ports;
+    while(aport)
         if((old_port = find_port(aport->port)))
         {
             MyFree(old_port->allow);
@@ -1666,8 +1687,10 @@ merge_ports()
             aport = ptr;
         }
     ptr = NULL;
-    for(aport = new_ports; aport; aport = aport->next);
+    aport = new_ports;
+    while(aport)
     {
+        ptrn = aport->next;
         if(aport && (aport->legal == -1))
         {
             if(ptr)
@@ -1676,7 +1699,9 @@ merge_ports()
                 ports = aport->next;
             free_port(aport);
         }
-        ptr = aport;
+        else
+            ptr = aport;
+        aport = ptrn;
     }
     new_ports = NULL;
     if(forked)
@@ -1687,12 +1712,13 @@ merge_ports()
 static void
 merge_classes()
 {
-    aClass  *class, *old_class, *ptr = NULL;
+    aClass  *class, *old_class, *ptr = NULL, *ptrn;
 
     for(old_class = classes; old_class; old_class = old_class->next)
         old_class->maxlinks = -1;
-    for(class = new_classes; class; )
-        if((old_class = find_class(class->name, 0)))
+    class = new_classes;
+    while(class)
+        if((old_class = find_class(class->name)))
         {
             old_class->connfreq = class->connfreq;
             old_class->pingfreq = class->pingfreq;
@@ -1709,8 +1735,10 @@ merge_classes()
             class = ptr;
         }
     ptr = NULL;
-    for(class = new_classes; class; class = class->next)
+    class = new_classes;
+    while(class)
     {
+        ptrn = class->next;
         if(class->maxlinks == -1)
         {
             if(ptr)
@@ -1719,12 +1747,16 @@ merge_classes()
                 new_classes = class->next;
             free_class(class);
         }
-        ptr = class;
+        else
+            ptr = class;
+        class = ptrn;
     }
     new_classes = NULL;
     ptr = NULL;
-    for(class = classes; class; class = class->next)
+    class = classes;
+    while(class)
     {
+        ptrn = class->next;
         if((class->maxlinks == -1) && (class->links <= 0))
         {
             if(ptr)
@@ -1733,7 +1765,9 @@ merge_classes()
                 classes = class->next;
             free_class(class);  
         }
-        ptr = class;
+        else
+            ptr = class;
+        class = ptrn;
     }
     return;
 }
@@ -1743,12 +1777,12 @@ merge_confs()
 {
     int i = 0;
 
+    merge_classes();        /* this should always be done first */
     merge_me();
     merge_connects();
     merge_allows();
     merge_opers();
     merge_ports();
-    merge_classes();
     while(uservers[i])
     {
         MyFree(uservers[i]);

@@ -269,7 +269,7 @@ static char *replies[] =
     /* 243 RPL_STATSOLINE */	":%s 243 %s %s %s * %s %lu %s",
     /* 244 RPL_STATSHLINE */	NULL,
     /* 245 RPL_STATSSLINE */	NULL,
-    /* 246 RPL_STATSXLINE */	":%s 246 %s %c %s * %s %d %d",
+    /* 246 RPL_STATSXLINE */	":%s 246 %s %s %s * %s %d %d",
     /* 247 */	                NULL,		/* Undernet's STATSGLINE */
     /* 248 */	                NULL,		/* Undernet's STATSULINE */
     /* 249 */	                NULL,

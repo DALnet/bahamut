@@ -9,14 +9,16 @@ THINGS TO FIX BEFORE RELEASE
       Then remove unnessecary one byte mallocs.  Disgusting kludge.
     - Clean up config.h [Half done]
     - Fix make install
+    - Implement IPV6
 
 TODO LIST
 ---------
 
-- Implement solaris /dev/poll socket engine
-- Implement IPV6
 - Split up aClient into separate structures for local and remote users
 - Backport message tokenization from 1.6
+- Split throttling off into its own hook module.
+- Add more hooks.
+- Integrate module.ini into ircd.conf
 
 List to Ponder
 --------------

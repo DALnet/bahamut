@@ -26,15 +26,16 @@
 #define RELEASE 2
 #define STABLE  3
 #define BETA    4
+#define ALPHA   5
 
-#define BRANCHSTATUS BETA
+#define BRANCHSTATUS ALPHA
 
 #define BASENAME "bahamut"
-#define MAJOR 1
-#define MINOR 4
-#define PATCH 37
+#define MAJOR 2
+#define MINOR 0
+#define PATCH 0
 
-#define PATCHES "BETA"
+#define PATCHES "cvs"
 
 void build_version(void);
 
