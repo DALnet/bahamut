@@ -2031,7 +2031,7 @@ int     send_lusers(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	       s_count++;
 	       break;
 	    case STAT_CLIENT:
-	       if (IsOper(acptr))
+	       if (IsAnOper(acptr))
 		  o_count++;
 #ifdef	SHOW_INVISIBLE_LUSERS
 	       if (MyConnect(acptr))
