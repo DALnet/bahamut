@@ -1205,11 +1205,11 @@ get_res(char *lp)
 
             strcpy(ntoatmp_f, inetntoa((char *)&rptr->he.h_addr_list[0]));
             strcpy(ntoatmp_r, inetntoa((char *)&rptr->he_rev.h_addr_list[0]));
-
+#ifdef DNS_ANS_DEBUG
             sendto_ops_lev(DEBUG_LEV, "Forward and Reverse queries do not have matching IP! %s<>%s %s<>%s",
                            rptr->he.h_name, rptr->he_rev.h_name,
                            ntoatmp_f, ntoatmp_r);
-
+#endif
             if(rptr->cinfo.flags == ASYNC_CLIENT && rptr->cinfo.value.cptr)
             {
                sendto_one(rptr->cinfo.value.cptr,

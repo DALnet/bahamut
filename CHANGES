@@ -1,4 +1,5 @@
 Changes for 1.4.21
+- turn off yet more DNS debug messages (forward<>reverse query error)
 - oper hostmasking no longer pollutes IPHASH (ouch)
 - configure script reworked to search better for libgmp.a
 - configure script bugs fixed
