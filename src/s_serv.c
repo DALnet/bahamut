@@ -4796,10 +4796,15 @@ struct pkl *k, *ok;
 int m_svskill(aClient *cptr, aClient *sptr, int parc, char *parv[]) 
 {
 	 aClient *acptr;
-	 char  *comment = (parc > 3 && parv[3]) ? parv[3] : "SVS Killed";
+	 char  *comment;
          ts_val ts = 0;
 
-         if (parc > 2) ts = atol(parv[2]); 
+         if (parc > 3) {
+           comment = parv[3] ? parv[3] : "SVS Killed";
+           ts = atol(parv[2]);
+         }
+         else
+           comment = (parc > 2 && parv[2]) ? parv[2] : "SVS Killed";
       
 	 if(!IsULine(sptr)) return -1;
          if ((acptr = find_client(parv[1], NULL)) && (!ts || ts == acptr->tsinfo)) {
