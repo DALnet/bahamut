@@ -1,3 +1,16 @@
 1.8 TODO List
 -------------
-
+- show usernames on failed /oper to +A only
+- fix conf parser "include" directive docs or allow semicolon
+- increase WATCH/DCCALLOW limits for opers (don't forget 005)
+- unified nick/user/host scrubbing, fix channel ban masks
+- fix numeric 338 colon placement
+- scale svsheld expiry times based on change attempts
+- sort out WATCH timestamps
+- m_server, verify remote IP before doing exists checks
+- do something about (r)who +t -- tsinfo is nick not client
+- make leaves not autoconnect if already linked to something
+- consider rwho callout to match ident slices
+- fix forbidden nick notice format, consider other notices
+- increase +I mask limit
+- include module example
