@@ -83,16 +83,8 @@ dead_link(aClient *to, char *notice)
        * just exactly why the server linked to us is dying. - lucas
        */
       ircsprintf(fbuf, "from %s: %s", me.name, notice);
-#ifdef UMODE_N
       sendto_gnotice(fbuf, get_client_name(to, HIDEME), strerror(errtmp));
-#else
-      send_globops(fbuf, get_client_name(to, HIDEME), strerror(errtmp));
-#endif
-#ifdef UMODE_N
       ircsprintf(fbuf, ":%s GNOTICE :%s", me.name, notice);
-#else
-      ircsprintf(fbuf, ":%s GLOBOPS :%s", me.name, notice);
-#endif
       sendto_serv_butone(to, fbuf, get_client_name(to, HIDEME), strerror(errtmp));
    }
    Debug((DEBUG_ERROR, notice, get_client_name(to, FALSE)));
@@ -1620,7 +1612,6 @@ int         fd;
    return;
 }
 
-#ifdef UMODE_N
 /*
  * sendto_gnotice - Relay routing information to Local users set +n
  * -Epiphani
@@ -1669,7 +1660,6 @@ char        nbuf[1024];
    return;
 }
 
-#endif /* UMODE_N */
 
 /*
  * sendto_channelops_butone

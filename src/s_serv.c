@@ -319,20 +319,11 @@ m_squit(aClient *cptr,
     * notify everyone about any squit, local or remote - lucas
     */
    if (MyConnect(acptr)) {
-#ifdef UMODE_N
       sendto_gnotice("from %s: Recieved SQUIT %s from %s (%s)",
 		 me.name, acptr->name, get_client_name(sptr, HIDEME), comment);
       sendto_serv_butone(&me,
 			 ":%s GNOTICE :Recieved SQUIT %s from %s (%s)",
 		me.name, server, get_client_name(sptr, HIDEME), comment);
-#else
-      send_globops("from %s: Received SQUIT %s from %s (%s)",
-		 me.name, acptr->name, get_client_name(sptr, HIDEME), comment);
-
-      sendto_serv_butone(&me,
-			 ":%s GLOBOPS :Received SQUIT %s from %s (%s)",
-	      me.name, server, get_client_name(sptr, HIDEME), comment);
-#endif /* UMODE_N */
 
 #
 #if defined(USE_SYSLOG) && defined(SYSLOG_SQUIT)
@@ -395,15 +386,10 @@ m_svinfo(aClient *cptr,
    deltat = abs(theirtime - tmptime);
 
    if (deltat > TS_MAX_DELTA) {
-#ifdef UMODE_N
-      sendto_gnotice("Link %s dropped, excessive TS delta (my TS=%d, their TS=&d, delta=%d)",
+      sendto_gnotice("Link %s dropped, excessive TS delta (my TS=%d, their TS=%d, delta=%d)",
 		get_client_name(sptr, HIDEME), tmptime, theirtime, deltat);
       sendto_serv_butone(&me, ":%s GNOTICE :Link %s dropped, excessive TS delta (delta=%d)",
 		me.name, get_client_name(sptr, HIDEME), deltat);
-#else
-      sendto_ops("Link %s dropped, excessive TS delta (my TS=%d, their TS=%d, delta=%d)",
-	     get_client_name(sptr, HIDEME), tmptime, theirtime, deltat);
-#endif
       return exit_client(sptr, sptr, sptr, "Excessive TS delta");
    }
 
@@ -563,15 +549,10 @@ m_server(aClient *cptr,
       bcptr = (cptr->firsttime > acptr->from->firsttime) ? cptr : acptr->from;
       sendto_one(bcptr, "ERROR :Server %s already exists", host);
       if (bcptr == cptr) {
-#ifdef UMODE_N
 			sendto_gnotice("Link %s cancelled, server %s already exists",
 				get_client_name(bcptr, HIDEME), host);
 			sendto_serv_butone(&me, ":%s GNOTICE :Link %s cancelled, server %s already exists",
 				me.name, get_client_name(bcptr, HIDEME), host);
-#else
-			sendto_ops("Link %s cancelled, server %s already exists",
-						  get_client_name(bcptr, HIDEME), host);
-#endif
 			return exit_client(bcptr, bcptr, &me, "Server Exists");
       }
       /*
@@ -885,18 +866,10 @@ m_server_estab(aClient *cptr)
    if ((find_uline(cptr->confs, cptr->name))) 
      cptr->flags |= FLAGS_ULINE; 
 
-#ifdef UMODE_N
    sendto_gnotice("Linke with %s established: %s %s", inpath, IsULine(cptr) ? "ULined" : "Normal", 
 		DoesTS(cptr) ? "TS link" : "Non-TS link!"); 
    sendto_serv_butone(&me, ":%s GNOTICE :Link with %s established: %s",
 		me.name, inpath, DoesTS(cptr) ? "TS link" : "Non-TS link!");
-#else
-   sendto_ops("Link with %s established: %s %s", inpath, IsULine(cptr) ? "ULined" : "Normal",
-		DoesTS(cptr) ? "TS link" : "Non-TS link!");
- 
-   sendto_serv_butone(&me, ":%s GLOBOPS :Link with %s established: %s", 
-				 me.name, inpath, DoesTS(cptr) ? "TS link" : "Non-TS link!");
-#endif
    (void) add_to_client_hash_table(cptr->name, cptr);
    /*
     * doesnt duplicate cptr->serv if allocated this struct already 
@@ -2332,7 +2305,6 @@ m_connect(aClient *cptr,
     * Let's notify about local connects, too. - lucas
     * sendto_ops_butone -> sendto_serv_butone(), like in df. -mjs
     */
-#ifdef UMODE_N
       sendto_gnotice("Received %s CONNECT %s -> %s from %s",
 		IsAnOper(cptr) ? "Local" : "Remote", parv[2] ? parv[2] : me.name, parv[1],
 		get_client_name(sptr, HIDEME));
@@ -2340,16 +2312,6 @@ m_connect(aClient *cptr,
 		IsAnOper(cptr) ? "Local" : "Remote",
 		parv[2] ? parv[2] : me.name, parv[1],
 		get_client_name(sptr, HIDEME));
-#else
-   send_globops("from %s: %s CONNECT %s %s from %s",
-		me.name, IsAnOper(cptr) ? "Local" : "Remote", 
-		parv[1],parv[2] ? parv[2] : "",
-		get_client_name(sptr, HIDEME));
-   sendto_serv_butone(&me, ":%s GLOBOPS :%s CONNECT %s %s from %s",
-		me.name, IsAnOper(cptr) ? "Local" : "Remote", 
-		parv[1], parv[2] ? parv[2] : "",
-		get_client_name(sptr, HIDEME));
-#endif
 
 #if defined(USE_SYSLOG) && defined(SYSLOG_CONNECT)
    syslog(LOG_DEBUG, "CONNECT From %s : %s %s", parv[0], parv[1], parv[2] ? parv[2] : "");
@@ -3318,7 +3280,7 @@ m_kline(aClient *cptr,
 
 #ifndef K_COMMENT_ONLY
    if (temporary_kline_time)
-      (void) ircsprintf(buffer, "Temporary K-line %for %s (%s)",
+      (void) ircsprintf(buffer, "Temporary K-line for %s (%s)",
 			reason, current_date);
    else
       (void) ircsprintf(buffer, "%s (%s)", reason, current_date);

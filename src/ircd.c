@@ -336,15 +336,7 @@ con_class = Class (cltmp);
       }
       if (connect_server(con_conf, (aClient *) NULL,
 			 (struct hostent *) NULL) == 0)
-#ifdef UMODE_N
-	 /* 
-	  * No need to propegate this.
-	  * there shouldnt be autoconns active on a server that is linked to anything.
-	  */
 	 sendto_gnotice("Connection to %s activated.", con_conf->name);
-#else
-	 send_globops("Connection to %s activated.", con_conf->name);
-#endif
    }
    Debug((DEBUG_NOTICE, "Next connection check : %s", myctime(next)));
    return (next);
@@ -504,13 +496,8 @@ char       *reason;
 		char *errtxt = "No response from %s, closing link";
        
 		ircsprintf(fbuf, "from %s: %s", me.name, errtxt);
-#ifdef UMODE_N
 		sendto_gnotice(fbuf, get_client_name(cptr, HIDEME));
 		ircsprintf(fbuf, ":%s GNOTICE :%s", me.name, errtxt);                                
-#else
-		send_globops(fbuf, get_client_name(cptr, HIDEME));
-		ircsprintf(fbuf, ":%s GLOBOPS :%s", me.name, errtxt);
-#endif
 		sendto_serv_butone(cptr, fbuf, get_client_name(cptr, HIDEME));
 	 }
 	 /*
@@ -807,13 +794,8 @@ int         die_index = 0;	/*
 	    char *errtxt = "No response from %s, closing link";
        
 	    ircsprintf(fbuf, "from %s: %s", me.name, errtxt);
-#ifdef UMODE_N
 	    sendto_gnotice(fbuf, get_client_name(cptr, HIDEME));
 	    ircsprintf(fbuf, ":%s GNOTICE :%s", me.name, errtxt);    
-#else
-	    send_globops(fbuf, get_client_name(cptr, HIDEME));
-	    ircsprintf(fbuf, ":%s GLOBOPS :%s", me.name, errtxt);    
-#endif
 	    sendto_serv_butone(cptr, fbuf, get_client_name(cptr, HIDEME));
 	 }
 

@@ -27,13 +27,13 @@
 #define STABLE  3
 #define BETA    4
 
-#define BRANCHSTATUS STABLE
+#define BRANCHSTATUS BETA
 
 #define BASENAME "bahamut"
 #define BRANCH "pelennor"
 #define MAJOR 1
-#define MINOR 0
-#define PATCH 5
+#define MINOR 1
+#define PATCH 0
 
 #define PATCH1 \
 \

@@ -82,9 +82,7 @@ static int  user_modes[] =
  UMODE_a, 'a',
  UMODE_A, 'A',
  UMODE_f, 'f',
-#ifdef UMODE_N
  UMODE_n, 'n',
-#endif
  0, 0};
 
 /*
@@ -3178,11 +3176,7 @@ m_oper(aClient *cptr,
 		  SetLocOp(sptr);
 		else
 		  SetOper(sptr);
-#ifdef UMODE_N
 		sptr->umode|=(UMODE_s|UMODE_g|UMODE_w|UMODE_n|UMODE_f);
-#else
-		sptr->umode|=(UMODE_s|UMODE_g|UMODE_w|UMODE_f);
-#endif
 		sptr->oflag = aconf->port;
       Count.oper++;
       *--s = '@';
@@ -3471,6 +3465,7 @@ m_umode(aClient *cptr,
 	        */
 		  case ' ':
 		  case '\r':
+		  case '\n':
 		  case '\t':
 			 break;
 		  case 'r':
@@ -3533,11 +3528,9 @@ m_umode(aClient *cptr,
        && !IsServer(cptr))
           sptr->umode &= ~UMODE_y;
 /* COMMENTED OUT FOR NOW
-#ifdef UMODE_N
    if (!(setflags & UMODE_n) && (!IsOper(sptr) && !IsLocOp(sptr))
        && !IsServer(cptr))
 	  sptr->umode &= ~UMODE_n;
-#endif
 */
    if (!(setflags & UMODE_d) && (!IsOper(sptr) && !IsLocOp(sptr))
        && !IsServer(cptr))

@@ -231,12 +231,6 @@
 #define NickServ "NickServ"
 #define StatServ "StatServ"
 
-/* UMODE_N
- * Define this if you want to have a custom username purely for routing
- * related information (+n)
- * Added Sept.99 -Epiphani
- */
-#define UMODE_N
 /*
  * FNAME_USERLOG and FNAME_OPERLOG - logs of local USERS and OPERS
  * Define this filename to maintain a list of persons who log into this
