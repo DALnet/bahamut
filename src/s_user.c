@@ -2802,7 +2802,7 @@ m_quit(aClient *cptr,
    if (!IsServer(cptr)) {
       strcpy(comment, "Quit: ");
       strncpy(comment + 6, reason, TOPICLEN - 7);
-      comment[TOPICLEN] = '\0';
+      comment[TOPICLEN-1] = 0;
       return exit_client(cptr, sptr, sptr, comment);
    }
    else
