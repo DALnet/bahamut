@@ -49,6 +49,8 @@ static void remove_unknown(aClient *, char *, char *);
 static struct Message *do_msg_tree(MESSAGE_TREE *, char *, struct Message *);
 static struct Message *tree_parse(char *);
 
+int num_msg_trees = 0;
+
 /*
  * *  Find a client (server or user) by name. *
  * 
@@ -455,6 +457,7 @@ init_tree_parse(struct Message *mptr)
 	             (int (*)(const void *, const void *)) mcmp);
 
    msg_tree_root = (MESSAGE_TREE *) MyMalloc(sizeof(MESSAGE_TREE));
+   num_msg_trees++;
    mpt = do_msg_tree(msg_tree_root, "", mptr);
    /*
     * this happens if one of the msgtab entries included characters
@@ -510,6 +513,7 @@ do_msg_tree(MESSAGE_TREE * mtree, char *prefix,
 	 for (c = 'A'; c <= 'Z'; c++) {
 	    if (mptr->cmd[lp] == c) {
 	       mtree1 = (MESSAGE_TREE *) MyMalloc(sizeof(MESSAGE_TREE));
+	       num_msg_trees++;
 	       mtree1->final = NULL;
 	       mtree->pointers[c - 'A'] = mtree1;
 	       strcpy(newpref, prefix);

@@ -306,12 +306,21 @@ void count_memory(aClient *cptr, char *nick)
    extern BlockHeap *free_fludbots;
 #endif
 
+   extern aMotd      *motd;
+#ifdef SHORT_MOTD
+   extern aMotd      *shortmotd;
+#endif
+   extern aMotd      *helpfile;
+
+   extern int num_msg_trees;
+
    Reg aClient *acptr;
    Reg Link   *link;
    Reg aBan   *bp;
    Reg aChannel *chptr;
    Reg aConfItem *aconf;
    Reg aClass *cltmp;
+   Reg aMotd *amo;
 
    int         lc = 0;		/*
 				 * local clients 
@@ -422,6 +431,10 @@ void count_memory(aClient *cptr, char *nick)
    int fludalloc = 0;
    u_long fludallocsz = 0;
    int fludlink = 0;
+
+   int motdlen = 0;
+
+   int servn = 0;
 	
    count_whowas_memory(&wwu, &wwm);	/*
 					 * no more away memory to count 
@@ -447,6 +460,9 @@ void count_memory(aClient *cptr, char *nick)
 	   link = link->next)
          fludlink++;
 #endif
+      if (acptr->serv) {
+         servn++;
+      }
 
       if (acptr->user) {
 	 us++;
@@ -493,6 +509,15 @@ void count_memory(aClient *cptr, char *nick)
 
    for (cltmp = classes; cltmp; cltmp = cltmp->next)
       cl++;
+
+   for (amo = motd; amo; amo = amo->next)
+      motdlen++;
+#ifdef SHORT_MOTD
+   for (amo = shortmotd; amo; amo = amo->next)
+      motdlen++;
+#endif
+   for (amo = helpfile; amo; amo = amo->next)
+      motdlen++;
 
    lcalloc = free_local_aClients->blocksAllocated * free_local_aClients->elemsPerBlock;
    lcallocsz = lcalloc * free_local_aClients->elemSize;
@@ -550,8 +575,15 @@ void count_memory(aClient *cptr, char *nick)
 	      me.name, RPL_STATSDEBUG, nick, cl, cl * sizeof(aClass));
    sendto_one(cptr, ":%s %d %s :Away Messages %d(%d)",
 	      me.name, RPL_STATSDEBUG, nick, aw, awm);
+   sendto_one(cptr, ":%s %d %s :MOTD structs %d(%d)",
+	      me.name, RPL_STATSDEBUG, nick, motdlen, motdlen * sizeof(aMotd));
+   sendto_one(cptr, ":%s %d %s :Servers %d(%d)",
+	      me.name, RPL_STATSDEBUG, nick, servn, servn * sizeof(aServer));
+   sendto_one(cptr, ":%s %d %s :Message Trees %d(%d)",
+	      me.name, RPL_STATSDEBUG, nick, num_msg_trees, num_msg_trees * sizeof(MESSAGE_TREE));
 
-   totmisc = wlhm + com + (cl * sizeof(aClass)) + awm;
+   totmisc = wlhm + com + (cl * sizeof(aClass)) + awm + (motdlen * sizeof(aMotd))
+             + (servn * sizeof(aServer)) + (num_msg_trees * sizeof(MESSAGE_TREE));
 
    sendto_one(cptr, ":%s %d %s :Fludbots ALLOC %d(%d)",
 	      me.name, RPL_STATSDEBUG, nick, fludalloc, fludallocsz);
@@ -568,10 +600,11 @@ void count_memory(aClient *cptr, char *nick)
 
    totww = wwu * sizeof(anUser) + wwm;
 
-   sendto_one(cptr, ":%s %d %s :Hash: client %d(%d) chan %d(%d) watch %d(%d)",
+   sendto_one(cptr, ":%s %d %s :Hash: client %d(%d) chan %d(%d) whowas %d(%d) watch %d(%d)",
 				  me.name, RPL_STATSDEBUG, nick,
 				  U_MAX, sizeof(aHashEntry) * U_MAX,
 				  CH_MAX, sizeof(aHashEntry) * CH_MAX,
+				  WW_MAX, sizeof(aWhowas *) * WW_MAX,
 				  WATCHHASHSIZE, sizeof(aWatch *) * WATCHHASHSIZE);
 
    count_dbuf_memory(&db, &db2);
@@ -596,11 +629,8 @@ void count_memory(aClient *cptr, char *nick)
 
    totmisc += (mem_ips_stored + mem_servers_cached);
 
-#ifdef USE_WATCH
-   tothash = (sizeof(aHashEntry)*U_MAX)+(sizeof(aHashEntry)*CH_MAX)+(sizeof(aWatch *)*WATCHHASHSIZE);
-#else
-   tothash = (sizeof(aHashEntry)*U_MAX)+(sizeof(aHashEntry)*CH_MAX); 
-#endif
+   tothash = (sizeof(aHashEntry)*U_MAX)+(sizeof(aHashEntry)*CH_MAX) +
+             (sizeof(aWatch *)*WATCHHASHSIZE) + (sizeof(aWhowas *)*WW_MAX);
 
    tot = totww + totch + totcl + totmisc + db + rm + tothash + linkallocsz + fludallocsz;
 
