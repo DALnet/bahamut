@@ -1037,7 +1037,7 @@ m_nick(aClient *cptr,
    Link       *lp;
    char        nick[NICKLEN + 2], *s;
    ts_val      newts = 0;
-   int         sameuser = 0, fromTS = 0, int samenick = 0;
+   int         sameuser = 0, fromTS = 0, samenick = 0;
         
    if (parc < 2) {
       sendto_one(sptr, err_str(ERR_NONICKNAMEGIVEN),
