@@ -752,6 +752,7 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr, int level, in
 #define SM_ERR_NOPRIVS 0x0001 /* is not an op */
 #define SM_ERR_MOREPARMS 0x0002 /* needs more parameters */	
 #define SM_ERR_RESTRICTED 0x0004 /* not allowed to op others or be op'd */	
+#define SM_ERR_NOTOPER    0x0008 /* not an irc op */
 #define SM_MAXMODES 6
 
 /* this macro appends to pbuf */
@@ -833,7 +834,7 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr, int level, in
          case 'O':
 	   if (level<1 || !IsOper(sptr))
 	   {
-	       errors |= SM_ERR_NOPRIVS;
+	       errors |= SM_ERR_NOTOPER;
 	       break;
 	   } else {
 	       if (change=='+')
@@ -1154,6 +1155,8 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr, int level, in
    {
       if(errors & SM_ERR_NOPRIVS)
          sendto_one(sptr, err_str(ERR_CHANOPRIVSNEEDED), me.name, sptr->name, chptr->chname);	  
+      if(errors & SM_ERR_NOTOPER)
+         sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name, sptr->name);	  
       if(errors & SM_ERR_RESTRICTED)
          sendto_one(sptr,":%s NOTICE %s :*** Notice -- You are restricted and cannot chanop others",
                     me.name, sptr->name);
