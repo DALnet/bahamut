@@ -891,7 +891,7 @@ int register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
 	sendto_one(sptr, rpl_str(RPL_MYINFO), me.name, parv[0],
 		   me.name, version);
 	sendto_one(sptr, rpl_str(RPL_PROTOCTL), me.name, parv[0], MAXWATCH,
-		   MAXMODEPARAMS, MAXCHANNELSPERUSER, MAXBANS, NICKLEN,
+		   MAXMODEPARAMSUSER, MAXCHANNELSPERUSER, MAXBANS, NICKLEN,
 		   TOPICLEN, TOPICLEN, MAXSILES);
 
 #if (RIDICULOUS_PARANOIA_LEVEL>=1)

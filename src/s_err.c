@@ -33,6 +33,7 @@ static char *replies[] =
                                 "TOPICLEN=%i KICKLEN=%i CHANTYPES=# "
                                 "PREFIX=(ov)@+ NETWORK=DALnet SILENCE=%i "
                                 "CASEMAPPING=ascii "
+                                "CHANMODES=b,k,l,ciLmMnOprRst "
                                 ":are available on this server",
     /* 006 */	                NULL,
     /* 007 */	                NULL,

@@ -856,7 +856,7 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
 #define SM_ERR_MOREPARMS 0x0002 /* needs more parameters */	
 #define SM_ERR_RESTRICTED 0x0004 /* not allowed to op others or be op'd */	
 #define SM_ERR_NOTOPER    0x0008 /* not an irc op */
-#define SM_MAXMODES 6
+#define SM_MAXMODES MAXMODEPARAMSUSER
 
 /* this macro appends to pbuf */
 #define ADD_PARA(p) pptr = p; if(pidx) pbuf[pidx++] = ' '; while(*pptr) \

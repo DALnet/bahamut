@@ -31,4 +31,5 @@
 #include "msg.h"
 #define	MAXMODEPARAMS	(MAXPARA-2)
 #define	MAXTSMODEPARAMS	(MAXPARA-3)
+#define MAXMODEPARAMSUSER 6
 #endif
