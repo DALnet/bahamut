@@ -47,7 +47,7 @@ int irc_printf(char *str, size_t size, const char *pattern, va_list vl) {
 					  if(i&0x80000000) {
 						  buf[len++]='-'; /* it's negative.. */
 						  i&=~0x80000000;
-						  i = 1<<31 - i; /* negative number, so we need to get rid of the rest of the bits too */
+						  i = (1 << 31) - i; /* negative number, so we need to get rid of the rest of the bits too */
 					  }
 					s=&num[11];
 					do {
@@ -130,7 +130,7 @@ int irc_printf(char *str, size_t size, const char *pattern, va_list vl) {
 					  if(i&0x80000000) {
 						  buf[len++]='-'; /* it's negative.. */
 						  i&=~0x80000000;
-						  i = 1<<31 - i; /* negative number so we need to get rid of the rest of the bits */
+						  i = (1 << 31) - i; /* negative number so we need to get rid of the rest of the bits */
 					  }
 					s=&num[11];
 					do {
