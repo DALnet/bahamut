@@ -2036,24 +2036,26 @@ void add_szline(aConfItem *aconf)
 }
 
 void remove_szline(char *mask, int m) {
-    aConfItem *aconf, *ac2=NULL;
-    aconf=szlines;
+    aConfItem *aconf, *ac2, *ac3;
+    ac2 = ac3 = aconf = szlines;
     while(aconf)
     {
-        if(aconf->host && (m ? match(mask, aconf->host) :
-			   !mycmp(mask, aconf->host)))
+        if((aconf->status & (CONF_ZLINE))
+           && (aconf->status & (CONF_SZLINE)) &&
+           aconf->name && (m==1 ? !match(mask, aconf->name) 
+			    : !mycmp(mask, aconf->name)))
         {
+            if (conf==aconf)
+                ac2 = ac3 = conf = aconf->next;
+            else
+                ac2 = ac3->next = aconf->next;
             MyFree(aconf->passwd);
-            MyFree(aconf->host);
-
-            if(ac2 == NULL)     /* at top of list */
-                szlines = aconf->next;
-            else                /* inside the list */
-                ac2->next = aconf->next;
+            MyFree(aconf->name);
             MyFree(aconf);
+            aconf=ac2;
         } else {
-            ac2 = aconf;
-            aconf = aconf->next;
+            ac3=aconf;
+            aconf=aconf->next;
         }
     }
 }

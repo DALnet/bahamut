@@ -3006,7 +3006,7 @@ m_user(aClient *cptr,
     realname = (parc < 5 || BadPtr(parv[4])) ? "<bad-realname>" : parv[4];
     if ((aconf = find_conf_name(realname, CONF_GCOS))) {
 	return exit_client(cptr, sptr, sptr, BadPtr(aconf->passwd) ?
-			   aconf->passwd : "Bad GCOS: Reason unspecified");
+			   "Bad GCOS: Reason unspecified" : aconf->passwd);
     }
     return do_user(parv[0], cptr, sptr, username, host, server, 0, realname);
 }
