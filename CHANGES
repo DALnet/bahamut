@@ -24,28 +24,38 @@ Changes for 1.8.2
 - stats L shows user IPs again (but still hides opers)
 - Numerics 477 and 487 no longer hardcoded dal.net
 - Fixed numeric responses for certain PRIVMSG/NOTICE targets
-- Updated reference.conf and template.conf with additional bits and better documentation of Allow block quirks
-- Tweaked handling and display of removed-but-not-yet-deleted conf entries after a rehash (Oper, Connect, Class)
-- Oper block host entries are now matched against the user@host that would appear on IRC (previously what they matched was a bit convoluted)
-- Corrected class maxusers handling -- applies to the class, not the allow block
+- Updated reference.conf and template.conf with additional bits and better
+  documentation of Allow block quirks
+- Tweaked handling and display of removed-but-not-yet-deleted conf entries
+  after a rehash (Oper, Connect, Class)
+- Oper block host entries are now matched against the user@host that would
+  appear on IRC (previously what they matched was a bit convoluted)
+- Corrected class maxusers handling -- applies to the class, not the allow
+  block
 - Updated 004 and 005 numerics
 - trace now shows the class list again
-- bquiet is now using deferred cache concept from ratbox to deal with ban exemptions correctly
+- bquiet is now using deferred cache concept from ratbox to deal with ban
+  exemptions correctly
 - Ban exemptions are now marked with type and checked during nick_is_banned()
-- Begin unbreaking redundant ban check -- will take at least one more release to complete
+- Begin unbreaking redundant ban check -- will take at least one more release
+  to complete
 - Cleaned up related channel ban code
 - CHOOK_10SEC is now called when it should be (from wshs)
 - Unbroke modules command handling (from wshs)
-- Fixed modules load crash when there was no Modules block in ircd.conf (from wshs)
+- Fixed modules load crash when there was no Modules block in ircd.conf 
+  (from wshs)
 - Fixed SVSKILL crash on no parameters (from Zeke Gomez)
 - Compile fixes for DNS_DEBUG and DEBUGMODE (but don't use DEBUGMODE)
 - Compile fix for missing LINE_MAX
 - Spellcheck: virii -> viruses (from The List)
-- HIDE_LINKS functionality inverted and attached to show_links token in Options block
-- NO_CHANOPS_WHEN_SPLIT functionality inverted and attached to allow_split_ops token in Options block
+- HIDE_LINKS functionality inverted and attached to show_links token in 
+  Options block
+- NO_CHANOPS_WHEN_SPLIT functionality inverted and attached to allow_split_ops
+  token in Options block
 - Merging duplicate Allow blocks during rehash to avoid admin confusion
 - Boolean Options block items can now be disabled by rehash
-- Fixed "servtype hub" causing certain previously specified options to reset to defaults
+- Fixed "servtype hub" causing certain previously specified options to reset
+  to defaults
 - Fixed a loop error report that was broken when it was introduced 11 years ago
 - Ignoring SVSMODE +o/O attempts (not handled correctly)
 - Repaired showing of +s channels in LIST to +A users
@@ -73,7 +83,9 @@ Changes for 1.8.2
 - Restricted stats q/Q/g to opers
 - Show IPs in stats C to services and local +A
 - Added RWHO, see /rwho ? and doc/pcrepattern.html for info
-
+- Set +k and +s umodes to opers only.
+- Fixed a bug in m_trace that caused cores when issuing a /trace when
+  connecting to a server.
 
 Changes for 1.8.0
 -----------------
