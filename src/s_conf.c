@@ -74,7 +74,7 @@ Conf_Me     *new_MeLine     = NULL;
 aOper       *new_opers      = NULL;
 aPort       *new_ports      = NULL;
 aClass      *new_classes    = NULL;
-char        *new_uservers[MAXUSERVS]; 
+char        *new_uservers[MAXUSERVS+1];    /* null terminated array */
 
 #ifdef LOCKFILE
 extern void do_pending_klines(void);
@@ -340,7 +340,7 @@ find_oper(char *name, char *username, char *sockhost, char *hostip)
     aOper *aoper;
     char userhost[USERLEN + HOSTLEN + 3];
     char userip[USERLEN + HOSTLEN + 3];
-    int i = 0, t = 0;
+    int i, t = 0;
 
     /* sockhost OR hostip must match our host field */
 
@@ -350,7 +350,7 @@ find_oper(char *name, char *username, char *sockhost, char *hostip)
 
     for(aoper = opers; aoper; aoper = aoper->next)
     {
-        while(aoper->hosts[i])
+        for(i = 0; aoper->hosts[i]; i++)
         {
             if(!(mycmp(name, aoper->nick) && (!match(userhost, aoper->hosts[i]) 
                     || !match(userip, aoper->hosts[i]))))
@@ -358,7 +358,6 @@ find_oper(char *name, char *username, char *sockhost, char *hostip)
                 t = 1;
                 break;
             }
-            i++;
         }
         if(t == 1)
             break;
@@ -418,16 +417,32 @@ set_effective_class(aClient *cptr)
 /* find the first (best) I line to attach.
  * rewritten in feb04 for the overdue death of aConfItem
  * and all the shit that came with it.  -epi
+ * Rewritten again in Mar04 to optimize and get rid of deceptive logic.
+ * Whoever wrote this originally must have been drunk...  -Quension
  */
 int 
 attach_Iline(aClient *cptr, struct hostent *hp, char *sockhost)
 {
     aAllow *allow;
-    char   *hname;
-    int     i, ulen, uhost_has_at;
-    static char uhost[HOSTLEN + USERLEN + 3];
-    static char uhost2[HOSTLEN + USERLEN + 3];
-    static char fullname[HOSTLEN + 1];
+    static char useriphost[HOSTLEN + USERLEN + 3];
+    static char usernamehost[HOSTLEN + USERLEN + 3];
+    char   *iphost;
+    char   *namehost = NULL;    /* squish compiler warning */
+    int     len;
+
+    /* user@host in both buffers, plus pointers to host only */
+    len = strlen(cptr->username);
+    memcpy(useriphost, cptr->username, len+1);
+    useriphost[len++] = '@';
+    iphost = useriphost + len;
+    strcpy(iphost, sockhost);
+    if (hp)
+    {
+        memcpy(usernamehost, useriphost, USERLEN+2); /* compiler optimize */
+        namehost = usernamehost + len;
+        strncpyzt(namehost, hp->h_name, HOSTLEN+1);
+        add_local_domain(namehost, HOSTLEN+1 - strlen(namehost));
+    }
 
     for (allow = allows; allow; allow = allow->next) 
     {
@@ -438,51 +453,42 @@ attach_Iline(aClient *cptr, struct hostent *hp, char *sockhost)
             continue;
 
         if (!allow->ipmask || !allow->hostmask)
-            return (attach_iline(cptr, allow, uhost, 0));
+            return (attach_iline(cptr, allow, iphost, 0));
 
-        if (hp)
-            for (i = 0, hname = hp->h_name; hname; hname = hp->h_aliases[i++]) 
+        /* match hostmask against both resolved name and IP, prefer name */
+        if (allow->flags & CONF_FLAGS_I_MATCH_NAME)
+        {
+            if (allow->flags & CONF_FLAGS_I_NAME_HAS_AT)
             {
-                strncpy(fullname, hname, sizeof(fullname) - 1);
-                add_local_domain(fullname, HOSTLEN - strlen(fullname));
-                if (allow->flags & CONF_FLAGS_I_NAME_HAS_AT)
-                {
-                    uhost_has_at = 1;
-                    ulen = ircsprintf(uhost, "%s@", cptr->username);
-                    strcpy(uhost2, uhost);
-                }
-                else 
-                {
-                    uhost_has_at = 0;
-                    ulen = 0;
-                    *uhost = '\0';
-                    *uhost2 = '\0';
-                }
-                strncat(uhost, fullname, sizeof(uhost) - ulen);
-                strncat(uhost2, sockhost, sizeof(uhost2) - ulen);
-                if ((!match(allow->hostmask, uhost)) ||
-                    (!match(allow->hostmask, uhost2)))
-                    return (attach_iline(cptr, allow, uhost, uhost_has_at));
+                if (hp && !match(allow->hostmask, usernamehost))
+                    return (attach_iline(cptr, allow, namehost, 1));
+                if (!match(allow->hostmask, useriphost))
+                    return (attach_iline(cptr, allow, hp?namehost:iphost, 1));
             }
-    
-        if (allow->flags & CONF_FLAGS_I_HOST_HAS_AT)
-        {
-            uhost_has_at = 1;
-            ulen = ircsprintf(uhost, "%s@", cptr->username);
-        }
-        else
-        {
-            uhost_has_at = 0;
-            ulen = 0;
-            *uhost = '\0';
+            else
+            {
+                if (hp && !match(allow->hostmask, namehost))
+                    return (attach_iline(cptr, allow, namehost, 0));
+                if (!match(allow->hostmask, iphost))
+                    return (attach_iline(cptr, allow, hp?namehost:iphost, 0));
+            }
         }
 
-        strncat(uhost, sockhost, sizeof(uhost) - ulen);
-
-        if (match(allow->ipmask, uhost) == 0)
-            return (attach_iline(cptr, allow, uhost, uhost_has_at));
+        if (allow->flags & CONF_FLAGS_I_MATCH_HOST)
+        {
+            if (allow->flags & CONF_FLAGS_I_HOST_HAS_AT)
+            {
+                if (!match(allow->ipmask, useriphost))
+                    return (attach_iline(cptr, allow, iphost, 1));
+            }
+            else
+            {
+                if (!match(allow->ipmask, iphost))
+                    return (attach_iline(cptr, allow, iphost, 0));
+            }
+        }
     }
-    
+
     return -1;          /* no match */
 }
 
@@ -513,7 +519,7 @@ attach_iline(aClient *cptr, aAllow *allow, char *uhost, int doid)
  */
 static int oper_access[] =
 {
-    ~(OFLAG_ADMIN|OFLAG_SADMIN|OFLAG_ZLINE|OFLAG_ADMIN), '*',
+    ~(OFLAG_ADMIN|OFLAG_SADMIN), '*',
     OFLAG_LOCAL,   'o',
     OFLAG_GLOBAL,  'O',
     OFLAG_REHASH,  'r',
@@ -534,7 +540,6 @@ static int oper_access[] =
     OFLAG_SADMIN,  'a',
     OFLAG_UMODEc,  'u',
     OFLAG_UMODEf,  'f',
-    OFLAG_ZLINE,   'z',
     OFLAG_UMODEF,  'F',
     0, 0 };
 
@@ -594,6 +599,12 @@ confadd_oper(cVar *vars[], int lnum)
         }
         else if(tmp->type && (tmp->type->flag & SCONFF_ACCESS))
         {
+            if(x->flags > 0)
+            {
+                confparse_error("Multiple access definitions", lnum);
+                free_oper(x);
+                return -1;
+            }
             for (m=(*tmp->value) ? tmp->value : m; *m; m++)
             {
                 for (i=oper_access; (flag = *i); i+=2)
@@ -616,6 +627,12 @@ confadd_oper(cVar *vars[], int lnum)
             DupString(x->class_name, tmp->value);
         }
     }
+    if(!x->nick)
+    {
+        confparse_error("Lacking name in oper block", lnum);
+        free_oper(x);
+        return -1;
+    }
     if(!x->hosts[0])
     {
         confparse_error("Lacking host in oper block", lnum);
@@ -625,6 +642,12 @@ confadd_oper(cVar *vars[], int lnum)
     if(!x->passwd)
     {
         confparse_error("Lacking passwd in oper block", lnum);
+        free_oper(x);
+        return -1;
+    }
+    if(x->flags == 0)
+    {
+        confparse_error("Lacking access in oper block", lnum);
         free_oper(x);
         return -1;
     }
@@ -936,6 +959,7 @@ confadd_allow(cVar *vars[], int lnum)
             DupString(x->ipmask, tmp->value);
             if(strchr(x->ipmask, '@'))
                 x->flags |= CONF_FLAGS_I_HOST_HAS_AT;
+            x->flags |= CONF_FLAGS_I_MATCH_HOST;
         }
         else if(tmp->type && (tmp->type->flag & SCONFF_HOST))
         {
@@ -949,6 +973,7 @@ confadd_allow(cVar *vars[], int lnum)
             DupString(x->hostmask, tmp->value);
             if(strchr(x->hostmask, '@'))
                 x->flags |= CONF_FLAGS_I_NAME_HAS_AT;
+            x->flags |= CONF_FLAGS_I_MATCH_NAME;
         }
         else if(tmp->type && (tmp->type->flag & SCONFF_PASSWD))
         {
@@ -1007,15 +1032,9 @@ confadd_allow(cVar *vars[], int lnum)
         return -1;
     }
     if(!x->ipmask)
-    {
-        DupString(x->ipmask, "*@*");
-        x->flags |= CONF_FLAGS_I_HOST_HAS_AT;
-    }
+        DupString(x->ipmask, "-");
     if(!x->hostmask)
-    {
-        DupString(x->hostmask, "*@*");
-        x->flags |= CONF_FLAGS_I_NAME_HAS_AT;
-    }
+        DupString(x->hostmask, "-");
     x->next = new_allows;
     new_allows = x;
     return lnum;
@@ -1097,9 +1116,27 @@ confadd_global(cVar *vars[], int lnum)
     {
         if(tmp->type && (tmp->type->flag & SCONFF_NAME))
         {
+            unsigned char *s;
+            int valid = 0;
             if(x->servername)
             {
                 confparse_error("Multiple name definitions", lnum);
+                return -1;
+            }
+            /* validate server name, based on m_server() */
+            for (s = tmp->value; *s; s++)
+            {
+                if (*s < ' ' || *s > '~')
+                {
+                    valid = 0;
+                    break;
+                }
+                if (*s == '.')
+                    valid = 1;
+            }
+            if (!valid)
+            {
+                confparse_error("Invalid server name", lnum);
                 return -1;
             }
             tmp->type = NULL;
@@ -1162,6 +1199,12 @@ confadd_admin(cVar *vars[], int lnum)
         new_MeLine = x;
     }
 
+    if (x->admin[0])
+    {
+        confparse_error("Multiple admin blocks", lnum);
+        return -1;
+    }
+
     for(tmp = vars[c]; tmp && (c != 3); tmp = vars[++c])
         DupString(x->admin[c], tmp->value);
 
@@ -1203,7 +1246,8 @@ confadd_class(cVar *vars[], int lnum)
         {
             if(x->connfreq > 0)
             {
-                confparse_error("Multiple connfreq definitions", lnum);
+                confparse_error("Multiple maxclones/connfreq definitions",
+                                lnum);
                 free_class(x);
                 return -1;
             }
@@ -1214,7 +1258,8 @@ confadd_class(cVar *vars[], int lnum)
         {
             if(x->maxlinks > 0)
             {
-                confparse_error("Multiple maxusers definitions", lnum);
+                confparse_error("Multiple maxusers/maxlinks definitions",
+                                lnum);
                 free_class(x);
                 return -1;
             }
@@ -1291,6 +1336,11 @@ confadd_kill(cVar *vars[], int lnum)
             break;
         }
     }
+    if(!host)
+    {
+        confparse_error("Lacking mask definition", lnum);
+        return -1;
+    }
     ub_u = BadPtr(ub_u) ? "*" : ub_u;
     ub_r = BadPtr(ub_r) ? "<No Reason>" : ub_r;
 
@@ -1328,10 +1378,23 @@ confadd_super(cVar *vars[], int lnum)
 {
     cVar *tmp;
     int c = 0;
+    int i;
+
+    /* If multiple super blocks are specified, set up to append */
+    for (i = 0; new_uservers[i]; i++)
+        ;
 
     for(tmp = vars[c]; tmp; tmp = vars[++c])
-        DupString(new_uservers[c], tmp->value);
-    new_uservers[++c] = NULL;
+    {
+        if (i == MAXUSERVS)
+        {
+            confparse_error("Excessive super server definitions", lnum);
+            return -1;
+        }
+        DupString(new_uservers[i], tmp->value);
+        i++;
+    }
+    new_uservers[i] = NULL;
     return lnum;
 }
 
@@ -1353,11 +1416,11 @@ confadd_restrict(cVar *vars[], int lnum)
                 return -1;
             }
             tmp->type = NULL;
-            if(!strcmp("CHAN", tmp->value))
+            if(!mycmp("CHAN", tmp->value))
                 type = SBAN_CHAN;
-            else if(!strcmp("NICK", tmp->value))
+            else if(!mycmp("NICK", tmp->value))
                 type = SBAN_NICK;
-            else if(!strcmp("GCOS", tmp->value))
+            else if(!mycmp("GCOS", tmp->value))
                 type = SBAN_GCOS;
             else
             {
@@ -1487,6 +1550,12 @@ merge_me()
         MyFree(MeLine->admin[0]);
         MyFree(MeLine->admin[1]);
         MyFree(MeLine->admin[2]);
+        /* MeLine->info is guaranteed to be replaced */
+        MeLine->diepass = NULL;
+        MeLine->restartpass = NULL;
+        MeLine->admin[0] = NULL;
+        MeLine->admin[1] = NULL;
+        MeLine->admin[2] = NULL;
     }
     else
     {
@@ -1942,6 +2011,7 @@ int rehash(aClient *cptr, aClient *sptr, int sig)
 {
     aClient    *acptr;
     int         i;
+    char       *conferr;
 
     if (sig == SIGHUP) 
     {
@@ -1972,6 +2042,8 @@ int rehash(aClient *cptr, aClient *sptr, int sig)
     /* remove perm klines */
     remove_userbans_match_flags(UBAN_LOCAL, UBAN_TEMPORARY);
 
+    initclass();
+
     if(initconf(configfile) == -1)
     {
         sendto_realops("Rehash Aborted");
@@ -1979,16 +2051,10 @@ int rehash(aClient *cptr, aClient *sptr, int sig)
         return 1;
     }
 
-    if(!set_classes())
+    conferr = finishconf();
+    if (conferr)
     {
-        sendto_realops("Rehash Aborted:  Nonexistant class referenced");
-        clear_newconfs();
-        return 1;
-    }
-
-    if(!new_ports)
-    {
-        sendto_one(sptr, "Rehash Aborted:  No ports defined");
+        sendto_realops("Rehash Aborted: %s", conferr);
         clear_newconfs();
         return 1;
     }

@@ -1113,8 +1113,9 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
                 break;
             for(tmp = allows; tmp; tmp = tmp->next)
                 sendto_one(sptr, rpl_str(RPL_STATSILINE), me.name,
-                           sptr->name, "I", tmp->ipmask, tmp->hostmask,
-                           tmp->port, tmp->class->name);
+                           sptr->name, (tmp->legal == -1 ? "Ix" : "I"),
+                           tmp->ipmask, tmp->hostmask, tmp->port,
+                           tmp->class->name);
             break;
         }
         case 'k':
@@ -1165,14 +1166,21 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
             int i = 0;
             if(!opers)
                 break;
-            for(tmp = opers; tmp; tmp = tmp->next)
-                while(tmp->hosts[i])
-                {
+            if (IsAnOper(sptr))
+            {
+                for(tmp = opers; tmp; tmp = tmp->next)
+                    for(i = 0; tmp->hosts[i]; i++)
+                        sendto_one(sptr, rpl_str(RPL_STATSOLINE), me.name,
+                                sptr->name, "O", tmp->hosts[i], tmp->nick,
+                                tmp->flags, tmp->class->name);
+            }
+            else
+            {
+                for(tmp = opers; tmp; tmp = tmp->next)
                     sendto_one(sptr, rpl_str(RPL_STATSOLINE), me.name,
-                            sptr->name, "O", tmp->hosts[i], tmp->nick,
+                            sptr->name, "O", "*", tmp->nick,
                             tmp->flags, tmp->class->name);
-                    i++;
-                }
+            }
             break;
         }
 

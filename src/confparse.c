@@ -67,6 +67,9 @@
  */
 
 extern int forked;
+extern int set_classes();
+extern aPort *new_ports;
+extern Conf_Me *new_MeLine;
 
 /* free_vars()
  * clear our temp variable array used by parse_block and children
@@ -293,6 +296,7 @@ parse_block(tConf *block, char *cur, FILE *file, int *lnum)
                 continue;
             }
             *cur = '\0';
+            cur++;
             if(vars[vnum]->loaded == 1)
                 DupString(vars[vnum]->value, var);
             vars[vnum]->loaded = 3;
@@ -602,6 +606,7 @@ parse_block(tConf *block, char *cur, FILE *file, int *lnum)
                 continue;
             }
             *cur = '\0';
+            cur++;
             if(vars[vnum]->loaded == 1)
                 DupString(vars[vnum]->value, var);
             vars[vnum]->loaded = 3;
@@ -639,8 +644,6 @@ initconf(char *filename)
         return -1;
     }
 
-    initclass();
-    
     while(!BadPtr(cur) || ((fgets(line, LINE_MAX, file) != NULL) && ++lnum
              && (cur = line)))
     {
@@ -715,4 +718,16 @@ initconf(char *filename)
         return -1;
     }
     return 1;
+}
+
+inline char *
+finishconf(void)
+{
+    if (!new_MeLine || !new_MeLine->servername)
+        return "Missing global block";
+    if (!set_classes())
+        return "Nonexistant class referenced";
+    if (!new_ports)
+        return "No ports defined";
+    return NULL;
 }

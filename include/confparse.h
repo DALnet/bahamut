@@ -111,6 +111,11 @@ struct ConfVar
 
 #define SCONFF_STRING               0x800000    /* allow freeform strings */
 
+/* subtoken aliases */
+
+#define SCONFT_MAXCLONE     "MAXCLONES"
+#define SCONFT_MAXLINKS     "MAXLINKS"
+
 /* these are the strings for options ONLY */
 
 #define OPTT_NETNAME    "NETWORK_NAME"
@@ -186,7 +191,9 @@ sConf confclasstab[] =
     {SCONFT_NAME, SCONFF_NAME, VARTYPE_NAME},
     {SCONFT_PINGFREQ, SCONFF_PINGFREQ, VARTYPE_INT},
     {SCONFT_CONNFREQ, SCONFF_CONNFREQ, VARTYPE_INT},
+    {SCONFT_MAXCLONE, SCONFF_CONNFREQ, VARTYPE_INT},
     {SCONFT_MAXUSERS, SCONFF_MAXUSERS, VARTYPE_INT},
+    {SCONFT_MAXLINKS, SCONFF_MAXUSERS, VARTYPE_INT},
     {SCONFT_MAXSENDQ, SCONFF_MAXSENDQ, VARTYPE_INT},
     {(char *) 0, 0, 0}
 };

@@ -654,6 +654,7 @@ main(int argc, char *argv[])
     uid_t         uid, euid;
     char        tmp[PATH_MAX];
     FILE        *mcsfp;
+    char        *conferr;
         
     if ((timeofday = time(NULL)) == -1) 
     {
@@ -833,24 +834,20 @@ main(int argc, char *argv[])
     initstats();
     init_tree_parse(msgtab);
     init_send();
-    NOW = time(NULL);
     open_debugfile();
     NOW = time(NULL);
+
+    initclass();
 
     if(initconf(configfile) == -1)
     {
         printf("Server not started\n");
         exit(-1);
     }
-    if(!set_classes())
+    conferr = finishconf();
+    if (conferr)
     {
-        printf("ERROR:  Nonexistant class referenced in config file\n"
-               "Server not started\n");
-        exit(-1);
-    }
-    if(!new_ports)
-    {
-        printf("ERROR:  No ports defined\nServer not started\n");
+        printf("ERROR: %s in config file\nServer not started\n", conferr);
         exit(-1);
     }
     merge_confs();

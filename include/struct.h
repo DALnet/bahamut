@@ -613,6 +613,10 @@ typedef struct Whowas
 #define CONF_FLAGS_I_NAME_HAS_AT   0x0004
 /* does HOST in I:HOST::NAME have an @? */
 #define CONF_FLAGS_I_HOST_HAS_AT   0x0008
+/* do we match allow:hostmask? */
+#define CONF_FLAGS_I_MATCH_NAME    0x0010
+/* do we match allow:ipmask? */
+#define CONF_FLAGS_I_MATCH_HOST    0x0020
 
 /* global configuration flags */
 
