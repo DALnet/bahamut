@@ -1013,9 +1013,9 @@ m_nick(aClient *cptr,
    else
 	  parc = 2;
    /*
-    * parc == 2 on a normal client sign on (local) and a normal client
-    * nick change parc == 4 on a normal server-to-server client nick
-    * change notice parc == 9 on a normal TS style server-to-server
+    * parc == 2 on a normal client sign on (local) and a normal client nick change 
+    * parc == 4 on a normal server-to-server client nick change
+    * parc == 9 on a normal TS style server-to-server
     * NICK introduction
     */
    if ((parc > 4) && (parc < 9)) {
@@ -1452,9 +1452,17 @@ m_nick(aClient *cptr,
 		}
 #endif
 		
+		/*
+		 * if the nickname is different, set the TS
+		 * AND set it -r. No need to propogate MODE -r and spam the network on registered
+		 * nick changes. yuck. - lucas
+		 */
       
 		if (mycmp(parv[0], nick))
+		{
 		  sptr->tsinfo = newts ? newts : (ts_val) timeofday;
+		  sptr->umode&=~UMODE_r;
+		}
 
 		if (MyConnect(sptr)) {
 			if(IsRegisteredUser(sptr)) {
@@ -1485,10 +1493,6 @@ m_nick(aClient *cptr,
 					return 0;
 				}
 #endif
-			}
-			if(IsRegNick(sptr)) {
-				sptr->umode&=~UMODE_r;
-				sendto_serv_butone(&me, ":%s MODE %s :-r", nick, nick);
 			}
 		}
 		else {
