@@ -25,6 +25,7 @@
 #define __msg_include__
 
 #define MSG_PRIVATE  "PRIVMSG"		/* PRIV */
+#define MSG_SPACK    "SPACK"        /* PRIV */
 #define MSG_WHO      "WHO"	      	/* WHO  -> WHOC */
 #define MSG_WHOIS    "WHOIS"	   	/* WHOI */
 #define MSG_WHOWAS   "WHOWAS"	   	/* WHOW */
@@ -206,6 +207,7 @@ extern int  m_dkey(aClient *, aClient *, int, char **);
 struct Message msgtab[] = 
 {
     {MSG_PRIVATE, m_private, 0, MAXPARA, 1, 0, 1, 0L},
+	{MSG_SPACK, m_private, 0, MAXPARA, 1, 0, 1, 0L},
     {MSG_NICK, m_nick, 0, MAXPARA, 1, 1, 0, 0L},
     {MSG_NOTICE, m_notice, 0, MAXPARA, 1, 0, 0, 0L},
     {MSG_JOIN, m_join, 0, MAXPARA, 1, 0, 0, 0L},
