@@ -1915,8 +1915,7 @@ int m_topic(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
    if (parc == 2) /* user is requesting a topic */ 
    {	
-      int showchan = 0;
-      char *namep = chptr->name;
+      char *namep = chptr->chname;
       char tempchname[CHANNELLEN + 2];
 
       if(!member && !(ShowChannel(sptr, chptr)))
@@ -1924,7 +1923,7 @@ int m_topic(aClient *cptr, aClient *sptr, int parc, char *parv[])
          if(IsAdmin(sptr))
          {
             tempchname[0] = '%';
-            strcpy(&tempchname[1], chptr->name);
+            strcpy(&tempchname[1], chptr->chname);
             namep = tempchname;
          }
          else
@@ -2335,9 +2334,9 @@ m_list(aClient *cptr,
 
 		   if(!x && IsAdmin(sptr))
 		   {
-		      chaname[0] = '%';
-		      strcpy(&chaname[1], chptr->name);
-		      nameptr = chaname;
+		      channame[0] = '%';
+		      strcpy(&channame[1], chptr->chname);
+		      nameptr = channame;
 		   }
 
 		   sendto_one(sptr, rpl_str(RPL_LIST), me.name, parv[0],

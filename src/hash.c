@@ -236,20 +236,18 @@ del_from_channel_hash_table(char *name, aChannel *chptr)
 /*
  * hash_find_client
  */
-aClient    *
-hash_find_client(char *name, aClient *cptr)
+aClient *hash_find_client(char *name, aClient *cptr)
 {
-   Reg aClient *tmp;
-   Reg aClient *prv = NULL;
-   Reg aHashEntry *tmp3;
-   int         hashv;
+   aClient *tmp;
+   aHashEntry *tmp3;
+   int hashv;
 
    hashv = hash_nick_name(name);
    tmp3 = &clientTable[hashv];
    /*
     * Got the bucket, now search the chain.
     */
-   for (tmp = (aClient *) tmp3->list; tmp; prv = tmp, tmp = tmp->hnext)
+   for (tmp = (aClient *) tmp3->list; tmp; tmp = tmp->hnext)
       if (mycmp(name, tmp->name) == 0) {
 	 return (tmp);
       }
@@ -268,17 +266,16 @@ hash_find_client(char *name, aClient *cptr)
     * - Dianora
     */
 }
+
 /*
  * hash_find_nickserver
  */
-aClient    *
-hash_find_nickserver(char *name, aClient *cptr)
+aClient *hash_find_nickserver(char *name, aClient *cptr)
 {
-   Reg aClient *tmp;
-   Reg aClient *prv = NULL;
-   Reg aHashEntry *tmp3;
-   int         hashv;
-   char       *serv;
+   aClient *tmp;
+   aHashEntry *tmp3;
+   int hashv;
+   char *serv;
 
    serv = strchr(name, '@');
    *serv++ = '\0';
@@ -287,7 +284,7 @@ hash_find_nickserver(char *name, aClient *cptr)
    /*
     * Got the bucket, now search the chain.
     */
-   for (tmp = (aClient *) tmp3->list; tmp; prv = tmp, tmp = tmp->hnext)
+   for (tmp = (aClient *) tmp3->list; tmp; tmp = tmp->hnext)
       if (mycmp(name, tmp->name) == 0 && tmp->user &&
 	  mycmp(serv, tmp->user->server) == 0) {
 	 *--serv = '\0';
@@ -303,9 +300,11 @@ hash_find_nickserver(char *name, aClient *cptr)
 aClient    *
 hash_find_server(char *server, aClient *cptr)
 {
-   Reg aClient *tmp, *prv = NULL;
+   aClient *tmp;
+#if 0
    Reg char   *t;
    Reg char    ch;
+#endif
    aHashEntry *tmp3;
 
    int         hashv;
@@ -313,20 +312,28 @@ hash_find_server(char *server, aClient *cptr)
    hashv = hash_nick_name(server);
    tmp3 = &clientTable[hashv];
 
-   for (tmp = (aClient *) tmp3->list; tmp; prv = tmp, tmp = tmp->hnext) {
+   for (tmp = (aClient *) tmp3->list; tmp; tmp = tmp->hnext) {
       if (!IsServer(tmp) && !IsMe(tmp))
 	 continue;
       if (mycmp(server, tmp->name) == 0) {
 	 return (tmp);
       }
    }
-   t = ((char *) server + strlen(server));
+
    /*
     * Whats happening in this next loop ? Well, it takes a name like
     * foo.bar.edu and proceeds to earch for *.edu and then *.bar.edu.
     * This is for checking full server names against masks although it
     * isnt often done this way in lieu of using matches().
     */
+
+   /* why in god's name would we ever want to do something like this?
+    * commented out, probably to be removed sooner or later - lucas 
+    */  
+
+#if 0
+   t = ((char *) server + strlen(server));
+
    for (;;) {
       t--;
       for (; t > server; t--)
@@ -346,8 +353,10 @@ hash_find_server(char *server, aClient *cptr)
       }
       *t = ch;
    }
+#endif
    return (cptr);
 }
+
 /*
  * hash_find_channel
  */
@@ -355,13 +364,13 @@ aChannel   *
 hash_find_channel(char *name, aChannel *chptr)
 {
    int         hashv;
-   Reg aChannel *tmp, *prv = NULL;
+   Reg aChannel *tmp;
    aHashEntry *tmp3;
 
    hashv = hash_channel_name(name);
    tmp3 = &channelTable[hashv];
 
-   for (tmp = (aChannel *) tmp3->list; tmp; prv = tmp, tmp = tmp->hnextch)
+   for (tmp = (aChannel *) tmp3->list; tmp; tmp = tmp->hnextch)
       if (mycmp(name, tmp->chname) == 0) {
 	 return (tmp);
       }

@@ -170,22 +170,21 @@ find_person(char *name, aClient *cptr)
  * 
  * NOTE: parse() should not be called recusively by any other functions!
  */
-int
-parse(aClient *cptr, char *buffer, char *bufend)
+int parse(aClient *cptr, char *buffer, char *bufend)
 {
-   Reg aClient *from = cptr;
-   Reg char   *ch, *s;
-   Reg int     i, numeric = 0, paramcount;
-   Reg struct Message *mptr;
+   aClient *from = cptr;
+   char *ch, *s;
+   int i, numeric = 0, paramcount;
+   struct Message *mptr;
 
 #ifdef DUMP_DEBUG
-	if(dumpfp!=NULL) {
-		fprintf(dumpfp, "<- %s: %s\n", (cptr->name ? cptr->name : "*"), buffer);
-		fflush(dumpfp);
-	}
+   if(dumpfp!=NULL) 
+   {
+      fprintf(dumpfp, "<- %s: %s\n", (cptr->name ? cptr->name : "*"), buffer);
+      fflush(dumpfp);
+   }
 #endif
-	Debug((DEBUG_DEBUG, "Parsing %s: %s",
-	  get_client_name(cptr, TRUE), buffer));
+   Debug((DEBUG_DEBUG, "Parsing %s: %s", get_client_name(cptr, TRUE), buffer));
 
    if (IsDead(cptr))
       return -1;
@@ -193,44 +192,51 @@ parse(aClient *cptr, char *buffer, char *bufend)
    s = sender;
    *s = '\0';
 
-   for (ch = buffer; *ch == ' '; ch++)	/*
-					 * skip spaces 
-					 */
-      /*
-       * null statement 
-       */
-      ;
+   for (ch = buffer; *ch == ' '; ch++);	/* skip spaces */
 
    para[0] = from->name;
-   if (*ch == ':') {
+   if (*ch == ':') 
+   {
       /*
-       * * Copy the prefix to 'sender' assuming it terminates * with
+       * Copy the prefix to 'sender' assuming it terminates with
        * SPACE (or NULL, which is an error, though).
        */
-      for (++ch, i = 0; *ch && *ch != ' '; ++ch)
-	 if (s < (sender + sizeof(sender) - 1))
-	    *s++ = *ch;		/*
-				 * leave room for NULL 
-				 */
+
+      for (++ch; *ch && *ch != ' '; ++ch)
+	 if (s < (sender + HOSTLEN))
+	    *s++ = *ch;		
       *s = '\0';
+
       /*
-       * * Actually, only messages coming from servers can have * the
-       * prefix--prefix silently ignored, if coming from * a user
-       * client... *
+       * Actually, only messages coming from servers can have the
+       * prefix--prefix silently ignored, if coming from a user
+       * client...
        * 
-       * ...sigh, the current release "v2.2PL1" generates also * null
-       * prefixes, at least to NOTIFY messages (e.g. it * puts
-       * "sptr->nickname" as prefix from server structures * where it's
-       * null--the following will handle this case * as "no prefix" at
+       * ...sigh, the current release "v2.2PL1" generates also null
+       * prefixes, at least to NOTIFY messages (e.g. it puts
+       * "sptr->nickname" as prefix from server structures where it's
+       * null--the following will handle this case as "no prefix" at
        * all --msa  (": NOTICE nick ...")
        */
-      if (*sender && IsServer(cptr)) {
-				 from = find_client(sender, (aClient *) NULL);
-				 if (!from || mycmp(from->name, sender))
-					 from = find_server(sender, (aClient *) NULL);
-				 
-	 else if (!from && strchr(sender, '@'))
-	    from = find_nickserv(sender, (aClient *) NULL);
+
+      if (*sender && IsServer(cptr)) 
+      {
+         from = find_client(sender, (aClient *) NULL);
+
+         /*
+          * okay, this doesn't seem to do much here.
+          * from->name _MUST_ be equal to sender. That's what find_client does.
+          * find_client will find servers too, and since we don't use server
+          * masking, the find server call is useless (and very wasteful).
+          * now, there HAS to be a from and from->name and sender have to be the same
+          * for us to get to the next if. but the next if starts out with if(!from)
+          * so this is UNREACHABLE CODE! AGH! - lucas
+          *
+          *  if (!from || mycmp(from->name, sender))
+          *     from = find_server(sender, (aClient *) NULL);
+          *  else if (!from && strchr(sender, '@'))
+	  *     from = find_nickserv(sender, (aClient *) NULL);
+          */
 
 	 para[0] = sender;
 	 /*
@@ -239,20 +245,21 @@ parse(aClient *cptr, char *buffer, char *bufend)
 	  * message (old IRC just let it through as if the prefix just
 	  * wasn't there...) --msa
 	  */
-	 if (!from) {
-			 Debug((DEBUG_ERROR,
-					  "Unknown prefix (%s)(%s) from (%s)",
-					  sender, buffer, cptr->name));
-			 ircstp->is_unpf++;
-			 
-			 remove_unknown(cptr, sender, buffer);
-			 
-			 return -1;
+	 if (!from) 
+         {
+            Debug((DEBUG_ERROR, "Unknown prefix (%s)(%s) from (%s)",
+                   sender, buffer, cptr->name));
+
+            ircstp->is_unpf++;
+            remove_unknown(cptr, sender, buffer);
+		 
+            return -1;
 	 }
-	 if (from->from != cptr) {
+
+	 if (from->from != cptr) 
+         {
 	    ircstp->is_wrdi++;
-	    Debug((DEBUG_ERROR,
-		   "Message (%s) coming from (%s)",
+	    Debug((DEBUG_ERROR, "Message (%s) coming from (%s)",
 		   buffer, cptr->name));
 
 	    return cancel_clients(cptr, from, buffer);
@@ -262,71 +269,58 @@ parse(aClient *cptr, char *buffer, char *bufend)
 	 ch++;
    }
 
-   if (*ch == '\0') {
+   if (*ch == '\0') 
+   {
       ircstp->is_empt++;
       Debug((DEBUG_NOTICE, "Empty message from host %s:%s",
 	     cptr->name, from->name));
       return (-1);
    }
    /*
-    * * Extract the command code from the packet.  Point s to the end *
-    * of the command code and calculate the length using pointer *
-    * arithmetic.  Note: only need length for numerics and *all* *
-    * numerics must have parameters and thus a space after the command *
+    * Extract the command code from the packet.  Point s to the end
+    * of the command code and calculate the length using pointer
+    * arithmetic.  Note: only need length for numerics and *all*
+    * numerics must have parameters and thus a space after the command
     * code. -avalon
     * 
     * ummm???? - Dianora
     */
 
-   if (*(ch + 3) == ' ' &&	/*
-				 * ok, lets see if its a possible
-				 * * numeric.. 
-				 */
-       isdigit(*ch) && isdigit(*(ch + 1)) && isdigit(*(ch + 2))) {
+   /* check for numeric */
+   if (*(ch + 3) == ' ' && isdigit(*ch) && isdigit(*(ch + 1)) && isdigit(*(ch + 2))) 
+   {
       mptr = (struct Message *) NULL;
-      numeric = (*ch - '0') * 100 + (*(ch + 1) - '0') * 10
-	 + (*(ch + 2) - '0');
+      numeric = (*ch - '0') * 100 + (*(ch + 1) - '0') * 10 + (*(ch + 2) - '0');
       paramcount = MAXPARA;
       ircstp->is_num++;
-      s = ch + 3;		/*
-				 * I know this is ' ' from above if 
-				 */
-      *s++ = '\0';		/*
-				 * blow away the ' ', and point s to
-				 * * next part 
-				 */
+      s = ch + 3;
+      *s++ = '\0';
    }
-   else {
-      s = strchr(ch, ' ');	/*
-				 * moved from above,now need it here 
-				 */
+   else 
+   {
+      s = strchr(ch, ' ');
+
       if (s)
 	 *s++ = '\0';
 
       mptr = tree_parse(ch);
 
-      if (!mptr || !mptr->cmd) {
+      if (!mptr || !mptr->cmd) 
+      {
 	 /*
-	  * * Note: Give error message *only* to recognized * persons.
-	  * It's a nightmare situation to have * two programs sending
-	  * "Unknown command"'s or * equivalent to each other at full
-	  * blast.... * If it has got to person state, it at least *
-	  * seems to be well behaving. Perhaps this message * should
-	  * never be generated, though...  --msa * Hm, when is the
-	  * buffer empty -- if a command * code has been found ??
-	  * -Armin
+          * only send error messages to things that actually sent buffers to us
+          * and only people, too.
 	  */
-	 if (buffer[0] != '\0') {
+	 if (buffer[0] != '\0') 
+         {
 	    if (IsPerson(from))
-	       sendto_one(from,
-			  ":%s %d %s %s :Unknown command",
-			  me.name, ERR_UNKNOWNCOMMAND,
-			  from->name, ch);
+	       sendto_one(from, ":%s %d %s %s :Unknown command",
+			  me.name, ERR_UNKNOWNCOMMAND, from->name, ch);
 	    Debug((DEBUG_ERROR, "Unknown (%s) from %s",
 		   ch, get_client_name(cptr, TRUE)));
 	 }
 	 ircstp->is_unco++;
-	 return (-1);
+	 return -1;
       }
 
       paramcount = mptr->parameters;
@@ -338,61 +332,54 @@ parse(aClient *cptr, char *buffer, char *bufend)
        * are allowed -SRB Opers can send 1 msg per second, burst of ~20
        * -Taner
        */
-      if ((mptr->flags & 1) && !(IsServer(cptr))) {
+      if ((mptr->flags & 1) && !(IsServer(cptr))) 
+      {
 #ifdef NO_OPER_FLOOD
 	 if (IsAnOper(cptr))
 	    /*
 	     * "randomly" (weighted) increase the since 
 	     */
-	    cptr->since += (cptr->receiveM % 5) ? 1 : 0;
+	    cptr->since += (cptr->receiveM % 10) ? 1 : 0;
 	 else
 #endif
 	    cptr->since += (2 + i / 120);
       }
    }
    /*
-    * * Must the following loop really be so devious? On * surface it
-    * splits the message to parameters from * blank spaces. But, if
-    * paramcount has been reached, * the rest of the message goes into
-    * this last parameter * (about same effect as ":" has...) --msa
+    * Must the following loop really be so devious? On surface it
+    * splits the message to parameters from blank spaces. But, if
+    * paramcount has been reached, the rest of the message goes into
+    * this last parameter (about same effect as ":" has...) --msa
     */
 
    /*
     * Note initially true: s==NULL || *(s-1) == '\0' !! 
     */
 
-   if (me.user)
-      para[0] = sender;
-
    i = 0;
-   if (s) {
+   if (s) 
+   {
       if (paramcount > MAXPARA)
 	 paramcount = MAXPARA;
-      for (;;) {
-	 /*
-	  * * Never "FRANCE " again!! ;-) Clean * out *all* blanks..
-	  * --msa
-	  */
+      for (;;) 
+      {
 	 while (*s == ' ')
 	    *s++ = '\0';
 
 	 if (*s == '\0')
 	    break;
-	 if (*s == ':') {
-	    /*
-	     * * The rest is single parameter--can * include blanks
-	     * also.
-	     */
+	 if (*s == ':') 
+         {
+	    /* The rest is a single parameter */
 	    para[++i] = s + 1;
 	    break;
 	 }
 	 para[++i] = s;
 	 if (i >= paramcount)
 	    break;
-	 for (; *s != ' ' && *s; s++)
-	    /*
-	     * null statement 
-	     */ ;
+
+         while(*s && *s != ' ')
+            s++;
       }
    }
 
@@ -411,12 +398,11 @@ parse(aClient *cptr, char *buffer, char *bufend)
     */
 
    if (!IsRegistered(cptr) && !mptr->allow_unregistered_use) {
-      sendto_one(from,
-		 ":%s %d %s %s :Register first.",
-		 me.name, ERR_NOTREGISTERED,
-		 from->name, ch);
+      sendto_one(from, ":%s %d %s %s :Register first.",
+		 me.name, ERR_NOTREGISTERED, from->name, ch);
       return -1;
    }
+
    if (IsRegisteredUser(cptr) && mptr->reset_idle)
       from->user->last = timeofday;
 
