@@ -1749,7 +1749,7 @@ int m_whois(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		   user->username, user->host, acptr->info);
 #if (RIDICULOUS_PARANOIA_LEVEL>=1)
 #if (RIDICULOUS_PARANOIA_LEVEL==1)
-	if(user->real_oper_host && (IsAdmin(sptr) || (sptr == acptr)))
+	if(MyConnect(acptr) && user->real_oper_host && (IsAdmin(sptr) || (sptr == acptr)))
 	{
 	    sendto_one(sptr, rpl_str(RPL_WHOISACTUALLY),
 		       me.name, sptr->name, name, 
@@ -1758,8 +1758,8 @@ int m_whois(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	}
 #endif
 #if (RIDICULOUS_PARANOIA_LEVEL==2)
-	if(user->real_oper_host && (IsAdmin(sptr) || (sptr == acptr)) &&
-	    IsLocal(sptr))
+	if(MyConnect(acptr) && user->real_oper_host && (IsAdmin(sptr) || (sptr == acptr)) &&
+	    MyConnect(sptr))
         {
             sendto_one(sptr, rpl_str(RPL_WHOISACTUALLY),
                        me.name, sptr->name, name,
