@@ -167,7 +167,7 @@ Reg int     a, b, c, d;
    b = (int) *s++;
    c = (int) *s++;
    d = (int) *s++;
-   (void) sprintf(buf, "%d.%d.%d.%d", a, b, c, d);
+   (void) ircsprintf(buf, "%d.%d.%d.%d", a, b, c, d);
 
    return buf;
 }

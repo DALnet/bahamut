@@ -2919,7 +2919,7 @@ m_sjoin(aClient *cptr,
    if (mode.limit && oldmode->limit != mode.limit) {
       INSERTSIGN(1,'+')
       *mbuf++ = 'l';
-      (void) sprintf(numeric, "%-15d", mode.limit);
+      (void) ircsprintf(numeric, "%-15d", mode.limit);
       if ((s = strchr(numeric, ' ')))
 		  *s = '\0';
       if(*parabuf)

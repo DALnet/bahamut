@@ -771,7 +771,7 @@ void send_globops(char *pattern, ...)
    for (i = 0; i <= highest_fd; i++)
 	  if ((cptr = local[i]) && !IsServer(cptr) && IsAnOper(cptr) &&
 			!IsMe(cptr) && SendGlobops(cptr)) {
-		  (void) sprintf(nbuf, ":%s NOTICE %s :*** Global -- ",
+		  (void) ircsprintf(nbuf, ":%s NOTICE %s :*** Global -- ",
 							  me.name, cptr->name);
 		  (void) strncat(nbuf, pattern,
 							  sizeof(nbuf) - strlen(nbuf));
@@ -791,7 +791,7 @@ void send_chatops(char *pattern, ...)
    for (i = 0; i <= highest_fd; i++)
 	  if ((cptr = local[i]) && !IsServer(cptr) && IsAnOper(cptr) &&
 			!IsMe(cptr) && SendChatops(cptr)) {
-		  (void) sprintf(nbuf, ":%s NOTICE %s :*** ChatOps -- ",
+		  (void) ircsprintf(nbuf, ":%s NOTICE %s :*** ChatOps -- ",
 							  me.name, cptr->name);
 		  (void) strncat(nbuf, pattern,
 							  sizeof(nbuf) - strlen(nbuf));
