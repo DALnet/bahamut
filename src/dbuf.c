@@ -23,8 +23,12 @@
  *
  * $Id$
  */
+
 #include "dbuf.h"
+#include "struct.h"
 #include "common.h"
+#include "sys.h"
+#include "h.h"
 
 #include <assert.h>
 #include <stdio.h>
