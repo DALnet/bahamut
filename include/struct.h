@@ -334,7 +334,7 @@ typedef struct MotdItem aMotd;
 #define IsUmodee(x)             ((x)->umode & UMODE_e)
 #define IsNoNonReg(x)           ((x)->umode & UMODE_R)
 #define IsWSquelch(x)           ((x)->umode & UMODE_x)
-#define ISSSquelch(x)           ((x)->umode & UMODE_X)
+#define IsSSquelch(x)           ((x)->umode & UMODE_X)
 #define	IsPerson(x)		((x)->user && IsClient(x))
 #define	IsPrivileged(x)		(IsAnOper(x) || IsServer(x))
 #define	SendWallops(x)		((x)->umode & UMODE_w)

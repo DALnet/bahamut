@@ -1418,21 +1418,21 @@ static inline int m_message(aClient *cptr, aClient *sptr, int parc,
 
     if (MyConnect(sptr)) 
     {
-#ifdef ANTI_SPAMBOT
-#ifndef ANTI_SPAMBOT_WARN_ONLY
 	/* if its a spambot, just ignore it */
-	if (sptr->join_leave_count >= MAX_JOIN_LEAVE_COUNT)
-	    return 0;
+	if ((IsSSquelch(sptr)) || (IsWSquelch(sptr))
+#if defined(ANTI_SPAMBOT) && !defined(ANTI_SPAMBOT_WARN_ONLY)
+	    || (sptr->join_leave_count >= MAX_JOIN_LEAVE_COUNT)
 #endif
-#endif
-	/* Deal with squelched clients */
-	if (ISSSquelch(sptr))
-	    return 0;
-	if (ISWSquelch(sptr)) {
-	    sendto_one(sptr, ":%s NOTICE %s :You are currently squelched.  "
-		       "Message not sent.", me.name, parv[0]);
-	    return 0;
+	    ) {
+	    if (strcasecmp(parv[0],parv[1])) {
+		if (IsWSquelch(sptr))
+		    sendto_one(sptr, ":%s NOTICE %s :You are currently "
+			       "squelched.  Message not sent.", me.name,
+			       parv[0]);		
+		return 0;
+	    }
 	}
+
 	parv[1] = canonize(parv[1]);
     }
 
