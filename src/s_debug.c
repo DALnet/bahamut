@@ -292,8 +292,8 @@ send_usage(aClient *cptr, char *nick)
         */
    sendto_one(cptr, ":%s %d %s :Reads %d Writes %d",
 	      me.name, RPL_STATSDEBUG, nick, readcalls, writecalls);
-   sendto_one(cptr, ":%s %d %s :DBUF alloc %d blocks %d",
-	      me.name, RPL_STATSDEBUG, nick, dbufalloc, dbufblocks);
+   sendto_one(cptr, ":%s %d %s :DBUF alloc %d used %d",
+	      me.name, RPL_STATSDEBUG, nick, DBufCount, DBufUsedCount);
    sendto_one(cptr,
 	      ":%s %d %s :Writes:  <0 %d 0 %d <16 %d <32 %d <64 %d",
 	      me.name, RPL_STATSDEBUG, nick,
@@ -416,7 +416,7 @@ count_memory(aClient *cptr, char *nick)
 
 				 * memory used by conf lines 
 				 */
-   u_long      db = 0, db2 = 0;		/*
+   size_t      db = 0, db2 = 0;		/*
 
 				 * memory used by dbufs 
 				 */
@@ -549,10 +549,10 @@ count_memory(aClient *cptr, char *nick)
 				  CH_MAX, sizeof(aHashEntry) * CH_MAX,
 				  WATCHHASHSIZE, sizeof(aWatch *) * WATCHHASHSIZE);
 
-   db = dbufblocks * sizeof(dbufbuf);
-   db2 = dbufalloc * sizeof(dbufbuf);
+   count_dbuf_memory(&db, &db2);
    sendto_one(cptr, ":%s %d %s :Dbuf blocks %d(%d) MAX %d(%d)",
-	      me.name, RPL_STATSDEBUG, nick, dbufalloc, db2 ,dbufblocks, db);
+	      me.name, RPL_STATSDEBUG, nick, DBufUsedCount, db2,
+	      DBufCount, db);
 
    rm = cres_mem(cptr);
 

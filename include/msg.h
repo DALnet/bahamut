@@ -106,9 +106,6 @@
 #endif
 #define MSG_SQLINE   "SQLINE" /* SQLINE */
 #define MSG_UNSQLINE "UNSQLINE" /* UNSQLINE */
-#ifdef DEBUG_DBUF    
-#define MSG_DBUF     "DBUF"      /* DBUFDEBUG */
-#endif
 #define MAXPARA      15
 
 #ifdef DEBUG_DBUF
@@ -279,9 +276,6 @@ struct Message msgtab[] = {
 #endif
    {MSG_SQLINE, m_sqline, 0, MAXPARA, 1, 0, 0, 0L},
    {MSG_UNSQLINE, m_unsqline, 0, MAXPARA, 1, 0, 0, 0L },
-#ifdef DEBUG_DBUF
-   {MSG_DBUF,  m_dbuf, 0, MAXPARA, 1, 0, 0, 0L},
-#endif
    {MSG_CAPAB, m_capab, 0, MAXPARA, 1, 1, 0, 0L},
    {(char *) 0, (int (*)()) 0, 0, 0, 0, 0, 0, 0L}
 };

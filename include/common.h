@@ -22,6 +22,7 @@
 
 #ifndef	__common_include__
 # define __common_include__
+# define IRCD_MIN(a, b)  ((a) < (b) ? (a) : (b))
 # if defined( HAVE_PARAM_H )
 #	include <sys/param.h>
 # endif

@@ -594,8 +594,8 @@ struct Client {
 #endif
 	char        buffer[BUFSIZE];	/* Incoming message buffer */
 	short       lastsq;		 /* # of 2k blocks when sendqueued called last */
-	dbuf        sendQ;		 /* Outgoing message queue--if socket full */
-	dbuf        recvQ;		 /* Hold for data incoming yet to be parsed */
+	struct DBuf        sendQ;		 /* Outgoing message queue--if socket full */
+	struct DBuf        recvQ;		 /* Hold for data incoming yet to be parsed */
 	long        sendM;		 /* Statistics: protocol messages send */
 	long        sendK;		 /* Statistics: total k-bytes send */
 	long        receiveM;	 /* Statistics: protocol messages received */

@@ -847,7 +847,7 @@
  */
 #define HYBRID_SOMAXCONN 25
 
-
+#define INET6  /* IPv6 support */
 
 /*
  * ----------------- archaic and/or broken secion -------------------- 
