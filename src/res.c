@@ -528,7 +528,7 @@ int arpa_to_ip(char *arpastring, unsigned int *saddr)
    return 1;
 }
 
-#define DNS_ANS_DEBUG
+#undef DNS_ANS_DEBUG
 
 #define MAX_ACCEPTABLE_ANS 10
 
