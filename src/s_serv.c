@@ -3493,7 +3493,7 @@ int m_kline(aClient *cptr, aClient *sptr, int parc, char *parv[])
     ircsprintf(buffer, "%s (%s)", reason, current_date);
 
     ban->flags |= UBAN_LOCAL;
-    ban->reason = (char *) MyMalloc(strlen(buffer + 1));
+    ban->reason = (char *) MyMalloc(strlen(buffer) + 1);
     strcpy(ban->reason, buffer);
     
     if (temporary_kline_time) 
