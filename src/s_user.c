@@ -3333,7 +3333,7 @@ int check_for_flud(aClient *fluder, aClient *cptr, aChannel *chptr, int type)
 	 */
 	if (cptr)
 	    sendto_one(cptr,
-		       ":%s NOTICE %s :*** Notice -- Server flood protection "
+		       ":%s NOTICE %s :*** Notice -- Server flodd protection "
 		       "activated for %s", me.name, cptr->name, cptr->name);
 	else
 	    sendto_channel_butserv(chptr, &me,
