@@ -402,6 +402,8 @@ void exit_one_client_in_split(aClient *cptr, aClient *dead, char *reason)
    while ((lp = cptr->user->silence))
       del_silence(cptr, lp->value.cp);
 
+   remove_dcc_references(cptr);
+
    del_from_client_hash_table(cptr->name, cptr); 
 
    hash_check_watch(cptr, RPL_LOGOFF);
