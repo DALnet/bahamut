@@ -1305,12 +1305,14 @@ int m_mode(aClient *cptr, aClient *sptr, int parc, char *parv[])
     
     if (!check_channelname(sptr, (unsigned char *) parv[1]))
         return 0;
-    
-    if (is_chan_op(sptr, chptr) || (IsServer(sptr) && chptr->channelts!=0))
-        chanop=1;
-    else if (IsULine(sptr) || (IsSAdmin(sptr) && !MyClient(sptr)))
-        chanop=2; /* extra speshul access */
-        
+
+    if (MyClient(sptr))
+    {
+        if (is_chan_op(sptr, chptr))
+            chanop = 1;
+    }
+    else
+        chanop = 2;
         
     if (parc < 3)
     {
@@ -1465,7 +1467,7 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
             break;
 
         case 'O':
-            if (!IsULine(sptr) && (level<1 || !IsOper(sptr)))
+            if (level<1 || (MyClient(sptr) && !IsOper(sptr)))
             {
                 errors |= SM_ERR_NOTOPER;
                 break;
@@ -1729,7 +1731,7 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
 
         case 'j':
 #ifdef JOINRATE_SERVER_ONLY
-            if (!IsServer(sptr) && !IsULine(sptr)) 
+            if (MyClient(sptr)) 
             {
                 sendto_one(sptr, err_str(ERR_ONLYSERVERSCANCHANGE),
                            me.name, cptr->name, chptr->chname);
@@ -1764,7 +1766,7 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
             else 
             {
                 char *tmpa, *tmperr;
-                int j_num, j_time, t_num;
+                int j_num, j_time, tval;
 
                 if(parv[args] == NULL) 
                 {
@@ -1808,24 +1810,35 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
                     break;
                 }
 
+                /* range limit for local non-samodes */
+                if (MyClient(sptr) && level < 2)
+                {
+                    /* static limits: time <= 60, 4 <= num <= 60 */
+                    if (j_time > 60)
+                        j_time = 60;
+                    if (j_num > 60)
+                        j_num = 60;
+                    if (j_num < 4)
+                        j_num = 4;
+
+                    /* adjust number to time using min rate 1/8 */
+                    tval = (j_time-1)/8+1;
+                    if (j_num < tval)
+                        j_num = tval;
+
+                    /* adjust time to number using max rate 2/1 */
+                    tval = j_num/2;
+                    if (j_time < tval)
+                        j_time = tval;
+                }
+
                 if(j_num == 0 || j_time == 0)
                 {
                     j_num = j_time = 0;
                     ircsprintf(tmp, "0");
                 }
                 else
-                {
-                    if (MyClient(sptr) && level < 2)
-                    {
-                        /* range limit for local non-samodes */
-                        if (j_time > 60)
-                            j_time = 60;
-                        t_num = (j_time-1)/8+1;
-                        if (j_num < t_num)
-                            j_num = t_num;
-                    }
                     ircsprintf(tmp, "%d:%d", j_num, j_time);
-                }
 
                 /* if we're going to overflow our mode buffer,
                  * drop the change instead */
@@ -2013,7 +2026,7 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
             if (MyClient(sptr) && (seenalready & MODE_LISTED))
                 break;
             seenalready |= MODE_LISTED;
-            if (!IsServer(sptr) && !IsULine(sptr))
+            if (MyClient(sptr))
             {
                 sendto_one(sptr, err_str(ERR_ONLYSERVERSCANCHANGE),
                            me.name, cptr->name, chptr->chname);
@@ -3148,51 +3161,52 @@ int m_topic(aClient *cptr, aClient *sptr, int parc, char *parv[])
         }
         return 0;
     }
-    
-    if(!member && !IsServer(sptr) && !IsULine(sptr)) 
-    {
-        sendto_one(sptr, err_str(ERR_NOTONCHANNEL), me.name, parv[0], name);
-        return 0;
-    }
-    
-    if (parc > 3 && (!MyConnect(sptr) || IsULine(sptr) || IsServer(sptr)))
-    {
-        topic = (parc > 4 ? parv[4] : "");
-        tnick = parv[2];
-        ts = atoi(parv[3]);
-    } 
-    else 
-        topic = parv[2];
-    
-    if (((!(chptr->mode.mode & MODE_TOPICLIMIT) || is_chan_op(sptr, chptr))
-         || IsULine(sptr) || IsServer(sptr))) 
-    {
-        /* setting a topic */
-        
-        /* local topic is newer than remote topic and we have a topic
-           and we're in a synch (server setting topic) */
 
-        if(IsServer(sptr) && !IsULine(sptr) && chptr->topic_time >= ts &&
-           chptr->topic[0])
+    topic = parv[2];
+
+    if (MyClient(sptr))
+    {
+        if (!member)
+        {
+            sendto_one(sptr, err_str(ERR_NOTONCHANNEL), me.name, parv[0],name);
             return 0;
-        
-        strncpyzt(chptr->topic, topic, TOPICLEN + 1);
-        strcpy(chptr->topic_nick, tnick);
-        chptr->topic_time = ts;
-        
-        /* in this case I think it's better that we send all the info that df 
-         * sends with the topic, so I changed everything to work like that. 
-         * -wd */
-        
-        sendto_serv_butone(cptr, ":%s TOPIC %s %s %lu :%s", parv[0],
-                           chptr->chname, chptr->topic_nick, chptr->topic_time,
-                           chptr->topic);
-        sendto_channel_butserv_me(chptr, sptr, ":%s TOPIC %s :%s", parv[0],
-                                  chptr->chname, chptr->topic);
+        }
+
+        if ((chptr->mode.mode & MODE_TOPICLIMIT) && !is_chan_op(sptr, chptr))
+        {
+            sendto_one(sptr, err_str(ERR_CHANOPRIVSNEEDED), me.name, parv[0],
+                       chptr->chname);
+            return 0;
+        }
     }
     else
-        sendto_one(sptr, err_str(ERR_CHANOPRIVSNEEDED), me.name, parv[0],
-                   chptr->chname);
+    {
+        /* extended info */
+        if (parc > 3)
+        {
+            topic = (parc > 4 ? parv[4] : "");
+            tnick = parv[2];
+            ts = atoi(parv[3]);
+        }
+
+        /* ignore old topics during burst/race */
+        if (!IsULine(sptr) && chptr->topic[0] && chptr->topic_time >= ts)
+            return 0;
+    }
+
+    strncpyzt(chptr->topic, topic, TOPICLEN + 1);
+    strcpy(chptr->topic_nick, tnick);
+    chptr->topic_time = ts;
+
+    /* in this case I think it's better that we send all the info that df
+     * sends with the topic, so I changed everything to work like that.
+     * -wd */
+
+    sendto_serv_butone(cptr, ":%s TOPIC %s %s %lu :%s", parv[0],
+                       chptr->chname, chptr->topic_nick, chptr->topic_time,
+                       chptr->topic);
+    sendto_channel_butserv_me(chptr, sptr, ":%s TOPIC %s :%s", parv[0],
+                              chptr->chname, chptr->topic);
         
     return 0;
 }

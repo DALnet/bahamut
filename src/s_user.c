@@ -2731,6 +2731,10 @@ int m_oper(aClient *cptr, aClient *sptr, int parc, char *parv[])
         syslog(LOG_INFO, "OPER (%s) (%s) by (%s!%s@%s)",
                name, encr, parv[0], sptr->user->username, sptr->sockhost);
 #endif
+#ifdef MAXBUFFERS
+        /* give them server-sized socket buffers, throughput++ */
+        reset_sock_opts(sptr->fd, 1);
+#endif
 #if defined(FNAME_OPERLOG)
         {
             int logfile;
