@@ -2655,16 +2655,6 @@ int m_oper(aClient *cptr, aClient *sptr, int parc, char *parv[])
     if (StrEq(encr, aoper->passwd))
     {
 	int         old = (sptr->umode & ALL_UMODES);
-	char       *s;
-
-	s = strchr(aoper->hostmask, '@');
-	if (s == (char *) NULL)
-	{
-	    sendto_one(sptr, err_str(ERR_NOOPERHOST), me.name, parv[0]);
-	    sendto_realops("corrupt aoper->hostmask [%s]", aoper->hostmask);
-	    return 0;
-	}
-	*s++ = '\0';
         /* attach our conf */
         sptr->user->oper = aoper;
         aoper->class->links++;
@@ -2680,7 +2670,6 @@ int m_oper(aClient *cptr, aClient *sptr, int parc, char *parv[])
 #endif
 	sptr->oflag = aoper->flags;
 	Count.oper++;
-	*--s = '@';
 	add_to_list(&oper_list, sptr);
         throttle_remove(oper_ip);
 	sendto_ops("%s (%s@%s) is now operator (%c)", parv[0],

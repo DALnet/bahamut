@@ -1053,12 +1053,17 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
         case 'O':
         {
             aOper *tmp;
+            int i = 0;
             if(!opers)
                 break;
             for(tmp = opers; tmp; tmp = tmp->next)
-                sendto_one(sptr, rpl_str(RPL_STATSOLINE), me.name,
-                            sptr->name, "O", tmp->hostmask, tmp->nick,
+                while(tmp->hosts[i])
+                {
+                    sendto_one(sptr, rpl_str(RPL_STATSOLINE), me.name,
+                            sptr->name, "O", tmp->hosts[i], tmp->nick,
                             tmp->flags, tmp->class->name);
+                    i++;
+                }
             break;
         }
 

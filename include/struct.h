@@ -660,10 +660,12 @@ struct Conf_Me
     char *admin[3];     /* our three admin lines */
 };
 
+#define MAXHOSTS 32
+
 struct Conf_Oper
 {
 	/* this is an O:line */
-	char *hostmask;
+	char *hosts[MAXHOSTS+1];
 	char *passwd;
 	char *nick;
 	int   flags;

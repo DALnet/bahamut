@@ -122,7 +122,9 @@ free_allow(aAllow *ptr)
 void
 free_oper(aOper *ptr)
 {
-    MyFree(ptr->hostmask);
+    int i = 0;
+    while(ptr->hosts[i])
+        MyFree(ptr->hosts[i]);
     MyFree(ptr->passwd);
     MyFree(ptr->nick);
     MyFree(ptr);
@@ -284,6 +286,7 @@ find_oper(char *name, char *username, char *sockhost, char *hostip)
     aOper *aoper;
     char userhost[USERLEN + HOSTLEN + 3];
     char userip[USERLEN + HOSTLEN + 3];
+    int i = 0;
 
     /* sockhost OR hostip must match our host field */
 
@@ -292,8 +295,9 @@ find_oper(char *name, char *username, char *sockhost, char *hostip)
     (void) ircsprintf(userip, "%s@%s", username, sockhost);
 
     for(aoper = opers; aoper; aoper = aoper->next)
-        if(!(mycmp(name, aoper->nick) && (match(userhost, aoper->hostmask) ||
-           match(userip, aoper->hostmask))))
+        while(aoper->hosts[i])
+            if(!(mycmp(name, aoper->nick) && (match(userhost, aoper->hosts[i]) 
+                    || match(userip, aoper->hosts[i]))))
                 break;
     return aoper;
 }
@@ -612,7 +616,7 @@ confadd_oper(char *name, char *host, char *passwd, char *flags, char *class)
 
     if((x = find_oper_byname(name)))
     {
-        MyFree(x->hostmask);
+        MyFree(x->hosts[0]);
         MyFree(x->passwd);
         x->flags = 0;
         new = 0;
@@ -624,7 +628,7 @@ confadd_oper(char *name, char *host, char *passwd, char *flags, char *class)
         new = 1;
     }
     x->legal = 1;
-    DupString(x->hostmask, host);
+    DupString(x->hosts[0], host);
     DupString(x->passwd, passwd);
     for (m=(*flags) ? flags : m; *m; m++)
     {
@@ -639,15 +643,15 @@ confadd_oper(char *name, char *host, char *passwd, char *flags, char *class)
         x->class = find_class(class);
     else
         x->class = find_class("default");
-    if (!strchr(x->hostmask, '@') && *x->hostmask != '/')
+    if (!strchr(x->hosts[0], '@') && *x->hosts[0] != '/')
     {
         char       *newhost;
         int         len = 3;
-        len += strlen(x->hostmask);
+        len += strlen(x->hosts[0]);
         newhost = (char *) MyMalloc(len);
-        (void) ircsprintf(newhost, "*@%s", x->hostmask);
-        MyFree(x->hostmask);
-        x->hostmask = newhost;
+        (void) ircsprintf(newhost, "*@%s", x->hosts[0]);
+        MyFree(x->hosts[0]);
+        x->hosts[0] = newhost;
     }
     if(new)
     {
