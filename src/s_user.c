@@ -1001,7 +1001,7 @@ m_nick(aClient *cptr,
 
 {
    aConfItem  *aconf;
-   aClient    *acptr;
+   aClient    *acptr, *uplink;
    char        nick[NICKLEN + 2], *s;
    ts_val      newts = 0;
    int         sameuser = 0, fromTS = 0;
@@ -1058,8 +1058,7 @@ m_nick(aClient *cptr,
    /*
     * if do_nick_name() returns a null name OR if the server sent a
     * nick name and do_nick_name() changed it in some way (due to rules
-         * of nick creation) then reject it. If from a server and we
-reject
+    * of nick creation) then reject it. If from a server and we reject
     * it, and KILL it. -avalon 4/4/92
     */
    if (do_nick_name(nick) == 0 ||
@@ -1099,7 +1098,7 @@ reject
     * Put this 'if' here so that the nesting goes nicely on the screen
     * :) * We check against server name list before determining if the
     * nickname * is present in the nicklist (due to the way the below
-         * for loop is * constructed). -avalon
+    * for loop is * constructed). -avalon
     */
    do {
 
@@ -1116,8 +1115,7 @@ reject
     * Well. unless we have a capricious server on the net, a nick can
     * never be the same as a server name - Dianora
     * That's not the only case; maybe someone broke do_nick_name
-    * or changed it so they could use "." in nicks on their network -
-sedition
+    * or changed it so they could use "." in nicks on their network - sedition
     */
 
    if (acptr)
@@ -1186,8 +1184,7 @@ sedition
                 acptr->name, acptr->from->name, parv[1], parv[5], parv[6],
                 cptr->name);
          sendto_serv_butone(NULL,
-                ":%s KILL %s :%s (%s(NOUSER) <- %s!%s@%s)(TS:%s)",
-me.name,
+                ":%s KILL %s :%s (%s(NOUSER) <- %s!%s@%s)(TS:%s)", me.name,
                 acptr->name, me.name, acptr->from->name, parv[1], parv[5],
                 parv[6], cptr->name);
          acptr->flags |= FLAGS_KILLED;
@@ -1233,8 +1230,7 @@ me.name,
           || (newts == acptr->tsinfo))
       {
 
-         sendto_ops_lev(SKILL_LEV, "Nick collision on %s(%s <- %s)(both
-killed)",
+         sendto_ops_lev(SKILL_LEV, "Nick collision on %s(%s <- %s)(both killed)",
                     acptr->name, acptr->from->name,
                     get_client_name(cptr, FALSE));
          ircstp->is_kill++;
@@ -1293,8 +1289,7 @@ killed)",
        !sptr->user)
    {
       sendto_ops_lev(SKILL_LEV,
-                 "Nick change collision from %s to %s(%s <- %s)(both
-killed)",
+                 "Nick change collision from %s to %s(%s <- %s)(both killed)",
                  sptr->name, acptr->name, acptr->from->name,
                  get_client_name(cptr, FALSE));
       ircstp->is_kill++;
@@ -1324,14 +1319,12 @@ killed)",
       {
          if (sameuser)
             sendto_ops_lev(SKILL_LEV,
-                       "Nick change collision from %s to %s(%s <-
-%s)(older killed)",
+                       "Nick change collision from %s to %s(%s <- %s)(older killed)",
                        sptr->name, acptr->name, acptr->from->name,
                        get_client_name(cptr, FALSE));
          else
             sendto_ops_lev(SKILL_LEV,
-                       "Nick change collision from %s to %s(%s <-
-%s)(newer killed)",
+                       "Nick change collision from %s to %s(%s <- %s)(newer killed)",
                        sptr->name, acptr->name, acptr->from->name,
                        get_client_name(cptr, FALSE));
          ircstp->is_kill++;
@@ -1374,7 +1367,15 @@ killed)",
 
    if (IsServer(sptr))
    {
-      sptr = make_client(cptr, sptr);
+      uplink = find_server(parv[7], NULL);
+      if(!uplink)
+      {
+         /* if we can't find the server this nick is on, complain loudly and ignore it. - lucas */
+         sendto_realops("Remote nick %s on UNKNOWN server %s\n", nick, parv[7]);
+         return 0;
+      }
+      sptr = make_client(cptr, uplink);
+
       if ((find_uline(cptr->confs, parv[7])))
          sptr->flags|=FLAGS_ULINE;
                 
@@ -1416,7 +1417,7 @@ killed)",
          }
                                 
          return do_user(nick, cptr, sptr, parv[5], parv[6],
-                        parv[7], (int)parv[8], parv[9]);
+                        parv[7], strtoul(parv[8], NULL, 0), parv[9]);
       }
    }
    else if (sptr->name[0])
@@ -1433,11 +1434,9 @@ killed)",
          {
             sendto_realops("Q:lined nick %s from %s on %s", nick,
                           (*sptr->name != 0 && !IsServer(sptr)) ?
-sptr->name :
-                           "<unregistered>",
+			  sptr->name : "<unregistered>",
                           (sptr->user == NULL) ? ((IsServer(sptr)) ?
-parv[6] :
-                           me.name) : sptr->user->server);
+			  parv[6] : me.name) : sptr->user->server);
                                 
             if (MyConnect(sptr) && (!IsServer(cptr)) && (!IsOper(cptr))
                 && (!IsULine(sptr)))
@@ -1478,8 +1477,7 @@ parv[6] :
              if (sptr->number_of_nick_changes <= MAX_NICK_CHANGES)
              {
 #endif
-                sendto_common_channels(sptr, ":%s NICK :%s", parv[0],
-nick);
+                sendto_common_channels(sptr, ":%s NICK :%s", parv[0], nick);
                 if (sptr->user)
                 {
                    add_history(sptr, 1);
@@ -1492,8 +1490,7 @@ nick);
              else
              {
                 sendto_one(sptr,
-                           ":%s NOTICE %s :*** Notice -- Too many nick
-changes wait %d seconds before trying to change it again.",
+                           ":%s NOTICE %s :*** Notice -- Too many nick changes. Wait %d seconds before trying again.",
                            me.name, sptr->name, MAX_NICK_TIME);
                 return 0;
              }
