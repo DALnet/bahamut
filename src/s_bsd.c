@@ -102,7 +102,7 @@ static char *readbuf;
 static char readbuf[8192];
 #endif
 
-/* Silly macro to ignore certain report error statements;
+/* Silly macro to ignore certain report error statements */
 #define silent_report_error(x,y) {x;}
 
 
