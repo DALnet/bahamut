@@ -417,6 +417,43 @@ void remove_matching_bans(aChannel *chptr, aClient *cptr, aClient *from)
   return;
 }
 
+int check_joinrate(aChannel *chptr, time_t ts, int local)
+{
+    int join_num = DEFAULT_JOIN_NUM;
+    int join_time = DEFAULT_JOIN_TIME;
+
+    if(!local && (NOW - ts) > 60)
+	return 1; /* attempt to compensate for lag */
+
+    /* Has the channel set their own custom settings? */
+    if(chptr->mode.mode & MODE_JOINRATE)
+    {
+	if(chptr->mode.join_num == 0 || chptr->mode.join_time == 0)
+	    return 1; /* channel has turned this off */
+
+	join_time = chptr->mode.join_time;
+	join_num = chptr->mode.join_num;
+    }
+#ifdef NO_DEFAULT_JOINRATE
+    else
+	return 1;
+#else
+    /* Has the join_time period elapsed? */
+    if((NOW - chptr->join_start) > join_time)
+    {
+	chptr->join_start = NOW;
+	chptr->join_count = 0;
+	return 1;
+    }
+
+    /* If it's local and we've filled the join count, say no */
+    if(local && chptr->join_count >= join_num)
+	return 0;
+
+    return 1;
+#endif
+}
+
 /*
  * adds a user to a channel by adding another link to the channels
  * member chain.
@@ -556,6 +593,7 @@ int can_send(aClient *cptr, aChannel *chptr, char *msg)
 static void channel_modes(aClient *cptr, char *mbuf, char *pbuf,
 			  aChannel *chptr)
 {
+    pbuf[0] = '\0';
     *mbuf++ = '+';
     if (chptr->mode.mode & MODE_SECRET)
 	*mbuf++ = 's';
@@ -586,18 +624,35 @@ static void channel_modes(aClient *cptr, char *mbuf, char *pbuf,
     if (chptr->mode.limit) {
 	*mbuf++ = 'l';
 	if (IsMember(cptr, chptr) || IsServer(cptr) || IsULine(cptr))
-	{
-	    if (*chptr->mode.key)
-		ircsprintf(pbuf, "%d ", chptr->mode.limit);
-	    else
-		ircsprintf(pbuf, "%d", chptr->mode.limit);	    
-	}
+	    ircsprintf(pbuf, "%d", chptr->mode.limit);	    
     }
     if (*chptr->mode.key)
     {
 	*mbuf++ = 'k';
 	if (IsMember(cptr, chptr) || IsServer(cptr) || IsULine(cptr))
+	{
+	    if(pbuf[0] != '\0')
+		strcat(pbuf, " ");
 	    strcat(pbuf, chptr->mode.key);
+	}
+    }
+    if (chptr->mode.mode & MODE_JOINRATE)
+    {
+	*mbuf++ = 'j';
+
+	if (IsMember(cptr, chptr) || IsServer(cptr) || IsULine(cptr))
+	{
+	    char tmp[128];
+	    if(pbuf[0] != '\0')
+		strcat(pbuf, " ");
+
+            if(chptr->mode.join_num == 0 || chptr->mode.join_time == 0)
+	        ircsprintf(tmp, "0");
+	    else
+	        ircsprintf(tmp, "%d:%d", chptr->mode.join_num, chptr->mode.join_time);
+
+	    strcat(pbuf, tmp);
+	}
     }
     *mbuf++ = '\0';
     return;
@@ -882,7 +937,7 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
     int i=0;
     char moreparmsstr[]="MODE   ";
     char nuhbuf[NICKLEN + USERLEN + HOSTLEN + 6]; /* for bans */
-    char tmp[16]; /* temporary buffer */
+    char tmp[128]; /* temporary buffer */
     int pidx = 0; /* index into pbuf */
     char *pptr; /* temporary paramater pointer */
     char *morig = mbuf; /* beginning of mbuf */
@@ -1054,6 +1109,89 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
 		args++;
             nmodes++;
             break;
+
+	case 'j':
+            if(level<1) 
+            {
+		errors |= SM_ERR_NOPRIVS;
+		break;
+            }
+
+            /* if it's a -, just change the flag, we have no arguments */
+            if(change=='-')
+            {
+		if((prelen + (mbuf - morig) + pidx + 1) > REALMODEBUFLEN) 
+		    break;
+		*mbuf++ = 'j';
+		chptr->mode.mode &= ~MODE_JOINRATE;
+		chptr->mode.join_num = 0;
+		chptr->mode.join_time = 0;
+		chptr->join_start = 0;
+		chptr->join_count = 0;
+		nmodes++;
+		break;
+            }
+            else 
+            {
+		char *tmpa, *tmperr;
+		int j_num, j_time;
+
+		if(parv[args] == NULL) 
+		{
+		    errors|=SM_ERR_MOREPARMS;
+		    break;
+		}
+
+		tmpa = strchr(parv[args], ':');
+		if(tmpa)
+		{
+		    *tmpa = '\0';
+		    tmpa++;
+		    j_time = strtol(tmpa, &tmperr, 10);
+		    if(*tmperr != '\0' || j_time < 0)
+		    {
+			/* error, user specified something invalid, just bail. */
+			args++;
+			break;
+		    }
+		}
+		else
+		    j_time = 0;
+
+		j_num = strtol(parv[args], &tmperr, 10);
+		if(*tmperr != '\0' || j_num < 0)
+		{
+		    args++;
+		    break;
+		}
+
+		if(j_num == 0 || j_time == 0)
+		{
+		    j_num = j_time = 0;
+		    ircsprintf(tmp, "0");
+		}
+		else
+		    ircsprintf(tmp, "%d:%d", j_num, j_time);
+
+		/* if we're going to overflow our mode buffer,
+		 * drop the change instead */
+		if((prelen + (mbuf - morig) + pidx + strlen(tmp)) > REALMODEBUFLEN) 
+		{
+		    args++;
+		    break;
+		}
+
+		chptr->mode.mode |= MODE_JOINRATE;
+		chptr->mode.join_num = j_num;
+		chptr->mode.join_time = j_time;
+		chptr->join_start = 0;
+		chptr->join_count = 0;
+		*mbuf++ = 'j';
+		ADD_PARA(tmp);
+		args++;
+		nmodes++;
+		break;
+            }
 
 	case 'l':
             if(level<1) 
@@ -1314,6 +1452,8 @@ static int can_join(aClient *sptr, aChannel *chptr, char *key)
 	return (ERR_BADCHANNELKEY);
     if (chptr->mode.limit && chptr->users >= chptr->mode.limit) 
 	return (ERR_CHANNELISFULL);
+    if (check_joinrate(chptr, NOW, 1) == 0)
+	return (ERR_CHANNELISFULL);
     if (is_banned(sptr, chptr))
 	return (ERR_BANNEDFROMCHAN);
     return 0;
@@ -1352,6 +1492,8 @@ static int can_join_whynot(aClient *sptr, aChannel *chptr, char *key, char *reas
         reasonbuf[rbufpos++] = 'k';
     if (chptr->mode.limit && chptr->users >= chptr->mode.limit) 
         reasonbuf[rbufpos++] = 'l';
+    if (check_joinrate(chptr, NOW, 1) == 0)
+        reasonbuf[rbufpos++] = 'j';
     if (is_banned(sptr, chptr))
         reasonbuf[rbufpos++] = 'b';
 
@@ -1813,6 +1955,7 @@ int m_join(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	    add_user_to_channel(chptr, sptr, flags);
 	else
 	    add_user_to_channel(chptr, sptr, 0);
+	chptr->join_count++;
 	/* Set timestamp if appropriate, and propagate */
 	if (MyClient(sptr) && flags == CHFL_CHANOP) 
 	{
@@ -3120,6 +3263,7 @@ int m_sjoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	if (!IsMember(sptr, chptr)) 
 	{
 	    add_user_to_channel(chptr, sptr, 0);
+	    chptr->join_count++;
 	    sendto_channel_butserv(chptr, sptr, ":%s JOIN :%s", parv[0],
 				   parv[2]);
 	}
@@ -3164,6 +3308,31 @@ int m_sjoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		args++;
 		if (parc < 5 + args)
 		    return 0;
+		break;
+
+	    case 'j':
+		{
+		    char *tmpa, *tmpb;
+
+		    mode.mode |= MODE_JOINRATE;
+		    tmpa = parv[4 + args];
+
+		    tmpb = strchr(tmpa, ':');
+		    if(tmpb)
+		    {
+			*tmpb = '\0';
+			tmpb++;
+			mode.join_time = atoi(tmpb);
+		    }
+		    else
+			mode.join_time = 0;
+
+		    mode.join_num = atoi(tmpa);
+
+		    args++;
+		    if (parc < 5 + args)
+			return 0;
+		}
 		break;
 
 	    case 'l':
@@ -3296,10 +3465,44 @@ int m_sjoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
     }
 
+    if ((oldmode->mode & MODE_JOINRATE) && !(mode.mode & MODE_JOINRATE))
+    {
+	INSERTSIGN(-1,'-')
+	*mbuf++ = 'j';
+    }
+
+    if ((mode.mode & MODE_JOINRATE) && (
+        !(oldmode->mode & MODE_JOINRATE) ||
+        (oldmode->join_num != mode.join_num || oldmode->join_time != mode.join_time)))
+    {
+	char tmp[128];
+
+	INSERTSIGN(1,'+')
+	*mbuf++ = 'j';
+        
+	if(mode.join_num == 0 || mode.join_time == 0)
+	    ircsprintf(tmp, "0");
+	else
+	    ircsprintf(tmp, "%d:%d", mode.join_num, mode.join_time);
+	ADD_PARA(tmp)
+	pargs++;
+    }
+
     if (oldmode->limit && !mode.limit)
     {
 	INSERTSIGN(-1,'-')
 	*mbuf++ = 'l';
+    }
+
+    if (mode.limit && oldmode->limit != mode.limit)
+    {
+	INSERTSIGN(1,'+')
+	*mbuf++ = 'l';
+	sprintf(numeric, "%-15d", mode.limit);
+	if ((s = strchr(numeric, ' ')))
+	*s = '\0';
+	ADD_PARA(numeric);
+	pargs++;
     }
 
     if (oldmode->key[0] && !mode.key[0])
@@ -3310,23 +3513,12 @@ int m_sjoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	pargs++;
     }
 
-    if (mode.limit && oldmode->limit != mode.limit)
-    {
-	INSERTSIGN(1,'+')
-	    *mbuf++ = 'l';
-	sprintf(numeric, "%-15d", mode.limit);
-	if ((s = strchr(numeric, ' ')))
-	    *s = '\0';
-	ADD_PARA(numeric);
-	pargs++;
-    }
-
     if (mode.key[0] && strcmp(oldmode->key, mode.key))
     {
 	INSERTSIGN(1,'+')
-	    *mbuf++ = 'k';
+	*mbuf++ = 'k';
 	ADD_PARA(mode.key)
-	    pargs++;
+	pargs++;
     }
 	
     chptr->mode = mode;

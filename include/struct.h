@@ -870,6 +870,8 @@ struct SMode
     unsigned int mode;
     int         limit;
     char        key[KEYLEN + 1];
+    int		join_num;
+    int		join_time;
 };
 
 /* Message table structure */
@@ -985,6 +987,8 @@ struct Channel
     struct fludbot *fluders;
 #endif
     char        chname[CHANNELLEN+1];
+    int		join_start;
+    int		join_count;
 };
 
 #define	TS_CURRENT	5	/* current TS protocol version */
@@ -1026,6 +1030,7 @@ struct Channel
 #define MODE_OPERONLY   0x08000
 #define MODE_MODREG     0x10000
 #define MODE_LISTED	0x20000
+#define MODE_JOINRATE	0x40000
 
 /* mode flags which take another parameter (With PARAmeterS) */
 

@@ -1063,7 +1063,18 @@
 #define MSG_TARGET_MINTOMAXTIME 300
 #define MSG_TARGET_TIME 45
 
-
+/*
+ * Channel joining rate-throttling support
+ *
+ * DEFAULT_JOIN_NUM:  number of joins to allow, network-wide, in a period of
+ *                    DEFAULT_JOIN_TIME seconds.
+ * DEFAULT_JOIN_TIME: time to collect joins.
+ * NO_DEFAULT_JOINRATE: No default, just let people use +j
+ */
+/* defaults are very forgiving. */
+#define DEFAULT_JOIN_NUM  8
+#define DEFAULT_JOIN_TIME 4
+#undef NO_DEFAULT_JOINRATE
 
 /*
  * ----------------- archaic and/or broken secion -------------------- 
