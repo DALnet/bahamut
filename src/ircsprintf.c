@@ -31,6 +31,10 @@ int irc_printf(char *str, size_t size, const char *pattern, va_list vl) {
 						u=1;
 						format++;
 					}
+					else if (*(format+1) == 'd') {
+						u=0;
+						format++;
+					}
 					else
 					  u=0;
 					/* fallthrough */
