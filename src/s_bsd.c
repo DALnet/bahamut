@@ -825,7 +825,7 @@ int completed_connection(aClient * cptr)
     {
         sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURST UNCONNECT DKEY"
                          " ZIP NICKIP TSMODE");
-        cptr->capabilities |= CAPAB_DODKEY;
+        SetWantDKEY(cptr);
     }
 #else
     sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURST UNCONNECT ZIP NICKIP TSMODE");

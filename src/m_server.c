@@ -347,7 +347,7 @@ m_server_estab(aClient *cptr)
     if((aconn->flags & CONN_ZIP))
         SetZipCapable(cptr);
     if((aconn->flags & CONN_DKEY))
-        SetDKEY(cptr);
+        SetWantDKEY(cptr);
     if (IsUnknown(cptr))
     {
         if (aconn->cpasswd[0])

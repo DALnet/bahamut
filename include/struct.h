@@ -240,6 +240,7 @@ typedef struct MotdItem aMotd;
 #define SetDKEY(x)	((x)->capabilities |= CAPAB_DKEY)
 #define CanDoDKEY(x)    ((x)->capabilities & CAPAB_DKEY)
 /* N: line, flag E */
+#define SetWantDKEY(x) ((x)->capabilities |= CAPAB_DODKEY)
 #define WantDKEY(x)	((x)->capabilities & CAPAB_DODKEY) 
 
 #define SetZipCapable(x) ((x)->capabilities |= CAPAB_ZIP)
