@@ -143,8 +143,8 @@ send_message(aClient *to, char *msg, int len)
       return 0;
    if (DBufLength(&to->sendQ) > get_sendq(to)) {
       if (IsServer(to))
-		  sendto_ops_butone(to, "Max SendQ limit exceeded for %s: %d > %d",
-								  get_client_name(to, (IsServer(to) ? HIDEME : FALSE)),
+		  sendto_ops("Max SendQ limit exceeded for %s: %d > %d",
+								  get_client_name(to, HIDEME),
 								  DBufLength(&to->sendQ), get_sendq(to));
       if (IsClient(to))
 		  to->flags |= FLAGS_SENDQEX;
