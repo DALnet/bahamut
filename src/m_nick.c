@@ -145,7 +145,7 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
     if (do_nick_name(nick) == 0 || (IsServer(cptr) && strcmp(nick, parv[1])))
     {
 	sendto_one(sptr, err_str(ERR_ERRONEUSNICKNAME),
-		   me.name, parv[0], parv[1], "Erroneous Nickname", "N/A");
+		   me.name, parv[0], parv[1], "Erroneous Nickname");
 	
 	if (IsServer(cptr))
 	{
@@ -474,8 +474,7 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		    sendto_one(sptr, err_str(ERR_ERRONEUSNICKNAME), me.name,
 			       BadPtr(parv[0]) ? "*" : parv[0], nick,
 			       BadPtr(ban->reason) ? "Erroneous Nickname" :
-			       ban->reason,
-			       BadPtr(ban->mask) ? "N/A" : ban->mask);
+			       ban->reason);
 		    sendto_realops_lev(REJ_LEV,
 				       "Forbidding restricted nick %s from %s.",
 				       nick, get_client_name(cptr, FALSE));
@@ -577,8 +576,7 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		    sendto_one(sptr, err_str(ERR_ERRONEUSNICKNAME), me.name,
 			       BadPtr(parv[0]) ? "*" : parv[0], nick,
 			       BadPtr(ban->reason) ? "Erroneous Nickname" :
-			       ban->reason,
-			       BadPtr(ban->mask) ? "N/A" : ban->mask);
+			       ban->reason);
 		    sendto_realops_lev(REJ_LEV,
 				       "Forbidding restricted nick %s from "
 				       "<unregistered>%s.", nick,
