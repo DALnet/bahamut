@@ -1927,8 +1927,8 @@ int read_message(time_t delay,
 	       char *errtxt = "Server %s closed the connection";
 
 	       ircsprintf(fbuf, "from %s: %s", me.name, errtxt);
-	       send_globops(fbuf, get_client_name(cptr, HIDEME));
-	       ircsprintf(fbuf, ":%s GLOBOPS :%s", me.name, errtxt);
+	       sendto_gnotice(fbuf, get_client_name(cptr, HIDEME));
+	       ircsprintf(fbuf, ":%s GNOTICE :%s", me.name, errtxt);
 	       sendto_serv_butone(cptr, fbuf,
 				  get_client_name(cptr, HIDEME));
 	    } else {
@@ -1936,9 +1936,9 @@ int read_message(time_t delay,
 	       int errtmp = errno;
 
 	       ircsprintf(fbuf, "from %s: %s", me.name, errtxt);
-	       send_globops(fbuf, get_client_name(cptr, HIDEME),
+	       sendto_gnotice(fbuf, get_client_name(cptr, HIDEME),
 			    strerror(errtmp));
-	       ircsprintf(fbuf, ":%s GLOBOPS :%s", me.name, errtxt);
+	       ircsprintf(fbuf, ":%s GNOTICE :%s", me.name, errtxt);
 	       sendto_serv_butone(cptr, fbuf,
 				  get_client_name(cptr, HIDEME),
 				  strerror(errtmp));
@@ -2279,17 +2279,17 @@ int read_message(time_t delay, fdlist * listp)
 	    char *errtxt = "Server %s closed the connection";
 
 	    ircsprintf(fbuf, "from %s: %s", me.name, errtxt);
-	    send_globops(fbuf, get_client_name(cptr, HIDEME));
-	    ircsprintf(fbuf, ":%s GLOBOPS :%s", me.name, errtxt);
+	    sendto_gnotice(fbuf, get_client_name(cptr, HIDEME));
+	    ircsprintf(fbuf, ":%s GNOTICE :%s", me.name, errtxt);
 	    sendto_serv_butone(cptr, fbuf, get_client_name(cptr, HIDEME));
 	 } else {
 	    char *errtxt = "Read error from %s, closing link (%s)";
 	    int errtmp = errno;
 
 	    ircsprintf(fbuf, "from %s: %s", me.name, errtxt);
-	    send_globops(fbuf, get_client_name(cptr, HIDEME),
+	    sendto_gnotice(fbuf, get_client_name(cptr, HIDEME),
 			 strerror(errtmp));
-	    ircsprintf(fbuf, ":%s GLOBOPS :%s", me.name, errtxt);
+	    ircsprintf(fbuf, ":%s GNOTICE :%s", me.name, errtxt);
 	    sendto_serv_butone(cptr, fbuf,
 			       get_client_name(cptr, HIDEME),
 			       strerror(errtmp));
