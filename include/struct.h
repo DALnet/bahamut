@@ -242,8 +242,8 @@ typedef struct MotdItem aMotd;
 #define SetZipCapable(x) ((x)->capabilities |= CAPAB_ZIP)
 #define IsZipCapable(x)	((x)->capabilities & CAPAB_ZIP)
 #define DoZipThis(x) 	((x)->capabilities & CAPAB_DOZIP) /* this is set in N: line, flag Z */
-#define SetNICKIP(x)    ((x)->capabilities |= CAPAB_ZIP)
-#define IsNICKIP(x)     ((x)->capabilities & CAPAB_ZIP)
+#define SetNICKIP(x)    ((x)->capabilities |= CAPAB_NICKIP)
+#define IsNICKIP(x)     ((x)->capabilities & CAPAB_NICKIP)
 
 /* flag macros. */
 #define IsULine(x) ((x)->flags & FLAGS_ULINE)
