@@ -1,4 +1,3 @@
-#define OLD_CHECKPINGS
 /************************************************************************
  *   IRC - Internet Relay Chat, src/ircd.c
  *   Copyright (C) 1990 Jarkko Oikarinen and
@@ -341,7 +340,18 @@ con_class = Class (cltmp);
    Debug((DEBUG_NOTICE, "Next connection check : %s", myctime(next)));
    return (next);
 }
+
+#define OLD_CHECKPINGS
 #ifdef OLD_CHECKPINGS
+
+/* dianora's code in the new checkpings is slightly wasteful.
+ * however, upon inspection (thanks seddy), when we close a connection,
+ * the ordering of local[i] is NOT reordered; simply local[highest_fd] becomes
+ * local[i], so we can just i--;  - lucas
+ */
+
+#define EXPERIMENTAL_CHECKPINGS
+
 static      time_t
 check_pings(time_t currenttime)
 {
@@ -362,7 +372,12 @@ time_t      oldest = 0, timeout;
       if (cptr->flags & FLAGS_DEADSOCKET) {
 	 (void) exit_client(cptr, cptr, &me, (cptr->flags & FLAGS_SENDQEX) ?
 			    "SendQ exceeded" : "Dead socket");
+
+#ifdef EXPERIMENTAL_CHECKPINGS
+	 i--;
+#else
 	 i = 0;
+#endif
 	 continue;
       }
 
@@ -442,9 +457,11 @@ char       *reason;
 	    (void) exit_client(cptr, cptr, &me, "you have been Z-lined");
 #endif
 	 }
-	 i = 0;			/*
-				 * start over from ground zero :-( 
-				 */
+#ifdef EXPERIMENTAL_CHECKPINGS
+	 i--;			/* subtract out this fd so we check it again.. */			
+#else
+	 i = 0;
+#endif
 	 continue;
       }
       if (!IsRegistered(cptr))
@@ -507,11 +524,15 @@ char       *reason;
 	  */
 
 	 (void) exit_client(cptr, cptr, &me, "Ping timeout");
+#ifdef EXPERIMENTAL_CHECKPINGS
+	 i--;			/* subtract out this fd so we check it again.. */			
+#else
 	 /*
 	  * need to start loop over because the close can affect the
 	  * ordering of the local[] array.- avalon
 	  */
 	 i = 0;
+#endif
 	 continue;
       }
       else if ((cptr->flags & FLAGS_PINGSENT) == 0) {
@@ -526,6 +547,7 @@ char       *reason;
 	 cptr->lasttime = currenttime - ping;
 	 sendto_one(cptr, "PING :%s", me.name);
       }
+
     ping_timeout:
       timeout = cptr->lasttime + ping;
       while (timeout <= currenttime)
@@ -541,6 +563,7 @@ char       *reason;
 	    (void) exit_client(cptr, cptr, &me, "Connection Timed Out");
 	 }
    }
+
    rehashed = 0;
    zline_in_progress = 0;
 
