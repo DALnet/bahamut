@@ -816,11 +816,14 @@ static int completed_connection(aClient * cptr)
       sendto_one(cptr, "PASS %s :TS", aconf->passwd);
 
    /* pass on our capabilities to the server we /connect'd */
-
+#ifdef HAVE_ENCRYPTION_ON
    if(!(nconf->port & CAPAB_DODKEY))
       sendto_one(cptr, "CAPAB TS3 NOQUIT SSJOIN BURST UNCONNECT ZIP");
    else
       sendto_one(cptr, "CAPAB TS3 NOQUIT SSJOIN BURST UNCONNECT DKEY ZIP");
+#else
+   sendto_one(cptr, "CAPAB TS3 NOQUIT SSJOIN BURST UNCONNECT ZIP");
+#endif
 
    aconf = nconf;
    sendto_one(cptr, "SERVER %s 1 :%s",

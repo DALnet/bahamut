@@ -35,8 +35,11 @@ extern int currently_processing_netsplit;
 
 static char sendbuf[2048];
 static char remotebuf[2048];
-static char rc4buf[768];
 static int  send_message(aClient *, char *, int);
+
+#ifdef HAVE_ENCRYPTION_ON
+static char rc4buf[768];
+#endif
 
 static int  sentalong[MAXCONNECTIONS];
 static int  sent_serial;
@@ -178,12 +181,14 @@ static int send_message(aClient *to, char *msg, int len) {
          return 0;
    }
 
+#ifdef HAVE_ENCRYPTION_ON
    if(IsRC4OUT(to))
    {
       /* don't destroy the data in 'msg' */
       rc4_process_stream_to_buf(to->serv->rc4_out, msg, rc4buf, len);
       msg = rc4buf;
    }
+#endif
 
    if (dbuf_put(&to->sendQ, msg, len) < 0)
      return dead_link(to, "Buffer allocation error for %s, closing link");
@@ -270,9 +275,10 @@ int send_queued(aClient *to) {
             return dead_link(to, "Zip output error for %s");
          }
 
+#ifdef HAVE_ENCRYPTION_ON
          if(IsRC4OUT(to))
             rc4_process_stream(to->serv->rc4_out, msg, len);
-
+#endif
          /* silently stick this on the sendq... */
          if (!dbuf_put(&to->sendQ, msg, len))
             return dead_link(to, "Buffer allocation error for %s");
@@ -307,9 +313,10 @@ int send_queued(aClient *to) {
             return dead_link(to, "Zip output error for %s");
          }
 
+#ifdef HAVE_ENCRYPTION_ON
          if(IsRC4OUT(to))
             rc4_process_stream(to->serv->rc4_out, msg, len);
-
+#endif
          /* silently stick this on the sendq... */
          if (!dbuf_put(&to->sendQ, msg, len))
             return dead_link(to, "Buffer allocation error for %s");        

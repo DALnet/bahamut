@@ -141,3 +141,7 @@
 
 /* Define if using HPUX.  */
 #undef OS_HPUX
+
+/* Define if using rc4.c and dh.c */
+#undef HAVE_ENCRYPTION_ON
+

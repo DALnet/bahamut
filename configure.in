@@ -6,6 +6,9 @@ VERSION=4.2
 AC_SUBST(PACKAGE)
 AC_SUBST(VERSION)
 
+AC_ARG_ENABLE(encryption, \
+[    encryption     rc4 link encryption, requires gnu MP library (on by default)],,enable_encryption=yes)
+
 dnl Checks for programs.
 AC_PROG_CC
 AC_ISC_POSIX
@@ -252,6 +255,16 @@ AC_MSG_RESULT(can't tell))
 
 AC_SUBST(DFDSS)
 
+if test $enable_encryption = no; then
+echo encryption disabled, skipping GNU MP checks
+ENCRYPT_SRC=""
+AC_SUBST(ENCRYPT_SRC)
+else
+ENCRYPT_SRC="rc4.c dh.c"
+AC_SUBST(ENCRYPT_SRC)
+AC_DEFINE(HAVE_ENCRYPTION_ON)
+fi
+
 dnl don't add more of these unless it's critical.  Trying to get rid of them.
 AC_MSG_CHECKING(operating system)
 case "$target" in
@@ -271,3 +284,4 @@ echo configuring zlib...
 cd zlib
 ./configure
 cd ..
+

@@ -969,11 +969,18 @@ m_server_estab(aClient *cptr)
    {
       if (bconf->passwd[0])
 	 sendto_one(cptr, "PASS %s :TS", bconf->passwd);
+
       /* Pass my info to the new server */
+
+#ifdef HAVE_ENCRYPTION_ON
       if(!WantDKEY(cptr))
          sendto_one(cptr, "CAPAB TS3 NOQUIT SSJOIN BURST UNCONNECT ZIP");
       else
          sendto_one(cptr, "CAPAB TS3 NOQUIT SSJOIN BURST UNCONNECT DKEY ZIP");
+#else
+      sendto_one(cptr, "CAPAB TS3 NOQUIT SSJOIN BURST UNCONNECT ZIP");
+#endif
+
       sendto_one(cptr, "SERVER %s 1 :%s",
 		 my_name_for_link(me.name, aconf),
 		 (me.info[0]) ? (me.info) : "IRCers United");
@@ -1036,6 +1043,7 @@ m_server_estab(aClient *cptr)
    strcpy(cptr->hostip, "127.0.0.1");
    strcpy(cptr->sockhost, "localhost");
 
+#ifdef HAVE_ENCRYPTION_ON
    if(!CanDoDKEY(cptr) || !WantDKEY(cptr))
       return do_server_estab(cptr);
    else
@@ -1043,6 +1051,10 @@ m_server_estab(aClient *cptr)
       SetNegoServer(cptr); /* VERY IMPORTANT THAT THIS IS HERE */
       sendto_one(cptr, "DKEY START");
    }
+#else
+   return do_server_estab(cptr);
+#endif
+
    return 0;
 }
 /* 
@@ -5486,7 +5498,7 @@ int m_dkey(aClient *cptr, aClient *sptr, int parc, char *parv[])
          return 0;
       return exit_client(sptr, sptr, sptr, "Not negotiating now");
    }
-
+#ifdef HAVE_ENCRYPTION_ON
    if(mycmp(parv[1], "START") == 0)
    {
       char keybuf[1024];
@@ -5578,6 +5590,7 @@ int m_dkey(aClient *cptr, aClient *sptr, int parc, char *parv[])
       ClearNegoServer(sptr);
       return do_server_estab(sptr);
    }
+#endif
 
    return 0;
 }

@@ -635,10 +635,12 @@ struct Server {
    char        byhost[HOSTLEN + 1];
    aConfItem  *nline;		/* N-line pointer for this server */
    int         dkey_flags; 	/* dkey flags */
+#ifdef HAVE_ENCRYPTION_ON
    void       *sessioninfo_in;  /* pointer to opaque sessioninfo structure */
    void       *sessioninfo_out; /* pointer to opaque sessioninfo structure */
    void       *rc4_in;        /* etc */
    void       *rc4_out;       /* etc */
+#endif
    void       *zip_out;
    void       *zip_in;
 };

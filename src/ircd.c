@@ -803,8 +803,10 @@ main(int argc, char *argv[])
    if (argc > 0)
 	  return bad_command();	/* This should exit out  */
 
+#ifdef HAVE_ENCRYPTION_ON
    if(dh_init() == -1)
       return 0;
+#endif
 	
    motd = (aMotd *) NULL;
    helpfile = (aMotd *) NULL;
