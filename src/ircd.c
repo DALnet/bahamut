@@ -1072,7 +1072,7 @@ time_t      lasttimeofday;
 
 	    if (noisy_htm) {
 	       (void) sprintf(to_send,
-		     "Entering high-traffic mode - (%dk/s > %dk/s)",
+		     "Entering happy-traffic mode - (%dk/s > %dk/s)",
 			      currlife, LRV);
 	       sendto_ops(to_send);
 	    }
@@ -1086,7 +1086,7 @@ time_t      lasttimeofday;
 				 */
 	    if (noisy_htm) {
 	       (void) sprintf(to_send,
-		   "Still high-traffic mode %d%s (%d delay): %dk/s",
+		   "Still in happy-traffic mode %d%s (%d delay): %dk/s",
 			  lifesux, (lifesux & 0x04) ? " (TURBO)" : "",
 			      (int) LCF, currlife);
 	       sendto_ops(to_send);
@@ -1109,7 +1109,7 @@ time_t      lasttimeofday;
 	 if (lifesux) {
 	    lifesux = 0;
 	    if (noisy_htm)
-	       sendto_ops("Resuming standard operation . . . .");
+	       sendto_ops("Resuming non-happy operation . . . .");
 	 }
       }
       lastrecvK = me.receiveK;

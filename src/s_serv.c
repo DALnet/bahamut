@@ -2786,9 +2786,9 @@ m_htm(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	    else
 	       LRV = new_value;
 
-	    sendto_one(sptr, ":%s NOTICE %s :NEW Max rate = %dk/s. Current = %.1fk/s",
+	    sendto_one(sptr, ":%s NOTICE %s :NEW Max rate = %dk/s. Current = %dk/s",
 		       me.name, parv[0], LRV, currlife);
-	    sendto_realops("%s!%s@%s set new HTM rate to %dk/s (%.1fk/s current)",
+	    sendto_realops("%s!%s@%s set new HTM rate to %dk/s (%dk/s current)",
 			parv[0], sptr->user->username, sptr->sockhost,
 			   LRV, currlife);
 	 }
@@ -2800,7 +2800,7 @@ m_htm(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	 {
 	    lifesux = 1;
 	    sendto_one(sptr, ":%s NOTICE %s :HTM is now ON.", me.name, parv[0]);
-	    sendto_ops("Entering high-traffic mode: Forced by %s!%s@%s",
+	    sendto_ops("Entering happy-traffic mode: Forced by %s!%s@%s",
 		       parv[0], sptr->user->username, sptr->sockhost);
 	    LCF = 30;		/* 30s */
 	 }
@@ -2809,7 +2809,7 @@ m_htm(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	    lifesux = 0;
 	    LCF = LOADCFREQ;
 	    sendto_one(sptr, ":%s NOTICE %s :HTM is now OFF.", me.name, parv[0]);
-	    sendto_ops("Resuming standard operation: Forced by %s!%s@%s",
+	    sendto_ops("Resuming non-happy operation: Forced by %s!%s@%s",
 		       parv[0], sptr->user->username, sptr->sockhost);
 	 }
 	 else if (!strcasecmp(command, "QUIET")) 
