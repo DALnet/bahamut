@@ -827,7 +827,7 @@ int check_joinrate(aChannel *chptr, time_t ts, int local, aClient *cptr)
         sendto_realops_lev(DEBUG_LEV, "Join rate warning on %s"
                                       " for %s!%s@%s (%d/%d in %d) (No action taken)",
                            chptr->chname, cptr->name, cptr->user->username,
-                           cptr->user->host, chptr->default_join_count, join_num,
+                           cptr->hostip, chptr->default_join_count, join_num,
                            NOW - chptr->default_join_start);
     /* update the count here for attempts, in case a lower throttle blocks */
     chptr->default_join_count++;
@@ -855,7 +855,7 @@ int check_joinrate(aChannel *chptr, time_t ts, int local, aClient *cptr)
         sendto_realops_lev(DEBUG_LEV, "Join rate throttling on %s"
                                       " for %s!%s@%s (%d/%d in %d)",
                            chptr->chname, cptr->name, cptr->user->username, 
-                           cptr->user->host, chptr->join_count, join_num, 
+                           cptr->hostip, chptr->join_count, join_num, 
                            NOW - chptr->join_start);
         return 0;
     }
@@ -3521,7 +3521,7 @@ int m_list(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
     chantimemax = topictimemax = currenttime + 86400;
     chantimemin = topictimemin = 0;
-    usermin = 2;  /* By default, set the minimum to 2 users */
+    usermin = 0;
     usermax = -1; /* No maximum */
 
     for (name = strtoken(&p, parv[1], ","); name && !error;

@@ -2440,7 +2440,7 @@ m_away(aClient *cptr, aClient *sptr, int parc, char *parv[])
      * readded because of anti-flud stuffs -epi
      */
     
-    sendto_serv_butone_services(cptr, ":%s AWAY :%s ", parv[0], parv[1]);
+    sendto_serv_butone_services(cptr, ":%s AWAY :%s", parv[0], parv[1]);
 
     if (away)
         MyFree(away);
