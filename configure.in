@@ -31,7 +31,7 @@ AC_ARG_ENABLE(openssl,
 [  --enable-openssl[=DIR]       Enable OpenSSL support (DIR optional).
   --disable-openssl            Disable OpenSSL support. ],
 [ check_openssl=$enableval ],
-[ check_openssl="yes" ])
+[ check_openssl="auto" ])
 
 AC_ARG_WITH(socketengine,
 [  --with-socketengine=TYPE       Set the socketengine type.  Choices are:
@@ -334,10 +334,11 @@ echo configuring zlib...
  cd ..
 )
 
-AC_MSG_NOTICE()
-AC_MSG_NOTICE(      ***** Bahamut Configuration Values *****)
-AC_MSG_NOTICE(      Socket Engine Type:             $engine )
-AC_MSG_NOTICE(      Encryption:                     $encryption)
-AC_MSG_NOTICE(      Loadable Modules:               $set_hmodules)
-AC_MSG_NOTICE(      More values to come!                    )
-AC_MSG_NOTICE()
+echo ""
+echo "      ******* Bahamut Configuration Settings *******"
+echo "      System Build Type:              $target"
+echo "      Socket Engine Type:             $engine"
+echo "      Encryption:                     $encryption"
+echo "      Loadable Modules:               $set_hmodules"
+echo "      More values to come!"
+echo ""

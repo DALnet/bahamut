@@ -1308,7 +1308,7 @@ if test "${enable_openssl+set}" = set; then
   enableval="$enable_openssl"
    check_openssl=$enableval
 else
-   check_openssl="yes"
+   check_openssl="auto"
 fi;
 
 
@@ -7204,17 +7204,11 @@ echo configuring zlib...
  cd ..
 )
 
-{ echo "$as_me:$LINENO: " >&5
-echo "$as_me: " >&6;}
-{ echo "$as_me:$LINENO: ***** Bahamut Configuration Values *****" >&5
-echo "$as_me: ***** Bahamut Configuration Values *****" >&6;}
-{ echo "$as_me:$LINENO: Socket Engine Type:             $engine " >&5
-echo "$as_me: Socket Engine Type:             $engine " >&6;}
-{ echo "$as_me:$LINENO: Encryption:                     $encryption" >&5
-echo "$as_me: Encryption:                     $encryption" >&6;}
-{ echo "$as_me:$LINENO: Loadable Modules:               $set_hmodules" >&5
-echo "$as_me: Loadable Modules:               $set_hmodules" >&6;}
-{ echo "$as_me:$LINENO: More values to come!                    " >&5
-echo "$as_me: More values to come!                    " >&6;}
-{ echo "$as_me:$LINENO: " >&5
-echo "$as_me: " >&6;}
+echo ""
+echo "      ******* Bahamut Configuration Settings *******"
+echo "      System Build Type:              $target"
+echo "      Socket Engine Type:             $engine"
+echo "      Encryption:                     $encryption"
+echo "      Loadable Modules:               $set_hmodules"
+echo "      More values to come!"
+echo ""
