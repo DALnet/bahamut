@@ -160,9 +160,10 @@ static char *make_nick_user_host(char *nick, char *name, char *host) {
 /* add_banid - add an id to be banned to the channel  (belongs to cptr) */
 
 static int add_banid(aClient *cptr, aChannel *chptr, char *banid) {
-   Reg aBan   *ban;
-   Reg int     cnt = 0;
-   Reg chanMember *cm;
+   aBan   	*ban;
+   int     	 cnt = 0;
+   chanMember 	*cm;
+   char 	*s, nickuhost[NICKLEN+USERLEN+HOSTLEN+3];
 
    if (MyClient(cptr))
 	  (void) collapse(banid);
@@ -201,14 +202,13 @@ static int add_banid(aClient *cptr, aChannel *chptr, char *banid) {
 
    chptr->banlist = ban;
 
-   for (cm = chptr->members; cm; cm = cm->next) {
-     char nickuhost[NICKLEN+USERLEN+HOSTLEN+3];
-     char *s = make_nick_user_host(cm->cptr->name, cm->cptr->user->username,
+   for (cm = chptr->members; cm; cm = cm->next) 
+   {
+     s = make_nick_user_host(cm->cptr->name, cm->cptr->user->username,
                 cm->cptr->hostip);
      ircsprintf(nickuhost, "%s!%s@s", cm->cptr->name, cm->cptr->user->username,
 		cm->cptr->user->host);
-     if (match(banid, nickuhost) == 0 ||
-         match(banid, s) == 0) 
+     if (match(banid, nickuhost) == 0 || match(banid, s) == 0) 
         cm->bans++;
    }
    return 0;
@@ -221,9 +221,10 @@ static int add_banid(aClient *cptr, aChannel *chptr, char *banid) {
 static int
 del_banid(aChannel *chptr, char *banid)
 {
-   Reg aBan  **ban;
-   Reg aBan   *tmp;
-   Reg chanMember *cm;
+   aBan        **ban;
+   aBan   	*tmp;
+   chanMember 	*cm;
+   char 	*s, nickuhost[NICKLEN+USERLEN+HOSTLEN+3];
 
    if (!banid)
       return -1;
@@ -236,17 +237,16 @@ del_banid(aChannel *chptr, char *banid)
 	 MyFree(tmp->who);
 	 MyFree(tmp);
 
-         for (cm = chptr->members; cm; cm = cm->next) {
-           char nickuhost[NICKLEN+USERLEN+HOSTLEN+3];
-           char *s = make_nick_user_host(cm->cptr->name, cm->cptr->user->username,
+         for (cm = chptr->members; cm; cm = cm->next) 
+	 {
+           s = make_nick_user_host(cm->cptr->name, cm->cptr->user->username,
 		      cm->cptr->hostip);
 	   ircsprintf(nickuhost, "%s!%s@%s", cm->cptr->name,
 		      cm->cptr->user->username, cm->cptr->user->host);
-	   if (match(banid, nickuhost) == 0 ||
-	       match(banid, s) == 0) 
+	   if (match(banid, nickuhost) == 0 || match(banid, s) == 0) 
               cm->bans--;
 	   if (cm->bans < 0) cm->bans = 0;
-	 }
+	  }
 	 break;
       }
    return 0;
@@ -259,7 +259,7 @@ del_banid(aChannel *chptr, char *banid)
  */
 
 static aBan *is_banned(aClient *cptr, aChannel *chptr) {
-   Reg aBan   *tmp;
+   aBan       *tmp;
    char        s[NICKLEN + USERLEN + HOSTLEN + 6];
    char       *s2;
 
