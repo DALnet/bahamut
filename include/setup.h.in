@@ -258,6 +258,9 @@
 /* Do we support loadable modules */
 #undef USE_HOOKMODULES
 
+/* Maxmimum number of iovecs supported by writev() */
+#undef WRITEV_IOV
+
 /* Define as `__inline' if that's what the C compiler calls it, or to nothing
    if it is not supported. */
 #undef inline

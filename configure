@@ -1274,11 +1274,13 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 
 PACKAGE=bahamut-release
-VERSION=1.4
+VERSION=1.8
 
 
 
 # autoheader templates
+
+
 
 
 
@@ -5245,12 +5247,36 @@ _ACEOF
 #define OS_SOLARIS 1
 _ACEOF
 
+        cat >>confdefs.h <<_ACEOF
+#define WRITEV_IOV 16
+_ACEOF
+
         ;;
     *-freebsd*)
         freebsd="yes"
+        cat >>confdefs.h <<_ACEOF
+#define WRITEV_IOV 32
+_ACEOF
+
+        ;;
+    *-netbsd*)
+        cat >>confdefs.h <<_ACEOF
+#define WRITEV_IOV 32
+_ACEOF
+
+        ;;
+    *-openbsd*)
+        cat >>confdefs.h <<_ACEOF
+#define WRITEV_IOV 32
+_ACEOF
+
         ;;
     *-linux*)
         linux="yes"
+        cat >>confdefs.h <<_ACEOF
+#define WRITEV_IOV 32
+_ACEOF
+
         ;;
     *aix*)
         aix="yes"
@@ -5261,6 +5287,10 @@ _ACEOF
         ;;
     *-darwin*)
         check_hmodules="no"
+        cat >>confdefs.h <<_ACEOF
+#define WRITEV_IOV 32
+_ACEOF
+
         ;;
 esac
 
