@@ -4096,6 +4096,13 @@ int m_rehash(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	sendto_ops("%s is rehashing DNS while whistling innocently", parv[0]);
 	return 0;
       }
+      if (mycmp(parv[1], "SZLINES") == 0) 
+      {
+	sendto_one(sptr, rpl_str(RPL_REHASHING), me.name, parv[0], "SLINES");
+	remove_szline("*", 1);		/* flush the dns cache */
+	sendto_ops("%s is removing SZLINES while whistling innocently", parv[0]);
+	return 0;
+      }
       else if (mycmp(parv[1], "TKLINES") == 0)
       {
 	sendto_one(sptr, rpl_str(RPL_REHASHING), me.name, parv[0], "temp klines");
