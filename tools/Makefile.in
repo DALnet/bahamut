@@ -5,18 +5,23 @@ INCLUDEDIR=-I../include
 
 mkpasswd_SOURCES = mkpasswd.c
 mkpasswd_OBJECTS = mkpasswd.o
+convert_conf_SOURCES = convert_conf.c
+convert_conf_OBJECTS = convert_conf.o ../src/match.o
 
-all_OBJECTS = $(mkpasswd_OBJECTS)
+all_OBJECTS = $(mkpasswd_OBJECTS) $(convert_conf_OBJECTS)
 
-all: mkpasswd
+all: mkpasswd convert_conf
 
 build: all
 
 mkpasswd: $(mkpasswd_OBJECTS)
 	$(CC) -o mkpasswd $(mkpasswd_OBJECTS) $(IRCDLIBS)
 
+convert_conf: $(convert_conf_OBJECTS)
+    $(CC) -o convert_conf $(convert_conf_OBJECTS) $(IRCDLIBS)
+
 clean:
-	$(RM) -f $(all_OBJECTS) fixklines viconf chkconf mkpasswd *~ core
+	$(RM) -f $(all_OBJECTS) mkpasswd convert_conf *~ core
 
 distclean: clean
 	$(RM) -f Makefile
