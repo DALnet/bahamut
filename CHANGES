@@ -10,6 +10,7 @@ Changes for 1.4.23
   way
 - Prompt for max channels per user and oper pw encryption in the config
   script
+- Example.conf brought up to date
 
 Changes for 1.4.22
 - Fixed a bug where a server with a bad name trying to connect or trying
