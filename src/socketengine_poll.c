@@ -115,6 +115,9 @@ int read_message(time_t delay, fdlist * listp)
 
          switch(fdtype)
          {
+            case FDT_NONE:
+               continue;
+
             case FDT_AUTH:
                cptr = (aClient *) fdvalue;
                if (rr)

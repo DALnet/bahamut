@@ -192,7 +192,6 @@ void unset_fd_flags(int fd, unsigned int flags)
 void get_fd_info(int fd, int *type, unsigned int *flags, void **value)
 {
    fd_range_assert(fd);
-   fd_used_assert(fd);
 
    *type = fd_list[fd].type;
    *flags = fd_list[fd].flags;
