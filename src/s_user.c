@@ -900,12 +900,12 @@ register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
         ircsprintf(tmpstr2,"WATCH=128 CASEMAPPING=ascii ELIST=cmntu "
                    "CHANMODES=b"
 #ifdef EXEMPT_LISTS
-                   ",e"
+                   "e"
 #endif
 #ifdef INVITE_LISTS
-                   ",I"
+                   "I"
 #endif
-                   ",k,l,ciLmMnOprRstj",MAXWATCH);
+                   ",k,jl,ciLmMnOprRst",MAXWATCH);
         sendto_one(sptr, rpl_str(RPL_PROTOCTL), me.name, parv[0], tmpstr2);
 
 #ifdef FORCE_EVERYONE_HIDDEN
