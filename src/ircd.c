@@ -1096,7 +1096,7 @@ int delay = 0;
 	    if (noisy_htm) 
 	    {
 	       (void) sprintf(to_send,
-		   "Still in high-traffic mode %d%s (%d delay): %dk/s",
+		   "Still high-traffic mode %d%s (%d delay): %dk/s",
 			  lifesux, (lifesux > 9) ? " (TURBO)" : "",
 			      (int) LCF, currlife);
 	       sendto_ops(to_send);
