@@ -26,8 +26,8 @@ static char *replies[] =
     /* 002 RPL_YOURHOST */	":%s 002 %s :Your host is %s, running "
                                 "version %s",
     /* 003 RPL_CREATED */	":%s 003 %s :This server was created %s",
-    /* 004 RPL_MYINFO */	":%s 004 %s %s %s oOiwscrknfydaAbghe "
-                                "biklLmMnoprRstvcF",
+    /* 004 RPL_MYINFO */	":%s 004 %s %s %s oOiwscrknfydaAbgheF "
+                                "biklLmMnoprRstvc",
     /* 005 RPL_PROTOCTL*/       ":%s 005 %s NOQUIT WATCH=%i SAFELIST MODES=%i "
                                 "MAXCHANNELS=%i MAXBANS=%i NICKLEN=%i "
                                 "TOPICLEN=%i KICKLEN=%i CHANTYPES=# "
