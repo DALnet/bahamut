@@ -209,7 +209,7 @@ int send_queued(aClient *to) {
       if ((rlen = deliver_it(to, msg, len)) < 0)
 	return dead_link(to, "Write error to %s, closing link (%s)");
       (void) dbuf_delete(&to->sendQ, rlen);
-      to->lastsq = (DBufLength(&to->sendQ) >> 1024);
+      to->lastsq = (DBufLength(&to->sendQ) >> 10);
       if (rlen < len)
 	/* ..or should I continue until rlen==0? */
 	/* no... rlen==0 means the send returned EWOULDBLOCK... */
