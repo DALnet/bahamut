@@ -1,9 +1,25 @@
 Outstanding bugs in 1.4.23
-- Doesn't compile under glibc 2.2.2
 - "Sux mode," where a server<->server connection can take a long time to
   establish if one or both sides filters ident connections
 - Source address support on /connect may not work under some conditions
 - Temp kline/akill matching on user connections is very slow with many klines
+
+Changes for 1.4.29
+- Umode +R to not allow msgs from non registered nicks
+- chanmode +R extended to deny msgs for -r clients in channel
+- +c/+R extended to squelch quit messages with color/from non reg'd nicks
+- wrapped HTM detection code in #ifndef HUB
+- Added channel qline reason display
+- Removed LITTLE_I_LINES as with services they are dumb
+- Massive code reformatting
+- Moved some oper notices around to reduce unnecessary traffic
+- klines match IP field too now, for NICKIP akills.
+- Changed default mask to @DALnet so it's known it's a fake address
+
+- This is the last 1.4 release planned.  For real this time.
+
+Changes for 1.4.28
+- Minor bug fixes
 
 Changes for 1.4.27
 - Fixed key bug
