@@ -1534,61 +1534,67 @@ void accept_connection(aClient *cptr)
     int addrlen = sizeof(struct sockaddr_in);
     char host[HOSTLEN + 2];
     int newfd;
+    int i;
     
     cptr->lasttime = timeofday;
-    if ((newfd = accept(cptr->fd, (struct sockaddr *) &addr, &addrlen)) < 0) 
+    
+    for (i = 0; i < 100; i++) /* accept up to 100 times per call to deal with high connect rates */
     {
-	switch(errno)
-	{
+        set_non_blocking(cptr->fd, cptr);
+        if ((newfd = accept(cptr->fd, (struct sockaddr *) &addr, &addrlen)) < 0) 
+        {
+	    switch(errno)
+	    {
 #ifdef EMFILE
-	   case EMFILE:
-	      report_error("Cannot accept connections %s:%s", cptr);
-	      break;
+	       case EMFILE:
+	          report_error("Cannot accept connections %s:%s", cptr);
+	          break;
 #endif
 #ifdef ENFILE
-	   case ENFILE:
-	      report_error("Cannot accept connections %s:%s", cptr);
-	      break;
+	       case ENFILE:
+	          report_error("Cannot accept connections %s:%s", cptr);
+	          break;
 #endif
-	}
+	    }
 
-	return;
-    }
+	    return;
+        }
 
-    strncpyzt(host, (char *) inetntoa((char *) &addr.sin_addr), sizeof(host));
+        strncpyzt(host, (char *) inetntoa((char *) &addr.sin_addr), sizeof(host));
 
-    if ((tmp=find_is_zlined(host))!=NULL) 
-    {
-	ircstp->is_ref++;
-	ircsprintf(dumpstring,"ERROR :Host zlined: %s\r\n",tmp->passwd);
-	write(newfd, dumpstring, strlen(dumpstring));
-	close(newfd);
-	return;
-    }
-    /* if they are throttled, drop them silently. */
-    if (throttle_check(host, newfd, NOW) == 0) {
-       ircstp->is_ref++;
-       close(newfd);
-       return;
-    }
+        if ((tmp=find_is_zlined(host))!=NULL) 
+        {
+	    ircstp->is_ref++;
+	    ircsprintf(dumpstring,"ERROR :Host zlined: %s\r\n",tmp->passwd);
+	    write(newfd, dumpstring, strlen(dumpstring));
+	    close(newfd);
+	    return;
+        }
+        /* if they are throttled, drop them silently. */
+        if (throttle_check(host, newfd, NOW) == 0) {
+           ircstp->is_ref++;
+           close(newfd);
+           return;
+        }
 
-    if (newfd >= HARD_FDLIMIT - 10) 
-    {
-	ircstp->is_ref++;
-	sendto_realops_lev(CCONN_LEV,"All connections in use. fd: %d (%s)",
-		   newfd,get_client_name(cptr, HIDEME));
-	send(newfd, "ERROR :All connections in use\r\n", 32, 0);
-	close(newfd);
-	return;
-    }
-    ircstp->is_ac++;
-    
-    add_connection(cptr, newfd);
+        if (newfd >= HARD_FDLIMIT - 10) 
+        {
+	    ircstp->is_ref++;
+	    sendto_realops_lev(CCONN_LEV,"All connections in use. fd: %d (%s)",
+		       newfd,get_client_name(cptr, HIDEME));
+	    send(newfd, "ERROR :All connections in use\r\n", 32, 0);
+	    close(newfd);
+	    return;
+        }
+        ircstp->is_ac++;
+
+        add_connection(cptr, newfd);
 #ifdef PINGNAZI
-    nextping = timeofday;
+        nextping = timeofday;
 #endif
-    if (!cptr->acpt)
-	cptr->acpt = &me;
+        if (!cptr->acpt)
+	    cptr->acpt = &me;
+    }
 }
 
 /*
