@@ -34,7 +34,7 @@
 #define MINOR 4
 #define PATCH 36
 
-#define PATCH1 ".RC2"
+#define PATCH1 ""
 
 #define PATCH2 ""
 
