@@ -939,6 +939,12 @@ m_server_estab(aClient *cptr)
 	       sendnick_TS(cptr, acptr);
 	 }
    }
+
+   /* stuff a PING at the end of this burst so we can figure out when
+      the other side has finished processing it. */
+   cptr->flags |= FLAGS_BURST|FLAGS_PINGSENT;
+   sendto_one(cptr, "PING :%s", me.name);
+
    /* now fill out the servers info so nobody knows dink about it. */
    memset((char *)&cptr->ip, '\0', sizeof(struct in_addr));
    strcpy(cptr->hostip, "127.0.0.1");

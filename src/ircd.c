@@ -526,8 +526,8 @@ time_t      oldest = 0, timeout;
 	    i = 0;
 #endif
 	    continue;
-         }
-         else if (!(cptr->flags & FLAGS_PINGSENT)) {
+         } /* don't send pings during a burst, as we send them already. */
+         else if (!(cptr->flags & (FLAGS_PINGSENT|FLAGS_BURST))) {
 	    /*
 	     * if we havent PINGed the connection and we havent heard from
 	     * it in a while, PING it to make sure it is still alive.

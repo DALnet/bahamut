@@ -53,7 +53,7 @@ int         botwarn(char *, char *, char *, char *);
 
 extern char motd_last_changed_date[];
 extern int  send_motd(aClient *, aClient *, int, char **);
-
+extern void send_topic_burst(aClient *);
 extern void outofmemory(void);	/*
 
 				 * defined in list.c 
@@ -3126,6 +3126,26 @@ m_pong(aClient *cptr,
    destination = parv[2];
    cptr->flags &= ~FLAGS_PINGSENT;
    sptr->flags &= ~FLAGS_PINGSENT;
+
+   /* if it's my client and it's a server.. */
+   if(sptr == cptr && IsServer(cptr))
+   {
+      if(sptr->flags & FLAGS_USERBURST)
+      {
+         sptr->flags &= ~FLAGS_USERBURST;
+         sendto_gnotice("from %s: %s has processed user/channel burst, sending topic burst.",
+			me.name, sptr->name);
+         send_topic_burst(sptr);
+	 sptr->flags |= FLAGS_PINGSENT;
+	 sendto_one(sptr, "PING :%s", me.name);
+      }
+      else if(sptr->flags & FLAGS_TOPICBURST)
+      {
+         sptr->flags &= ~FLAGS_TOPICBURST;
+         sendto_gnotice("from %s: %s has processed topic burst (synched to network data).",
+			me.name, sptr->name);
+      }
+   }
 
    /*
     * Now attempt to route the PONG, comstud pointed out routable PING

@@ -178,22 +178,19 @@ typedef struct MotdItem aMotd;
 #define	FLAGS_LISTEN       0x000040	/* used to mark clients which we listen() on */
 #define	FLAGS_CHKACCESS    0x000080	/* ok to check clients access if set */
 #define	FLAGS_DOINGDNS	   0x000100	/* client is waiting for a DNS response */
-#define	FLAGS_AUTH	       0x000200	/* client is waiting on rfc931 response */
-#define	FLAGS_WRAUTH	     0x000400	/* set if we havent writen to ident server */
-#define	FLAGS_LOCAL	       0x000800	/* set for local clients */
-#define	FLAGS_GOTID	       0x001000	/* successful ident lookup achieved */
-#define	FLAGS_DOID	       0x002000	/* I-lines say must use ident return */
-#define	FLAGS_NONL	       0x004000	/* No \n in buffer */
+#define	FLAGS_AUTH	   0x000200	/* client is waiting on rfc931 response */
+#define	FLAGS_WRAUTH	   0x000400	/* set if we havent writen to ident server */
+#define	FLAGS_LOCAL	   0x000800	/* set for local clients */
+#define	FLAGS_GOTID	   0x001000	/* successful ident lookup achieved */
+#define	FLAGS_DOID	   0x002000	/* I-lines say must use ident return */
+#define	FLAGS_NONL	   0x004000	/* No \n in buffer */
 #define FLAGS_NORMALEX     0x008000	/* Client exited normally */
 #define FLAGS_SENDQEX      0x010000	/* Sendq exceeded */
 #define FLAGS_IPHASH       0x020000	/* iphashed this client */
-#define	FLAGS_RESTRICTED   0x040000	/* restricted client */
-#define FLAGS_PING_TIMEOUT 0x080000
-#define FLAGS_KILLFLAG     0x100000
-#define FLAGS_GKILLFLAG    0x200000
-#define FLAGS_ZKILLFLAG    0x400000
-#define FLAGS_CONNECTION_TIMEDOUT 0x800000
-#define FLAGS_ULINE 			0x2000000
+#define FLAGS_ULINE 	   0x040000	/* client is U-lined */
+#define FLAGS_USERBURST	   0x080000	/* server in nick/channel netburst */
+#define FLAGS_TOPICBURST   0x100000	/* server in topic netburst */
+#define FLAGS_BURST	(FLAGS_USERBURST | FLAGS_TOPICBURST)
 
 /* Capabilities of the ircd or clients */
 
@@ -763,7 +760,7 @@ struct Channel {
 	int         hashv;		/* raw hash value */
 	Mode        mode;
 	char        topic[TOPICLEN + 1];
-   char        topic_nick[NICKLEN + 1];
+        char        topic_nick[NICKLEN + 1];
 	time_t      topic_time;
 	int         users;
 	chanMember       *members;

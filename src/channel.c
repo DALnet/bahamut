@@ -1771,6 +1771,18 @@ count_channels(aClient *sptr)
       count++;
    return (count);
 }
+
+void send_topic_burst(aClient *cptr)
+{
+   aChannel *chptr;
+   for (chptr = channel; chptr; chptr = chptr->nextch)
+   {
+      if(chptr->topic[0] != '\0')
+         sendto_one(cptr, ":%s TOPIC %s %s %lu :%s", me.name, chptr->chname,
+		    chptr->topic_nick, chptr->topic_time, chptr->topic);
+   }
+}
+
 /*
  * * m_topic *        parv[0] = sender prefix *       parv[1] = topic text
  */
@@ -1829,10 +1841,18 @@ m_topic(aClient *cptr,
 		}
 	}
 	else if (((!(chptr->mode.mode & MODE_TOPICLIMIT) || is_chan_op(sptr, chptr))
-				|| IsULine(sptr) || IsServer(sptr)) && topic) {
+				|| IsULine(sptr) || IsServer(sptr))) {
 		/*
 		 * setting a topic 
 		 */
+
+		if(IsServer(sptr) || IsULine(sptr))
+		{
+			/* local topic is newer than remote topic and we have a topic*/
+			if(chptr->topic_time > ts && chptr->topic[0])
+				return 0;
+		}
+
 		strncpyzt(chptr->topic, topic, sizeof(chptr->topic));
 		strcpy(chptr->topic_nick, tnick);
 		chptr->topic_time = ts;
