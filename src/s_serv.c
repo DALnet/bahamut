@@ -446,7 +446,7 @@ m_info(aClient *cptr, aClient *sptr, int parc, char *parv[])
         /* you didnt, so i removed it.. kinda stupid anyway.  -epi */
         
         sendto_one(sptr,
-                   ":%s %d %s :Birth Date: %s, compile # %s",
+                   ":%s %d %s :Birth Date: %s, compile #%s",
                    me.name, RPL_INFO, parv[0], creation, generation);
         sendto_one(sptr, ":%s %d %s :On-line since %s",
                    me.name, RPL_INFO, parv[0],

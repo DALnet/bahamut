@@ -343,7 +343,7 @@ static char *replies[] =
     /* 312 RPL_WHOISSERVER */	":%s 312 %s %s %s :%s",
     /* 313 RPL_WHOISOPERATOR */	":%s 313 %s %s :is %s",
     /* 314 RPL_WHOWASUSER */	":%s 314 %s %s %s %s * :%s",
-    /* 315 RPL_ENDOFWHO */	":%s 315 %s %s :End of /WHO list.",
+    /* 315 RPL_ENDOFWHO */	":%s 315 %s %s :End of /%s list.",
     /* 316 RPL_WHOISCHANOP */	NULL,
     /* 317 RPL_WHOISIDLE */	":%s 317 %s %s %ld %ld :seconds idle, "
                                 "signon time",
@@ -393,7 +393,7 @@ static char *replies[] =
     /* 351 RPL_VERSION */	":%s 351 %s %s.%s %s :%s",
     /* 352 RPL_WHOREPLY */	":%s 352 %s %s %s %s %s %s %s :%d %s",
     /* 353 RPL_NAMREPLY */	":%s 353 %s %s",
-    /* 354 */	                NULL,	/* In use by Undernet */
+    /* 354 RPL_RWHOREPLY */ ":%s 354 %s",   /* also used for Undernet's WHOX */
     /* 355 */	                NULL,
     /* 356 */	                NULL,
     /* 357 */	                NULL,
@@ -591,11 +591,9 @@ static char *replies[] =
     /* 520 */	                NULL,
     /* 521 ERR_LISTSYNTAX */	":%s 521 %s :Bad list syntax, type /quote "
                                 "list ? or /raw list ?",
-    /* 522 ERR_WHOSYNTAX */	":%s 522 %s :/WHO Syntax incorrect, use "
-                                "/who ? for help",
-    /* 523 ERR_WHOLIMEXCEED */	":%s 523 %s :Error, /who limit of %d exceed."
-                                "  Please narrow your search down and try "
-                                "again",
+    /* 522 ERR_WHOSYNTAX */	":%s 522 %s :/%s Syntax incorrect, use "
+                                "/%s ? for help",
+    /* 523 ERR_WHOLIMEXCEED */	":%s 523 %s %d :%s search limit exceeded.",
     /* 524 */	                NULL,
     /* 525 */	                NULL,
     /* 526 */	                NULL,
