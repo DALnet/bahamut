@@ -1037,7 +1037,7 @@ m_nick(aClient *cptr,
    Link       *lp;
    char        nick[NICKLEN + 2], *s;
    ts_val      newts = 0;
-   int         sameuser = 0, fromTS = 0;
+   int         sameuser = 0, fromTS = 0, int samenick = 0;
         
    if (parc < 2) {
       sendto_one(sptr, err_str(ERR_NONICKNAMEGIVEN),
@@ -1616,15 +1616,17 @@ m_nick(aClient *cptr,
    /*
     * *  Finally set new nick name.
     */
+
    if (sptr->name[0])
    {
       (void) del_from_client_hash_table(sptr->name, sptr);
-      if (IsPerson(sptr) && mycmp(sptr->name, nick))
+      samenick = mycmp(sptr->name, nick) ? 0 : 1;
+      if (IsPerson(sptr) && !samenick)
          hash_check_watch(sptr, RPL_LOGOFF);
    }
    (void) strcpy(sptr->name, nick);
    (void) add_to_client_hash_table(nick, sptr);
-   if (IsPerson(sptr))
+   if (IsPerson(sptr) && !samenick)
       hash_check_watch(sptr, RPL_LOGON);
    return 0;
 
