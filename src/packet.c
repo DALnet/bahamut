@@ -43,13 +43,14 @@ dopacket(aClient *cptr, char *buffer, int length)
 {
    char   *ch1;
    char   *ch2;
-   char *cptrbuf;
+   char *cptrbuf = cptr->buffer;
    aClient    *acpt = cptr->acpt;
+   char *nbuf = NULL;
+   int nlen;
 
    if(IsRC4IN(cptr))
       rc4_process_stream(cptr->serv->rc4_in, buffer, length);
 
-   cptrbuf = cptr->buffer;
    me.receiveB += length;	/*
 				 * Update bytes received 
 				 */
@@ -74,13 +75,14 @@ dopacket(aClient *cptr, char *buffer, int length)
       me.receiveB &= 0x03ff;
    }
 
+zcontinue:
    ch1 = cptrbuf + cptr->count;
    ch2 = buffer;   
 
    if(ZipIn(cptr))
    {
       int err;
-      ch2 = zip_input(cptr->serv->zip_in, ch2, &length, &err);
+      ch2 = zip_input(cptr->serv->zip_in, ch2, &length, &err, &nbuf, &nlen);
 
       if(length == -1)
       {
@@ -127,7 +129,7 @@ dopacket(aClient *cptr, char *buffer, int length)
                if(length)
                {
                   int err;
-                  ch2 = zip_input(cptr->serv->zip_in, ch2, &length, &err);
+                  ch2 = zip_input(cptr->serv->zip_in, ch2, &length, &err, &nbuf, &nlen);
 
                   if(length == -1)
                   {
@@ -161,6 +163,16 @@ dopacket(aClient *cptr, char *buffer, int length)
 				 */
    }
    cptr->count = ch1 - cptrbuf;
+
+   if(nbuf)
+   {
+      sendto_realops("Overflowed zipInBuf! If you see this a lot, you should consider increasing zipInBufSize!");
+      buffer = nbuf;
+      length = nlen;
+      nbuf = NULL;
+      goto zcontinue; /* gross, but it should work.. */
+   }   
+
    return 0;
 }
 

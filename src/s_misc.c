@@ -1067,7 +1067,7 @@ serv_info(aClient *cptr, char *name)
          zip_out_get_stats(acptr->serv->zip_out, &ib, &ob, &rat);
          if(ib)
          {
-            sendto_one(cptr, ":%s %d %s :Zip inbytes %d, outbytes %d (%3.2f%%)",
+            sendto_one(cptr, ":%s %d %s : - Zip inbytes %d, outbytes %d (%3.2f%%)",
                        me.name, RPL_STATSDEBUG, name, ib, ob, rat);
          }
       }

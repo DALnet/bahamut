@@ -342,6 +342,10 @@ m_svinfo(aClient *cptr, aClient *sptr, int parc, char *parv[])
    {
       SetZipIn(sptr);
       sptr->serv->zip_in = zip_create_input_session();
+      sendto_gnotice("from %s: Input from %s is now compressed",
+		     me.name, get_client_name(sptr, HIDEME));
+      sendto_serv_butone(sptr, ":%s GNOTICE :Input from %s is now compressed",
+		         me.name, get_client_name(sptr, HIDEME));
       return ZIP_NEXT_BUFFER;
    }
 
@@ -756,12 +760,11 @@ int do_server_estab(aClient *cptr)
       cptr->flags |= FLAGS_ULINE; 
    }
 
-   sendto_gnotice("from %s: Link with %s established, states: %s %s %s %s %s", me.name, inpath, 
-		ZipOut(cptr) ? "Out-compressed" : "Out-uncompressed", 
-		ZipIn(cptr) ? "In-compressed" : "In-uncompressed", 
-		RC4EncLink(cptr) ? "RC4-encrypted" : "Unencrypted", 
-                IsULine(cptr) ? "ULined" : "Normal", 
-		DoesTS(cptr) ? "TS" : "Non-TS"); 
+   sendto_gnotice("from %s: Link with %s established, states:%s%s%s%s", me.name, inpath, 
+		ZipOut(cptr) ? " Output-compressed" : "", 
+		RC4EncLink(cptr) ? " encrypted" : "", 
+                IsULine(cptr) ? " ULined" : "", 
+		DoesTS(cptr) ? " TS" : " Non-TS"); 
 
    /* Notify everyone of the fact that this has just linked: the entire network should get two
       of these, one explaining the link between me->serv and the other between serv->me */

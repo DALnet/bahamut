@@ -55,12 +55,13 @@ void *zip_create_output_session()
 #define zipInBufSize (65536)
 static char zipInBuf[zipInBufSize];
 
-char *zip_input(void *session, char *buffer, int *len, int *err)
+char *zip_input(void *session, char *buffer, int *len, int *err, char **nbuf, int *nbuflen)
 {
    struct zipped_link_in *z = (struct zipped_link_in *) session;
    z_stream *zin = &z->stream;
    int ret;
 
+   *nbuf = NULL;
    *err = 0;
 
    zin->next_in = buffer;
@@ -80,8 +81,10 @@ char *zip_input(void *session, char *buffer, int *len, int *err)
               *len = -1;
               return zin->msg ? zin->msg : "????";
            }
-           *len = -1;
-           return "ZIPIN OVERFLOW";
+           *nbuf = zin->next_in;
+           *nbuflen = zin->avail_in;
+           *len = zipInBufSize - zin->avail_out;
+           return zipInBuf;
         }
         else
         {
