@@ -855,9 +855,15 @@ static void channel_modes(aClient *cptr, char *mbuf, char *pbuf,
     return;
 }
 
-static void send_ban_list(aClient *cptr, aChannel *chptr)
+static void send_channel_lists(aClient *cptr, aChannel *chptr)
 {
     aBan   *bp;
+#ifdef EXEMPT_LISTS
+    aBanExempt *exempt;
+#endif
+#ifdef INVITE_LISTS
+    anInvite *inv;
+#endif            
     char   *cp;
     int         count = 0, send = 0;
 
@@ -902,6 +908,79 @@ static void send_ban_list(aClient *cptr, aChannel *chptr)
             *cp = '\0';
         }
     }
+#ifdef EXEMPT_LISTS
+    for (exempt = chptr->banexempt_list; exempt; exempt = exempt->next)
+    {
+        if (strlen(parabuf) + strlen(exempt->banstr) + 20 < (size_t)MODEBUFLEN)
+        {
+            if (*parabuf) strcat(parabuf, " ");
+            strcat(parabuf, exempt->banstr);
+            count++;
+            *cp++ = 'e';
+            *cp = 0;
+        }
+        else if (*parabuf)
+            send = 1;
+        
+        
+        if (count == MAXTSMODEPARAMS)
+            send = 1;
+        
+        if (send)
+        {
+            sendto_one(cptr, ":%s MODE %s %ld %s %s", me.name, chptr->chname,
+                           chptr->channelts, modebuf, parabuf);
+            send = 0;
+            *parabuf = 0;
+            cp = modebuf;
+            if (count != MAXTSMODEPARAMS)
+            {
+                strcpy(parabuf, exempt->banstr);
+                *cp++ = 'e';
+                count = 1;
+            }
+            else count = 0;
+            *cp = 0;
+        }
+    }
+#endif    
+#ifdef INVITE_LISTS
+    for (inv = chptr->invite_list; inv; inv = inv->next)
+    {
+        if (strlen(parabuf) + strlen(inv->invstr) + 20 < (size_t)MODEBUFLEN)
+        {
+            if (*parabuf) strcat(parabuf, " ");
+            strcat(parabuf, inv->invstr);
+            count++;
+            *cp++ = 'I';
+            *cp = 0;
+        }
+        else if (*parabuf)
+            send = 1;
+        
+        
+        if (count == MAXTSMODEPARAMS)
+            send = 1;
+        
+        if (send)
+        {
+            sendto_one(cptr, ":%s MODE %s %ld %s %s", me.name, chptr->chname,
+                           chptr->channelts, modebuf, parabuf);
+            send = 0;
+            *parabuf = 0;
+            cp = modebuf;
+            if (count != MAXTSMODEPARAMS)
+            {
+                strcpy(parabuf, inv->invstr);
+                *cp++ = 'I';
+                count = 1;
+            }
+            else count = 0;
+            *cp = 0;
+        }
+    }
+#endif    
+    
 }
 
 /* send "cptr" a full list of the modes for channel chptr. */
@@ -980,7 +1059,7 @@ void send_channel_modes(aClient *cptr, aChannel *chptr)
     *parabuf = '\0';
     *modebuf = '+';
     modebuf[1] = '\0';
-    send_ban_list(cptr, chptr);
+    send_channel_lists(cptr, chptr);
     if (modebuf[1] || *parabuf)
         sendto_one(cptr, ":%s MODE %s %ld %s %s",
                 me.name, chptr->chname, chptr->channelts, modebuf, parabuf);
