@@ -25,9 +25,7 @@
 /*
  * External definitions for functions in inet(3) 
  */
-#include "config.h"		/*
-				 * for system definitions 
-				 */
+#include "config.h"		/* for system definitions */
 
 #ifdef	__alpha
 #define	__u_l	unsigned int

@@ -31,18 +31,13 @@ typedef struct hashentry {
    void       *list;
 } aHashEntry;
 
-/*
- * Taner had BITS_PER_COL 4 BITS_PER_COL_MASK 0xF - Dianora 
- */
+/* Taner had BITS_PER_COL 4 BITS_PER_COL_MASK 0xF - Dianora */
 
 #define BITS_PER_COL 3
 #define BITS_PER_COL_MASK 0x7
 #define MAX_SUB     (1<<BITS_PER_COL)
 
-/*
- * Client hash table 
- */
-/*
+/* Client hash table 
  * used in hash.c 
  */
 
@@ -50,10 +45,7 @@ typedef struct hashentry {
 #define U_MAX_INITIAL_MASK (U_MAX_INITIAL-1)
 #define U_MAX (U_MAX_INITIAL*MAX_SUB)
 
-/*
- * Channel hash table 
- */
-/*
+/* Channel hash table 
  * used in hash.c 
  */
 
@@ -61,10 +53,7 @@ typedef struct hashentry {
 #define CH_MAX_INITIAL_MASK (CH_MAX_INITIAL-1)
 #define CH_MAX (CH_MAX_INITIAL*MAX_SUB)
 
-/*
- * Who was hash table 
- */
-/*
+/* Who was hash table 
  * used in whowas.c 
  */
 
@@ -74,6 +63,4 @@ typedef struct hashentry {
 
 #define WATCHHASHSIZE   10007
 
-#endif /*
-        * __hash_include__ 
-        */
+#endif /* __hash_include__ */

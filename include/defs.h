@@ -39,9 +39,7 @@
  */
 #if defined(OS_SOLARIS2) && !defined( SOL20 )
 # define SOL20 1
-# define USE_POLL 1		/*
- * Get around stupid select() limitations 
-								 */
+# define USE_POLL 1		/* Get around stupid select() limitations */
 #endif
 
 #if defined( OS_ESIX ) && !defined( ESIX )
@@ -71,24 +69,20 @@
 # if !defined( AIX )
 #	define AIX 1
 # endif
-# define USE_POLL 1		/*
- * KLUGE - only define on AIX 4.x!! -cab 
-								 */
+# define USE_POLL 1		/* KLUGE - only define on AIX 4.x!! -cab */
 #endif
 
 #if defined( OS_MIPS )
 # undef SYSV
 # undef BSD
-# define BSD 1			/*
- * mips only works in a bsd43 environment 
-							 */
+# define BSD 1			/* mips only works in a bsd43 environment */
 # if !defined( MIPS )
 #	define MIPS 1
 # endif
 #endif
 
 #if defined( BSD_RELIABLE_SIGNALS ) \
-&& (defined( SYSV_UNRELIABLE_SIGNALS ) || defined( POSIX_SIGNALS ))
+    && (defined( SYSV_UNRELIABLE_SIGNALS ) || defined( POSIX_SIGNALS ))
 error You defined too many signal types in setup.h
 #elif defined( SYSV_UNRELIABLE_SIGNALS ) && defined( POSIX_SIGNALS )
 error You defined too many signal types in setup.h
@@ -98,6 +92,4 @@ error You defined too many signal types in setup.h
 # define HAVE_RELIABLE_SIGNALS
 #endif
 
-#endif				/*
- * DEFS_H_INCLUDED 
-						 */
+#endif				/* DEFS_H_INCLUDED */

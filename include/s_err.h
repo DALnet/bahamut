@@ -629,7 +629,7 @@ static char *replies[] = {
 	/* 597 */ NULL,
 	/* 598 */ NULL,
 	/* 599 */ NULL,
-   /* 600 */ "%s %s %s %d :logged online",
+   	/* 600 */ "%s %s %s %d :logged online",
 	/* 601 */ "%s %s %s %d :logged offline",
 	/* 602 */ "%s %s %s %d :stopped watching",
 	/* 603 */ ":You have %d and are on %d WATCH entries",

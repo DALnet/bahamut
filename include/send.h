@@ -40,20 +40,15 @@ extern void send_globops(char *pattern, ...);
 extern void send_operwall(aClient *, char *, char *);
 
 extern void sendto_all_butone(aClient *one, aClient *from, char *pattern, ...);
-extern void sendto_channel_butone(aClient *one, aClient *from, aChannel *chptr,
-											 char *pattern, ...);
+extern void sendto_channel_butone(aClient *one, aClient *from, aChannel *chptr, char *pattern, ...);
 extern void sendto_channel_butserv(aChannel *chptr, aClient *from, char *pattern, ...);
-extern void sendto_channelops_butone(aClient *one, aClient *from, 
-												 aChannel *chptr,char *pattern, ...);
-extern void sendto_channelvoice_butone(aClient *one, aClient *from, 
-													aChannel *chptr, char *pattern, ...);
-extern void sendto_channelvoiceops_butone(aClient *one, aClient *from, 
-														aChannel *chptr, char *patern, ...);
+extern void sendto_channelops_butone(aClient *one, aClient *from, aChannel *chptr,char *pattern, ...);
+extern void sendto_channelvoice_butone(aClient *one, aClient *from, aChannel *chptr, char *pattern, ...);
+extern void sendto_channelvoiceops_butone(aClient *one, aClient *from, aChannel *chptr, char *patern, ...);
 extern void sendto_common_channels(aClient *user, char *pattern, ...);
 extern void sendto_fdlist(fdlist *listp, char *pattern, ...);
 extern void sendto_locops(char *pattern, ...);
-extern void sendto_match_butone(aClient *one, aClient *from, char *mask, int what,
-										  char *pattern, ...);
+extern void sendto_match_butone(aClient *one, aClient *from, char *mask, int what, char *pattern, ...);
 extern void sendto_match_servs(aChannel *chptr, aClient *from, char *format, ...);
 extern void sendto_one(aClient *to, char *pattern, ...);
 extern void sendto_ops(char *pattern, ...);
