@@ -31,23 +31,39 @@
 #include "h.h"
 
 
+#define CLIM_HARD_GLOBAL    1
+#define CLIM_SOFT_LOCAL     2
+#define CLIM_SOFT_GLOBAL    3
+
 typedef struct SCloneEnt CloneEnt;
+typedef struct SCloneStat CloneStat;
 
 struct SCloneEnt
 {
-    CloneEnt *prev;
-    CloneEnt *next;
-    aClient  *clients;
-    int       lcount;
-    int       gcount;
-    int       limit;
-    char      ent[HOSTIPLEN+1];
+    CloneEnt *prev;                 /* master list */
+    CloneEnt *next;                 /* master list */
+    aClient  *clients;              /* online clients, IP/32 only */
+    int       lcount;               /* local clones */
+    int       gcount;               /* global clones */
+    int       limit;                /* global limit (from services) */
+    int       sllimit;              /* soft local limit (from SET) */
+    int       sglimit;              /* soft global limit (from SET) */
+    char      ent[HOSTIPLEN+1];     /* IP entity */
 };
 
-extern void *clones_hashtable;
+struct SCloneStat {
+    unsigned long   rlh;    /* rejected local hosts */
+    unsigned long   rls;    /* rejected local sites */
+    unsigned long   rgh;    /* rejected global hosts */
+    unsigned long   rgs;    /* rejected global sites */
+};
+
+extern CloneEnt *clones_list;
+extern CloneStat clones_stat;
 
 void clones_init(void);
-void clones_set(char *, int);
+int  clones_set(char *, int, int);
+void clones_get(char *, int *, int *, int *);
 void clones_send(aClient *);
 
 #ifdef THROTTLE_ENABLE

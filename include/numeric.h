@@ -34,6 +34,7 @@
 #define RPL_TRACEOPERATOR    204
 #define RPL_TRACEUSER        205
 #define RPL_TRACESERVER      206
+
 #define RPL_TRACENEWTYPE     208
 #define RPL_TRACECLASS       209
 
@@ -48,11 +49,10 @@
 #define RPL_ENDOFSTATS       219
 
 #define RPL_UMODEIS          221
-
 #define RPL_STATSBLINE	     222
 #define RPL_STATSELINE	     223
 
-#define RPL_STATSZLINE	     225
+#define RPL_STATSCLONE	     225
 #define RPL_STATSCOUNT	     226
 #define RPL_STATSGLINE       227
 
@@ -65,63 +65,7 @@
 #define	RPL_STATSHLINE       244
 #define	RPL_STATSSLINE       245
 #define RPL_STATSULINE	     246
-#define	RPL_STATSDEBUG	     249
-#define	RPL_LUSERCLIENT      251
-#define RPL_LUSEROP          252
-#define	RPL_LUSERUNKNOWN     253
-#define	RPL_LUSERCHANNELS    254
-#define	RPL_LUSERME          255
-#define	RPL_ADMINME          256
-#define	RPL_ADMINLOC1        257
-#define	RPL_ADMINLOC2        258
-#define	RPL_ADMINEMAIL       259
 
-#define	RPL_TRACELOG         261
-#define RPL_ENDOFTRACE       262
-#define RPL_LOAD2HI          263
-
-#define RPL_LOCALUSERS       265
-#define RPL_GLOBALUSERS      266
-#define RPL_SILELIST         271
-#define RPL_ENDOFSILELIST    272
-
-#define RPL_TRACELINK        200
-#define RPL_TRACECONNECTING  201
-#define RPL_TRACEHANDSHAKE   202
-#define RPL_TRACEUNKNOWN     203
-#define RPL_TRACEOPERATOR    204
-#define RPL_TRACEUSER        205
-#define RPL_TRACESERVER      206
-#define RPL_TRACENEWTYPE     208
-#define RPL_TRACECLASS       209
-
-#define RPL_STATSLINKINFO    211
-#define RPL_STATSCOMMANDS    212
-#define RPL_STATSCLINE       213
-#define RPL_STATSNLINE       214
-#define RPL_STATSILINE       215
-#define RPL_STATSKLINE       216
-#define RPL_STATSQLINE       217
-#define RPL_STATSYLINE       218
-#define RPL_ENDOFSTATS       219
-
-#define RPL_UMODEIS          221
-
-#define RPL_STATSBLINE	     222
-#define RPL_STATSELINE	     223
-
-#define RPL_STATSZLINE	     225
-#define RPL_STATSGLINE       227
-
-#define RPL_SERVLIST         234
-#define RPL_SERVLISTEND      235
-
-#define	RPL_STATSLLINE       241
-#define	RPL_STATSUPTIME      242
-#define	RPL_STATSOLINE       243
-#define	RPL_STATSHLINE       244
-#define	RPL_STATSSLINE       245
-#define RPL_STATSULINE	     246
 #define	RPL_STATSDEBUG	     249
 
 #define	RPL_LUSERCLIENT      251
@@ -140,61 +84,9 @@
 
 #define RPL_LOCALUSERS       265
 #define RPL_GLOBALUSERS      266
+
 #define RPL_SILELIST         271
 #define RPL_ENDOFSILELIST    272
-
-#define RPL_TRACELINK        200
-#define RPL_TRACECONNECTING  201
-#define RPL_TRACEHANDSHAKE   202
-#define RPL_TRACEUNKNOWN     203
-#define RPL_TRACEOPERATOR    204
-#define RPL_TRACEUSER        205
-#define RPL_TRACESERVER      206
-#define RPL_TRACENEWTYPE     208
-#define RPL_TRACECLASS       209
-
-#define RPL_STATSLINKINFO    211
-#define RPL_STATSCOMMANDS    212
-#define RPL_STATSCLINE       213
-#define RPL_STATSNLINE       214
-#define RPL_STATSILINE       215
-#define RPL_STATSKLINE       216
-#define RPL_STATSQLINE       217
-#define RPL_STATSYLINE       218
-#define RPL_ENDOFSTATS       219
-
-#define RPL_UMODEIS          221
-
-#define RPL_STATSBLINE	     222
-#define RPL_STATSELINE	     223
-
-#define RPL_STATSZLINE	     225
-#define RPL_STATSGLINE       227
-
-#define RPL_SERVLIST         234
-#define RPL_SERVLISTEND      235
-
-#define	RPL_STATSLLINE       241
-#define	RPL_STATSUPTIME      242
-#define	RPL_STATSOLINE       243
-#define	RPL_STATSHLINE       244
-#define	RPL_STATSSLINE       245
-#define RPL_STATSULINE	     246
-#define	RPL_STATSDEBUG	     249
-
-#define	RPL_LUSERCLIENT      251
-#define RPL_LUSEROP          252
-#define	RPL_LUSERUNKNOWN     253
-#define	RPL_LUSERCHANNELS    254
-#define	RPL_LUSERME          255
-#define	RPL_ADMINME          256
-#define	RPL_ADMINLOC1        257
-#define	RPL_ADMINLOC2        258
-#define	RPL_ADMINEMAIL       259
-
-#define	RPL_TRACELOG         261
-#define RPL_ENDOFTRACE       262
-#define RPL_LOAD2HI          263
 
 #define	RPL_NONE             300
 #define RPL_AWAY             301
@@ -210,16 +102,10 @@
 #define RPL_WHOISUSER        311
 #define RPL_WHOISSERVER      312
 #define RPL_WHOISOPERATOR    313
-
-
 #define RPL_WHOWASUSER       314
-/* rpl_endofwho below (315) */
-#define	RPL_ENDOFWHOWAS      369
-
-#define RPL_WHOISCHANOP      316	/* redundant and not needed but
-					 * reserved */
+#define RPL_ENDOFWHO         315
+#define RPL_WHOISCHANOP      316
 #define RPL_WHOISIDLE        317
-
 #define RPL_ENDOFWHOIS       318
 #define RPL_WHOISCHANNELS    319
 
@@ -241,33 +127,25 @@
 #define RPL_INVITING         341
 #define	RPL_SUMMONING        342
 
-#ifdef INVITE_LISTS
 #define RPL_INVITELIST       346
 #define RPL_ENDOFINVITELIST  347
-#endif
-
-#ifdef EXEMPT_LISTS
 #define RPL_EXEMPTLIST       348
 #define RPL_ENDOFEXEMPTLIST  349
-#endif
 
 #define RPL_VERSION          351
-
 #define RPL_WHOREPLY         352
-#define RPL_RWHOREPLY        354
-#define RPL_ENDOFWHO         315
 #define RPL_NAMREPLY         353
-#define RPL_ENDOFNAMES       366
+#define RPL_RWHOREPLY        354
 
 #define RPL_KILLDONE         361
 #define	RPL_CLOSING          362
 #define RPL_CLOSEEND         363
 #define RPL_LINKS            364
 #define RPL_ENDOFLINKS       365
-/* rpl_endofnames above (366) */
+#define RPL_ENDOFNAMES       366
 #define RPL_BANLIST          367
 #define RPL_ENDOFBANLIST     368
-/* rpl_endofwhowas above (369) */
+#define	RPL_ENDOFWHOWAS      369
 
 #define	RPL_INFO             371
 #define	RPL_MOTD             372
@@ -278,6 +156,7 @@
 
 #define RPL_YOUREOPER        381
 #define RPL_REHASHING        382
+
 #define RPL_MYPORTIS         384
 #define RPL_NOTOPERANYMORE   385
 
@@ -286,13 +165,6 @@
 #define	RPL_USERS            393
 #define	RPL_ENDOFUSERS       394
 #define	RPL_NOUSERS          395
-
-
-
-#define RPL_LOCALUSERS      265
-#define RPL_GLOBALUSERS     266
-#define RPL_SILELIST         271
-#define RPL_ENDOFSILELIST    272
 
 #define ERR_NOSUCHNICK       401
 #define ERR_NOSUCHSERVER     402
@@ -319,6 +191,7 @@
 #define ERR_NONICKNAMEGIVEN  431
 #define ERR_ERRONEUSNICKNAME 432
 #define ERR_NICKNAMEINUSE    433
+
 #define ERR_BANONCHAN        435
 #define	ERR_NICKCOLLISION    436
 #define ERR_BANNICKCHANGE    437
@@ -357,7 +230,7 @@
 #define ERR_NOPRIVILEGES     481
 #define ERR_CHANOPRIVSNEEDED 482
 #define	ERR_CANTKILLSERVER   483
-#define ERR_DESYNC	     484
+#define ERR_DESYNC           484
 #define ERR_CHANBANREASON    485
 #define ERR_NONONREG         486
 #define ERR_MSGSERVICES      487
@@ -369,6 +242,7 @@
 
 #define ERR_GHOSTEDCLIENT    503
 #define ERR_LAST_ERR_MSG     504
+
 #define ERR_SILELISTFULL     511
 #define ERR_TOOMANYWATCH     512
 

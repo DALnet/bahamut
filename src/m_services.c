@@ -691,7 +691,7 @@ m_svsclone(aClient *cptr, aClient *sptr, int parc, char *parv[])
         return 0;
 
     d = atoi(parv[2]);
-    clones_set(parv[1], d);
+    clones_set(parv[1], CLIM_HARD_GLOBAL, d);
     sendto_serv_butone(cptr, ":%s SVSCLONE %s %s", parv[0], parv[1], parv[2]);
 
     return 0;

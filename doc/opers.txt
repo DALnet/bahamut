@@ -1,6 +1,7 @@
 The following outlines the features and commands
 that Bahamut has for operators of the server.
 - 11/13/02 - srd (srd@dal.net)
+- 10/02/04 - Quension (quension@dal.net)
 
 Based upon opers.txt for ircd-hybrid by:
 ThemBones (kraemer@u.washington.edu)
@@ -29,7 +30,7 @@ Usermodes: (* designates that the umode is oper only)
  *+F        -  Can bypass the ircd's recvq throttling
  *+h        -  Operator is available for help, being listed in /stats P
  *+K        -  Recieve U:lined server kill notices
- *+j        -  Recieve rejected drone connection notices 
+ *+j        -  Recieve rejected connection notices 
  *+m        -  user can see spambot notices.
  *+n        -  User can see routing notices.
  *+y        -  User can see certain information requests. (e.g. /stats)
@@ -47,7 +48,7 @@ COMMAND         - USAGE and DESCRIPTION
   KILL          - KILL <nick> <reason>
                   Disconnects user <nick> from the IRC server he/she
                   is connected to with reason <reason>.
-                  Local Opers can only kill clients on his/her server.
+                  Local Opers can only kill clients on their servers.
                   Global Opers can kill clients on any server on the
                   IRC network.
 
@@ -57,29 +58,35 @@ COMMAND         - USAGE and DESCRIPTION
                   <letter>.
                   LETTER (* = Oper only.)
                   ------ (^ = Can be configured to be oper only.)
-                    c - Shows C/N lines
-                  ^ d - Shows D lines
-                  ^ e - Shows E lines
-                  ^ f - Shows F lines
-                  * h - Shows H lines
-                    i - Shows I lines
-                    K - Shows K lines (or matched klines)
-                    k - Shows temporary K lines (or matched temp klines)
+                  * a - Shows akills
+                  * c - Shows connect blocks
+                  * D - Shows special clone limits
+                  * d - Shows clone limit statistics
+                  * G - Shows local gcos restrictions
+                  * g - Shows network gcos restrictions (sglines)
+                    i - Shows allow blocks
+                  * K - Shows permanent K lines
+                  * k - Shows temporary K lines
                   * L - Shows IP and generic info about [nick]
                   * l - Shows hostname and generic info about [nick]
-                    m - Shows commands and their usage
-                  ^ o - Shows O/o lines
+                  * m - Shows commands and their usage
+                  ^ o - Shows oper bocks
                     p - Shows opers connected and their idle times
+                  * Q - Shows local nick/chan restrictions
+                  * q - Shows network nick/chan restrictions (sqlines)
                     r - Shows resource usage by ircd (only in DEBUGMODE)
+                  * s - Shows server name cache
+                  * T - Shows throttle stats
                   * t - Shows generic server stats
-                  * U - Shows U:lined servers.
-		    u - Shows server uptime
+                  * U - Shows super (U-Lined) servers.
+                    u - Shows server uptime
                     v - Shows connected servers and their idle times
-                    y - Shows Y lines
+                  * w - Shows fd list (only in DEBUGMODE)
+                    y - Shows class blocks
                   * z - Shows memory stats
-                    ? - Shows connected servers and sendq info about them
+                    ? - Shows network traffic statistics bdefgjnx
 
-  CONNECT       - CONNECT <server_A> [port] [server_B]
+  CONNECT       - CONNECT <server_A> [port [server_B]]
                   When [server_B] is used, CONNECT asks [server_B] to
                   connect to <server_A>.  Global Opers only.
 
@@ -87,25 +94,22 @@ COMMAND         - USAGE and DESCRIPTION
                   your server to <server_A>.  Local and Global Opers.
 
                   When [port] is used, the connection will be attempted
-                  to [port].
-                  When [port] is not used, 6667 is used as a default.
+                  to [port].  When [port] is not used, a default will be
+                  chosen from the conf.
 
 + WALLOPS       - WALLOPS :<message>
-                  Sends a WALLOPS message of <message> to all opers
-                  who are umode +w and +z (see above)
-
-                  Server sent wallops go to all users who are umode
-                  +w, oper or not.
+                  Sends a WALLOPS message of <message> to all users
+                  who are umode +w (this includes non-opers).
 
 + LOCOPS        - LOCOPS :<message>
                   Sends an LOCOPS message of <message> to all
                   opers on local server who are umode +g
 
-+ GLOBOPS        - GLOBOPS :<message>
++ GLOBOPS       - GLOBOPS :<message>
                   Sends an GLOBOPS message of <message> to all
                   opers on the network who are umode +g
 
-+ CHATOPS        - CHATOPS :<message>
++ CHATOPS       - CHATOPS :<message>
                   Sends an CHATOPS message of <message> to all
                   opers on the network who are umode +b
 
@@ -118,24 +122,24 @@ COMMAND         - USAGE and DESCRIPTION
                   connected, as well as the connection class they
                   fall into.
 
-                  Opers can see all clients connected to a server
-                  with TRACE as well as the connection class they
-                  fall into.
+                  Opers can see unregistered connections on a server
+                  with TRACE as well as connection class counts.
 
   REHASH        - REHASH [option]
                   When no [option] is given, ircd will re-read the
                   ircd.conf file.
 
                   [option] can be one of the following:
-                    DNS     - Re-read the /etc/resolv.conf file
-                    IP      - Reloads the IP hash for the new and
-                              improved ACKPATCH.  Should never need 
-                              to be used.
-                    TKLINES - Clears temporary klines
-                    GC      - Performs garbage collecting of excess
-                              memory.
-                    MOTD    - Re-reads MOTD file
-		    THROTTLES - Clears connection throttles
+                    DNS       - Re-read the /etc/resolv.conf file
+                    TKLINES   - Clears temporary klines
+                    GC        - Performs garbage collecting of excess
+                                memory.
+                    MOTD      - Re-reads MOTD files
+                    THROTTLES - Clears connection throttles
+                    AKILLS    - Clears akills
+                    SQLINES   - Clears sqlines
+                    SGLINES   - Clears sglines
+                    TSQGLINES - Clears temporary nick/channel/gcos blocks
 
   RESTART       - RESTART
                   Restarts the IRC server.
@@ -144,18 +148,14 @@ COMMAND         - USAGE and DESCRIPTION
                   Close any connections from clients who have not fully
                   registered yet.
 
-  DIE           - DIE [reason]
-                   Terminates the IRC server with optional reason 
-                   [reason]
-
-+ HASH          - HASH
-                  Shows some stats about ircd's internal hashes.
+  DIE           - DIE
+                  Terminates the IRC server.
 
 + DNS           - DNS
                   Shows some stats about ircd's asynchronous resolving
-                   code
+                  code
 
-+ KLINE         - KLINE <nick|user@host> :[reason]
++ KLINE         - KLINE [minutes] <nick|user@host> :[reason]
                   Adds a KLINE to the ircd.conf or klines.conf file which
                   will ban the specified user from using that server.
                   The banned client will receive a message saying he/she
@@ -172,8 +172,7 @@ COMMAND         - USAGE and DESCRIPTION
 + SET           - SET <option> <value>
                   <option> can be one of the following:
                     MAX       - Sets the number of max connections
-                                to <value>.  (This number cannot exceed
-                                HARD_FDLIMIT in config.h)
+                                to <value>.
 
                     -- The following three are if compiled with FLUD --
                      FLUDNUM   - Sets the number of flud messages to 
@@ -183,3 +182,19 @@ COMMAND         - USAGE and DESCRIPTION
                      FLUDBLOCK - Sets the number of seconds to block 
                                  fluds to <value>
 
+                    -- The following are if compiled with THROTTLE_ENABLE --
+                     THROTTLE ENABLE     - Enables/disables connection
+                                           throttling
+                     THROTTLE COUNT      - Sets connection count to <value>
+                     THROTTLE TIME       - Sets time window to <value> seconds
+                     THROTTLE RECORDTIME - Sets host record time to <value>
+                                           seconds
+                     THROTTLE HASH       - Resizes throttle hashtable to
+                                           <value> buckets
+                     LCLONES <ip>        - Displays or sets soft local clone
+                                           limit for <ip> (1.2.3.4/1.2.3.*)
+                                           to <value> (0 to reset to default)
+                     GCLONES <ip>        - Displays or sets soft global clone
+                                           limit for <ip> to <value>
+                     DEFLCLONES          - Same as local_clones in conf
+                     DEFGCLONES          - Same as global_clones in conf

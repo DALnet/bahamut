@@ -38,6 +38,7 @@
 #include "whowas.h"
 #include "res.h"
 #include "sbuf.h"
+#include "clones.h"
 
 #if defined(DEBUGMODE) && defined(HAVE_GETRUSAGE)
 #include <sys/time.h>
@@ -364,6 +365,7 @@ count_memory(aClient *cptr, char *nick)
 #ifdef FLUD
     extern BlockHeap *free_fludbots;
 #endif
+    extern BlockHeap *free_cloneents;
 
     extern aMotd      *motd;
     extern aMotd      *shortmotd;
@@ -377,6 +379,7 @@ count_memory(aClient *cptr, char *nick)
     aBan   *bp;
     aChannel *chptr;
     aMotd *amo;
+    CloneEnt *ce;
 
     int         lc = 0;         /* local clients */
     int         lcc = 0;        /* local client conf links */
@@ -424,12 +427,17 @@ count_memory(aClient *cptr, char *nick)
     int totallinks = 0; /* total links used */
     int chanalloc = 0; /* total channels alloc'd */
     int cmemballoc = 0;
+    int clonealloc = 0;
     u_long lcallocsz = 0, rcallocsz = 0; /* size for stuff above */
-    u_long userallocsz = 0, linkallocsz = 0, dlinkallocsz = 0, chanallocsz = 0, cmemballocsz = 0;
+    u_long userallocsz = 0, linkallocsz = 0, dlinkallocsz = 0, chanallocsz = 0;
+    u_long cmemballocsz = 0, cloneallocsz = 0;
 
     int fludalloc = 0;
     u_long fludallocsz = 0;
     int fludlink = 0;
+
+    int cloneent = 0;
+    u_long cloneentsz = 0;
 
     int motdlen = 0;
 
@@ -517,6 +525,10 @@ count_memory(aClient *cptr, char *nick)
     for (amo = helpfile; amo; amo = amo->next)
         motdlen++;
 
+    for (ce = clones_list; ce; ce = ce->next)
+        cloneent++;
+    cloneentsz = cloneent * sizeof(*ce);
+
     lcalloc = free_local_aClients->blocksAllocated *
         free_local_aClients->elemsPerBlock;
     lcallocsz = lcalloc * free_local_aClients->elemSize;
@@ -545,6 +557,10 @@ count_memory(aClient *cptr, char *nick)
     fludalloc = free_fludbots->blocksAllocated * free_fludbots->elemsPerBlock;
     fludallocsz = fludalloc * free_fludbots->elemSize;
 #endif
+
+    clonealloc = free_cloneents->blocksAllocated
+               * free_cloneents->elemsPerBlock;
+    cloneallocsz = clonealloc * free_cloneents->elemSize;
 
     totallinks = lcc + usi +  uss + usc + chi + wle + fludlink + usdm + usdr;
 
@@ -606,6 +622,10 @@ count_memory(aClient *cptr, char *nick)
 
     sendto_one(cptr, ":%s %d %s :Fludbots ALLOC %d(%d)",
                me.name, RPL_STATSDEBUG, nick, fludalloc, fludallocsz);
+
+    sendto_one(cptr, ":%s %d %s :Clones %d(%d) ALLOC %d(%d)", me.name,
+               RPL_STATSDEBUG, nick, cloneent, cloneentsz, clonealloc,
+               cloneallocsz);
 
     sendto_one(cptr, ":%s %d %s :Channels %d(%d) ALLOC %d(%d) Bans %d(%d) "
                "Members %d(%d) ALLOC %d(%d)", me.name, RPL_STATSDEBUG, nick,
@@ -1128,6 +1148,83 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
         }
         break;
 
+        case 'D':
+            if (!IsAnOper(sptr))
+                sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name, parv[0]);
+            else
+            {
+                CloneEnt *ce;
+
+                for (ce = clones_list; ce; ce = ce->next)
+                    if (ce->limit || ce->sllimit || ce->sglimit)
+                        sendto_one(sptr, rpl_str(RPL_STATSCLONE), me.name,
+                                   parv[0], ce->ent, ce->sllimit, ce->sglimit,
+                                   ce->limit);
+            }
+            break;
+
+        case 'd':
+            if (!IsAnOper(sptr))
+                sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name, parv[0]);
+            else
+            {
+                CloneEnt *ce;
+                int entries = 0;
+                int sllimits = 0;
+                int sglimits = 0;
+                int hlimits = 0;
+                int active = 0;
+                int sites = 0;
+                unsigned long rtot;
+
+                for (ce = clones_list; ce; ce = ce->next)
+                {
+                    entries++;
+                    if (ce->sllimit)
+                        sllimits++;
+                    if (ce->sglimit)
+                        sglimits++;
+                    if (ce->limit)
+                        hlimits++;
+                    if (ce->gcount)
+                    {
+                        active++;
+                        /* blah, but not important enough for its own flag */
+                        if (!ce->clients)
+                            sites++;
+                    }
+                }
+
+                rtot = clones_stat.rlh + clones_stat.rls
+                     + clones_stat.rgh + clones_stat.rgs;
+
+                sendto_one(sptr, ":%s %d %s :Default local host limit: %d"
+                           "  site: %d", me.name, RPL_STATSDEBUG, parv[0],
+                           local_ip_limit, local_ip24_limit);
+                sendto_one(sptr, ":%s %d %s :Default global host limit: %d"
+                           "  site: %d", me.name, RPL_STATSDEBUG, parv[0],
+                           global_ip_limit, global_ip24_limit);
+                sendto_one(sptr, ":%s %d %s :Clone entries: %d", me.name,
+                           RPL_STATSDEBUG, parv[0], entries);
+                sendto_one(sptr, ":%s %d %s :    Active hosts: %d  sites: %d",
+                           me.name, RPL_STATSDEBUG, parv[0], active-sites,
+                           sites);
+                sendto_one(sptr, ":%s %d %s :    Soft local limits: %d"
+                           "  global: %d", me.name, RPL_STATSDEBUG, parv[0],
+                           sllimits, sglimits);
+                sendto_one(sptr, ":%s %d %s :    Hard global limits: %d",
+                           me.name, RPL_STATSDEBUG, parv[0], hlimits);
+                sendto_one(sptr, ":%s %d %s :Rejected connections: %lu",
+                           me.name, RPL_STATSDEBUG, parv[0], rtot);
+                sendto_one(sptr, ":%s %d %s :    Local hosts: %lu  sites: %lu",
+                           me.name, RPL_STATSDEBUG, parv[0],
+                           clones_stat.rlh, clones_stat.rls);
+                sendto_one(sptr, ":%s %d %s :    Global hosts: %lu  sites: %lu",
+                           me.name, RPL_STATSDEBUG, parv[0],
+                           clones_stat.rgh, clones_stat.rgs);
+            }
+            break;
+
         case 'G':
             if(IsAnOper(sptr))
                 report_simbans_match_flags(sptr, SBAN_GCOS|SBAN_LOCAL, 0);
@@ -1331,8 +1428,9 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
                 break;
             for(tmp = classes; tmp; tmp = tmp->next)
                 sendto_one(sptr, rpl_str(RPL_STATSYLINE), me.name,
-                            sptr->name, 'Y', tmp->name, tmp->pingfreq,
-                            tmp->connfreq, tmp->maxlinks, tmp->maxsendq);
+                           sptr->name, 'Y', tmp->name, tmp->pingfreq,
+                           tmp->connfreq, tmp->ip24clones, tmp->maxlinks,
+                           tmp->maxsendq);
             break;
         }
 

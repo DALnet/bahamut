@@ -44,10 +44,11 @@ extern BlockHeap *hashent_freelist;
 #endif
 
 
-static BlockHeap *cloneent_freelist;
 static void *clones_hashtable;
 
-CloneEnt *clones_list;
+BlockHeap *free_cloneents;
+CloneEnt  *clones_list;
+CloneStat  clones_stat;
 
 
 static CloneEnt *
@@ -57,7 +58,7 @@ get_clone(char *key, int create)
 
     if (!(ce = hash_find(clones_hashtable, key)) && create)
     {
-        ce = BlockHeapALLOC(cloneent_freelist, CloneEnt);
+        ce = BlockHeapALLOC(free_cloneents, CloneEnt);
         memset(ce, 0, sizeof(*ce));
         strcpy(ce->ent, key);
         hash_insert(clones_hashtable, ce);
@@ -71,8 +72,11 @@ get_clone(char *key, int create)
 }
 
 static void
-del_clone(CloneEnt *ce)
+expire_clone(CloneEnt *ce)
 {
+    if (ce->gcount || ce->limit || ce->sllimit || ce->sglimit)
+        return;
+
     if (ce->next)
         ce->next->prev = ce->prev;
     if (ce->prev)
@@ -80,7 +84,7 @@ del_clone(CloneEnt *ce)
     else
         clones_list = ce->next;
     hash_delete(clones_hashtable, ce);
-    BlockHeapFree(cloneent_freelist, ce);
+    BlockHeapFree(free_cloneents, ce);
 }
 
 
@@ -105,14 +109,26 @@ static int
 report_clone(aClient *cptr, CloneEnt *ce, int limit, int global, int is24)
 {
     if (global)
+    {
         sendto_realops_lev(REJ_LEV, "local clone %s!%s@%s (%s %d/%d global)",
                            cptr->name, cptr->user->username, cptr->user->host,
                            ce->ent, ce->gcount + 1, limit);
+        if (is24)
+            clones_stat.rgs++;
+        else
+            clones_stat.rgh++;
+    }
     else
+    {
         sendto_realops_lev(REJ_LEV, "local clone %s!%s@%s (%s %d/%d local %s)",
                            cptr->name, cptr->user->username, cptr->user->host,
                            ce->ent, ce->lcount + 1, limit,
                            cptr->user->allow->class->name);
+        if (is24)
+            clones_stat.rls++;
+        else
+            clones_stat.rlh++;
+    }
 
     throttle_force(cptr->hostip);
 
@@ -135,12 +151,20 @@ clones_check(aClient *cptr)
 
     if (ceip)
     {
-        if (!(limit = cptr->user->allow->class->connfreq))
+        /* local limit priority stack: soft set, class, default */
+        limit = ceip->sllimit;
+        if (!limit)
+            limit = cptr->user->allow->class->connfreq;
+        if (!limit)
             limit = local_ip_limit;
         if (ceip->lcount >= limit)
             return report_clone(cptr, ceip, limit, 0, 0);
 
-        if (!(limit = ceip->limit))
+        /* global limit priority stack: soft set, services, default */
+        limit = ceip->sglimit;
+        if (!limit)
+            limit = ceip->limit;
+        if (!limit)
             limit = global_ip_limit;
         if (ceip->gcount >= limit)
             return report_clone(cptr, ceip, limit, 1, 0);
@@ -148,12 +172,18 @@ clones_check(aClient *cptr)
 
     if (ce24)
     {
-        if (!(limit = cptr->user->allow->class->ip24clones))
+        limit = ce24->sllimit;
+        if (!limit)
+            limit = cptr->user->allow->class->ip24clones;
+        if (!limit)
             limit = local_ip24_limit;
         if (ce24->lcount >= limit)
             return report_clone(cptr, ce24, limit, 0, 1);
 
-        if (!(limit = ce24->limit))
+        limit = ce24->sglimit;
+        if (!limit)
+            limit = ce24->limit;
+        if (!limit)
             limit = global_ip24_limit;
         if (ce24->gcount >= limit)
             return report_clone(cptr, ce24, limit, 1, 1);
@@ -217,35 +247,76 @@ clones_remove(aClient *cptr)
         ce24->lcount--;
     }
 
-    if (!ceip->gcount && !ceip->limit)
-        del_clone(ceip);
-
-    if (!ce24->gcount && !ce24->limit)
-        del_clone(ce24);
+    expire_clone(ceip);
+    expire_clone(ce24);
 }
 #endif  /* THROTTLE_ENABLE */
 
 /*
  * Sets a global clone limit.  A limit of 0 reverts to default settings.
+ * Returns -1 on invalid parameters, old value otherwise.
  */
-void
-clones_set(char *ent, int limit)
+int
+clones_set(char *ent, int type, int limit)
+{
+    CloneEnt *ce;
+    int       rval = 0;
+
+    if (strlen(ent) > HOSTIPLEN)
+        return -1;
+
+    if (limit < 0)
+        return -1;
+
+    ce = get_clone(ent, 1);
+
+    switch (type)
+    {
+        case CLIM_HARD_GLOBAL:
+            rval = ce->limit;
+            ce->limit = limit;
+            if (limit && ce->sglimit > limit)
+                ce->sglimit = 0;
+            break;
+
+        case CLIM_SOFT_GLOBAL:
+            rval = ce->sglimit;
+            ce->sglimit = limit;
+            break;
+
+        case CLIM_SOFT_LOCAL:
+            rval = ce->sllimit;
+            ce->sllimit = limit;
+            break;
+    }
+
+    expire_clone(ce);
+
+    return rval;
+}
+
+/*
+ * Gets the current clone limits.  0 means using default.
+ */
+void clones_get(char *ent, int *hglimit, int *sglimit, int *sllimit)
 {
     CloneEnt *ce;
 
-    if (strlen(ent) > HOSTIPLEN)
-        return;
+    ce = get_clone(ent, 0);
 
-    if (limit < 1)
-        limit = 0;
-
-    ce = get_clone(ent, 1);
-    ce->limit = limit;
-
-    if (!ce->gcount && !ce->limit)
-        del_clone(ce);
+    if (ce)
+    {
+        *hglimit = ce->limit;
+        *sglimit = ce->sglimit;
+        *sllimit = ce->sllimit;
+    }
+    else
+    {
+        *hglimit = 0;
+        *sglimit = 0;
+        *sllimit = 0;
+    }
 }
-
 
 /*
  * Propagate global clone limits.
@@ -272,7 +343,7 @@ clones_init(void)
 #ifndef THROTTLE_ENABLE
     hashent_freelist = BlockHeapCreate(sizeof(hashent), 1024);
 #endif
-    cloneent_freelist = BlockHeapCreate(sizeof(CloneEnt), 1024);
+    free_cloneents = BlockHeapCreate(sizeof(CloneEnt), 1024);
     clones_hashtable = create_hash_table(THROTTLE_HASHSIZE,
                                          offsetof(CloneEnt, ent), HOSTIPLEN,
                                          2, (void *)strcmp);
