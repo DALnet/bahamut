@@ -169,8 +169,25 @@ int m_version(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
     if (hunt_server(cptr, sptr, ":%s VERSION :%s", 1, parc, parv) ==
 	HUNTED_ISME)
-	sendto_one(sptr, rpl_str(RPL_VERSION), me.name,
-		   parv[0], version, debugmode, me.name, serveropts);
+    {
+#ifdef USE_DRONEMODULE
+	if(IsAnOper(sptr) || IsServer(sptr) || IsULine(sptr))
+	{
+	    char tmpbuf[256], dverbuf[128];
+
+	    if(short_drone_mod_version(dverbuf, 128) == NULL)
+		ircsnprintf(tmpbuf, 256, "%s nodm", serveropts);
+	    else
+		ircsnprintf(tmpbuf, 256, "%s dm(%s)", serveropts, dverbuf);
+
+	    sendto_one(sptr, rpl_str(RPL_VERSION), me.name,
+		       parv[0], version, debugmode, me.name, tmpbuf);
+	}
+	else
+#endif
+	    sendto_one(sptr, rpl_str(RPL_VERSION), me.name,
+		       parv[0], version, debugmode, me.name, serveropts);
+    }
     return 0;
 }
 

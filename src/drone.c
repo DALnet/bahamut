@@ -44,13 +44,15 @@ void drone_init() { }
 void drone_rehash() { }
 int is_a_drone(aClient *sptr) { return 0; }
 char *drone_mod_version(char *a, int b) { return NULL; }
+char *short_drone_mod_version(char *a, int b) { return NULL; }
 #else
 
 #include <dlfcn.h>
 #define DRONEMODULENAME "drone.so"
+#define DRONEMODULE_INTERFACE_VERSION 101
 
 void *drone_module_handle = NULL;
-void (*get_drone_module_version)(char **v) = NULL;
+void (*get_drone_module_version)(char **v, char **sv) = NULL;
 int (*drone_module_func)(char *n, char *u, char *h, char *g, char **dstyle) = NULL;
 int drones_ok = 0;
 
@@ -61,6 +63,8 @@ int drones_ok = 0;
 void drone_init()
 {
    char *err;
+   void (*get_drone_ifver)(int *v) = NULL;
+   int ver;
 
    drone_module_handle = dlopen(DPATH DRONEMODULENAME, RTLD_NOW);
    if(drone_module_handle == NULL)
@@ -69,6 +73,26 @@ void drone_init()
       return;
    }
    
+   get_drone_ifver = dlsym(drone_module_handle, "drone_interface_version");
+   if((err = (char *) dlerror()) != NULL)
+   {
+      fprintf(stderr, "Error loading functions in " DRONEMODULENAME ": %s\n", err);
+      dlclose(drone_module_handle);
+      drone_module_handle = NULL;
+      return;
+   }
+
+   (*get_drone_ifver)(&ver);
+   if(ver != DRONEMODULE_INTERFACE_VERSION)
+   {
+      fprintf(stderr, DRONEMODULENAME " uses interface version %d, "
+              "my interface version is %d\n", ver, 
+              DRONEMODULE_INTERFACE_VERSION);
+      dlclose(drone_module_handle);
+      drone_module_handle = NULL;
+      return;
+   }
+
    drone_module_func = dlsym(drone_module_handle, "check_drone");
    if((err = (char *) dlerror()) != NULL)
    {
@@ -87,7 +111,7 @@ void drone_init()
       return;
    }
 
-   (*get_drone_module_version)(&err);
+   (*get_drone_module_version)(&err, NULL);
    fprintf(stderr, "Loaded " DRONEMODULENAME", version %s\n", err ? err : "unspecified");
 
    drones_ok = 1;
@@ -96,6 +120,8 @@ void drone_init()
 void drone_rehash()
 {
    char *err;
+   void (*get_drone_ifver)(int *v) = NULL;
+   int ver;
 
    if(drones_ok)
    {
@@ -108,14 +134,34 @@ void drone_rehash()
    drone_module_handle = dlopen(DPATH DRONEMODULENAME, RTLD_NOW);
    if(drone_module_handle == NULL)
    {
-      sendto_realops("Error loading " DRONEMODULENAME ": %s\n", dlerror());
+      sendto_realops("Error loading " DRONEMODULENAME ": %s", dlerror());
+      return;
+   }
+
+   get_drone_ifver = dlsym(drone_module_handle, "drone_interface_version");
+   if((err = (char *) dlerror()) != NULL)
+   {
+      sendto_realops("Error loading functions in " DRONEMODULENAME ": %s", err);
+      dlclose(drone_module_handle);
+      drone_module_handle = NULL;
+      return;
+   }
+
+   (*get_drone_ifver)(&ver);
+   if(ver != DRONEMODULE_INTERFACE_VERSION)
+   {
+      sendto_realops(DRONEMODULENAME " uses interface version %d, "
+              "my interface version is %d", ver, 
+              DRONEMODULE_INTERFACE_VERSION);
+      dlclose(drone_module_handle);
+      drone_module_handle = NULL;
       return;
    }
    
    drone_module_func = dlsym(drone_module_handle, "check_drone");
    if((err = (char *) dlerror()) != NULL)
    {
-      sendto_realops("Error loading functions in " DRONEMODULENAME ": %s\n", err);
+      sendto_realops("Error loading functions in " DRONEMODULENAME ": %s", err);
       dlclose(drone_module_handle);
       drone_module_handle = NULL;
       return;
@@ -124,7 +170,7 @@ void drone_rehash()
    get_drone_module_version = dlsym(drone_module_handle, "get_drone_module_version");
    if((err = (char *) dlerror()) != NULL)
    {
-      sendto_realops("Error loading functions in " DRONEMODULENAME ": %s\n", err);
+      sendto_realops("Error loading functions in " DRONEMODULENAME ": %s", err);
       dlclose(drone_module_handle);
       drone_module_handle = NULL;
       return;
@@ -132,7 +178,7 @@ void drone_rehash()
 
    drones_ok = 1;
 
-   (*get_drone_module_version)(&err);
+   (*get_drone_module_version)(&err, NULL);
    sendto_realops("Successfully loaded module " DRONEMODULENAME ". Version: %s", 
       err ? err : "unspecified");
 }
@@ -170,7 +216,21 @@ char *drone_mod_version(char *buf, int buflen)
       return buf;
    }
 
-   (*get_drone_module_version)(&v);
+   (*get_drone_module_version)(&v, NULL);
+   ircsnprintf(buf, buflen, "%s", v ? v : "unspecified");
+   return buf; 
+}
+
+char *short_drone_mod_version(char *buf, int buflen)
+{
+   char *v = NULL;
+
+   if(!drones_ok)
+   {
+      return NULL;
+   }
+
+   (*get_drone_module_version)(NULL, &v);
    ircsnprintf(buf, buflen, "%s", v ? v : "unspecified");
    return buf; 
 }

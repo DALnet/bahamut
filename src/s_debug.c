@@ -59,6 +59,9 @@ char        serveropts[] =
 #ifdef USE_SYSLOG
     'Y',
 #endif
+#ifdef USE_DRONEMODULE
+    'M',
+#endif
     ' ',
     'T',
     'S',
