@@ -165,7 +165,7 @@ static int send_message(aClient *to, char *msg, int len) {
     * Well, let's try every 4k for clients, and immediately for servers
     * -Taner
     */
-   SQinK = DBufLength(&to->sendQ) / 1024;
+   SQinK = (DBufLength(&to->sendQ) >> 10);
    if (IsServer(to)) {
       if (SQinK > to->lastsq)
 	send_queued(to);
@@ -209,7 +209,7 @@ int send_queued(aClient *to) {
       if ((rlen = deliver_it(to, msg, len)) < 0)
 	return dead_link(to, "Write error to %s, closing link (%s)");
       (void) dbuf_delete(&to->sendQ, rlen);
-      to->lastsq = DBufLength(&to->sendQ) / 1024;
+      to->lastsq = (DBufLength(&to->sendQ) >> 1024);
       if (rlen < len)
 	/* ..or should I continue until rlen==0? */
 	/* no... rlen==0 means the send returned EWOULDBLOCK... */
