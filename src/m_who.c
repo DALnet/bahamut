@@ -42,7 +42,7 @@ int chk_who(aClient *, int);
 extern int lifesux;
 extern int user_modes[];
 
-
+extern Link *find_channel_link(Link *, aChannel *);
 
 int build_searchopts(aClient *sptr, int parc, char *parv[]) {
   static char *who_help[] = {

@@ -1455,5 +1455,5 @@ void build_version(void)
 {
 	char *s=PATCHES;
 	ircsprintf(version, "%s-%.1d.%.1d(%.2d)%s", BASENAME,
-		   MAJOR, MINOR, PATCH, (*s != 0 ? PATCHES : "");	
+		   MAJOR, MINOR, PATCH, (*s != 0 ? PATCHES : ""));	
 }
