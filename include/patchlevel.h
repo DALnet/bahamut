@@ -34,9 +34,9 @@
 #define MINOR 4
 #define PATCH 36
 
-#define PATCH1 ".prepre1"
+#define PATCH1 ".RC1"
 
-#define PATCH2 ".kthx"
+#define PATCH2 ""
 
 #define PATCH3 ""
 
