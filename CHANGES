@@ -5,6 +5,11 @@ Outstanding bugs
 - Squelching needs finished - Release was too important
 
 Changes for 1.4.34
+- Don't use FD_SETSIZE at all if USE_POLL is defined
+- Fixed a server negotiation bug that could break apart the network
+  when autoconnects and user connects were done at the same instant
+- Fix a bug where PART messages were not sent to 'userB' when 'userA's 
+  QUIT message was squelched on more than 1 channel
 - Fixed split riding ability left over from hybrid (where a channel
   with a newer TS could 'take over' if it had ops and the older TS channel
   did not)
