@@ -403,6 +403,9 @@ int can_send(aClient *cptr, aChannel *chptr) {
    if(cm && cm->bans && !(cm->flags & (CHFL_CHANOP | CHFL_VOICE)))
       return (MODE_BAN);
 
+   if (!member && !(chptr->mode.mode & MODE_NOPRIVMSGS) && MyClient(cptr) && is_banned(cptr, chptr))
+      return (MODE_BAN); /* channel is -n and user is not there; we need to bquiet them if we can */
+
    return 0;
 }
 
