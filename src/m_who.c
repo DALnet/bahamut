@@ -69,10 +69,12 @@ int build_searchopts(aClient *sptr, int parc, char *parv[])
       "               wildcards accepted",
       "Flag s <server>: user is on server <server>,",
       "                 wildcards not accepted",
-      "Flag t <seconds>: (+t) show users on for more than <seconds> seconds",
+      "Flag t <seconds>: (+t) show users on for more than or equal to <seconds> seconds",
       "                  (-t) show users on for less than <seconds> seconds",
       "Flag u <user>: user has string <user> in their username,",
       "               wildcards accepted",
+      "Flag T <type>: user is of type <type>, where type is assigned",
+      "               by services.",
       "Behavior flags:",
       "Flag C: show first visible channel user is in",
       "Flag M: check for user in channels I am a member of",
@@ -107,7 +109,7 @@ int build_searchopts(aClient *sptr, int parc, char *parv[])
   };
 
   char *flags, change=1, *s, *err;
-  int args=1, i;
+  int args=1, i, rval;
 
   memset((char *)&wsopts, '\0', sizeof(SOpts));
   /* if we got no extra arguments, send them the help. yeech. */
@@ -261,26 +263,39 @@ int build_searchopts(aClient *sptr, int parc, char *parv[])
 	  args++;
 	  break;
       case 'l':
-          if(parv[args]==NULL || !IsAnOper(sptr))
+          if(parv[args]==NULL || !IsAnOper(sptr) || 
+             (rval = strtol(parv[args], &err, 0)) < 0 || *err != '\0')  
           {
               sendto_one(sptr, getreply(ERR_WHOSYNTAX), me.name,
                          sptr->name);
               return 0;
           }
-          wsopts.class=strtol(parv[args], NULL, 0);
-          wsopts.class_value=change ? 2 :1;
+          wsopts.class = rval;
+          wsopts.class_value = change ? 2 :1;
           args++;
           break;
        case 't': 
 	  if(parv[args]==NULL || !IsAnOper(sptr) || 
-             strtol(parv[args], &err, 0) == 0 || *err != '\0')
+             (rval = strtol(parv[args], &err, 0)) == 0 || *err != '\0')
 	  {
 	      sendto_one(sptr, getreply(ERR_WHOSYNTAX), me.name,
 			 sptr->name);
 	      return 0;
 	  }
-	  wsopts.ts=strtol(parv[args], NULL, 0);
-	  wsopts.ts_value=change ? 2 : 1;
+	  wsopts.ts = rval;
+	  wsopts.ts_value = change ? 2 : 1;
+	  args++;
+	  break;
+       case 'T': 
+	  if(parv[args]==NULL || !IsAnOper(sptr) || 
+             (rval = strtol(parv[args], &err, 0)) == 0 || *err != '\0')
+	  {
+	      sendto_one(sptr, getreply(ERR_WHOSYNTAX), me.name,
+			 sptr->name);
+	      return 0;
+	  }
+	  wsopts.client_type = rval;
+	  wsopts.client_type_plus = change ? 1 : 0;
 	  args++;
 	  break;
       case 'I':
@@ -410,9 +425,12 @@ int build_searchopts(aClient *sptr, int parc, char *parv[])
    * sense either, as does specifying a nick.
    */
   
-  if(wsopts.search_chan && !(wsopts.check_away || wsopts.gcos || wsopts.host ||
-			     wsopts.check_umode || wsopts.server ||
-			     wsopts.user || wsopts.class))
+  if(wsopts.search_chan && !(wsopts.check_away || wsopts.gcos_plus || 
+			     wsopts.host_plus || wsopts.check_umode || 
+			     wsopts.serv_plus || wsopts.nick_plus || 
+			     wsopts.user_plus || wsopts.class_value || 
+			     wsopts.ts_value || wsopts.client_type_plus || 
+			     wsopts.ip_plus))
   {
       if(parv[args]==NULL || wsopts.channel || wsopts.nick ||
 	 parv[args][0] == '#' || parv[args][0] == '&')
@@ -433,10 +451,12 @@ int build_searchopts(aClient *sptr, int parc, char *parv[])
       }
   } 
   else /* can't show_chan if nothing else is set! */
-      if(wsopts.show_chan && !(wsopts.check_away || wsopts.gcos ||
-			       wsopts.host || wsopts.check_umode ||
-			       wsopts.server || wsopts.user || wsopts.nick ||
-			       wsopts.ip || wsopts.channel || wsopts.class_value || wsopts.ts_value))
+      if(wsopts.show_chan && !(wsopts.check_away || wsopts.gcos_plus || 
+			       wsopts.host_plus || wsopts.check_umode || 
+			       wsopts.serv_plus || wsopts.nick_plus || 
+			       wsopts.user_plus || wsopts.class_value || 
+			       wsopts.ts_value || wsopts.client_type_plus || 
+			       wsopts.ip_plus || wsopts.chan_plus))
       {
 	  if(parv[args]==NULL)
 	  {
@@ -462,7 +482,7 @@ int build_searchopts(aClient *sptr, int parc, char *parv[])
 
 /* these four are used by chk_who to check gcos/nick/user/host
  * respectively 
- * as well as ip/Yline class -srd */
+ * as well as ip -srd */
 
 int (*gchkfn)(char *, char *);
 int (*nchkfn)(char *, char *);
@@ -476,15 +496,22 @@ int chk_who(aClient *ac, int showall)
 	return 0;
     if(IsInvisible(ac) && !showall)
 	return 0;
+
+    if(wsopts.client_type_plus &&
+	wsopts.client_type != ac->user->servicetype)
+	return 0;
+
     if(wsopts.check_umode)
 	if((wsopts.umode_plus && 
 	    !((ac->umode&wsopts.umodes)==wsopts.umodes)) ||
 	   (!wsopts.umode_plus && ((ac->umode&wsopts.umodes)==wsopts.umodes)))
 	    return 0;
+
     if(wsopts.check_away)
 	if((wsopts.away_plus && ac->user->away==NULL) ||
 	   (!wsopts.away_plus && ac->user->away!=NULL))
 	    return 0;
+
     /* while this is wasteful now, in the future
      * when clients contain pointers to their servers
      * of origin, this'll become a 4 byte check instead of a mycmp
@@ -546,7 +573,7 @@ int chk_who(aClient *ac, int showall)
         NOW - ac->tsinfo < wsopts.ts)
         return 0;
     else if(wsopts.ts_value == 1 && /* -t */
-        NOW - ac->tsinfo > wsopts.ts)
+        NOW - ac->tsinfo >= wsopts.ts)
         return 0;
 
     return 1;

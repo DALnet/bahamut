@@ -1203,6 +1203,7 @@ typedef struct SearchOptions
     aChannel *channel;
     aClient *server;
     unsigned int channelflags;
+    unsigned int client_type;
     char umode_plus:1;
     char nick_plus:1;
     char user_plus:1;
@@ -1218,7 +1219,8 @@ typedef struct SearchOptions
     char show_chan:1;
     char search_chan:1;
     char ip_show:1;
-    char spare:1; /* spare space for more stuff(?) */
+    char client_type_plus:1;
+    /* char spare:0; spare space for more stuff(?) */
 } SOpts;
 
 /*
