@@ -19,6 +19,17 @@
 
 /* $Id$  */
 
+#ifdef DEBUG_DBUF
+#define DBUFTABLE 10000
+int dbuftableused=0;
+struct {
+   void *ptr;
+   short line;
+   char file[20];
+   char function[30];
+} dbuftable[DBUFTABLE];
+#endif
+
 #ifndef __dbuf_include__
 #define __dbuf_include__
 /*
@@ -108,8 +119,12 @@ typedef struct dbufbuf {
  *      returns > 0, if operation successfull *         < 0, if failed
  * (due memory allocation problem)
  */
+#ifndef DEBUG_DBUF
 int         dbuf_put(dbuf *, char *, int);
-
+#else
+int         dbuf__put(dbuf *, char *, int, char *, short, char *);
+# define dbuf_put(x, y, z) dbuf__put(x, y, x, __FILE__, __LINE__, __FUNCTION__)
+#endif
 /*
  * Dynamic buffer header 
  */
@@ -175,9 +190,12 @@ char       *dbuf_map(dbuf *, int *);
 /*
  * Return number of bytes accessible 
  */
-
+#ifndef DEBUG_DBUF
 int         dbuf_delete(dbuf *, int);
-
+#else
+int dbuf__delete(dbuf *, int, char *, short, char *);
+#define dbuf_delete(x, y) dbuf__delete(x, y, __FILE__, __LINE__, __FUNCTION__)
+#endif
 /*
  * Dynamic buffer header 
  */

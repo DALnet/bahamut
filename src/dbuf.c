@@ -122,8 +122,24 @@ static int dbuf_malloc_error(dbuf *dyn)
   return -1;
 }
 
+#ifdef DEBUF_DBUF
+int dbuf__put(dbuf *dyn,char *buf, int length, char *file, short line, char *function) {
+   int ret;
+   dbuftableused++;
+   dbuftable[dbuftableused].ptr=dyn;
+   dbuftable[dbuftableused].line=line;
+   strcpy(dbuftable[dbuftableused].file, file);
+   strcpy(dbuftable[dbuftableused].function, function);
+   ret=r_dbuf_put(dyn, buf, length);
+   return ret;
+}
+#endif
 
+#ifndef DEBUG_DBUF
 int	dbuf_put(dbuf *dyn,char *buf,int length)
+#else
+int     r_dbuf_put(dbuf *dyn,char *buf,int length)
+#endif
 {
   Reg	dbufbuf	**h, *d;
   Reg	int	 off;
@@ -187,7 +203,26 @@ char	*dbuf_map(dbuf *dyn,int *length)
   return (dyn->head->data + dyn->offset);
 }
 
+#ifdef DEBUG_DBUF
+int dbuf__delete(dbuf *dyn, int length, char *file, short line, char *function) {
+   int ret, i=0;
+   for (i = 0; (i < dbuftableused) && (dbuftable[i].ptr != dyn); i++);
+   if (i==dbuftableused) return 1;
+   dbuftableused--;
+   dbuftable[i].ptr=dbuftable[dbuftableused].ptr;
+   dbuftable[i].line=dbuftable[dbuftableused].line;
+   strcpy(dbuftable[i].file, dbuftable[dbuftableused].file);
+   strcpy(dbuftable[i].function, dbuftable[dbuftableused].function);
+   ret=r_dbuf_delete(dyn, length);
+   return ret;
+}
+#endif  
+
+#ifndef DEBUG_DBUF
 int	dbuf_delete(dbuf *dyn,int length)
+#else
+int     r_dbuf_delete(dbuf *dyn,int length)  
+#endif
 {
   dbufbuf *d;
   int chunk;
