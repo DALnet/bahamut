@@ -427,7 +427,7 @@ int channel_svsmode(aClient *cptr, aClient *sptr, int parc, char *parv[])
  */
 int m_svsmode(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
-    int            flag, *s, what, setflags;
+    int            flag, *s, what;
     char          *m, *modes, *optarg;
     aClient       *acptr;
     ts_val         ts = 0;
@@ -457,11 +457,7 @@ int m_svsmode(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	return 0;
 
     what = MODE_ADD;
-    setflags = 0;
 
-    for (s = user_modes; (flag = *s); s += 2)
-	if (acptr->umode & flag)
-	    setflags |= flag;
     for (m = modes; *m; m++)
 	switch(*m)
 	{

@@ -270,7 +270,6 @@ typedef struct MotdItem aMotd;
 #define UMODE_w     0x00008	/* umode +w - Get wallops */
 #define UMODE_s     0x00010	/* umode +s - Server notices */
 #define UMODE_c     0x00020	/* umode +c - Client connections/exits */
-#define UMODE_c     0x00020	/* umode +c - Client connections/exits */
 #define UMODE_r     0x00040	/* umode +r - registered nick */
 #define UMODE_k     0x00080	/* umode +k - Server kill messages */
 #define UMODE_f     0x00100	/* umode +f - Server flood messages */
@@ -301,10 +300,11 @@ typedef struct MotdItem aMotd;
 #define SPAM_LEV 	7
 #define DCCSEND_LEV	8
 
-#define	SEND_UMODES (UMODE_i|UMODE_o|UMODE_w|UMODE_r|UMODE_a|UMODE_A|\
-                     UMODE_h|UMODE_R)
-#define ALL_UMODES (SEND_UMODES|UMODE_s|UMODE_c|UMODE_r|UMODE_k|UMODE_f|\
-	            UMODE_y|UMODE_d|UMODE_g|UMODE_b|UMODE_n|UMODE_h|UMODE_m|\
+#define	SEND_UMODES (UMODE_i|UMODE_o|UMODE_r|UMODE_a|UMODE_A|\
+                     UMODE_R)
+#define ALL_UMODES (SEND_UMODES|UMODE_w|UMODE_h|\
+	            UMODE_s|UMODE_c|UMODE_r|UMODE_k|UMODE_f|\
+	            UMODE_y|UMODE_d|UMODE_g|UMODE_b|UMODE_n|UMODE_m|\
 	            UMODE_O|UMODE_R|UMODE_e|UMODE_F)
 #ifdef DEFAULT_HELP_MODE
 #define OPER_UMODES (UMODE_o|UMODE_w|UMODE_s|UMODE_y|UMODE_d|UMODE_g|\
