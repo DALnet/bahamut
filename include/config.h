@@ -114,6 +114,18 @@
  */
 #undef HUB
 
+/* Define this if you want a notice sent to connecting users
+ * about wingate scanning bots.  A URL is included in the 
+ * notice
+ */
+#define WINGATE_NOTICE
+/* For this to compile, you must define the hostname of your 
+ * wingate bot - which is included in the notice.
+ */
+#ifdef WINGATE_NOTICE
+#define MONITOR_HOST "bots.someisp.com"
+#endif
+
 /*
  * USE_SYSLOG - log errors and such to syslog() If you wish to have the
  * server send 'vital' messages about server through syslog, define

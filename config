@@ -38,6 +38,7 @@ SPATH="`grep 'SPATH' $OPTIONS_H | sed s/'.define SPATH '// | sed s/'\"'//g | xar
 MAXSENDQ="`grep 'define MAXSENDQLENGTH' $OPTIONS_H | sed s/'.define MAXSENDQLENGTH '// | xargs echo -n`"
 BUFPOOL="`grep 'define BUFFERPOOL' $OPTIONS_H | sed s/'.define BUFFERPOOL '// | xargs echo -n`"
 SERVICES_NAME="`grep 'SERVICES_NAME' $OPTIONS_H | sed s/'.define SERVICES_NAME '// | xargs echo -n`"
+MHOST="`grep 'MONITOR_HOST' $OPTIONS_H | sed s/'.define MONITOR_HOST '// | sed s/'\"'//g | xargs echo -n`"
 #
 # Now to pull yucky defaults out.
 #
@@ -77,11 +78,17 @@ if [ -n "$HUB" ] ; then
 else
    HUB="1"
 fi
+WINGATE="`grep 'define WINGATE' $OPTIONS_H | sed s/'.define WINGATE_NOTICE'// | xargs echo -n`"
+if [ -n "$WINGATE" ] ; then
+   WINGATE=""
+else
+   WINGATE="1"
+fi
 SYSLOG="`grep 'USE_SYSLOG' $OPTIONS_H | sed s/'.define USE_SYSLOG'// | xargs echo -n`"
 if [ -n "$SYSLOG" ] ; then
-   SYSLOG="1"
-else
    SYSLOG=""
+else
+   SYSLOG="1"
 fi
 LOGKILL="`grep 'SYSLOG_KILL' $OPTIONS_H | sed s/'.define SYSLOG_KILL'// | xargs echo -n`"
 if [ -n "$LOGKILL" ] ; then
@@ -132,6 +139,7 @@ STATSN="1"
 SMOTD="0"
 DEFINVIS="1"
 HUB=""
+WINGATE="1"
 SYSLOG="1"
 LOGKILL=""
 LOGSQUIT="1"
@@ -141,6 +149,7 @@ MAXSENDQ="5050000"
 BUFPOOL="(4 * MAXSENDQLENGTH)"
 HULINED="1" 
 SERVICES_NAME="services.whatever.net"
+MHOST="some.bot.host"
 
 fi # ENDIF $OPTIONS_H
 ###############################
@@ -443,6 +452,66 @@ while [ -z "$FOO" ] ; do
     esac
 done
 
+FOO=""
+runonce=""
+while [ -z "$FOO" ] ; do
+    if [ -n "$WINGATE" ] ; then
+        FOO="Yes"
+    else
+        FOO="No"
+    fi
+    echo ""
+    echo "Would you like connecting users to be sent a notice regarding"
+    echo "wingate and socks scans?  This must be defined if you"
+    echo "intend to run your server on DALnet."
+    echo -n "[$FOO] -> $c"
+    if [ -z "$AUTO_CONFIG" -o -n "$runonce" ] ; then
+        read cc
+        runonce=Yes
+    else
+        cc=""
+    fi
+    if [ -z "$cc" ] ; then
+        cc=$FOO
+    fi
+    case "$cc" in
+        [Yy]*)
+            WINGATE="1"
+            ;;
+        [Nn]*)
+            WINGATE=""
+            ;;
+        *)
+            echo ""
+            echo "You need to enter either Yes or No here..."
+            echo ""
+            FOO=""
+            ;; 
+    esac
+done
+
+case "$WINGATE" in
+   1)
+
+FOO=""
+runonce=""
+while [ -z "$FOO" ] ; do
+    FOO="$MHOST"
+    echo ""
+    echo "What host does your wingate bot run from?"
+    echo -n "[$FOO] -> $c"
+    if [ -z "$AUTO_CONFIG" -o -n "$runonce" ] ; then
+        read cc
+    else
+        cc=""
+        runonce=Yes
+    fi
+    if [ -z "$cc" ] ; then
+        cc=$FOO
+    fi
+done  
+MHOST=$cc
+esac
 
 FOO=""
 runonce=""
@@ -808,6 +877,11 @@ if [ -n "$HUB" ] ; then
 else
     echo "#undef HUB" >> $OPTIONS_H
 fi
+if [ -n "$WINGATE" ] ; then
+    echo "#define WINGATE_NOTICE" >> $OPTIONS_H
+else
+    echo "#undef WINGATE_NOTICE" >> $OPTIONS_H
+fi
 if [ -n "$SYSLOG" ] ; then
     echo "#define USE_SYSLOG" >> $OPTIONS_H
 else
@@ -832,6 +906,9 @@ cat >> $OPTIONS_H << __EOF__
 
 /* Now that the simple stuff is done, we have to add some ifdef's */
 
+#ifdef WINGATE_NOTICE
+#define MONITOR_HOST "$MHOST"
+#endif
 
 #ifdef	USE_SYSLOG
 #undef	SYSLOG_USERS
@@ -865,7 +942,7 @@ echo "#endif /* This is the endif for the ifdef at the top. */" >> $OPTIONS_H
 cat Makefile | sed s/'FDLIMIT=.*'/FDLIMIT=${FDLIMIT}/ | tee Makefile >/dev/null
 ### Solaris compat?
 if [ -n "$SOLARIS" ] ; then
-cat Makefile | sed s/'XFLAGS='/XFLAGS=-DUSE_POLL/ | tee Makefile >/dev/null
+cat Makefile | sed s/'XFLAGS=.*'/XFLAGS=-DUSE_POLL/ | tee Makefile >/dev/null
 fi
 echo "Done."
 echo ""

@@ -1722,7 +1722,7 @@ m_stats(aClient *cptr,
 	 case 'C':
 	 case 'c':
 #ifdef HIDEULINEDSERVS
-		if (!IsOper(sptr))
+		if (!IsAnOper(sptr))
 		    sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name,  parv[0]);
 		else
 #endif

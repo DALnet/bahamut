@@ -1,233 +1,197 @@
+#include "ircsprintf.h"
 
-/* $Id$ */
+char num[12] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+char itoa_tab[10] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'  };
+char xtoa_tab[16] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 
+	  'a', 'b', 'c', 'd', 'e', 'f'  };
+char nullstring[]="(null)";
 
-#include <stdio.h>
-#ifdef USE_STDARGS
-#include <stdarg.h>
-#endif
-
-#ifndef USE_STDARGS
-void
-ircsprintf(
-	     char *outp,
-	     char *formp,
-	     char *in0p, char *in1p, char *in2p, char *in3p,
-	     char *in4p, char *in5p, char *in6p, char *in7p,
-	     char *in8p, char *in9p, char *in10p)
-{
-	
-   /*
-    * rp for Reading, wp for Writing, fp for the Format string 
-    */
-	char       *inp[11];		/*
-									 * 
-									 * we could hack this if we know the format of
-									 * * the stack 
-									 */
-	register char *rp, *fp, *wp;
-	register char f;
-	register int i = 0;
-	
-   inp[0] = in0p;
-   inp[1] = in1p;
-   inp[2] = in2p;
-   inp[3] = in3p;
-   inp[4] = in4p;
-   inp[5] = in5p;
-   inp[6] = in6p;
-   inp[7] = in7p;
-   inp[8] = in8p;
-   inp[9] = in9p;
-   inp[10] = in10p;
-
-   fp = formp;
-   wp = outp;
-	
-   rp = inp[i];
-	/*
-	 * start with the first input string 
-	 */
-   /*
-    * just scan the format string and puke out whatever is necessary
-    * along the way...
-    */
-
-   while ((f = *(fp++))) {
-		
-      if (f != '%')
-		  *(wp++) = f;
-      else
-		  switch (*(fp++)) {
-			  
-			case 's':		/*
-								 * put the most common case at the top 
-								 */
-			  if (rp) {
-				  while (*rp)
-					 *wp++ = *rp++;
-				  *wp = '\0';
-			  }
-			  else {
-				  *wp++ = '{';
-				  *wp++ = 'n';
-				  *wp++ = 'u';
-				  *wp++ = 'l';
-				  *wp++ = 'l';
-				  *wp++ = '}';
-				  *wp++ = '\0';
-			  }
-			  rp = inp[++i];	/*
-									 * get the next parameter 
-									 */
-			  break;
-			case 'd':
-				 {
-					 register int myint;
-					 
-					 myint = (int) rp;
-					 
-					 if (myint < 100 || myint > 999) {
-						 sprintf(outp, formp, in0p, in1p, in2p, in3p,
-									in4p, in5p, in6p, in7p, in8p,
-									in9p, in10p);
-						 return;
-					 }
-					 
-					 *(wp++) = (char) ((myint / 100) + (int) '0');
-					 myint %= 100;
-					 *(wp++) = (char) ((myint / 10) + (int) '0');
-					 myint %= 10;
-					 *(wp++) = (char) ((myint) + (int) '0');
-					 
-					 rp = inp[++i];
-				 }
-			  break;
-			case 'u':
-				 {
-					 register unsigned int myuint;
-					 
-					 myuint = (unsigned int) rp;
-					 
-					 if (myuint < 100 || myuint > 999) {
-						 sprintf(outp, formp, in0p, in1p, in2p, in3p,
-									in4p, in5p, in6p, in7p, in8p,
-									in9p, in10p);
-						 return;
-					 }
-					 
-					 *(wp++) = (char) ((myuint / 100) + (unsigned int) '0');
-					 myuint %= 100;
-					 *(wp++) = (char) ((myuint / 10) + (unsigned int) '0');
-					 myuint %= 10;
-					 *(wp++) = (char) ((myuint) + (unsigned int) '0');
-					 
-					 rp = inp[++i];
-				 }
-			  break;
-			case '%':
-			  *(wp++) = '%';
-			  break;
-			default:
-			  /*
-				* oh shit 
-				*/
-			  sprintf(outp, formp, in0p, in1p, in2p, in3p,
-						 in4p, in5p, in6p, in7p, in8p,
-						 in9p, in10p);
-			  return;
-			  break;
-		  }
-   }
-   *wp = '\0';
-	
-   return;
+int irc_printf(char *str, size_t size, const char *pattern, va_list vl) {
+	char *s;
+	char *buf=str, *format=pattern;
+	va_list ap=vl;
+	unsigned long i, u;
+	int len=0;
+	if(!size) {
+		while(*format) {
+			switch(*format) {
+			 case '%':
+				format++;
+				switch(*format) {
+				 case 's': /* most popular ;) */
+					s=va_arg(ap, char *);
+					while(*s)
+					  buf[len++]=*s++;
+					format++;
+					break;
+				 case 'u':
+					format--; /* falls through and is caught below */
+				 case 'l':
+					if (*(format+1) == 'u') {
+						u=1;
+						format++;
+					}
+					else
+					  u=0;
+					/* fallthrough */
+				 case 'd':
+				 case 'i':
+					i=va_arg(ap, unsigned long);
+					if(!u)
+					  if(i&0x80000000) {
+						  buf[len++]='-'; /* it's negative.. */
+						  i&=~0x80000000;
+					  }
+					s=&num[11];
+					do {
+						*--s=itoa_tab[i%10];
+						i/=10;
+					} while(i!=0);
+					while(*s)
+					  buf[len++]=*s++;
+					format++;
+					break;
+				 case 'n':
+					/* oo, sneaky...it really is just a long, though! */
+				 case 'x':
+				 case 'X':
+					i=va_arg(ap, long);
+					buf[len++]='0';
+					buf[len++]='x';
+					s=&num[11];
+					do {
+						*--s=xtoa_tab[i%16];
+						i/=16;
+					} while(i!=0);
+					while(*s) {
+						buf[len++]=*s++;
+					}
+					format++;
+					break;
+				 case 'c':
+					buf[len++]=va_arg(ap, char);
+					format++;
+					break;
+				 default:
+					/* yick, unknown type...default to returning what our 
+					 s[n]printf friend would */
+					return vsprintf(str, pattern, vl);
+					break;
+				}
+				break;
+			 default:
+				buf[len++]=*format++;
+				break;
+			}
+		}
+		buf[len]=0;
+		return len;
+	}
+	else {
+		while(*format && len<size) {
+			switch(*format) {
+			 case '%':
+				format++;
+				switch(*format) {
+				 case 's': /* most popular ;) */
+					s=va_arg(ap, char *);
+					if(*s==NULL)
+					  s=nullstring;
+					while(*s && len<size)
+					  buf[len++]=*s++;
+					format++;
+					break;
+				 case 'u':
+					format--; /* now fall through and it's caught, cool */
+				 case 'l':
+					if (*(format+1) == 'u')
+					  u=1;
+					else
+					  u=0;
+					format++;
+					/* fallthrough */
+				 case 'd':
+				 case 'i':
+					i=va_arg(ap, unsigned long);
+					if(!u)
+					  if(i&0x80000000) {
+						  buf[len++]='-'; /* it's negative.. */
+						  i&=~0x80000000;
+					  }
+					s=&num[11];
+					do {
+						*--s=itoa_tab[i%10];
+						i/=10;
+					} while(i!=0);
+					while(*s && len<size)
+					  buf[len++]=*s++;
+					format++;
+					break;
+				 case 'n':
+					/* oo, sneaky...it really is just a long, though! */
+				 case 'x':
+				 case 'X':
+					i=va_arg(ap, long);
+					buf[len++]='0';
+					if(len<size)
+					  buf[len++]='x';
+					else 
+					  break;
+					s=&num[11];
+					do {
+						*--s=xtoa_tab[i%16];
+						i/=16;
+					} while(i!=0);
+					while(*s && len<size)
+					  buf[len++]=*s++;
+					format++;
+					break;
+				 case 'c':
+					buf[len++]=va_arg(ap, char);
+					format++;
+					break;
+				 default:
+					/* yick, unknown type...default to returning what our 
+					 s[n]printf friend would */
+					return vsnprintf(str, size, pattern, vl);
+					break;
+				}
+				break;
+			 default:
+				buf[len++]=*format++;
+				break;
+			}
+		}
+		buf[len]=0;
+		return len;
+	}
 }
 
-#else
-
-void ircsprintf(char *outp, char *formp, ...) {
+int ircsprintf(char *str, const char *format, ...) {
+	int ret;
 	va_list vl;
-	char *f=formp, *o=outp, f, *rp;
-	va_start(vl, formp);
-	
-   while ((f = *(fp++))) {
-		if (f != '%')
-		  *(wp++) = f;
-      else
-		  switch (*(fp++)) {
-			  
-			case 's':		/*
-								 * put the most common case at the top 
-								 */
-			  rp=va_arg(vl, char *);
-			  if (rp) {
-				  while (*rp)
-					 *wp++ = *rp++;
-				  *wp = '\0';
-			  }
-			  else {
-				  *wp++ = '{';
-				  *wp++ = 'n';
-				  *wp++ = 'u';
-				  *wp++ = 'l';
-				  *wp++ = 'l';
-				  *wp++ = '}';
-				  *wp++ = '\0';
-			  }
-			  break;
-			case 'd':
-				 {
-					 int myint;
-					 
-					 myint = va_arg(vl, int);
-					 
-					 if (myint < 100 || myint > 999) {
-						 vsprintf(outp, formp, vl);
-						 return;
-					 }
-					 
-					 *(wp++) = (char) ((myint / 100) + (int) '0');
-					 myint %= 100;
-					 *(wp++) = (char) ((myint / 10) + (int) '0');
-					 myint %= 10;
-					 *(wp++) = (char) ((myint) + (int) '0');
-					 
-				 }
-			  break;
-			case 'u':
-				 {
-					 unsigned int myuint;
-					 
-					 myuint = va_arg(vl, unsigned int);
-					 
-					 if (myuint < 100 || myuint > 999) {
-						 vsprintf(outp, formp, vl);
-						 return;
-					 }
-					 
-					 *(wp++) = (char) ((myuint / 100) + (unsigned int) '0');
-					 myuint %= 100;
-					 *(wp++) = (char) ((myuint / 10) + (unsigned int) '0');
-					 myuint %= 10;
-					 *(wp++) = (char) ((myuint) + (unsigned int) '0');
-					 
-					 rp = inp[++i];
-				 }
-			  break;
-			case '%':
-			  *(wp++) = '%';
-			  break;
-			default:
-			  /*
-				* oh shit 
-				*/
-			  vsprintf(outp, formp, vl);
-			  return;
-			  break;
-		  }
-   }
-   *wp = '\0';
-	
-	return;
+	va_start(vl, format);
+	ret=irc_printf(str, 0, format, vl);
+	va_end(vl);
+	return ret;
 }
-#endif
+
+int ircsnprintf(char *str, size_t size, const char *format, ...) {
+	int ret;
+	va_list vl;
+	va_start(vl, format);
+	ret=irc_printf(str, size, format, vl);
+	va_end(vl);
+	return ret;
+}
+int ircvsprintf(char *str, const char *format, va_list ap) {
+	int ret;
+	ret=irc_printf(str, 0, format, ap);
+	return ret;
+}
+
+int ircvsnprintf(char *str, size_t size, const char *format, va_list ap) {
+	int ret;
+	ret=irc_printf(str, size, format, ap);
+	return ret;
+}

@@ -27,6 +27,9 @@
 
 /* $Id$ */
 
+#include "send.h"
+#include "ircsprintf.h"
+
 extern int  R_do_dns, R_fin_dns, R_fin_dnsc, R_fail_dns, R_do_id,
             R_fin_id, R_fail_id;
 
@@ -179,7 +182,6 @@ extern char *getreply(int);
 extern char *strerror(int);
 extern int  dgets(int, char *, int);
 extern char *inetntoa(char *);
-extern void ircsprintf();
 extern int  dbufalloc, dbufblocks, debuglevel, errno, h_errno;
 extern int  highest_fd, debuglevel, portnum, debugtty, maxusersperchannel;
 extern int  readcalls, udpfd, resfd;
@@ -216,142 +218,6 @@ extern void restart(char *);
 extern void send_channel_modes(aClient *, aChannel *);
 extern void server_reboot(void);
 extern void terminate(void), write_pidfile(void);
-
-extern int  send_queued(aClient *);
-
-/*
- * Missing definitions 
- */
-/*
- * VARARGS 
- */
-#ifndef USE_STDARGS
-extern void sendto_ops_lev();	/*
-
-				 * defined in send.c 
-				 */
-extern void sendto_realops_lev();	/*
-
-					 * defined in send.c 
-					 */
-extern void sendto_realops();	/*
-
-				 * defined in send.c 
-				 */
-extern void send_operwall(aClient *, char *, char *);	/*
-
-							 * defined in send.c 
-							 */
-extern void send_globops();
-extern void sendto_gnotice();
-extern void sendto_locops();
-extern void send_chatops();
-extern void sendto_wallops_butone();	/*
-
-					 * defined in send.c 
-					 */
-/*
- * END Missing definitions 
- */
-
-/*
- * VARARGS2 
- */
-extern void sendto_one();
-
-/*
- * VARARGS4 
- */
-extern void sendto_channel_butone();
-extern void sendto_channelops_butone();
-extern void sendto_channelvoice_butone();
-extern void sendto_channelvoiceops_butone();
-
-/*
- * VARARGS2 
- */
-extern void sendto_serv_butone();
-
-/*
- * VARARGS2 
- */
-extern void sendto_common_channels();
-
-/*
- * VARARGS3 
- */
-extern void sendto_channel_butserv();
-
-/*
- * VARARGS3 
- */
-extern void sendto_match_servs();
-
-/*
- * VARARGS5 
- */
-extern void sendto_match_butone();
-
-/*
- * VARARGS3 
- */
-extern void sendto_all_butone();
-
-/*
- * VARARGS1 
- */
-extern void sendto_ops();
-
-/*
- * VARARGS1 
- */
-extern void ts_warn();
-
-/*
- * VARARGS3 
- */
-extern void sendto_ops_butone();
-
-/*
- * VARARGS3 
- */
-extern void sendto_prefix_one();
-extern void vsendto_prefix_one();
-#else
-#include <stdarg.h>
-extern void sendto_ops_lev(int lev, char *pattern, ...);
-extern void sendto_realops_lev(int lev, char *pattern, ...);
-extern void sendto_realops(char *pattern, ...);
-extern void vsendto_realops(char *pattern, va_list vl);
-extern void send_operwall(aClient *, char *, char *);
-extern void send_globops(char *pattern, ...);
-extern void sendto_locops(char *pattern, ...);
-extern void send_chatops(char *pattern, ...);
-extern void sendto_wallops_butone(aClient *one, aClient *from, char *pattern, ...);
-extern void sendto_one(aClient *to, char *pattern, ...);
-extern void vsendto_one(aClient *to, char *pattern, va_list vl);
-extern void sendto_channel_butone(aClient *one, aClient *from, aChannel *chptr,
-											 char *pattern, ...);
-extern void sendto_channelops_butone(aClient *one, aClient *from, 
-												 aChannel *chptr,char *pattern, ...);
-extern void sendto_channelvoice_butone(aClient *one, aClient *from, 
-													aChannel *chptr, char *pattern, ...);
-extern void sendto_channelvoiceops_butone(aClient *one, aClient *from, 
-														aChannel *chptr, char *patern, ...);
-extern void sendto_serv_butone(aClient *one, char *pattern, ...);
-
-extern void sendto_common_channels(aClient *user, char *pattern, ...);
-extern void sendto_channel_butserv(aChannel *chptr, aClient *from, char *pattern, ...);
-extern void sendto_match_servs(aChannel *chptr, aClient *from, char *format, ...);
-extern void sendto_match_butone(aClient *one, aClient *from, char *mask, int what,
-										  char *pattern, ...);
-extern void sendto_all_butone(aClient *one, aClient *from, char *pattern, ...);
-extern void sendto_ops(char *pattern, ...);
-extern void ts_warn(char *pattern, ...);
-extern void sendto_ops_butone(aClient *one, aClient *from, char *pattern, ...);
-extern void sendto_prefix_one(aClient *to, aClient *from, char *pattern, ...);
-extern void vsendto_prefix_one(aClient *to, aClient *from, char *pattern, va_list vl);
-#endif
 
 extern int  match(char *, char *);
 extern char *collapse(char *);
@@ -497,4 +363,3 @@ extern      int     hash_del_watch_list(aClient  *);
 extern      aWatch *hash_get_watch(char *);
 # define MAXWATCH       128
 #endif
-
