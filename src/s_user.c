@@ -2800,8 +2800,7 @@ m_quit(aClient *cptr,
       return exit_client(cptr, sptr, sptr, comment);
    }
    else
-      exit_client(cptr, sptr, sptr, reason);
-   return 0;
+      return exit_client(cptr, sptr, sptr, reason);
 }
 /*
  * * m_kill * parv[0] = sender prefix *       parv[1] = kill victim *
