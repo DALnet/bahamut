@@ -5429,7 +5429,11 @@ int m_unszline(aClient *cptr, aClient *sptr, int parc, char *parv[])
 int m_dkey(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
    if(!(IsNegoServer(sptr) && parc > 1))
-      return 0;
+   {
+      if(IsPerson(sptr))
+         return 0;
+      return exit_client(sptr, sptr, sptr, "Not negotiating now");
+   }
 
    if(mycmp(parv[1], "START") == 0)
    {
