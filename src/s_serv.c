@@ -1555,15 +1555,6 @@ int m_links(aClient *cptr, aClient *sptr, int parc, char *parv[])
     char       *d;
     int         n;
 
-    if (parc > 1 && (IsServer(sptr) || IsULine(sptr)) && mycmp(parv[1], "CONTROL") == 0)
-    {
-        char pbuf[512];
-        make_parv_copy(pbuf, parc, parv);
-	sendto_serv_butone(cptr, ":%s LINKS %s", parv[0], pbuf);
-
-	return fakelinkscontrol(parc - 2, parv + 2);
-    }
-
     /* reject non-local requests */
     if (!IsAnOper(sptr) && !MyConnect(sptr))
 	return 0;

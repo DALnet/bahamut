@@ -121,22 +121,28 @@ void fakelinkserver_update(char *name, char *desc)
    strcpy(ls->description, desc);
 }
 
-int fakelinkscontrol(int parc, char *parv[])
+int m_linkscontrol(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
-   if(parc < 1)
+   if (!(parc > 1 && (IsServer(sptr) || IsULine(sptr))))
       return 0;
+   else
+   {
+      char pbuf[512];
 
-   if(parc > 0 && mycmp(parv[0], "RESET") == 0)
+      make_parv_copy(pbuf, parc, parv);
+      sendto_serv_butone(cptr, ":%s LINKSCONTROL %s", parv[0], pbuf);
+   }
+
+   if(mycmp(parv[1], "RESET") == 0)
    {
       fakelinkserver_reset();
       return 0;
    }
-
-   if(parc > 1 && mycmp(parv[0], "+") == 0)
+   else if(parc > 2 && mycmp(parv[1], "+") == 0)
    {
-      char *servername = parv[1];
+      char *servername = parv[2];
       aClient *acptr = find_server(servername, NULL);
-      char *desc = (parc > 2) ? parv[2] : HIDDEN_SERVER_DESC;
+      char *desc = (parc > 3) ? parv[3] : HIDDEN_SERVER_DESC;
 
       if(strchr(servername, '.') == NULL)
          return 0;
@@ -146,10 +152,9 @@ int fakelinkscontrol(int parc, char *parv[])
 
       fakelinkserver_add(servername, acptr ? acptr->info : desc);
    }
-
-   if(parc > 1 && mycmp(parv[0], "-") == 0)
+   else if(parc > 2 && mycmp(parv[1], "-") == 0)
    {
-      char *servername = parv[1];
+      char *servername = parv[2];
 
       fakelinkserver_delete(servername);
    }
@@ -336,3 +341,6 @@ void fakelusers_sendlock(aClient *sptr)
    else
       sendto_one(sptr, ":%s LUSERSLOCK UNTIL %d", (int) luserslock_expiretime);
 }
+
+/////////////// ARGH
+
