@@ -485,9 +485,9 @@ register_user(aClient *cptr,
    parv[0] = sptr->name;
    parv[1] = parv[2] = NULL;
 	  
+   p = inetntoa((char *) &sptr->ip);
+   strncpyzt(sptr->hostip, p, HOSTIPLEN + 1);
    if (MyConnect(sptr)) {
-      p = inetntoa((char *) &sptr->ip);
-      strncpyzt(sptr->hostip, p, HOSTIPLEN + 1);
       if ((i = check_client(sptr))) {
 			/*
 			 * -2 is a socket error, already reported.
@@ -1162,23 +1162,6 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
      return 0;
      
    }
-
-   if ((IsServer(sptr) && IsNICKIP(sptr)) && ((parc > 4) && (parc < 11)))
-   {
-     /*
-      * We got the wrong number of params. Someone is trying to trick
-      * us. Kill it. -ThemBones As discussed with ThemBones, not much
-      * point to this code now sending a whack of global kills would
-      * also be more annoying then its worth, just note the problem,
-      * and continue -Dianora
-      */
-     sendto_realops("IGNORING BAD NICK: %s[%s@%s] on %s (from %s)", parv[1],
-		    (parc >= 6) ? parv[5] : "-",
-		    (parc >= 7) ? parv[6] : "-",
-		    (parc >= 8) ? parv[7] : "-", parv[0]);
-     return 0;
-     
-   }
     
    if (((parc == 10)||(parc == 11)) && (!strchr(parv[6], '.')))
    {
@@ -1505,7 +1488,7 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
        if (parc==10) {
 	 return do_user(nick, cptr, sptr, parv[5], parv[6],
 			parv[7], strtoul(parv[8], NULL, 0), 0, parv[9]);
-       } else {
+       } else if (parc==11) {
 	 return do_user(nick, cptr, sptr, parv[5], parv[6], parv[7],
 			strtoul(parv[8], NULL, 0), strtoul(parv[9], NULL, 0),
 			parv[10]);
