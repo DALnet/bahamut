@@ -341,18 +341,18 @@ make_user(aClient *cptr)
 
       if (user == (anUser *) NULL)
 	 outofmemory();
-      user->away = NULL;
-      *user->username = '\0';	/*
-				 * Initialize this crap 
-				 */
+
+      *user->username = '\0';
       *user->host = '\0';
-      user->server = (char *) NULL;	/*
-					 * scache server name 
-					 */
+
       user->joined = 0;
+
       user->channel = NULL;
       user->invited = NULL;
+      user->away = NULL;
+      user->server = NULL;	/* scache server name */
       user->silence = NULL;
+      user->lopt = NULL;
       cptr->user = user;
    }
    return user;
