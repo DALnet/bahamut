@@ -1,17 +1,21 @@
 Changes for 1.8.3
 -----------------
 
-- Fixed classes merging bug that caused memory corruption and
-  crashes
+- Fixed rehash bug with specific conf changes that caused memory
+  corruption and crashes
 - Fixed a possible buffer overflow issue in oper hostmasking
 - Fixed solaris devpoll socket engine logic problems.
 - Fixed class reference counting errors.
-- Fixed a bug with +j propegation on resync
+- Fixed a bug with cmode +j propegation on resync
 - Added a second set of join counters to send warning notices
   to +d opers when the default thresholds are met.  Still sends
-  a throttle notice when +j thresholds are met.
+  a throttle notice when cmode +j thresholds are met.
 - Fixed a ERR_BANLISTFULL to respond depending on which list
   (+I/+e) is full.  From Unim4trix0 (Unim4trix0@gmail.com).
+- Readded clone limiting (now better than ever!), see doc/reference.conf
+- Range limiting for cmode +j args (min rate 1:8, max time 60).
+- Fixed spamming redudant cmode changes.
+- Fixed bad handling of bogus oper messages (from Zeke Gomez).
 
 
 Changes for 1.8.2
