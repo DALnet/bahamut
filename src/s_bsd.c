@@ -2096,6 +2096,7 @@ int read_message(time_t delay, fdlist * listp)
 int connect_server(aConfItem * aconf, aClient * by, struct hostent *hp)
 {
    struct sockaddr *svp;
+   struct sockaddr_in myaddr;
    aClient *cptr, *c2ptr;
    char *s;
    int errtmp, len;
@@ -2154,6 +2155,28 @@ int connect_server(aConfItem * aconf, aClient * by, struct hostent *hp)
       cptr->fd = -2;
       free_client(cptr);
       return -1;
+   }
+
+   if (aconf->localhost)
+   {
+      myaddr.sin_family = AF_INET;
+      myaddr.sin_port = 0;
+      myaddr.sin_addr.s_addr = inet_addr(aconf->localhost);
+      bzero(&(myaddr.sin_zero), 8);
+      if (bind(cptr->fd, &myaddr, sizeof(struct sockaddr)))
+      {
+         errtmp = errno;
+         report_error("Connect to host %s failed: %s", cptr);
+         if (by && IsPerson(by) && !MyClient(by))
+	 sendto_one(by,
+		    ":%s NOTICE %s :Connect to server %s failed.",
+		    me.name, by->name, cptr->name);
+         close(cptr->fd);
+         cptr->fd = -2;
+         free_client(cptr);
+         errno = errtmp;
+         return -1;
+      }
    }
 
    set_non_blocking(cptr->fd, cptr);

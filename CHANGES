@@ -1,3 +1,12 @@
+Changes for 1.4.23
+- Some error message changes/fixes
+- Fixed a cloaking bug
+- Added support to source from a different local IP address when /connecting
+  out to another server; useful for servers which don't want to use the main
+  IP in the M: line as the server<->server IP
+  - To use: Add :<local IP> to the end of a C: line
+  - E.g.: C:192.168.0.1:pass:server.dal.net::10:192.168.10.200
+
 Changes for 1.4.22
 - Fixed a bug where a server with a bad name trying to connect or trying
   to be used in /links could crash Bahamut

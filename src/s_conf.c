@@ -1437,6 +1437,15 @@ initconf(int opt, int fd)
 	    break;							
 
    	 Class       (aconf) = find_class(atoi(tmp));
+
+         if (aconf->status & CONF_CONNECT_SERVER)
+         {
+            if ((tmp = getfield(NULL)) == NULL)
+		break;
+
+            DupString(aconf->localhost, tmp);
+         }
+
 	 	break;
 
 	 /* NOTREACHED */

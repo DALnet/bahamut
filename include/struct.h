@@ -555,6 +555,7 @@ struct ConfItem {
 	int         clients;		/* Number of *LOCAL* clients using this */
 	struct in_addr ipnum;	  /* ip number of host field */
 	char       *host;
+	char       *localhost;
 	char       *passwd;
 	char       *name;
 	int         port;
