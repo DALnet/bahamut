@@ -134,14 +134,14 @@ static struct DBufBuffer* dbuf_alloc()
  * We are allocating dbufs unlimitedly to deal with large channels on
  * splits and other known issue.
  * 
- * Once again, defing the following only for testing purposes
+ * Once again, define the following only for testing purposes
  * - Raistlin
  */
 
 #undef DBUFS_WORKING_CORRECTLY
    
 #ifdef DBUFS_WORKING_CORRECTLY  
-  if (DBufUsedCount * DBUF_SIZE == BUFFERPOOL)
+  if (DBufUsedCount * DBUF_SIZE >= BUFFERPOOL)
     return NULL;
 #endif
    
