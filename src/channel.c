@@ -1758,7 +1758,7 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
             else 
             {
                 char *tmpa, *tmperr;
-                int j_num, j_time;
+                int j_num, j_time, t_num;
 
                 if(parv[args] == NULL) 
                 {
@@ -1802,7 +1802,18 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
                     ircsprintf(tmp, "0");
                 }
                 else
+                {
+                    if (MyClient(sptr) && level < 2)
+                    {
+                        /* range limit for local non-samodes */
+                        if (j_time > 60)
+                            j_time = 60;
+                        t_num = (j_time-1)/8+1;
+                        if (j_num < t_num)
+                            j_num = t_num;
+                    }
                     ircsprintf(tmp, "%d:%d", j_num, j_time);
+                }
 
                 /* if we're going to overflow our mode buffer,
                  * drop the change instead */
