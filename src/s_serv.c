@@ -948,7 +948,6 @@ int do_server_estab(aClient *cptr)
 #ifdef HUB
     /* Send out fake server list and other 'fake' stuff */
     fakeserver_sendserver(cptr);
-    fakelusers_sendlock(cptr);
 #endif
 
     /* Bursts are about to start.. send a BURST */
@@ -997,6 +996,11 @@ int do_server_estab(aClient *cptr)
 		    sendnick_TS(cptr, acptr);
 	    }
     }
+
+#ifdef HUB
+    /* Send this here to get global count? */
+    fakelusers_sendlock(cptr);
+#endif
 
     if(ZipOut(cptr))
     {
