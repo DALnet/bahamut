@@ -565,6 +565,7 @@ typedef struct Whowas
     char       *servername;
     char        realname[REALLEN + 1];
     time_t      logoff;
+    unsigned int umode;
     struct Client *online;  /* Pointer to new nickname for chasing or NULL */
     
     struct Whowas *next;    /* for hash table... */

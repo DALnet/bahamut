@@ -61,6 +61,7 @@ void add_history(aClient *cptr, int online)
      * -Dianora
      */
     new->servername = cptr->user->server;
+    new->umode = cptr->umode;
 
     if (online) 
     {
@@ -167,9 +168,14 @@ int m_whowas(aClient *cptr, aClient *sptr, int parc, char *parv[])
 			   temp->username,
 			   temp->hostname,
 			   temp->realname);
-		sendto_one(sptr, rpl_str(RPL_WHOISSERVER),
-			   me.name, parv[0], temp->name,
-			   temp->servername, myctime(temp->logoff));
+		if((temp->umode & UMODE_I) && !IsAnOper(sptr))
+		    sendto_one(sptr, rpl_str(RPL_WHOISSERVER),
+			       me.name, parv[0], temp->name,
+			       HIDDEN_SERVER_NAME, myctime(temp->logoff));
+		else
+		    sendto_one(sptr, rpl_str(RPL_WHOISSERVER),
+			       me.name, parv[0], temp->name,
+			       temp->servername, myctime(temp->logoff));
 		cur++;
 		found++;
 	    }

@@ -550,8 +550,7 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 				       nick);
 		if (sptr->user)
 		{
-		    if(!IsUmodeI(sptr))
-			add_history(sptr, 1);
+		    add_history(sptr, 1);
 			
 		    sendto_serv_butone(cptr, ":%s NICK %s :%ld",
 				       parv[0], nick, sptr->tsinfo);
@@ -563,8 +562,7 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	    sendto_common_channels(sptr, ":%s NICK :%s", parv[0], nick);
 	    if (sptr->user)
 	    {
-		if(!IsUmodeI(sptr))
-		    add_history(sptr, 1);
+		add_history(sptr, 1);
 		
 		sendto_serv_butone(cptr, ":%s NICK %s :%ld",
 				   parv[0], nick, sptr->tsinfo);
