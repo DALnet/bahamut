@@ -48,7 +48,6 @@ MHOST="`grep 'MONITOR_HOST' $OPTIONS_H | sed s/'.define MONITOR_HOST '// | sed s
 LOCALKLINE="`grep 'SERVER_KLINE_ADDRESS' $OPTIONS_H | sed s/'.define SERVER_KLINE_ADDRESS '// | sed s/'\"'//g | xargs echo -n`"
 NETWORKKLINE="`grep 'NETWORK_KLINE_ADDRESS' $OPTIONS_H | sed s/'.define NETWORK_KLINE_ADDRESS '// | sed s/'\"'//g | xargs echo -n`"
 MAXCHANNELSPERUSER="`grep 'MAXCHANNELSPERUSER' $OPTIONS_H | sed s/'.define MAXCHANNELSPERUSER '// | xargs echo -n`"
-SOCKETENGINE="`grep 'SOCKETENGINE' $OPTIONS_H | sed s/'.define SOCKETENGINE '// | sed s/'\"'//g | xargs echo -n`"
 #
 # Now to pull yucky defaults out.
 #
@@ -168,7 +167,6 @@ LOGSQUIT=""
 LOGCONN=""
 SOPER=""
 USESELECT=""
-SOCKETENGINE="poll"
 MAXSENDQ="5050000"
 BUFPOOL="(4 * MAXSENDQLENGTH)"
 HULINED="1" 
@@ -292,10 +290,6 @@ case "$OS" in
 	echo "You are using Sun/Solaris, Compatibility code loaded..."
 	;;
 esac
-
-if [ -n "$SOLARIS" ] ; then
-    SOCKETENGINE="poll"
-fi
 
 FOO=""
 runonce=""
@@ -902,64 +896,6 @@ while [ -z "$FOO" ] ; do
     esac
 done
 
-if [ -n "$SOLARIS" ] ; then
-   echo ""
-   echo "Solaris detected, poll() forced..."
-   echo ""
-else
-   FOO=""
-   runonce=""
-   while [ -z "$FOO" ] ; do
-       FOO="$SOCKETENGINE"
-       echo ""
-       echo "Which socket engine do you wish to use?"
-       echo ""
-       echo "The following choices are available"
-       echo "select - use the select() system call. More economical for small networks."
-       echo "         Has setbacks as to the maximum number of clients you can hold"
-       if [ -n "$BROKEN_SELECT" ] ; then
-          echo "         ------------------------------------------------------------------"
-          echo "         [ WARNING: FD_SETSIZE is locked on this machine. You may only hold"
-          echo "           1024 clients with this lock if you use select. Use poll! :) ]"
-          echo "         ------------------------------------------------------------------"
-       fi
-       echo "poll   - use the poll() system call. No limits, better performance than select,"
-       echo "         however some systems do not support it. Linux 2.2 uses select to wrap poll."
-       echo "kqueue - use the kqueue() system call. ONLY WORKS UNDER FREEBSD."
-       echo "         However, it works with little to no system load -- highly optimal."
-       echo -n "[$FOO] -> $c"
-       if [ -z "$AUTO_CONFIG" -o -n "$runonce" ] ; then
-          read cc
-          runonce=Yes
-       else
-          cc=""
-       fi
-       if [ -z "$cc" ] ; then
-          cc=$FOO
-       fi
-       case "$cc" in
-          [Pp][Oo][Ll][Ll])
-             SOCKETENGINE="poll"
-             USESELECT=""
-             ;;
-          [Kk][Qq][Uu][Ee][Uu][Ee])
-             SOCKETENGINE="kqueue"
-             USESELECT=""
-             ;;
-          [Ss][Ee][Ll][Ee][Cc][Tt])
-             SOCKETENGINE="select"
-             USESELECT="1"
-             ;;
-          *)
-             echo ""
-             echo "You need to enter either poll, select, or kqueue here..."
-             echo ""
-             FOO=""
-             ;;
-       esac
-   done
-fi
-
 FOO=""
 runonce=""
 while [ -z "$FOO" ] ; do
@@ -1123,7 +1059,6 @@ cat > $OPTIONS_H << __EOF__
 #define SERVICES_NAME "$SERVICES_NAME"
 #define MAXCHANNELSPERUSER $MAXCHANNELSPERUSER
 
-#define SOCKETENGINE "$SOCKETENGINE"
 __EOF__
 
 if [ -n "$USESELECT" ] ; then
@@ -1241,7 +1176,6 @@ else
    cat Makefile.tmp | sed s/'FDLIMIT=.*'/FDLIMIT=/ > Makefile
 fi
 
-cat Makefile | sed s/'ENGINE=.*'/ENGINE=socketengine_${SOCKETENGINE}.c/ > Makefile.tmp
 cat Makefile.tmp > Makefile
 
 echo "Done."

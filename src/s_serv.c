@@ -35,7 +35,7 @@
 #include "zlink.h"
 #include "userban.h"
 
-#if defined(AIX) || defined(DYNIXPTX) || defined(SVR3)
+#if defined(AIX) || defined(SVR3)
 #include <time.h>
 #endif
 #include <sys/stat.h>
@@ -69,7 +69,7 @@ extern void reset_sock_opts();
 
 extern char *smalldate(time_t);	/* defined in s_misc.c */
 extern void outofmemory(void);	/* defined in list.c */
-extern void s_die(void);	/* defined in ircd.c as VOIDSIG */
+extern void s_die(void);
 extern int  match(char *, char *);	/* defined in match.c */
 
 /* Local function prototypes */

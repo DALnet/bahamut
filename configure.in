@@ -1,23 +1,52 @@
 dnl Process this file with autoconf to produce a configure script.
+dnl rewritten for my own personal sanity, and for more extensive
+dnl checks - feb04 -epi
+
 AC_INIT
+
 AC_CONFIG_HEADER(include/setup.h)
+
 PACKAGE=bahamut-release
 VERSION=1.4
 AC_SUBST(PACKAGE)
 AC_SUBST(VERSION)
 
-AC_ARG_ENABLE(hookmodules, \
-[  --disable-hookmodules   disable support for loadable hook modules],,enable_hmodules=yes)
+# autoheader templates
+
+AH_TEMPLATE([BROKEN_FD_SETSIZE],[If on a system with a broken FD_SETSIZE])
+AH_TEMPLATE([HAVE_ENCRYPTION_ON],[If we support encryption])
+AH_TEMPLATE([HAVE_MINMAX],[If we have the MIN and MAX macros])
+AH_TEMPLATE([MALLOCH],[Our malloc header file])
+AH_TEMPLATE([OS_SOLARIS2],[If we're running on Solaris])
+AH_TEMPLATE([SYS_ERRLIST_DECLARED],[If the sys_errlist array is defined])
+AH_TEMPLATE([USE_HOOKMODULES],[Do we support loadable modules])
+
+dnl Put our options of here for ease of reading.
+
+AC_ARG_ENABLE(hookmodules,
+[  --disable-hookmodules   disable support for loadable hook modules],,
+[ check_hmodules="yes" ])
+
+AC_ARG_ENABLE(openssl,
+[  --enable-openssl[=DIR]       Enable OpenSSL support (DIR optional).
+  --disable-openssl            Disable OpenSSL support. ],
+[ check_openssl=$enableval ],
+[ check_openssl="yes" ])
+
+AC_ARG_WITH(socketengine,
+[  --with-socketengine=TYPE       Set the socketengine type.  Choices are:
+                                kqueue poll select ],
+[ check_sengine=$withval ],
+[ check_sengine="yes" ])
 
 dnl Checks for programs.
 AC_PROG_CC
 AC_ISC_POSIX
-AC_CANONICAL_SYSTEM
-AC_AIX
 AC_PROG_MAKE_SET
-AC_PATH_PROG(RM,rm)
-AC_PATH_PROG(CP,cp)
+AC_PATH_PROG(RM, rm)
+AC_PATH_PROG(CP, cp)
 AC_PROG_INSTALL
+AC_C_INLINE
 
 dnl Checks for libraries.
 dnl Replace `main' with a function in -lnsl:
@@ -28,7 +57,11 @@ AC_CHECK_FUNC(crypt,, AC_CHECK_LIB(descrypt, crypt,,AC_CHECK_LIB(crypt, crypt,,)
 
 dnl Checks for header files.
 AC_HEADER_STDC
-AC_CHECK_HEADERS(sys/param.h unistd.h string.h strings.h sys/syslog.h stdlib.h stddef.h stropts.h limits.h)
+AC_CHECK_HEADERS([fcntl.h limits.h malloc.h netdb.h netinet/in.h stddef.h])
+AC_CHECK_HEADERS([stdlib.h string.h strings.h sys/file.h sys/ioctl.h])
+AC_CHECK_HEADERS([sys/param.h sys/socket.h sys/time.h syslog.h unistd.h])
+AC_CHECK_HEADERS([utmp.h])
+AC_CHECK_HEADERS(inttypes.h sys/resource.h errno.h stdlib.h stddef.h getopt.h)
 AC_CHECK_HEADER(malloc.h, AC_DEFINE(MALLOCH, <malloc.h>)) 
 AC_MSG_CHECKING(MIN and MAX definition)
 AC_EGREP_CPP(yes,
@@ -44,51 +77,26 @@ AC_EGREP_CPP(yes,
 
 dnl Checks for library functions.
 AC_PROG_GCC_TRADITIONAL
-AC_CHECK_FUNCS(index strerror strtoken strtok inet_addr inet_ntoa inet_netof inet_aton)
-AC_CHECK_FUNCS(gettimeofday lrand48 sigaction bzero bcmp bcopy)
-AC_CHECK_FUNCS(dn_skipname __dn_skipname getrusage times, break)
+AC_CHECK_FUNCS([alarm dup2 gethostbyname gethostname getpass gettimeofday])
+AC_CHECK_FUNCS([inet_ntoa isascii memmove memset munmap setenv socket])
+AC_CHECK_FUNCS([strcasecmp strchr strdup strerror strncasecmp strrchr strtol])
+AC_CHECK_FUNCS([strtoul index strerror strtoken strtok inet_addr inet_netof])
+AC_CHECK_FUNCS([inet_aton gettimeofday lrand48 sigaction bzero bcmp bcopy])
+AC_CHECK_FUNCS([dn_skipname __dn_skipname getrusage times, break])
 
-if test "$enable_hmodules" = "yes"; then
-AC_CHECK_LIB(dl, dlopen)
-AC_CHECK_HEADER(dlfcn.h)
-AC_CHECK_FUNCS(dlopen dlsym)
-AC_DEFINE(USE_HOOKMODULES)
-LIBS="$LIBS -Wl,-export-dynamic"
+dnl Checks for loadable hook module support
+
+set_hmodules="disabled"
+
+if test "$check_hmodules" = "yes"; then
+    AC_CHECK_LIB(dl, dlopen)
+    AC_CHECK_HEADER(dlfcn.h)
+    AC_CHECK_FUNCS(dlopen dlsym)
+    AC_DEFINE(USE_HOOKMODULES)
+    set_hmodules="enabled"
+    LIBS="$LIBS -Wl,-export-dynamic"
 fi
 
-dnl taken from ircd's Config script
-AC_MSG_CHECKING(signal implementation)
-AC_TRY_RUN(
-[
-int main()
-{
-#if defined(HAVE_SIGACTION)
-	exit(0);
-#else
-	exit(1);
-#endif
-}
-], AC_DEFINE(POSIX_SIGNALS) AC_MSG_RESULT(posix),
-    AC_TRY_RUN(
-[
-#include <signal.h>
-int calls = 0;
-void handler()
-{
-	if (calls) return;
- 	calls++;
-	kill(getpid(), SIGTERM);
-	sleep(1);
-}
-int main()
-{
-	signal(SIGTERM, handler);
-	kill(getpid(), SIGTERM);
-	exit (0);
-}
-], AC_DEFINE(BSD_RELIABLE_SIGNALS) AC_MSG_RESULT(bsd),
-    AC_DEFINE(SYSV_UNRELIABLE_SIGNALS) AC_MSG_RESULT(sysv), AC_MSG_RESULT(uknown)),
-AC_MSG_RESULT(unknown))
 dnl Check for sys_errlist
 dnl Stolen from BitchX
 AC_MSG_CHECKING(for sys_errlist declaration)
@@ -106,60 +114,11 @@ main()
   AC_DEFINE(SYS_ERRLIST_DECLARED),
   AC_MSG_RESULT(no), AC_MSG_RESULT(cross compiling))
 
-dnl Check to see if we should set USE_FAST_FD_ISSET
-AC_MSG_CHECKING(to see if we should enable fast FD_ISSET code)
-AC_TRY_COMPILE(, [
-#include <sys/types.h>
+dnl Openssl checks - combination of our old way and the hybrid7 method
 
-int main()
-{
-  fd_set read_set;
-  read_set.fds_bits;
-  exit(0);
-}
-], 
-  AC_MSG_RESULT(yes)
-  AC_DEFINE(USE_FAST_FD_ISSET),
-  AC_MSG_RESULT(no))
-
-dnl Check to see if we have a broken FD_SETSIZE
-
-DFDSS='-DFD_SETSIZE=1024'
-
-AC_MSG_CHECKING(to see if FD_SETSIZE is broken)
-AC_TRY_RUN([
-#define FD_SETSIZE 666
-#include <sys/types.h>
-#include <sys/time.h>
-
-int main()
-{
-  if(FD_SETSIZE != 666)
-     exit(1);
-  exit(0);
-}
-], 
-AC_MSG_RESULT(no),
-[
-AC_MSG_RESULT(YES)
-AC_MSG_WARN(FD_SETSIZE is hard set by your operating system)
-AC_MSG_WARN(MAXCONNECTIONS must be no higher than the hardwired FD_SETSIZE)
-AC_MSG_WARN(If you're using a system that supports it use the poll call instead of select.)
-AC_DEFINE(BROKEN_FD_SETSIZE)
-DFDSS=' # FD_SETSIZE is broken on this machine!'
-],
-AC_MSG_RESULT(can't tell))
-
-AC_SUBST(DFDSS)
-
-dnl Openssl checks - stolen from hybrid7
+save_LIBS="$LIBS"
 
 AC_MSG_CHECKING(for OpenSSL)
-AC_ARG_ENABLE(openssl,
-[  --enable-openssl[=DIR]       Enable OpenSSL support (DIR optional).
-  --disable-openssl            Disable OpenSSL support. ],
-[ cf_enable_openssl=$enableval ],
-[ cf_enable_openssl="auto" ])
 
 if test "X$cf_enable_openssl" != "Xno" ; then
   cf_openssl_basedir=""
@@ -169,8 +128,8 @@ if test "X$cf_enable_openssl" != "Xno" ; then
      cf_openssl_basedir="${cf_enable_openssl}"
   else
     dnl Do the auto-probe here.  Check some common directory paths.
-    for dirs in /usr/local/ssl /usr/pkg /usr/local \
-                /usr/local/openssl ; do
+    for dirs in /usr/local/ssl /usr/pkg /usr/local /usr/lib /usr/lib/ssl\
+                /opt /opt/openssl /usr/local/openssl ; do
       if test -f "${dirs}/include/openssl/opensslv.h" ; then
         cf_openssl_basedir="${dirs}"
         break
@@ -202,89 +161,168 @@ if test "X$cf_enable_openssl" != "Xno" ; then
   dnl If we have a basedir defined, then everything is okay.  Otherwise,
   dnl we have a problem.
   if test "X$cf_openssl_basedir" != "X" ; then
+    LIBS="$save_LIBS $SSL_LIBS -lcrypto"
     AC_MSG_RESULT($cf_openssl_basedir)
+    AC_TRY_RUN([
+    #include <stdio.h>
+    #include <string.h>
+    #include <openssl/rand.h>
+    #include <openssl/opensslv.h>
+    #include <openssl/crypto.h>
+    int main(void)
+    {
+        FILE *fp;
+        char a[2048];
+
+        fp = fopen(".openssl_h_version", "w");
+        if(fp)
+        {
+            fprintf(fp, "%s\n", OPENSSL_VERSION_TEXT);
+            fclose(fp);
+        }
+
+        fp = fopen(".openssl_l_version", "w");
+        if(fp)
+        {
+            fprintf(fp, "%s\n", SSLeay_version(SSLEAY_VERSION));
+            fclose(fp);
+        }
+
+        memset(a, 0, 2048);
+        RAND_add(a, 2048, 2048);
+        if(RAND_status() <= 0)
+            return 1;
+        return 0;
+    }
+    ],
+    [ found_openssl=yes; ], [], AC_MSG_RESULT(cross compiler))
+    if test "X$found_openssl" = "X"; then
+        echo ""
+        echo "Insufficient version of openssl"
+        echo " - openssl library version: `cat .openssl_l_version`"
+        echo " - openssl header version : `cat .openssl_h_version`"
+        $RM -f .openssl_l_version .openssl_h_version
+        echo ""
+        echo "Bahamut requires OpenSSL version 0.9.5 or later to compile"
+        echo ""
+        exit 1
+    fi
+    echo " - openssl library version: `cat .openssl_l_version`"
+    echo " - openssl header version : `cat .openssl_h_version`"
+    $RM -f .openssl_l_version .openssl_h_version
     cf_enable_openssl="yes"
+    encryption="enabled"
+    AC_DEFINE(HAVE_ENCRYPTION_ON)
+    ENCRYPT_SRC="rc4.c dh.c"
+    AC_SUBST(ENCRYPT_SRC)
   else
     AC_MSG_RESULT(not found.  Please check your path.)
     cf_enable_openssl="no"
+    encryption="disabled"
   fi
   unset cf_openssl_basedir
 else
   dnl If --disable-openssl was specified
+  encryption="disabled"
   AC_MSG_RESULT(disabled)
 fi
 
-save_CPPFLAGS="$CPPFLAGS"
-CPPFLAGS="$CPPFLAGS $SSL_INCLUDES"
-save_LIBS="$LIBS"
-LIBS="$LIBS $SSL_LIBS"
-if test "X$cf_enable_openssl" != "Xno"; then
-    dnl Check OpenSSL version (must be 0.9.6 or above!)
-    AC_MSG_CHECKING(for OpenSSL 0.9.6 or above)
-    AC_TRY_RUN(
-    [
-#include <openssl/opensslv.h>
-#include <stdlib.h>
-int main(void) {
-  if ( (OPENSSL_VERSION_NUMBER & 0x00906000) == 0x00906000)
-  {
-    exit(0);
-  }
-  exit(1);
-}
-    ], cf_openssl_version_ok='yes',
-       cf_openssl_version_ok='no',
-       cf_openssl_version_ok='no')
-
-    if test "X$cf_openssl_version_ok" = "Xyes"; then
-        AC_MSG_RESULT(ok)
-        dnl Do all the HAVE_LIBCRYPTO magic -- and check for ciphers
-        save_CPPFLAGS="$CPPFLAGS"
-        CPPFLAGS="$CPPFLAGS $SSL_LIBS"
-        AC_CHECK_LIB(crypto, RSA_free)
-        if test "X$ac_cv_lib_crypto_RSA_free" = "Xyes"; then
-            cf_openssl_ciphers=''
-            AC_CHECK_FUNCS(EVP_bf_cfb,
-                cf_openssl_ciphers="${cf_openssl_ciphers}BF/168 BF/128 ")
-            AC_CHECK_FUNCS(EVP_cast5_cfb,
-                cf_openssl_ciphers="${cf_openssl_ciphers}CAST/128 ")
-            AC_CHECK_FUNCS(EVP_idea_cfb,
-                cf_openssl_ciphers="${cf_openssl_ciphers}IDEA/128 ")
-            AC_CHECK_FUNCS(EVP_rc5_32_12_16_cfb,
-                cf_openssl_ciphers="${cf_openssl_ciphers}RC5.16/128 RC5.12/128 RC5.8/128 ")
-            AC_CHECK_FUNCS(EVP_des_ede3_cfb,
-                cf_openssl_ciphers="${cf_openssl_ciphers}3DES/168 ")
-            AC_CHECK_FUNCS(EVP_des_cfb,
-                cf_openssl_ciphers="${cf_openssl_ciphers}DES/56 ")
-        fi
-        CPPFLAGS="$save_CPPFLAGS"
-        SSL_LIBS="$SSL_LIBS -lcrypto"
-    else
-        AC_MSG_RESULT(no - OpenSSL support disabled)
-    fi
-fi
-CPPFLAGS="$save_CPPFLAGS"
-LIBS="$save_LIBS"
-
-   if test -z "$cf_openssl_basedir" ; then
-      cf_openssl_basedir="(system)"
-   fi
-   ac_cv_openssldir=$cf_openssl_basedir
+unset save_LIBS
 
 dnl end of openssl library test
 
-dnl don't add more of these unless it's critical.  Trying to get rid of them.
-AC_MSG_CHECKING(operating system)
+dnl check for various OSes
+
 case "$target" in
-*-solaris2*) AC_DEFINE(OS_SOLARIS2) AC_MSG_RESULT(Solaris 2.x) ;;
-*-aix*) AC_DEFINE(OS_AIX) AC_MSG_RESULT(AIX) ;;
-*-esix*) AC_DEFINE(OS_ESIX) AC_MSG_RESULT(ESIX) ;;
-*-next*) AC_DEFINE(OS_NEXT) AC_MSG_RESULT(NeXT something) ;;
-*-mips*) AC_DEFINE(OS_MIPS) AC_MSG_RESULT(MIPS something) ;;
-*-sequent-ptx*) AC_DEFINE(OS_DYNIXPTX) AC_MSG_RESULT(Dynix PTX) ;;
-*-hpux*) AC_DEFINE(OS_HPUX) AC_MSG_RESULT(HP-UX) ;;
-*) AC_MSG_RESULT(nothing special required) ;;
+    *-solaris2)
+        solaris2="yes"
+        AC_DEFINE(OS_SOLARIS2)
+        ;;
+    *-freebsd)
+        freebsd="yes"
+        ;;
+    *-linux)
+        linux="yes"
+        ;;
 esac
+
+dnl once we add epoll and /dev/poll support, these will be
+dnl updated with the appropriate checks
+
+if test "$check_sengine" = "yes"; then
+    engine="select"
+    if test "$freebsd" = "yes"; then
+        AC_CHECK_FUNC(kevent, [ engine="kqueue" ], )
+    elif test "$solaris2" = "yes"; then
+        AC_CHECK_FUNC(poll, [ engine="poll" ], )
+    elif test "$linux" = "yes"; then
+        AC_CHECK_FUNC(poll, [ engine="poll" ], )
+    else
+        AC_CHECK_FUNC(poll, [ engine="poll"], )
+    fi
+elif test "$check_sengine" = "kqueue"; then
+    AC_CHECK_FUNC(kevent, [ engine="kqueue" ], )
+    if test "X$engine" = "X"; then
+        AC_MSG_NOTICE()
+        AC_MSG_NOTICE(kqueue not supported on this platform!)
+        AC_MSG_ERROR()
+    fi
+    AC_MSG_NOTICE(setting socketengine type to kqueue)
+elif test "$check_sengine" = "poll"; then
+    AC_CHECK_FUNC(poll, [ engine="poll" ], )
+    if test "X$engine" = "X"; then
+        AC_MSG_NOTICE()
+        AC_MSG_NOTICE(poll not supported on this platform!)
+        AC_MSG_ERROR()
+    fi
+    AC_MSG_NOTICE(setting socketengine type to poll)
+elif test "$check_sengine" = "select"; then
+    AC_MSG_NOTICE(setting socketengine type to select.. for some stupid reason)
+    engine = "select"
+else
+    AC_MSG_NOTICE()
+    AC_MSG_NOTICE(socket engine type incorrect!)
+    AC_MSG_ERROR()
+fi
+
+SENGINE="socketengine_$engine.c"
+
+dnl Check to see if we have a broken FD_SETSIZE
+if test $engine = "select"; then
+    AC_MSG_WARN()
+    AC_MSG_WARN(select is not reccomended!)
+    AC_MSG_WARN()
+    FDSETSIZE='-DFD_SETSIZE=1024'
+
+    AC_MSG_CHECKING(to see if FD_SETSIZE is broken)
+    AC_TRY_RUN([
+    #define FD_SETSIZE 666
+    #include <sys/types.h>
+    #include <sys/time.h>
+
+    int main()
+    {
+        if(FD_SETSIZE != 666)
+            exit(1);
+        exit(0);
+    }
+    ],
+    AC_MSG_RESULT(no),
+    [
+    AC_MSG_RESULT(YES)
+    AC_MSG_WARN(FD_SETSIZE is hard set by your operating system)
+    AC_MSG_WARN(MAXCONNECTIONS must be no higher than the hardwired FD_SETSIZE)
+    AC_DEFINE(BROKEN_FD_SETSIZE)
+    FDSETSIZE=' # FD_SETSIZE is broken on this machine!'
+    ],
+    AC_MSG_RESULT(can't tell))
+fi
+
+AC_SUBST(SSL_INCLUDES)
+AC_SUBST(SSL_LIBS)
+AC_SUBST(LIBS)
+AC_SUBST(SENGINE)
+AC_SUBST(FDSETSIZE)
 
 AC_OUTPUT(Makefile src/Makefile tools/Makefile)
 
@@ -295,4 +333,10 @@ echo configuring zlib...
  cd ..
 )
 
-touch .run_configure
+AC_MSG_NOTICE()
+AC_MSG_NOTICE(      ***** Bahamut Configuration Values *****)
+AC_MSG_NOTICE(      Socket Engine Type:             $engine )
+AC_MSG_NOTICE(      Encryption:                     $encryption)
+AC_MSG_NOTICE(      Loadable Modules:               $set_hmodules)
+AC_MSG_NOTICE(      More values to come!                    )
+AC_MSG_NOTICE()

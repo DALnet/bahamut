@@ -1,91 +1,34 @@
-#************************************************************************
-#*   IRC - Internet Relay Chat, Makefile
-#*   Copyright (C) 1990, Jarkko Oikarinen
-#*
-#*   This program is free software; you can redistribute it and/or modify
-#*   it under the terms of the GNU General Public License as published by
-#*   the Free Software Foundation; either version 1, or (at your option)
-#*   any later version.
-#*
-#*   This program is distributed in the hope that it will be useful,
-#*   but WITHOUT ANY WARRANTY; without even the implied warranty of
-#*   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#*   GNU General Public License for more details.
-#*
-#*   You should have received a copy of the GNU General Public License
-#*   along with this program; if not, write to the Free Software
-#*   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
-#*/
+#   IRC - Internet Relay Chat, Makefile
+#   Copyright (C) 1990, Jarkko Oikarinen
+#
+#   This program is free software; you can redistribute it and/or modify
+#   it under the terms of the GNU General Public License as published by
+#   the Free Software Foundation; either version 1, or (at your option)
+#   any later version.
+#
+#   This program is distributed in the hope that it will be useful,
+#   but WITHOUT ANY WARRANTY; without even the implied warranty of
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#   GNU General Public License for more details.
+#
+#   You should have received a copy of the GNU General Public License
+#   along with this program; if not, write to the Free Software
+#   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+#
+# $Id$
 
 RM=@RM@
 
-# Any extra compile options here:
-XFLAGS=
-# file descriptor size limit
-FDLIMIT=@DFDSS@
-# Default CFLAGS
-CFLAGS= -Wall -g -O2 ${FDLIMIT} ${XFLAGS}
-# engine
-ENGINE=
-#
-# What I used on FreeBSD 2.1.7 with kernel compiled for 4096 descriptors
-# the -D"FD_SETSIZE=4096" is only needed if sys/types.h has not been updated
-# to match the kernel config --JRL
-#CFLAGS= -g -D"FD_SETSIZE=4096" -O2
-#
-# To compile on IRIX (tested 2/24/2000 on IRIX 6.4)
-#CFLAGS=-D_USE_BSD
-#IRCDLIBS=-lbsd
-#
-# NOTE: The rest of these definitions may or may not work, I haven't tested them --JRL
-#
-# use the following on MIPS:
-#CFLAGS= -systype bsd43 -DSYSTYPE_BSD43
-# For Irix 4.x (SGI), use the following:
-#CFLAGS= -g -cckr
-#
-# on NEXT use:
-#CFLAGS=-bsd
-#on NeXT other than 2.0:
-#IRCDLIBS=-lsys_s
-#
-# AIX 370 flags
-#CFLAGS=-D_BSD -Hxa
-#IRCDLIBS=-lbsd
-#
-# Dynix/ptx V2.0.x
-#CFLAGS= -O -Xo
-#IRCDLIBS= -lsocket -linet -lnsl -lseq
-# 
-# Dynix/ptx V1.x.x
-#IRCDLIBS= -lsocket -linet -lnsl -lseq
-#
-#use the following on SUN OS without nameserver libraries inside libc
-#IRCDLIBS=-lresolv
-#
-# ESIX
-#CFLAGS=-O -I/usr/ucbinclude
-#IRCDLIBS=-L/usr/ucblib -L/usr/lib -lsocket -lucb -lns -lnsl
-#
-# LDFLAGS - flags to send the loader (ld). SunOS users may want to add
-# -Bstatic here.
-#
-#LDFLAGS=-Bstatic
-#
-#Dell SVR4
-#CC=gcc
-#CFLAGS= -O2
-#IRCDLIBS=-lsocket -lnsl -lucb
-#IRCLIBS=-lcurses -lresolv -lsocket -lnsl -lucb
-
-
+ENGINE=@SENGINE@
+FDSETSIZE=@FDSETSIZE@
 
 SHELL=/bin/sh
 SUBDIRS=zlib src tools
 CLEANSUBDIRS=src tools
 
-MAKE=make 'CFLAGS=${CFLAGS}' 'INSTALL=${INSTALL}' 'LDFLAGS=${LDFLAGS}' 'ENGINE_S=${ENGINE}'
-MAKEPROFILE=make 'CFLAGS=${CFLAGS} -pg -DPROFILING' 'INSTALL=${INSTALL}' 'LDFLAGS=${LDFLAGS} -pg' 'ENGINE_S=${ENGINE}'
+CC=@CC@
+CFLAGS=@CFLAGS@
+LIBS=@LIBS@ 
 
 all:	build
 
@@ -94,11 +37,6 @@ build:
 		echo "Hmm...doesn't look like you've run configure..."; \
 		echo "Doing so now."; \
 		sh configure; \
-	fi
-	-@if [ -f .run_configure ] ; then \
-		echo "Hmm...You haven't run config after you've ran configure..."; \
-		echo "Doing so now."; \
-		sh config; \
 	fi
 	@for i in $(SUBDIRS); do \
 		echo "Building $$i";\
@@ -116,7 +54,7 @@ profile:
 	@for i in $(SUBDIRS); do \
 		echo "Building $$i [profile]";\
 		cd $$i;\
-		${MAKEPROFILE} build; cd ..;\
+		${MAKE} profile; cd ..;\
 	done
 
 clean:

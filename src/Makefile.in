@@ -3,6 +3,9 @@ RM=@RM@
 IRCDLIBS=@LIBS@ ../zlib/libz.a
 INCLUDEDIR=-I../include
 OPENSSLINC=@SSL_INCLUDES@
+ENGINE=@SENGINE@
+CRYPTO=@ENCRYPT_SRC@
+CFLAGS=-Wall @CFLAGS@
 
 RES_SRC =
 
@@ -15,7 +18,7 @@ SOURCES = blalloc.c bsd.c channel.c dbuf.c fdlist.c m_stats.c\
           s_conf.c s_debug.c s_err.c s_misc.c s_numeric.c s_serv.c s_user.c \
           scache.c send.c support.c throttle.c whowas.c zlink.c userban.c \
           clientlist.c struct.c fds.c hide.c modules.c inifile.c \
-          $(ENGINE_S)
+          $(ENGINE) $(CRYPTO)
 
 OBJECTS = $(SOURCES:.c=.o) version.o
 

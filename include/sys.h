@@ -78,13 +78,7 @@
 
 #define MyFree(x)       if ((x) != NULL) free(x)
 
-#ifdef NEXT
-#define VOIDSIG int		/* whether signal() returns int of void */
-#else
-#define VOIDSIG void		/* whether signal() returns int of void */
-#endif
-
-extern VOIDSIG dummy();
+extern void dummy();
 
 #ifdef	NO_U_TYPES
 

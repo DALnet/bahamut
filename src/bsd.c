@@ -38,16 +38,8 @@ extern char *sys_errlist[];
 int writecalls = 0, writeb[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 int readcalls = 0;
 #endif
-VOIDSIG dummy()
+void dummy()
 {
-#ifndef HAVE_RELIABLE_SIGNALS
-    (void) signal(SIGALRM, dummy);
-    (void) signal(SIGPIPE, dummy);
-# ifdef SIGWINCH
-    (void) signal(SIGWINCH, dummy);
-# endif
-#else
-#ifdef POSIX_SIGNALS
     struct sigaction act;
     
     act.sa_handler = dummy;
@@ -62,8 +54,6 @@ VOIDSIG dummy()
     (void) sigaction(SIGPIPE, &act, (struct sigaction *) NULL);
 #ifdef SIGWINCH
     (void) sigaction(SIGWINCH, &act, (struct sigaction *) NULL);
-#endif
-#endif
 #endif
 }
 

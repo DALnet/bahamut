@@ -42,14 +42,6 @@
 # define USE_POLL 1		/* Get around stupid select() limitations */
 #endif
 
-#if defined( OS_ESIX ) && !defined( ESIX )
-# define ESIX 1
-#endif
-
-#if defined( OS_NEXT ) && !defined( NEXT )
-# define NEXT 1
-#endif
-
 #if defined( aix ) || defined( OS_AIX )
 # include <sys/machine.h>
 # if BYTE_ORDER == BIG_ENDIAN
@@ -71,17 +63,6 @@
 # if !defined( MIPS )
 #	define MIPS 1
 # endif
-#endif
-
-#if defined( BSD_RELIABLE_SIGNALS ) \
-    && (defined( SYSV_UNRELIABLE_SIGNALS ) || defined( POSIX_SIGNALS ))
-error You defined too many signal types in setup.h
-#elif defined( SYSV_UNRELIABLE_SIGNALS ) && defined( POSIX_SIGNALS )
-error You defined too many signal types in setup.h
-#endif
-
-#if defined( BSD_RELIABLE_SIGNALS ) || defined( POSIX_SIGNALS )
-# define HAVE_RELIABLE_SIGNALS
 #endif
 
 #endif				/* DEFS_H_INCLUDED */

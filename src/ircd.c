@@ -140,7 +140,7 @@ static int profiling_state = 1;
 static int profiling_newmsg = 0;
 static char profiling_msg[512];
 
-VOIDSIG s_dumpprof()
+void s_dumpprof()
 {
     char buf[32];
 
@@ -153,7 +153,7 @@ VOIDSIG s_dumpprof()
     profiling_newmsg = 1;
 }
 
-VOIDSIG s_toggleprof()
+void s_toggleprof()
 {
     char buf[32];
 
@@ -177,7 +177,7 @@ VOIDSIG s_toggleprof()
 
 #endif
 
-VOIDSIG s_die() 
+void s_die() 
 {
     FILE *fp;
     dump_connections(me.fd);
@@ -196,21 +196,15 @@ VOIDSIG s_die()
     exit(0);
 }
 
-static  VOIDSIG s_rehash() 
+static  void s_rehash() 
 {
-#ifdef	POSIX_SIGNALS
     struct sigaction act;
-#endif
     dorehash = 1;
-#ifdef	POSIX_SIGNALS
     act.sa_handler = s_rehash;
     act.sa_flags = 0;
     (void) sigemptyset(&act.sa_mask);
     (void) sigaddset(&act.sa_mask, SIGHUP);
     (void) sigaction(SIGHUP, &act, NULL);
-#else
-    (void) signal(SIGHUP, s_rehash);	/* sysV -argv */
-#endif
 }
 
 void restart(char *mesg) 
@@ -227,7 +221,7 @@ void restart(char *mesg)
     server_reboot();
 }
 
-VOIDSIG s_restart() 
+void s_restart() 
 {
     static int  restarting = 0;
 	
@@ -1261,7 +1255,6 @@ static void open_debugfile()
 
 static void setup_signals()
 {
-#ifdef	POSIX_SIGNALS
     struct sigaction act;
 
     act.sa_handler = SIG_IGN;
@@ -1286,24 +1279,6 @@ static void setup_signals()
     act.sa_handler = s_die;
     (void) sigaddset(&act.sa_mask, SIGTERM);
     (void) sigaction(SIGTERM, &act, NULL);
-
-#else
-# ifndef	HAVE_RELIABLE_SIGNALS
-    (void) signal(SIGPIPE, dummy);
-#  ifdef	SIGWINCH
-    (void) signal(SIGWINCH, dummy);
-#  endif
-# else
-#  ifdef	SIGWINCH
-    (void) signal(SIGWINCH, SIG_IGN);
-#  endif
-    (void) signal(SIGPIPE, SIG_IGN);
-# endif
-    (void) signal(SIGALRM, dummy);
-    (void) signal(SIGHUP, s_rehash);
-    (void) signal(SIGTERM, s_die);
-    (void) signal(SIGINT, s_restart);
-#endif 
 
 #ifdef RESTARTING_SYSTEMCALLS
     /*
