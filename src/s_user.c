@@ -1143,6 +1143,10 @@ int check_dccsend(aClient *from, aClient *to, char *msg)
 
     switch(extlen)
     {
+	case 0:
+	arraysz = 0;
+	break;
+
     case 2:
 	farray = exploits_2char;
 	arraysz = 2;
@@ -1163,14 +1167,17 @@ int check_dccsend(aClient *from, aClient *to, char *msg)
 	return 0;
     }
 
-    for(i = 0; farray[i]; i++)
+    if (arraysz != 0)
     {
-	if(myncmp(farray[i], ext, arraysz) == 0)
-	    break;
-    }
+        for(i = 0; farray[i]; i++)
+        {
+            if(myncmp(farray[i], ext, arraysz) == 0)
+            break;
+        }
 
-    if(farray[i] == NULL)
-	return 0;
+        if(farray[i] == NULL)
+            return 0;
+	}
 
     if(!allow_dcc(to, from))
     {
