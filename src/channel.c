@@ -2587,7 +2587,7 @@ m_sjoin(aClient *cptr,
     * pass -: go through and delete old modes that are in oldmode and not mode
     */
 	
-   if(mode.mode != oldmode.mode)
+   if(mode.mode != oldmode->mode)
    {
         /* plus modes */
         if((MODE_PRIVATE & mode.mode) && !(MODE_PRIVATE & oldmode->mode)) {
@@ -2624,35 +2624,35 @@ m_sjoin(aClient *cptr,
 	}
    
 	/* minus modes */
-	if((MODE_PRIVATE & oldmode.mode) && !(MODE_PRIVATE & mode->mode)) {
+	if((MODE_PRIVATE & oldmode->mode) && !(MODE_PRIVATE & mode.mode)) {
 		INSERTSIGN(-1,'-')
 		*mbuf++ = 'p';
 	}
-	if((MODE_SECRET & oldmode.mode) && !(MODE_SECRET & mode->mode)) {
+	if((MODE_SECRET & oldmode->mode) && !(MODE_SECRET & mode.mode)) {
 		INSERTSIGN(-1,'-')
 		*mbuf++ = 's';
 	}
-	if((MODE_MODERATED & oldmode.mode) && !(MODE_MODERATED & mode->mode)) {
+	if((MODE_MODERATED & oldmode->mode) && !(MODE_MODERATED & mode.mode)) {
 		INSERTSIGN(-1,'-')
 		*mbuf++ = 'm';
 	}
-	if((MODE_NOPRIVMSGS & oldmode.mode) && !(MODE_NOPRIVMSGS & mode->mode)) {
+	if((MODE_NOPRIVMSGS & oldmode->mode) && !(MODE_NOPRIVMSGS & mode.mode)) {
 		INSERTSIGN(-1,'-')
 		*mbuf++ = 'n';
 	}
-	if((MODE_TOPICLIMIT & oldmode.mode) && !(MODE_TOPICLIMIT & mode->mode)) {
+	if((MODE_TOPICLIMIT & oldmode->mode) && !(MODE_TOPICLIMIT & mode.mode)) {
 		INSERTSIGN(-1,'-')
 		*mbuf++ = 't';
 	}
-	if((MODE_INVITEONLY & oldmode.mode) && !(MODE_INVITEONLY & mode->mode)) {
+	if((MODE_INVITEONLY & oldmode->mode) && !(MODE_INVITEONLY & mode.mode)) {
 		INSERTSIGN(-1,'-')
 		*mbuf++ = 'i';
 	}
-	if((MODE_REGISTERED & oldmode.mode) && !(MODE_REGISTERED & mode->mode)) {
+	if((MODE_REGISTERED & oldmode->mode) && !(MODE_REGISTERED & mode.mode)) {
 		INSERTSIGN(-1,'-')
 		*mbuf++='r';
 	}
-	if((MODE_REGONLY & oldmode.mode) && !(MODE_REGONLY & mode->mode)) {
+	if((MODE_REGONLY & oldmode->mode) && !(MODE_REGONLY & mode.mode)) {
 		INSERTSIGN(-1,'-')
 		*mbuf++='R';
 	}
