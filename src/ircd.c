@@ -370,7 +370,7 @@ static time_t check_pings(time_t currenttime)
 {
     aClient 	*cptr;
     aConfItem 	*aconf = (aConfItem *) NULL;
-    int     	 zkillflag, ping = 0, i;
+    int     	 killflag, zkillflag, ping = 0, i;
     time_t       oldest = 0; /* timeout removed, see EXPLANATION below */
     char       	*reason, *ktype, fbuf[512];
     char 		*errtxt = "No response from %s, closing link";
@@ -393,40 +393,43 @@ static time_t check_pings(time_t currenttime)
 	    continue;
 	}
 
-	zkillflag = NO;
+	killflag = zkillflag = NO;
 
-	if (rehashed) 
+	if (rehashed && IsPerson(cptr)) 
 	{
-	    if (zline_in_progress) 
+	    if ((aconf = find_zkill(cptr)))	
+		zkillflag = YES;
+
+            if (!zline_in_progress && !zkillflag && (aconf = find_kill(cptr)))	
+		killflag = YES;
+
+	    if (killflag || zkillflag)
 	    {
-		if (IsPerson(cptr)) 
-		{
-		    if ((aconf = find_zkill(cptr)))	
-			zkillflag = YES;
+		ktype = zkillflag ? "Z-lined" : 
+		    ((aconf->status == CONF_KILL) ? "K-lined" : "Autokilled");
+
+		if (killflag)    
+		{   
+		    sendto_ops("%s active for %s",   
+			       (aconf->status == CONF_KILL) ? "K-line" :   
+			       "Autokill", get_client_name(cptr, FALSE));   
+		    reason = aconf->passwd ? aconf->passwd : ktype;   
+	    	}   
+		else /* its a Z line */ 
+		{ 
+		    sendto_ops("Z-line active for %s",
+			       get_client_name(cptr, FALSE));
+		    reason = aconf->passwd ? aconf->passwd : "Z-lined";
 		}
+	    
+		sendto_one(cptr, err_str(ERR_YOUREBANNEDCREEP),
+			   me.name, cptr->name, ktype);
+	    
+		ircsprintf(fbuf, "%s: %s", ktype, reason);
+		exit_client(cptr, cptr, &me, fbuf);
+		i--;   /* subtract out this fd so we check it again.. */
+		continue;
 	    }
-	}
-
-	/* Added a bit of code here to differentiate 
-	 * between K and Z-lines. -ThemBones
-	 */
-
-	if (zkillflag)
-	{
-	    ktype = zkillflag ? "Z-lined" : 
-		((aconf->status == CONF_KILL) ? "K-lined" : "Autokilled");
-
-		sendto_ops("Z-line active for %s",
-			   get_client_name(cptr, FALSE));
-		reason = aconf->passwd ? aconf->passwd : "Z-lined";
-	    
-	    sendto_one(cptr, err_str(ERR_YOUREBANNEDCREEP),
-		       me.name, cptr->name, ktype);
-	    
-	    ircsprintf(fbuf, "%s: %s", ktype, reason);
-	    (void) exit_client(cptr, cptr, &me, fbuf);
-	    i--;   /* subtract out this fd so we check it again.. */
-	    continue;
 	}
 	
 	if (IsRegistered(cptr))

@@ -5241,7 +5241,6 @@ int m_akill(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	aconf->hold=timeset+length;
 	
     add_temp_kline(aconf);
-    rehashed=NO;
     /* Check local users against it */
     for (i = 0; i <= highest_fd; i++)
     {
