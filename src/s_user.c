@@ -2406,7 +2406,7 @@ int chk_who(aClient *, int);
 
 int build_searchopts(aClient *sptr, int parc, char *parv[]) {
 	static char *who_help[] = {
-		"/WHO [[+|-][acghmnsu] [args]",
+		"/WHO [+|-][acghmnsuCM] [args]",
 		"Flags are specified like channel modes, the flags cgmnsu all have arguments",
 		"Flags are set to a positive check by +, a negative check by -",
 		"The flags work as follows:",
