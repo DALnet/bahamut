@@ -863,8 +863,10 @@ register_user(aClient *cptr,
    }
    else
 	  strncpyzt(user->username, username, USERLEN + 1);
-	
+
    SetClient(sptr);
+   sptr->pingval = get_client_ping(sptr);
+
    /*
     * Increment our total user count here 
     */
@@ -3306,6 +3308,7 @@ m_oper(aClient *cptr,
 					  IsOper(sptr) ? 'O' : 'o');
 			send_umode_out(cptr, sptr, old);
       sendto_one(sptr, rpl_str(RPL_YOUREOPER), me.name, parv[0]);
+      sptr->pingval = get_client_ping(sptr);
 #if !defined(CRYPT_OPER_PASSWORD) && (defined(FNAME_OPERLOG) ||\
     (defined(USE_SYSLOG) && defined(SYSLOG_OPER)))
       encr = "";

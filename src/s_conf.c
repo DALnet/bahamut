@@ -1081,6 +1081,18 @@ rehash(aClient *cptr, aClient *sptr, int sig)
 		  free_conf(tmp2);
 	}
    rehashed = 1;
+
+   for (i = 0; i <= highest_fd; i++)
+   {
+
+      /* our Y: lines could have changed, rendering our client ping
+         cache invalid. Reset it here. - lucas */
+
+      if ((acptr = local[i]) && !IsMe(acptr) && IsRegistered(acptr)) 
+         acptr->pingval = get_client_ping(acptr);
+   }
+
+
    return ret;
 }
 /*

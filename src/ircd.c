@@ -459,7 +459,7 @@ time_t      oldest = 0, timeout;
       }
 
       if (IsRegistered(cptr))
-	 ping = get_client_ping(cptr);
+	 ping = cptr->pingval;
       else
 	 ping = CONNECTTIMEOUT;
 

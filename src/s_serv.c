@@ -804,6 +804,8 @@ m_server_estab(aClient *cptr)
    check_fdlists(timeofday);
 #endif
 
+   cptr->pingval = get_client_ping(cptr);
+
    nextping = timeofday;
 
   /* error, error, error! if a server is U:'d, and it connects to us, 
