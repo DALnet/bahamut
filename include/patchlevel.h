@@ -22,13 +22,11 @@
 #define __patchlevel_header__
 
 /* these don't go in the version itself, but they're importany anyways */
-#define CURRENT 1
-#define RELEASE 2
-#define STABLE  3
-#define BETA    4
-#define ALPHA   5
+#define RELEASE 1
+#define BETA    2
+#define CURRENT 3
 
-#define BRANCHSTATUS ALPHA
+#define BRANCHSTATUS CURRENT
 
 #define BASENAME "bahamut"
 #define MAJOR 1

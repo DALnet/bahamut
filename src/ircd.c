@@ -114,15 +114,15 @@ extern void     read_help(char *);          /* defined in s_serv.c */
 extern void     init_globals();
 
 char        **myargv;
-char        configfile[PATH_MAX];           /* Server configuration file */
+char        configfile[PATH_MAX] = {0};     /* Server configuration file */
 
 int         debuglevel = -1;       /* Server debug level */
 int         bootopt = 0;           /* Server boot option flags */
 char        *debugmode = "";        /* -"-    -"-   -"-  */
 char        *sbrk0;                 /* initial sbrk(0) */
 static int  dorehash = 0;
-char        dpath[PATH_MAX];        /* our configure files live in here */
-char        spath[PATH_MAX];        /* the path to our binary */
+char        dpath[PATH_MAX] = {0};  /* our configure files live in here */
+char        spath[PATH_MAX] = {0};  /* the path to our binary */
 int         rehashed = 1;
 int         zline_in_progress = 0; /* killing off matching D lines */
 time_t      nextconnect = 1;       /* time for next try_connections call */
@@ -526,7 +526,6 @@ void get_paths(char *argv)
                 tmp2[PATH_MAX];
     int len, fd;
     
-    *spath = 0;
     *t_dpath = 0;
     *t_d2path = 0;
     *tmp = 0;
@@ -545,7 +544,6 @@ void get_paths(char *argv)
         }
         strcat(tmp, t_dpath);
         strcat(tmp, "/ircd.conf");
-        printf("TMP: %s\n", tmp);
         if((fd = open(tmp, O_RDONLY)) > 0)
         {
             /* found our ircd.conf in the directory
@@ -561,7 +559,6 @@ void get_paths(char *argv)
         strncat(t_d2path, spath, len);
         strcat(tmp2, t_d2path);
         strcat(tmp2, "/ircd.conf");
-        printf("TMP2: %s\n", tmp2);
         if((fd = open(tmp2, O_RDONLY)) > 0)
         {
             /* found the ircd.conf in the directory local
@@ -594,16 +591,16 @@ void get_paths(char *argv)
         {
             strcat(dpath, t_dpath);
             strcat(dpath, "/");
-            len = strlen(configfile);
-            while(configfile[len] != '/')
-                len--;
-            strncat(dpath, configfile, len);
+            if(strchr(configfile, '/'))
+            {
+                len = strlen(configfile);
+                while(configfile[len] != '/')
+                    len--;
+                strncat(dpath, configfile, len);
+            }
         }
-        /* set our config file to an absolute path */
-        strcat(tmp, dpath);
-        strcat(tmp, "/ircd.conf");
-        strcpy(configfile, tmp);
     }
+    printf("CONFIGFILE: %s\n", configfile);
 }
 
 
@@ -772,10 +769,7 @@ main(int argc, char *argv[])
         }
     }
 
-    *spath = 0;
-    *dpath = 0;
-    *configfile = 0;
-    get_paths(argv[0]);
+    get_paths(myargv[0]);
 
     if(chdir(dpath))
     {
@@ -847,7 +841,6 @@ main(int argc, char *argv[])
     open_debugfile();
     NOW = time(NULL);
 
-    printf("CONFIGFILE: %s\n", configfile);
     if(initconf(configfile) == -1)
     {
         printf("Server not started\n");

@@ -407,8 +407,7 @@ void
 confadd_oper(char *name, char *host, char *passwd, char *flags, char *class)
 {
     aOper *x;
-    int *i, flag, new, hostidx;
-    char *m = "*";
+    int new, hostidx;
     
     if (!strchr(host, '@') && *host != '/')
     {
@@ -445,15 +444,8 @@ confadd_oper(char *name, char *host, char *passwd, char *flags, char *class)
         new = 1;
     }
     x->legal = 1;
-    for (m=(*flags) ? flags : m; *m; m++)
-    {
-        for (i=oper_access; (flag = *i); i+=2)
-            if (*m==(char)(*(i+1)))
-            {
-                x->flags |= flag;
-                break;
-            }
-    }
+    /* this kludge is just to get the string across.. *shrug* */
+    DupString(x->class_name, flags);
     if(class)
         x->class = find_class(class);
     else
@@ -1130,10 +1122,11 @@ printconf()
     printf("/* Class Definitions */\n\n");
     for(class = classes; class; class = class->next)
     {
-        printf("class %s {\n", class->name);
+        printf("class {\n");
+        printf("    name %s;\n", class->name);
         printf("    pingfreq %d;\n", class->pingfreq);
-        printf("    maxlinks %d;\n", class->maxlinks);
-        printf("    connectfreq %d;\n", class->connfreq);
+        printf("    maxusers %d;\n", class->maxlinks);
+        printf("    connfreq %d;\n", class->connfreq);
         printf("    maxsendq %d;\n", class->maxsendq);
         printf("};\n\n");
     }
@@ -1142,7 +1135,7 @@ printconf()
     {
         printf("allow {\n");
         printf("    ipmask \"%s\";\n", allow->ipmask);
-        printf("    hostmask \"%s\";\n", allow->hostmask);
+        printf("    host \"%s\";\n", allow->hostmask);
         if(allow->passwd && allow->passwd != "")
             printf("    passwd \"%s\";\n", allow->passwd);
         if(allow->port != 0)
@@ -1153,20 +1146,12 @@ printconf()
     for(aoper = opers; aoper; aoper = aoper->next)
     {
         int i;
-        char oper_flags[32] = { 0 }, *ptr = oper_flags;
-        printf("oper %s {\n", aoper->nick);
+        printf("oper {\n");
+        printf("    name \"%s\";\n", aoper->nick);
         for (i = 0; aoper->hosts[i]; ++i)
             printf("    host \"%s\";\n", aoper->hosts[i]);
         printf("    passwd \"%s\";\n", aoper->passwd);
-        if(aoper->flags & OFLAG_ADMIN)
-            *ptr++ = 'A';
-        if(aoper->flags & OFLAG_SADMIN)
-            *ptr++ = 'a';
-        if(aoper->flags & OFLAG_GLOBAL)
-            *ptr++ = 'O';
-        else if(aoper->flags & OFLAG_LOCAL)
-            *ptr++ = 'o';
-        if (*ptr) printf("    flags %s;\n", oper_flags);
+        printf("    access %s;\n", aoper->class_name); /* kludge! */
         printf("    class \"%s\";\n", aoper->class->name);
         printf("};\n\n");
     }
@@ -1175,14 +1160,15 @@ printconf()
     {
         if(!aconn->host || aconn->host == "")
             continue;
-        printf("connect %s {\n", aconn->name);
+        printf("connect {\n", aconn->name);
+        printf("    name \"%s\";\n", aconn->name);
         printf("    host \"%s\";\n", aconn->host);
         printf("    apasswd \"%s\";\n", aconn->apasswd);
         printf("    cpasswd \"%s\";\n", aconn->cpasswd);
         if(aconn->port > 0)
             printf("    port %d;\n", aconn->port);
         if(aconn->source && aconn->source != "")
-            printf("    source \"%s\";\n", aconn->source);
+            printf("    bind \"%s\";\n", aconn->source);
         if(aconn->flags != 0)
             printf("    flags ");
         if(aconn->flags & CONN_ZIP)
@@ -1200,20 +1186,21 @@ printconf()
     {
         int i;
         printf("/* Superservers */\n\n");
-        printf("superservers (\n");
+        printf("super {\n");
         for (i = 0; uservers[i]; ++i)
         {
             if (i != 0) printf(";\n");
-            printf("    %s", uservers[i]);
+            printf("    %s;", uservers[i]);
         }
-        printf("\n);\n\n");
+        printf("\n};\n\n");
     }
     printf("/* port configurations */\n\n");
     for(aport = ports; aport; aport = aport->next)
     {
-        printf("port %d {\n", aport->port);
+        printf("port {\n");
+        printf("    port %d;\n", aport->port);
         if(aport->allow && aport->allow != "")
-            printf("    allow \"%s\";\n", aport->allow);
+            printf("    ipmask \"%s\";\n", aport->allow);
         if(aport->address && aport->address != "")
             printf("    bind \"%s\";\n", aport->address);
         printf("};\n\n");
@@ -1231,7 +1218,7 @@ printconf()
             printf("CHAN;\n");
         else
         {
-            printf("\n\n\nPROBLEM READING QLINE TYPE \n\n");
+            printf("\n\n\nPROPLEM READING QLINE TYPE \n\n");
             exit(-1);
         }
         printf("    mask \"%s\";\n", sban->target);
@@ -1242,8 +1229,8 @@ printconf()
     for(hban = hbans; hban; hban = hban->next)
     {
         printf("kill {\n");
-        printf("    username \"%s\";\n", hban->username);
-        printf("    host \"%s\";\n", hban->target);
+        printf("    mask \"%s@%s\";\n", hban->username ? hban->username : "*",
+                                        hban->target);
         printf("    reason \"%s\";\n", hban->reason);
         printf("};\n\n");
     }

@@ -123,7 +123,6 @@ static char readbuf[8192];
 #endif
 #endif
 
-
 /*
  * add_local_domain() 
  * Add the domain to hostname, if it is missing
@@ -1808,6 +1807,7 @@ connect_inet(aConnect *aconn, aClient *cptr, int *lenp)
         if (bind(cptr->fd, (struct sockaddr *) &sin, sizeof(sin)) == -1)
         {
             report_error("error binding to local port for %s:%s", cptr);
+            close(cptr->fd);
             return NULL;
         }
     }
