@@ -2429,6 +2429,11 @@ int m_list(aClient *cptr, aClient *sptr, int parc, char *parv[])
     /* Some starting san checks -- No interserver lists allowed. */
     if (cptr != sptr || !sptr->user) return 0;
 
+    if (IsSquelch(sptr)) {
+	sendto_one(sptr, rpl_str(RPL_LISTEND), me.name, parv[0]);
+	return 0;
+    }
+
     /* If a /list is in progress, then another one will cancel it */
     if ((lopt = sptr->user->lopt)!=NULL)
     {

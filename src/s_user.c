@@ -1419,7 +1419,7 @@ static inline int m_message(aClient *cptr, aClient *sptr, int parc,
     if (MyConnect(sptr)) 
     {
 	/* if its a spambot, just ignore it */
-	if ((IsSSquelch(sptr)) || (IsWSquelch(sptr))
+	if ((IsSquelch(sptr))
 #if defined(ANTI_SPAMBOT) && !defined(ANTI_SPAMBOT_WARN_ONLY)
 	    || (sptr->join_leave_count >= MAX_JOIN_LEAVE_COUNT)
 #endif
@@ -1926,6 +1926,11 @@ int m_whois(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	sendto_one(sptr, rpl_str(RPL_WHOISSERVER),
 		   me.name, parv[0], name, user->server,
 		   a2cptr ? a2cptr->info : "*Not On This Net*");
+	
+	if(IsOper(sptr) && IsSquelch(acptr))
+	    sendto_one(sptr, rpl_str(RPL_WHOISTEXT),
+		       me.name, parv[0], "User is squelched");
+	
 	if(IsRegNick(acptr))
 	    sendto_one(sptr, rpl_str(RPL_WHOISREGNICK),
 		       me.name, parv[0], name);

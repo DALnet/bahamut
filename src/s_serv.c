@@ -1753,6 +1753,9 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
     if (hunt_server(cptr, sptr, ":%s STATS %s :%s", 2, parc, parv) !=
 	HUNTED_ISME)
 	return 0;
+
+    if (IsSquelch(sptr))
+	return 0;
     
     if (!IsAnOper(sptr) && !IsULine(sptr)) 
     {
