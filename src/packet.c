@@ -84,7 +84,7 @@ dopacket(aClient *cptr, char *buffer, int length)
 
       if(length == -1)
       {
-         sendto_realops("Zipout error for %s: (%d) %s\n", cptr->name, err, ch2);
+         sendto_realops("Zipin error for %s: (%d) %s\n", cptr->name, err, ch2);
          return exit_client(cptr, cptr, &me, "fatal error in zip_input!");
       }
    }
@@ -131,7 +131,7 @@ dopacket(aClient *cptr, char *buffer, int length)
 
                   if(length == -1)
                   {
-                     sendto_realops("Zipout error for %s: (%d) %s\n", cptr->name, err, ch2);
+                     sendto_realops("Zipin error for %s: (%d) %s\n", cptr->name, err, ch2);
                      return exit_client(cptr, cptr, &me, "fatal error in zip_input!");
                   }
                }
