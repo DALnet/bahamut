@@ -1170,6 +1170,7 @@ void io_loop()
 	if (dorehash && !lifesux) 
 	{
 	    (void) rehash(&me, &me, 1);
+        (void) read_motd(MOTD);
 	    dorehash = 0;
 	}
 	/*
