@@ -37,5 +37,9 @@ install: all
 		echo $(INSTALL_DATA) $$i $(INSTALL_DIR); \
 		$(INSTALL_DATA) $$i $(INSTALL_DIR); \
 	done
-	@touch $(INSTALL_DIR)/ircd.motd
-	@echo "This is the default Bahamut MOTD" >> $(INSTALL_DIR)/ircd.motd
+
+	-@if [ ! -f $(INSTALL_DIR)/ircd.motd ] ; then \
+		echo "ircd.motd does not exist, creating..."; \
+		touch $(INSTALL_DIR)/ircd.motd; \
+		echo "This is the default Bahamut MOTD" >> $(INSTALL_DIR)/ircd.motd; \
+	fi
