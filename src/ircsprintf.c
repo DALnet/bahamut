@@ -14,6 +14,7 @@ int irc_printf(char *str, size_t size, const char *pattern, va_list vl) {
 	int len=0;
 	if(!size) {
 		while(*format) {
+			u = 0;
 			switch(*format) {
 			 case '%':
 				format++;
@@ -93,6 +94,7 @@ int irc_printf(char *str, size_t size, const char *pattern, va_list vl) {
 	}
 	else {
 		while(*format && len<size) {
+			u = 0;
 			switch(*format) {
 			 case '%':
 				format++;
@@ -108,11 +110,16 @@ int irc_printf(char *str, size_t size, const char *pattern, va_list vl) {
 				 case 'u':
 					format--; /* now fall through and it's caught, cool */
 				 case 'l':
-					if (*(format+1) == 'u')
-					  u=1;
+					if (*(format+1) == 'u') {
+						u=1;
+						format++;
+					}
+					else if (*(format+1) == 'd') {
+						u=0;
+						format++;
+					}
 					else
 					  u=0;
-					format++;
 					/* fallthrough */
 				 case 'd':
 				 case 'i':

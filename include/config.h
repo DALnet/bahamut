@@ -645,7 +645,7 @@
  * Twits with misconfigured servers can get really annoying with
  * enabled.
  */
-#undef WARN_NO_NLINE
+#define WARN_NO_NLINE
 
 /******************************************************************
  * STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP
