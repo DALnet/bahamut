@@ -125,6 +125,7 @@
 #define MSG_MODULE   "MODULE"		/* MODULE */
 #define MSG_RWHO     "RWHO"         /* RWHO */
 #define MSG_SVSCLONE "SVSCLONE"     /* SVSCLONE */
+#define MSG_CHANKILL "CHANKILL"     /* CHANKILL */
 
 #define MAXPARA      15
 
@@ -221,6 +222,7 @@ extern int  m_linkscontrol(aClient *, aClient *, int, char **);
 extern int  m_module(aClient *, aClient *, int, char **);
 extern int  m_rwho(aClient *, aClient *, int, char **);
 extern int  m_svsclone(aClient *, aClient *, int, char **);
+extern int  m_chankill(aClient *, aClient *, int, char **);
 
 #ifdef MSGTAB
 struct Message msgtab[] = 
@@ -324,6 +326,7 @@ struct Message msgtab[] =
     {MSG_MODULE, m_module, 0, MAXPARA, 1, 0, 0, 0L},
     {MSG_RWHO, m_rwho, 0, MAXPARA, 1, 0, 0, 0L},
     {MSG_SVSCLONE, m_svsclone, 0, MAXPARA, 1, 0 ,0, 0L},
+    {MSG_CHANKILL, m_chankill, 0, MAXPARA, 1, 0, 0, 0L},
     {(char *) 0, (int (*)()) 0, 0, 0, 0, 0, 0, 0L}
 };
 

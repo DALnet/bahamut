@@ -697,3 +697,36 @@ m_svsclone(aClient *cptr, aClient *sptr, int parc, char *parv[])
     return 0;
 }
 
+
+/* m_chankill
+ *   Destroy a channel completely, removing all local users
+ *   with a kick and propegating the chankill out.  The user will
+ *   not see anyone else get kicked before they do.
+ * parv[0] - sender (Ulined client)
+ * parv[1] - channel
+ * parv[2] - kick reason
+ */
+
+int
+m_chankill(aClient *cptr, aClient *sptr, int parc, char *parv[])
+{
+    aChannel *chptr = NULL;
+    chanMember *cur = NULL;
+    aClient *acptr = NULL;
+
+    if(!IsULine(sptr) || parc < 2)  /* we can kick without a reason. */
+        return 0;
+    if(!(chptr = find_channel(parv[1], NULL)))
+        return 0;
+    for(cur = chptr->members; cur; cur=cur->next)
+    {
+        acptr = cur->cptr;
+        if(MyClient(acptr)) /* tell our clients that the channel is gone */
+            sendto_one(acptr, ":%s KICK %s :%s", parv[0], parv[1], (parc == 3) ? parv[2] : "");
+    }
+    for(cur = chptr->members; cur; cur=cur->next)   /* im being lazy, i know */
+        remove_user_from_channel(cur->cptr, chptr);
+    /* at this point, the channel should not exist locally */
+    sendto_serv_butone(cptr, ":%s CHANKILL %s :%s", parv[0], parv[1], (parc == 3) ? parv[2] : "");
+    return 0;
+}
