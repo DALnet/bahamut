@@ -982,6 +982,21 @@ int main(int argc, char *argv[])
     return 0;
 }
 
+void send_safelists()
+{
+   Link *lp, *lpn;
+   aClient *cptr;
+
+   for(lp = listing_clients; lp; lp = lpn)
+   {
+      lpn = lp->next;
+
+      cptr = lp->value.cptr;
+      while(DoList(cptr) && IsSendable(cptr))
+         send_list(cptr, 64);
+   }
+}
+
 void io_loop()
 {
     char to_send[200];
@@ -1153,6 +1168,13 @@ void io_loop()
 	    delay = 1;
 	else
 	    delay = MIN(delay, TIMESEC);
+
+	/*
+	 * Send people their /list replies, being careful
+	 * not to fill their sendQ
+	 */
+	send_safelists();
+
 	/*
 	 * We want to read servers on every io_loop, as well as "busy"
 	 * clients (which again, includes servers. If "lifesux", then we

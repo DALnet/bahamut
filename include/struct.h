@@ -1196,7 +1196,7 @@ typedef struct SearchOptions
     char spare:3; /* spare space for more stuff(?) */
 } SOpts;
 
-#define IsSendable(x)      (DBufLength(&x->sendQ) < 16384)
+#define IsSendable(x)      (DBufLength(&(x)->sendQ) < ((x)->sendqlen / 2))
 #define DoList(x)          (((x)->user) && ((x)->user->lopt))
 
 /* internal defines for cptr->sockerr */
