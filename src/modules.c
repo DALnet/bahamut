@@ -12,8 +12,9 @@
 #include "throttle.h"
 #include "h.h"
 #include "hooks.h"
+#include "inifile.h"
 
-#define MODULE_INTERFACE_VERSION 1006 /* the interface version, specified below. */
+#define MODULESINI "modules.conf"
 
 #ifndef USE_HOOKMODULES
 int m_module(aClient *cptr, aClient *sptr, int parc, char *parv[])
@@ -48,6 +49,12 @@ int call_hooks(enum c_hooktype hooktype, ...)
 {
    return 0;
 }
+
+int init_modules()
+{
+   return 0;
+}
+
 #else
 
 #include <dlfcn.h>
@@ -116,8 +123,13 @@ int modsym_load(aClient *sptr, char *modname, char *symbol, void *modulehandle, 
 
    if((error = dlerror()) != NULL)
    {
-      sendto_one(sptr, ":%s NOTICE %s :Module symbol error for %s/%s: %s",
-                 me.name, sptr->name, modname, symbol, error);
+      if(sptr)
+         sendto_one(sptr, ":%s NOTICE %s :Module symbol error for %s/%s: %s",
+                    me.name, sptr->name, modname, symbol, error);
+      else
+         fprintf(stderr, " - Module symbol error for %s/%s: %s\n",
+                 modname, symbol, error);
+        
       dlclose(modulehandle);
       return 0;
    }
@@ -160,8 +172,12 @@ int load_module(aClient *sptr, char *modname)
 
    if((themod = find_module(modname)))
    {
-      sendto_one(sptr, ":%s NOTICE %s :Module %s is already loaded [version: %s]",
-                 me.name, sptr->name, modname, themod->version);
+      if(sptr)
+         sendto_one(sptr, ":%s NOTICE %s :Module %s is already loaded [version: %s]",
+                    me.name, sptr->name, modname, themod->version);
+      else
+         fprintf(stderr, " - Module %s is already loaded [version: %s]\n",
+                 modname, themod->version);
       return 0;
    }
 
@@ -170,8 +186,12 @@ int load_module(aClient *sptr, char *modname)
    tmpmod.handle = dlopen(mnamebuf, RTLD_NOW);
    if(tmpmod.handle == NULL)
    {
-      sendto_one(sptr, ":%s NOTICE %s :Module load error for %s: %s",
-                 me.name, sptr->name, modname, dlerror());
+      if(sptr)
+         sendto_one(sptr, ":%s NOTICE %s :Module load error for %s: %s",
+                    me.name, sptr->name, modname, dlerror());
+      else
+         fprintf(stderr, " - Module load error for %s: %s\n",
+                 modname, dlerror());
       return -1;
    }
 
@@ -191,9 +211,14 @@ int load_module(aClient *sptr, char *modname)
    (*tmpmod.module_check)(&acsz);
    if(acsz != MODULE_INTERFACE_VERSION)
    {
-      sendto_one(sptr, ":%s NOTICE %s :Module load error for %s: Incompatible module ("
-                 "My interface version: %d Module version: %d)",
-                 me.name, sptr->name, modname, MODULE_INTERFACE_VERSION, acsz);
+      if(sptr)
+         sendto_one(sptr, ":%s NOTICE %s :Module load error for %s: Incompatible module ("
+                    "My interface version: %d Module version: %d)",
+                    me.name, sptr->name, modname, MODULE_INTERFACE_VERSION, acsz);
+      else
+         fprintf(stderr, " - Module load error for %s: Incompatible module ("
+                 "My interface version: %d Module version: %d)\n",
+                 modname, MODULE_INTERFACE_VERSION, acsz);
       dlclose(tmpmod.handle);
       return -1;
    }
@@ -213,8 +238,13 @@ int load_module(aClient *sptr, char *modname)
 
    if(ret == 0)
    {
-      sendto_one(sptr, ":%s NOTICE %s :Module %s successfully loaded [version: %s]",
-                 me.name, sptr->name, modname, themod->version);
+      if(sptr)
+         sendto_one(sptr, ":%s NOTICE %s :Module %s successfully loaded [version: %s]",
+                    me.name, sptr->name, modname, themod->version);
+      else
+         fprintf(stderr, " - Module %s successfully loaded [version: %s]\n",
+                 modname, themod->version);
+
       call_hooks(MHOOK_LOAD, modname, (void *) themod);
    }
    else
@@ -222,8 +252,12 @@ int load_module(aClient *sptr, char *modname)
       drop_all_hooks(themod);
       destroy_module(themod);
 
-      sendto_one(sptr, ":%s NOTICE %s :Module %s load failed (module requested unload)",
-                 me.name, sptr->name, modname);
+      if(sptr)
+         sendto_one(sptr, ":%s NOTICE %s :Module %s load failed (module requested unload)",
+                    me.name, sptr->name, modname);
+      else
+         fprintf(stderr, " - Module %s load failed (module requested unload)\n",
+                 modname);
    }
 
    return 0;
@@ -266,12 +300,12 @@ int m_module(aClient *cptr, aClient *sptr, int parc, char *parv[])
    if(!MyClient(sptr))
       localaccess = 0;
 
-   if(localaccess && parc > 2 && mycmp(parv[1], "LOAD") == 0)
+   if(parc > 2 && mycmp(parv[1], "LOAD") == 0)
    {
       if(!BadPtr(parv[2]))
          load_module(sptr, parv[2]);
    }
-   else if(localaccess && parc > 2 && mycmp(parv[1], "UNLOAD") == 0)
+   else if(parc > 2 && mycmp(parv[1], "UNLOAD") == 0)
    {
       if(!BadPtr(parv[2]))
          unload_module(sptr, parv[2]);
@@ -642,5 +676,29 @@ void list_hooks(aClient *sptr)
       sendto_one(sptr, ":%s NOTICE %s :Module: %s  Type: %s",
                  me.name, sptr->name, mod->name, get_texthooktype(hook->hooktype));
    }
+}
+
+int init_modules()
+{
+   void *mini = ini_open(MODULESINI);
+   char *autoload = NULL, *p, *s;
+   char m_autoload[512];
+
+   if(!mini)
+      return 0;
+
+   autoload = ini_get_value(mini, "DEFAULT", "autoload");
+   if(autoload)
+      strncpyzt(m_autoload, autoload, 512);
+   else
+      m_autoload[0] = '\0';
+
+   ini_close(mini);
+
+   for (p = NULL, s = strtoken(&p, m_autoload, ", "); s;
+           s = strtoken(&p, NULL, ", "))
+      load_module(NULL, s);
+
+   return 0;
 }
 #endif

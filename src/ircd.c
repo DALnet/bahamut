@@ -44,6 +44,7 @@
 #include "dich_conf.h"
 #include "throttle.h"
 #include "userban.h"
+#include "hooks.h"
 #include "fds.h"
 
 aConfList   EList1 = {0, NULL};			/* ordered */
@@ -827,6 +828,9 @@ int main(int argc, char *argv[])
 	    default_fdlist.entry[i] = i - 1;
 	}
     }
+
+    /* init the modules, load default modules! */
+    init_modules();
 
     if ((timeofday = time(NULL)) == -1) 
     {
