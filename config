@@ -1174,7 +1174,7 @@ echo "#endif /* This is the endif for the ifdef at the top. */" >> $OPTIONS_H
 ### use poll?
 if [ -n "$USEPOLL" ] ; then
    cat Makefile | sed s/'XFLAGS=.*'/XFLAGS=-DUSE_POLL/ > Makefile.tmp
-   cat Makefile.tmp > Makefile
+   cat Makefile.tmp | sed s/'FDLIMIT=.*'/FDLIMIT=/ > Makefile
 else
    cat Makefile | sed s/'XFLAGS=.*'/XFLAGS=/ > Makefile.tmp
    ### now insert the FDLIMIT in the makefile
