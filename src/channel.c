@@ -3288,8 +3288,9 @@ int m_sjoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	/* if the channel is created in client sjoin, we lost some channel modes. */
 	if(created)
 	{
-	    sendto_realops_lev(DEBUG_LEV, "Requesting resynch of %s from %s (%s created)",
-			       chptr->chname, cptr->name, get_client_name(sptr, FALSE));
+	    sendto_realops_lev(DEBUG_LEV, "Requesting resynch of %s from %s (%s!%s@%s[%s] created)",
+			       chptr->chname, cptr->name, sptr->name, sptr->user->username,
+			       sptr->user->host, sptr->hostip);
 	    sendto_one(cptr, "RESYNCH %s", chptr->chname);
 	}
 
