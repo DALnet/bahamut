@@ -296,7 +296,8 @@ int BlockHeapGarbageCollect(BlockHeap *bh)
 	return 0;
     }
   
-    walker = last = bh->base;
+    last = NULL;
+    walker = bh->base;
     while (walker)
     {
 	/* This section rewritten Dec 10 1998 - Dianora */
