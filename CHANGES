@@ -3,6 +3,15 @@ Outstanding bugs
   establish if one or both sides filters ident connections
 - Source address support on /connect may not work under some conditions
 
+Changes for 1.4.32
+- Throttling modified to be more friendly and punish repeat offenders
+- Major bug causing memory corruption (coredumps as well as
+  duplicate or missing messages) fixed
+- Lag on signon fixed (where a user connects, but the server chooses
+  to ignore the user until something is sent to them)
+- Fixed a netsplit detection bug when a leaf server splits from its hub
+  (for no_chanops_when_split)
+
 Changes for 1.4.31
 - Connection Throttling Patch from Chip Norkus
 
