@@ -354,8 +354,8 @@ find_oper(char *name, char *username, char *sockhost, char *hostip)
     {
         for(i = 0; aoper->hosts[i]; i++)
         {
-            if(mycmp(name, aoper->nick) && (!match(userhost, aoper->hosts[i]) 
-                    || !match(userip, aoper->hosts[i])))
+            if(!mycmp(name, aoper->nick) && (!match(aoper->hosts[i], userhost) 
+                    || !match(aoper->hosts[i], userip)))
                 return aoper;
         }
     }

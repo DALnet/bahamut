@@ -1164,7 +1164,7 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
             int i = 0;
             if(!opers)
                 break;
-            if (IsAnOper(sptr))
+            if (IsAnOper(sptr) || IsULine(sptr))
             {
                 for(tmp = opers; tmp; tmp = tmp->next)
                     for(i = 0; tmp->hosts[i]; i++)
