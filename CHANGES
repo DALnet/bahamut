@@ -20,6 +20,11 @@ Changes for 1.4.35
   write to locations of memory that weren't ours :)
 - Fix O: flags that just didn't work as advertised
 - Moved rejection notices to umode +j (re_j_ection)
+- Moved KILL messages from U: lined clients to umode +K (oper only)
+- Support for a loadable drone module, compile with --enable-dronemodule, 
+  ircd tries to load drone.so from DPATH on startup or on /rehash drones,
+  read src/drone.c to view the interface
+- /stats t shows more information
 - Various code cleanup and readability fixes
 
 Changes for 1.4.34
