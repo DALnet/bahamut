@@ -1,3 +1,30 @@
+/************************************************************************
+ *   IRC - Internet Relay Chat, src/zlink.c
+ *   Copyright (C) 2000 Lucas Madar
+ *
+ *   This program is free software; you can redistribute it and/or modify
+ *   it under the terms of the GNU General Public License as published by
+ *   the Free Software Foundation; either version 1, or (at your option)
+ *   any later version.
+ *
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program; if not, write to the Free Software
+ *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+/* $Id$ */
+
+/*
+ * This streaming ircd zlib implementation was
+ * inspired mostly by dianora's example in hybrid-6
+ * - lucas
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include "zlib.h"
@@ -6,16 +33,36 @@
 #define ZIP_MIN_BLOCK		1024	/* smallest block to compress */
 #define ZIP_MAX_BLOCK 		8192	/* largest block to compress */
 
+/*
+ * This shouldn't be necessary.
+ * The outbuf should never be larger than 
+ * the maximum block.. should it?
+ * I'll account for any weirdness in zlib.
+ */
+#define zipOutBufSize (ZIP_MAX_BLOCK * 2)
+static char zipOutBuf[zipOutBufSize];
+
+/*
+ * 64k overflowed every now and then.
+ * This isn't that important, an overflow is 
+ * non-fatal, but causes more calls to deflate()
+ */
+#define zipInBufSize (98304) /* 96K */
+static char zipInBuf[zipInBufSize];
+
+/* opaque "out" data structure */
 struct zipped_link_out {
    z_stream    stream;             /* zip stream data */
    char        buf[ZIP_MAX_BLOCK]; /* zipped buffer */
    int         bufsize;            /* size of inbuf content */
 };
 
+/* opaque "in" data structure */
 struct zipped_link_in {
    z_stream    stream;             /* zip stream data */
 };
 
+/* returns a pointer to a setup opaque input session */
 void *zip_create_input_session()
 {
    struct zipped_link_in *zip;
@@ -34,6 +81,7 @@ void *zip_create_input_session()
    return (void *) zip;
 }
 
+/* returns a pointer to an opaque output session */
 void *zip_create_output_session()
 {
    struct zipped_link_out *zip;
@@ -52,9 +100,23 @@ void *zip_create_output_session()
    return (void *) zip;
 }
 
-#define zipInBufSize (98304) /* 96K */
-static char zipInBuf[zipInBufSize];
-
+/*
+ * zip_input()
+ *
+ * session - opaque in-session pointer
+ * buffer - compressed buffer
+ * len - length of buffer (will change)
+ * err - numeric error if length is -1 on return
+ * nbuf - set if this function needs to be called again
+ * nbuflen - if nbuf is set, length to call with again.
+ *  -- nbuf, if set, should call zip_input when done processing
+ *     first return, with buffer set to nbuf.
+ * returns:
+ * len > -1:
+ *   compressed data
+ * len == -1:
+ *   error message
+ */
 char *zip_input(void *session, char *buffer, int *len, int *err, char **nbuf, int *nbuflen)
 {
    struct zipped_link_in *z = (struct zipped_link_in *) session;
@@ -99,21 +161,7 @@ char *zip_input(void *session, char *buffer, int *len, int *err, char **nbuf, in
    }
 }
 
-/* This shouldn't be necessary... but be safe? */
-#define zipOutBufSize (ZIP_MAX_BLOCK * 2)
-static char zipOutBuf[zipOutBufSize];
-
-/*
- * session is opaque session pointer.
- * buffer is buffer to compress.
- * len will change.
- * forceflush forces inflate to return a buffer, even if it has
- * not optimally compressed something.
- * Largedata should be nonzero during a split.
- * largedata is also an error indicator, it is set if len is -1.
- * if len is -1, returns null terminated error string.
- */
-
+/* returns the amount of data waiting in the outgoing buffer */
 int zip_is_data_out(void *session)
 {
    struct zipped_link_out *z = (struct zipped_link_out *) session;
@@ -121,6 +169,17 @@ int zip_is_data_out(void *session)
    return z->bufsize;
 }
 
+/*
+ * zip_output():
+ * session is opaque session pointer.
+ * buffer is buffer to compress.
+ * len is length of buffer, will change.
+ * forceflush forces inflate to return a buffer, even if it has
+ * not optimally compressed something.
+ * Largedata should be nonzero during a split.
+ * largedata is also an error number, it is set if len is -1.
+ * if len is -1, returns null terminated error string.
+ */
 char *zip_output(void *session, char *buffer, int *len, int forceflush, int *largedata)
 {
    struct zipped_link_out *z = (struct zipped_link_out *) session;
@@ -164,6 +223,9 @@ char *zip_output(void *session, char *buffer, int *len, int forceflush, int *lar
    return zout->msg ? zout->msg : "???";
 }
 
+/*
+ * if *insiz is zero, there are no stats available for this session.
+ */
 void zip_out_get_stats(void *session, unsigned long *insiz, unsigned long *outsiz, double *ratio)
 {
    struct zipped_link_out *z = (struct zipped_link_out *) session;
