@@ -4,7 +4,7 @@ Changes for 1.4.19
 - Imported res fixes from bahamut-stable
 - made configure work for solaris to find gmp
 
-Changes for 1.4.18
+Changes for 1.4.18 (never officially released)
 - Changed level of some debug messages to not go to all opers
 
 Changes for 1.4.17 (never officially released)
