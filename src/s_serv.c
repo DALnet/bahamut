@@ -805,7 +805,8 @@ m_server_estab(aClient *cptr)
    if ((find_uline(cptr->confs, cptr->name))) 
      cptr->flags |= FLAGS_ULINE; 
 
-   sendto_gnotice("Link with %s established: %s %s", inpath, IsULine(cptr) ? "ULined" : "Normal", 
+   sendto_gnotice("from %s: Link with %s established: %s %s", me.name, inpath, 
+                IsULine(cptr) ? "ULined" : "Normal", 
 		DoesTS(cptr) ? "TS link" : "Non-TS link!"); 
 
    /* Notify everyone of the fact that this has just linked: the entire network should get two
