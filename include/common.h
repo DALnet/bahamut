@@ -55,10 +55,6 @@
 #if !defined(STDC_HEADERS)
 char        *malloc(), *calloc();
 void        free();
-#else
-#ifdef MALLOCH
-#include MALLOCH
-#endif
 #endif
 extern void flush_fdlist_connections();
 extern int  match(char *, char *);

@@ -1,5 +1,8 @@
 /* include/setup.h.in.  Generated from configure.in by autoheader.  */
 
+/* AIX support */
+#undef AIX
+
 /* If on a system with a broken FD_SETSIZE */
 #undef BROKEN_FD_SETSIZE
 
@@ -218,9 +221,6 @@
 
 /* Define to 1 if you have the `__dn_skipname' function. */
 #undef HAVE___DN_SKIPNAME
-
-/* Our malloc header file */
-#undef MALLOCH
 
 /* Maximum Connections we allow */
 #undef MAXCONNECTIONS
