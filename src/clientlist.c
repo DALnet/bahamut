@@ -15,6 +15,37 @@
 Link *server_list = NULL;
 Link *oper_list = NULL;
 
+/* Clients currently doing a /list */
+Link *listing_clients = NULL;
+
+int get_list_memory(Link *list)
+{
+   Link *lp;
+   int count = 0;
+
+   for(lp = list; lp; lp = lp->next)
+      count++;
+
+   return count;
+}
+
+void print_list_memory(aClient *cptr)
+{
+   int lc;
+
+   lc = get_list_memory(server_list);
+   sendto_one(cptr, ":%s %d %s :   server_list %d(%d)",
+              me.name, RPL_STATSDEBUG, cptr->name, lc, lc * sizeof(Link));
+
+   lc = get_list_memory(oper_list);
+   sendto_one(cptr, ":%s %d %s :   oper_list %d(%d)",
+              me.name, RPL_STATSDEBUG, cptr->name, lc, lc * sizeof(Link));
+
+   lc = get_list_memory(listing_clients);
+   sendto_one(cptr, ":%s %d %s :   listing_clients %d(%d)",
+              me.name, RPL_STATSDEBUG, cptr->name, lc, lc * sizeof(Link));
+}
+
 void add_to_list(Link **list, aClient *cptr) 
 {
    Link *lp = make_link();

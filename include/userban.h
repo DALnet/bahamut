@@ -73,3 +73,4 @@ void report_userbans_match_flags(aClient *cptr, unsigned int, unsigned int);
 int user_match_ban(aClient *, struct userBan *);
 char *get_userban_host(struct userBan *, char *, int);
 
+int count_userbans(aClient *cptr);

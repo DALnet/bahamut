@@ -985,3 +985,102 @@ void ubanent_free(uBanEnt *b)
    ubanent_count--;
    MyFree(b);
 }
+
+
+int count_list(uBanEnt *bl, int *mem)
+{
+   uBanEnt *bln;
+   struct userBan *ban;
+   int umem = 0, ucnt = 0;
+
+   while(bl)
+   {
+      bln = LIST_NEXT(bl, lp);
+      ban = bl->ban;
+
+      ucnt++;
+      umem += sizeof(struct userBan);
+      if(ban->u)
+         umem += (strlen(ban->u) + 1);
+      if(ban->h)
+         umem += (strlen(ban->h) + 1);
+      if(ban->reason)
+         umem += (strlen(ban->reason) + 1);
+
+      bl = LIST_NEXT(bl, lp);
+   }
+
+   if(mem)
+      *mem = umem;
+
+   return ucnt;
+}
+
+int count_userbans(aClient *cptr)
+{
+   uBanEnt *bl;
+   int a, b;
+   int ic[16], im[16];
+   int ict = 0, imt = 0;
+
+   memset(ic, 0, sizeof(int) * 16);
+   memset(im, 0, sizeof(int) * 16);
+
+   bl = LIST_FIRST(&CIDR4BIG_bans);
+   ic[0] = count_list(bl, &im[0]);
+
+   for(a = 0; a < 256; a++)
+   {
+     for(b = 0; b < 256; b++)
+     {
+        int tmpim;
+
+        bl = LIST_FIRST(&CIDR4_bans[a][b]);
+        ic[1] += count_list(bl, &tmpim);
+        im[1] += tmpim;
+     }
+   }
+
+   bl = LIST_FIRST(&host_bans.wild_list);
+   ic[2] = count_list(bl, &im[2]);
+   bl = LIST_FIRST(&ip_bans.wild_list);
+   ic[3] = count_list(bl, &im[3]);
+
+   for(a = 0; a < HASH_SIZE; a++)
+   {
+      int tmpim;
+
+      bl = LIST_FIRST(&host_bans.hash_list[a]);
+      ic[4] += count_list(bl, &tmpim);
+      im[4] += tmpim;
+
+      bl = LIST_FIRST(&ip_bans.hash_list[a]);
+      ic[5] += count_list(bl, &tmpim);
+      im[5] += tmpim;
+   }
+
+   for(a = 0; a < 16; a++)
+   {
+      ict += ic[a];
+      imt += im[a];
+   }
+
+   sendto_one(cptr, ":%s %d %s :UserBans %d(%d) UserBanEnts %d(%d)",
+              me.name, RPL_STATSDEBUG, cptr->name, ict, imt, ubanent_count,
+              ubanent_count * sizeof(uBanEnt));
+
+   sendto_one(cptr, ":%s %d %s :  CIDR4BIG %d(%d)",
+              me.name, RPL_STATSDEBUG, cptr->name, ic[0], im[0]);
+   sendto_one(cptr, ":%s %d %s :  CIDR4 %d(%d)",
+              me.name, RPL_STATSDEBUG, cptr->name, ic[1], im[1]);
+   sendto_one(cptr, ":%s %d %s :  Host %d(%d)",
+              me.name, RPL_STATSDEBUG, cptr->name, ic[4], im[4]);
+   sendto_one(cptr, ":%s %d %s :  Host wild %d(%d)",
+              me.name, RPL_STATSDEBUG, cptr->name, ic[2], im[2]);
+   sendto_one(cptr, ":%s %d %s :  IP %d(%d)",
+              me.name, RPL_STATSDEBUG, cptr->name, ic[5], im[5]);
+   sendto_one(cptr, ":%s %d %s :  IP wild %d(%d)",
+              me.name, RPL_STATSDEBUG, cptr->name, ic[3], im[3]);
+
+   return imt + (ubanent_count * sizeof(uBanEnt));
+}

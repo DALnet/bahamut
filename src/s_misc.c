@@ -592,12 +592,13 @@ int exit_client(aClient *cptr, aClient *sptr, aClient *from, char *comment)
 	if (IsPerson(sptr)) 
 	{
 	    Link *lp, *next;
-	    LOpts *lopt=sptr->user->lopt;
+	    LOpts *lopt = sptr->user->lopt;
 	    /* poof goes their watchlist! */
 	    hash_del_watch_list(sptr);
 	    /* if they have listopts, axe those, too */
-	    if(lopt!=NULL) 
+	    if(lopt != NULL) 
 	    {
+		remove_from_list(&listing_clients, sptr);
 		for (lp = lopt->yeslist; lp; lp = next) 
 		{
 		    next = lp->next;

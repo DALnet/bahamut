@@ -110,6 +110,7 @@ char        serveropts[] =
 #endif
 #endif /* HAVE_GETRUSAGE */
 #include "h.h"
+#include "userban.h"
 
 #ifndef ssize_t
 #define ssize_t unsigned int
@@ -314,6 +315,7 @@ void count_memory(aClient *cptr, char *nick)
     u_long      totww = 0;
     u_long      totmisc = 0;
     u_long      tothash = 0;
+    u_long	totuban = 0;
     u_long      tot = 0;
 
     int wlh=0, wle=0; /* watch headers/entries */
@@ -489,6 +491,9 @@ void count_memory(aClient *cptr, char *nick)
 	       me.name, RPL_STATSDEBUG, nick, lcc, lcc*sizeof(Link));
     sendto_one(cptr, ":%s %d %s :   Fludees %d(%d)",
 	       me.name, RPL_STATSDEBUG, nick, fludlink, fludlink*sizeof(Link));
+
+    /* Print summary of LINKs used in clientlist.c */
+    print_list_memory(cptr);
 	
     sendto_one(cptr, ":%s %d %s :WATCH headers %d(%d)",
 	       me.name, RPL_STATSDEBUG, nick, wlh, wlhm);
@@ -520,6 +525,9 @@ void count_memory(aClient *cptr, char *nick)
 	       chu, chu * sizeof(chanMember), cmemballoc, cmemballocsz);
 
     totch = chanallocsz + cmemballocsz + chbm;
+
+    /* print userban summary, get userban total usage */
+    totuban = count_userbans(cptr);
 
     sendto_one(cptr, ":%s %d %s :Whowas users %d(%d)",
 	       me.name, RPL_STATSDEBUG, nick, wwu, wwu * sizeof(anUser));
@@ -561,12 +569,12 @@ void count_memory(aClient *cptr, char *nick)
 	(sizeof(aWatch *)*WATCHHASHSIZE) + (sizeof(aWhowas *)*WW_MAX);
 
     tot = totww + totch + totcl + totmisc + db + rm + tothash + linkallocsz +
-	fludallocsz;
+	fludallocsz + totuban;
 
     sendto_one(cptr, ":%s %d %s :whowas %d chan %d client/user %d misc %d "
-	       "dbuf %d hash %d res %d link %d flud %d",
+	       "dbuf %d hash %d res %d link %d flud %d userban %d",
 	       me.name, RPL_STATSDEBUG, nick, totww, totch, totcl, totmisc,
-	       db, tothash, rm, linkallocsz, fludallocsz);
+	       db, tothash, rm, linkallocsz, fludallocsz, totuban);
 
     sendto_one(cptr, ":%s %d %s :TOTAL: %d sbrk(0)-etext: %u",
 	       me.name, RPL_STATSDEBUG, nick, tot,
