@@ -537,7 +537,7 @@ int can_send(aClient *cptr, aChannel *chptr, char *msg)
 	    return (MODE_MODERATED);
 	if(cm->bans && !(cm->flags & (CHFL_CHANOP | CHFL_VOICE)))
 	    return (MODE_BAN);
-	if (chptr->mode.mode & MODE_REGONLY && !IsRegNick(cptr) &
+	if ((chptr->mode.mode & MODE_REGONLY) && !IsRegNick(cptr) &&
 	    !(cm->flags & (CHFL_CHANOP | CHFL_VOICE)))
 	    return (ERR_NEEDREGGEDNICK);
 	if ((chptr->mode.mode & MODE_NOCOLOR) && msg_has_colors(msg))
