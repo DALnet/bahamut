@@ -4140,6 +4140,13 @@ int m_rehash(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	   sendto_ops("%s is rehashing throttles", parv[0]);
 	   return 0;
 	}
+	else if(mycmp(parv[1], "DRONES") == 0) {
+	   sendto_ops("%s is rehashing drones", parv[0]);
+	   sendto_one(sptr, rpl_str(RPL_REHASHING), me.name, parv[0],
+		 "drones");
+	   drone_rehash();
+	   return 0;
+	}
     }
     else 
     {

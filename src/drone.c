@@ -38,8 +38,20 @@
 #include "throttle.h"
 #include "h.h"
 
-/* Forward declarations go here. */
-int check_drone_PB(char *, char *);
+#ifndef USE_DRONEMODULE
+/* Simply ignore all this stuff. */
+void drone_init() { }
+void drone_rehash() { }
+int is_a_drone(aClient *sptr) { return 0; }
+#else
+
+#include <dlfcn.h>
+#define DRONEMODULENAME "drone.so"
+
+void *drone_module_handle = NULL;
+void (*get_drone_module_version)(char **v) = NULL;
+int (*drone_module_func)(char *n, char *u, char *h, char *g, char **dstyle) = NULL;
+int drones_ok = 0;
 
 /*
  * drone_init
@@ -47,6 +59,81 @@ int check_drone_PB(char *, char *);
  */
 void drone_init()
 {
+   char *err;
+
+   drone_module_handle = dlopen(DPATH DRONEMODULENAME, RTLD_NOW);
+   if(drone_module_handle == NULL)
+   {
+      fprintf(stderr, "Error loading " DRONEMODULENAME ": %s\n", dlerror());
+      return;
+   }
+   
+   drone_module_func = dlsym(drone_module_handle, "check_drone");
+   if((err = dlerror()) != NULL)
+   {
+      fprintf(stderr, "Error loading functions in " DRONEMODULENAME ": %s\n", err);
+      dlclose(drone_module_handle);
+      drone_module_handle = NULL;
+      return;
+   }
+
+   get_drone_module_version = dlsym(drone_module_handle, "get_drone_module_version");
+   if((err = dlerror()) != NULL)
+   {
+      fprintf(stderr, "Error loading functions in " DRONEMODULENAME ": %s\n", err);
+      dlclose(drone_module_handle);
+      drone_module_handle = NULL;
+      return;
+   }
+
+   (*get_drone_module_version)(&err);
+   fprintf(stderr, "Loaded " DRONEMODULENAME", version %s\n", err ? err : "unspecified");
+
+   drones_ok = 1;
+}
+
+void drone_rehash()
+{
+   char *err;
+
+   if(drones_ok)
+   {
+      dlclose(drone_module_handle);
+      drone_module_handle = NULL;
+      sendto_realops("Successfully unloaded " DRONEMODULENAME);
+      drones_ok = 0;
+   }
+
+   drone_module_handle = dlopen(DPATH DRONEMODULENAME, RTLD_NOW);
+   if(drone_module_handle == NULL)
+   {
+      sendto_realops("Error loading " DRONEMODULENAME ": %s\n", dlerror());
+      return;
+   }
+   
+   drone_module_func = dlsym(drone_module_handle, "check_drone");
+   if((err = dlerror()) != NULL)
+   {
+      sendto_realops("Error loading functions in " DRONEMODULENAME ": %s\n", err);
+      dlclose(drone_module_handle);
+      drone_module_handle = NULL;
+      return;
+   }
+
+   get_drone_module_version = dlsym(drone_module_handle, "get_drone_module_version");
+   if((err = dlerror()) != NULL)
+   {
+      sendto_realops("Error loading functions in " DRONEMODULENAME ": %s\n", err);
+      dlclose(drone_module_handle);
+      drone_module_handle = NULL;
+      return;
+   }
+
+   drones_ok = 1;
+
+   (*get_drone_module_version)(&err);
+   sendto_realops("Successfully loaded module " DRONEMODULENAME ". Version: %s", 
+      err ? err : "unspecified");
 }
 
 /* 
@@ -56,44 +143,19 @@ void drone_init()
  */
 int is_a_drone(aClient *sptr)
 {
-#ifdef REJECT_ACEBOTS
-   if(check_drone_PB(sptr->user->username, sptr->info))
-   {
-      sendto_realops_lev(REJ_LEV, "Rejecting acebot-style drone: %s (%s@%s) [%s]",
-                         sptr->name, sptr->user->username, sptr->user->host, sptr->info);
-      return 1;
-   }
-#endif
+   char *dstyle = NULL;
 
+   if(drones_ok)
+   {
+      if((*drone_module_func)(sptr->name, sptr->user->username, sptr->user->host, sptr->info, &dstyle))
+      {
+         sendto_realops_lev(REJ_LEV, "Rejecting %s-style drone: %s (%s@%s) [%s]",
+                            dstyle ? dstyle : "generic", 
+                            sptr->name, sptr->user->username, sptr->user->host, sptr->info);
+
+         return 1;
+      }
+   }
    return 0;
 }
-
-/*
- * Returns 1 if the user matches a drone style
- * discovered by PB@DAL.net
- */
-#ifdef REJECT_ACEBOTS
-int check_drone_PB(char *username, char *gcos)
-{
-   unsigned char *x;
-
-   if(*username == '~')
-      username++;
-
-   if(strlen(username) <= 2)
-      return 0;
-
-   /* verify that it's all uppercase leters */
-   for(x = (unsigned char *) username; *x; x++)
-   {
-      if(*x < 'A' || *x > 'Z')
-         return 0;
-   }
-
-   if(strcmp(username, gcos))
-      return 0;
-
-   return 1;
-}
-#endif
-
+#endif /* USE_DRONEMODULE */

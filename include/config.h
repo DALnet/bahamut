@@ -436,13 +436,6 @@
 #define REJECT_IPHONE
 
 /*
- * REJECT_ACEBOTS
- * 
- * Reject acebot-style drones. This is a good thing.
- */
-#define REJECT_ACEBOTS
-
-/*
  * ZLINES_IN_KPATH - put (/quote) ZLINES in your KPATH file. Define
  * this if you want ZLINES in your KPATH file.  Otherwise ZLINES will
  * be added to the main ircd.conf
