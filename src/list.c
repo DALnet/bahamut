@@ -176,7 +176,6 @@ aClient    *make_client(aClient *from, aClient *uplink)
 	cptr->since = cptr->lasttime = cptr->firsttime = timeofday;
 	cptr->sockerr = -1;
 	cptr->authfd = -1;
-	cptr->sendqlen = MAXSENDQLENGTH;
 	return (cptr);
     }
     else /* from is not NULL */
@@ -459,14 +458,6 @@ Link *make_link()
     lp->next = (Link *) NULL;	/* just to be paranoid... */
 
     return lp;
-}
-
-CLink *make_clink()
-{
-	CLink *clp;
-	clp = (struct CLink *) MyMalloc(sizeof(CLink));
-	memset((char *) clp, '\0', sizeof(CLink));
-	return clp;
 }
 
 void free_link(Link *lp)

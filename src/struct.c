@@ -289,13 +289,6 @@ aListener *ac_lstn(aClient *cptr)
         return cptr->lstn;
 }
 
-CLink *ac_confs(aClient *cptr)
-{
-        if(cptr->fd == -1)
-                abort();
-        return cptr->confs;
-}
-
 int ac_authfd(aClient *cptr)
 {
         if(cptr->fd == -1)
@@ -389,18 +382,4 @@ int ac_capabilities(aClient *cptr)
         if(cptr->fd == -1)
                 abort();
         return cptr->capabilities;
-}
-
-int ac_pingval(aClient *cptr)
-{
-        if(cptr->fd == -1)
-                abort();
-        return cptr->pingval;
-}
-
-int ac_sendqlen(aClient *cptr)
-{
-        if(cptr->fd == -1)
-                abort();
-        return cptr->sendqlen;
 }

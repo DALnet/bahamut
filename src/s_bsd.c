@@ -919,15 +919,12 @@ int check_server_init(aClient * cptr)
         return -1;
     }
     /* check for Ulined access and link it if nessecary */
-    if(!(cptr->confs))
-        cptr->confs = make_clink();
     if((userv = find_aUserver(cptr->name)))
-        cptr->confs->userv = userv;
-    cptr->confs->aconn = aconn;
+        cptr->serv->userv = userv;
+    cptr->serv->aconn = aconn;
     aconn->class->links++;
-
-    /* this may give cptr a new sendq length.. */
-    cptr->sendqlen = aconn->class->maxSendq;
+    aconn->acpt = cptr;
+    set_effective_class(cptr);
 
     if ((aconn->ipnum.s_addr == -1))
     memcpy((char *) &aconn->ipnum, (char *) &cptr->ip,
@@ -1029,7 +1026,7 @@ void close_connection(aClient *cptr)
         {
             aconn->hold = time(NULL);
             aconn->hold += (aconn->hold - cptr->since > HANGONGOODLINK) ?
-                HANGONRETRYDELAY : ConfConFreq(aconn);
+                HANGONRETRYDELAY : aconn->class->connfreq;
             if (nextconnect > aconn->hold)
                 nextconnect = aconn->hold;
         }
@@ -1909,13 +1906,8 @@ int connect_server(aConnect *aconn, aClient * by, struct hostent *hp)
         errno = ETIMEDOUT;
     return -1;
     }
-    /* 
-     * attach our config to cptr now.
-     */
     
-    if(!cptr->confs)
-    cptr->confs = make_clink();
-    cptr->confs->aconn = aconn;
+    cptr->serv->aconn = aconn;
     
     /* The socket has been connected or connect is in progress. */
     (void) make_server(cptr);

@@ -502,7 +502,7 @@ int register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
 	    strcpy(sptr->sockhost, sptr->hostip);
 	}
 	
-	pwaconf = sptr->confs->allow;
+	pwaconf = sptr->user->allow;
 
 	if (sptr->flags & FLAGS_DOID && !(sptr->flags & FLAGS_GOTID)) 
 	{
@@ -825,8 +825,7 @@ int register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
 	
     if (MyConnect(sptr))
     {
-	sptr->pingval = get_client_ping(sptr);
-	sptr->sendqlen = get_sendq(sptr);
+        set_effective_class(sptr);
 #ifdef MAXBUFFERS
 	/* Let's try changing the socket options for the client here... */
 	reset_sock_opts(sptr->fd, 0);
@@ -921,12 +920,12 @@ int register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
 #endif
 
 	sendto_realops_lev(CCONN_LEV,
-			   "Client connecting: %s (%s@%s) [%s] {%d}",
+			   "Client connecting: %s (%s@%s) [%s] {%s}",
 			   nick,
 			   user->username,
 			   user->host,
 			   sptr->hostip,
-			   get_client_class(sptr));
+			   sptr->class->name);
 
 	(void) send_lusers(sptr, sptr, 1, parv);
 		
@@ -2655,7 +2654,6 @@ int m_oper(aClient *cptr, aClient *sptr, int parc, char *parv[])
     
     if (StrEq(encr, aoper->passwd))
     {
-	CLink	   *clp;
 	int         old = (sptr->umode & ALL_UMODES);
 	char       *s;
 
@@ -2668,12 +2666,9 @@ int m_oper(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	}
 	*s++ = '\0';
         /* attach our conf */
-        if(!(clp = cptr->confs))
-            clp = make_clink();
-        clp->aoper = aoper;
+        sptr->user->oper = aoper;
         aoper->class->links++;
         aoper->opers++;
-        sptr->confs = clp;
 	if (!(aoper->flags & OFLAG_ISGLOBAL))
 	    SetLocOp(sptr);
 	else
@@ -2693,8 +2688,7 @@ int m_oper(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		   IsOper(sptr) ? 'O' : 'o');
 	send_umode_out(cptr, sptr, old);
 	sendto_one(sptr, rpl_str(RPL_YOUREOPER), me.name, parv[0]);
-	sptr->pingval = get_client_ping(sptr);
-	sptr->sendqlen = get_sendq(sptr);
+    set_effective_class(sptr);
 #if !defined(CRYPT_OPER_PASSWORD) && (defined(FNAME_OPERLOG) ||\
     (defined(USE_SYSLOG) && defined(SYSLOG_OPER)))
 	encr = "";
@@ -3012,7 +3006,7 @@ int m_umode(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	
     if ((setflags & (UMODE_o | UMODE_O)) && !IsAnOper(sptr) && MyConnect(sptr))
     {
-	sptr->sendqlen = get_sendq(sptr);
+    set_effective_class(sptr);
 	sptr->oflag = 0;
     }
 
@@ -3030,10 +3024,9 @@ int m_umode(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	     * Now that the user is no longer opered, let's return
 	     * them back to the appropriate Y:class -srd
 	     */
-	    sptr->pingval = get_client_ping(sptr);
-	    sptr->sendqlen = get_sendq(sptr);
-        sptr->confs->aoper->opers--;
-        sptr->confs->aoper = NULL;
+        sptr->user->oper->opers--;
+        sptr->user->oper = NULL;
+        set_effective_class(sptr);
 	}
     }
     

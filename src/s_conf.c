@@ -73,10 +73,28 @@ Conf_Me    *MeLine    = ((Conf_Me *) NULL); /* meline - only one    */
 aOper      *opers     = ((aOper *) NULL);   /* opers - Olines   */
 aPort      *ports     = ((aPort *) NULL);   /* ports - P/M lines    */
 aUserv     *uservers  = ((aUserv *) NULL);  /* Uservs - Ulined  */
+aClass     *classes;
 
 #ifdef LOCKFILE
 extern void do_pending_klines(void);
 #endif
+
+/* initclass()
+ * initialize the default class
+ */
+
+void initclass()
+{
+    classes = (aClass *) make_class();
+
+    DupString(classes->name, "default");
+    classes->connfreq = CONNECTFREQUENCY;
+    classes->pingfreq = PINGFREQUENCY;
+    classes->maxlinks = MAXIMUM_LINKS;
+    classes->maxsendq = MAXSENDQLENGTH;
+    classes->links = 0;
+    classes->next = NULL;
+}
 
 /* free_ routines
  * free the requested conf structure
@@ -134,77 +152,85 @@ free_port(aPort *ptr)
 void
 clear_conflinks(aClient *cptr)
 {
-    CLink *clp;
-    if(!(clp = cptr->confs))
-        return;
-    if(clp->aconn)
+    if(IsServer(cptr))
     {
-        clp->aconn->class->links--;
-        clp->aconn->acpt = NULL;
-        if(clp->aconn->legal == -1)     /* scheduled for removal? */
+        aConnect *x;
+        if((x = cptr->serv->aconn))
         {
-            aConnect *aconn = NULL, *aconnl;
-            for(aconnl = connects; aconnl; aconnl = aconnl->next)
+            x->class->links--;
+            x->acpt = NULL;
+            if(x->legal == -1)     /* scheduled for removal? */
             {
-                if(aconnl == clp->aconn)
+                aConnect *aconn = NULL, *aconnl;
+                for(aconnl = connects; aconnl; aconnl = aconnl->next)
                 {
-                    if(aconn)
-                        aconn->next = aconnl->next;
-                    else
-                        connects = aconnl->next;
-                    free_connect(aconnl);
-                    break;
+                    if(aconnl == x)
+                    {
+                        if(aconn)
+                            aconn->next = aconnl->next;
+                        else    
+                            connects = aconnl->next;
+                        free_connect(aconnl);
+                        break;
+                    }
+                    aconn = aconnl;
                 }
-                aconn = aconnl;
             }
+            cptr->serv->aconn = NULL;
         }
     }
-    if(clp->allow)
+    else
     {
-        clp->allow->class->links--;
-        clp->allow->clients--;
-        if((clp->allow->clients <= 0) && (clp->allow->legal == -1))
+        aAllow *x;
+        aOper *y;
+        if((x = cptr->user->allow))
         {
-            /* remove this allow now that its empty */
-            aAllow *allow = NULL, *allowl;
-            for(allowl = allows; allowl; allowl = allowl->next)
+            x->class->links--;
+            x->clients--;
+            if((x->clients <= 0) && (x->legal == -1))
             {
-                if((allowl == clp->allow))
+                /* remove this allow now that its empty */
+                aAllow *allow = NULL, *allowl;
+                for(allowl = allows; allowl; allowl = allowl->next)
                 {
-                    if(allow)
-                        allow->next = allowl->next;
-                    else
-                        allows = allowl->next;
-                    free_allow(allowl);
-                    break;
+                    if((allowl == x))
+                    {
+                        if(allow)
+                            allow->next = allowl->next;
+                        else
+                            allows = allowl->next;
+                        free_allow(allowl);
+                        break;
+                    }
+                    allow = allowl;
                 }
-                allow = allowl;
             }
+            cptr->user->allow = NULL;
+        }
+        if((y = cptr->user->oper))
+        {
+            y->class->links--;
+            y->opers--;
+            if((y->legal == -1) && (y->opers <= 0))
+            {
+                aOper *oper = NULL, *operl;
+                for(operl = opers; operl; operl = operl->next)
+                {
+                    if(operl == y)
+                    {
+                        if(oper)
+                            oper->next = operl->next;
+                        else
+                            opers = operl->next;
+                        free_oper(operl);
+                        break;
+                    }
+                    oper = operl;
+                }
+            }
+            cptr->user->oper = NULL;
         }
     }
-    if(clp->aoper)
-    {
-        clp->aoper->class->links--;
-        clp->aoper->opers--;
-        if((clp->aoper->legal == -1))      /* and.. scheduled for removal */
-        {
-            aOper *oper = NULL, *operl;
-            for(operl = opers; operl; operl = operl->next)
-            {
-                if(operl == clp->aoper)
-                {
-                    if(oper)
-                        oper->next = operl->next;
-                    else
-                        opers = operl->next;
-                    free_oper(operl);
-                    break;
-                }
-                oper = operl;
-            }
-        }
-    }
-    MyFree(clp);
     return;
 }
 
@@ -284,6 +310,43 @@ find_oper_byname(char *name)
     return aoper;
 }
 
+aClass *
+find_class(char *name)
+{
+    aClass *tmp;
+    for(tmp = classes; tmp; tmp = tmp->next)
+        if(!mycmp(name, tmp->name))
+            break;
+    return tmp;
+}
+
+/* set_effective_class
+ * sets the class for cptr properly
+ */
+
+void
+set_effective_class(aClient *cptr)
+{
+    if(IsServer(cptr))
+    {
+        if(cptr->serv->aconn->class)
+            cptr->class = cptr->serv->aconn->class;
+        else
+            cptr->class = find_class("default");
+    }
+    else
+    {
+        if(cptr->user->oper)
+            cptr->class = cptr->user->oper->class;
+        else if(cptr->user->allow)
+            cptr->class = cptr->user->allow->class;
+        else
+            cptr->class = find_class("default");
+    }
+    return;
+}
+    
+
 /* find the first (best) I line to attach.
  * rewritten in feb04 for the overdue death of aConfItem
  * and all the shit that came with it.  -epi
@@ -360,7 +423,6 @@ int attach_Iline(aClient *cptr, struct hostent *hp, char *sockhost)
  */
 static int attach_iline(aClient *cptr, aAllow *allow, char *uhost, int doid)
 {
-    CLink       *clp;
     
     if (doid)
         cptr->flags |= FLAGS_DOID;
@@ -368,17 +430,9 @@ static int attach_iline(aClient *cptr, aAllow *allow, char *uhost, int doid)
     
     /* only check it if its non zero  */
 
-    if((clp = cptr->confs))
-    {
-        if(clp->allow == allow)
-            return 1;       /* already linked */
-    }
-    else
-        clp = make_clink(); 
-    clp->allow = allow;
+    cptr->user->allow = allow;
     allow->clients++;
     allow->class->links++;
-    cptr->confs = clp;
 
     return 0;
 }
@@ -496,6 +550,29 @@ clear_opers()
     return;
 }
 
+/* this used to be check_class - revamped and moved here 
+ * to rip out all those shitty obfuscation macros that whoever
+ * whote it was so fond of.
+ * -epi
+ */
+
+void 
+clear_classes()
+{
+    aClass *cltmp, *cltmp2;
+
+    for (cltmp2 = cltmp = classes; cltmp; cltmp = cltmp2->next)
+        if (cltmp->maxlinks < 0)
+        {
+            cltmp2->next = cltmp->next;;
+            if (cltmp->links <= 0)
+                free_class(cltmp);
+        }
+        else
+            cltmp2 = cltmp;
+}
+
+
 /* confadd_ functions
  * add a config item
  * Feb.15/04 -epi
@@ -561,9 +638,9 @@ confadd_oper(char *name, char *host, char *passwd, char *flags, char *class)
             }
     }
     if(class)
-        x->class = find_class(atoi(class));
+        x->class = find_class(class);
     else
-        x->class = find_class(0);
+        x->class = find_class("default");
     if (!strchr(x->hostmask, '@') && *x->hostmask != '/')
     {
         char       *newhost;
@@ -623,9 +700,9 @@ confadd_connect(char *name, char *host, char *apasswd, char *cpasswd,
         (void) lookup_confhost(x);
     }
     if(class)
-        x->class = find_class(atoi(class));
+        x->class = find_class(class);
     else
-        x->class = find_class(0);
+        x->class = find_class("default");
     if(port)
         x->port = port;
     if(apasswd)
@@ -686,9 +763,9 @@ confadd_allow(char *ipmask, char *passwd, char *hostmask, int port, char *class)
     else
         x->port = 0;
     if(class)
-        x->class = find_class(atoi(class));
+        x->class = find_class(class);
     else
-        x->class = find_class(0);
+        x->class = find_class("default");
     if(strchr(x->ipmask, '@'))
         x->flags |= CONF_FLAGS_I_HOST_HAS_AT;
     if(strchr(x->hostmask, '@'))
@@ -789,6 +866,29 @@ confadd_me(char *servername, char *info, char *dpass, char *rpass,
     return;
 }
 
+void
+confadd_class(char *name, int ping, int connfreq, int maxlinks, long sendq)
+{
+    aClass *x;
+    int new = 0;
+
+    if(!(x = find_class(name)))
+    {
+        x = make_class();
+        DupString(x->name, name);
+        new = 1;
+    }
+    x->pingfreq = ping;
+    x->connfreq = connfreq;
+    x->maxlinks = maxlinks;
+    x->maxsendq = (sendq > 0) ? sendq : MAXSENDQLENGTH;
+    if(new)
+    {
+        x->next = classes;
+        classes = x;
+    }
+    return;
+}
 
     
 /*
@@ -843,8 +943,10 @@ int rehash(aClient *cptr, aClient *sptr, int sig)
      * deletion. The table is cleaned up by check_class. - avalon
      */
 
-    for (cltmp = NextClass(FirstClass()); cltmp; cltmp = NextClass(cltmp))
-    MaxLinks(cltmp) = -1;
+    for (cltmp = classes->next; cltmp; cltmp = cltmp->next)
+        cltmp->maxlinks = -1;
+
+    clear_classes();
 
     if (sig != SIGINT)
     flush_cache();      /* Flush DNS cache */
@@ -875,20 +977,6 @@ int rehash(aClient *cptr, aClient *sptr, int sig)
     open_listeners();
 
     rehashed = 1;
-
-    for (i = 0; i <= highest_fd; i++)
-    {
-
-        /* our Y: lines could have changed, rendering our client ping
-         * cache invalid. Reset it here. - lucas */
-
-        if ((acptr = local[i]) && !IsMe(acptr))
-        {
-            if(IsRegistered(acptr)) 
-                acptr->pingval = get_client_ping(acptr);
-            acptr->sendqlen = get_sendq(acptr);
-        }
-    }
 
     return ret;
 }
@@ -1135,7 +1223,7 @@ initconf(int opt, int fd, aClient *rehasher)
         }
         if (t_status & CONF_CLASS) 
         {
-            add_class(atoi(t_host), atoi(t_passwd), atoi(t_name), 
+            confadd_class(t_host, atoi(t_passwd), atoi(t_name), 
                             atoi(t_flags), atoi(t_class));
             continue;
         }
@@ -1313,7 +1401,7 @@ initconf(int opt, int fd, aClient *rehasher)
     }
     (void) dgets(-1, NULL, 0);  /* make sure buffer is at empty pos */
     (void) close(fd);
-    check_class();
+    clear_classes();
     nextping = nextconnect = time(NULL);
     return 0;
 }

@@ -69,7 +69,6 @@ typedef struct User anUser;
 typedef struct Server aServer;
 typedef struct SLink Link;
 typedef struct SLinkD DLink;
-typedef struct CLink CLink;
 typedef struct ChanLink chanMember;
 typedef struct SMode Mode;
 typedef struct Watch aWatch;
@@ -88,11 +87,11 @@ typedef struct Conf_Oper aOper;
 typedef struct Conf_Me Conf_Me;
 typedef struct Conf_Port aPort;
 typedef struct Conf_Userv aUserv;
+typedef struct Conf_Class aClass;
 typedef long ts_val;
 
 typedef struct MotdItem aMotd;
 
-#include "class.h"
 #include "dbuf.h"		/* THIS REALLY SHOULDN'T BE HERE!!! --msa */
 
 #define	HOSTLEN		63	/* Length of hostname.  Updated to */
@@ -255,7 +254,7 @@ typedef struct MotdItem aMotd;
 
 
 /* flag macros. */
-#define IsULine(x) ((x)->flags & FLAGS_ULINE)
+#define IsULine(x) ((x)->uplink->serv->userv)
 
 
 /* User Modes */
@@ -689,10 +688,21 @@ struct Conf_Port
 
 struct Conf_Userv
 {
-	char *name;
+	char    *name;
 	aClient *acpt;
-	int     legal;
-	aUserv *next;
+	int      legal;
+	aUserv  *next;
+};
+
+struct Conf_Class
+{
+    char        *name;
+    int          connfreq;
+    int          pingfreq;
+    int          maxlinks;
+    long         maxsendq;
+    int          links;
+    aClass      *next;
 };
 
 struct Listener {
@@ -743,6 +753,8 @@ struct User
     char       *real_oper_username;
     char       *real_oper_ip;
 #endif
+    aOper      *oper;
+    aAllow     *allow;
 };
 
 struct Server
@@ -751,8 +763,9 @@ struct Server
     char        bynick[NICKLEN + 1];
     char        byuser[USERLEN + 1];
     char        byhost[HOSTLEN + 1];
-    aConnect   *aconn;		  /* N-line pointer for this server */
-    int         dkey_flags; 	  /* dkey flags */
+    aConnect   *aconn;		        /* N-line pointer for this server */
+    aUserv     *userv;             /* ulined config for this server */
+    int         dkey_flags; 	    /* dkey flags */
 #ifdef HAVE_ENCRYPTION_ON
     void       *sessioninfo_in;   /* pointer to opaque sessioninfo structure */
     void       *sessioninfo_out;  /* pointer to opaque sessioninfo structure */
@@ -872,7 +885,6 @@ struct Client
     long        lastrecvM;       /* to check for activity --Mika */
     int         priority;
     aListener  *lstn;	         /* listener which we accepted from */
-    CLink       *confs;		 /* Configuration record associated */
     int         authfd;	         /* fd for rfc931 authentication */
     char        username[USERLEN + 1]; /* username here now for auth stuff */
     unsigned short port;	 /* and the remote port# too :-) */
@@ -895,8 +907,7 @@ struct Client
     int sockerr;                /* what was the last error returned for
 				 * this socket? */
     int capabilities;           /* what this server/client supports */
-    int pingval;	        /* cache client class ping value here */
-    int sendqlen;	        /* cache client max sendq here */
+    aClass  *class;             /* our current effective class */
 
 #ifdef MSG_TARGET_LIMIT
     struct {
@@ -1075,17 +1086,6 @@ struct SLinkD
     } value;
     int         flags;
 };
-
-struct CLink
-{
-    /* used to link all applicable confs to a client */
-	aConnect	*aconn;
-	aAllow	    *allow;
-	aOper	    *aoper;
-	aUserv      *userv;
-    int		 flags;
-};
-
 
 /* channel structure */
 
@@ -1353,7 +1353,8 @@ typedef struct SearchOptions
  * and we haven't used 2/3rds of their sendQ
  */
 #define IsSendable(x)      (!((x)->flags & FLAGS_BLOCKED) && \
-                            DBufLength(&(x)->sendQ) < (int) ((float) (x)->sendqlen / 1.5))
+                            DBufLength(&(x)->sendQ) < (int) \
+                            ((float) (x)->class->maxsendq / 1.5))
 #define DoList(x)          (((x)->user) && ((x)->user->lopt))
 
 /* internal defines for cptr->sockerr */

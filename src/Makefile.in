@@ -10,7 +10,7 @@ RES_SRC =
 #This is only for very old systems that NEED this
 #RES_SRC = res_mkquery.c res_init.c res_comp.c
 
-SOURCES = blalloc.c bsd.c channel.c class.c dbuf.c fdlist.c\
+SOURCES = blalloc.c bsd.c channel.c dbuf.c fdlist.c\
           hash.c inet_addr.c ircd.c ircsprintf.c list.c match.c packet.c \
           parse.c res.c m_nick.c m_services.c m_who.c s_auth.c s_bsd.c \
           s_conf.c s_debug.c s_err.c s_misc.c s_numeric.c s_serv.c s_user.c \
@@ -52,33 +52,28 @@ version.c: version.c.SH
 
 bsd.o: bsd.c ../include/struct.h ../include/config.h \
  ../include/setup.h ../include/defs.h ../include/hash.h \
- ../include/class.h ../include/dbuf.h ../include/common.h \
+ ../include/dbuf.h ../include/common.h \
  ../include/sys.h ../include/h.h \
  ../include/fdlist.h ../include/patchlevel.h
 channel.o: channel.c ../include/struct.h ../include/config.h \
  ../include/setup.h ../include/defs.h ../include/hash.h \
- ../include/class.h ../include/dbuf.h ../include/common.h \
+ ../include/dbuf.h ../include/common.h \
  ../include/sys.h ../include/numeric.h ../include/channel.h \
  ../include/h.h ../include/fdlist.h \
  ../include/patchlevel.h
-class.o: class.c ../include/struct.h ../include/config.h \
- ../include/setup.h ../include/defs.h ../include/hash.h \
- ../include/class.h ../include/dbuf.h ../include/common.h \
- ../include/numeric.h ../include/h.h  \
- ../include/fdlist.h ../include/patchlevel.h
 dbuf.o: dbuf.c ../include/struct.h ../include/config.h \
  ../include/setup.h ../include/defs.h ../include/hash.h \
- ../include/class.h ../include/dbuf.h ../include/common.h \
+ ../include/dbuf.h ../include/common.h \
  ../include/sys.h ../include/patchlevel.h
 drone.o: drone.c ../include/struct.h ../include/config.h \
  ../include/setup.h ../include/defs.h ../include/hash.h \
- ../include/class.h ../include/dbuf.h ../include/common.h \
+ ../include/dbuf.h ../include/common.h \
  ../include/sys.h ../include/numeric.h ../include/msg.h \
  ../include/channel.h ../include/h.h \
  ../include/fdlist.h ../include/patchlevel.h
 modules.o: modules.c ../include/struct.h ../include/config.h \
  ../include/setup.h ../include/defs.h ../include/hash.h \
- ../include/class.h ../include/dbuf.h ../include/common.h \
+ ../include/dbuf.h ../include/common.h \
  ../include/sys.h ../include/numeric.h ../include/msg.h \
  ../include/channel.h ../include/h.h  \
  ../include/fdlist.h ../include/patchlevel.h
@@ -86,128 +81,128 @@ fdlist.o: fdlist.c ../include/config.h ../include/setup.h \
  ../include/defs.h ../include/fdlist.h ../include/patchlevel.h
 hash.o: hash.c ../include/struct.h ../include/config.h \
  ../include/setup.h ../include/defs.h ../include/hash.h \
- ../include/class.h ../include/dbuf.h ../include/common.h \
+ ../include/dbuf.h ../include/common.h \
  ../include/sys.h ../include/h.h \
  ../include/fdlist.h ../include/patchlevel.h
 inet_addr.o: inet_addr.c ../include/setup.h ../include/struct.h \
  ../include/config.h ../include/defs.h ../include/hash.h \
- ../include/class.h ../include/dbuf.h ../include/common.h \
+ ../include/dbuf.h ../include/common.h \
  ../include/sys.h ../include/nameser.h ../include/resolv.h \
  ../include/patchlevel.h
 ircd.o: ircd.c ../include/struct.h ../include/config.h \
  ../include/setup.h ../include/defs.h ../include/hash.h \
- ../include/class.h ../include/dbuf.h ../include/common.h \
+ ../include/dbuf.h ../include/common.h \
  ../include/sys.h ../include/numeric.h ../include/h.h \
  ../include/fdlist.h ../include/patchlevel.h
 ircsprintf.o: ircsprintf.c
 list.o: list.c ../include/struct.h ../include/config.h \
  ../include/setup.h ../include/defs.h ../include/hash.h \
- ../include/class.h ../include/dbuf.h ../include/common.h \
+ ../include/dbuf.h ../include/common.h \
  ../include/sys.h ../include/h.h \
  ../include/fdlist.h ../include/numeric.h \
  ../include/patchlevel.h
 m_nick.o: m_nick.c ../include/struct.h ../include/config.h \
  ../include/setup.h ../include/defs.h ../include/hash.h \
- ../include/class.h ../include/dbuf.h ../include/common.h \
+ ../include/dbuf.h ../include/common.h \
  ../include/sys.h ../include/numeric.h ../include/msg.h \
  ../include/channel.h ../include/h.h \
  ../include/fdlist.h ../include/patchlevel.h
 m_services.o: m_services.c ../include/struct.h ../include/config.h \
  ../include/setup.h ../include/defs.h ../include/hash.h \
- ../include/class.h ../include/dbuf.h ../include/common.h \
+ ../include/dbuf.h ../include/common.h \
  ../include/sys.h ../include/numeric.h ../include/msg.h \
  ../include/channel.h ../include/h.h \
  ../include/fdlist.h ../include/patchlevel.h
 m_who.o: m_who.c ../include/struct.h ../include/config.h \
  ../include/setup.h ../include/defs.h ../include/hash.h \
- ../include/class.h ../include/dbuf.h ../include/common.h \
+ ../include/dbuf.h ../include/common.h \
  ../include/sys.h ../include/numeric.h ../include/msg.h \
  ../include/channel.h ../include/h.h \
  ../include/fdlist.h ../include/patchlevel.h
 match.o: match.c ../include/struct.h ../include/config.h \
  ../include/setup.h ../include/defs.h ../include/hash.h \
- ../include/class.h ../include/dbuf.h ../include/common.h \
+ ../include/dbuf.h ../include/common.h \
  ../include/sys.h \
  ../include/patchlevel.h
 packet.o: packet.c ../include/struct.h ../include/config.h \
  ../include/setup.h ../include/defs.h ../include/hash.h \
- ../include/class.h ../include/dbuf.h ../include/common.h \
+ ../include/dbuf.h ../include/common.h \
  ../include/sys.h ../include/msg.h ../include/h.h \
  ../include/fdlist.h ../include/patchlevel.h
 parse.o: parse.c ../include/struct.h ../include/config.h \
  ../include/setup.h ../include/defs.h ../include/hash.h \
- ../include/class.h ../include/dbuf.h ../include/common.h \
+ ../include/dbuf.h ../include/common.h \
  ../include/msg.h ../include/sys.h ../include/numeric.h ../include/h.h \
  ../include/fdlist.h ../include/patchlevel.h
 res.o: res.c ../include/struct.h ../include/config.h \
  ../include/setup.h ../include/defs.h ../include/hash.h \
- ../include/class.h ../include/dbuf.h ../include/common.h \
+ ../include/dbuf.h ../include/common.h \
  ../include/sys.h ../include/res.h ../include/numeric.h ../include/h.h \
  ../include/fdlist.h ../include/nameser.h \
  ../include/resolv.h ../include/patchlevel.h
 s_auth.o: s_auth.c ../include/struct.h ../include/config.h \
  ../include/setup.h ../include/defs.h ../include/hash.h \
- ../include/class.h ../include/dbuf.h ../include/common.h \
+ ../include/dbuf.h ../include/common.h \
  ../include/sys.h ../include/res.h ../include/numeric.h \
  ../include/patchlevel.h ../include/sock.h ../include/h.h \
  ../include/fdlist.h \
  ../include/patchlevel.h
 s_bsd.o: s_bsd.c ../include/struct.h ../include/config.h \
  ../include/setup.h ../include/defs.h ../include/hash.h \
- ../include/class.h ../include/dbuf.h ../include/common.h \
+ ../include/dbuf.h ../include/common.h \
  ../include/sys.h ../include/res.h ../include/numeric.h \
  ../include/patchlevel.h ../include/inet.h ../include/nameser.h \
  ../include/resolv.h ../include/h.h  \
  ../include/fdlist.h ../include/patchlevel.h
 s_conf.o: s_conf.c ../include/struct.h ../include/config.h \
  ../include/setup.h ../include/defs.h ../include/hash.h \
- ../include/class.h ../include/dbuf.h ../include/common.h \
+ ../include/dbuf.h ../include/common.h \
  ../include/sys.h ../include/numeric.h ../include/h.h \
  ../include/fdlist.h
 s_debug.o: s_debug.c ../include/struct.h ../include/config.h \
  ../include/setup.h ../include/defs.h ../include/hash.h \
- ../include/class.h ../include/dbuf.h ../include/numeric.h \
+ ../include/dbuf.h ../include/numeric.h \
  ../include/common.h ../include/sys.h ../include/h.h \
  ../include/fdlist.h
 s_err.o: s_err.c ../include/struct.h ../include/config.h \
  ../include/setup.h ../include/defs.h ../include/hash.h \
- ../include/class.h ../include/dbuf.h ../include/numeric.h \
+ ../include/dbuf.h ../include/numeric.h \
  ../include/patchlevel.h
 s_misc.o: s_misc.c ../include/struct.h ../include/config.h \
  ../include/setup.h ../include/defs.h ../include/hash.h \
- ../include/class.h ../include/dbuf.h ../include/common.h \
+ ../include/dbuf.h ../include/common.h \
  ../include/sys.h ../include/numeric.h ../include/h.h \
  ../include/fdlist.h ../include/patchlevel.h
 s_numeric.o: s_numeric.c ../include/struct.h ../include/config.h \
  ../include/setup.h ../include/defs.h ../include/hash.h \
- ../include/class.h ../include/dbuf.h ../include/common.h \
+ ../include/dbuf.h ../include/common.h \
  ../include/sys.h ../include/numeric.h ../include/h.h \
  ../include/fdlist.h ../include/patchlevel.h
 s_serv.o: s_serv.c ../include/struct.h ../include/config.h \
  ../include/setup.h ../include/defs.h ../include/hash.h \
- ../include/class.h ../include/dbuf.h ../include/common.h \
+ ../include/dbuf.h ../include/common.h \
  ../include/sys.h ../include/numeric.h ../include/msg.h \
  ../include/channel.h ../include/h.h  \
  ../include/fdlist.h ../include/patchlevel.h
 s_user.o: s_user.c ../include/struct.h ../include/config.h \
  ../include/setup.h ../include/defs.h ../include/hash.h \
- ../include/class.h ../include/dbuf.h ../include/common.h \
+ ../include/dbuf.h ../include/common.h \
  ../include/sys.h ../include/numeric.h ../include/msg.h \
  ../include/channel.h ../include/h.h \
  ../include/fdlist.h ../include/patchlevel.h
 send.o: send.c ../include/struct.h ../include/config.h \
  ../include/setup.h ../include/defs.h ../include/hash.h \
- ../include/class.h ../include/dbuf.h ../include/common.h \
+ ../include/dbuf.h ../include/common.h \
  ../include/sys.h ../include/h.h  \
  ../include/fdlist.h ../include/numeric.h \
  ../include/patchlevel.h
 support.o: support.c ../include/struct.h ../include/config.h \
  ../include/setup.h ../include/defs.h ../include/hash.h \
- ../include/class.h ../include/dbuf.h ../include/common.h \
+ ../include/dbuf.h ../include/common.h \
  ../include/sys.h ../include/patchlevel.h
 whowas.o: whowas.c ../include/struct.h ../include/config.h \
  ../include/setup.h ../include/defs.h ../include/hash.h \
- ../include/class.h ../include/dbuf.h ../include/common.h \
+ ../include/dbuf.h ../include/common.h \
  ../include/sys.h ../include/numeric.h ../include/h.h \
  ../include/fdlist.h ../include/patchlevel.h
 scache.o: scache.c ../include/struct.h ../include/h.h \
@@ -226,7 +221,7 @@ throttle.o: throttle.c \
  ../include/patchlevel.h ../include/throttle.h
 userban.o: userban.c ../include/userban.h ../include/struct.h ../include/config.h \
  ../include/setup.h ../include/defs.h ../include/hash.h \
- ../include/class.h ../include/dbuf.h ../include/common.h \
+ ../include/dbuf.h ../include/common.h \
  ../include/sys.h ../include/numeric.h ../include/msg.h \
  ../include/channel.h ../include/h.h \
  ../include/fdlist.h ../include/patchlevel.h

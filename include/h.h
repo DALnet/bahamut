@@ -53,6 +53,7 @@ extern aPort *ports;
 extern Conf_Me *MeLine;
 extern aOper *opers;
 extern aUserv *uservers;
+extern aClass *classes;
 
 
 #include "fdlist.h"
@@ -215,7 +216,6 @@ extern void 	  free_user(anUser *, aClient *);
 extern void 	  free_channel(aChannel *);
 extern aChannel  *make_channel();
 extern Link 	 *make_link(void);
-extern CLink     *make_clink(void);
 extern DLink 	 *make_dlink(void);
 extern chanMember *make_chanmember(void);
 extern anUser 	 *make_user(aClient *);
@@ -231,12 +231,8 @@ extern void 	  initlists(void);
 extern void 	  block_garbage_collect(void);	/* list.c */
 extern void       block_destroy(void);	        /* list.c */
 
-extern void 	  add_class(int, int, int, int, long);
-extern long 	  get_sendq(aClient *);
-extern int  	  get_con_freq(aClass *);
-extern int  	  get_client_ping(aClient *);
-extern int  	  get_client_class(aClient *);
-extern void 	  report_classes(aClient *);
+extern void     set_effective_class(aClient *);
+extern void     initclass();
 
 extern struct hostent *get_res(char *);
 extern struct hostent *gethost_byaddr(char *, Link *);

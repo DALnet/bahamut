@@ -295,7 +295,7 @@ static time_t try_connections(time_t currenttime)
     aConnect  *aconn, **pconn, *con_conn = (aConnect *) NULL;
     aClient   *cptr;
     aClass    *cltmp;
-    int        connecting, confrq, con_class = 0;
+    int        connecting, confrq;
     time_t      next = 0;
 
     connecting = FALSE;
@@ -325,7 +325,7 @@ static time_t try_connections(time_t currenttime)
 	    continue;
 	}
 
-	confrq = get_con_freq(cltmp);
+	confrq = cltmp->connfreq;
 	aconn->hold = currenttime + confrq;
 
 	/* Found a CONNECT config with port specified, scan clients 
@@ -334,11 +334,8 @@ static time_t try_connections(time_t currenttime)
 
 	cptr = find_name(aconn->name, (aClient *) NULL);
 
-	if (!cptr && (Links(cltmp) < MaxLinks(cltmp)) &&
-	    (!connecting || (Class (cltmp) > con_class))) 
+	if (!cptr && (cltmp->links < cltmp->maxlinks) && !connecting) 
 	{
-	    con_class = Class (cltmp);
-
 	    con_conn = aconn;
 	    /* We connect only one at time... */
 	    connecting = TRUE;
@@ -402,7 +399,7 @@ static time_t check_pings(time_t currenttime)
 	}
 
 	if (IsRegistered(cptr))
-	    ping = cptr->pingval;
+	    ping = cptr->class->pingfreq;
 	else
 	    ping = CONNECTTIMEOUT;
 
@@ -856,8 +853,6 @@ int main(int argc, char *argv[])
     R_fin_id = strlen(REPORT_FIN_ID);
     R_fail_id = strlen(REPORT_FAIL_ID);
 	
-    check_class();
-		
 	write_pidfile();
 	
     Debug((DEBUG_NOTICE, "Server ready..."));
@@ -887,7 +882,6 @@ int main(int argc, char *argv[])
         strncpyzt(me.name, me.sockhost, sizeof(me.name));
     me.hopcount = 0;
     me.authfd = -1;
-    me.confs = NULL;
     me.next = NULL;
     me.user = NULL;
     me.from = &me;

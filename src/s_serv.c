@@ -786,8 +786,7 @@ int do_server_estab(aClient *cptr)
     /* adds to server list */
     add_to_list(&server_list, cptr);
 
-    cptr->pingval = get_client_ping(cptr);
-    cptr->sendqlen = get_sendq(cptr);
+    set_effective_class(cptr);
 
     /* Check one more time for good measure... is it there? */
     if ((acptr = find_name(cptr->name, NULL))) 
@@ -1015,7 +1014,7 @@ int m_server_estab(aClient *cptr)
     split = mycmp(cptr->name, cptr->sockhost);
     host = cptr->name;
 
-    if (!(aconn = cptr->confs->aconn)) 
+    if (!(aconn = cptr->serv->aconn)) 
     {
 	ircstp->is_ref++;
 	sendto_one(cptr, "ERROR :Access denied. No N line for server %s",
@@ -1513,19 +1512,19 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		{
 		    sendto_one(sptr, rpl_str(RPL_STATSCLINE), me.name,
 			   sptr->name, "C", "*", tmp->name, (tmp->port ? tmp->port : 0),
-			   tmp->class->class);
+			   tmp->class->name);
 		    sendto_one(sptr, rpl_str(RPL_STATSNLINE), me.name,
 			   sptr->name, "N", "*", tmp->name, "1",
-			   tmp->class->class);
+			   tmp->class->name);
 		} 
 		else
 		{
                     sendto_one(sptr, rpl_str(RPL_STATSCLINE), me.name,
                            sptr->name, "C", tmp->host, tmp->name, 
-                           (tmp->port ? tmp->port : 0), tmp->class->class);
+                           (tmp->port ? tmp->port : 0), tmp->class->name);
                     sendto_one(sptr, rpl_str(RPL_STATSNLINE), me.name,
                            sptr->name, "N", tmp->host, tmp->name, "1",
-                           tmp->class->class);
+                           tmp->class->name);
 		}
 	    }
 	}
@@ -1547,7 +1546,7 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		for(tmp = allows; tmp; tmp = tmp->next)
 			sendto_one(sptr, rpl_str(RPL_STATSILINE), me.name,
 				   sptr->name, "I", tmp->ipmask, tmp->hostmask,
-				   tmp->port, tmp->class->class);
+				   tmp->port, tmp->class->name);
 	}
 	break;
 		
@@ -1600,7 +1599,7 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		for(tmp = opers; tmp; tmp = tmp->next)
 			sendto_one(sptr, rpl_str(RPL_STATSOLINE), me.name,
 				   sptr->name, "O", tmp->hostmask, tmp->nick,
-				   tmp->flags, tmp->class->class);
+				   tmp->flags, tmp->class->name);
 	}
 	break;
 		
@@ -1688,7 +1687,10 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
     case 'Y':
     case 'y':
-	report_classes(sptr);
+        break;
+    /* disabled for now. 
+	    report_classes(sptr);
+     */
 	break;
 		
     case 'Z':
@@ -3960,8 +3962,7 @@ int m_trace(aClient *cptr, aClient *sptr, int parc, char *parv[])
     if(!IsAnOper(sptr) || !dow) /* non-oper traces must be full nicks */
 	/* lets also do this for opers tracing nicks */
     {
-	char      *name;
-	int       class;
+	char      *name, *class;
 	acptr = hash_find_client(tname,(aClient *)NULL);
 	if(!acptr || !IsPerson(acptr)) 
 	{
@@ -3972,8 +3973,8 @@ int m_trace(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	    return 0;
 			  
 	}
+    class = acptr->class->name;
 	name = get_client_name(acptr,FALSE);
-	class = get_client_class(acptr);
 	if (IsAnOper(acptr)) 
 	{
 	    sendto_one(sptr, rpl_str(RPL_TRACEOPERATOR),
@@ -4017,8 +4018,7 @@ int m_trace(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	
     for (i = 0; i <= highest_fd; i++) 
     {
-	char       *name;
-	int         class;
+	char       *name, *class;
 		
 	if (!(acptr = local[i]))	/* Local Connection? */
 	    continue;
@@ -4039,7 +4039,7 @@ int m_trace(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	    name = get_client_name(acptr, FALSE);
 	else
 	    name = get_client_name(acptr, HIDEME);
-	class = get_client_class(acptr);
+    class = acptr->class->name;
 		
 	switch (acptr->status) 
 	{
@@ -4124,10 +4124,10 @@ int m_trace(aClient *cptr, aClient *sptr, int parc, char *parv[])
 #ifdef HIDEULINEDSERVS
     if (IsOper(sptr))
 #endif
-	for (cltmp = FirstClass(); doall && cltmp; cltmp = NextClass(cltmp))
-	    if (Links(cltmp) > 0)
+	for (cltmp = classes; doall && cltmp; cltmp = cltmp->next)
+	    if (cltmp->links > 0)
 		sendto_one(sptr, rpl_str(RPL_TRACECLASS), me.name,
-			   parv[0], Class (cltmp), Links(cltmp));
+			   parv[0], cltmp->name, cltmp->links);
 	
     sendto_one(sptr, rpl_str(RPL_ENDOFTRACE), me.name, parv[0], tname);
     return 0;

@@ -63,7 +63,6 @@ int build_searchopts(aClient *sptr, int parc, char *parv[])
       "Flag h <host>: user has string <host> in their hostname,",
       "               wildcards accepted",
       "Flag i <ip>: user is from <ip>, wildcards and cidr accepted,",
-      "Flag l <class>: show users in a specific <class>",
       "Flag m <usermodes>: user has <usermodes> set on them",
       "Flag n <nick>: user has string <nick> in their nickname,",
       "               wildcards accepted",
@@ -262,18 +261,6 @@ int build_searchopts(aClient *sptr, int parc, char *parv[])
 	  wsopts.host_plus=change;
 	  args++;
 	  break;
-      case 'l':
-          if(parv[args]==NULL || !IsAnOper(sptr) || 
-             (rval = strtol(parv[args], &err, 0)) < 0 || *err != '\0')  
-          {
-              sendto_one(sptr, getreply(ERR_WHOSYNTAX), me.name,
-                         sptr->name);
-              return 0;
-          }
-          wsopts.class = rval;
-          wsopts.class_value = change ? 2 :1;
-          args++;
-          break;
        case 't': 
 	  if(parv[args]==NULL || !IsAnOper(sptr) || 
              (rval = strtol(parv[args], &err, 0)) == 0 || *err != '\0')
@@ -433,9 +420,8 @@ int build_searchopts(aClient *sptr, int parc, char *parv[])
   if(wsopts.search_chan && !(wsopts.check_away || wsopts.gcos_plus || 
 			     wsopts.host_plus || wsopts.check_umode || 
 			     wsopts.serv_plus || wsopts.nick_plus || 
-			     wsopts.user_plus || wsopts.class_value || 
-			     wsopts.ts_value || wsopts.client_type_plus || 
-			     wsopts.ip_plus))
+			     wsopts.user_plus || wsopts.ts_value || 
+                 wsopts.client_type_plus || wsopts.ip_plus))
   {
       if(parv[args]==NULL || wsopts.channel || wsopts.nick ||
 	 parv[args][0] == '#' || parv[args][0] == '&')
@@ -459,9 +445,9 @@ int build_searchopts(aClient *sptr, int parc, char *parv[])
       if(wsopts.show_chan && !(wsopts.check_away || wsopts.gcos_plus || 
 			       wsopts.host_plus || wsopts.check_umode || 
 			       wsopts.serv_plus || wsopts.nick_plus || 
-			       wsopts.user_plus || wsopts.class_value || 
-			       wsopts.ts_value || wsopts.client_type_plus || 
-			       wsopts.ip_plus || wsopts.chan_plus))
+			       wsopts.user_plus || wsopts.ts_value || 
+                   wsopts.client_type_plus || wsopts.ip_plus || 
+                   wsopts.chan_plus))
       {
 	  if(parv[args]==NULL)
 	  {
@@ -566,13 +552,6 @@ int chk_who(aClient *ac, int showall)
      * a value of 1 means '-', and a value of 0 means
      * not speficied. 
      */
-
-    if(wsopts.class_value == 2 &&
-        !(MyClient(ac) && get_client_class(ac) != wsopts.class))
-        return 0;
-    else if(wsopts.class_value == 1 &&
-        !(MyClient(ac) && get_client_class(ac) == wsopts.class))
-        return 0;
 
     if(wsopts.ts_value == 2 && /* +t */
         NOW - ac->tsinfo < wsopts.ts)
