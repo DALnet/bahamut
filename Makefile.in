@@ -111,7 +111,7 @@ install: all
 		cd ..; \
 	done
 	@echo ""
-	@echo "Now edit $(INSTALL_DIR)/example.conf"
+	@echo "Now edit $(INSTALL_DIR)/template.conf"
 	@echo "and move it to ircd.conf - and you'll be all set."
 	@echo "See the doc/ directory and the INSTALL file for more assistance"
 	@echo "Thank you for choosing Bahamut!"
