@@ -2634,6 +2634,11 @@ int m_oper(aClient *cptr, aClient *sptr, int parc, char *parv[])
     {
         sendto_realops("Why is %s sending me an OPER? Contact Coders",
                         cptr->name);
+
+        /* sanity */
+        if (!IsPerson(sptr))
+            return 0;
+
 #ifdef DEFAULT_HELP_MODE
         sptr->umode |= UMODE_o;
         sptr->umode |= UMODE_h;
