@@ -952,9 +952,6 @@ register_user(aClient *cptr,
 			sendto_one(sptr, ":%s NOTICE %s :*** Notice -- You can not be chanopped", me.name, nick);
       }
 #endif
-#ifdef PING_NAZI
-      nextping = timeofday;
-#endif
 		
    }
    else if (IsServer(cptr)) {

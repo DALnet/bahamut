@@ -823,10 +823,6 @@ m_server_estab(aClient *cptr)
    cptr->pingval = get_client_ping(cptr);
    cptr->sendqlen = get_sendq(cptr);
 
-#ifdef PINGNAZI
-   nextping = timeofday;
-#endif
-
   /* error, error, error! if a server is U:'d, and it connects to us, 
    * we need to figure that out! So, do it here. - lucas 
    */ 
@@ -3239,7 +3235,6 @@ m_kline(aClient *cptr, aClient *sptr, int parc, char *parv[])
       add_temp_kline(aconf);
       rehashed = YES;
       zline_in_progress = NO;
-      nextping = timeofday;
       sendto_realops("%s added temporary %d min. K-Line for [%s@%s] [%s]",
 		   parv[0], temporary_kline_time, user, host, reason);
       return 0;
@@ -3293,7 +3288,6 @@ m_kline(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
    rehashed = YES;
    zline_in_progress = NO;
-   nextping = timeofday;
    sendto_realops("%s added K-Line for [%s@%s] [%s]",
 		  parv[0], user, host, reason);
 
@@ -3987,7 +3981,6 @@ m_zline(aClient *cptr, aClient *sptr, int parc, char *parv[])
     */
    rehashed = YES;
    zline_in_progress = YES;
-   nextping = timeofday;
 
 #if defined(LOCKFILE) && defined(ZLINES_IN_KPATH)
 
@@ -4930,7 +4923,6 @@ int m_akill(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	add_temp_kline(aconf);
 	rehashed=YES;
 	zline_in_progress=NO;
-	nextping=timeofday;  
 	
 	/* now finally send it off to any other servers! */
 	sendto_serv_butone(cptr, ":%s AKILL %s %s %d %s %d :%s",
