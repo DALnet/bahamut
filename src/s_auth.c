@@ -72,7 +72,8 @@ void start_auth(aClient *cptr)
     {
 	sendto_realops_lev(DEBUG_LEV,"Can't allocate fd for auth on %s",
 		   get_client_name(cptr, (IsServer(cptr) ? HIDEME : TRUE)));
-	(void) close(cptr->authfd);
+	close(cptr->authfd);
+        cptr->authfd = -1;
 	return;
     }
 #ifdef SHOW_HEADERS
@@ -96,7 +97,8 @@ void start_auth(aClient *cptr)
 	     sizeof(localaddr)) == -1) 
     {
 	report_error("binding auth stream socket %s:%s", cptr);
-	(void) close(cptr->fd);
+	close(cptr->authfd);
+        cptr->authfd = -1;
 	return;
     }
     
@@ -111,7 +113,7 @@ void start_auth(aClient *cptr)
     {
 	ircstp->is_abad++;
 	/* No error report from this... */
-	(void) close(cptr->authfd);
+	close(cptr->authfd);
 	cptr->authfd = -1;
 	if (!DoingDNS(cptr))
 	    SetAccess(cptr);
@@ -164,7 +166,7 @@ void send_authports(aClient *cptr)
     Debug((DEBUG_SEND, "sending [%s] to auth port %s.113",
 	   authbuf, inetntoa((char *) &them.sin_addr)));
 
-    if (write(cptr->authfd, authbuf, strlen(authbuf)) != strlen(authbuf)) {
+    if (send(cptr->authfd, authbuf, strlen(authbuf)) != strlen(authbuf), 0) {
 	authsenderr(cptr);
 	return;
     }

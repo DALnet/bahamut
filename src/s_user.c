@@ -2400,6 +2400,8 @@ int m_pong(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	    sendto_serv_butone(sptr, ":%s GNOTICE :%s has synched to network "
 			       "data.", me.name, sptr->name);
 #endif
+	    /* Kludge: Get the "sync" message on small networks immediately */ 
+	    sendto_one(sptr, "PING :%s", me.name);
 	}
     }
 

@@ -2069,7 +2069,7 @@ int read_message(time_t delay, fdlist * listp)
                auth--;
                if (rr)
                   read_authports(cptr);
-               if (rw)
+               if (rw && cptr->authfd >= 0)
                   send_authports(cptr);
                continue;
            }
