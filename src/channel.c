@@ -1120,7 +1120,8 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
     char *pptr; /* temporary paramater pointer */
     char *morig = mbuf; /* beginning of mbuf */
     /* :cptr-name MODE chptr->chname [MBUF] [PBUF] (buflen - 3 max and NULL) */
-    int prelen = strlen(cptr->name) + strlen(chptr->chname) + 16;
+    /* added another 11 bytes to this, for TSMODE -epi */
+    int prelen = strlen(cptr->name) + strlen(chptr->chname) + 27;
 
 
     args=1;
