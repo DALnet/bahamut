@@ -435,6 +435,9 @@ count_memory(aClient *cptr, char *nick)
    for (acptr = client; acptr; acptr = acptr->next) {
       if (MyConnect(acptr)) {
 	 lc++;
+#ifdef USE_WATCH
+	 wle += acptr->watches;
+#endif
 	 for (link = acptr->confs; link; link = link->next)
 	    lcc++;
       }
