@@ -33,7 +33,7 @@ extern void outofmemory(void);
 typedef struct _SBuffer 
 {
     struct _SBuffer *next;
-    int        free_time;
+    int        shared;
     int        bufsize;
     int        refcount;
     char       *end;
@@ -60,7 +60,7 @@ typedef struct _SBufUserBlock
     struct _SBufUserBlock *next;
 } SBufUserBlock;
 
-SBuffer             *largesbuf_pool = NULL, *smallsbuf_pool = NULL, *free_queue = NULL;
+SBuffer             *largesbuf_pool = NULL, *smallsbuf_pool = NULL;
 SBufUser            *user_pool = NULL;
 SBufBlock           *sbuf_blocks = NULL;
 SBufUserBlock       *sbufuser_blocks = NULL;
@@ -160,41 +160,20 @@ int sbuf_init()
 
 int sbuf_free(SBuffer* buf)
 {
-    SBuffer* loop, *next, *prev = NULL;
-    int found = 0;
-    
-    for (loop = free_queue; loop; loop = next)
+    switch (buf->bufsize)
     {
-        next = loop->next;
-        if (loop == buf) found = 1;
-        if (loop->refcount == 0 && NOW > loop->free_time)
-        {
-            switch (buf->bufsize)
-            {
-                case SBUF_LARGE_BUFFER:
-                    buf->next = largesbuf_pool;
-                    largesbuf_pool = buf;
-                    break;
+        case SBUF_LARGE_BUFFER:
+            buf->next = largesbuf_pool;
+            largesbuf_pool = buf;
+            break;
         
-                case SBUF_SMALL_BUFFER:
-                    buf->next = smallsbuf_pool;
-                    smallsbuf_pool = buf;
-                    break;
+        case SBUF_SMALL_BUFFER:
+            buf->next = smallsbuf_pool;
+            smallsbuf_pool = buf;
+            break;
         
-                default:
-                    return -1;
-            }
-            if (prev == NULL) free_queue = next;
-            else prev->next = next;
-            continue;
-        }
-        prev = loop;
-    }
-    
-    if (!found)
-    {
-        buf->next = free_queue;
-        free_queue = buf;
+        default:
+            return -1;
     }
         
     return 0;
@@ -225,7 +204,7 @@ SBuffer* sbuf_alloc(int theSize)
         buf->refcount = 0;
         buf->end = ((char*)buf) + SBUF_BASE;
         buf->next = NULL;
-        buf->free_time = NOW;
+        buf->shared = 0;
         return buf;
     }
     else
@@ -242,7 +221,7 @@ SBuffer* sbuf_alloc(int theSize)
         buf->refcount = 0;
         buf->end = ((char*)buf) + SBUF_BASE;
         buf->next = NULL;
-        buf->free_time = NOW;
+        buf->shared = 0;
         return buf;
     }
 }
@@ -287,12 +266,27 @@ int sbuf_begin_share(const char* theData, int theLength, void **thePtr)
     *s->end++ = '\r';
     *s->end++ = '\n';
     s->refcount = 0;
-    s->free_time = NOW + SBUF_REQUIRED_TIME;
+    s->shared = 1;
     
     *thePtr = (void*)s;
     return 1;
 }
 
+int sbuf_end_share(void **thePtr, int theNum)
+{
+    SBuffer *s, **shares = (SBuffer**)thePtr;
+
+    for (s = shares[0]; theNum; --theNum, ++s)
+    {
+        if (!s) continue;
+        
+        s->shared = 0;
+        if (s->refcount == 0) sbuf_free(s);
+    }
+    
+    return 0;
+}
+    
 int sbuf_put_share(SBuf* theBuf, void* theSBuffer)
 {
     SBufUser *user;
@@ -387,13 +381,19 @@ int sbuf_delete(SBuf* theBuf, int theLength)
             theBuf->head = theBuf->head->next;
             
             tmp->buf->refcount--;
-            if (tmp->buf->refcount == 0)
+            if (tmp->buf->refcount == 0 && tmp->buf->shared == 0)
                 sbuf_free(tmp->buf);
             sbuf_user_free(tmp);
         }
     }
-    if (theBuf->length == 0) theBuf->tail = NULL;
+    if (theBuf->head == NULL) theBuf->tail = NULL;
     
+    /* debug profiling code */
+    if (theBuf->head == NULL && theBuf->length != 0)
+    {
+        syslog(LOG_INFO, "sbuf: length <> 0, head,tail = NULL -- creating core by abort()");
+        abort();
+    }
     return 1;
 }
 
@@ -427,7 +427,7 @@ int sbuf_flush(SBuf* theBuf)
         theBuf->head = tmp->next;
         
         tmp->buf->refcount--;
-        if (tmp->buf->refcount == 0)
+        if (tmp->buf->refcount == 0 && tmp->buf->shared == 0)
             sbuf_free(tmp->buf);
         sbuf_user_free(tmp);
     }

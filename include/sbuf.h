@@ -24,7 +24,6 @@
 /* Definitions */
 #define SBUF_LARGE_BUFFER			512
 #define SBUF_SMALL_BUFFER			256
-#define SBUF_REQUIRED_TIME          10
 
 /* Macros */
 #define IsEol(c)                    ((c) == '\r' || (c) == '\n')
@@ -46,6 +45,7 @@ typedef struct _SBuf
 
 extern int			sbuf_init();
 extern int			sbuf_begin_share(const char* theData, int theLength, void** thePtr);
+extern int          sbuf_end_share(void** thePtr, int theNum);
 extern int          sbuf_put_share(SBuf* theBuf, void *theSBuffer);
 extern int			sbuf_put(SBuf* theBuf, const char* theData, int theLength);
 extern int			sbuf_delete(SBuf* theBuf, int theLength);

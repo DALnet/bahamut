@@ -617,6 +617,7 @@ void sendto_channel_butone(aClient *one, aClient *from, aChannel *chptr,
         }
     }
     
+    sbuf_end_share(share_bufs, 2);    
     va_end(vl);
     return;
 }
@@ -677,6 +678,8 @@ void sendto_channel_remote_butone(aClient *one, aClient *from, aChannel *chptr,
             }
         }
     }
+    
+    sbuf_end_share(&share_buf, 1);
     
     va_end(vl);
     return;
@@ -802,6 +805,8 @@ void sendto_common_channels(aClient *from, char *pattern, ...)
         /* send the share buf if others are using it too */
         send_message(from, sendbuf, msglen, share_buf);
     }
+    
+    sbuf_end_share(&share_buf, 1);
 
     va_end(vl);
     return;
@@ -846,7 +851,7 @@ void send_quit_to_common_channels(aClient *from, char *reason)
             }
         }
     }
-    return;
+    sbuf_end_share(&share_buf, 1);
 }
 
 /*
@@ -892,7 +897,7 @@ void send_part_to_common_channels(aClient *from, char *reason)
             }
         }
     }
-    return;
+    sbuf_end_share(&share_buf, 1);
 }
 
 #ifdef FLUD
@@ -969,8 +974,8 @@ void sendto_channel_butserv(aChannel *chptr, aClient *from, char *pattern, ...)
             /* vsendto_prefix_one(acptr, from, pattern, vl); */
         }
     }
+    sbuf_end_share(&share_buf, 1);
     va_end(vl);
-    return;
 }
 
 /*
@@ -1017,8 +1022,8 @@ void sendto_channel_butserv_me(aChannel *chptr, aClient *from, char *pattern, ..
 
         }
     }
+    sbuf_end_share(&share_buf, 1);
     va_end(vl);
-    return;
 }
 
 /*
@@ -1056,8 +1061,8 @@ void sendto_channelops_butserv(aChannel *chptr, aClient *from, char *pattern, ..
             send_message(acptr, sendbuf, didlocal, share_buf);
         }
     }
+    sbuf_end_share(&share_buf, 1);
     va_end(vl);
-    return;
 }
 
 /*
@@ -1647,6 +1652,7 @@ void sendto_fdlist(fdlist *listp, char *pattern, ...)
     for (fd = listp->entry[j = 1]; j <= listp->last_entry;
          fd = listp->entry[++j])
         send_message(local[fd], sendbuf, len, share_buf);
+    sbuf_end_share(&share_buf, 1);
     va_end(vl);
 }
 
@@ -1660,6 +1666,7 @@ void vsendto_fdlist(fdlist *listp, char *pattern, va_list vl)
     for (fd = listp->entry[j = 1]; j <= listp->last_entry;
          fd = listp->entry[++j])
         send_message(local[fd], sendbuf, len, share_buf);
+    sbuf_end_share(&share_buf, 1);
 }
 
 
@@ -2002,8 +2009,8 @@ void sendto_channelvoice_butone(aClient *one, aClient *from, aChannel *chptr,
             }
         }
     }
+    sbuf_end_share(share_buf, 2);
     va_end(vl);
-    return;
 }
 
 /*
@@ -2068,7 +2075,7 @@ void sendto_channelvoiceops_butone(aClient *one, aClient *from, aChannel
             }
         }
     }
-    return;
+    sbuf_end_share(share_buf, 2);
 }
 
 /*******************************************
