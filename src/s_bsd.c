@@ -1751,6 +1751,7 @@ int connect_server(aConnect *aconn, aClient * by, struct hostent *hp)
 #endif
 
     add_fd(cptr->fd, FDT_CLIENT, cptr);
+    cptr->flags |= FLAGS_BLOCKED;
     set_fd_flags(cptr->fd, FDF_WANTREAD|FDF_WANTWRITE);
 
     return 0;
