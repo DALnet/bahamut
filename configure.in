@@ -7,7 +7,7 @@ AC_SUBST(PACKAGE)
 AC_SUBST(VERSION)
 
 AC_ARG_ENABLE(encryption, \
-[    encryption     rc4 link encryption, requires gnu MP library (on by default)],,enable_encryption=yes)
+[  --disable-encryption    disable rc4 link encryption (removes gnu MP dependancy)],,enable_encryption=yes)
 
 dnl Checks for programs.
 AC_PROG_CC
@@ -256,14 +256,203 @@ AC_MSG_RESULT(can't tell))
 AC_SUBST(DFDSS)
 
 if test $enable_encryption = no; then
-echo encryption disabled, skipping GNU MP checks
+echo "encryption disabled, skipping GNU MP checks..."
 ENCRYPT_SRC=""
 AC_SUBST(ENCRYPT_SRC)
 else
+echo "encryption enabled, looking for GNU MP library..."
 ENCRYPT_SRC="rc4.c dh.c"
 AC_SUBST(ENCRYPT_SRC)
 AC_DEFINE(HAVE_ENCRYPTION_ON)
+
+# ---------- check for gmp library (stolen from eggdrop)
+
+CURDIR=`pwd`
+AC_CHECK_PROG(BASENAME,basename,basename)
+AC_CHECK_PROG(DIRNAME,dirname,dirname)
+if test $BASENAME = "" || test $DIRNAME = "" ; then
+  echo ack...no basename or dirname, we cant configure gmp without them.
+  exit 1
 fi
+
+AC_ARG_WITH(gmplib, [  --with-gmplib=PATH      full path to gmp library], gmplibname=$withval)
+AC_ARG_WITH(gmpinc, [  --with-gmpinc=PATH      full path to gmp header], gmpincname=$withval)
+
+if test -r "$gmplibname"; then
+  GMPLIB=`$DIRNAME $gmplibname`
+  GMPLIBFN=`$BASENAME $gmplibname | cut -c4-`
+  echo "using gmplib $GMPLIB/lib$GMPLIBFN"
+else
+
+ libnames="gmp.so gmp.so.3 gmp.so.3 gmp.so.3.1 gmp.so.3.1.1 gmp.so.3.0.1 gmp.so.3.0\
+           gmp.a"
+
+ # look for libgmp.a: if GMPLIB is set, check there first
+ if test "$GMPLIB" != ""; then
+   GMPLIBFN=notfound
+   for checkfn in $libnames;
+   do
+     if test -r $GMPLIB/lib$checkfn; then
+       if test $GMPLIBFN = notfound; then
+         GMPLIBFN=$checkfn
+       fi
+     fi
+   done
+   if test $GMPLIBFN = notfound; then
+     echo "Environment variable GMPLIB is set, but incorrect."
+     unset GMPLIB
+   fi
+ fi
+
+ # check in common places now
+ AC_MSG_CHECKING(for libgmp)
+ if test "$GMPLIB" = ""; then
+   for checkfn in $libnames;
+   do
+     if test "$GMPLIB" = ""; then
+       for check in $CURDIR/gmp /usr/local/lib /usr/lib /usr/i486-linuxaout/lib $HOME $HOME/lib;
+       do
+         if test -r $check/lib$checkfn; then
+           if test "$GMPLIB" = ""; then
+             AC_MSG_RESULT(found in $check/lib$checkfn)
+             GMPLIB=$check
+             GMPLIBFN=$checkfn
+           fi
+         fi
+       done
+     fi
+   done
+ else
+   AC_MSG_RESULT(found in $GMPLIB/lib$GMPLIBFN)
+ fi
+
+fi # option
+
+# give up if they don't even have that
+if test "$GMPLIB" = ""; then
+  AC_MSG_RESULT(not found)
+fi
+
+# now look for pesky $GMPINCFN file
+if test -r "$gmpincname"; then
+  GMPINC=`$DIRNAME $gmpincname`
+  GMPINCFN=`$BASENAME $gmpincname`
+  echo "using gmp header $GMPINC/$GMPINCFN"
+else
+  GMPINCFN=gmp.h
+  	
+  if test "$GMPINC" != ""; then
+    if test ! -r $GMPINC/$GMPINCFN; then
+      echo "Environment variable GMPINC is set, but incorrect."
+      unset GMPINC
+    fi
+  fi
+
+  # check in common places now
+  AC_MSG_CHECKING(for $GMPINCFN)
+  if test "$GMPINC" = ""; then
+    for check in $CURDIR/gmp /usr/local/include /usr/include $HOME $HOME/include;
+    do
+      if test -r $check/$GMPINCFN; then
+        if test "$GMPINC" != ""; then
+          break
+        fi
+        AC_MSG_RESULT(found in $check/$GMPINCFN)
+        GMPINC=$check
+        break
+      fi
+    done
+  else
+    AC_MSG_RESULT(found in $GMPINC/$GMPINCFN)
+  fi
+
+  # had GMPLIB but not GMPINC?  so close... :(
+  if test "$GMPINC" = ""; then
+    AC_MSG_RESULT(not found)
+    unset GMPLIB
+    unset GMPLIBFN
+  fi
+fi # option
+
+# done looking, now either GMPLIB & GMPINC are both set, or neither is set
+
+if test "$GMPLIB" = ""; then
+  echo ""
+  echo "I can't find GNU MP on this system, or I found an older version."
+  echo ""
+  echo "bahamut requires the GNU multiprecision library to compile with encryption."
+  echo "If you wish to disable server link encryption, run configure with"
+  echo "the option --disable-encryption."
+  echo ""
+  echo "If you have the gnu multiprecision library installed, I couldn't find it,"
+  echo "or I was confused by an older version. You can set the environment"
+  echo "variables GMPLIB and GMPINC to the directories of the library and the"
+  echo "header file, respectively."
+  echo ""
+  echo "You may also make a directory \"gmp\" in the current directory"
+  echo "and place libgmp.a and gmp.h in that directory, and I will"
+  echo "autodetect it next time you run configure."
+  echo ""
+  echo "You can download gmp at http://www.swox.com/gmp, or any of the"
+  echo "GNU distribution sites (http://www.gnu.org for more information)"
+  exit 1
+else
+  echo Checking $GMPINC/$GMPINCFN directory for gmp version
+  AC_MSG_CHECKING(for gmp version)
+AC_TRY_RUN([
+#include <stdio.h>
+#include "$GMPINC/$GMPINCFN"
+
+int main()
+{
+  int major = __GNU_MP_VERSION;
+  if(major < 3)
+     exit(1);
+  exit(0);
+}
+], 
+AC_MSG_RESULT(ok),
+AC_MSG_RESULT(too old)
+AC_MSG_ERROR(Invalid or too old gmp.h),
+AC_MSG_RESULT(can't tell))
+fi # option 
+
+AC_MSG_CHECKING(how to link to the gmp library)
+AC_TRY_RUN([
+#include <stdio.h>
+
+int main()
+{
+   char *x = "$GMPLIBFN";
+   int a;
+
+   for(a = 0; x[a]; a++)
+      ;
+   if(a < 3)
+      exit(0);
+   if(x[a-1] == 'a' && x[a-2] == '.')
+      exit(1);
+   exit(0);
+}
+
+],
+[
+AC_MSG_RESULT(dynamic)
+GMPLIBFNCUT=`echo $GMPLIBFN | cut -d. -f1`
+GMP_LIBS="-L$GMPLIB -l$GMPLIBFNCUT"
+],
+[
+AC_MSG_RESULT(static)
+GMP_LIBS="$GMPLIB/lib$GMPLIBFN"
+], 
+AC_MSG_RESULT(grr cross compiler blah!))
+
+   AC_SUBST(GMPINC)
+   AC_SUBST(GMPINCFN)
+   AC_SUBST(GMP_LIBS)
+
+fi
+dnl end of gmp library test
 
 dnl don't add more of these unless it's critical.  Trying to get rid of them.
 AC_MSG_CHECKING(operating system)
@@ -278,7 +467,7 @@ case "$target" in
 *) AC_MSG_RESULT(nothing special required) ;;
 esac
 
-AC_OUTPUT(Makefile src/Makefile tools/Makefile)
+AC_OUTPUT(Makefile src/Makefile tools/Makefile include/gmp_irc.h)
 
 echo configuring zlib...
 cd zlib

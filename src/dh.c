@@ -29,9 +29,9 @@
 #include <unistd.h>
 #include <string.h>
 #include <time.h>
-#include <gmp.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include "gmp_irc.h"
 
 struct session_info {
    mpz_t session_secret;
