@@ -15,7 +15,7 @@ SOURCES = blalloc.c bsd.c channel.c class.c dbuf.c dich_conf.c fdlist.c \
           parse.c res.c m_nick.c m_services.c m_who.c s_auth.c s_bsd.c \
           s_conf.c s_debug.c s_err.c s_misc.c s_numeric.c s_serv.c s_user.c \
           scache.c send.c support.c throttle.c whowas.c zlink.c drone.c \
-          userban.c clientlist.c fds.c $(ENGINE_S) $(CONF_SRC)
+          userban.c clientlist.c fds.c hide.c $(ENGINE_S) $(CONF_SRC)
 OBJECTS = $(SOURCES:.c=.o) version.o
 
 all:
@@ -234,6 +234,7 @@ userban.o: userban.c ../include/userban.h ../include/struct.h ../include/config.
  ../include/fdlist.h ../include/patchlevel.h
 clientlist.o: clientlist.c ../include/struct.h ../include/config.h ../include/h.h
 fds.o: fds.c ../include/struct.h ../include/config.h ../include/fds.h ../include/h.h
+hide.o: hide.c ../include/struct.h ../include/config.h ../include/h.h
 socketengine_poll.o: ../include/config.h ../include/h.h
 socketengine_select.o: ../include/config.h ../include/h.h
 socketengine_kqueue.o: ../include/config.h ../include/h.h

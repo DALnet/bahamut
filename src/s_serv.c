@@ -102,9 +102,10 @@ char        motd_last_changed_date[MAX_DATE_STRING]; /* enough room for date */
 static int  flush_write(aClient *, char *, int, char *, int, char *);
 #endif
 
-#ifdef HIDE_LINKS
-static void linkserver_update(char *, char *);
-#endif
+void fakeserver_list(aClient *);
+int fakelinkscontrol(int, char **);
+void fakelinkserver_update(char *, char *);
+void fakeserver_sendserver(aClient *);
 
 #ifdef LOCKFILE
 /* Shadowfax's lockfile code */
@@ -667,9 +668,7 @@ int m_server(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	strncpyzt(acptr->info, info, REALLEN);
 	acptr->serv->up = find_or_add(parv[0]);
 		
-#ifdef HIDE_LINKS
-	linkserver_update(acptr->name, acptr->info);
-#endif
+	fakelinkserver_update(acptr->name, acptr->info);
 	SetServer(acptr);
 
 	/* 
@@ -858,9 +857,7 @@ int do_server_estab(aClient *cptr)
 	cptr->flags |= FLAGS_ULINE; 
     }
 
-#ifdef HIDE_LINKS
-    linkserver_update(cptr->name, cptr->info);
-#endif
+    fakelinkserver_update(cptr->name, cptr->info);
     
     sendto_gnotice("from %s: Link with %s established, states:%s%s%s%s",
 		   me.name, inpath, ZipOut(cptr) ? " Output-compressed" : "", 
@@ -946,7 +943,12 @@ int do_server_estab(aClient *cptr)
 	    sendto_one(cptr, ":%s SGLINE %d :%s:%s", me.name,
 		       strlen(aconf->name), aconf->name, aconf->passwd);
     }
-    
+
+#ifdef HUB
+    /* Send out fake server list */
+    fakeserver_sendserver(cptr);
+#endif
+
     /* Bursts are about to start.. send a BURST */
     if (IsBurst(cptr))
 	sendto_one(cptr, "BURST"); 
@@ -1556,140 +1558,6 @@ int m_info(aClient *cptr, aClient *sptr, int parc, char *parv[])
     return 0;
 }
 
-#ifdef HIDE_LINKS
-/* Grossness for maintaining a fake /links list resides here */
-
-struct linkserver {
-   char *name;
-   char *description;
-};
-
-static Link *lserver_list = NULL;
-
-static struct linkserver *linkserver_find(char *name)
-{
-   Link *lp;
-   struct linkserver *ls;
-
-   for(lp = lserver_list; lp; lp = lp->next)
-   {
-      ls = (struct linkserver *) lp->value.cp;
-      if(mycmp(name, ls->name) == 0)
-         return ls;
-   }
-   return NULL;
-}
-
-static void linkserver_reset()
-{
-   Link *lp;
-   struct linkserver *ls;
-
-   while((lp = lserver_list))
-   {
-      lserver_list = lp->next;
-
-      ls = (struct linkserver *) lp->value.cp;
-      MyFree(ls->name);
-      MyFree(ls->description);
-      MyFree(ls);
-      free_link(lp);
-   }
-}
-
-static void linkserver_delete(char *name)
-{
-   Link *lp, *lpprev, *lpn;
-   struct linkserver *ls;
-
-   for(lp = lserver_list, lpprev = NULL; lp; lpprev = lp, lp = lpn)
-   {
-      lpn = lp->next;
-      ls = (struct linkserver *) lp->value.cp;
-      if(mycmp(name, ls->name) == 0)
-      {
-         if(lpprev)
-            lpprev->next = lp->next;
-         else
-            lserver_list = lp->next;
-
-         MyFree(ls->name);
-         MyFree(ls->description);
-         MyFree(ls);
-         free_link(lp);
-         return;
-      }
-   }
-}
-
-static void linkserver_add(char *name, char *desc)
-{
-   struct linkserver *ls;
-   Link *lp;
-
-   if(linkserver_find(name))
-      return;
-
-   ls = (struct linkserver *) MyMalloc(sizeof(struct linkserver));
-   ls->name = (char *) MyMalloc(strlen(name) + 1);
-   strcpy(ls->name, name);
-   ls->description = (char *) MyMalloc(strlen(desc) + 1);
-   strcpy(ls->description, desc);
-
-   lp = make_link();
-   lp->value.cp = (char *) ls;
-   lp->next = lserver_list;
-   lserver_list = lp;
-}
-
-static void linkserver_update(char *name, char *desc)
-{
-   struct linkserver *ls;
-
-   if(!(ls = linkserver_find(name)))
-      return;
-
-   MyFree(ls->description);
-   ls->description = (char *) MyMalloc(strlen(desc) + 1);
-   strcpy(ls->description, desc);
-}
-
-int linkscontrol(int parc, char *parv[])
-{
-   if(parc < 1)
-      return 0;
-
-   if(parc > 0 && mycmp(parv[0], "RESET") == 0)
-   {
-      linkserver_reset();
-      return 0;
-   }
-
-   if(parc > 1 && mycmp(parv[0], "+") == 0)
-   {
-      char *servername = parv[1];
-      aClient *acptr = find_server(servername, NULL);
-
-      if(strchr(servername, '.') == NULL)
-         return 0;
-
-      if(strchr(servername, ' ') != NULL)
-         return 0;
-
-      linkserver_add(servername, acptr ? acptr->info : HIDDEN_SERVER_DESC);
-   }
-
-   if(parc > 1 && mycmp(parv[0], "-") == 0)
-   {
-      char *servername = parv[1];
-
-      linkserver_delete(servername);
-   }
-
-   return 0;
-}
-#endif
-
 /*
  * * m_links 
  *      parv[0] = sender prefix 
@@ -1702,9 +1570,6 @@ int linkscontrol(int parc, char *parv[])
 int m_links(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     char       *mask;
-#ifdef HIDE_LINKS
-    Link       *lp;
-#endif
     aClient    *acptr;
     char        clean_mask[(2 * HOSTLEN) + 1];
     char       *s;
@@ -1713,13 +1578,13 @@ int m_links(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
     if (parc > 1 && (IsServer(sptr) || IsULine(sptr)) && mycmp(parv[1], "CONTROL") == 0)
     {
-	if(parc > 3)
-	    sendto_serv_butone(cptr, ":%s LINKS CONTROL %s %s", parv[0], parv[2], parv[3]);
+	if(parc > 4)
+	    sendto_serv_butone(cptr, ":%s LINKS CONTROL %s %s :%s", parv[0], parv[2], parv[3], parv[4]);
+	else if(parc > 3)
+	    sendto_serv_butone(cptr, ":%s LINKS CONTROL %s :%s", parv[0], parv[2], parv[3]);
 	else if(parc > 2)
-	    sendto_serv_butone(cptr, ":%s LINKS CONTROL %s", parv[0], parv[2]);
-#ifdef HIDE_LINKS
-	return linkscontrol(parc - 2, parv + 2);
-#endif
+	    sendto_serv_butone(cptr, ":%s LINKS CONTROL :%s", parv[0], parv[2]);
+	return fakelinkscontrol(parc - 2, parv + 2);
     }
 
     /* reject non-local requests */
@@ -1774,14 +1639,7 @@ int m_links(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
 #ifdef HIDE_LINKS
     if(!IsAnOper(sptr))
-    {
-	for (lp = lserver_list; lp; lp = lp->next)
-	{
-	    struct linkserver *ls = (struct linkserver *) lp->value.cp;
-            sendto_one(sptr, rpl_str(RPL_LINKS), me.name, parv[0],
-		       ls->name, ls->name, 0, ls->description);
-	}
-    }
+        fakeserver_list(sptr);
     else
 #endif
     for (acptr = client, (void) collapse(mask); acptr; acptr = acptr->next) 
