@@ -749,7 +749,7 @@ void send_quit_to_common_channels(aClient *from, char *reason)
  * Sends a message to all people (inclusing user) on local server who are
  * in same channel with user if the user cannot send to the channel.
  */
-void send_part_to_common_channels(aClient *from)
+void send_part_to_common_channels(aClient *from, char *reason)
 {
     Link *channels;
     chanMember *users;
@@ -764,7 +764,7 @@ void send_part_to_common_channels(aClient *from)
     for (channels = from->user->channel; channels;
 	 channels = channels->next)
     {
-	if (can_send(from, channels->value.chptr, NULL)) 
+	if (can_send(from, channels->value.chptr, reason)) 
 	{
 	    msglen=sprintf(sendbuf,":%s!%s@%s PART %s",
 			   from->name,from->user->username,from->user->host,

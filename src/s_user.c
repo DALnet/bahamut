@@ -1246,7 +1246,10 @@ int check_dccsend(aClient *from, aClient *to, char *msg)
 /* check to see if the message has any color chars in it. */
 int msg_has_colors(char *msg)
 {
-    char *c = msg;
+
+    char *c;
+    if (msg==NULL) return 0;
+    c=msg;
 
     while(*c)
     {
@@ -1357,6 +1360,7 @@ static inline int m_message(aClient *cptr, aClient *sptr, int parc,
 	    if(MyClient(sptr)&&ret==ERR_NEEDREGGEDNICK) {
 		sendto_one(sptr, err_str(ERR_NEEDREGGEDNICK), me.name,
 			   parv[0], nick, "speak in");		
+		continue;
 	    }
 
 	    if(ret)
@@ -1429,26 +1433,52 @@ static inline int m_message(aClient *cptr, aClient *sptr, int parc,
 	    {
 		if ((chptr = find_channel(nick + 1, NullChn))) 
 		{
-		    if (can_send(sptr, chptr, parv[2]) == 0 || IsULine(sptr))
+		    ret = IsULine(sptr) ? 0 : can_send(sptr, chptr, parv[2]);
+		    
+		    if(MyClient(sptr)&&ret==ERR_NOCOLORSONCHAN) {
+			sendto_one(sptr, err_str(ERR_NOCOLORSONCHAN), me.name,
+				   parv[0], nick, parv[2]);
+			continue;
+		    }
+		    if(MyClient(sptr)&&ret==ERR_NEEDREGGEDNICK) {
+			sendto_one(sptr, err_str(ERR_NEEDREGGEDNICK), me.name,
+				   parv[0], nick, "speak in");		
+			continue;
+		    }
+		    if (ret)
+			sendto_one(sptr, err_str(ERR_CANNOTSENDTOCHAN),
+				   me.name, parv[0], nick + 1);
+		    else 
 			sendto_channelops_butone(cptr, sptr, chptr,
 						 ":%s %s %s :%s", parv[0], cmd,
 						 nick, parv[2]);
-		    else if (!notice)
-			sendto_one(sptr, err_str(ERR_CANNOTSENDTOCHAN),
-				   me.name, parv[0], nick + 1);
 		}
 	    }
 	    else if (nick[0] == '+') 
 	    {
 		if ((chptr = find_channel(nick + 1, NullChn))) 
 		{
-		    if (IsULine(sptr) || can_send(sptr, chptr, parv[2]) == 0)
+		    ret = IsULine(sptr) ? 0 : can_send(sptr, chptr, parv[2]);
+
+		    if(MyClient(sptr)&&ret==ERR_NOCOLORSONCHAN)
+		    {
+			sendto_one(sptr, err_str(ERR_NOCOLORSONCHAN), me.name,
+				   parv[0], nick, parv[2]);
+			continue;
+		    }
+		    if(MyClient(sptr)&&ret==ERR_NEEDREGGEDNICK)
+		    {
+			sendto_one(sptr, err_str(ERR_NEEDREGGEDNICK), me.name,
+				   parv[0], nick, "speak in");		
+			continue;
+		    }
+		    if (ret)
+			sendto_one(sptr, err_str(ERR_CANNOTSENDTOCHAN),
+				   me.name, parv[0], nick + 1);
+		    else
 			sendto_channelvoice_butone(cptr, sptr, chptr, 
 						   ":%s %s %s :%s", parv[0],
 						   cmd, nick, parv[2]);
-		    else if (!notice)
-			sendto_one(sptr, err_str(ERR_CANNOTSENDTOCHAN),
-				   me.name, parv[0], nick + 1);
 		}
 	    }
 	    else
@@ -1460,13 +1490,28 @@ static inline int m_message(aClient *cptr, aClient *sptr, int parc,
 	{
 	    if ((chptr = find_channel(nick + 2, NullChn))) 
 	    {
-		if (IsULine(sptr) || can_send(sptr, chptr, parv[2]) == 0)
+		ret = IsULine(sptr) ? 0 : can_send(sptr, chptr, parv[2]);
+		
+		if(MyClient(sptr)&&ret==ERR_NOCOLORSONCHAN)
+		{
+		    sendto_one(sptr, err_str(ERR_NOCOLORSONCHAN), me.name,
+			       parv[0], nick, parv[2]);
+		    continue;
+		}
+		if(MyClient(sptr)&&ret==ERR_NEEDREGGEDNICK)
+		{
+		    sendto_one(sptr, err_str(ERR_NEEDREGGEDNICK), me.name,
+			       parv[0], nick, "speak in");		
+		    continue;
+		}
+		if (ret)
+		    sendto_one(sptr, err_str(ERR_CANNOTSENDTOCHAN),
+			       me.name, parv[0], nick + 1);
+		else
 		    sendto_channelvoiceops_butone(cptr, sptr, chptr,
 						  ":%s %s %s :%s", parv[0],
 						  cmd, nick, parv[2]);
-		else if (!notice)
-		    sendto_one(sptr, err_str(ERR_CANNOTSENDTOCHAN), me.name,
-			       parv[0], nick + 1);
+
 	    }
 	    else
 		sendto_one(sptr, err_str(ERR_NOSUCHNICK), me.name, parv[0],

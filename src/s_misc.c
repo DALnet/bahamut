@@ -867,8 +867,8 @@ static void exit_one_client(aClient *cptr, aClient *sptr, aClient *from,
 	 */
 	if (sptr->user)
 	{
+	    send_part_to_common_channels(sptr, comment);
 	    send_quit_to_common_channels(sptr, comment);
-	    send_part_to_common_channels(sptr);
 	    while ((lp = sptr->user->channel))
 		remove_user_from_channel(sptr, lp->value.chptr);
 	    
