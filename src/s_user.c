@@ -1008,7 +1008,7 @@ register_user(aClient *cptr,
      }
      memset(sptr->passwd, '\0', PASSWDLEN);
      
-     if (*ubuf) send_umode(cptr, sptr, 0, ALL_UMODES, ubuf);
+     if (ubuf[1]) send_umode(cptr, sptr, 0, ALL_UMODES, ubuf);
    }
 
    return 0;
