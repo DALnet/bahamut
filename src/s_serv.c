@@ -2011,11 +2011,11 @@ int m_admin(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	sendto_one(sptr, rpl_str(RPL_ADMINME),
 		   me.name, parv[0], me.name);
 	sendto_one(sptr, rpl_str(RPL_ADMINLOC1),
-		   me.name, parv[0], MeLine->aline1 ? MeLine->aline1 : "");
+		   me.name, parv[0], MeLine->admin[0] ? MeLine->admin[0] : "");
 	sendto_one(sptr, rpl_str(RPL_ADMINLOC2),
-		   me.name, parv[0], MeLine->aline2 ? MeLine->aline2 : "");
+		   me.name, parv[0], MeLine->admin[1] ? MeLine->admin[1] : "");
 	sendto_one(sptr, rpl_str(RPL_ADMINEMAIL),
-		   me.name, parv[0], MeLine->aline3 ? MeLine->aline3 : "");
+		   me.name, parv[0], MeLine->admin[2] ? MeLine->admin[2] : "");
     return 0;
 }
 

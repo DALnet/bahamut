@@ -849,18 +849,18 @@ confadd_me(char *servername, char *info, char *dpass, char *rpass,
     }
     if(aline1)
     {
-        MyFree(MeLine->aline1);
-        DupString(MeLine->aline1, aline1);
+        MyFree(MeLine->admin[0]);
+        DupString(MeLine->admin[0], aline1);
     }
     if(aline2)
     {
-        MyFree(MeLine->aline2);
-        DupString(MeLine->aline2, aline2);
+        MyFree(MeLine->admin[1]);
+        DupString(MeLine->admin[1], aline2);
     }
     if(aline3)
     {
-        MyFree(MeLine->aline3);
-        DupString(MeLine->aline3, aline3);
+        MyFree(MeLine->admin[2]);
+        DupString(MeLine->admin[2], aline3);
     }
     if(dpass)
     {

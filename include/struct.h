@@ -657,9 +657,7 @@ struct Conf_Me
 	char *info;
 	char *diepass;
 	char *restartpass;
-    char *aline1;
-    char *aline2;
-    char *aline3;
+    char *admin[3];     /* our three admin lines */
 };
 
 struct Conf_Oper
