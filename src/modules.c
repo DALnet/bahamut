@@ -796,6 +796,10 @@ list_hooks(aClient *sptr)
 int init_modules()
 {
     int i;
+
+    if(!modules)
+        return 0;
+
     for(i = 0; modules->autoload[i]; i++)
     {
         load_module(NULL, modules->autoload[i]);
