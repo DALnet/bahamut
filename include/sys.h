@@ -38,19 +38,19 @@
 #if defined( HAVE_UNISTD_H )
 #include <unistd.h>
 #endif
+
 #if defined( HAVE_STDLIB_H )
 #include <stdlib.h>
 #endif
 
 #if defined( HAVE_STRINGS_H )
 #include <strings.h>
-#else
+#endif
+
 #if defined( HAVE_STRING_H )
 #include <string.h>
 #endif
-#endif
-#define	strcasecmp	mycmp
-#define	strncasecmp	myncmp
+
 #if !defined( HAVE_INDEX )
 #define   index   strchr
 #define   rindex  strrchr

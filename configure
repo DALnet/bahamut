@@ -1897,13 +1897,17 @@ else
 fi
 done
 
-echo $ac_n "checking for non-blocking socket implementation""... $ac_c" 1>&6
-echo "configure:1902: checking for non-blocking socket implementation" >&5
+
+
+nonblock=no
+
+echo $ac_n "checking for posix (O_NONBLOCK) nonblocking sockets""... $ac_c" 1>&6
+echo "configure:1906: checking for posix (O_NONBLOCK) nonblocking sockets" >&5
 if test "$cross_compiling" = yes; then
-  echo "$ac_t""cross compiling " 1>&6
+  echo "$ac_t""can't tell" 1>&6
 else
   cat > conftest.$ac_ext <<EOF
-#line 1907 "configure"
+#line 1911 "configure"
 #include "confdefs.h"
 
 #include <sys/types.h>
@@ -1925,7 +1929,7 @@ int main()
 	if (f >= 0 && !(fcntl(f, F_SETFL, O_NONBLOCK))) {
 		signal(SIGALRM, alarmed);
 		alarm(3);
-		recvfrom(f, b, 12, 0, x, &l);
+		recvfrom(f, b, 12, 0, (struct sockaddr *)x, &l);
 		alarm(0);
 		exit(0);
 	}
@@ -1934,25 +1938,32 @@ int main()
 }
 
 EOF
-if { (eval echo configure:1938: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext} && (./conftest; exit) 2>/dev/null
+if { (eval echo configure:1942: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext} && (./conftest; exit) 2>/dev/null
 then
   cat >> confdefs.h <<\EOF
 #define NBLOCK_POSIX 1
 EOF
- echo "$ac_t""O_NONBLOCK " 1>&6
+
+nonblock=yes
+echo "$ac_t""O_NONBLOCK" 1>&6
 else
   echo "configure: failed program was:" >&5
   cat conftest.$ac_ext >&5
+  rm -fr conftest*
+  echo "$ac_t""no" 1>&6
 fi
 rm -fr conftest*
 fi
 
 
+if test $nonblock = no; then
+echo $ac_n "checking for bsd (O_NDELAY) nonblocking sockets""... $ac_c" 1>&6
+echo "configure:1962: checking for bsd (O_NDELAY) nonblocking sockets" >&5
 if test "$cross_compiling" = yes; then
-  echo "$ac_t""unable to test" 1>&6
+  echo "$ac_t""can't tell" 1>&6
 else
   cat > conftest.$ac_ext <<EOF
-#line 1956 "configure"
+#line 1967 "configure"
 #include "confdefs.h"
 
 #include <sys/types.h>
@@ -1974,7 +1985,7 @@ int main()
 	if (f >= 0 && !(fcntl(f, F_SETFL, O_NDELAY))) {
 		signal(SIGALRM, alarmed);
 		alarm(3);
-		recvfrom(f, b, 12, 0, x, &l);
+		recvfrom(f, b, 12, 0, (struct sockaddr *)x, &l);
 		alarm(0);
 		exit(0);
 	}
@@ -1983,25 +1994,33 @@ int main()
 }
 
 EOF
-if { (eval echo configure:1987: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext} && (./conftest; exit) 2>/dev/null
+if { (eval echo configure:1998: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext} && (./conftest; exit) 2>/dev/null
 then
   cat >> confdefs.h <<\EOF
 #define NBLOCK_BSD 1
 EOF
- echo "$ac_t""O_NDELAY " 1>&6
+
+nonblock=yes
+echo "$ac_t""O_NDELAY" 1>&6
 else
   echo "configure: failed program was:" >&5
   cat conftest.$ac_ext >&5
+  rm -fr conftest*
+  echo "$ac_t""no" 1>&6
 fi
 rm -fr conftest*
 fi
 
+fi
 
+if test $nonblock = no; then
+echo $ac_n "checking for sysv (FIONBIO) nonblocking sockets""... $ac_c" 1>&6
+echo "configure:2019: checking for sysv (FIONBIO) nonblocking sockets" >&5
 if test "$cross_compiling" = yes; then
   echo "$ac_t""unable to test" 1>&6
 else
   cat > conftest.$ac_ext <<EOF
-#line 2005 "configure"
+#line 2024 "configure"
 #include "confdefs.h"
 
 #include <sys/types.h>
@@ -2023,7 +2042,7 @@ int main()
 	if (f >= 0 && !(fcntl(f, F_SETFL, FIONBIO))) {
 		signal(SIGALRM, alarmed);
 		alarm(3);
-		recvfrom(f, b, 12, 0, x, &l);
+		recvfrom(f, b, 12, 0, (struct sockaddr *)x, &l);
 		alarm(0);
 		exit(0);
 	}
@@ -2032,27 +2051,36 @@ int main()
 }
 
 EOF
-if { (eval echo configure:2036: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext} && (./conftest; exit) 2>/dev/null
+if { (eval echo configure:2055: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext} && (./conftest; exit) 2>/dev/null
 then
   cat >> confdefs.h <<\EOF
 #define NBLOCK_SYSV 1
 EOF
- echo "$ac_t""FIONBIO" 1>&6
+
+nonblock=yes
+echo "$ac_t""FIONBIO" 1>&6
 else
   echo "configure: failed program was:" >&5
   cat conftest.$ac_ext >&5
+  rm -fr conftest*
+  echo "$ac_t""no" 1>&6
 fi
 rm -fr conftest*
 fi
 
+fi
+
+if test $nonblock = no; then
+{ echo "configure: error: No nonblocking socket implementation found. ircd requires nonblocking sockets." 1>&2; exit 1; }
+fi
 
 echo $ac_n "checking signal implementation""... $ac_c" 1>&6
-echo "configure:2051: checking signal implementation" >&5
+echo "configure:2079: checking signal implementation" >&5
 if test "$cross_compiling" = yes; then
   echo "$ac_t""unknown" 1>&6
 else
   cat > conftest.$ac_ext <<EOF
-#line 2056 "configure"
+#line 2084 "configure"
 #include "confdefs.h"
 
 int main()
@@ -2065,7 +2093,7 @@ int main()
 }
 
 EOF
-if { (eval echo configure:2069: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext} && (./conftest; exit) 2>/dev/null
+if { (eval echo configure:2097: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext} && (./conftest; exit) 2>/dev/null
 then
   cat >> confdefs.h <<\EOF
 #define POSIX_SIGNALS 1
@@ -2079,7 +2107,7 @@ else
   echo "$ac_t""uknown" 1>&6
 else
   cat > conftest.$ac_ext <<EOF
-#line 2083 "configure"
+#line 2111 "configure"
 #include "confdefs.h"
 
 #include <signal.h>
@@ -2099,7 +2127,7 @@ int main()
 }
 
 EOF
-if { (eval echo configure:2103: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext} && (./conftest; exit) 2>/dev/null
+if { (eval echo configure:2131: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext} && (./conftest; exit) 2>/dev/null
 then
   cat >> confdefs.h <<\EOF
 #define BSD_RELIABLE_SIGNALS 1
@@ -2122,12 +2150,12 @@ rm -fr conftest*
 fi
 
 echo $ac_n "checking for sys_errlist declaration""... $ac_c" 1>&6
-echo "configure:2126: checking for sys_errlist declaration" >&5
+echo "configure:2154: checking for sys_errlist declaration" >&5
 if test "$cross_compiling" = yes; then
-    { echo "configure: error: can not run test program while cross compiling" 1>&2; exit 1; }
+  echo "$ac_t""cross compiling" 1>&6
 else
   cat > conftest.$ac_ext <<EOF
-#line 2131 "configure"
+#line 2159 "configure"
 #include "confdefs.h"
 
 #include <sys/types.h>
@@ -2140,7 +2168,7 @@ main()
 }
 
 EOF
-if { (eval echo configure:2144: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext} && (./conftest; exit) 2>/dev/null
+if { (eval echo configure:2172: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext} && (./conftest; exit) 2>/dev/null
 then
   echo "$ac_t""yes" 1>&6
   cat >> confdefs.h <<\EOF
@@ -2158,9 +2186,9 @@ fi
 
 
 echo $ac_n "checking to see if we should enable fast FD_ISSET code""... $ac_c" 1>&6
-echo "configure:2162: checking to see if we should enable fast FD_ISSET code" >&5
+echo "configure:2190: checking to see if we should enable fast FD_ISSET code" >&5
 cat > conftest.$ac_ext <<EOF
-#line 2164 "configure"
+#line 2192 "configure"
 #include "confdefs.h"
 
 int main() {
@@ -2176,7 +2204,7 @@ int main()
 
 ; return 0; }
 EOF
-if { (eval echo configure:2180: \"$ac_compile\") 1>&5; (eval $ac_compile) 2>&5; }; then
+if { (eval echo configure:2208: \"$ac_compile\") 1>&5; (eval $ac_compile) 2>&5; }; then
   rm -rf conftest*
   echo "$ac_t""yes" 1>&6
   cat >> confdefs.h <<\EOF
@@ -2191,8 +2219,50 @@ else
 fi
 rm -f conftest*
 
+
+DFDSS="-DFD_SETSIZE=1024"
+
+echo $ac_n "checking to see if FD_SETSIZE is broken""... $ac_c" 1>&6
+echo "configure:2227: checking to see if FD_SETSIZE is broken" >&5
+if test "$cross_compiling" = yes; then
+  echo "$ac_t""can't tell" 1>&6
+else
+  cat > conftest.$ac_ext <<EOF
+#line 2232 "configure"
+#include "confdefs.h"
+
+#define FD_SETSIZE 666
+#include <sys/types.h>
+#include <sys/time.h>
+
+int main()
+{
+  if(FD_SETSIZE != 666)
+     exit(1);
+  exit(0);
+}
+
+EOF
+if { (eval echo configure:2247: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext} && (./conftest; exit) 2>/dev/null
+then
+  echo "$ac_t""no" 1>&6
+else
+  echo "configure: failed program was:" >&5
+  cat conftest.$ac_ext >&5
+  rm -fr conftest*
+  echo "$ac_t""YES" 1>&6
+echo "configure: warning: FD_SETSIZE is hard set by your operating system" 1>&2
+echo "configure: warning: MAXCONNECTIONS must be no higher than the hardwired FD_SETSIZE" 1>&2
+DFDSS=""
+fi
+rm -fr conftest*
+fi
+
+
+
+
 echo $ac_n "checking operating system""... $ac_c" 1>&6
-echo "configure:2196: checking operating system" >&5
+echo "configure:2266: checking operating system" >&5
 case "$target" in
 *-solaris2*) cat >> confdefs.h <<\EOF
 #define OS_SOLARIS2 1
@@ -2383,6 +2453,7 @@ s%@CP@%$CP%g
 s%@INSTALL_PROGRAM@%$INSTALL_PROGRAM%g
 s%@INSTALL_SCRIPT@%$INSTALL_SCRIPT%g
 s%@INSTALL_DATA@%$INSTALL_DATA%g
+s%@DFDSS@%$DFDSS%g
 
 CEOF
 EOF

@@ -44,8 +44,12 @@ AC_PROG_GCC_TRADITIONAL
 AC_CHECK_FUNCS(index strerror strtoken strtok inet_addr inet_ntoa inet_netof inet_aton)
 AC_CHECK_FUNCS(gettimeofday lrand48 sigaction bzero bcmp bcopy)
 AC_CHECK_FUNCS(dn_skipname __dn_skipname getrusage times, break)
+
 dnl taken from ircd's Config script
-AC_MSG_CHECKING(for non-blocking socket implementation)
+
+nonblock=no
+
+AC_MSG_CHECKING(for posix (O_NONBLOCK) nonblocking sockets)
 AC_TRY_RUN(
 [
 #include <sys/types.h>
@@ -67,15 +71,20 @@ int main()
 	if (f >= 0 && !(fcntl(f, F_SETFL, O_NONBLOCK))) {
 		signal(SIGALRM, alarmed);
 		alarm(3);
-		recvfrom(f, b, 12, 0, x, &l);
+		recvfrom(f, b, 12, 0, (struct sockaddr *)x, &l);
 		alarm(0);
 		exit(0);
 	}
 #endif
 	exit(1);
 }
-], AC_DEFINE(NBLOCK_POSIX) AC_MSG_RESULT( O_NONBLOCK ),, AC_MSG_RESULT( cross compiling ))
+], AC_DEFINE(NBLOCK_POSIX)
+nonblock=yes
+AC_MSG_RESULT(O_NONBLOCK),
+AC_MSG_RESULT(no), AC_MSG_RESULT(can't tell))
 
+if test $nonblock = no; then
+AC_MSG_CHECKING(for bsd (O_NDELAY) nonblocking sockets)
 AC_TRY_RUN(
 [
 #include <sys/types.h>
@@ -97,15 +106,21 @@ int main()
 	if (f >= 0 && !(fcntl(f, F_SETFL, O_NDELAY))) {
 		signal(SIGALRM, alarmed);
 		alarm(3);
-		recvfrom(f, b, 12, 0, x, &l);
+		recvfrom(f, b, 12, 0, (struct sockaddr *)x, &l);
 		alarm(0);
 		exit(0);
 	}
 #endif
 	exit(1);
 }
-], AC_DEFINE(NBLOCK_BSD) AC_MSG_RESULT( O_NDELAY ),, AC_MSG_RESULT(unable to test))
+], AC_DEFINE(NBLOCK_BSD)
+nonblock=yes
+AC_MSG_RESULT(O_NDELAY),
+AC_MSG_RESULT(no), AC_MSG_RESULT(can't tell))
+fi
 
+if test $nonblock = no; then
+AC_MSG_CHECKING(for sysv (FIONBIO) nonblocking sockets)
 AC_TRY_RUN(
 [
 #include <sys/types.h>
@@ -127,14 +142,23 @@ int main()
 	if (f >= 0 && !(fcntl(f, F_SETFL, FIONBIO))) {
 		signal(SIGALRM, alarmed);
 		alarm(3);
-		recvfrom(f, b, 12, 0, x, &l);
+		recvfrom(f, b, 12, 0, (struct sockaddr *)x, &l);
 		alarm(0);
 		exit(0);
 	}
 #endif /* !NBLOCK_POSIX && !NBLOCK_BSD && FIONBIO */
 	exit(1);
 }
-], AC_DEFINE(NBLOCK_SYSV) AC_MSG_RESULT(FIONBIO),, AC_MSG_RESULT(unable to test))
+], AC_DEFINE(NBLOCK_SYSV)
+nonblock=yes
+AC_MSG_RESULT(FIONBIO),
+AC_MSG_RESULT(no),
+AC_MSG_RESULT(unable to test))
+fi
+
+if test $nonblock = no; then
+AC_MSG_ERROR(No nonblocking socket implementation found. ircd requires nonblocking sockets.)
+fi
 
 dnl taken from ircd's Config script
 AC_MSG_CHECKING(signal implementation)
@@ -184,7 +208,7 @@ main()
 ],
   AC_MSG_RESULT(yes)
   AC_DEFINE(SYS_ERRLIST_DECLARED),
-  AC_MSG_RESULT(no))
+  AC_MSG_RESULT(no), AC_MSG_RESULT(cross compiling))
 
 dnl Check to see if we should set USE_FAST_FD_ISSET
 AC_MSG_CHECKING(to see if we should enable fast FD_ISSET code)
@@ -201,6 +225,32 @@ int main()
   AC_MSG_RESULT(yes)
   AC_DEFINE(USE_FAST_FD_ISSET),
   AC_MSG_RESULT(no))
+
+dnl Check to see if we have a broken FD_SETSIZE
+
+DFDSS="-DFD_SETSIZE=1024"
+
+AC_MSG_CHECKING(to see if FD_SETSIZE is broken)
+AC_TRY_RUN([
+#define FD_SETSIZE 666
+#include <sys/types.h>
+#include <sys/time.h>
+
+int main()
+{
+  if(FD_SETSIZE != 666)
+     exit(1);
+  exit(0);
+}
+], 
+AC_MSG_RESULT(no),
+AC_MSG_RESULT(YES)
+AC_MSG_WARN(FD_SETSIZE is hard set by your operating system)
+AC_MSG_WARN(MAXCONNECTIONS must be no higher than the hardwired FD_SETSIZE)
+DFDSS="",
+AC_MSG_RESULT(can't tell))
+
+AC_SUBST(DFDSS)
 
 dnl don't add more of these unless it's critical.  Trying to get rid of them.
 AC_MSG_CHECKING(operating system)

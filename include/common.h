@@ -62,11 +62,8 @@ void        free();
 # endif
 extern void flush_fdlist_connections();
 extern int  match(char *, char *);
-/* Damned GLibc 2.1 has screwy libraries. -Rak */
-#  if !defined(__linux__) || !(__GLIBC__ > 1 && __GLIBC_MINOR__ > 0)
 extern int  mycmp(char *, char *);
 extern int  myncmp(char *, char *, int);
-#  endif
 # if !defined( HAVE_STRTOK )
 extern char *strtok(char *, char *);
 # endif
