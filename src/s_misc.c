@@ -386,11 +386,13 @@ void exit_one_server(aClient *cptr, aClient *dead, aClient *from, char *spinfo, 
     *  the server loop each time we find a server.
     */
 
+   Debug((DEBUG_NOTICE, "server noquit: %s", cptr->name));
+
    for (acptr = client; acptr; acptr = next) 
    {
       next = acptr->next; /* we might destroy this client record in the loop. */
 
-      if(acptr->uplink != cptr || !IsPerson(cptr)) 
+      if(acptr->uplink != cptr || !IsPerson(acptr)) 
          continue;
 
       exit_one_client_in_split(acptr, dead, spinfo);
@@ -400,12 +402,14 @@ void exit_one_server(aClient *cptr, aClient *dead, aClient *from, char *spinfo, 
    {
       next = acptr->next; /* we might destroy this client record in the loop. */
 
-      if(acptr->uplink != cptr || !IsServer(cptr)) 
+      if(acptr->uplink != cptr || !IsServer(acptr)) 
          continue;
 
       exit_one_server(acptr, dead, from, spinfo, comment);
       next = client; /* restart the loop */
    }
+
+   Debug((DEBUG_NOTICE, "done exiting server: %s", cptr->name));
 
    for (i = serv_fdlist.entry[j = 1]; j <= serv_fdlist.last_entry; i = serv_fdlist.entry[++j]) 
    {
@@ -442,6 +446,8 @@ void exit_server(aClient *cptr, aClient *from, char *comment)
    char splitname[HOSTLEN + HOSTLEN + 2];
 
    ircsprintf(splitname, "%s %s", cptr->uplink->name, cptr->name);
+
+   Debug((DEBUG_NOTICE, "exit_server(%s, %s, %s)", cptr->name, from->name, comment));
 
    exit_one_server(cptr, cptr, from, splitname, comment);
 }
