@@ -26,6 +26,7 @@ Changes for 1.4.35
   read src/drone.c to view the interface
 - /stats t shows more information
 - Various code cleanup and readability fixes
+- Users and opers will now recieve a different output to '/who ?'.
 
 Changes for 1.4.34
 - Don't use FD_SETSIZE at all if USE_POLL is defined
