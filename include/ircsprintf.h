@@ -2,6 +2,7 @@
 #define IRCSPRINTF_H
 #include <stdarg.h>
 #include <stdio.h>
+#include "setup.h"
 
 /* define this if you intend to use ircsnprintf or ircvsnprintf */
 /* It's not used, and sNprintf functions are not in all libraries */
