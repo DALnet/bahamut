@@ -832,8 +832,8 @@ static int completed_connection(aClient * cptr)
    /* 
     * Is this the right place to do this?  dunno... -Taner
     */
-/*   if (!IsDead(cptr))
-      start_auth(cptr); */
+   if (!IsDead(cptr))
+      start_auth(cptr);
 #endif
 
    return (IsDead(cptr)) ? -1 : 0;
@@ -1299,6 +1299,9 @@ aClient *add_connection(aClient * cptr, int fd)
    add_client_to_list(acptr);
    set_non_blocking(acptr->fd, acptr);
    set_sock_opts(acptr->fd, acptr);
+#ifdef DO_IDENTD
+   start_auth(acptr);
+#endif
    return acptr;
 }
 
