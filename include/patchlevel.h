@@ -36,7 +36,7 @@
 
 #define PATCH1 ".prepre1"
 
-#define PATCH2 ""
+#define PATCH2 ".kthx"
 
 #define PATCH3 ""
 

@@ -150,6 +150,8 @@ int engine_read_message(time_t delay)
                {
                   struct fd_callbackp *fdcb = (struct fd_callbackp *) fdvalue;
 
+                  fdcb->rdf = rr;
+                  fdcb->wrf = rw;
                   (*fdcb->callback)(fdcb);
                }
                break;
