@@ -562,12 +562,10 @@ struct ConfItem {
 #endif
 /* Client structures */
 struct User {
-	struct User *next;		  /* chain of anUser structures */
 	Link       *channel;		/* chain of channel pointer blocks */
 	Link       *invited;		/* chain of invite pointer blocks */
 	char       *away;		    /* pointer to away message */
 	time_t      last;
-	int         refcnt;		  /* Number of times this block is referenced */
 	int         joined;		  /* number of channels joined */
 	char        username[USERLEN + 1];
 	char        host[HOSTLEN + 1];
@@ -584,14 +582,14 @@ struct User {
     * USER is introduced... --msa
     */
 	Link       *silence;    /* chain of silenced users */
-	char 	   *servicemessage;
 	LOpts 	   *lopt;      /* Saved /list options */
 };
 
 struct Server {
-   anUser     *user;		/* who activated this connection */
    char       *up;		  /* Pointer to scache name */
-   char        by[NICKLEN + 1];
+   char        bynick[NICKLEN + 1];
+   char        byuser[USERLEN + 1];
+   char        byhost[HOSTLEN + 1];
    aConfItem  *nline;		/* N-line pointer for this server */
 };
 

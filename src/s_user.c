@@ -2838,12 +2838,10 @@ m_whois(aClient *cptr,
 {
    static anUser UnknownUser =
    {
-      NULL,			/* next */
       NULL,			/* channel */
       NULL,			/* invited */
 		NULL,			/* away */
       0,			/* last */
-      1,			/* refcount */
       0,			/* joined */
       "<Unknown>",		/* user */
       "<Unknown>",		/* host */

@@ -349,12 +349,10 @@ make_user(aClient *cptr)
       user->server = (char *) NULL;	/*
 					 * scache server name 
 					 */
-      user->refcnt = 1;
       user->joined = 0;
       user->channel = NULL;
       user->invited = NULL;
-			user->silence = NULL;
-			user->servicemessage = NULL;
+      user->silence = NULL;
       cptr->user = user;
    }
    return user;
@@ -368,8 +366,9 @@ make_server(aClient *cptr)
    if (!serv) {
       serv = (aServer *) MyMalloc(sizeof(aServer));
 
-      serv->user = NULL;
-      *serv->by = '\0';
+      *serv->bynick = '\0';
+      *serv->byuser = '\0';
+      *serv->byhost = '\0';
       serv->up = (char *) NULL;
       cptr->serv = serv;
    }
@@ -382,30 +381,24 @@ make_server(aClient *cptr)
 void
 free_user(anUser *user, aClient *cptr)
 {
-   if (--user->refcnt <= 0) {
-      if (user->away)
-				MyFree((char *) user->away);
-			if (user->servicemessage)
-				MyFree((char *) user->servicemessage);
-      /*
-       * sanity check
-       */
-      if (user->joined || user->refcnt < 0 ||
-	  user->invited || user->channel)
-	 sendto_ops("* %#x user (%s!%s@%s) %#x %#x %#x %d %d *",
-		    cptr, cptr ? cptr->name : "<noname>",
-		    user->username, user->host, user,
-		    user->invited, user->channel, user->joined,
-		    user->refcnt);
+   if (user->away)
+      MyFree((char *) user->away);
+   /*
+    * sanity check
+    */
+   if (user->joined || user->invited || user->channel)
+      sendto_ops("* %#x user (%s!%s@%s) %#x %#x %#x %d *",
+                  cptr, cptr ? cptr->name : "<noname>",
+                  user->username, user->host, user,
+                  user->invited, user->channel, user->joined);
 
-      if (BlockHeapFree(free_anUsers, user)) {
-	 sendto_ops("list.c couldn't BlockHeapFree(free_anUsers,user) user = %lX", user);
-	 sendto_ops("Please report to the hybrid team! bahamut-bugs@bahamut.net");
+   if (BlockHeapFree(free_anUsers, user)) 
+   {
+      sendto_ops("list.c couldn't BlockHeapFree(free_anUsers,user) user = %lX", user);
+      sendto_ops("Please report to the hybrid team! bahamut-bugs@bahamut.net");
 #if defined(USE_SYSLOG) && defined(SYSLOG_BLOCK_ALLOCATOR)
-	 syslog(LOG_DEBUG, "list.c couldn't BlockHeapFree(free_anUsers,user) user = %lX", user);
+      syslog(LOG_DEBUG, "list.c couldn't BlockHeapFree(free_anUsers,user) user = %lX", user);
 #endif
-      }
-
    }
 }
 /*
@@ -443,8 +436,6 @@ remove_client_from_list(aClient *cptr)
 						 * try this here 
 						 */
    if (cptr->serv) {
-      if (cptr->serv->user)
-	 free_user(cptr->serv->user, cptr);
       MyFree((char *) cptr->serv);
    }
    /*

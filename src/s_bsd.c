@@ -2165,16 +2165,13 @@ int connect_server(aConfItem * aconf, aClient * by, struct hostent *hp)
     */
    (void) make_server(cptr);
    if (by && IsPerson(by)) {
-      (void) strcpy(cptr->serv->by, by->name);
-      if (cptr->serv->user)
-	 free_user(cptr->serv->user, NULL);
-      cptr->serv->user = by->user;
-      by->user->refcnt++;
+      strcpy(cptr->serv->bynick, by->name);
+      strcpy(cptr->serv->byuser, by->user->username);
+      strcpy(cptr->serv->byhost, by->user->host);
    } else {
-      (void) strcpy(cptr->serv->by, "AutoConn.");
-      if (cptr->serv->user)
-	 free_user(cptr->serv->user, NULL);
-      cptr->serv->user = NULL;
+      strcpy(cptr->serv->bynick, "AutoConn.");
+      *cptr->serv->byuser = '\0';
+      *cptr->serv->byhost = '\0';
    }
    cptr->serv->up = me.name;
    if (cptr->fd > highest_fd)

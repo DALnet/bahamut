@@ -1089,9 +1089,9 @@ show_servers(aClient *cptr, char *name)
       j++;
       sendto_one(cptr, ":%s %d %s :%s (%s!%s@%s) Idle: %d",
 		 me.name, RPL_STATSDEBUG, name, cptr2->name,
-		 (cptr2->serv->by[0] ? cptr2->serv->by : "Remote."),
-	      (cptr2->serv->user ? cptr2->serv->user->username : "*"),
-		 (cptr2->serv->user ? cptr2->serv->user->host : "*"),
+		 (cptr2->serv->bynick[0] ? cptr2->serv->bynick : "Remote."),
+	      (cptr2->serv->byuser[0] ? cptr2->serv->byuser : "*"),
+		 (cptr2->serv->byhost[0] ? cptr2->serv->byhost : "*"),
 		 timeofday - cptr2->lasttime);
    }
    sendto_one(cptr, ":%s %d %s :%d Server%s", me.name, RPL_STATSDEBUG,

@@ -4364,17 +4364,12 @@ m_trace(aClient *cptr, aClient *sptr, int parc, char *parv[])
 			}
 			break;
 		 case STAT_SERVER:
-			if (acptr->serv->user)
-			  sendto_one(sptr, rpl_str(RPL_TRACESERVER),
+			sendto_one(sptr, rpl_str(RPL_TRACESERVER),
 							 me.name, parv[0], class, link_s[i],
-							 link_u[i], name, acptr->serv->by,
-							 acptr->serv->user->username,
-							 acptr->serv->user->host);
-			else
-			  sendto_one(sptr, rpl_str(RPL_TRACESERVER),
-							 me.name, parv[0], class, link_s[i],
-							 link_u[i], name, *(acptr->serv->by) ?
-							 acptr->serv->by : "*", "*", me.name);
+							 link_u[i], name, 
+							 *(acptr->serv->bynick) ? acptr->serv->bynick : "*", 
+							 *(acptr->serv->byuser) ? acptr->serv->byuser : "*", 
+							 *(acptr->serv->byhost) ? acptr->serv->byhost : me.name);
 			cnt++;
 			break;
 		 case STAT_LOG:
