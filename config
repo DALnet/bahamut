@@ -17,13 +17,13 @@ BRANCH=`grep 'BRANCHSTATUS ' include/patchlevel.h | sed s/'.define BRANCHSTATUS 
 MAJOR=`grep 'MAJOR' include/patchlevel.h | sed s/'.define MAJOR '// | xargs echo -n`
 MINOR=`grep 'MINOR' include/patchlevel.h | sed s/'.define MINOR '// | xargs echo -n`
 PATCH=`grep 'PATCH ' include/patchlevel.h | sed s/'.define PATCH '// | xargs echo -n`
-BROKEN_SELECT=`grep 'BROKEN_FD_SETSIZE' include/setup.h | sed s/'.define BROKEN_FD_SETSIZE'// | xargs echo -n`
+BROKEN_SELECT=`grep 'define.*BROKEN_FD_SETSIZE' include/setup.h | xargs echo -n`
 IRCD=`printf '%s(%s)-%i.%i.%i' ${BASENAME} ${BRANCH} ${MAJOR} ${MINOR} ${PATCH}`
 OPTIONS_H="include/options.h"
 if [ -n "$BROKEN_SELECT" ] ; then
-    BROKEN_SELECT=""
-else
     BROKEN_SELECT="1"
+else
+    BROKEN_SELECT=""
 fi
 ##
 ##
