@@ -956,14 +956,14 @@ int register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
 #endif
 #ifdef WINGATE_NOTICE
 	sendto_one(sptr, ":%s NOTICE %s :*** Notice -- This server runs an "
-		   "open proxy/wingate detection monitor.", me.name, nick);
-	sendto_one(sptr, ":%s NOTICE %s :*** Notice -- If you see a port 1080 "
-		   "or port 23 connection from %s", me.name, nick,
+		   "open proxy monitor to prevent abuse.", me.name, nick);
+	sendto_one(sptr, ":%s NOTICE %s :*** Notice -- If you see connections on "
+		   "various ports from %s", me.name, nick,
 		   ProxyMonHost);
-	sendto_one(sptr, ":%s NOTICE %s :*** Notice -- please disregard it, as it is the detector in action.",
+	sendto_one(sptr, ":%s NOTICE %s :*** Notice -- please disregard them, as they are the monitor in action.",
 		   me.name, nick);
 	sendto_one(sptr, ":%s NOTICE %s :*** Notice -- For more information "
-		   "please see %s", me.name, nick, ProxyMonURL);
+		   "please visit %s", me.name, nick, ProxyMonURL);
 #endif
 		
     }
