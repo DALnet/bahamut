@@ -271,10 +271,10 @@ m_squit(aClient *cptr, aClient *sptr, int parc, char *parv[])
     */
    if (MyConnect(acptr)) 
    {
-      sendto_gnotice("from %s: Recieved SQUIT %s from %s (%s)",
+      sendto_gnotice("from %s: Received SQUIT %s from %s (%s)",
 		 me.name, acptr->name, get_client_name(sptr, HIDEME), comment);
       sendto_serv_butone(acptr,
-			 ":%s GNOTICE :Recieved SQUIT %s from %s (%s)",
+			 ":%s GNOTICE :Received SQUIT %s from %s (%s)",
 		me.name, server, get_client_name(sptr, HIDEME), comment);
 
 #if defined(USE_SYSLOG) && defined(SYSLOG_SQUIT)
