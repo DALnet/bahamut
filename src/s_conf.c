@@ -485,7 +485,7 @@ clear_opers()
     aoper = opers;
     opers = NULL;
     while(aoper)
-        if(!aoper->opers)
+        if((aoper->opers > 0))
         {
             aoper->legal = -1;
             if(!keep)
