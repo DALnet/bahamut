@@ -504,7 +504,7 @@ int has_voice(aClient *cptr, aChannel *chptr)
     return 0;
 }
 
-int can_send(aClient *cptr, aChannel *chptr)
+int can_send(aClient *cptr, aChannel *chptr, char *msg)
 {
     chanMember   *cm;
     int     member;
@@ -520,6 +520,10 @@ int can_send(aClient *cptr, aChannel *chptr)
 	    return (MODE_MODERATED);
 	if(chptr->mode.mode & MODE_NOPRIVMSGS)
 	    return (MODE_NOPRIVMSGS);
+	if (chptr->mode.mode & MODE_REGONLY && !IsRegNick(cptr))
+	    return (ERR_NEEDREGGEDNICK);
+	if ((chptr->mode.mode & MODE_NOCOLOR) && msg_has_colors(msg))
+	    return (ERR_NOCOLORSONCHAN);
 	if (MyClient(cptr) && is_banned(cptr, chptr))
 	    return (MODE_BAN); /*
 				* channel is -n and user is not there;
@@ -533,6 +537,11 @@ int can_send(aClient *cptr, aChannel *chptr)
 	    return (MODE_MODERATED);
 	if(cm->bans && !(cm->flags & (CHFL_CHANOP | CHFL_VOICE)))
 	    return (MODE_BAN);
+	if (chptr->mode.mode & MODE_REGONLY && !IsRegNick(cptr))
+	    return (ERR_NEEDREGGEDNICK);
+	if ((chptr->mode.mode & MODE_NOCOLOR) && msg_has_colors(msg))
+	    return (ERR_NOCOLORSONCHAN);
+
     }
     
     return 0;
@@ -1672,7 +1681,9 @@ int m_join(aClient *cptr, aClient *sptr, int parc, char *parv[])
 			   getreply(ERR_CHANBANREASON), me.name, parv[0], name,
 			   BadPtr(aconf->passwd) ? "Reserved channel" :
 					  aconf->passwd);
-            else
+            else if (i==ERR_NEEDREGGEDNICK)
+		sendto_one(sptr, getreply(i), me.name, parv[0], name, "join");
+	    else 
 		sendto_one(sptr,
 			   getreply(i), me.name, parv[0], name);
 
@@ -1849,11 +1860,11 @@ int m_part(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	}
 	/* Remove user from the old channel (if any) */
 
-	if (parc < 3 || can_send(sptr,chptr))
+	if (parc < 3 || can_send(sptr,chptr,reason))
 	    sendto_match_servs(chptr, cptr, PartFmt, parv[0], name);
 	else
 	    sendto_match_servs(chptr, cptr, PartFmt2, parv[0], name, reason);
-	if (parc < 3 || can_send(sptr,chptr))
+	if (parc < 3 || can_send(sptr,chptr,reason))
 	    sendto_channel_butserv(chptr, sptr, PartFmt, parv[0], name);
 	else
 	    sendto_channel_butserv(chptr, sptr, PartFmt2, parv[0], name,

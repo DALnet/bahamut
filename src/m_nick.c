@@ -512,7 +512,7 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	 
 		for (lp = sptr->user->channel; lp; lp = lp->next)
 		{
-		    if (can_send(sptr, lp->value.chptr))
+		    if (can_send(sptr, lp->value.chptr, NULL))
 		    { 
 			sendto_one(sptr, err_str(ERR_BANNICKCHANGE), me.name,
 				   sptr->name, lp->value.chptr->chname);

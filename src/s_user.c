@@ -1348,14 +1348,15 @@ static inline int m_message(aClient *cptr, aClient *sptr, int parc,
 #endif
 		    break;
 		}
-	    ret = IsULine(sptr) ? 0 : can_send(sptr, chptr);
-	    if(!ret && MyClient(sptr) &&
-	       (chptr->mode.mode & MODE_NOCOLOR) && msg_has_colors(parv[2]))
-	    {
-		if(!notice)
-		    sendto_one(sptr, err_str(ERR_NOCOLORSONCHAN), me.name,
-			       parv[0], nick, parv[2]);
+	    ret = IsULine(sptr) ? 0 : can_send(sptr, chptr, parv[2]);
+	    if(MyClient(sptr)&&ret==ERR_NOCOLORSONCHAN) {
+		sendto_one(sptr, err_str(ERR_NOCOLORSONCHAN), me.name,
+			   parv[0], nick, parv[2]);
 		continue;
+	    }
+	    if(MyClient(sptr)&&ret==ERR_NEEDREGGEDNICK) {
+		sendto_one(sptr, err_str(ERR_NEEDREGGEDNICK), me.name,
+			   parv[0], nick, "speak in");		
 	    }
 
 	    if(ret)
@@ -1428,7 +1429,7 @@ static inline int m_message(aClient *cptr, aClient *sptr, int parc,
 	    {
 		if ((chptr = find_channel(nick + 1, NullChn))) 
 		{
-		    if (can_send(sptr, chptr) == 0 || IsULine(sptr))
+		    if (can_send(sptr, chptr, parv[2]) == 0 || IsULine(sptr))
 			sendto_channelops_butone(cptr, sptr, chptr,
 						 ":%s %s %s :%s", parv[0], cmd,
 						 nick, parv[2]);
@@ -1441,7 +1442,7 @@ static inline int m_message(aClient *cptr, aClient *sptr, int parc,
 	    {
 		if ((chptr = find_channel(nick + 1, NullChn))) 
 		{
-		    if (IsULine(sptr) || can_send(sptr, chptr) == 0)
+		    if (IsULine(sptr) || can_send(sptr, chptr, parv[2]) == 0)
 			sendto_channelvoice_butone(cptr, sptr, chptr, 
 						   ":%s %s %s :%s", parv[0],
 						   cmd, nick, parv[2]);
@@ -1459,7 +1460,7 @@ static inline int m_message(aClient *cptr, aClient *sptr, int parc,
 	{
 	    if ((chptr = find_channel(nick + 2, NullChn))) 
 	    {
-		if (IsULine(sptr) || can_send(sptr, chptr) == 0)
+		if (IsULine(sptr) || can_send(sptr, chptr, parv[2]) == 0)
 		    sendto_channelvoiceops_butone(cptr, sptr, chptr,
 						  ":%s %s %s :%s", parv[0],
 						  cmd, nick, parv[2]);

@@ -723,7 +723,7 @@ void send_quit_to_common_channels(aClient *from, char *reason)
     for (channels = from->user->channel; channels; 
 	 channels = channels->next)
     {
-	if (!can_send(from, channels->value.chptr)) 
+	if (!can_send(from, channels->value.chptr, reason)) 
 	{
 	    for (users = channels->value.chptr->members; 
 		 users; users = users->next) 
@@ -764,7 +764,7 @@ void send_part_to_common_channels(aClient *from)
     for (channels = from->user->channel; channels;
 	 channels = channels->next)
     {
-	if (can_send(from, channels->value.chptr)) 
+	if (can_send(from, channels->value.chptr, NULL)) 
 	{
 	    msglen=sprintf(sendbuf,":%s!%s@%s PART %s",
 			   from->name,from->user->username,from->user->host,

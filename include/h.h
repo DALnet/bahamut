@@ -83,7 +83,7 @@ extern void 	 remove_matching_bans(aChannel *, aClient *, aClient *);
 extern void 	 remove_user_from_channel(aClient *, aChannel *);
 extern void 	 del_invite(aClient *, aChannel *);
 extern void 	 send_user_joins(aClient *, aClient *);
-extern int  	 can_send(aClient *, aChannel *);
+extern int  	 can_send(aClient *, aChannel *, char *);
 extern int   	 is_chan_op(aClient *, aChannel *);
 extern int  	 has_voice(aClient *, aChannel *);
 extern int  	 count_channels(aClient *);
@@ -212,6 +212,7 @@ extern char 	 *myctime(time_t), *date(time_t);
 extern int  	  exit_client(aClient *, aClient *, aClient *, char *);
 extern void 	  initstats(void), tstats(aClient *, char *);
 extern void 	  serv_info(aClient *, char *);
+int               msg_has_colors(char *);
 
 extern int  	  parse(aClient *, char *, char *);
 extern void 	  init_tree_parse(struct Message *);

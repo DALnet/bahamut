@@ -531,7 +531,7 @@ static char *replies[] =
     /* 475 ERR_BADCHANNELKEY */	":%s 475 %s %s :Cannot join channel (+k)",
     /* 476 ERR_BADCHANMASK */	":%s 476 %s %s :Bad Channel Mask",
     /* 477 ERR_NEEDREGGEDNICK */	":%s 477 %s %s :You need to identify "
-                                        "to a registered nick to join that "
+                                        "to a registered nick to %s that "
                                         "channel.",
     /* 478 ERR_BANLISTFULL */	":%s 478 %s %s %s :Channel ban list is full",
     /* 479 ERR_BADCHANNAME */   ":%s 479 %s %s :Channel name contains illegal "
@@ -544,7 +544,7 @@ static char *replies[] =
     /* 483 ERR_CANTKILLSERVER */	":%s 483 %s :You cant kill a server!",
     /* 484 */	                NULL,	/* In use by Undernet */
     /* 485 ERR_CHANBANREASON */	":%s 485 %s %s :Cannot join channel (%s)",
-    /* 486 ERR_NONONREG */	":%s 486 %s :You must be identified to a "
+    /* 486 ERR_NONONREG */	":%s 486 %s :You must identify to a "
                                 "registered nick to private message %s",
     /* 487 */	                NULL,
     /* 488 */	                NULL,
