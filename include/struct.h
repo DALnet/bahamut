@@ -86,7 +86,6 @@ typedef struct Conf_Allow aAllow;
 typedef struct Conf_Oper aOper;
 typedef struct Conf_Me Conf_Me;
 typedef struct Conf_Port aPort;
-typedef struct Conf_Userv aUserv;
 typedef struct Conf_Class aClass;
 typedef long ts_val;
 
@@ -254,7 +253,7 @@ typedef struct MotdItem aMotd;
 
 
 /* flag macros. */
-#define IsULine(x) ((x)->uplink->serv->userv)
+#define IsULine(x) ((x)->flags & FLAGS_ULINE)
 
 
 /* User Modes */
@@ -686,14 +685,6 @@ struct Conf_Port
 	aPort *next;
 };
 
-struct Conf_Userv
-{
-	char    *name;
-	aClient *acpt;
-	int      legal;
-	aUserv  *next;
-};
-
 struct Conf_Class
 {
     char        *name;
@@ -764,7 +755,6 @@ struct Server
     char        byuser[USERLEN + 1];
     char        byhost[HOSTLEN + 1];
     aConnect   *aconn;		        /* N-line pointer for this server */
-    aUserv     *userv;             /* ulined config for this server */
     int         dkey_flags; 	    /* dkey flags */
 #ifdef HAVE_ENCRYPTION_ON
     void       *sessioninfo_in;   /* pointer to opaque sessioninfo structure */

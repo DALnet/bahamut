@@ -565,14 +565,6 @@ Conf_Me *make_me()
 	return i;
 }
 
-aUserv *make_userv()
-{
-	aUserv *i;
-	i = (struct Conf_Userv *) MyMalloc(sizeof(aUserv));
-	memset((char *) i, '\0', sizeof(aUserv));
-	return i;
-}
-
 /*
  * Attempt to free up some block memory
  * 

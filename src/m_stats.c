@@ -1106,12 +1106,10 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
             else
 #endif
             {
-                aUserv *tmp;
-                if(!uservers)
-                    break;
-                for(tmp = uservers; tmp; tmp = tmp->next)
+                int i;
+                for(i = 0; uservers[i]; i++)
                     sendto_one(sptr, rpl_str(RPL_STATSULINE), me.name,
-                    sptr->name, "U", "*", tmp->name, 0, 0);
+                    sptr->name, "U", "*", uservers[i], 0, 0);
             }
             break;
 

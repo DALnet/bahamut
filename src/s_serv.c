@@ -565,7 +565,7 @@ int m_server(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	    /* Don't complain for servers that are juped */
 	    /* (don't complain if the server that already exists is U: lined,
                 unless I actually have a .conf U: line for it */
-	    if(!IsULine(acptr) || (find_aUserver(acptr->name) != NULL))
+	    if(!IsULine(acptr) || !find_aUserver(acptr->name))
 	    {
 		sendto_gnotice("from %s: Link %s cancelled, server %s already "
 			       "exists", me.name, get_client_name(bcptr, HIDEME),

@@ -52,7 +52,7 @@ extern aAllow *allows;
 extern aPort *ports;
 extern Conf_Me *MeLine;
 extern aOper *opers;
-extern aUserv *uservers;
+extern char  *uservers[];
 extern aClass *classes;
 
 
@@ -160,7 +160,7 @@ extern int        attach_Iline(aClient *, struct hostent *, char *);
 extern aConnect  *find_aConnect(char *);
 extern aOper     *find_oper(char *, char *, char *, char *);
 extern aConnect  *find_aConnect_match(char *, char *, char *);
-extern aUserv    *find_aUserver(char *);
+extern int        find_aUserver(char *);
 extern void       clear_conflinks(aClient *);
 
 extern void 	  start_auth(aClient *);

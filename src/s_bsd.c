@@ -825,7 +825,6 @@ int check_server_init(aClient * cptr)
     char sockname[HOSTLEN + 1], fullname[HOSTLEN + 1];
     char abuff[HOSTLEN + USERLEN + 2];
     int i = 0, ok = 0;
-    aUserv *userv;
 
     if (check_init(cptr, sockname))
         return -2;
@@ -919,8 +918,8 @@ int check_server_init(aClient * cptr)
         return -1;
     }
     /* check for Ulined access and link it if nessecary */
-    if((userv = find_aUserver(cptr->name)))
-        cptr->serv->userv = userv;
+    if(find_aUserver(cptr->name))
+        cptr->flags |= FLAGS_ULINE;
     cptr->serv->aconn = aconn;
     aconn->class->links++;
     aconn->acpt = cptr;

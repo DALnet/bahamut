@@ -58,7 +58,6 @@ extern aConnect     *make_connect();
 extern aAllow       *make_allow();
 extern struct Conf_Me   *make_me();
 extern aPort        *make_port();
-extern aUserv       *make_userv();
 
 /* externally defined routines */
 
@@ -67,13 +66,15 @@ extern char ProxyMonURL[TOPICLEN+1];
 extern char ProxyMonHost[HOSTLEN+1];
 #endif
 
+#define MAXUSERVS 24
+
 aConnect   *connects  = ((aConnect *) NULL);    /* connects, C/N pairs  */
 aAllow     *allows    = ((aAllow *) NULL);  /* allows  - I lines    */
 Conf_Me    *MeLine    = ((Conf_Me *) NULL); /* meline - only one    */
 aOper      *opers     = ((aOper *) NULL);   /* opers - Olines   */
 aPort      *ports     = ((aPort *) NULL);   /* ports - P/M lines    */
-aUserv     *uservers  = ((aUserv *) NULL);  /* Uservs - Ulined  */
 aClass     *classes;
+char       *uservers[MAXUSERVS];
 
 #ifdef LOCKFILE
 extern void do_pending_klines(void);
@@ -270,14 +271,16 @@ find_aConnect_match(char *name, char *username, char *host)
     return aconn;
 }
 
-aUserv *
+int
 find_aUserver(char *name)
 {
-    aUserv *tmp;
-    for(tmp = uservers; tmp; tmp = tmp->next)
-        if(!mycmp(name, tmp->name))
-            break;
-    return tmp;
+    int i;
+    for(i = 0; uservers[i]; i++)
+    {
+        if(!mycmp(name, uservers[i]))
+            return 1;
+    }
+    return 0;
 }
 
 aOper *
@@ -1379,13 +1382,15 @@ initconf(int opt, int fd, aClient *rehasher)
         }
         if (t_status & CONF_ULINE)
         {
-            aUserv *x;
-            if((x = find_aUserver(t_host)))
-                continue;
-            x = make_userv();
-            DupString(x->name, t_host);
-            x->next = uservers;
-            uservers = x;
+            int i;
+            if(!find_aUserver(t_host))
+            {
+                i = 0;
+                while(uservers[i])
+                    i++;
+                DupString(uservers[i], t_host);
+                uservers[i+1] = NULL;
+            }
             continue;
         }
         if(t_status & CONF_DRPASS)
