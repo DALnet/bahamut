@@ -216,9 +216,7 @@ typedef struct MotdItem aMotd;
 
 /* Capabilities of the ircd or clients */
 
-#define CAPAB_TS3     0x0000001	/* Supports the TS3 Protocal */
 #define CAPAB_NOQUIT  0x0000002 /* Supports NOQUIT */
-#define CAPAB_NSJOIN  0x0000004 /* server supports new smart sjoin */
 #define CAPAB_BURST   0x0000008 /* server supports BURST command */
 #define CAPAB_UNCONN  0x0000010 /* server supports UNCONNECT */
 #define CAPAB_DKEY    0x0000020 /* server supports dh-key exchange 
@@ -229,14 +227,8 @@ typedef struct MotdItem aMotd;
 #define CAPAB_NICKIP  0x0000200 /* IP in the NICK line? */
 #define CAPAB_TSMODE  0x0000400 /* MODE's parv[2] is chptr->channelts for channel mode */
 
-#define SetTS3(x)   	((x)->capabilities |= CAPAB_TS3)
-#define IsTS3       	((x)->capabilities & CAPAB_TS3)
-
 #define SetNoQuit(x) 	((x)->capabilities |= CAPAB_NOQUIT)
 #define IsNoQuit(x) 	((x)->capabilities & CAPAB_NOQUIT)
-
-#define SetSSJoin(x)	((x)->capabilities |= CAPAB_NSJOIN)
-#define IsSSJoin(x)	((x)->capabilities & CAPAB_NSJOIN)
 
 #define SetBurst(x)	((x)->capabilities |= CAPAB_BURST)
 #define IsBurst(x)	((x)->capabilities & CAPAB_BURST)

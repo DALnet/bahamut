@@ -1077,13 +1077,13 @@ int m_server_estab(aClient *cptr)
 	
 #ifdef HAVE_ENCRYPTION_ON
 	if(!WantDKEY(cptr))
-	    sendto_one(cptr, "CAPAB TS3 NOQUIT SSJOIN BURST UNCONNECT ZIP "
+	    sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURST UNCONNECT ZIP "
 		       "NICKIP TSMODE");
 	else
-	    sendto_one(cptr, "CAPAB TS3 NOQUIT SSJOIN BURST UNCONNECT DKEY "
+	    sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURST UNCONNECT DKEY "
 		       "ZIP NICKIP TSMODE");
 #else
-	sendto_one(cptr, "CAPAB TS3 NOQUIT SSJOIN BURST UNCONNECT ZIP NICKIP TSMODE");
+	sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURST UNCONNECT ZIP NICKIP TSMODE");
 #endif
 
 	sendto_one(cptr, "SERVER %s 1 :%s",
@@ -4787,12 +4787,8 @@ int m_capab(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
     for (i = 1; i < parc; i++) 
     {
-	if (strcmp(parv[i], "TS3") == 0)
-	    SetTS3(cptr);
-	else if (strcmp(parv[i], "NOQUIT") == 0)
+	if (strcmp(parv[i], "NOQUIT") == 0)
 	    SetNoQuit(cptr);
-	else if (strcmp(parv[i], "SSJOIN") == 0)
-	    SetSSJoin(cptr);
 	else if (strcmp(parv[i], "BURST") == 0)
 	    SetBurst(cptr);
 	else if (strcmp(parv[i], "UNCONNECT") == 0)

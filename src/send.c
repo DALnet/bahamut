@@ -935,46 +935,6 @@ void sendto_channel_butserv(aChannel *chptr, aClient *from, char *pattern, ...)
 }
 
 /*
- * sendto_ssjoin_servs
- * 
- * send to all servers with ssjoin capability (or not)
- * 
- */
-void sendto_ssjoin_servs(int ssjoin, aChannel *chptr, aClient *from, 
-			 char *pattern, ...)
-{
-    int j, k = 0;
-    fdlist      send_fdlist;
-    int     i;
-    aClient *cptr;
-    va_list vl;
-	
-    if (chptr) 
-    {
-	if (*chptr->chname == '&')
-	    return;
-    }
-    va_start(vl, pattern);
-    for (i = serv_fdlist.entry[j = 1]; j <= serv_fdlist.last_entry;
-	 i = serv_fdlist.entry[++j]) 
-    {
-	if (!(cptr = local[i]) || 
-	    (cptr == from) ||
-	    (ssjoin && !IsSSJoin(cptr)) ||
-	    (!ssjoin && IsSSJoin(cptr)))
-	    continue;
-	
-	send_fdlist.entry[++k] = i;
-    }
-    send_fdlist.last_entry = k;
-    if (k)
-	vsendto_fdlist(&send_fdlist, pattern, vl);
-    va_end(vl);
-    return;
-}
-
-
-/*
  * sendto_tsmode_servs
  * 
  * send to all servers with tsmode capability (or not)

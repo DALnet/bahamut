@@ -117,6 +117,7 @@
 #define MSG_OS	     "OS"            	/* OperServ commands */
 #define MSG_SS	     "SS"            	/* StatServ commands */
 #define MSG_HS	     "HS"            	/* StatServ commands */
+#define MSG_RESYNCH  "RESYNCH"		/* RESYNCH */
 
 #define MAXPARA      15
 
@@ -206,6 +207,7 @@ extern int  m_dccallow(aClient *, aClient *, int, char **);
 extern int  m_sgline(aClient *, aClient *, int, char **);
 extern int  m_unsgline(aClient *, aClient *, int, char **);
 extern int  m_dkey(aClient *, aClient *, int, char **);
+extern int  m_resynch(aClient *, aClient *, int, char **);
 
 
 #ifdef MSGTAB
@@ -303,6 +305,7 @@ struct Message msgtab[] =
     {MSG_OS, m_os, 0, 1, 1, 1, 0, 0L},
     {MSG_SS, m_ss, 0, 1, 1, 1, 0, 0L},
     {MSG_HS, m_hs, 0, 1, 1, 1, 0, 0L},
+    {MSG_RESYNCH, m_resynch, 0, MAXPARA, 1, 0, 0, 0L},
     {(char *) 0, (int (*)()) 0, 0, 0, 0, 0, 0, 0L}
 };
 

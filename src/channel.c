@@ -63,15 +63,12 @@ unsigned long tsdms;
 static char *PartFmt = ":%s PART %s";
 static char *PartFmt2 = ":%s PART %s :%s";
 
-/* old and new server SJOIN formats: old with dual TS */
-static char *oldSJOINFmt = ":%s SJOIN %ld %ld %s %s %s :%s";
-static char *newSJOINFmt = ":%s SJOIN %ld %s %s %s :%s";
+/* server <-> server SJOIN format  */
+static char *SJOINFmt = ":%s SJOIN %ld %s %s %s :%s";
 /* NP means no paramaters, don't send the extra space there */
-static char *oldSJOINFmtNP = ":%s SJOIN %ld %ld %s %s :%s";
-static char *newSJOINFmtNP = ":%s SJOIN %ld %s %s :%s";
-/* client sjoin.. old is the same as server, new is our new version */
-static char *oldCliSJOINFmt = ":%s SJOIN %ld %ld %s + :%s";
-static char *newCliSJOINFmt = ":%s SJOIN %ld %s";
+static char *SJOINFmtNP = ":%s SJOIN %ld %s %s :%s";
+/* client SJOIN format, for no channel creation */
+static char *CliSJOINFmt = ":%s SJOIN %ld %s";
 
 /* some buffers for rebuilding channel/nick lists with ,'s */
 static char nickbuf[BUFSIZE], buf[BUFSIZE];
@@ -670,13 +667,8 @@ void send_channel_modes(aClient *cptr, aChannel *chptr)
     *modebuf = *parabuf = '\0';
     channel_modes(cptr, modebuf, parabuf, chptr);
 
-    if(IsSSJoin(cptr))
-	ircsprintf(buf, ":%s SJOIN %ld %s %s %s :", me.name,
-		   chptr->channelts, chptr->chname, modebuf, parabuf);
-    else
-	ircsprintf(buf, ":%s SJOIN %ld %ld %s %s %s :", me.name,
-		   chptr->channelts, chptr->channelts, chptr->chname, modebuf,
-		   parabuf);
+    ircsprintf(buf, ":%s SJOIN %ld %s %s %s :", me.name,
+	       chptr->channelts, chptr->chname, modebuf, parabuf);
     t = buf + strlen(buf);
     for (l = chptr->members; l; l = l->next)
 	if (l->flags & MODE_CHANOP)
@@ -721,13 +713,8 @@ void send_channel_modes(aClient *cptr, aChannel *chptr)
 	    if (t[-1] == ' ')
 		t[-1] = '\0';
 	    sendto_one(cptr, "%s", buf);
-	    if(IsSSJoin(cptr))
-		sprintf(buf, ":%s SJOIN %ld %s 0 :", me.name,
-			chptr->channelts, chptr->chname);
-	    else
-		sprintf(buf, ":%s SJOIN %ld %ld %s 0 :", me.name,
-			chptr->channelts, chptr->channelts,
-			chptr->chname);
+	    sprintf(buf, ":%s SJOIN %ld %s 0 :", me.name,
+		    chptr->channelts, chptr->chname);
 	    t = buf + strlen(buf);
 	    n = 0;
 	}
@@ -1364,10 +1351,13 @@ int check_channelname(aClient *cptr, unsigned char *cn)
  * *  Get Channel block for chname (and allocate a new channel *
  * block, if it didn't exist before).
  */
-static aChannel *get_channel(aClient *cptr, char *chname, int flag)
+static aChannel *get_channel(aClient *cptr, char *chname, int flag, int *created)
 {
     aChannel *chptr;
     int         len;
+
+    if(created)
+	*created = 0;
 
     if (BadPtr(chname))
 	return NULL;
@@ -1383,6 +1373,9 @@ static aChannel *get_channel(aClient *cptr, char *chname, int flag)
     if (flag == CREATE)
     {
 	chptr = make_channel();
+
+	if(created)
+	    *created = 1;
 	
 	strncpyzt(chptr->chname, chname, len + 1);
 	if (channel)
@@ -1739,7 +1732,7 @@ int m_join(aClient *cptr, aClient *sptr, int parc, char *parv[])
 			sptr->user->server);
 	}
 
-	chptr = get_channel(sptr, name, CREATE);
+	chptr = get_channel(sptr, name, CREATE, NULL);
 	
 	if (!chptr || (MyConnect(sptr) && (i = can_join(sptr, chptr, key))))
 	{
@@ -1784,30 +1777,19 @@ int m_join(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	    
 	    if (allow_op)
 	    {
-		sendto_ssjoin_servs(0, chptr, cptr, 
-				    ":%s SJOIN %ld %ld %s + :@%s",
-				    me.name, chptr->channelts,
-				    chptr->channelts, name, parv[0]);
-		sendto_ssjoin_servs(1, chptr, cptr, ":%s SJOIN %ld %s + :@%s",
-				    me.name, chptr->channelts, name, parv[0]);
+		sendto_match_servs(chptr, cptr, ":%s SJOIN %ld %s + :@%s",
+				   me.name, chptr->channelts, name, parv[0]);
 	    }
 	    else
 	    {
-		sendto_ssjoin_servs(0, chptr, cptr, 
-				    ":%s SJOIN %ld %ld %s + :%s",
-				    me.name, chptr->channelts,
-				    chptr->channelts, name, parv[0]);
-		sendto_ssjoin_servs(1, chptr, cptr, ":%s SJOIN %ld %s + :%s",
-				    me.name, chptr->channelts, name, parv[0]);
+		sendto_match_servs(chptr, cptr, ":%s SJOIN %ld %s + :%s",
+				   me.name, chptr->channelts, name, parv[0]);
 	    }
 	}
 	else if (MyClient(sptr)) 
 	{
-            sendto_ssjoin_servs(0, chptr, cptr, oldCliSJOINFmt,
-				me.name, chptr->channelts,
-				chptr->channelts, name, parv[0]);
-            sendto_ssjoin_servs(1, chptr, cptr, newCliSJOINFmt,
-				parv[0], chptr->channelts, name);
+            sendto_match_servs(chptr, cptr, CliSJOINFmt,
+			       parv[0], chptr->channelts, name);
 	}
 	else 
 	{
@@ -1903,7 +1885,7 @@ int m_part(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
     while (name)
     {
-	chptr = get_channel(sptr, name, 0);
+	chptr = get_channel(sptr, name, 0, NULL);
 	if (!chptr)
 	{
 	    sendto_one(sptr, err_str(ERR_NOSUCHCHANNEL),
@@ -1969,7 +1951,7 @@ int m_kick(aClient *cptr, aClient *sptr, int parc, char *parv[])
     
     while (name)
     {
-	chptr = get_channel(sptr, name, !CREATE);
+	chptr = get_channel(sptr, name, !CREATE, NULL);
 	if (!chptr)
 	{
 	    sendto_one(sptr, err_str(ERR_NOSUCHCHANNEL),
@@ -2867,6 +2849,31 @@ static inline void sjoin_sendit(aClient *cptr, aClient *sptr,
 			   chptr->chname, modebuf, parabuf);
 }
 
+/* m_resynch
+ *
+ * parv[0] = sender
+ * parv[1] = #channel
+ *
+ * Sent from a server I am directly connected to that is requesting I resend
+ * EVERYTHING I know about #channel.
+ */
+int m_resynch(aClient *cptr, aClient *sptr, int parc, char *parv[])
+{
+    aChannel *chptr;
+
+    if(!MyConnect(sptr) || !IsServer(sptr) || parc < 2)
+	return 0;
+
+    chptr = find_channel(parv[1], NullChn);
+
+    sendto_realops_lev(DEBUG_LEV, "%s is requesting a resynch of %s%s", 
+		       parv[0], parv[1], (chptr == NullChn) ? " [failed]" : "");
+
+    if (chptr != NullChn)
+	send_channel_modes(sptr, chptr);
+    return 0;
+}
+
 /*
  * m_sjoin 
  * parv[0] - sender 
@@ -2901,7 +2908,7 @@ int m_sjoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
     chanMember *cm;
     int         args = 0, haveops = 0, keepourmodes = 1, keepnewmodes = 1,
 	doesop = 0, what = 0, pargs = 0, fl, people = 0,
-	isnew, clientjoin = 0, pbpos, sjbufpos;
+	isnew, clientjoin = 0, pbpos, sjbufpos, created = 0;
     char   *s, *s0, *para;
     static char numeric[16], sjbuf[BUFSIZE];
     char        keep_modebuf[REALMODEBUFLEN], keep_parabuf[REALMODEBUFLEN];
@@ -2940,7 +2947,7 @@ int m_sjoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
     newts = atol(parv[1]);
 	
     isnew = ChannelExists(parv[2]) ? 0 : 1;
-    chptr = get_channel(sptr, parv[2], CREATE);
+    chptr = get_channel(sptr, parv[2], CREATE, &created);
     oldts = chptr->channelts;
 
     for (cm = chptr->members; cm; cm = cm->next)
@@ -2977,11 +2984,16 @@ int m_sjoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
 				   parv[2]);
 	}
 
-	sendto_ssjoin_servs(0, chptr, cptr, oldCliSJOINFmt, me.name,
-			    tstosend, tstosend, parv[2], parv[0]);
+	sendto_match_servs(chptr, cptr, CliSJOINFmt, parv[0],
+			   tstosend, parv[2]);
 
-	sendto_ssjoin_servs(1, chptr, cptr, newCliSJOINFmt, parv[0],
-			    tstosend, parv[2]);
+	/* if the channel is created in client sjoin, we lost some channel modes. */
+	if(created)
+	{
+	    sendto_realops_lev(DEBUG_LEV, "Requesting resynch of %s from %s",
+			       chptr->chname, cptr->name);
+	    sendto_one(cptr, "RESYNCH %s", chptr->chname);
+	}
 
 	return 0;
     }
@@ -3453,19 +3465,13 @@ int m_sjoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
 	if(keep_parabuf[0] != '\0')
 	{
-	    sendto_ssjoin_servs(1, chptr, cptr, newSJOINFmt, parv[0], tstosend,
+	    sendto_match_servs(chptr, cptr, SJOINFmt, parv[0], tstosend,
 				parv[2], keep_modebuf, keep_parabuf, sjbuf);
-	    sendto_ssjoin_servs(0, chptr, cptr, oldSJOINFmt, parv[0], 
-				tstosend, tstosend, parv[2], keep_modebuf,
-				keep_parabuf, sjbuf);
 	} 
 	else
 	{
-	    sendto_ssjoin_servs(1, chptr, cptr, newSJOINFmtNP, parv[0],
-				tstosend, parv[2], keep_modebuf, sjbuf);
-	    sendto_ssjoin_servs(0, chptr, cptr, oldSJOINFmtNP, parv[0],
-				tstosend, tstosend, parv[2], keep_modebuf,
-				sjbuf);
+	    sendto_match_servs(chptr, cptr, SJOINFmtNP, parv[0],
+			       tstosend, parv[2], keep_modebuf, sjbuf);
 	}
     }
     return 0;
