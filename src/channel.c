@@ -3233,6 +3233,8 @@ int m_sjoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	       if we both have a differing key. */
 	    strcpy(mode.key, oldmode->key);
 	}
+	else if(*oldmode->key && *mode.key == '\0')
+	    strcpy(mode.key, oldmode->key);
     }
     
     pbpos = 0;
@@ -3366,21 +3368,21 @@ int m_sjoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
             INSERTSIGN(-1,'-')
                 *mbuf++='L';  
         }
-#endif          
-	
-	if (oldmode->limit && !mode.limit)
-	{
-	    INSERTSIGN(-1,'-')
-                *mbuf++ = 'l';
-        }
+#endif          	
+    }
+
+    if (oldmode->limit && !mode.limit)
+    {
+	INSERTSIGN(-1,'-')
+	*mbuf++ = 'l';
     }
 
     if (oldmode->key[0] && !mode.key[0])
     {
 	INSERTSIGN(-1,'-')
-	    *mbuf++ = 'k';
+	*mbuf++ = 'k';
 	ADD_PARA(oldmode->key)
-	    pargs++;
+	pargs++;
     }
 
     if (mode.limit && oldmode->limit != mode.limit)
