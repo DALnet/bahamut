@@ -828,11 +828,6 @@ void send_part_to_common_channels(aClient *from, char *reason)
     aClient *cptr;
     int msglen = 0;
     
-    INC_SERIAL
-
-    if(from->fd >= 0)
-	sentalong[from->fd] = sent_serial;
-    
     for (channels = from->user->channel; channels;
 	 channels = channels->next)
     {
@@ -841,6 +836,12 @@ void send_part_to_common_channels(aClient *from, char *reason)
 	    msglen=sprintf(sendbuf,":%s!%s@%s PART %s",
 			   from->name,from->user->username,from->user->host,
 			   channels->value.chptr->chname);
+
+            INC_SERIAL
+
+            if(from->fd >= 0)
+	       sentalong[from->fd] = sent_serial;
+
 	    for (users = channels->value.chptr->members;
 		 users; users = users->next) 
 	    {
