@@ -98,7 +98,7 @@ cannot tell other servers to do so.
 
 Network services can set specific limits using the SVSCLONE command; these
 are referred to as "hard" global clone limits.  The command syntax is
-provided for services authors to reference; it is not accessible to
+provided here for services authors to reference; it is not accessible to
 clients.
 
     SVSCLONE <host/site> <limit>              - to set the limit
@@ -111,16 +111,16 @@ The default limits can be changed online using the SET DEFGCLONES command.
 Note that this setting is not saved and will be lost when the server is
 restarted; it is useful for testing or setting temporary limits.
 
-    SET DEFLGLONES                            - to display both limits
-    SET DEFLGLONES <host limit>               - to set the host limit
-    SET DEFLGLONES <host limit>:<site limit>  - to set the both limits
+    SET DEFGCLONES                            - to display both limits
+    SET DEFGCLONES <host limit>               - to set the host limit
+    SET DEFGCLONES <host limit>:<site limit>  - to set both limits
 
     Supplying a limit of 0 will revert to the internal default.
 
 Specific global limits can be set online using the SET GCLONES command;
 this is called the "soft" global clone limit and overrides the defaults.
-It will also override a services-set hard limit if it is lower; it is not
-possible to set a soft limit higher than a hard one.  Like DEFGCLONES,
+It will also override a services-set hard limit if it is lower, but it is
+not possible to set a soft limit higher than a hard one.  Like DEFGCLONES,
 this setting is temporary.
 
     SET GCLONES <host/site>                   - to display the limits
@@ -133,7 +133,8 @@ this setting is temporary.
 
 Monitoring
 ----------
-Rejection notices for clone connections are sent to usermode +j, in the following format:
+Rejection notices for clone connections are sent to usermode +j, in the
+following format:
 
     clone <nick!user@host> (<place> <online>/<limit> <type> <from>)
 
