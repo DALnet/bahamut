@@ -32,10 +32,6 @@
 #include "sys.h"
 #include "h.h"
 
-#if !defined(VALLOC) && !defined(valloc)
-#define	valloc malloc
-#endif
-
 int	dbufalloc = 0, dbufblocks = 0, maxdbufalloc = 0, maxdbufblocks = 0;
 static	dbufbuf	*freelist = NULL;
 
@@ -74,12 +70,7 @@ void dbuf_init()
 */
 static dbufbuf *dbuf_alloc()
 {
-#if defined(VALLOC) && !defined(DEBUGMODE)
-  Reg	dbufbuf	*dbptr, *db2ptr;
-  Reg	int	num;
-#else
   Reg	dbufbuf *dbptr;
-#endif
 
   dbufalloc++;
   if (dbufalloc > maxdbufalloc)
@@ -95,38 +86,10 @@ static dbufbuf *dbuf_alloc()
       dbufalloc--;
       return NULL;
     }
-
-#if defined(VALLOC) && !defined(DEBUGMODE)
-# if defined(SOL20) || defined(_SC_PAGESIZE)
-  num = sysconf(_SC_PAGESIZE)/sizeof(dbufbuf);
-# else
-  num = getpagesize()/sizeof(dbufbuf);
-# endif
-  if (num < 0)
-    num = 1;
-
-  dbufblocks += num;
-  if (dbufblocks > maxdbufblocks)
-    maxdbufblocks = dbufblocks;
-
-  dbptr = (dbufbuf *)valloc(num*sizeof(dbufbuf));
-  if (!dbptr)
-    return (dbufbuf *)NULL;
-
-  num--;
-  for (db2ptr = dbptr; num; num--)
-    {
-      db2ptr = (dbufbuf *)((char *)db2ptr + sizeof(dbufbuf));
-      db2ptr->next = freelist;
-      freelist = db2ptr;
-    }
-  return dbptr;
-#else
   dbufblocks++;
   if (dbufblocks > maxdbufblocks)
       maxdbufblocks = dbufblocks;
   return (dbufbuf *)MyMalloc(sizeof(dbufbuf));
-#endif
 }
 
 /*
@@ -351,18 +314,3 @@ getmsg_init:
   
   return i;
 }
-#ifdef TEST_DBUF
-void test_dbuf(void)
-{
-
-  /* mika@cs.caltech.edu 6/21/95
-     test the size of the dbufs */
-  int increment;
-  int nextalloc;
-
-  increment = -(int)dbuf_alloc()+(int)dbuf_alloc();
-  nextalloc = -(int)dbuf_alloc()+(int)malloc(sizeof(char));
-  printf("size: %d increment is %d, nextalloc is %d, pagesize is %d\n",sizeof(dbufbuf),increment,nextalloc,getpagesize());
-  return;
-}
-#endif /* TEST_DBUF */
