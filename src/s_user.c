@@ -1313,7 +1313,7 @@ m_nick(aClient *cptr,
     */
    if (!newts || !acptr->tsinfo || (newts == acptr->tsinfo) ||
        !sptr->user) {
-      sendto_ops_lev(SKILL_LEV"Nick change collision from %s to %s(%s <- %s)(both killed)",
+      sendto_ops_lev(SKILL_LEV, "Nick change collision from %s to %s(%s <- %s)(both killed)",
 		 sptr->name, acptr->name, acptr->from->name,
 		 get_client_name(cptr, FALSE));
       ircstp->is_kill++;
