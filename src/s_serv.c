@@ -2391,7 +2391,10 @@ m_trace(aClient *cptr, aClient *sptr, int parc, char *parv[])
             return 0;
                           
         }
-        class = acptr->class->name;
+        if(acptr->class)
+            class = acptr->class->name;
+        else
+            class = "NONE";
         name = get_client_name(acptr,FALSE);
         if (IsAnOper(acptr)) 
         {
@@ -2452,7 +2455,10 @@ m_trace(aClient *cptr, aClient *sptr, int parc, char *parv[])
             name = get_client_name(acptr, FALSE);
         else
             name = get_client_name(acptr, HIDEME);
-        class = acptr->class->name;
+        if(acptr->class)
+            class = acptr->class->name;
+        else
+            class = "NONE";
                 
         switch (acptr->status) 
         {
@@ -2527,7 +2533,7 @@ m_trace(aClient *cptr, aClient *sptr, int parc, char *parv[])
         }
         /* let the user have some idea that its at the end of the trace */
         sendto_one(sptr, rpl_str(RPL_TRACESERVER),
-                   me.name, parv[0], 0, link_s[me.fd],
+                   me.name, parv[0], "NONE", link_s[me.fd],
                    link_u[me.fd], me.name, "*", "*", me.name,
                    timeofday - acptr->lasttime);
         sendto_one(sptr, rpl_str(RPL_ENDOFTRACE), me.name,

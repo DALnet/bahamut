@@ -232,7 +232,7 @@ static char *replies[] =
     /* 206 RPL_TRACESERVER */	":%s 206 %s Server %s %dS %dC %s %s!%s@%s %ld",
     /* 207 */	                NULL,
     /* 208 RPL_TRACENEWTYPE */	":%s 208 %s <newtype> 0 %s",
-    /* 209 RPL_TRACECLASS */	":%s 209 %s Class %d %d",
+    /* 209 RPL_TRACECLASS */	":%s 209 %s Class %s %d",
     /* 210 */	                NULL,
     /* 211 */	                NULL,
     /* 212 RPL_STATSCOMMANDS */	":%s 212 %s %s %u %u",
