@@ -789,11 +789,6 @@ main(int argc, char *argv[])
         fclose(mcsfp);
     }
 
-#ifdef USE_SYSLOG
-# define SYSLOG_ME     "ircd"
-    openlog(SYSLOG_ME, LOG_PID | LOG_NDELAY, LOG_FACILITY);
-#endif
-
     if ((uid != euid) && !euid) 
     {
         printf("Do not run ircd as root.\nAborting...\n");
@@ -891,25 +886,18 @@ main(int argc, char *argv[])
     R_fin_id = strlen(REPORT_FIN_ID);
     R_fail_id = strlen(REPORT_FAIL_ID);
         
-    Debug((DEBUG_NOTICE, "Server ready..."));
-#ifdef USE_SYSLOG
-    syslog(LOG_NOTICE, "Server Ready");
-#endif
     NOW = time(NULL);
         
-    if ((timeofday = time(NULL)) == -1) 
-    {
-#ifdef USE_SYSLOG
-        syslog(LOG_WARNING, "Clock Failure (%d), TS can be corrupted", errno);
-#endif
-        printf("Clock Failure (%d), TS can be corrupted", errno);
-    }
-
     init_sys();
     forked = 1;
 
+#ifdef USE_SYSLOG
+# define SYSLOG_ME     "ircd"
+    openlog(SYSLOG_ME, LOG_PID | LOG_NDELAY, LOG_FACILITY);
+#endif
+
     /* the pid file must be written *AFTER* the fork */
-        write_pidfile();
+    write_pidfile();
         
 
     /* moved this to here such that we allow more verbose error
@@ -934,6 +922,9 @@ main(int argc, char *argv[])
 
 #ifdef DUMP_DEBUG
     dumpfp=fopen("dump.log", "w");
+#endif
+#ifdef USE_SYSLOG
+    syslog(LOG_NOTICE, "Server Ready");
 #endif
     
     io_loop();
