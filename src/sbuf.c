@@ -188,7 +188,7 @@ SBuffer* sbuf_alloc(int theSize)
 {
     SBuffer* buf;
     
-    if ((theSize + 1) >= SBUF_SMALL_BUFFER)
+    if (theSize >= SBUF_SMALL_BUFFER)
     {
         buf = largesbuf_pool;
         if (!buf) {
@@ -254,7 +254,7 @@ int sbuf_begin_share(const char* theData, int theLength, void **thePtr)
 {
     SBuffer *s;
     
-    s = sbuf_alloc(theLength);
+    s = sbuf_alloc(theLength + 2); /* +2 for the \r\n we're tacking on to the buffer */
     if (!s || theLength + 2 > s->bufsize) return sbuf_alloc_error();
     
     memcpy(s->end, theData, theLength);

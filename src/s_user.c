@@ -898,7 +898,14 @@ register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
                    NICKLEN,TOPICLEN,TOPICLEN,Network_Name,MAXSILES);
         sendto_one(sptr, rpl_str(RPL_PROTOCTL), me.name, parv[0], tmpstr2);
         ircsprintf(tmpstr2,"WATCH=128 CASEMAPPING=ascii "
-                   "CHANMODES=b,k,l,ciLmMnOprRst",MAXWATCH);
+                   "CHANMODES=b"
+#ifdef EXEMPT_LISTS
+                   "e"
+#endif
+#ifdef INVITE_LISTS
+                   "I"
+#endif
+                   ",k,l,ciLmMnOprRst",MAXWATCH);
         sendto_one(sptr, rpl_str(RPL_PROTOCTL), me.name, parv[0], tmpstr2);
 
 #ifdef FORCE_EVERYONE_HIDDEN
