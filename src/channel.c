@@ -1822,6 +1822,109 @@ int m_join(aClient *cptr, aClient *sptr, int parc, char *parv[])
     return 0;
 }
 
+/* m_sajoin
+ * join a channel regardless of modes.
+ */
+
+
+int m_sajoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
+{
+	static char 	 jbuf[BUFSIZE];
+	aChannel 	*chptr;
+	char 		*name;
+	int 		 chanlen = 0, i;
+	char 		*p = NULL;
+
+	if (!(sptr->user))
+		return 0;
+
+	if(!IsSAdmin(sptr))
+	{
+		sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name, parv[0]);
+		return 0;
+	}
+
+	if (parc < 2 || *parv[1] == '\0')
+	{
+		sendto_one(sptr, err_str(ERR_NEEDMOREPARAMS),
+			   me.name, parv[0], "SAJOIN");
+		return 0;
+	}
+
+	*jbuf = '\0';
+	/* dont support multiple channel SAJOIN's, but strtoken here to
+	 * make sure we're not doing something stupid. */
+	name = strtoken(&p, parv[1], ",");	
+	if(!check_channelname(sptr, (unsigned char *) name))
+		return 0;
+	chanlen = strlen(name);
+	if (chanlen > CHANNELLEN)
+	{
+		name[CHANNELLEN] = '\0';
+		chanlen = CHANNELLEN;
+	}
+	if(*name == '0' && !atoi(name))
+		*jbuf = '\0';
+	else if(!IsChannelName(name))
+	{
+		if(MyClient(sptr))
+			sendto_one(sptr, err_str(ERR_NOSUCHCHANNEL),
+				   me.name, parv[0], name);
+		return 0;
+	}
+	if(*jbuf)
+		(void) strcat(jbuf, ",");
+	(void) strncat(jbuf, name, sizeof(jbuf - 1));
+	if(MyConnect(sptr) && !ChannelExists(name))
+	{
+			sendto_one(sptr, "You cannot SAJOIN %s (Nonexistant Channel)", name);
+			return 0;
+	}
+	chptr = get_channel(sptr, name, CREATE, NULL);
+
+	if(chptr && IsMember(sptr, chptr))
+		return 0;
+
+	if(!chptr)
+		return 0;
+
+	if((MyConnect(sptr) && (i = can_join(sptr, chptr, NULL))))
+	{
+		if (i == ERR_BANNEDFROMCHAN)
+			send_globops("from %s: %s used SAJOIN to join %s which they are banned from.",
+			             me.name, sptr->name, name);
+		else if(i == ERR_INVITEONLYCHAN)
+                        send_globops("from %s: %s used SAJOIN to join %s which is invite only.",
+                                     me.name, sptr->name, name);
+		else if(i == ERR_BADCHANNELKEY)
+                        send_globops("from %s: %s used SAJOIN to join %s which is protected by a key.",
+                                     me.name, sptr->name, name);
+		else if(i == ERR_NEEDREGGEDNICK)
+                        send_globops("from %s: %s used SAJOIN to join %s because they forgot to /ns identify",
+                                     me.name, sptr->name, name);
+		else
+                        send_globops("from %s: %s used SAJOIN to join %s",
+                                     me.name, sptr->name, name);
+	}
+
+	add_user_to_channel(chptr, sptr, 0);
+	if(MyClient(sptr))
+		sendto_match_servs(chptr, cptr, CliSJOINFmt, parv[0], chptr->channelts, name);
+	sendto_channel_butserv(chptr, sptr, ":%s JOIN :%s", parv[0], name);
+	if(MyClient(sptr))
+	{
+		if(chptr->topic[0] != '\0')
+		{
+			sendto_one(sptr, rpl_str(RPL_TOPIC), me.name, parv[0], name, chptr->topic);
+			sendto_one(sptr, rpl_str(RPL_TOPICWHOTIME), me.name, parv[0], name,
+				   chptr->topic_nick, chptr->topic_time);
+		}
+		parv[1] = name;
+		(void) m_names(cptr, sptr, 2, parv);
+	}
+	return 0;
+}
+
 /*
  * m_part 
  * parv[0] = sender prefix 

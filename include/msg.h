@@ -85,6 +85,7 @@
 #define MSG_HTM      "HTM"	      	/* HTM */
 #define MSG_SET      "SET"	      	/* SET */
 #define MSG_SAMODE   "SAMODE"    	/* SAMODE */
+#define MSG_SAJOIN   "SAJOIN"		/* SAJOIN */
 #define MSG_CHANSERV "CHANSERV"		/* CHANSERV */
 #define MSG_NICKSERV "NICKSERV"		/* NICKSERV */
 #define MSG_MEMOSERV "MEMOSERV"		/* MEMOSERV */
@@ -188,6 +189,7 @@ extern int  m_ison(aClient *, aClient *, int, char **);
 extern int  m_svinfo(aClient *, aClient *, int, char **);
 extern int  m_sjoin(aClient *, aClient *, int, char **);
 extern int  m_samode(aClient *, aClient *, int, char **);
+extern int  m_sajoin(aClient *, aClient *, int, char **);
 extern int  m_globops(aClient *, aClient *, int, char **);
 extern int  m_chatops(aClient *, aClient *, int, char **);
 extern int  m_goper(aClient *, aClient *, int, char **);
@@ -221,6 +223,7 @@ struct Message msgtab[] =
     {MSG_JOIN, m_join, 0, MAXPARA, 1, 0, 0, 0L},
     {MSG_MODE, m_mode, 0, MAXPARA, 1, 0, 0, 0L},
     {MSG_SAMODE, m_samode, 0, MAXPARA, 1, 0, 0, 0L},
+    {MSG_SAJOIN, m_sajoin, 0, MAXPARA, 1, 0, 0, 0L},
     {MSG_QUIT, m_quit, 0, MAXPARA, 1, 1, 0, 0L},
     {MSG_PART, m_part, 0, MAXPARA, 1, 0, 0, 0L},
     {MSG_TOPIC, m_topic, 0, MAXPARA, 1, 0, 0, 0L},
