@@ -127,9 +127,24 @@ static struct DBufBuffer* dbuf_alloc()
 {
   struct DBufBuffer* db = dbufFreeList;
 
-  if (DBufUsedCount * DBUF_SIZE >= BUFFERPOOL)
-    return NULL;
+/*
+ * At present, do NOT define this.  It will cause you to drop users on
+ * largish nets.
+ * 
+ * We are allocating dbufs unlimitedly to deal with large channels on
+ * splits and other known issue.
+ * 
+ * Once again, defing the following only for testing purposes
+ * - Raistlin
+ */
 
+#undef DBUFS_WORKING_CORRECTLY
+   
+#ifdef DBUFS_WORKING_CORRECTLY  
+  if (DBufUsedCount * DBUF_SIZE == BUFFERPOOL)
+    return NULL;
+#endif
+   
   if (!db)
   {
     dbuf_allocblock(INITIAL_DBUFS);
