@@ -101,6 +101,7 @@ typedef struct MotdItem aMotd;
 #define	USERLEN		    10
 #define	REALLEN	 	    50
 #define	TOPICLEN	    307
+#define	KILLLEN	            400
 #define	CHANNELLEN	  32
 #define	PASSWDLEN 	  63
 #define	KEYLEN		    23

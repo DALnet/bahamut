@@ -3195,7 +3195,7 @@ m_kill(aClient *cptr,
 {
    aClient    *acptr;
    char       *user, *path, *killer, *p, *nick;
-   char mypath[TOPICLEN + 1];
+   char mypath[KILLLEN + 1];
 	char       *unknownfmt = "<Unknown>";	/*
 						 * AFAIK this shouldnt happen
 						 * * but -Raist 
@@ -3219,11 +3219,9 @@ m_kill(aClient *cptr,
       sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name, parv[0]);
       return 0;
    }
-   if (IsAnOper(cptr)) {
-      if (!BadPtr(path))
-		  if (strlen(path) > (size_t) TOPICLEN)
-			 path[TOPICLEN] = '\0';
-   }
+   if (!BadPtr(path))
+       if (strlen(path) > (size_t) KILLLEN)
+	   path[KILLLEN] = '\0';
    if (MyClient(sptr))
 	  user = canonize(user);
    for (p = NULL, nick = strtoken(&p, user, ","); nick;
@@ -3272,7 +3270,7 @@ m_kill(aClient *cptr,
 			   *s=0;
 
                         /* "<myname>!<sptr->user->host>!<sptr->name> (path)" */
-                        slen = TOPICLEN - (strlen(sptr->name) + strlen(sptr->user->host) + strlen(myname) + 8);
+                        slen = KILLLEN - (strlen(sptr->name) + strlen(sptr->user->host) + strlen(myname) + 8);
                         if(slen < 0)
                            slen = 0;
                      
@@ -3280,10 +3278,10 @@ m_kill(aClient *cptr,
                            path[slen] = '\0'; 
 
                         ircsprintf(mypath, "%s!%s!%s (%s)", myname, sptr->user->host, sptr->name, path); 
-                           mypath[TOPICLEN]='\0';  
+                           mypath[KILLLEN]='\0';  
 		}
 		else
-		  strncpy(mypath,path,TOPICLEN + 1);
+		  strncpy(mypath,path,KILLLEN + 1);
 		/*
 		 * * Notify all *local* opers about the KILL, this includes the
 		 * one * originating the kill, if from this server--the special
