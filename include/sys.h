@@ -51,6 +51,9 @@
 #include <string.h>
 #endif
 
+#define	strcasecmp	mycmp
+#define	strncasecmp	myncmp
+
 #if !defined( HAVE_INDEX )
 #define   index   strchr
 #define   rindex  strrchr
