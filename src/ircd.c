@@ -407,9 +407,8 @@ static time_t check_pings(time_t currenttime)
 
 	if (cptr->flags & FLAGS_DEADSOCKET) 
 	{
-	    (void) exit_client(cptr, cptr, &me, (cptr->flags & FLAGS_SENDQEX) ?
-			       "SendQ exceeded" : "Dead socket");
-	    i--;
+	    exit_client(cptr, cptr, &me, (cptr->flags & FLAGS_SENDQEX) ?
+			"SendQ exceeded" : "Dead socket");
 	    continue;
 	}
 
@@ -476,11 +475,9 @@ static time_t check_pings(time_t currenttime)
 				       get_client_name(cptr, HIDEME));
 		}
 		
-		(void) exit_client(cptr, cptr, &me, "Ping timeout");
-		i--;   /* subtract out this fd so we check it again.. */
+		exit_client(cptr, cptr, &me, "Ping timeout");
 		continue;
 	    } /* don't send pings during a burst, as we send them already. */
-	    
 	    else if (!(cptr->flags & (FLAGS_PINGSENT|FLAGS_BURST)) && 
 		     !(IsConnecting(cptr) || IsHandshake(cptr))) {
 		/*

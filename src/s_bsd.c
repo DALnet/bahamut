@@ -231,23 +231,28 @@ int inetport(aClient * cptr, char *name, int port, u_long bind_addr)
     
     /* At first, open a new socket */
     
-    if (cptr->fd == -1)
+    if (cptr->fd < 0)
     {
 	cptr->fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (cptr->fd < 0 && errno == EAGAIN)
 	{
 	    sendto_realops("opening stream socket %s: No more sockets",
 			   get_client_name(cptr, HIDEME));
+	    cptr->fd = -2;
 	    return -1;
 	}
     }
     if (cptr->fd < 0)
     {
 	report_error("opening stream socket %s:%s", cptr);
+	cptr->fd = -2;
 	return -1;
-    } else if (cptr->fd >= (HARD_FDLIMIT - 10)) {
+    } 
+    else if (cptr->fd >= (HARD_FDLIMIT - 10)) 
+    {
 	sendto_realops("No more connections allowed (%s)", cptr->name);
-	(void) close(cptr->fd);
+	close(cptr->fd);
+	cptr->fd = -2;
 	return -1;
     }
     set_sock_opts(cptr->fd, cptr);
@@ -1703,8 +1708,8 @@ int connect_server(aConfItem * aconf, aClient * by, struct hostent *hp)
 
     if (!svp)
     {
-	if (cptr->fd != -1)
-	    (void) close(cptr->fd);
+	if (cptr->fd >= 0)
+	    close(cptr->fd);
 	cptr->fd = -2;
 	free_client(cptr);
 	return -1;
@@ -1712,7 +1717,7 @@ int connect_server(aConfItem * aconf, aClient * by, struct hostent *hp)
     
     set_non_blocking(cptr->fd, cptr);
     set_sock_opts(cptr->fd, cptr);
-    (void) signal(SIGALRM, dummy);
+    signal(SIGALRM, dummy);
     if (connect(cptr->fd, svp, len) < 0 && errno != EINPROGRESS) 
     {
 	errtmp = errno;		/* other system calls may eat errno */
@@ -1720,7 +1725,7 @@ int connect_server(aConfItem * aconf, aClient * by, struct hostent *hp)
 	if (by && IsPerson(by) && !MyClient(by))
 	    sendto_one(by, ":%s NOTICE %s :Connect to server %s failed.",
 		       me.name, by->name, cptr->name);
-	(void) close(cptr->fd);
+	close(cptr->fd);
 	cptr->fd = -2;
 	free_client(cptr);
 	errno = errtmp;
@@ -1816,9 +1821,10 @@ static struct sockaddr *connect_inet(aConfItem * aconf,
     else if (specific_virtual_host == 1)
 	sin.sin_addr = vserv.sin_addr;
 
-    if (cptr->fd == -1)
+    if (cptr->fd < 0)
     {
 	report_error("opening stream socket to server %s:%s", cptr);
+        cptr->fd = -2;
 	return NULL;
     }
     /* 

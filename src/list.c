@@ -170,9 +170,9 @@ aClient    *make_client(aClient *from, aClient *uplink)
 	cptr->from = cptr;	/* 'from' of local client is self! */
 
 	cptr->status = STAT_UNKNOWN;
-	cptr->fd = -1;
+	cptr->fd = -2;
 	cptr->uplink = uplink;
-	(void) strcpy(cptr->username, "unknown");
+	strcpy(cptr->username, "unknown");
 	cptr->since = cptr->lasttime = cptr->firsttime = timeofday;
 	cptr->sockerr = -1;
 	cptr->authfd = -1;
@@ -219,8 +219,8 @@ void free_client(aClient *cptr)
 	sendto_ops("list.c couldn't BlockHeapFree(free_remote_aClients,cptr) "
 		   "cptr = %lX", cptr);
 	sendto_ops("Please report to the bahamut team! "
-		   "bahamut-bugs@bahamut.net");
-	
+		   "coders@dal.net");
+	abort();
 #if defined(USE_SYSLOG) && defined(SYSLOG_BLOCK_ALLOCATOR)
 	syslog(LOG_DEBUG, "list.c couldn't "
 	       "BlockHeapFree(free_remote_aClients,cptr) cptr = %lX", cptr);
@@ -366,7 +366,7 @@ void remove_client_from_list(aClient *cptr)
 #endif
 
     if (cptr->user)
-	(void) free_user(cptr->user, cptr);	/* try this here */
+	free_user(cptr->user, cptr);	/* try this here */
     if (cptr->serv) 
     {
 #ifdef HAVE_ENCRYPTION_ON
@@ -385,16 +385,8 @@ void remove_client_from_list(aClient *cptr)
 	    zip_destroy_output_session(cptr->serv->zip_out);
 	MyFree((char *) cptr->serv);
     }
-    /*
-     * YEUCK... This is telling me the only way of knowing that a cptr
-     * was pointing to a remote aClient or not is by checking to see if
-     * its fd is not -2, that is, unless you look at FLAGS_LOCAL
-     * 
-     * -Dianora
-     * 
-     */
 
-    (void) free_client(cptr);
+    free_client(cptr);
     return;
 }
 
