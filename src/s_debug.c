@@ -69,7 +69,7 @@ void build_rplcache(void)
                "CHANTYPES=# CHANLIMIT=#:%i PREFIX=(ov)@+ STATUSMSG=@+",
                Network_Name, MAXBANS, maxchannelsperuser, CHANNELLEN,
                TOPICLEN, NICKLEN, TOPICLEN, MAXMODEPARAMSUSER,
-               maxchannelsperuser, MAXSILES);
+               maxchannelsperuser);
 
     ircsprintf(rplisupport1, rpl_str(RPL_ISUPPORT), me.name, "%s", scratchbuf);
 
