@@ -19,6 +19,7 @@
 #include "h.h"
 
 #ifdef CUSTOM_ERR
+#error "CUSTOM_ERR IS BROKEN!"
 #include "s_err.h"
 #else
 static char *replies[] = {

@@ -576,6 +576,8 @@ exit_client(
 		  Count.local--;
       if (IsServer(sptr)) {
 			Count.myserver--;
+                        if (IsULine(sptr))
+                           Count.myulined--;
 			delfrom_fdlist(sptr->fd, &serv_fdlist);
 #ifdef NO_CHANOPS_WHEN_SPLIT
 			if (serv_fdlist.entry[1] <= serv_fdlist.last_entry) {

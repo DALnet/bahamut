@@ -828,7 +828,10 @@ m_server_estab(aClient *cptr)
    */ 
 
    if ((find_uline(cptr->confs, cptr->name))) 
-     cptr->flags |= FLAGS_ULINE; 
+   {
+      Count.myulined++;
+      cptr->flags |= FLAGS_ULINE; 
+   }
 
    sendto_gnotice("from %s: Link with %s established: %s %s", me.name, inpath, 
                 IsULine(cptr) ? "ULined" : "Normal", 
@@ -2018,7 +2021,7 @@ int     send_lusers(aClient *cptr, aClient *sptr, int parc, char *parv[])
 #define LUSERS_CACHE_TIME 180
    static long 		 last_time=0;
    static int   	 s_count = 0, c_count = 0, u_count = 0, i_count = 0;
-   static int   	 o_count = 0, m_client = 0, m_server = 0;
+   static int   	 o_count = 0, m_client = 0, m_server = 0, m_ulined = 0;
    int 			 forced;
    aClient 		*acptr;
 
@@ -2026,6 +2029,7 @@ int     send_lusers(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
    Count.unknown = 0;
    m_server = Count.myserver;
+   m_ulined = Count.myulined;
    m_client = Count.local;
    i_count = Count.invisi;
    u_count = Count.unknown;
@@ -2045,6 +2049,7 @@ int     send_lusers(aClient *cptr, aClient *sptr, int parc, char *parv[])
       o_count = 0;
       m_client = 0;
       m_server = 0;
+      m_ulined = 0;
 
       for (acptr = client; acptr; acptr = acptr->next) 
       {
@@ -2052,7 +2057,11 @@ int     send_lusers(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	 {
 	    case STAT_SERVER:
 	       if (MyConnect(acptr))
+               {
 		  m_server++;
+                  if(IsULine(acptr))
+                     m_ulined++;
+               }
 	    case STAT_ME:
 	       s_count++;
 	       break;
@@ -2102,6 +2111,13 @@ int     send_lusers(aClient *cptr, aClient *sptr, int parc, char *parv[])
 			       "Local server count off by %d",
 			       Count.myserver - m_server);
 	    Count.myserver = m_server;
+	 }
+	 if (m_ulined != Count.myulined) 
+	 {
+	    sendto_realops_lev(DEBUG_LEV,
+			       "Local ulinedserver count off by %d",
+			       Count.myulined - m_ulined);
+	    Count.myulined = m_ulined;
 	 }
 	 if (s_count != Count.server) 
 	 {
@@ -2183,7 +2199,11 @@ int     send_lusers(aClient *cptr, aClient *sptr, int parc, char *parv[])
       sendto_one(sptr, rpl_str(RPL_LUSERCHANNELS),
 		 me.name, parv[0], Count.chan);
    sendto_one(sptr, rpl_str(RPL_LUSERME),
+#ifdef HIDEULINEDSERVS
+              me.name, parv[0], IsOper(sptr) ? m_server : m_server - m_ulined);
+#else
 	      me.name, parv[0], m_client, m_server);
+#endif
 #ifdef CLIENT_COUNT
    sendto_one(sptr, rpl_str(RPL_LOCALUSERS), me.name, parv[0],
 	      Count.local, Count.max_loc);

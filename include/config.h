@@ -277,6 +277,12 @@
  * define this.  Otherwise leave it undef'd for plain ole boring
  * messages.
  */
+
+/*
+ * DO NOT USE CUSTOM_ERR
+ * IT IS BROKEN!
+ * EDIT S_ERR.C INSTEAD!
+ */
 #undef CUSTOM_ERR
 
 /* Don't change this... */

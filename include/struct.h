@@ -470,6 +470,7 @@ typedef struct MotdItem aMotd;
 struct Counter {
 	int         server;		 /* servers */
 	int         myserver;	 /* my servers */
+        int         myulined;	/* my ulined servers */
 	int         oper;		   /* Opers */
 	int         chan;		   /* Channels */
 	int         local;		 /* Local Clients */
