@@ -107,7 +107,11 @@ static int send_message(aClient *to, char *msg, int len) {
 #ifdef DUMP_DEBUG
    fprintf(dumpfp, "-> %s: %s"\n, (to->name ? to->name : "*"), msg);
 #endif
-   if(IsServer(sptr))
+
+   if (to->from)
+     to = to->from;   /* shouldn't be necessary */
+
+   if(IsServer(to))
    {
       if(len>510) 
         {
@@ -138,8 +142,6 @@ static int send_message(aClient *to, char *msg, int len) {
 		len+=2;
 	}   
    }
-   if (to->from)
-     to = to->from;   /* shouldn't be necessary */
    
    if (IsMe(to)) {
       sendto_ops("Trying to send to myself! [%s]", msg);
