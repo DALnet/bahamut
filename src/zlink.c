@@ -160,3 +160,12 @@ char *zip_output(void *session, char *buffer, int *len, int forceflush, int *lar
    *largedata = ret;
    return zout->msg ? zout->msg : "???";
 }
+
+void zip_out_get_stats(void *session, unsigned long *insiz, unsigned long *outsiz, double *ratio)
+{
+   struct zipped_link_out *z = (struct zipped_link_out *) session;
+
+   *insiz = z->stream.total_in;
+   *outsiz = z->stream.total_out;
+   *ratio = ((100.0 * (double)z->stream.total_out) / (double) z->stream.total_in);
+}

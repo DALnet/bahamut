@@ -756,7 +756,8 @@ int do_server_estab(aClient *cptr)
       cptr->flags |= FLAGS_ULINE; 
    }
 
-   sendto_gnotice("from %s: Link with %s established: %s %s %s", me.name, inpath, 
+   sendto_gnotice("from %s: Link with %s established: %s %s %s %s", me.name, inpath, 
+		ZipOut(cptr) ? "Compressed" : "Uncompressed", 
 		RC4EncLink(cptr) ? "RC4-Encrypted" : "Unencrypted", 
                 IsULine(cptr) ? "ULined" : "Normal", 
 		DoesTS(cptr) ? "TS link" : "Non-TS link!"); 
@@ -882,6 +883,19 @@ int do_server_estab(aClient *cptr)
 	    if (acptr->from != cptr)
 	       sendnick_TS(cptr, acptr);
 	 }
+   }
+
+   if(ZipOut(cptr))
+   {
+      unsigned long inb, outb;
+      double rat;
+
+      zip_out_get_stats(cptr->serv->zip_out, &inb, &outb, &rat);
+
+      sendto_gnotice("from %s: Connect burst to %s: %lu bytes normal, %lu compressed (%3.2f%%)",
+                     me.name, get_client_name(cptr, HIDEME), inb, outb, rat);
+      sendto_serv_butone(cptr, ":%s GNOTICE :Connect burst to %s: %lu bytes normal, %lu compressed (%3.2f%%)",
+                     me.name, get_client_name(cptr, HIDEME), inb, outb, rat);
    }
 
    /* stuff a PING at the end of this burst so we can figure out when

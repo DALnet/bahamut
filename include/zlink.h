@@ -4,3 +4,4 @@ extern char *zip_input(void *session, char *buffer, int *len, int *err);
 /* largedata is err return */
 extern char *zip_output(void *session, char *buffer, int *len, int forceflush, int *largedata);
 extern int zip_is_data_out(void *session);
+extern void zip_out_get_stats(void *session, unsigned long *insiz, unsigned long *outsiz, double *ratio);

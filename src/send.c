@@ -164,7 +164,7 @@ static int send_message(aClient *to, char *msg, int len) {
 
    if(ZipOut(to))
    {
-      int ldata = 0;
+      int ldata = (to->flags & FLAGS_BURST);
 
       msg = zip_output(to->serv->zip_out, msg, &len, 0, &ldata);
       if(len == -1)
@@ -256,7 +256,7 @@ int send_queued(aClient *to) {
          more_data = 1;
       else
       {
-         int ldata = 0;
+         int ldata = (to->flags & FLAGS_BURST);
 
          msg = zip_output(to->serv->zip_out, NULL, &len, 1, &ldata);
          if(len == -1)
@@ -288,7 +288,7 @@ int send_queued(aClient *to) {
 
       if(more_data && DBufLength(&to->sendQ) == 0)
       {
-         int ldata = 0;
+         int ldata = (to->flags & FLAGS_BURST);
 
          more_data = 0;
 
