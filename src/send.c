@@ -515,18 +515,74 @@ void sendto_channel_butlocal(aClient *one, aClient *from, aChannel *chptr, char 
  * Send a message to all members of a channel that are connected to this
  * server.
  */
-void
-sendto_channel_butserv(aChannel *chptr, aClient *from, char *pattern, ...)
+void sendto_channel_butserv(aChannel *chptr, aClient *from, char *pattern, ...)
 {
    chanMember  *cm;
    aClient *acptr;
    va_list vl;
+   int didlocal = 0;
+   char *pfix, *p;
 
    va_start(vl, pattern);
+
+   pfix = va_arg(vl, char *);
+
    for (cm = chptr->members; cm; cm = cm->next)
    {
       if (MyConnect(acptr = cm->cptr))
-         vsendto_prefix_one(acptr, from, pattern, vl);
+      {
+         if(!didlocal)
+         {
+            int sidx = 1;
+
+            *sendbuf = ':';
+
+            if(IsPerson(from))
+            {
+               int flag = 0;
+               anUser *user = from->user;
+
+               for(p = from->name; *p; p++)
+                  sendbuf[sidx++] = *p;
+
+               if (user)
+               {
+                  if (*user->username) 
+                  {
+                     sendbuf[sidx++] = '!';
+                     for(p = user->username; *p; p++)
+                        sendbuf[sidx++] = *p;
+	          }
+                  if (*user->host && !MyConnect(from)) 
+                  {
+                     sendbuf[sidx++] = '@';
+                     for(p = user->host; *p; p++)
+                        sendbuf[sidx++] = *p;
+                     flag = 1;
+                  }
+               }
+
+               if (!flag && MyConnect(from) && *user->host) 
+               {
+                  sendbuf[sidx++] = '@';
+                  for(p = from->sockhost; *p; p++)
+                     sendbuf[sidx++] = *p;
+               }
+            }
+            else
+            {
+               for(p = pfix; *p; p++)
+                  sendbuf[sidx++] = *p;
+            }
+
+            didlocal = ircvsprintf(&sendbuf[sidx], pattern + 3, vl);
+            didlocal += sidx;
+         }
+
+         send_message(acptr, sendbuf, didlocal);
+
+         /* vsendto_prefix_one(acptr, from, pattern, vl); */
+      }
    }
    va_end(vl);
    return;
