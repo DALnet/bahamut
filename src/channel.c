@@ -391,8 +391,7 @@ int can_send(aClient *cptr, aChannel *chptr) {
    if (IsServer(cptr) || IsULine(cptr))
       return 0;
 
-   member = IsMember(cptr, chptr);
-   cm = find_user_member(chptr->members, cptr);
+   member = (cm = find_user_member(chptr->members, cptr)) ? 1 : 0;
 
    if (chptr->mode.mode & MODE_MODERATED &&
        (!cm || !(cm->flags & (CHFL_CHANOP | CHFL_VOICE))))
@@ -433,6 +432,8 @@ channel_modes(aClient *cptr, char *mbuf, char *pbuf, aChannel *chptr) {
       *mbuf++ = 'r';
    if (chptr->mode.mode & MODE_REGONLY)
       *mbuf++ = 'R';
+   if (chptr->mode.mode & MODE_NOCOLOR)
+      *mbuf++ = 'c';
    if (chptr->mode.limit) {
       *mbuf++ = 'l';
       if (IsMember(cptr, chptr) || IsServer(cptr) || IsULine(cptr)) {
@@ -661,7 +662,7 @@ set_mode(aClient *cptr, aClient *sptr, aChannel *chptr, int level, int parc,
 		MODE_PRIVATE, 'p', MODE_SECRET, 's',
       MODE_MODERATED, 'm', MODE_NOPRIVMSGS, 'n',
       MODE_TOPICLIMIT, 't', MODE_REGONLY, 'R',
-		MODE_INVITEONLY, 'i',
+		MODE_INVITEONLY, 'i', MODE_NOCOLOR, 'c',
 		0x0, 0x0};
 	
 	Link *lp; /* for walking lists */
@@ -2631,6 +2632,9 @@ m_sjoin(aClient *cptr,
 		case 'R':
 		  mode.mode |= MODE_REGONLY;
 		  break;
+		case 'c':
+		  mode.mode |= MODE_NOCOLOR;
+		  break;
 		case 'k':
 		  strncpyzt(mode.key, parv[4 + args], KEYLEN + 1);
 		  args++;
@@ -2735,6 +2739,10 @@ m_sjoin(aClient *cptr,
 		INSERTSIGN(1,'+')
 		*mbuf++='R';
 	}
+	if((MODE_NOCOLOR & mode.mode) && !(MODE_NOCOLOR & oldmode->mode)) {
+		INSERTSIGN(1,'+')
+		*mbuf++='c';
+	}
    
 	/* minus modes */
 	if((MODE_PRIVATE & oldmode->mode) && !(MODE_PRIVATE & mode.mode)) {
@@ -2768,6 +2776,10 @@ m_sjoin(aClient *cptr,
 	if((MODE_REGONLY & oldmode->mode) && !(MODE_REGONLY & mode.mode)) {
 		INSERTSIGN(-1,'-')
 		*mbuf++='R';
+	}
+	if((MODE_NOCOLOR & oldmode->mode) && !(MODE_NOCOLOR & mode.mode)) {
+		INSERTSIGN(-1,'-')
+		*mbuf++='c';
 	}
 	
 	if (oldmode->limit && !mode.limit) {

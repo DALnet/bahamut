@@ -1789,25 +1789,26 @@ m_message(aClient *cptr,
 #endif /*
 			* FLUD 
         */
-			(void) msg_has_colors(parv[2]);
 
 			ret = IsULine(sptr) ? 0 : can_send(sptr, chptr);
 
-			switch(ret)
+			if(!ret && MyClient(sptr) && (chptr->mode.mode & MODE_NOCOLOR) && msg_has_colors(parv[2]))
 			{
-			   case 0:
-				sendto_channel_butone(cptr, sptr, chptr, ":%s %s %s :%s",
-						      parv[0], cmd, nick, parv[2]);
-				break;
-
-			   /* case MSG_COLORED:  -- not yet */
-
-			   default:
-				if(!notice)
-				   sendto_one(sptr, err_str(ERR_CANNOTSENDTOCHAN),
-					      me.name, parv[0], nick);
-				break;
+			   if(!notice)
+			      sendto_one(sptr, err_str(ERR_NOCOLORSONCHAN),
+				         me.name, parv[0], nick, parv[2]);
+			   continue;
 			}
+
+			if(ret)
+			{
+			   if(!notice)
+			      sendto_one(sptr, err_str(ERR_CANNOTSENDTOCHAN),
+					 me.name, parv[0], nick);
+			}
+			else
+			   sendto_channel_butone(cptr, sptr, chptr, ":%s %s %s :%s",
+						      parv[0], cmd, nick, parv[2]);
 
 			continue;
       }

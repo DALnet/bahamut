@@ -809,7 +809,10 @@ struct Channel {
 #define	MODE_LIMIT	    0x0800
 #define MODE_REGISTERED	0x1000
 #define MODE_REGONLY	0x2000
-#define	MODE_FLAGS	    0x3fff
+#define MODE_NOCOLOR	0x4000
+
+/* the hell is this? - lucas */
+/* #define	MODE_FLAGS	    0x3fff*/
 
 /* mode flags which take another parameter (With PARAmeterS) */
 
