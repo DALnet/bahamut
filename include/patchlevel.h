@@ -27,7 +27,7 @@
 #define STABLE  3
 #define BETA    4
 
-#define BRANCHSTATUS BETA
+#define BRANCHSTATUS RELEASE
 
 #define BASENAME "bahamut"
 #define BRANCH "pelennor"
