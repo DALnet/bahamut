@@ -39,6 +39,8 @@ MAXSENDQ="`grep 'define MAXSENDQLENGTH' $OPTIONS_H | sed s/'.define MAXSENDQLENG
 BUFPOOL="`grep 'define BUFFERPOOL' $OPTIONS_H | sed s/'.define BUFFERPOOL '// | xargs echo -n`"
 SERVICES_NAME="`grep 'SERVICES_NAME' $OPTIONS_H | sed s/'.define SERVICES_NAME '// | xargs echo -n`"
 MHOST="`grep 'MONITOR_HOST' $OPTIONS_H | sed s/'.define MONITOR_HOST '// | sed s/'\"'//g | xargs echo -n`"
+LOCALKLINE="`grep 'SERVER_KLINE_ADDRESS' $OPTIONS_H | sed s/'.define SERVER_KLINE_ADDRESS '// | sed s/'\"'//g | xargs echo -n`"
+NETWORKKLINE="`grep 'NETWORK_KLINE_ADDRESS' $OPTIONS_H | sed s/'.define NETWORK_KLINE_ADDRESS '// | sed s/'\"'//g | xargs echo -n`"
 #
 # Now to pull yucky defaults out.
 #
@@ -150,6 +152,8 @@ BUFPOOL="(4 * MAXSENDQLENGTH)"
 HULINED="1" 
 SERVICES_NAME="services.dal.net"
 MHOST="some.bot.host"
+LOCALKLINE="admin@poorly.configured.server.com"
+NETWORKKLINE="admin@poorly.configured.server.com"
 
 fi # ENDIF $OPTIONS_H
 ###############################
@@ -514,6 +518,50 @@ while [ -z "$FOO" ] ; do
 done  
 MHOST=$cc
 esac
+
+FOO=""
+runonce=""
+while [ -z "$FOO" ] ; do
+    FOO="$LOCALKLINE"
+    echo ""
+    echo "What address can users affected by k-lines ask for help?"
+    echo "This is displayed to all LOCALLY k-lined users upon connect."
+    echo "This should be the address of the local administrator."
+    echo "This should _NOT_ be kline@dal.net!"
+    echo -n "[$FOO] -> $c"
+    if [ -z "$AUTO_CONFIG" -o -n "$runonce" ] ; then
+        read cc
+    else
+        cc=""
+        runonce=Yes
+    fi
+    if [ -z "$cc" ] ; then
+        cc=$FOO
+    fi
+done  
+LOCALKLINE=$cc
+
+FOO=""
+runonce=""
+while [ -z "$FOO" ] ; do
+    FOO="$NETWORKKLINE"
+    echo ""
+    echo "What address can users affected by autokills ask for help?"
+    echo "This is displayed to all globally autokilled users upon connect."
+    echo "This should be the address of the network administrator."
+    echo "On dalnet, this should be kline@dal.net."
+    echo -n "[$FOO] -> $c"
+    if [ -z "$AUTO_CONFIG" -o -n "$runonce" ] ; then
+        read cc
+    else
+        cc=""
+        runonce=Yes
+    fi
+    if [ -z "$cc" ] ; then
+        cc=$FOO
+    fi
+done  
+NETWORKKLINE=$cc
 
 FOO=""
 runonce=""
@@ -911,6 +959,9 @@ cat >> $OPTIONS_H << __EOF__
 #ifdef WINGATE_NOTICE
 #define MONITOR_HOST "$MHOST"
 #endif
+
+#define SERVER_KLINE_ADDRESS "$LOCALKLINE"
+#define NETWORK_KLINE_ADDRESS "$NETWORKKLINE"
 
 #ifdef	USE_SYSLOG
 #undef	SYSLOG_USERS
