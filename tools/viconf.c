@@ -18,7 +18,7 @@
 #endif
 
 #ifndef lint
-static char *rcs_version="$Id$";
+/* static char *rcs_version="$Id$"; */
 #endif /* lint */
 
 int main(int argc, char *argv[])

@@ -18,8 +18,10 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)chkconf.c	1.7 27 Oct 1993 (C) 1993 Darren Reed";
-static char *rcs_version = "$Id$";
+/*
+ * static  char sccsid[] = "@(#)chkconf.c	1.7 27 Oct 1993 (C) 1993 Darren Reed";
+ * static char *rcs_version = "$Id$";
+ */
 #endif
 
 #define FOREVER for(;;)
