@@ -30,6 +30,7 @@
 #include "numeric.h"
 #include "channel.h"
 #include "inet.h"
+#include "clones.h"
 
 #include "pcre.h"
 
@@ -38,10 +39,10 @@ extern unsigned int cidr_to_netmask(unsigned int);
 extern Link *find_channel_link(Link *, aChannel *);
 
 /* max capturing submatches to allow in all fields combined */
-#define MAX_SUBMATCHES  10
+#define MAX_SUBMATCHES  9
 
 /* for pcre_exec(), don't touch */
-#define NVEC        (MAX_SUBMATCHES+1*3)
+#define NVEC        ((MAX_SUBMATCHES+1)*3)
 
 /* PCRE matched fields */
 #define RWHO_NICK   1
@@ -58,6 +59,14 @@ extern Link *find_channel_link(Link *, aChannel *);
 #define RWM_SERVER  0x0010
 #define RWM_TS      0x0020
 #define RWM_STYPE   0x0040
+#define RWM_JOINS   0x0080
+#define RWM_CLONES  0x0100
+#define RWM_MATCHES 0x0200
+#define RWM_CHANNEL 0x0400
+
+/* whois compatibility */
+#define RWC_SHOWIP  0x0001
+#define RWC_CHANNEL 0x0002
 
 /* output options */
 #define RWO_NICK    0x0001
@@ -71,6 +80,10 @@ extern Link *find_channel_link(Link *, aChannel *);
 #define RWO_STYPE   0x0100
 #define RWO_GCOS    0x0200
 #define RWO_AWAY    0x0400
+#define RWO_JOINS   0x0800
+#define RWO_CLONES  0x1000
+#define RWO_MATCHES 0x2000
+#define RWO_CHANNEL 0x4000
 
 
 static const char *rwho_help[] = {
@@ -79,12 +92,17 @@ static const char *rwho_help[] = {
     "'+' being a positive match and '-' being a negative one:",
     "  a             - user is (not) away",
     "  c <channel>   - user is on channel <channel> (+ only)",
+    "  d <clones>    - there are N or more (less) matching users per host",
+    "  D <matches>   - there are N or more (less) users per host",
     "  h <host>      - user's host does (not) match wildcard mask",
     "  i <ip>        - user's IP does (not) match CIDR <ip>",
+    "  j <channels>  - user is in N or more (less) channels",
     "  m <usermodes> - user is (not) using modes <usermodes>",
     "  s <server>    - user is (not) on server <server>",
-    "  t <seconds>   - user has been online (not) more than <seconds>",
+    "  t <seconds>   - user has been online N or more (less) seconds",
     "  T <type>      - user is (not) type <type> as set by services",
+    "  C             - for compatibility with WHO, use discouraged",
+    "  I             - for compatibility with WHO, use discouraged",
     "The following match flags are compiled into a single regular expression",
     "in the order you specify, so later flags can use backreferences to",
     "submatches in the flags prior:",
@@ -102,35 +120,45 @@ static const char *rwho_help[] = {
     "  i             - user's IP",
     "  s             - user's server",
     "  f             - standard WHO flags (GH*%@+)",
+    "  c             - user's most recently joined channel",
+    "  j             - number of joined channels",
+    "  d             - number of clones on user's IP",
+    "  D             - number of matches on user's IP (see below)",
     "  t             - user's signon timestamp",
     "  T             - user's type (set by services)",
     "  m             - user's modes",
     "  g             - user's gcos/real name (mutually exclusive with 'a')",
     "  a             - user's away reason (mutually exclusive with 'g')",
-    "There are two special output flags:",
+    "There are three special output flags:",
     "  L<count>      - limit to N results (no space between L and <count>)",
     "  C             - no results, just supply match count in RPL_ENDOFWHO",
+    "  D             - returns only one match per host (summarize)",
     NULL
 };
 
 static struct {
-    unsigned  check;            /* things to try match */
-    unsigned  check_pos;        /* things to match positively */
+    unsigned  check[2];         /* things to try match */
     unsigned  rplfields;        /* fields to include in the response */
+    unsigned  compat;           /* WHO compatibility flags */
     char     *rplcookie;        /* response cookie */
     int       countonly;        /* counting only, no results */
     int       limit;            /* max number of results */
     int       spat[RWHO_COUNT]; /* match string build pattern */
     pcre     *re;               /* regex pattern */
-    aChannel *chptr;            /* search in channel */
     aClient  *server;           /* server */
-    char     *host_pat;         /* wildcard host pattern */
-    int      (*host_func)();    /* host match function */
-    int       umodes;           /* usermodes */
+    aChannel *chptr;            /* search in channel */
+    char     *host_pat[2];      /* wildcard host pattern */
+    int      (*host_func[2])(); /* host match function */
+    int       umodes[2];        /* usermodes */
     unsigned  stype;            /* services type */
-    unsigned  ip_mask;          /* IP netmask */
-    unsigned  ip_addr;          /* IP address */
-    ts_val    ts;               /* signon timestamp */
+    unsigned  ip_mask[2];       /* IP netmask */
+    unsigned  ip_addr[2];       /* IP address */
+    ts_val    ts[2];            /* signon timestamp */
+    int       joined[2];        /* min/max joined chans */
+    int       clones[2];        /* min/max clones */
+    int       matches[2];       /* min/max clone matches */
+    int       thisclones;       /* number of clones on this host */
+    int       thismatches;      /* number of matches on this host */
 } rwho_opts;
 
 static char rwhobuf[1024];
@@ -243,9 +271,8 @@ static int rwho_parseopts(aClient *sptr, int parc, char *parv[])
     char       *remap[RWHO_COUNT] = {0};
     char       *sfl;
     char       *s;
-    unsigned    flags[2] = { 0 };
     int         spatidx = 0;
-    int         plus = 1;
+    int         neg = 0;
     int         arg = 2;
     int         i;
     ts_val      ts;
@@ -282,15 +309,20 @@ static int rwho_parseopts(aClient *sptr, int parc, char *parv[])
         switch (*sfl)
         {
             case '+':
-                plus = 1;
+                neg = 0;
                 break;
 
             case '-':
-                plus = 0;
+                neg = 1;
                 break;
 
             case 'a':
-                flags[plus] |= RWM_AWAY;
+                if (rwho_opts.check[!neg] & RWM_AWAY)
+                {
+                    rwho_synerr(sptr, "cannot use both +a and -a in match");
+                    return 0;
+                }
+                rwho_opts.check[neg] |= RWM_AWAY;
                 break;
 
             case 'c':
@@ -299,7 +331,7 @@ static int rwho_parseopts(aClient *sptr, int parc, char *parv[])
                     rwho_synerr(sptr, "missing argument for match flag c");
                     return 0;
                 }
-                if (!plus)
+                if (neg)
                 {
                     rwho_synerr(sptr, "negative match not supported for match"
                                 " flag c");
@@ -312,6 +344,47 @@ static int rwho_parseopts(aClient *sptr, int parc, char *parv[])
                                parv[0], parv[arg]);
                     return 0;
                 }
+                rwho_opts.check[neg] |= RWM_CHANNEL;
+                arg++;
+                break;
+
+            case 'C':
+                rwho_opts.compat |= RWC_CHANNEL;
+                break;
+
+            case 'd':
+                if (!parv[arg])
+                {
+                    rwho_synerr(sptr, "missing argument for match flag d");
+                    return 0;
+                }
+                i = strtol(parv[arg], &s, 0);
+                if (*s != 0 || i < 1)
+                {
+                    rwho_synerr(sptr, "invalid number of clones for match"
+                                " flag d");
+                    return 0;
+                }
+                rwho_opts.clones[neg] = i;
+                rwho_opts.check[neg] |= RWM_CLONES;
+                arg++;
+                break;
+
+            case 'D':
+                if (!parv[arg])
+                {
+                    rwho_synerr(sptr, "missing argument for match flag D");
+                    return 0;
+                }
+                i = strtol(parv[arg], &s, 0);
+                if (*s != 0 || i < 1)
+                {
+                    rwho_synerr(sptr, "invalid number of matches for match"
+                                " flag D");
+                    return 0;
+                }
+                rwho_opts.matches[neg] = i;
+                rwho_opts.check[neg] |= RWM_MATCHES;
                 arg++;
                 break;
 
@@ -322,11 +395,11 @@ static int rwho_parseopts(aClient *sptr, int parc, char *parv[])
                     return 0;
                 }
                 if (strchr(parv[arg], '*') || strchr(parv[arg], '?'))
-                    rwho_opts.host_func = match;
+                    rwho_opts.host_func[neg] = match;
                 else
-                    rwho_opts.host_func = mycmp;
-                rwho_opts.host_pat = parv[arg];
-                flags[plus] |= RWM_HOST;
+                    rwho_opts.host_func[neg] = mycmp;
+                rwho_opts.host_pat[neg] = parv[arg];
+                rwho_opts.check[neg] |= RWM_HOST;
                 arg++;
                 break;
 
@@ -341,18 +414,41 @@ static int rwho_parseopts(aClient *sptr, int parc, char *parv[])
                     *s++ = 0;
                     i = strtol(s, &s, 10);
                     if (*s == 0 && 1 < i && i < 32)
-                        rwho_opts.ip_mask = htonl(cidr_to_netmask(i));
+                        rwho_opts.ip_mask[neg] = htonl(cidr_to_netmask(i));
                 }
                 else
-                    rwho_opts.ip_mask = ~0;
-                rwho_opts.ip_addr = inet_addr(parv[arg]);
-                if (rwho_opts.ip_addr == 0xFFFFFFFF || !rwho_opts.ip_mask)
+                    rwho_opts.ip_mask[neg] = ~0;
+                rwho_opts.ip_addr[neg] = inet_addr(parv[arg]);
+                if (rwho_opts.ip_addr[neg] == 0xFFFFFFFF
+                    || !rwho_opts.ip_mask[neg])
                 {
                     rwho_synerr(sptr, "invalid CIDR IP for match flag i");
                     return 0;
                 }
-                rwho_opts.ip_addr &= rwho_opts.ip_mask;
-                flags[plus] |= RWM_IP;
+                rwho_opts.ip_addr[neg] &= rwho_opts.ip_mask[neg];
+                rwho_opts.check[neg] |= RWM_IP;
+                arg++;
+                break;
+
+            case 'I':
+                rwho_opts.compat |= RWC_SHOWIP;
+                break;
+
+            case 'j':
+                if (!parv[arg])
+                {
+                    rwho_synerr(sptr, "missing argument for match flag s");
+                    return 0;
+                }
+                i = strtol(parv[arg], &s, 0);
+                if (*s != 0 || i < 0)
+                {
+                    rwho_synerr(sptr, "invalid number of channels for match"
+                                " flag j");
+                    return 0;
+                }
+                rwho_opts.joined[neg] = i;
+                rwho_opts.check[neg] |= RWM_JOINS;
                 arg++;
                 break;
 
@@ -366,10 +462,10 @@ static int rwho_parseopts(aClient *sptr, int parc, char *parv[])
                     for (i = 1; user_modes[i]; i+=2)
                         if (*s == user_modes[i])
                         {
-                            rwho_opts.umodes |= user_modes[i-1];
+                            rwho_opts.umodes[neg] |= user_modes[i-1];
                             break;
                         }
-                flags[plus] |= RWM_MODES;
+                rwho_opts.check[neg] |= RWM_MODES;
                 arg++;
                 break;
 
@@ -379,6 +475,11 @@ static int rwho_parseopts(aClient *sptr, int parc, char *parv[])
                     rwho_synerr(sptr, "missing argument for match flag s");
                     return 0;
                 }
+                if (rwho_opts.check[!neg] & RWM_SERVER)
+                {
+                    rwho_synerr(sptr, "cannot use both +s and -s in match");
+                    return 0;
+                }
                 rwho_opts.server = find_server(parv[arg], NULL);
                 if (!rwho_opts.server)
                 {
@@ -386,7 +487,7 @@ static int rwho_parseopts(aClient *sptr, int parc, char *parv[])
                                sptr->name, parv[arg]);
                     return 0;
                 }
-                flags[plus] |= RWM_SERVER;
+                rwho_opts.check[neg] |= RWM_SERVER;
                 arg++;
                 break;
 
@@ -403,8 +504,8 @@ static int rwho_parseopts(aClient *sptr, int parc, char *parv[])
                                 " flag t");
                     return 0;
                 }
-                rwho_opts.ts = NOW - ts;
-                flags[plus] |= RWM_TS;
+                rwho_opts.ts[neg] = NOW - ts;
+                rwho_opts.check[neg] |= RWM_TS;
                 arg++;
                 break;
 
@@ -414,6 +515,11 @@ static int rwho_parseopts(aClient *sptr, int parc, char *parv[])
                     rwho_synerr(sptr, "missing argument for match flag T");
                     return 0;
                 }
+                if (rwho_opts.check[!neg] & RWM_STYPE)
+                {
+                    rwho_synerr(sptr, "cannot use both +T and -T in match");
+                    return 0;
+                }
                 ui = strtoul(parv[arg], &s, 0);
                 if (*s != 0)
                 {
@@ -421,7 +527,7 @@ static int rwho_parseopts(aClient *sptr, int parc, char *parv[])
                     return 0;
                 }
                 rwho_opts.stype = ui;
-                flags[plus] |= RWM_STYPE;
+                rwho_opts.check[neg] |= RWM_STYPE;
                 arg++;
                 break;
 
@@ -436,15 +542,20 @@ static int rwho_parseopts(aClient *sptr, int parc, char *parv[])
                     rwho_synerr(sptr, "flags may not be used more than once");
                     return 0;
                 }
-                if (!plus)
+                if (neg)
                 {
                     rwho_synerr(sptr, "negative match not supported for match"
                                 " flag A");
                     return 0;
                 }
+                if (rwho_opts.check[!neg] & RWM_AWAY)
+                {
+                    rwho_synerr(sptr, "cannot use both +A and -a in match");
+                    return 0;
+                }
                 remap[RWHO_AWAY] = parv[arg];
                 rwho_opts.spat[spatidx++] = RWHO_AWAY;
-                flags[plus] |= RWM_AWAY;    /* implicit +a */
+                rwho_opts.check[neg] |= RWM_AWAY;    /* implicit +a */
                 arg++;
                 break;
 
@@ -459,7 +570,7 @@ static int rwho_parseopts(aClient *sptr, int parc, char *parv[])
                     rwho_synerr(sptr, "flags may not be used more than once");
                     return 0;
                 }
-                if (!plus)
+                if (neg)
                 {
                     rwho_synerr(sptr, "negative match not supported for match"
                                 " flag g");
@@ -481,7 +592,7 @@ static int rwho_parseopts(aClient *sptr, int parc, char *parv[])
                     rwho_synerr(sptr, "flags may not be used more than once");
                     return 0;
                 }
-                if (!plus)
+                if (neg)
                 {
                     rwho_synerr(sptr, "negative match not supported for match"
                                 " flag n");
@@ -503,7 +614,7 @@ static int rwho_parseopts(aClient *sptr, int parc, char *parv[])
                     rwho_synerr(sptr, "flags may not be used more than once");
                     return 0;
                 }
-                if (!plus)
+                if (neg)
                 {
                     rwho_synerr(sptr, "negative match not supported for match"
                                 " flag u");
@@ -543,6 +654,10 @@ static int rwho_parseopts(aClient *sptr, int parc, char *parv[])
             case 'i': rwho_opts.rplfields |= RWO_IP; sfl++; break;
             case 's': rwho_opts.rplfields |= RWO_SERVER; sfl++; break;
             case 'f': rwho_opts.rplfields |= RWO_FLAGS; sfl++; break;
+            case 'c': rwho_opts.rplfields |= RWO_CHANNEL; sfl++; break;
+            case 'j': rwho_opts.rplfields |= RWO_JOINS; sfl++; break;
+            case 'd': rwho_opts.rplfields |= RWO_CLONES; sfl++; break;
+            case 'D': rwho_opts.rplfields |= RWO_MATCHES; sfl++; break;
             case 't': rwho_opts.rplfields |= RWO_TS; sfl++; break;
             case 'T': rwho_opts.rplfields |= RWO_STYPE; sfl++; break;
             case 'm': rwho_opts.rplfields |= RWO_MODES; sfl++; break;
@@ -567,25 +682,37 @@ static int rwho_parseopts(aClient *sptr, int parc, char *parv[])
         }
     }
 
-    /* need something to match on*/
-    if (!(flags[0] || flags[1] || spatidx || rwho_opts.chptr))
-    {
-        rwho_synerr(sptr, NULL);
-        return 0;
-    }
-
-    if (flags[0] & flags[1])
-    {
-        rwho_synerr(sptr, "flags may not specified more than once");
-        return 0;
-    }
-
-    rwho_opts.check = (flags[0] | flags[1]);
-    rwho_opts.check_pos = flags[1];
-
     if ((rwho_opts.rplfields & (RWO_GCOS|RWO_AWAY)) == (RWO_GCOS|RWO_AWAY))
     {
         rwho_synerr(sptr, "output flags g and a may not be used together");
+        return 0;
+    }
+
+    if ((rwho_opts.check[0] & rwho_opts.check[1] & RWM_CLONES)
+        && (rwho_opts.clones[0] > rwho_opts.clones[1]))
+    {
+        rwho_synerr(sptr, "values for match flags +d and -d will never match");
+        return 0;
+    }
+
+    if ((rwho_opts.check[0] & rwho_opts.check[1] & RWM_MATCHES)
+        && (rwho_opts.matches[0] > rwho_opts.matches[1]))
+    {
+        rwho_synerr(sptr, "values for match flags +D and -D will never match");
+        return 0;
+    }
+
+    if ((rwho_opts.check[0] & rwho_opts.check[1] & RWM_JOINS)
+        && (rwho_opts.joined[0] > rwho_opts.joined[1]))
+    {
+        rwho_synerr(sptr, "values for match flags +j and -j will never match");
+        return 0;
+    }
+
+    if ((rwho_opts.check[0] & rwho_opts.check[1] & RWM_TS)
+        && (rwho_opts.ts[0] < rwho_opts.ts[1]))
+    {
+        rwho_synerr(sptr, "values for match flags +t and -t will never match");
         return 0;
     }
 
@@ -603,75 +730,70 @@ static int rwho_parseopts(aClient *sptr, int parc, char *parv[])
 static int rwho_match(aClient *cptr, int *failcode, aClient **failclient)
 {
     char *s;
+    char *b;
     int   i;
-    int   m1, m2;
     int   ovec[NVEC];
 
-    if (rwho_opts.check & RWM_SERVER)
-    {
-        m1 = !(rwho_opts.check_pos & RWM_SERVER);
-        m2 = !(cptr->uplink == rwho_opts.server);
+    if ((rwho_opts.check[0] & RWM_SERVER) &&
+        (cptr->uplink != rwho_opts.server))
+        return 0;
+    else if ((rwho_opts.check[1] & RWM_SERVER) &&
+        (cptr->uplink == rwho_opts.server))
+        return 0;
 
-        if (m1 != m2)
-            return 0;
-    }
+    if ((rwho_opts.check[0] & RWM_TS) && (cptr->tsinfo > rwho_opts.ts[0]))
+        return 0;
 
-    if (rwho_opts.check & RWM_TS)
-    {
-        m1 = !(rwho_opts.check_pos & RWM_TS);
-        m2 = !(cptr->tsinfo < rwho_opts.ts);
+    if ((rwho_opts.check[1] & RWM_TS) && (cptr->tsinfo < rwho_opts.ts[1]))
+        return 0;
 
-        if (m1 != m2)
-            return 0;
-    }
+    if ((rwho_opts.check[0] & RWM_AWAY) && !cptr->user->away)
+        return 0;
+    else if ((rwho_opts.check[1] & RWM_AWAY) && cptr->user->away)
+        return 0;
 
-    if (rwho_opts.check & RWM_AWAY)
-    {
-        m1 = !(rwho_opts.check_pos & RWM_AWAY);
-        m2 = !cptr->user->away;
+    if ((rwho_opts.check[0] & RWM_STYPE) &&
+        (cptr->user->servicetype != rwho_opts.stype))
+        return 0;
+    else if ((rwho_opts.check[1] & RWM_STYPE) &&
+        (cptr->user->servicetype == rwho_opts.stype))
+        return 0;
 
-        if (m1 != m2)
-            return 0;
-    }
+    if ((rwho_opts.check[0] & RWM_JOINS) &&
+        (cptr->user->joined < rwho_opts.joined[0]))
+        return 0;
 
-    if (rwho_opts.check & RWM_STYPE)
-    {
-        m1 = !(rwho_opts.check_pos & RWM_STYPE);
-        m2 = !(cptr->user->servicetype == rwho_opts.stype);
+    if ((rwho_opts.check[1] & RWM_JOINS) &&
+        (cptr->user->joined > rwho_opts.joined[1]))
+        return 0;
 
-        if (m1 != m2)
-            return 0;
-    }
+    if ((rwho_opts.check[0] & RWM_IP) &&
+        ((cptr->ip.s_addr & rwho_opts.ip_mask[0]) != rwho_opts.ip_addr[0]))
+        return 0;
 
-    if (rwho_opts.check & RWM_IP)
-    {
-        m1 = !(rwho_opts.check_pos & RWM_IP);
-        m2 = !((cptr->ip.s_addr & rwho_opts.ip_mask) == rwho_opts.ip_addr);
+    if ((rwho_opts.check[1] & RWM_IP) &&
+        ((cptr->ip.s_addr & rwho_opts.ip_mask[1]) != rwho_opts.ip_addr[1]))
+        return 0;
+    
+    if ((rwho_opts.check[0] & RWM_MODES) &&
+        ((cptr->umode & rwho_opts.umodes[0]) != rwho_opts.umodes[0]))
+        return 0;
 
-        if (m1 != m2)
-            return 0;
-    }
+    if ((rwho_opts.check[1] & RWM_MODES) &&
+        (cptr->umode & rwho_opts.umodes[1]))
+        return 0;
 
-    if (rwho_opts.check & RWM_MODES)
-    {
-        if (rwho_opts.check_pos & RWM_MODES)
-        {
-            if ((cptr->umode & rwho_opts.umodes) != rwho_opts.umodes)
-                return 0;
-        }
-        else if (cptr->umode & rwho_opts.umodes)
-            return 0;
-    }
+    if ((rwho_opts.check[0] & RWM_CHANNEL) && !IsMember(cptr, rwho_opts.chptr))
+        return 0;
 
-    if (rwho_opts.check & RWM_HOST)
-    {
-        m1 = !(rwho_opts.check_pos & RWM_HOST);
-        m2 = !!rwho_opts.host_func(rwho_opts.host_pat, cptr->user->host);
+    if ((rwho_opts.check[0] & RWM_HOST) &&
+        rwho_opts.host_func[0](rwho_opts.host_pat[0], cptr->user->host))
+        return 0;
 
-        if (m1 != m2)
-            return 0;
-    }
-
+    if ((rwho_opts.check[1] & RWM_HOST) &&
+        !rwho_opts.host_func[1](rwho_opts.host_pat[1], cptr->user->host))
+        return 0;
+    
     if (rwho_opts.re)
     {
         s = scratch;
@@ -680,24 +802,25 @@ static int rwho_match(aClient *cptr, int *failcode, aClient **failclient)
             switch (rwho_opts.spat[i])
             {
                 case RWHO_NICK:
-                    s += ircsprintf(s, "%s", cptr->name);
-                    s++;    /* deliberately using zero terminator */
+                    b = cptr->name;
+                    while ((*s++ = *b++));
+                    /* note: deliberately using zero terminator */
                     break;
 
                 case RWHO_USER:
-                    s += ircsprintf(s, "%s", cptr->user->username);
-                    s++;
+                    b = cptr->user->username;
+                    while ((*s++ = *b++));
                     break;
 
                 case RWHO_GCOS:
-                    s += ircsprintf(s, "%s", cptr->info);
-                    s++;
+                    b = cptr->info;
+                    while ((*s++ = *b++));
                     break;
 
-                    /* will core if RWM_AWAY wasn't implicitly set */
+                /* will core if RWM_AWAY wasn't implicitly set */
                 case RWHO_AWAY:
-                    s += ircsprintf(s, "%s", cptr->user->away);
-                    s++;
+                    b = cptr->user->away;
+                    while ((*s++ = *b++));
                     break;
             }
         }
@@ -743,18 +866,29 @@ static char *rwho_prepbuf(aClient *cptr)
  */
 static void rwho_reply(aClient *cptr, aClient *ac, char *buf, chanMember *cm)
 {
-    char *src;
-    char *dst;
+    char     *src;
+    char     *dst;
+    aChannel *chptr = NULL;
 
     dst = buf;
+
+    if (ac->user->channel)
+        chptr = ac->user->channel->value.chptr;
 
     /* use standard RPL_WHOREPLY if no output flags */
     if (!rwho_opts.rplfields)
     {
         char status[5];
+        char chname[CHANNELLEN+2] = "*";
+
+        if (!cm && (rwho_opts.compat & RWC_CHANNEL) && chptr)
+        {
+            for (cm = chptr->members; cm; cm = cm->next)
+                if (cm->cptr == ac)
+                    break;
+        }
 
         dst = status;
-
         if (ac->user->away)
             *dst++ = 'G';
         else
@@ -771,10 +905,24 @@ static void rwho_reply(aClient *cptr, aClient *ac, char *buf, chanMember *cm)
                 *dst++ = '+';
         }
         *dst = 0;
-        
+
+        if (!rwho_opts.chptr && (rwho_opts.compat & RWC_CHANNEL) && chptr)
+        {
+            dst = chname;
+            if (!PubChannel(chptr))
+                *dst++ = '%';
+            if (PubChannel(chptr) || IsAdmin(cptr))
+                strcpy(dst, chptr->chname);
+        }
+
+        if (rwho_opts.compat & RWC_SHOWIP)
+            src = ac->hostip;
+        else
+            src = ac->user->host;
+
         ircsprintf(buf, getreply(RPL_WHOREPLY), me.name, cptr->name,
-                   rwho_opts.chptr ? rwho_opts.chptr->chname : "*",
-                   ac->user->username, ac->user->host, ac->user->server,
+                   rwho_opts.chptr ? rwho_opts.chptr->chname : chname,
+                   ac->user->username, src, ac->user->server,
                    ac->name, status, ac->hopcount, ac->info);
         return;
     }
@@ -830,6 +978,14 @@ static void rwho_reply(aClient *cptr, aClient *ac, char *buf, chanMember *cm)
             *dst++ = '*';
         if (IsInvisible(ac))
             *dst++ = '%';
+
+        if (!cm && (rwho_opts.rplfields & RWO_CHANNEL) && chptr)
+        {
+            for (cm = chptr->members; cm; cm = cm->next)
+                if (cm->cptr == cptr)
+                    break;
+        }
+
         if (cm)
         {
             if (cm->flags & CHFL_CHANOP)
@@ -838,6 +994,34 @@ static void rwho_reply(aClient *cptr, aClient *ac, char *buf, chanMember *cm)
                 *dst++ = '+';
         }
     }
+
+    if (rwho_opts.rplfields & RWO_CHANNEL)
+    {
+        *dst++ = ' ';
+
+        if (!chptr)
+            *dst++ = '*';
+        else
+        {
+            if (!PubChannel(chptr))
+                *dst++ = '%';
+            if (PubChannel(chptr) || IsAdmin(cptr))
+            {
+                src = chptr->chname;
+                while (*src)
+                    *dst++ = *src++;
+            }
+        }
+    }
+
+    if (rwho_opts.rplfields & RWO_JOINS)
+        dst += ircsprintf(dst, " %d", ac->user->joined);
+
+    if (rwho_opts.rplfields & RWO_CLONES)
+        dst += ircsprintf(dst, " %d", rwho_opts.thisclones);
+
+    if (rwho_opts.rplfields & RWO_MATCHES)
+        dst += ircsprintf(dst, " %d", rwho_opts.thismatches);
 
     if (rwho_opts.rplfields & RWO_TS)
         dst += ircsprintf(dst, " %d", ac->tsinfo);
@@ -908,10 +1092,108 @@ int m_rwho(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
     fill = rwho_prepbuf(sptr);
 
-    if (rwho_opts.chptr)
+    if (rwho_opts.chptr && !IsAdmin(sptr) && !ShowChannel(sptr, rwho_opts.chptr))
+        rwho_opts.countonly = 1;
+
+    if (((rwho_opts.check[0] | rwho_opts.check[1]) & (RWM_CLONES|RWM_MATCHES))
+        || (rwho_opts.rplfields & (RWO_CLONES|RWO_MATCHES)))
     {
-        if (!IsAdmin(sptr) && !ShowChannel(sptr, rwho_opts.chptr))
-            rwho_opts.countonly = 1;
+        CloneEnt *ce;
+        aClient *fm;
+
+        for (ce = clones_list; ce; ce = ce->next)
+        {
+            if (!ce->clients)
+                continue;
+
+            if ((rwho_opts.check[0] & RWM_CLONES) &&
+                (ce->gcount < rwho_opts.clones[0]))
+                continue;
+
+            if ((rwho_opts.check[1] & RWM_CLONES) &&
+                (ce->gcount > rwho_opts.clones[1]))
+                continue;
+
+            fm = NULL;
+            rwho_opts.thismatches = 0;
+            rwho_opts.thisclones = ce->gcount;
+
+            /* if using match flag D or summarizing, we need the match count */
+            if (((rwho_opts.check[0] | rwho_opts.check[1]) & RWM_MATCHES)
+                || (rwho_opts.rplfields & RWO_MATCHES))
+            {
+                for (ac = ce->clients; ac; ac = ac->clone.next)
+                {
+                    if (!rwho_match(ac, &failcode, &failclient))
+                        continue;
+
+                    if (!fm)
+                        fm = ac;
+
+                    rwho_opts.thismatches++;
+                }
+
+                /* we know no matches, so no need to process further */
+                if (!rwho_opts.thismatches)
+                    continue;
+
+                if ((rwho_opts.check[0] & RWM_MATCHES) &&
+                    (rwho_opts.thismatches < rwho_opts.matches[0]))
+                    continue;
+
+                if ((rwho_opts.check[1] & RWM_MATCHES) &&
+                    (rwho_opts.thismatches > rwho_opts.matches[1]))
+                    continue;
+            }
+
+            /* if summarizing, we cached from the sweep above */
+            if (rwho_opts.rplfields & RWO_MATCHES)
+            {
+                if (!left)
+                {
+                    sendto_one(sptr, getreply(ERR_WHOLIMEXCEED), me.name,
+                               parv[0], rwho_opts.limit, "RWHO");
+                    break;
+                }
+
+                if (!rwho_opts.countonly)
+                {
+                    rwho_reply(sptr, fm, fill, NULL);
+                    sendto_one(sptr, "%s", rwhobuf);
+                }
+
+                results++;
+                left--;
+                continue;
+            }
+
+            /* not summarizing, so send each match */
+            for (ac = ce->clients; ac; ac = ac->clone.next)
+            {
+                if (!rwho_match(ac, &failcode, &failclient))
+                    continue;
+
+                if (!left)
+                {
+                    sendto_one(sptr, getreply(ERR_WHOLIMEXCEED), me.name,
+                               parv[0], rwho_opts.limit, "RWHO");
+                    break;
+                }
+
+                if (!rwho_opts.countonly)
+                {
+                    rwho_reply(sptr, ac, fill, NULL);
+                    sendto_one(sptr, "%s", rwhobuf);
+                }
+
+                results++;
+                left--;
+            }
+        }
+    }
+    else if (rwho_opts.chptr)
+    {
+        rwho_opts.check[0] &= ~RWM_CHANNEL;
 
         for (cm = rwho_opts.chptr->members; cm; cm = cm->next)
         {
@@ -964,6 +1246,10 @@ int m_rwho(aClient *cptr, aClient *sptr, int parc, char *parv[])
             left--;
         }
     }
+
+    if (rwho_opts.compat)
+        sendto_one(sptr, getreply(RPL_COMMANDSYNTAX), me.name, sptr->name,
+                   "NOTE: match flags C and I are deprecated");
 
     ircsprintf(rwhobuf, "%d", results);
     sendto_one(sptr, getreply(RPL_ENDOFWHO), me.name, parv[0], rwhobuf,"RWHO");
