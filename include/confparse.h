@@ -18,7 +18,7 @@ struct TopConf
     char *tok;              /* our token string             */
     unsigned int   flag;    /* our token flag               */
     unsigned int   nest;    /* tokens we allow to nest here */
-    unsigned long  subtok;  /* sub-tokens allowed in here   */
+    sConf       *subtok;  /* sub-tokens allowed in here   */
     int         (*func) (); /* function to call to add this */
 };
 
@@ -111,6 +111,39 @@ struct ConfVar
 
 #define SCONFF_STRING               0x800000    /* allow freeform strings */
 
+/* these are the strings for options ONLY */
+
+#define OPTT_MAXSENDQ   "MAXSENDQ"
+#define OPTF_MAXSENDQ               0x000001
+#define OPTT_NETNAME    "NETWORK_NAME"
+#define OPTF_NETNAME                0x000002
+#define OPTT_STAFFADDY  "STAFF_ADDRESS"
+#define OPTF_STAFFADDY              0x000004
+#define OPTT_SERVNAME   "SERVICES_NAME"
+#define OPTF_SERVNAME               0x000010
+#define OPTT_MAXCHAN    "MAXCHANNELS"
+#define OPTF_MAXCHAN                0x000020
+#define OPTT_WGMONHOST  "WGMONHOST"
+#define OPTF_WGMONHOST              0x000040
+#define OPTT_WGMONURL   "WGMONURL"
+#define OPTF_WGMONURL               0x000080
+#define OPTT_NKLINEADDY "NETWORK_KLINE"
+#define OPTF_NKLINEADDY             0x000100
+#define OPTT_LKLINEADDY "LOCAL_KLINE"
+#define OPTF_LKLINEADDY             0x000200
+#define OPTT_CRYPTPASS  "CRYPT_OPER_PASS"
+#define OPTF_CRYPTPASS              0x000400
+#define OPTT_SMOTD      "SHORT_MOTD"
+#define OPTF_SMOTD                  0x000800
+#define OPTT_SERVTYPE   "SERVTYPE"
+#define OPTF_SERVTYPE               0x001000
+#define OPTT_STATSNAME  "STATS_NAME"
+#define OPTF_STATSNAME              0x002000
+#define OPTT_TSMAXDELTA "TS_MAX_DELTA"
+#define OPTF_TSMAXDELTA             0x004000
+#define OPTT_TSWARNDELTA "TS_WARN_DELTA"
+#define OPTF_TSWARNDELTA            0x008000
+
 /* our variable types */
 
 #define VARTYPE_INT     0x0001  /* integers             */
@@ -121,6 +154,108 @@ struct ConfVar
 /* functions for parsing variables into appropriate variables */
 
 #ifdef CONF_TABS
+
+sConf confglobtab[] =
+{
+    {SCONFT_NAME, SCONFF_NAME, VARTYPE_NAME},
+    {SCONFT_INFO, SCONFF_INFO, VARTYPE_STRING},
+    {SCONFT_DPASS, SCONFF_DPASS, VARTYPE_NAME},
+    {SCONFT_RPASS, SCONFF_RPASS, VARTYPE_NAME},
+    {(char *) 0, 0, 0}
+};
+
+sConf confopttab[] =
+{
+    {OPTT_MAXSENDQ, OPTF_MAXSENDQ, VARTYPE_INT},
+    {OPTT_NETNAME, OPTF_NETNAME, VARTYPE_NAME},
+    {OPTT_SERVNAME, OPTF_SERVNAME, VARTYPE_NAME},
+    {OPTT_STATSNAME, OPTF_STATSNAME, VARTYPE_NAME},
+    {OPTT_MAXCHAN, OPTF_MAXCHAN, VARTYPE_INT},
+    {OPTT_WGMONHOST, OPTF_WGMONHOST, VARTYPE_NAME},
+    {OPTT_WGMONURL, OPTF_WGMONURL, VARTYPE_NAME},
+    {OPTT_NKLINEADDY, OPTF_NKLINEADDY, VARTYPE_NAME},
+    {OPTT_LKLINEADDY, OPTF_LKLINEADDY, VARTYPE_NAME},
+    {OPTT_CRYPTPASS, OPTF_CRYPTPASS, VARTYPE_NONE},
+    {OPTT_SMOTD, OPTF_SMOTD, VARTYPE_NONE},
+    {OPTT_SERVTYPE, OPTF_SERVTYPE, VARTYPE_NAME},
+    {OPTT_TSMAXDELTA, OPTF_TSMAXDELTA, VARTYPE_INT},
+    {OPTT_TSWARNDELTA, OPTF_TSWARNDELTA, VARTYPE_INT},
+    {OPTT_STAFFADDY, OPTF_STAFFADDY, VARTYPE_NAME},
+    {(char *) 0, 0, 0}
+};
+
+sConf confclasstab[] =
+{
+    {SCONFT_NAME, SCONFF_NAME, VARTYPE_NAME},
+    {SCONFT_PINGFREQ, SCONFF_PINGFREQ, VARTYPE_INT},
+    {SCONFT_CONNFREQ, SCONFF_CONNFREQ, VARTYPE_INT},
+    {SCONFT_MAXUSERS, SCONFF_MAXUSERS, VARTYPE_INT},
+    {SCONFT_MAXSENDQ, SCONFF_MAXSENDQ, VARTYPE_INT},
+    {(char *) 0, 0, 0}
+};
+
+sConf confallowtab[] =
+{
+    {SCONFT_HOST, SCONFF_HOST, VARTYPE_NAME},
+    {SCONFT_IPMASK, SCONFF_IPMASK, VARTYPE_NAME},
+    {SCONFT_PORT, SCONFF_PORT, VARTYPE_INT},
+    {SCONFT_PASSWD, SCONFF_PASSWD, VARTYPE_NAME},
+    {SCONFT_CLASS, SCONFF_CLASS, VARTYPE_NAME},
+    {(char *) 0, 0, 0}
+};
+
+sConf confopertab[] =
+{
+    {SCONFT_NAME, SCONFF_NAME, VARTYPE_NAME},
+    {SCONFT_HOST, SCONFF_HOST, VARTYPE_NAME},
+    {SCONFT_PASSWD, SCONFF_PASSWD, VARTYPE_NAME},
+    {SCONFT_ACCESS, SCONFF_ACCESS, VARTYPE_NAME},
+    {SCONFT_CLASS, SCONFF_CLASS, VARTYPE_NAME},
+    {(char *) 0, 0, 0}
+};
+
+sConf confconnecttab[] =
+{
+    {SCONFT_NAME, SCONFF_NAME, VARTYPE_NAME},
+    {SCONFT_HOST, SCONFF_HOST, VARTYPE_NAME},
+    {SCONFT_BIND, SCONFF_BIND, VARTYPE_NAME},
+    {SCONFT_APASSWD, SCONFF_APASSWD, VARTYPE_NAME},
+    {SCONFT_CPASSWD, SCONFF_CPASSWD, VARTYPE_NAME},
+    {SCONFT_FLAGS, SCONFF_FLAGS, VARTYPE_NAME},
+    {SCONFT_PORT, SCONFF_PORT, VARTYPE_INT},
+    {SCONFT_CLASS, SCONFF_CLASS, VARTYPE_NAME},
+    {(char *) 0, 0, 0}
+};
+
+sConf confrestricttab[] =
+{
+    {SCONFT_REASON, SCONFF_REASON, VARTYPE_STRING},
+    {SCONFT_TYPE, SCONFF_TYPE, VARTYPE_NAME},
+    {SCONFT_MASK, SCONFF_MASK, VARTYPE_NAME},
+    {(char *) 0, 0, 0}
+};
+
+sConf confkilltab[] =
+{
+    {SCONFT_REASON, SCONFF_REASON, VARTYPE_STRING},
+    {SCONFT_MASK, SCONFF_MASK, VARTYPE_NAME},
+    {(char *) 0, 0, 0}
+};
+
+sConf confporttab[] =
+{
+    {SCONFT_PORT, SCONFF_PORT, VARTYPE_INT},
+    {SCONFT_BIND, SCONFF_BIND, VARTYPE_NAME},
+    {SCONFT_IPMASK, SCONFF_IPMASK, VARTYPE_NAME},
+    {(char *) 0, 0, 0}
+};
+
+
+sConf confopentab[] =
+{
+    {0,SCONFF_STRING,0},
+    {(char *) 0, 0, 0}
+};
 
 extern int confadd_global(cVar **, int);
 extern int confadd_options(cVar **, int);
@@ -136,56 +271,19 @@ extern int confadd_port(cVar **, int);
 
 struct TopConf tconftab[] = 
 {
-    {CONFT_GLOBAL, CONFF_GLOBAL, CONFF_ADMIN,
-      (SCONFF_NAME|SCONFF_INFO|SCONFF_DPASS|SCONFF_RPASS), confadd_global},
-    {CONFT_OPTIONS, CONFF_OPTIONS, 0, 0, confadd_options},
-    {CONFT_CLASS, CONFF_CLASS, 0, (SCONFF_NAME|SCONFF_PINGFREQ|SCONFF_CONNFREQ
-                                    |SCONFF_MAXUSERS|SCONFF_MAXSENDQ),
-                                    confadd_class},
-    {CONFT_ALLOW, CONFF_ALLOW, 0, (SCONFF_HOST|SCONFF_IPMASK|SCONFF_PORT
-                                    |SCONFF_PASSWD|SCONFF_CLASS),
-                                    confadd_allow},
-    {CONFT_OPER, CONFF_OPER, 0, (SCONFF_NAME|SCONFF_HOST
-                                    |SCONFF_PASSWD|SCONFF_ACCESS|SCONFF_CLASS),
-                                    confadd_oper},
-    {CONFT_CONNECT, CONFF_CONNECT, 0, (SCONFF_NAME|SCONFF_HOST|SCONFF_BIND
-                                    |SCONFF_APASSWD|SCONFF_CPASSWD|SCONFF_FLAGS
-                                    |SCONFF_PORT|SCONFF_CLASS),
-                                    confadd_connect},
-    {CONFT_RESTRICT, CONFF_RESTRICT, 0, (SCONFF_TYPE|SCONFF_MASK
-                                    |SCONFF_REASON), confadd_restrict},
-    {CONFT_KILL, CONFF_KILL, 0, (SCONFF_MASK|SCONFF_REASON), confadd_kill},
-    {CONFT_ADMIN, CONFF_ADMIN, 0, SCONFF_STRING, confadd_admin},
-    {CONFT_SUPER, CONFF_SUPER, 0, 0, confadd_super},
-    {CONFT_PORT, CONFF_PORT, 0, (SCONFF_PORT|SCONFF_BIND|SCONFF_IPMASK),
-                                confadd_port},
+    {CONFT_GLOBAL, CONFF_GLOBAL, CONFF_ADMIN, confglobtab, confadd_global},
+    {CONFT_OPTIONS, CONFF_OPTIONS, 0, confopttab, confadd_options},
+    {CONFT_CLASS, CONFF_CLASS, 0, confclasstab, confadd_class},
+    {CONFT_ALLOW, CONFF_ALLOW, 0, confallowtab, confadd_allow},
+    {CONFT_OPER, CONFF_OPER, 0, confopertab, confadd_oper},
+    {CONFT_CONNECT, CONFF_CONNECT, 0, confconnecttab, confadd_connect},
+    {CONFT_RESTRICT, CONFF_RESTRICT, 0, confrestricttab, confadd_restrict},
+    {CONFT_KILL, CONFF_KILL, 0, confkilltab, confadd_kill},
+    {CONFT_ADMIN, CONFF_ADMIN, 0, confopentab, confadd_admin},
+    {CONFT_SUPER, CONFF_SUPER, 0, confopentab, confadd_super},
+    {CONFT_PORT, CONFF_PORT, 0, confporttab, confadd_port},
     {(char *) 0, 0, 0, 0}
 };
 
-
-struct SubConf sconftab[] =
-{
-    {SCONFT_NAME, SCONFF_NAME, VARTYPE_NAME},
-    {SCONFT_INFO, SCONFF_INFO, VARTYPE_STRING},
-    {SCONFT_DPASS, SCONFF_DPASS, VARTYPE_NAME},
-    {SCONFT_RPASS, SCONFF_RPASS, VARTYPE_NAME},
-    {SCONFT_PINGFREQ, SCONFF_PINGFREQ, VARTYPE_INT},
-    {SCONFT_CONNFREQ, SCONFF_CONNFREQ, VARTYPE_INT},
-    {SCONFT_MAXUSERS, SCONFF_MAXUSERS, VARTYPE_INT},
-    {SCONFT_MAXSENDQ, SCONFF_MAXSENDQ, VARTYPE_INT},
-    {SCONFT_CLASS, SCONFF_CLASS, VARTYPE_NAME},
-    {SCONFT_HOST, SCONFF_HOST, VARTYPE_NAME},
-    {SCONFT_PORT, SCONFF_PORT, VARTYPE_INT},
-    {SCONFT_PASSWD, SCONFF_PASSWD, VARTYPE_NAME},
-    {SCONFT_ACCESS, SCONFF_ACCESS, VARTYPE_NAME},
-    {SCONFT_BIND, SCONFF_BIND, VARTYPE_NAME},
-    {SCONFT_APASSWD, SCONFF_APASSWD, VARTYPE_NAME},
-    {SCONFT_CPASSWD, SCONFF_CPASSWD, VARTYPE_NAME},
-    {SCONFT_FLAGS, SCONFF_FLAGS, VARTYPE_NAME},
-    {SCONFT_REASON, SCONFF_REASON, VARTYPE_STRING},
-    {SCONFT_TYPE, SCONFF_TYPE, VARTYPE_NAME},
-    {SCONFT_MASK, SCONFF_MASK, VARTYPE_NAME},
-    {(char *) 0, 0, 0}
-};
 
 #endif

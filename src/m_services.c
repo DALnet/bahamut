@@ -64,13 +64,14 @@ int m_ns(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	  sendto_one(sptr, err_str(ERR_NOTEXTTOSEND), me.name, parv[0]);
 	return -1;
     }
-    if ((acptr = find_server(SERVICES_NAME, NULL)))
-#ifdef SERVICESHUB
-	sendto_one(acptr, ":%s NS :%s", parv[0], parv[1]);
-#else
-	sendto_one(acptr, ":%s PRIVMSG %s@%s :%s", 
-		parv[0], NICKSERV, SERVICES_NAME, parv[1]);
-#endif
+    if ((acptr = find_server(Services_Name, NULL)))
+    {
+        if(confopts & FLAGS_SERVHUB)
+	        sendto_one(acptr, ":%s NS :%s", parv[0], parv[1]);
+        else
+	        sendto_one(acptr, ":%s PRIVMSG %s@%s :%s", 
+		        parv[0], NICKSERV, Services_Name, parv[1]);
+    }
     else
 	sendto_one(sptr, err_str(ERR_SERVICESDOWN), me.name,
 		   parv[0], NICKSERV);
@@ -90,13 +91,15 @@ int m_cs(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	  sendto_one(sptr, err_str(ERR_NOTEXTTOSEND), me.name, parv[0]);
 	return -1;
     }
-    if ((acptr = find_server(SERVICES_NAME, NULL)))
-#ifdef SERVICESHUB
-	sendto_one(acptr, ":%s CS :%s", parv[0], parv[1]);
-#else
-	sendto_one(acptr, ":%s PRIVMSG %s@%s :%s", 
-		parv[0], CHANSERV, SERVICES_NAME, parv[1]);
-#endif
+    if ((acptr = find_server(Services_Name, NULL)))
+    {
+        if(confopts & FLAGS_SERVHUB)
+
+	        sendto_one(acptr, ":%s CS :%s", parv[0], parv[1]);
+        else
+	        sendto_one(acptr, ":%s PRIVMSG %s@%s :%s", 
+		        parv[0], CHANSERV, Services_Name, parv[1]);
+    }
     else
 	sendto_one(sptr, err_str(ERR_SERVICESDOWN), me.name,
 		   parv[0], CHANSERV);
@@ -116,13 +119,14 @@ int m_ms(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	  sendto_one(sptr, err_str(ERR_NOTEXTTOSEND), me.name, parv[0]);
 	return -1;
     }
-    if ((acptr = find_server(SERVICES_NAME, NULL)))
-#ifdef SERVICESHUB
-	sendto_one(acptr, ":%s MS :%s", parv[0], parv[1]);
-#else
-	sendto_one(acptr, ":%s PRIVMSG %s@%s :%s", 
-		parv[0], MEMOSERV, SERVICES_NAME, parv[1]);
-#endif
+    if ((acptr = find_server(Services_Name, NULL)))
+    {
+        if(confopts & FLAGS_SERVHUB)
+	        sendto_one(acptr, ":%s MS :%s", parv[0], parv[1]);
+        else
+	        sendto_one(acptr, ":%s PRIVMSG %s@%s :%s", 
+		        parv[0], MEMOSERV, Services_Name, parv[1]);
+    }
     else
 	sendto_one(sptr, err_str(ERR_SERVICESDOWN), me.name,
 		   parv[0], MEMOSERV);
@@ -142,13 +146,14 @@ int m_rs(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	  sendto_one(sptr, err_str(ERR_NOTEXTTOSEND), me.name, parv[0]);
 	return -1;
     }
-    if ((acptr = find_server(SERVICES_NAME, NULL)))
-#ifdef SERVICESHUB
-	sendto_one(acptr, ":%s RS :%s", parv[0], parv[1]);
-#else
-	sendto_one(acptr, ":%s PRIVMSG %s@%s :%s", 
-		parv[0], ROOTSERV, SERVICES_NAME, parv[1]);
-#endif
+    if ((acptr = find_server(Services_Name, NULL)))
+    {
+        if(confopts & FLAGS_SERVHUB)
+	        sendto_one(acptr, ":%s RS :%s", parv[0], parv[1]);
+        else
+	        sendto_one(acptr, ":%s PRIVMSG %s@%s :%s", 
+		        parv[0], ROOTSERV, Services_Name, parv[1]);
+    }
     else
 	sendto_one(sptr, err_str(ERR_SERVICESDOWN), me.name,
 		   parv[0], ROOTSERV);
@@ -168,13 +173,14 @@ int m_os(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	  sendto_one(sptr, err_str(ERR_NOTEXTTOSEND), me.name, parv[0]);
 	return -1;
     }
-    if ((acptr = find_server(STATS_NAME, NULL)))
-#ifdef SERVICESHUB
-	sendto_one(acptr, ":%s OS :%s", parv[0], parv[1]);
-#else
-	sendto_one(acptr, ":%s PRIVMSG %s@%s :%s", 
-		parv[0], OPERSERV, STATS_NAME, parv[1]);
-#endif
+    if ((acptr = find_server(Stats_Name, NULL)))
+    {
+        if(confopts & FLAGS_SERVHUB)
+	        sendto_one(acptr, ":%s OS :%s", parv[0], parv[1]);
+        else
+	        sendto_one(acptr, ":%s PRIVMSG %s@%s :%s", 
+		    parv[0], OPERSERV, Stats_Name, parv[1]);
+    }
     else
 	sendto_one(sptr, err_str(ERR_SERVICESDOWN), me.name,
 		   parv[0], OPERSERV);
@@ -194,13 +200,14 @@ int m_ss(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	  sendto_one(sptr, err_str(ERR_NOTEXTTOSEND), me.name, parv[0]);
 	return -1;
     }
-    if ((acptr = find_server(STATS_NAME, NULL)))
-#ifdef SERVICESHUB
-	sendto_one(acptr, ":%s SS :%s", parv[0], parv[1]);
-#else
-	sendto_one(acptr, ":%s PRIVMSG %s@%s :%s", 
-		parv[0], STATSERV, STATS_NAME, parv[1]);
-#endif
+    if ((acptr = find_server(Stats_Name, NULL)))
+    {
+        if(confopts & FLAGS_SERVHUB)
+	        sendto_one(acptr, ":%s SS :%s", parv[0], parv[1]);
+        else
+	        sendto_one(acptr, ":%s PRIVMSG %s@%s :%s", 
+		        parv[0], STATSERV, Stats_Name, parv[1]);
+    }
     else
 	sendto_one(sptr, err_str(ERR_SERVICESDOWN), me.name,
 		   parv[0], STATSERV);
@@ -220,13 +227,14 @@ int m_hs(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	  sendto_one(sptr, err_str(ERR_NOTEXTTOSEND), me.name, parv[0]);
 	return -1;
     }
-    if ((acptr = find_server(STATS_NAME, NULL)))
-#ifdef SERVICESHUB
-	sendto_one(acptr, ":%s HS :%s", parv[0], parv[1]);
-#else
-	sendto_one(acptr, ":%s PRIVMSG %s@%s :%s", 
-		parv[0], HELPSERV, STATS_NAME, parv[1]);
-#endif
+    if ((acptr = find_server(Stats_Name, NULL)))
+    {
+        if(confopts & FLAGS_SERVHUB)
+	        sendto_one(acptr, ":%s HS :%s", parv[0], parv[1]);
+        else
+	        sendto_one(acptr, ":%s PRIVMSG %s@%s :%s", 
+		        parv[0], HELPSERV, Stats_Name, parv[1]);
+    }
     else
 	sendto_one(sptr, err_str(ERR_SERVICESDOWN), me.name,
 		   parv[0], HELPSERV);
@@ -249,13 +257,13 @@ int m_services(aClient *cptr, aClient *sptr, int parc, char *parv[])
     if ((strlen(parv[1]) >= 4) && (!myncmp(parv[1], "help", 4)))
     {
 	sendto_one(sptr, ":services!service@%s NOTICE %s :For ChanServ "
-		   "help use: /chanserv help", SERVICES_NAME,
+		   "help use: /chanserv help", Services_Name,
 		   sptr->name);
 	sendto_one(sptr, ":services!service@%s NOTICE %s :For NickServ "
-		   "help use: /nickserv help", SERVICES_NAME,
+		   "help use: /nickserv help", Services_Name,
 		   sptr->name);
 	sendto_one(sptr, ":services!service@%s NOTICE %s :For MemoServ "
-		   "help use: /memoserv help", SERVICES_NAME,
+		   "help use: /memoserv help", Services_Name,
 		   sptr->name);
 	return 0;
     }

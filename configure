@@ -852,6 +852,8 @@ Optional Packages:
   --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
   --with-socketengine=TYPE       Set the socketengine type.  Choices are:
                                 kqueue poll select
+  --with-maxconnections=NUMBER   Set the maximum number of sockets.
+  --with-spath=DIR               Set the path for the executable.
 
 Some influential environment variables:
   CC          C compiler command
@@ -1295,6 +1297,12 @@ VERSION=1.4
 
 
 
+
+
+
+
+
+
 # Check whether --enable-hookmodules or --disable-hookmodules was given.
 if test "${enable_hookmodules+set}" = set; then
   enableval="$enable_hookmodules"
@@ -1318,6 +1326,22 @@ if test "${with_socketengine+set}" = set; then
    check_sengine=$withval
 else
    check_sengine="yes"
+fi;
+
+# Check whether --with-maxconnections or --without-maxconnections was given.
+if test "${with_maxconnections+set}" = set; then
+  withval="$with_maxconnections"
+   check_maxconnections=$withval
+else
+   check_maxconnections="auto"
+fi;
+
+# Check whether --with-spath or --without-spath was given.
+if test "${with_spath+set}" = set; then
+  withval="$with_spath"
+   spath=$withval
+else
+   spath="NONE"
 fi;
 
 ac_ext=c
@@ -4998,7 +5022,7 @@ done
 
 
 
-for ac_func in dn_skipname __dn_skipname getrusage times, break
+for ac_func in dn_skipname __dn_skipname getrusage times break
 do
 as_ac_var=`echo "ac_cv_func_$ac_func" | $as_tr_sh`
 echo "$as_me:$LINENO: checking for $ac_func" >&5
@@ -6008,6 +6032,88 @@ fi
 if test "$solaris2" != "yes" && test "set_hmodules" = "enabled"; then
     LIBS="$LIBS $MOD_LIBS"
 fi
+
+if test "$check_maxconnections" == "auto"; then
+
+    echo "$as_me:$LINENO: checking Maximum file descriptors" >&5
+echo $ECHO_N "checking Maximum file descriptors... $ECHO_C" >&6;
+    if test "${maxconnections+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+
+cat << _EOF_ > test.c
+    #include <sys/resource.h>
+    #include <stdio.h>
+    #ifdef RLIMIT_FDMAX
+    #define RLIMIT_FD_MAX   RLIMIT_FDMAX
+    #else
+    #ifdef RLIMIT_NOFILE
+    #define RLIMIT_FD_MAX RLIMIT_NOFILE
+    #else
+    #ifdef RLIMIT_OPEN_MAX
+    #define RLIMIT_FD_MAX RLIMIT_OPEN_MAX
+    #else
+    #undef RLIMIT_FD_MAX
+    #endif
+    #endif
+    #endif
+
+
+    int main()
+    {
+        #ifdef RLIMIT_FD_MAX
+        struct rlimit limit;
+
+        if(!getrlimit(RLIMIT_FD_MAX, &limit))
+        {
+            if(limit.rlim_max > 32768)
+                printf("32768");
+            else
+                printf("%ld", (long) limit.rlim_max);
+        }
+        else
+        #endif
+            printf("256");
+        return 1;
+    }
+_EOF_
+    $CC -o test test.c >/dev/null 2>&1
+    maxconnections=`./test`
+    echo "$as_me:$LINENO: result: $maxconnections" >&5
+echo "${ECHO_T}$maxconnections" >&6
+    $RM -f test test.c
+
+fi
+
+    cat >>confdefs.h <<_ACEOF
+#define MAXCONNECTIONS ${maxconnections}
+_ACEOF
+
+
+else
+    maxconnections=$check_maxconnections
+    cat >>confdefs.h <<_ACEOF
+#define MAXCONNECTIONS ${maxconnections}
+_ACEOF
+
+fi
+
+if test $prefix = NONE; then
+    prefix=$HOME/ircd
+fi
+
+cat >>confdefs.h <<_ACEOF
+#define DPATH "${prefix}"
+_ACEOF
+
+
+if test "X$spath" = "XNONE"; then
+    spath=$prefix/ircd
+fi
+cat >>confdefs.h <<_ACEOF
+#define SPATH "${spath}"
+_ACEOF
+
 
 
 
@@ -7135,5 +7241,6 @@ echo "      System Build Type:              $target"
 echo "      Socket Engine Type:             $engine"
 echo "      Encryption:                     $encryption"
 echo "      Loadable Modules:               $set_hmodules"
-echo "      More values to come!"
+echo "      Maximum Connections:            $maxconnections"
+echo "      Install Directory:              $prefix"
 echo ""

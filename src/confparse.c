@@ -150,10 +150,11 @@ parse_block(tConf *block, char *cur, FILE *file, int *lnum)
     char line[LINE_MAX];
     tConf *b2 = NULL;
     sConf *item = NULL;
+    sConf *sconftab = block->subtok;
     cVar  *vars[MAX_VALUES] = { 0 };
     int   vnum = 0, tlnum = 0, clear = 0, done = 0, skip = 0;
 
-    if(block->subtok == SCONFF_STRING)
+    if((sconftab) && (sconftab->flag == SCONFF_STRING))
     {
         /* this subtype only takes freeform variables
          * dont bother looking for tokens
@@ -465,12 +466,6 @@ parse_block(tConf *block, char *cur, FILE *file, int *lnum)
             if(!item->tok)
             {
                 confparse_error("Unknown token", *lnum);
-                free_vars(vars);
-                return NULL;
-            }
-            if(!(block->subtok & item->flag))
-            {
-                confparse_error("Token not permitted in block", *lnum);
                 free_vars(vars);
                 return NULL;
             }

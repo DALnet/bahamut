@@ -20,6 +20,9 @@ AH_TEMPLATE([MALLOCH],[Our malloc header file])
 AH_TEMPLATE([OS_SOLARIS2],[If we're running on Solaris])
 AH_TEMPLATE([SYS_ERRLIST_DECLARED],[If the sys_errlist array is defined])
 AH_TEMPLATE([USE_HOOKMODULES],[Do we support loadable modules])
+AH_TEMPLATE([MAXCONNECTIONS],[Maximum Connections we allow])
+AH_TEMPLATE([DPATH],[Location of our installation])
+AH_TEMPLATE([SPATH],[Location of our binary])
 
 dnl Put our options of here for ease of reading.
 
@@ -38,6 +41,14 @@ AC_ARG_WITH(socketengine,
                                 kqueue poll select ],
 [ check_sengine=$withval ],
 [ check_sengine="yes" ])
+AC_ARG_WITH(maxconnections,
+[  --with-maxconnections=NUMBER   Set the maximum number of sockets.],
+[ check_maxconnections=$withval ],
+[ check_maxconnections="auto" ])
+AC_ARG_WITH(spath,
+[  --with-spath=DIR               Set the path for the executable.],
+[ spath=$withval ],
+[ spath="NONE" ])
 
 dnl Checks for programs.
 AC_PROG_CC
@@ -83,7 +94,7 @@ AC_CHECK_FUNCS([inet_ntoa isascii memmove memset munmap setenv socket])
 AC_CHECK_FUNCS([strcasecmp strchr strdup strerror strncasecmp strrchr strtol])
 AC_CHECK_FUNCS([strtoul index strerror strtoken strtok inet_addr inet_netof])
 AC_CHECK_FUNCS([inet_aton gettimeofday lrand48 sigaction bzero bcmp bcopy])
-AC_CHECK_FUNCS([dn_skipname __dn_skipname getrusage times, break])
+AC_CHECK_FUNCS([dn_skipname __dn_skipname getrusage times break])
 
 dnl Checks for loadable hook module support
 
@@ -275,6 +286,70 @@ if test "$solaris2" != "yes" && test "set_hmodules" = "enabled"; then
     LIBS="$LIBS $MOD_LIBS"
 fi
 
+if test "$check_maxconnections" == "auto"; then
+
+    AC_MSG_CHECKING(Maximum file descriptors);
+    AC_CACHE_VAL(maxconnections,
+[
+cat << _EOF_ > test.c
+    #include <sys/resource.h>
+    #include <stdio.h>
+    #ifdef RLIMIT_FDMAX
+    #define RLIMIT_FD_MAX   RLIMIT_FDMAX
+    #else
+    #ifdef RLIMIT_NOFILE
+    #define RLIMIT_FD_MAX RLIMIT_NOFILE
+    #else
+    #ifdef RLIMIT_OPEN_MAX
+    #define RLIMIT_FD_MAX RLIMIT_OPEN_MAX
+    #else
+    #undef RLIMIT_FD_MAX
+    #endif
+    #endif
+    #endif
+
+
+    int main()
+    {
+        #ifdef RLIMIT_FD_MAX
+        struct rlimit limit;
+        
+        if(!getrlimit(RLIMIT_FD_MAX, &limit))
+        {
+            if(limit.rlim_max > 32768)
+                printf("32768");
+            else
+                printf("%ld", (long) limit.rlim_max);
+        }
+        else
+        #endif
+            printf("256");
+        return 1;
+    }
+_EOF_
+    $CC -o test test.c >/dev/null 2>&1
+    maxconnections=`./test`
+    AC_MSG_RESULT($maxconnections)
+    $RM -f test test.c
+])
+    AC_DEFINE_UNQUOTED(MAXCONNECTIONS, ${maxconnections})
+
+else
+    maxconnections=$check_maxconnections
+    AC_DEFINE_UNQUOTED(MAXCONNECTIONS, ${maxconnections})
+fi
+
+if test $prefix = NONE; then
+    prefix=$HOME/ircd
+fi
+
+AC_DEFINE_UNQUOTED(DPATH, "${prefix}")
+
+if test "X$spath" = "XNONE"; then
+    spath=$prefix/ircd
+fi
+AC_DEFINE_UNQUOTED(SPATH, "${spath}")
+
 AC_SUBST(SSL_INCLUDES)
 AC_SUBST(SSL_LIBS)
 AC_SUBST(LIBS)
@@ -296,5 +371,6 @@ echo "      System Build Type:              $target"
 echo "      Socket Engine Type:             $engine"
 echo "      Encryption:                     $encryption"
 echo "      Loadable Modules:               $set_hmodules"
-echo "      More values to come!"
+echo "      Maximum Connections:            $maxconnections"
+echo "      Install Directory:              $prefix"
 echo ""

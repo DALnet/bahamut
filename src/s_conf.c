@@ -53,13 +53,6 @@ extern aAllow       *make_allow();
 extern struct Conf_Me   *make_me();
 extern aPort        *make_port();
 
-/* externally defined routines */
-
-#ifdef WINGATE_NOTICE
-extern char ProxyMonURL[TOPICLEN+1];
-extern char ProxyMonHost[HOSTLEN+1];
-#endif
-
 /* these are our global lists of ACTIVE conf entries */
 
 #define MAXUSERVS 24
@@ -102,6 +95,42 @@ void initclass()
     new_classes->maxsendq = MAXSENDQLENGTH;
     new_classes->links = 0;
 }
+
+/* init_globals
+ * initialize our major globals to the defaults first
+ */
+
+void init_globals()
+{
+    strncpyzt(ProxyMonURL, DEFAULT_WGMON_URL, sizeof(ProxyMonURL));
+    strncpyzt(ProxyMonHost, DEFAULT_WGMON_HOST, sizeof(ProxyMonHost));
+    strncpyzt(Network_Name, DEFAULT_NETWORK, sizeof(Network_Name));
+    strncpyzt(Services_Name, DEFAULT_SERVICES_NAME, sizeof(Services_Name));
+    strncpyzt(Stats_Name, DEFAULT_STATS_NAME, sizeof(Stats_Name));
+    snprintf(NS_Services_Name, sizeof(NS_Services_Name), "%s@%s", 
+                NICKSERV, Services_Name);
+    snprintf(CS_Services_Name, sizeof(CS_Services_Name), "%s@%s", 
+                CHANSERV, Services_Name);
+    snprintf(MS_Services_Name, sizeof(MS_Services_Name), "%s@%s", 
+                MEMOSERV, Services_Name);
+    snprintf(RS_Services_Name, sizeof(RS_Services_Name), "%s@%s", 
+                ROOTSERV, Services_Name);
+    snprintf(OS_Stats_Name, sizeof(OS_Stats_Name), "%s@%s", 
+                OPERSERV, Stats_Name);
+    snprintf(SS_Stats_Name, sizeof(SS_Stats_Name), "%s@%s", 
+                STATSERV, Stats_Name);
+    snprintf(HS_Stats_Name, sizeof(HS_Stats_Name), "%s@%s", 
+                HELPSERV, Stats_Name);
+    strncpyzt(Network_Kline_Address, DEFAULT_NKLINE_ADDY,
+                                            sizeof(Network_Kline_Address));
+    strncpyzt(Local_Kline_Address, DEFAULT_LKLINE_ADDY,
+                                            sizeof(Local_Kline_Address));
+    strncpyzt(Staff_Address, DEFAULT_STAFF_ADDRESS, sizeof(Staff_Address));
+    maxchannelsperuser = DEFAULT_MAXCHANNELSPERUSER;
+    tsmaxdelta = DEFAULT_TSMAXDELTA;
+    tswarndelta = DEFAULT_TSWARNDELTA;
+}
+
 
 /* free_ routines
  * free the requested conf structure
@@ -763,6 +792,127 @@ confadd_connect(cVar *vars[], int lnum)
 int
 confadd_options(cVar *vars[], int lnum)
 {
+    cVar *tmp;
+    int c = 0;
+    char *ctmp = NULL;
+
+    /* here, because none of the option peice are interdependent
+     * all the items are added immediately.   Makes life easier
+     */
+
+    for(tmp = vars[c]; tmp; tmp = vars[++c])
+    {
+        if(tmp->type && (tmp->type->flag & OPTF_MAXSENDQ))
+        {
+            aClass *t2;
+            t2 = find_class("default", 1);
+            t2->maxsendq = atoi(tmp->value);
+            tmp->type = NULL;
+        }
+        else if(tmp->type && (tmp->type->flag & OPTF_NETNAME))
+        {
+            tmp->type = NULL;
+            strncpyzt(Network_Name, tmp->value, sizeof(Network_Name));
+        }
+        else if(tmp->type && (tmp->type->flag & OPTF_SERVNAME))
+        {
+            tmp->type = NULL;
+            strncpyzt(Services_Name, tmp->value, sizeof(Services_Name));
+            sprintf(ctmp, "%s@%s", NICKSERV, Services_Name);
+            strncpyzt(NS_Services_Name, ctmp, sizeof(NS_Services_Name));
+            sprintf(ctmp, "%s@%s", CHANSERV, Services_Name);
+            strncpyzt(CS_Services_Name, ctmp, sizeof(CS_Services_Name));
+            sprintf(ctmp, "%s@%s", MEMOSERV, Services_Name);
+            strncpyzt(MS_Services_Name, ctmp, sizeof(MS_Services_Name));
+            sprintf(ctmp, "%s@%s", ROOTSERV, Services_Name);
+            strncpyzt(RS_Services_Name, ctmp, sizeof(RS_Services_Name));
+        }
+        else if(tmp->type && (tmp->type->flag & OPTF_STATSNAME))
+        {
+            tmp->type = NULL;
+            strncpyzt(Stats_Name, tmp->value, sizeof(Stats_Name));
+            sprintf(ctmp, "%s@%s", OPERSERV, Stats_Name);
+            strncpyzt(OS_Stats_Name, ctmp, sizeof(OS_Stats_Name));
+            sprintf(ctmp, "%s@%s", STATSERV, Stats_Name);
+            strncpyzt(SS_Stats_Name, ctmp, sizeof(SS_Stats_Name));
+            sprintf(ctmp, "%s@%s", HELPSERV, Stats_Name);
+            strncpyzt(HS_Stats_Name, ctmp, sizeof(HS_Stats_Name));
+        }
+        else if(tmp->type && (tmp->type->flag & OPTF_WGMONHOST))
+        {
+            tmp->type = NULL;
+            confopts |= FLAGS_WGMONURL;
+            strncpyzt(ProxyMonHost, tmp->value, sizeof(ProxyMonHost));
+        }
+        else if(tmp->type && (tmp->type->flag & OPTF_WGMONURL))
+        {
+            tmp->type = NULL;
+            confopts |= FLAGS_WGMONHOST;
+            strncpyzt(ProxyMonURL, tmp->value, sizeof(ProxyMonURL));
+        }
+        else if(tmp->type && (tmp->type->flag & OPTF_MAXCHAN))
+        {
+            tmp->type = NULL;
+            maxchannelsperuser = atoi(tmp->value);
+        }
+        else if(tmp->type && (tmp->type->flag & OPTF_SERVTYPE))
+        {
+            tmp->type = NULL;
+            if(!mycmp("HUB", tmp->value))
+                confopts |= FLAGS_HUB;
+            else if(!mycmp("SERVICESHUB", tmp->value))
+                confopts |= FLAGS_SERVHUB;
+            else if(!mycmp("CLIENT", tmp->value))
+                confopts &= ~(FLAGS_HUB|FLAGS_SERVHUB);
+            else
+            {
+                confparse_error("Unknown servtype in option block", lnum);
+                return -1;
+            }
+        }
+        else if(tmp->type && (tmp->type->flag & OPTF_NKLINEADDY))
+        {
+            tmp->type = NULL;
+            strncpyzt(Network_Kline_Address, tmp->value,
+                                    sizeof(Network_Kline_Address));
+        }
+        else if(tmp->type && (tmp->type->flag & OPTF_LKLINEADDY))
+        {
+            tmp->type = NULL;
+            strncpyzt(Local_Kline_Address, tmp->value,
+                                    sizeof(Local_Kline_Address));
+        }
+        else if(tmp->type && (tmp->type->flag & OPTF_STAFFADDY))
+        {
+            tmp->type = NULL;
+            strncpyzt(Staff_Address, tmp->value, sizeof(Staff_Address));
+        }
+        else if(tmp->type && (tmp->type->flag & OPTF_SMOTD))
+        {
+            tmp->type = NULL;
+            confopts |= FLAGS_SMOTD;
+        }
+        else if(tmp->type && (tmp->type->flag & OPTF_SMOTD))
+        {
+            tmp->type = NULL;
+            confopts |= FLAGS_SMOTD;
+        }
+        else if(tmp->type && (tmp->type->flag & OPTF_CRYPTPASS))
+        {
+            tmp->type = NULL;
+            confopts |= FLAGS_CRYPTPASS;
+        }
+        else if(tmp->type && (tmp->type->flag & OPTF_TSMAXDELTA))
+        {
+            tmp->type = NULL;
+            tsmaxdelta = atoi(tmp->value);
+        }
+        else if(tmp->type && (tmp->type->flag & OPTF_TSWARNDELTA))
+        {
+            tmp->type = NULL;
+            tswarndelta = atoi(tmp->value);
+        }
+    }
     return lnum;
 }
 

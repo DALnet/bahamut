@@ -7,6 +7,10 @@ THINGS TO FIX BEFORE RELEASE
     - Fix our broken-ass conf structure handling such that we check
       on the existence of pointers before attempting to use them.
       Then remove unnessecary one byte mallocs.  Disgusting kludge.
+    - Clean up config.h
+    - Make sure everything is covered that was handled by ./config
+      then delete it.
+    - Fix make install
 
 TODO LIST
 ---------
@@ -15,7 +19,6 @@ TODO LIST
 - Implement solaris /dev/poll socket engine
 - Implement IPV6
 - Split up aClient into separate structures for local and remote users
-- Outdate the use of config script within configuration file
 - Backport message tokenization from 1.6
 
 List to Ponder

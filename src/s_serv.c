@@ -376,7 +376,7 @@ int m_svinfo(aClient *cptr, aClient *sptr, int parc, char *parv[])
     theirtime = atol(parv[4]);
     deltat = abs(theirtime - tmptime);
     
-    if (deltat > TS_MAX_DELTA) 
+    if (deltat > tsmaxdelta) 
     {
 	sendto_gnotice("from %s: Link %s dropped, excessive TS delta (my "
                        "TS=%d, their TS=%d, delta=%d)",
@@ -388,7 +388,7 @@ int m_svinfo(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	return exit_client(sptr, sptr, sptr, "Excessive TS delta");
     }
 
-    if (deltat > TS_WARN_DELTA) 
+    if (deltat > tswarndelta) 
     {
 	sendto_realops("Link %s notable TS delta (my TS=%d, their TS=%d, "
                        "delta=%d)", get_client_name(sptr, HIDEME), tmptime,
@@ -960,10 +960,8 @@ int do_server_estab(aClient *cptr)
 	    }
     }
 
-#ifdef HUB
-    /* Send this here to get global count? */
-    fakelusers_sendlock(cptr);
-#endif
+    if(confopts & FLAGS_HUB)
+        fakelusers_sendlock(cptr);
 
     if(ZipOut(cptr))
     {
@@ -999,9 +997,6 @@ int m_server_estab(aClient *cptr)
 
     char       *inpath, *host, *s, *encr;
     int         split;
-#ifndef HUB
-    int i;
-#endif
 
     inpath = get_client_name(cptr, HIDEME);  /* "refresh" inpath with host  */
     split = mycmp(cptr->name, cptr->sockhost);
@@ -1026,15 +1021,17 @@ int m_server_estab(aClient *cptr)
     }
     memset(cptr->passwd, '\0', sizeof(cptr->passwd));
 
-#ifndef	HUB
-    for (i = 0; i <= highest_fd; i++)
-	if (local[i] && IsServer(local[i])) 
-	{
-	    ircstp->is_ref++;
-	    sendto_one(cptr, "ERROR :I'm a leaf not a hub");
-	    return exit_client(cptr, cptr, cptr, "I'm a leaf");
-	}
-#endif
+    if(!(confopts & FLAGS_HUB))
+    {
+        int i;
+        for (i = 0; i <= highest_fd; i++)
+	    if (local[i] && IsServer(local[i])) 
+	    {
+	        ircstp->is_ref++;
+	        sendto_one(cptr, "ERROR :I'm a leaf not a hub");
+	        return exit_client(cptr, cptr, cptr, "I'm a leaf");
+	    }
+    }
     
     /* aconf->port is a CAPAB field, kind-of. kludge. mm, mm. */
     /* no longer! this should still get better though */

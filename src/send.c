@@ -426,11 +426,11 @@ void sendto_one_services(aClient *to, char *pattern, ...)
     va_list vl;
     int len;		/* used for the length of the current message */
     
-#ifdef SERVICESHUB
-    if(to && to->user && to->user->server && 
-       (!strcasecmp(to->user->server,SERVICES_NAME) || !strcasecmp(to->user->server,STATS_NAME)))
-      return;
-#endif
+    if(confopts & FLAGS_SERVHUB)
+        if(to && to->user && to->user->server && 
+                (!mycmp(to->user->server,Services_Name) || 
+                 !mycmp(to->user->server,Stats_Name)))
+            return;
 
     va_start(vl, pattern);
     len = ircvsprintf(sendbuf, pattern, vl);
@@ -577,11 +577,13 @@ void sendto_channel_butone(aClient *one, aClient *from, aChannel *chptr,
 	acptr = cm->cptr;
 	if (acptr->from == one)
 	    continue; /* ...was the one I should skip */
-#ifdef SERVICESHUB
-       if(acptr && acptr->user && acptr->user->server && 
-         (!strcasecmp(acptr->user->server,SERVICES_NAME) || !strcasecmp(acptr->user->server,STATS_NAME)))
-         continue;
-#endif
+
+    if(confopts & FLAGS_SERVHUB)
+        if(acptr && acptr->user && acptr->user->server && 
+                (!mycmp(acptr->user->server,Services_Name) || 
+                 !mycmp(acptr->user->server,Stats_Name)))
+            continue;
+
 	i = acptr->from->fd;
 	if (MyClient(acptr)) 
 	{
@@ -650,11 +652,13 @@ void sendto_channel_remote_butone(aClient *one, aClient *from, aChannel *chptr,
 	acptr = cm->cptr;
 	if (acptr->from == one)
 	    continue; /* ...was the one I should skip */
-#ifdef SERVICESHUB
+
+    if(confopts & FLAGS_SERVHUB)
        if(acptr && acptr->user && acptr->user->server && 
-         (!strcasecmp(acptr->user->server,SERVICES_NAME) || !strcasecmp(acptr->user->server,STATS_NAME)))
-         continue;
-#endif
+                (!mycmp(acptr->user->server,Services_Name) || 
+                 !mycmp(acptr->user->server,Stats_Name)))
+            continue;
+
 	i = acptr->from->fd;
 	if (!MyClient(acptr)) 
 	{
@@ -702,12 +706,11 @@ void sendto_serv_butone_services(aClient *one, char *pattern, ...)
     for (lp = server_list; lp; lp = lp->next)
     {
 	cptr = lp->value.cptr;
-#ifdef SERVICESHUB
-	if ((one && cptr == one->from) || 
-            !strcasecmp(cptr->name,SERVICES_NAME) || !strcasecmp(cptr->name,STATS_NAME))
-#else
+    if(confopts & FLAGS_SERVHUB)
+        if(!mycmp(cptr->name,Services_Name) || !mycmp(cptr->name,Stats_Name))
+            continue;
+
 	if (one && cptr == one->from)
-#endif
 	    continue;
 	send_fdlist.entry[++k] = cptr->fd;
     }
@@ -1912,11 +1915,13 @@ void sendto_channelops_butone(aClient *one, aClient *from, aChannel *chptr,
 	if (acptr->from == one ||
 	    !(cm->flags & CHFL_CHANOP))
 	    continue;
-#ifdef SERVICESHUB
+
+    if(confopts & FLAGS_SERVHUB)
         if(acptr && acptr->user && acptr->user->server && 
-          (!strcasecmp(acptr->user->server,SERVICES_NAME) || !strcasecmp(acptr->user->server,STATS_NAME)))
-          continue;
-#endif
+            (!mycmp(acptr->user->server,Services_Name) || 
+             !mycmp(acptr->user->server,Stats_Name)))
+            continue;
+
 	i = acptr->from->fd;
 	if (MyConnect(acptr) && IsRegisteredUser(acptr)) {
 	    vsendto_prefix_one(acptr, from, pattern, vl);
@@ -1967,11 +1972,11 @@ void sendto_channelvoice_butone(aClient *one, aClient *from, aChannel *chptr,
 	if (acptr->from == one ||
 		!(cm->flags & CHFL_VOICE))
 	    continue;
-#ifdef SERVICESHUB
+    if(confopts & FLAGS_SERVHUB)
         if(acptr && acptr->user && acptr->user->server && 
-          (!strcasecmp(acptr->user->server,SERVICES_NAME) || !strcasecmp(acptr->user->server,STATS_NAME)))
-          continue;
-#endif
+            (!mycmp(acptr->user->server,Services_Name) || 
+             !mycmp(acptr->user->server,Stats_Name)))
+            continue;
 	i = acptr->from->fd;
 	if (MyConnect(acptr) && IsRegisteredUser(acptr))
 	{
@@ -2034,11 +2039,13 @@ void sendto_channelvoiceops_butone(aClient *one, aClient *from, aChannel
 	if (acptr->from == one || !((cm->flags & CHFL_VOICE) ||
 				    (cm->flags & CHFL_CHANOP)))
 	    continue;
-#ifdef SERVICESHUB
+
+    if(confopts & FLAGS_SERVHUB)
         if(acptr && acptr->user && acptr->user->server && 
-          (!strcasecmp(acptr->user->server,SERVICES_NAME) || !strcasecmp(acptr->user->server,STATS_NAME)))
-          continue;
-#endif
+            (!mycmp(acptr->user->server,Services_Name) || 
+             !mycmp(acptr->user->server,Stats_Name)))
+            continue;
+
 	i = acptr->from->fd;
 	if (MyConnect(acptr) && IsRegisteredUser(acptr)) {
 	    if (!didlocal)

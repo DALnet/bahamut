@@ -56,6 +56,25 @@ extern aOper *opers;
 extern char  *uservers[];
 extern aClass *classes;
 
+extern char ProxyMonURL[TOPICLEN+1];
+extern char ProxyMonHost[HOSTLEN+1];
+extern char Network_Name[HOSTLEN+1];
+extern char Services_Name[HOSTLEN+1];
+extern char NS_Services_Name[HOSTLEN+strlen(NICKSERV)+1];
+extern char CS_Services_Name[HOSTLEN+strlen(CHANSERV)+1];
+extern char MS_Services_Name[HOSTLEN+strlen(MEMOSERV)+1];
+extern char RS_Services_Name[HOSTLEN+strlen(ROOTSERV)+1];
+extern char Stats_Name[HOSTLEN+1];
+extern char OS_Stats_Name[HOSTLEN+strlen(OPERSERV)+1];
+extern char SS_Stats_Name[HOSTLEN+strlen(STATSERV)+1];
+extern char HS_Stats_Name[HOSTLEN+strlen(HELPSERV)+1];
+extern char Staff_Address[HOSTLEN+1];
+extern char Network_Kline_Address[HOSTLEN+1];
+extern char Local_Kline_Address[HOSTLEN+1];
+extern int  maxchannelsperuser, tsmaxdelta, tswarndelta;
+extern int  confopts;
+
+
 
 #include "fdlist.h"
 extern fdlist 	 serv_fdlist;

@@ -38,9 +38,7 @@ char        serveropts[] =
 #ifdef DEBUGMODE
     'D',
 #endif
-#ifdef HUB
     'H',
-#endif
 #ifdef SHOW_INVISIBLE_LUSERS
     'i',
 #endif

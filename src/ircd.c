@@ -57,11 +57,24 @@ aMotd	   *shortmotd;		/* short motd */
 
 struct tm  *motd_tm;
 
-/* holds the information for the proxy monitor */
-#ifdef WINGATE_NOTICE
+/* global conf options (from option block) */
 char ProxyMonURL[TOPICLEN+1];
 char ProxyMonHost[HOSTLEN+1];
-#endif
+char Network_Name[HOSTLEN+1];
+char Services_Name[HOSTLEN+1];
+char NS_Services_Name[HOSTLEN+strlen(NICKSERV)+1];
+char CS_Services_Name[HOSTLEN+strlen(CHANSERV)+1];
+char MS_Services_Name[HOSTLEN+strlen(MEMOSERV)+1];
+char RS_Services_Name[HOSTLEN+strlen(ROOTSERV)+1];
+char Stats_Name[HOSTLEN+1];
+char OS_Stats_Name[HOSTLEN+strlen(OPERSERV)+1];
+char SS_Stats_Name[HOSTLEN+strlen(STATSERV)+1];
+char HS_Stats_Name[HOSTLEN+strlen(HELPSERV)+1];
+char Network_Kline_Address[HOSTLEN+1];
+char Local_Kline_Address[HOSTLEN+1];
+char Staff_Address[HOSTLEN+1];
+int  maxchannelsperuser, tsmaxdelta, tswarndelta;
+int  confopts;
 
 /* this stuff by mnystrom@mit.edu */
 #include "fdlist.h"
@@ -103,6 +116,7 @@ extern void 	read_motd(char *);	    /* defined in s_serv.c */
 extern void 	read_shortmotd(char *);	    /* defined in s_serv.c */
 #endif
 extern void 	read_help(char *);	    /* defined in s_serv.c */
+extern void     init_globals();
 
 char      **myargv;
 char       *configfile = CONFIGFILE; 	    /* Server configuration file */
@@ -719,6 +733,8 @@ int main(int argc, char *argv[])
     if (argc > 0)
 	return bad_command();	/* This should exit out  */
 
+    init_globals();
+
 #ifdef HAVE_ENCRYPTION_ON
     printf("Initializing Encryption...");
     if(dh_init() == -1)
@@ -791,12 +807,6 @@ int main(int argc, char *argv[])
     /* init the modules, load default modules! */
     init_modules();
 
-#ifdef WINGATE_NOTICE
-    strcpy(ProxyMonURL, "http://");
-    strncpyzt((ProxyMonURL + 7), DEFAULT_PROXY_INFO_URL, (TOPICLEN + 1) - 7);
-    strncpyzt(ProxyMonHost, MONITOR_HOST, (HOSTLEN + 1));
-#endif
-	
     me.flags = FLAGS_LISTEN;
     me.fd = -1;
 	

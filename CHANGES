@@ -27,3 +27,5 @@ Changes for 1.4.37:
 - config file format changed to bind-style
 - klinefile outdated
 - replaced dbufs with sbufs - shared buffers.
+- removed old High Traffic Mode (HTM) code
+- config option block added to outdate use of ./config script

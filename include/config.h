@@ -39,7 +39,7 @@
  */
 
 #ifdef OPTIONS_H
-#include "options.h"
+#include "setup.h"
 #endif
 
 #ifndef OPTIONS_H
@@ -257,6 +257,12 @@
 #undef NO_PRIORITY
 #endif
 
+#ifndef SPATH
+#define SPATH DPATH/bin/ircd
+#endif
+
+#define MAXSENDQLENGTH 5050000  /* Recommended value: 5050000 for efnet */
+
 /* File names */
 #define	CPATH	"ircd.conf"
 #define	MPATH	"ircd.motd"
@@ -302,7 +308,9 @@
 */
 
 /* Don't change this... */
+#ifdef BLAH
 #define HARD_FDLIMIT	(HARD_FDLIMIT_ - 10)
+#endif
 #define MASTER_MAX	(HARD_FDLIMIT - MAX_BUFFER)
 
 #include "defs.h"
@@ -547,20 +555,19 @@
  */
 #define WARN_NO_NLINE
 
-/* DEFAULT_PROXY_INFO_URL
- * Rather self explanitory. If not specified in T: line,
- * we tell clients to go to "http://<this>"
+/* Defaults for things in option block of ircd.conf
  */
-#define DEFAULT_PROXY_INFO_URL "kline.dal.net/proxy"
-
-/*
- * STAFF_ADDRESS
- *
- * Hostmask for staff when oper hostmasking is used.
- * If you are actually a dalnet server, you should not change this.
- * The idea is to make it universal for the entire network.
- */
-#define STAFF_ADDRESS "staff.dalnet"
+#define DEFAULT_WGMON_URL "http://kline.dal.net/proxy"
+#define DEFAULT_WGMON_HOST "some.bot.host"
+#define DEFAULT_STAFF_ADDRESS "staff.dalnet"
+#define DEFAULT_NETWORK "DALnet"
+#define DEFAULT_SERVICES_NAME "services.dal.net"
+#define DEFAULT_STATS_NAME "stats.dal.net"
+#define DEFAULT_NKLINE_ADDY "admin@badly.configured.server"
+#define DEFAULT_LKLINE_ADDY "admin@badly.configured.server"
+#define DEFAULT_MAXCHANNELSPERUSER 10
+#define DEFAULT_TSMAXDELTA 120
+#define DEFAULT_TSWARNDELTA 15
 
 /*
  * RIDICULOUS_PARANOIA_LEVEL
@@ -731,11 +738,11 @@
 
 /* EXEMPT_LISTS and INVITE_LISTS
  * Written by Sedition, Feb.04
- * Both working, but EXEMPT_LISTS are disabled until services
+ * Both working, but are disabled until services
  * can be made to interact with them. -epi
  */
 #undef EXEMPT_LISTS
-#define INVITE_LISTS
+#undef INVITE_LISTS
 
 /******************************************************************
  * STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP
@@ -800,7 +807,19 @@
  *
  * Change the HARD_FDLIMIT_ instead 
  */
-#define MAXCONNECTIONS	HARD_FDLIMIT
+#ifdef MAXCONNECTIONS
+#if (MAXCONNECTIONS > 16384)
+#define MAX_BUFFER 128
+#elif (MAXCONNECTIONS > 8192)
+#define MAX_BUFFER 64
+#elif (MAXCONNECTIONS > 4096)
+#define MAX_BUFFER 32
+#else
+#define MAX_BUFFER 24
+#endif
+#define INIT_MAXCLIENTS (MAXCONNECTIONS - MAX_BUFFER - 24)
+#define HARD_FDLIMIT (INIT_MAXCLIENTS - 10)
+#endif
 
 /*
  * NICKNAMEHISTORYLENGTH - size of WHOWAS array this defines the length
@@ -1047,10 +1066,6 @@
 
 #if !defined(CLIENT_FLOOD)
 #error CLIENT_FLOOD undefined.
-#endif
-
-#if (defined(OPTIONS_H) && !defined(OPTIONS_H_14))
-#error Using outdated include/options.h - run config
 #endif
 
 #if defined(DEBUGMODE) || defined(DNS_DEBUG)

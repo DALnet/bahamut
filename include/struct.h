@@ -615,6 +615,17 @@ typedef struct Whowas
 /* does HOST in I:HOST::NAME have an @? */
 #define CONF_FLAGS_I_HOST_HAS_AT   0x0008
 
+/* global configuration flags */
+
+#define FLAGS_HUB       0x0001
+#define FLAGS_SERVHUB   0x0002
+#define FLAGS_SMOTD     0x0004
+#define FLAGS_CRYPTPASS 0x0008
+#define FLAGS_WGMONURL  0x0010
+#define FLAGS_WGMONHOST 0x0020
+#define FLAGS_WGMON     (FLAGS_WGMONURL|FLAGS_WGMONHOST)
+
+/* flags for connects */
 
 #define CONN_ZIP 	0x001	/* zippable    */
 #define CONN_DKEY	0x010	/* cryptable   */

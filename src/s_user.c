@@ -61,11 +61,6 @@ extern void reset_sock_opts();
 extern int send_lusers(aClient *,aClient *,int, char **);
 #endif
 
-#ifdef WINGATE_NOTICE
-extern char ProxyMonURL[TOPICLEN + 1];
-extern char ProxyMonHost[HOSTLEN + 1];
-#endif
-
 static char buf[BUFSIZE], buf2[BUFSIZE];
 int  user_modes[] =
 {
@@ -762,7 +757,7 @@ int register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
 	               me.name, sptr->name, inetntoa((char *)&sptr->ip.s_addr));
 	    sendto_one(sptr, ":%s NOTICE %s :*** For assistance, please email %s and "
 	               "include everything shown here.", me.name, sptr->name,
-	               local ? SERVER_KLINE_ADDRESS : NETWORK_KLINE_ADDRESS);
+	               local ? Local_Kline_Address : Network_Kline_Address);
 
 	    ircstp->is_ref++;
 	    ircstp->is_ref_2++;
@@ -850,9 +845,9 @@ int register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
 	ircsprintf(tmpstr2,"NOQUIT SAFELIST MODES=%i "
 		   "MAXCHANNELS=%i MAXBANS=%i NICKLEN=%i "
 		   "TOPICLEN=%i KICKLEN=%i CHANTYPES=# "
-		   "PREFIX=(ov)@+ NETWORK=DALnet SILENCE=%i",
-		   MAXMODEPARAMSUSER,MAXCHANNELSPERUSER,MAXBANS,
-		   NICKLEN,TOPICLEN,TOPICLEN,MAXSILES);
+		   "PREFIX=(ov)@+ NETWORK=%s SILENCE=%i",
+		   MAXMODEPARAMSUSER,maxchannelsperuser,MAXBANS,
+		   NICKLEN,TOPICLEN,TOPICLEN,Network_Name,MAXSILES);
 	sendto_one(sptr, rpl_str(RPL_PROTOCTL), me.name, parv[0], tmpstr2);
 	ircsprintf(tmpstr2,"WATCH=128 CASEMAPPING=ascii "
 		   "CHANMODES=b,k,l,ciLmMnOprRst",MAXWATCH);
@@ -898,13 +893,13 @@ int register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
 		    strcpy(sptr->user->real_oper_host, sptr->user->host);
 		    strcpy(sptr->user->real_oper_username, sptr->user->username);
 		    strcpy(sptr->user->real_oper_ip, sptr->hostip);
-		    strncpyzt(sptr->user->host, STAFF_ADDRESS, HOSTLEN + 1);
+		    strncpyzt(sptr->user->host, Staff_Address, HOSTLEN + 1);
 		    strncpyzt(sptr->user->username, onick, USERLEN + 1);
 		    strncpyzt(sptr->username, onick, USERLEN + 1);
 		    sptr->flags |= FLAGS_GOTID; /* fake ident */
 		    sptr->ip.s_addr = 0;
 		    strcpy(sptr->hostip, "0.0.0.0");
-		    strncpy(sptr->sockhost, STAFF_ADDRESS, HOSTLEN + 1);
+		    strncpy(sptr->sockhost, Staff_Address, HOSTLEN + 1);
 		}
 
 		if(tmpptr)
@@ -959,17 +954,17 @@ int register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
 #else
 	(void) send_motd(sptr, sptr, 1, parv);
 #endif
-#ifdef WINGATE_NOTICE
-	sendto_one(sptr, ":%s NOTICE %s :*** Notice -- This server runs an "
-		   "open proxy monitor to prevent abuse.", me.name, nick);
-	sendto_one(sptr, ":%s NOTICE %s :*** Notice -- If you see connections on "
-		   "various ports from %s", me.name, nick,
-		   ProxyMonHost);
-	sendto_one(sptr, ":%s NOTICE %s :*** Notice -- please disregard them, as they are the monitor in action.",
-		   me.name, nick);
-	sendto_one(sptr, ":%s NOTICE %s :*** Notice -- For more information "
-		   "please visit %s", me.name, nick, ProxyMonURL);
-#endif
+    if(confopts & FLAGS_WGMON)
+    {
+	    sendto_one(sptr, ":%s NOTICE %s :*** Notice -- This server runs an "
+		    "open proxy monitor to prevent abuse.", me.name, nick);
+	    sendto_one(sptr, ":%s NOTICE %s :*** Notice -- If you see connections"
+            " on various ports from %s", me.name, nick, ProxyMonHost);
+	    sendto_one(sptr, ":%s NOTICE %s :*** Notice -- please disregard them,"
+            " as they are the monitor in action.", me.name, nick);
+	    sendto_one(sptr, ":%s NOTICE %s :*** Notice -- For more information "
+		    "please visit %s", me.name, nick, ProxyMonURL);
+    }
 		
     }
     else if (IsServer(cptr)) 
@@ -1031,7 +1026,7 @@ int register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
 	if(sptr->passwd[0] && (nsptr=find_person(NICKSERV,NULL))!=NULL)
 	{
 	    sendto_one(nsptr,":%s PRIVMSG %s@%s :SIDENTIFY %s", sptr->name,
-		       NICKSERV, SERVICES_NAME, sptr->passwd);
+		       NICKSERV, Services_Name, sptr->passwd);
 	}
 	
 	memset(sptr->passwd, '\0', PASSWDLEN);
@@ -1371,9 +1366,6 @@ static inline int m_message(aClient *cptr, aClient *sptr, int parc,
 {
     aClient *acptr;
     char *s;
-#ifdef SERVICESHUB
-    char *myparv[2];
-#endif
     int i, ret, ischan, ismine;
     aChannel *chptr;
     char *nick, *server, *p, *cmd, *dccmsg;
@@ -1450,8 +1442,9 @@ static inline int m_message(aClient *cptr, aClient *sptr, int parc,
 
 		default:
 #ifdef FLUD
-		    if (check_for_flud(sptr, NULL, chptr, 1))
-			return 0;
+            if(!(confopts & (FLAGS_HUB|FLAGS_SERVHUB)))
+		        if (check_for_flud(sptr, NULL, chptr, 1))
+			        return 0;
 #endif
 		    break;
 		}
@@ -1670,34 +1663,45 @@ static inline int m_message(aClient *cptr, aClient *sptr, int parc,
 	    /* Not destined for a user on me :-( */
 	    if (!IsMe(acptr)) 
 	    {
-#ifdef SERVICESHUB
-                if(mycmp(server+1, SERVICES_NAME)==0) 
-		{
-                  if(!mycmp(nick,NICKSERVATSERVICES)) {
+        if(confopts & FLAGS_SERVHUB)
+        {
+            char *myparv[2];
+
+            if(mycmp(server+1, Services_Name)==0) 
+            {
+                if(!mycmp(nick,NS_Services_Name)) 
+                {
                     myparv[0]=parv[0];
                     myparv[1]=parv[2];                    
                     m_ns(cptr, sptr, parc-1, myparv);  
-                  } else if(!mycmp(nick,CHANSERVATSERVICES)) {
+                } 
+                else if(!mycmp(nick,CS_Services_Name)) 
+                {
                     myparv[0]=parv[0];
                     myparv[1]=parv[2];                    
                     m_cs(cptr, sptr, parc-1, myparv);  
-                  } else if(!mycmp(nick,MEMOSERVATSERVICES)) {
+                } 
+                else if(!mycmp(nick,MS_Services_Name)) 
+                {
                     myparv[0]=parv[0];
                     myparv[1]=parv[2];                    
                     m_ms(cptr, sptr, parc-1, myparv);  
-                  } else if(!mycmp(nick,ROOTSERVATSERVICES)) {
+                } 
+                else if(!mycmp(nick,RS_Services_Name)) 
+                {
                     myparv[0]=parv[0];
                     myparv[1]=parv[2];                    
                     m_rs(cptr, sptr, parc-1, myparv);  
-		  } else {
+                } 
+                else 
+                {
                     sendto_one(acptr, ":%s %s %s :%s", parv[0], cmd, nick,
-			   parv[2]);
-                  }
-		  continue;                    
+			                    parv[2]);
                 }
-#endif
-                sendto_one(acptr, ":%s %s %s :%s", parv[0], cmd, nick,
-                           parv[2]);
+		        continue;                    
+            }
+        }
+        sendto_one(acptr, ":%s %s %s :%s", parv[0], cmd, nick, parv[2]);
 		continue;
 	    }
 	    *server = '\0';
@@ -2449,11 +2453,15 @@ int m_pong(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	    sptr->flags &= ~FLAGS_USERBURST;
 	    sendto_gnotice("from %s: %s has processed user/channel burst, "
 			   "sending topic burst.", me.name, sptr->name);
-#ifdef SERVICESHUB 
+        if(confopts & FLAGS_SERVHUB)
+        {
             // services doesn't care about TOPICs during a sync or AWAY messages
-            if(strcasecmp(cptr->name,SERVICES_NAME)!=0 && strcasecmp(cptr->name,STATS_NAME)!=0)
-#endif
-	      send_topic_burst(sptr);
+            if(mycmp(cptr->name,Services_Name)!=0 && 
+                    mycmp(cptr->name,Stats_Name)!=0)
+                send_topic_burst(sptr);
+        }
+        else
+	        send_topic_burst(sptr);
 	    sptr->flags |= FLAGS_PINGSENT|FLAGS_SOBSENT;
 	    sendto_one(sptr, "PING :%s", me.name);
 	}
@@ -2462,10 +2470,9 @@ int m_pong(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	    sptr->flags &= ~FLAGS_TOPICBURST;
 	    sendto_gnotice("from %s: %s has processed topic burst (synched "
 			   "to network data).", me.name, sptr->name);
-#ifdef HUB
-	    sendto_serv_butone(sptr, ":%s GNOTICE :%s has synched to network "
+        if(confopts & FLAGS_HUB)
+	        sendto_serv_butone(sptr, ":%s GNOTICE :%s has synched to network "
 			       "data.", me.name, sptr->name);
-#endif
 	    /* Kludge: Get the "sync" message on small networks immediately */ 
 	    sendto_one(sptr, "PING :%s", me.name);
 	}
@@ -3279,7 +3286,7 @@ int check_for_fludblock(aClient *fluder, aClient *cptr, aChannel *chptr,
     int         blocking;
 
     /* If it's disabled, we don't need to process all of this */
-    if (flud_block == 0)
+    if ((confopts & (FLAGS_HUB|FLAGS_SERVHUB)) || (flud_block == 0))
 	return 0;
 
     /* It's either got to be a client or a channel being fluded */
@@ -3310,7 +3317,7 @@ int check_for_flud(aClient *fluder, aClient *cptr, aChannel *chptr, int type)
     Link       *newfludee;
     
     /* If it's disabled, we don't need to process all of this */
-    if (flud_block == 0)
+    if ((confopts & (FLAGS_HUB|FLAGS_SERVHUB)) || (flud_block == 0))
 	return 0;
 	
     /* It's either got to be a client or a channel being fluded */

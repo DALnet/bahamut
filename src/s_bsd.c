@@ -1449,7 +1449,7 @@ aClient *add_connection(aListener *lptr, int fd)
            me.name, inetntoa((char *)&acptr->ip.s_addr));
     sendto_one(acptr, ":%s NOTICE * :*** For assistance, please email %s and "
            "include everything shown here.", me.name, 
-           local ? SERVER_KLINE_ADDRESS : NETWORK_KLINE_ADDRESS);
+           local ? Local_Kline_Address : Network_Kline_Address);
 
     ircstp->is_ref++;
     ircstp->is_ref_1++;

@@ -319,11 +319,11 @@ int m_luserslock(aClient *cptr, aClient *sptr, int parc, char *parv[])
    /* LUSERSLOCK CANCEL */
    else if(parc > 1 && mycmp(parv[1], "CANCEL") == 0)
    {
-#ifdef HUB
-      /* If I'm a hub, toss out anyone but services telling me to cancel. */
-      if(!IsULine(sptr))
-         return 0;
-#endif
+       if(confopts & FLAGS_HUB)
+         /* If I'm a hub, toss out anyone but services telling me to cancel. */
+        if(!IsULine(sptr))
+           return 0;
+
       if(luserslock_expiretime != -1)
       {
          luserslock_expiretime = -1;
