@@ -819,8 +819,9 @@ void send_quit_to_common_channels(aClient *from, char *reason)
     chanMember *users;
     aClient *cptr;
     int msglen;
-    INC_SERIAL
     void *share_buf = NULL;
+
+    INC_SERIAL
     
     msglen=sprintf(sendbuf,":%s!%s@%s QUIT :%s", from->name,
                    from->user->username,from->user->host, reason);      

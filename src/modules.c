@@ -348,12 +348,13 @@ m_module(aClient *cptr, aClient *sptr, int parc, char *parv[])
     }
     else if(parc > 2 && mycmp(parv[1], "CMD") == 0)
     {
+        aModule *themod;
         if(!MyClient(sptr) && IsAdmin(sptr))
         {
             sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name, parv[0]);
             return 0;
         }
-        aModule *themod = find_module(parv[2]);
+        themod = find_module(parv[2]);
         if(!themod)
         {
             sendto_one(sptr, ":%s NOTICE %s :Module %s not found for cmd",
@@ -364,10 +365,13 @@ m_module(aClient *cptr, aClient *sptr, int parc, char *parv[])
     }
     else if(!MyClient(sptr) && parc > 2 && mycmp(parv[1], "CGLOBAL") == 0)
     {
+        char pbuf[512];
+        aModule *themod;
+
         if(!(IsServer(sptr) || IsULine(sptr)))
             return 0;
-        char pbuf[512];
-        aModule *themod = find_module(parv[2]);
+
+        themod = find_module(parv[2]);
 
         /* Pass this on to all servers! */
         make_parv_copy(pbuf, parc, parv);
