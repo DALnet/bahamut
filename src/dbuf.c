@@ -361,7 +361,7 @@ int m_dbuf(aClient *cptr, aClient *sptr, int parc, char *parv[]) {
    f=fopen("dbuf.out", "a");
    for (i=1;i<=dbuftableused;i++) {
       fprintf(f, "%i - %p - %s - %i - %s\n", 
-		 me.name, i, dbuftable[i].ptr, dbuftable[i].file,
+		 i, dbuftable[i].ptr, dbuftable[i].file,
 		 dbuftable[i].line, dbuftable[i].function);
    }
    sendto_one(sptr, "NOTICE %s :***Dbuf information dumped to dbuf.out", sptr->name);
