@@ -41,8 +41,8 @@ static int newblock(BlockHeap *bh)
 	return 1;
     b->freeElems = bh->elemsPerBlock;
     b->next = bh->base;
-    b->allocMap = (long *) MyMalloc(sizeof(long) * (bh->numlongs + 1));
-    memset((void *) b->allocMap, '\0', (bh->numlongs + 1) * sizeof(long));
+    b->allocMap = (unsigned long *) MyMalloc(sizeof(unsigned long) * (bh->numlongs + 1));
+    memset((void *) b->allocMap, '\0', (bh->numlongs + 1) * sizeof(unsigned long));
     if (b->allocMap == NULL)
     {
 	free(b);
@@ -104,8 +104,8 @@ BlockHeap *BlockHeapCreate(size_t elemsize, int elemsperblock)
     bh->elemsPerBlock = elemsperblock;
     bh->blocksAllocated = 0;
     bh->freeElems = 0;
-    bh->numlongs = (bh->elemsPerBlock / (sizeof(long) * 8)) + 1;
-    if ((bh->elemsPerBlock % (sizeof(long) * 8)) == 0)
+    bh->numlongs = (bh->elemsPerBlock / (sizeof(unsigned long) * 8)) + 1;
+    if ((bh->elemsPerBlock % (sizeof(unsigned long) * 8)) == 0)
 	bh->numlongs--;
     bh->base = NULL;
   
@@ -244,8 +244,8 @@ int BlockHeapFree(BlockHeap *bh, void *ptr)
 	{
 	    ctr = ((unsigned long) ptr - (unsigned long) (walker->elems)) /
 		(unsigned long) bh->elemSize;
-	    bitmask = 1L << (ctr % (sizeof(long) * 8));
-	    ctr = ctr / (sizeof(long) * 8);
+	    bitmask = 1L << (ctr % (sizeof(unsigned long) * 8));
+	    ctr = ctr / (sizeof(unsigned long) * 8);
 	    /* Flip the right allocation bit
 	     *
 	     * Complain if the bit is already clear, something is wrong
