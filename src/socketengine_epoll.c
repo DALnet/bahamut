@@ -72,6 +72,12 @@ void engine_del_fd(int fd)
     {
         *epfd = epoll_fds[numfds-1];
         set_fd_internal(epfd->fd, (void*)epfd);
+        
+        /* update the epoll internal pointer as well */
+        ev.events = epfd->events;
+        ev.data.ptr = epfd;
+        if (epoll_ctl(epoll_id, EPOLL_CTL_MOD, epfd->fd, &ev) < 0)
+            abort();
     }
     
     --numfds;
