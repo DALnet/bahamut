@@ -170,7 +170,28 @@ zcontinue:
 
    if(nbuf)
    {
-      sendto_realops("Overflowed zipInBuf! If you see this a lot, you should consider increasing zipInBufSize!");
+      static time_t last_complain = 0;
+      static int numrepeat = 0;
+
+      numrepeat++;
+
+      if(NOW > (last_complain + 300)) /* if more than 5 minutes have elapsed.. */
+      {
+         if(last_complain == 0)
+         {
+            sendto_realops("Overflowed zipInBuf! "
+                           "If you see this a lot, you should increase zipInBufSize in src/zlink.c.");
+         }
+         else
+         {
+            sendto_realops("Overflowed zipInBuf %d times in the last %d seconds. "
+                           "If you see this a lot, you should increase zipInBufSize in src/zlink.c.",
+                           numrepeat, last_complain);
+         }
+         last_complain = NOW;
+         numrepeat = 0;
+      }
+
       buffer = nbuf;
       length = nlen;
       nbuf = NULL;
