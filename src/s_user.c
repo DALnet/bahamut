@@ -1732,7 +1732,8 @@ int         i;
 }
 
 char *exploits_2char[] = { "js", "pl", NULL };
-char *exploits_3char[] = { "exe", "com", "bat", "dll", "ini", "vbs", "pif", "mrc", "scr", "doc", "xls", "lnk", "shs", NULL };
+char *exploits_3char[] = { "exe", "com", "bat", "dll", "ini", "vbs", "pif", "mrc", "scr", "doc", "xls", "lnk", "shs", "htm", NULL };
+char *exploits_4char[] = { "html", NULL };
 
 int check_dccsend(aClient *from, aClient *to, char *msg)
 {
@@ -1786,6 +1787,11 @@ int check_dccsend(aClient *from, aClient *to, char *msg)
       case 3:
          farray = exploits_3char;
          arraysz = 3;
+         break;
+
+      case 4:
+         farray = exploits_4char;
+         arraysz = 4;
          break;
 
       /* no executable file here.. */

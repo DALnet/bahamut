@@ -6,6 +6,8 @@ Changes for 1.4.23
   IP in the M: line as the server<->server IP
   - To use: Add :<local IP> to the end of a C: line
   - E.g.: C:192.168.0.1:pass:server.dal.net::10:192.168.10.200
+- Block DCCs of .htm/.html files due to script viruses being spread in this
+  way
 
 Changes for 1.4.22
 - Fixed a bug where a server with a bad name trying to connect or trying
