@@ -2049,7 +2049,7 @@ int m_kill(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	    char myname[HOSTLEN+1], *s;
 	    int slen;
 
-	    strncpy(myname, me.name, 80);
+	    strncpy(myname, me.name, HOSTLEN + 1);
 	    if((s = index(myname, '.')))
 		*s=0;
 	    
