@@ -1567,7 +1567,7 @@ int read_message(time_t delay,
 	 }
 	 if (DoingDNS(cptr) || DoingAuth(cptr))
 	    continue;
-	 if (IsMe(cptr) && IsListening(cptr)) {
+	 if ((IsMe(cptr) && IsListening(cptr)) || IsConnecting(cptr)) {
 	    FD_SET(i, read_set);
 	 } else if (!IsMe(cptr)) {
 	    if (DBufLength(&cptr->recvQ) && delay2 > 2)
@@ -1920,7 +1920,7 @@ int read_message(time_t delay,
 	 /* 
 	  * NOTE: if length == -2 then cptr has already been freed!
 	  */
-	 if (length != -2 && (IsServer(cptr) || IsHandshake(cptr))) {
+	 if (length != -2 && (IsServer(cptr) || IsHandshake(cptr) || IsConnecting(cptr))) {
 	    char fbuf[512];
 
 	    if (length == 0) {
@@ -2270,7 +2270,7 @@ int read_message(time_t delay, fdlist * listp)
        * -avalon
        */
       Debug((DEBUG_ERROR, "READ ERROR: fd = %d %d %d", fd, errno, length));
-      if (IsServer(cptr) || IsHandshake(cptr)) {
+      if (IsServer(cptr) || IsHandshake(cptr) || IsConnecting(cptr)) {
 	 /* see below.. * *        int         connected = timeofday - * *
 	  * cptr->firsttime; */
 	 char fbuf[512];
