@@ -2122,17 +2122,9 @@ int build_searchopts(aClient *sptr, int parc, char *parv[]) {
 	int args=1, i;
 	
 	memset((char *)&wsopts, '\0', sizeof(SOpts));
-	/* if we got no extra arguments, just assume it's *'s all the way
-	 * [really only set for host ;)] and return */
-	if(parc<1) {
-		wsopts.host_plus=1;
-		/* well I don't particularly like this, 
-		 * but we do it anyways */
-		wsopts.host="*";
-		return 1;
-	}
+	/* if we got no extra arguments, send them the help. yeech. */
 	/* if it's /who ?, send them the help */
-	else if(parv[0][0]=='?') {
+	if(parc < 1 || parv[0][0]=='?') {
 		char **ptr = who_help;
 		for (; *ptr; ptr++)
 		  sendto_one(sptr, getreply(RPL_COMMANDSYNTAX), me.name,
@@ -2316,8 +2308,9 @@ int chk_who(aClient *ac, int showall) {
 	 * when clients contain pointers to their servers
 	 * of origin, this'll become a 4 byte check instead of a mycmp
 	 * -wd */
+        /* welcome to the future... :) - lucas */
 	if(wsopts.serv_plus)
-	  if(mycmp(wsopts.server->name, ac->user->server))
+	  if(wsopts.server != ac->uplink)
 		 return 0;
 	/* we only call match once, since if the first condition
 	 * isn't true, most (all?) compilers will never try the
