@@ -242,7 +242,7 @@ int BlockHeapFree(BlockHeap *bh, void *ptr)
     {
 	if ((ptr >= walker->elems) && (ptr <= walker->endElem))
 	{
-	    ctr = ((unsigned long) ptr - (unsigned long) (walker->elems)) \ 
+	    ctr = ((unsigned long) ptr - (unsigned long) (walker->elems)) /
 		(unsigned long) bh->elemSize;
 	    bitmask = 1L << (ctr % (sizeof(long) * 8));
 	    ctr = ctr / (sizeof(long) * 8);

@@ -28,38 +28,39 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 
-extern int  errno;	/* ...seems that errno.h doesn't define this everywhere */
+extern int  errno;  /* ...seems that errno.h doesn't define this everywhere */
 #ifndef SYS_ERRLIST_DECLARED
 extern char *sys_errlist[];
 #endif
 
 #if defined(DEBUGMODE) || defined (DNS_DEBUG)
-int         writecalls = 0, writeb[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-int         readcalls = 0;
+int writecalls = 0, writeb[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+int readcalls = 0;
 #endif
-VOIDSIG dummy(){
+VOIDSIG dummy()
+{
 #ifndef HAVE_RELIABLE_SIGNALS
-   (void) signal(SIGALRM, dummy);
-   (void) signal(SIGPIPE, dummy);
+    (void) signal(SIGALRM, dummy);
+    (void) signal(SIGPIPE, dummy);
 # ifdef SIGWINCH
-   (void) signal(SIGWINCH, dummy);
+    (void) signal(SIGWINCH, dummy);
 # endif
 #else
 #ifdef POSIX_SIGNALS
-struct sigaction act;
-
-   act.sa_handler = dummy;
-   act.sa_flags = 0;
-   (void) sigemptyset(&act.sa_mask);
-   (void) sigaddset(&act.sa_mask, SIGALRM);
-   (void) sigaddset(&act.sa_mask, SIGPIPE);
+    struct sigaction act;
+    
+    act.sa_handler = dummy;
+    act.sa_flags = 0;
+    (void) sigemptyset(&act.sa_mask);
+    (void) sigaddset(&act.sa_mask, SIGALRM);
+    (void) sigaddset(&act.sa_mask, SIGPIPE);
 #ifdef SIGWINCH
-   (void) sigaddset(&act.sa_mask, SIGWINCH);
+    (void) sigaddset(&act.sa_mask, SIGWINCH);
 #endif
-   (void) sigaction(SIGALRM, &act, (struct sigaction *) NULL);
-   (void) sigaction(SIGPIPE, &act, (struct sigaction *) NULL);
+    (void) sigaction(SIGALRM, &act, (struct sigaction *) NULL);
+    (void) sigaction(SIGPIPE, &act, (struct sigaction *) NULL);
 #ifdef SIGWINCH
-   (void) sigaction(SIGWINCH, &act, (struct sigaction *) NULL);
+    (void) sigaction(SIGWINCH, &act, (struct sigaction *) NULL);
 #endif
 #endif
 #endif
@@ -80,72 +81,80 @@ struct sigaction act;
  * *NOTE*  alarm calls have been preserved, so this should work equally 
  *  well whether blocking or non-blocking mode is used...
  */
-int deliver_it(aClient *cptr, char *str, int len) {
-   int         retval;
-   aClient    *acpt = cptr->acpt;	
+int deliver_it(aClient *cptr, char *str, int len)
+{
+    int         retval;
+    aClient    *acpt = cptr->acpt;	
 #ifdef	DEBUGMODE
-   writecalls++;
+    writecalls++;
 #endif
-   retval = send(cptr->fd, str, len, 0);
-   /*
-    * Convert WOULDBLOCK to a return of "0 bytes moved". This 
-    * should occur only if socket was non-blocking. Note, that all is
-    * Ok, if the 'write' just returns '0' instead of an error and
-    * errno=EWOULDBLOCK. 
-    */
-   if (retval < 0 && (errno == EWOULDBLOCK || errno == EAGAIN ||
-		      errno == ENOBUFS)) {
-      retval = 0;
-      cptr->flags |= FLAGS_BLOCKED;
-      return (retval);		/* Just get out now... */
-   }
-   else if (retval > 0) {
-      cptr->flags &= ~FLAGS_BLOCKED;
-   }
-
+    retval = send(cptr->fd, str, len, 0);
+    /*
+     * Convert WOULDBLOCK to a return of "0 bytes moved". This 
+     * should occur only if socket was non-blocking. Note, that all is
+     * Ok, if the 'write' just returns '0' instead of an error and
+     * errno=EWOULDBLOCK. 
+     */
+    if (retval < 0 && (errno == EWOULDBLOCK || errno == EAGAIN ||
+		       errno == ENOBUFS))
+    {
+	retval = 0;
+	cptr->flags |= FLAGS_BLOCKED;
+	return (retval);		/* Just get out now... */
+    }
+    else if (retval > 0)
+    {
+	cptr->flags &= ~FLAGS_BLOCKED;
+    }
+    
 #ifdef DEBUGMODE
-   if (retval < 0) {
-      writeb[0]++;
-      Debug((DEBUG_ERROR, "write error (%s) to %s",
-	     sys_errlist[errno], cptr->name));
-   }
-   else if (retval == 0)
-      writeb[1]++;
-   else if (retval < 16)
-      writeb[2]++;
-   else if (retval < 32)
-      writeb[3]++;
-   else if (retval < 64)
-      writeb[4]++;
-   else if (retval < 128)
-      writeb[5]++;
-   else if (retval < 256)
-      writeb[6]++;
-   else if (retval < 512)
-      writeb[7]++;
-   else if (retval < 1024)
-      writeb[8]++;
-   else
-      writeb[9]++;
+    if (retval < 0)
+    {
+	writeb[0]++;
+	Debug((DEBUG_ERROR, "write error (%s) to %s",
+	       sys_errlist[errno], cptr->name));
+    }
+    else if (retval == 0)
+	writeb[1]++;
+    else if (retval < 16)
+	writeb[2]++;
+    else if (retval < 32)
+	writeb[3]++;
+    else if (retval < 64)
+	writeb[4]++;
+    else if (retval < 128)
+	writeb[5]++;
+    else if (retval < 256)
+	writeb[6]++;
+    else if (retval < 512)
+	writeb[7]++;
+    else if (retval < 1024)
+	writeb[8]++;
+    else
+	writeb[9]++;
 #endif
-   if (retval > 0) {
-      cptr->sendB += retval;
-      me.sendB += retval;
-      if (cptr->sendB > 1023) {
-	 cptr->sendK += (cptr->sendB >> 10);
-	 cptr->sendB &= 0x03ff;	/* 2^10 = 1024, 3ff = 1023 */
-      }
-      if (acpt != &me) {
-	 acpt->sendB += retval;
-	 if (acpt->sendB > 1023) {
-	    acpt->sendK += (acpt->sendB >> 10);
-	    acpt->sendB &= 0x03ff;
-	 }
-      }
-      else if (me.sendB > 1023) {
-	 me.sendK += (me.sendB >> 10);
-	 me.sendB &= 0x03ff;
-      }
-   }
-   return (retval);
+    if (retval > 0)
+    {
+	cptr->sendB += retval;
+	me.sendB += retval;
+	if (cptr->sendB > 1023)
+	{
+	    cptr->sendK += (cptr->sendB >> 10);
+	    cptr->sendB &= 0x03ff;	/* 2^10 = 1024, 3ff = 1023 */
+	}
+	if (acpt != &me)
+	{
+	    acpt->sendB += retval;
+	    if (acpt->sendB > 1023) {
+		acpt->sendK += (acpt->sendB >> 10);
+		acpt->sendB &= 0x03ff;
+	    }
+	}
+	else if (me.sendB > 1023)
+	{
+	    me.sendK += (me.sendB >> 10);
+	    me.sendB &= 0x03ff;
+	}
+    }
+    return (retval);
 }
