@@ -2967,7 +2967,7 @@ m_whois(aClient *cptr,
 					  parv[0], name,
 					  user->username, user->host, acptr->info);
 
-                if(user->real_oper_host && IsAdmin(sptr))
+                if((sptr == acptr) || (user->real_oper_host && IsAdmin(sptr)))
                 {
                    sendto_one(sptr, rpl_str(RPL_WHOISACTUALLY),
                               me.name, sptr->name, name, 
