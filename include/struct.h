@@ -198,6 +198,16 @@ typedef struct MotdItem aMotd;
 #define FLAGS_CONNECTION_TIMEDOUT 0x800000
 #define FLAGS_ULINE 			0x2000000
 
+/* Capabilities of the ircd (part of FLAGS, above) */
+
+#define CAPAB_TS3     0x4000000	/* Supports the TS3 Protocal */
+
+/* flags macros. */
+
+#define SetTS3(x)   ((x)->flags |= CAPAB_TS3)
+#define IsTS3       ((x)->flags & CAPAB_TS3)
+#define IsULine(x) ((x)->flags & FLAGS_ULINE)
+
 /* User Modes */
 #define UMODE_o     0x00001	/* umode +o - Oper */
 #define UMODE_O     0x00002	/* umode +O - Local Oper */
@@ -235,17 +245,6 @@ typedef struct MotdItem aMotd;
 #endif
 #define LOCOP_UMODES (UMODE_O|UMODE_w|UMODE_s|UMODE_y|UMODE_d|UMODE_g|UMODE_n|UMODE_h)
 #define	FLAGS_ID (FLAGS_DOID|FLAGS_GOTID)
-
-/* Capabilities of the ircd */
-
-#define CAPAB_TS3     0x0001	/* Supports the TS3 Protocal */
-
-/* flags macros. */
-
-#define SetTS3(x)   ((x)->flags |= CAPAB_TS3)
-#define IsTS3       ((x)->flags & CAPAB_TS3)
-#define IsULine(x) ((x)->flags & FLAGS_ULINE)
-
 
 #define	IsOper(x)		((x)->umode & UMODE_o)
 #define	IsLocOp(x)		((x)->umode & UMODE_O)
