@@ -2045,8 +2045,8 @@ void remove_szline(char *mask, int m) {
            aconf->host && (m==1 ? !match(mask, aconf->host) 
 			    : !mycmp(mask, aconf->host)))
         {
-            if (conf==aconf)
-                ac2 = ac3 = conf = aconf->next;
+            if (aconf == szlines)
+                ac2 = ac3 = szlines = aconf->next;
             else
                 ac2 = ac3->next = aconf->next;
             MyFree(aconf->passwd);

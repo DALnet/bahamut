@@ -5264,7 +5264,7 @@ int m_sgline(aClient *cptr, aClient *sptr, int parc, char *parv[])
    /* if we have any G:lines (SG or G) that match
     * this G:line, just return (no need to waste cpu */
 
-   if (!(aconf=find_conf_name(parv[1], CONF_GCOS)))
+   if (!(aconf=find_conf_name(mask, CONF_GCOS)))
    {
 	/* okay, it doesn't suck, build a new conf for it */
 	aconf=make_conf();
