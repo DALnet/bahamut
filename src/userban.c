@@ -751,7 +751,7 @@ struct userBan *make_hostbased_ban(char *user, char *phost)
       /* verify that each octet is all numbers or just a '*' */
       /* bans that match 123.123.123.1?? are still valid, just not convertable to a CIDR */
 
-      for(gotwild = i1 = 0; i1 < dotcount; i1++)
+      for(gotwild = i1 = 0; i1 <= dotcount; i1++)
       {
          if(strcmp(octet[i1], "*") == 0)
          {
