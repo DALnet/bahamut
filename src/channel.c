@@ -409,12 +409,15 @@ channel_modes(aClient *cptr, char *mbuf, char *pbuf, aChannel *chptr) {
    if (chptr->mode.limit) {
       *mbuf++ = 'l';
       if (IsMember(cptr, chptr) || IsServer(cptr) || IsULine(cptr))
-	 (void) ircsprintf(pbuf, "%d ", chptr->mode.limit);
+	 if (*chptr->mode.key)
+	    ircsprintf(pbuf, "%d ", chptr->mode.limit);
+	 else
+	    ircsprintf(pbuf, "%d", chptr->mode.limit);	    
    }
    if (*chptr->mode.key) {
       *mbuf++ = 'k';
       if (IsMember(cptr, chptr) || IsServer(cptr) || IsULine(cptr))
-	 (void) strcat(pbuf, chptr->mode.key);
+	 strcat(pbuf, chptr->mode.key);
    }
    *mbuf++ = '\0';
    return;
