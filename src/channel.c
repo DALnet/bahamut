@@ -813,6 +813,23 @@ int check_joinrate(aChannel *chptr, time_t ts, int local, aClient *cptr)
     if(!local && (NOW - ts) > 60)
         return 1; /* attempt to compensate for lag */
 
+    /* This first section checks the defaults, the second
+     * checks the channels +j settings */
+    /* Has the join_time period elapsed? */
+    if((NOW - chptr->default_join_start) > join_time)
+    {
+        chptr->default_join_start = NOW;
+        chptr->default_join_count = 0;
+    }
+    /* If it's local and we've filled the join count, complain
+     * to ops so they can take the appropriate measures */
+    if(local && chptr->default_join_count >= join_num)
+        sendto_realops_lev(DEBUG_LEV, "Join rate warning on %s"
+                                      " for %s!%s@%s (%d/%d in %d) (No action taken)",
+                           chptr->chname, cptr->name, cptr->user->username,
+                           cptr->user->host, chptr->default_join_count, join_num,
+                           NOW - chptr->default_join_start);
+
     /* Has the channel set their own custom settings? */
     if(chptr->mode.mode & MODE_JOINRATE)
     {
@@ -822,10 +839,6 @@ int check_joinrate(aChannel *chptr, time_t ts, int local, aClient *cptr)
         join_time = chptr->mode.join_time;
         join_num = chptr->mode.join_num;
     }
-#ifdef NO_DEFAULT_JOINRATE
-    else
-        return 1;
-#else
     /* Has the join_time period elapsed? */
     if((NOW - chptr->join_start) > join_time)
     {
@@ -845,7 +858,6 @@ int check_joinrate(aChannel *chptr, time_t ts, int local, aClient *cptr)
         return 0;
     }
     return 1;
-#endif
 }
 
 /*

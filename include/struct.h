@@ -1143,8 +1143,10 @@ struct Channel
     struct fludbot *fluders;
 #endif
     char        chname[CHANNELLEN+1];
-    int		join_start;
+    int		join_start;         /* these two are for +j watching */
     int		join_count;
+    int     default_join_start; /* these two handle the default joinrate handling */
+    int     default_join_count;
     unsigned int banserial;     /* used for bquiet cache */
 };
 
