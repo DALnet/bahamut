@@ -530,8 +530,8 @@ fi
 
 
 
-PACKAGE=ircd-hybrid
-VERSION=4.2
+PACKAGE=bahamut-release
+VERSION=1.4
 
 
 

@@ -1,5 +1,3 @@
-TEST
-
 Bahamut was taken on by a group of loosely knit coders that decided that
 Dreamforge just was eating up too much CPU to handle DALnet's growing user
 base.  Originally starting out as the DFhybrid project, it slowly grew
@@ -25,14 +23,13 @@ Ian Westcott        rakarra@dal.net
 Jason Slagle        raistlin@bahamut.net
 Karthik Arumugham   karthik@karthik.com
 Kevin Turner        kevin@dal.net
-Lucas Madar         lucas@negaverse.org
+Lucas Madar         lucas@dal.net
 Mark Salerno        msofty@dal.net
 Ryan Smith          xpsycho@dal.net
 Sven Nielsen        dalvenjah@dal.net
 
 Thanks goes out to all those not listed here, your help is much
 appreciated.
-
 
 Feel free to contact the Bahamut team with any bugs, bug fixes, and the
 like at: coders@dal.net

@@ -1,12 +1,10 @@
-If you don't read this first, we won't help you.
-:-)
-
 See the INSTALL document for info on configuring and compiling
 Bahamut.
 
-THIS IS A BETA RELEASE.  NOT ALL BUGS HAVE BEEN IRONED OUT.
+If you have further questions on bahamut, our website is located at
+http://bahamut.dal.net. You may also send an inquiry to the bahamut
+source mailing list, dalnet-src@dal.net. Please make sure your question
+isn't listed in a FAQ on the webpage above before asking.
 
-DEBUGGING MODE: if you run ircd with the -s flag, it will send
-errors that are normally syslogged to stderr.  This is very useful
-if you don't have syslogging set up and ircd won't run.
-
+Enjoy!
+- The bahamut team

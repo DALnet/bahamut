@@ -106,11 +106,10 @@ build:
 		${MAKE} build; cd ..;\
 	done
 	@echo "******************************************************************************"
-	@echo "* Note: Please do not send bug reports or feature inquiries to the mailing   *"
-	@echo "* lists or to the Bahamut coders. Instead, go to                             *"
-	@echo "* http://www.bahamut.net/contact.html and FOLLOW the                         *"
-	@echo "* directions there. If you don't follow those simple instructions, your      *"
-	@echo "* requests will most likely be ignored.                                      *"
+	@echo "* For help with bahamut, please refer to http://bahamut.dal.net/             *"
+	@echo "* If you encouter serious security related bugs, please mail coders@dal.net  *"
+	@echo "* For other bug reports and inquiries, please mail dalnet-src@dal.net        *"
+	@echo "* Thank you for choosing Bahamut!  - The DALnet coding team                  *"
 	@echo "******************************************************************************"
 
 profile:

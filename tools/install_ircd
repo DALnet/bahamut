@@ -82,14 +82,14 @@ fi;
 if [ $base_MPATH = $MPATH ] ; then
   if [ ! -f ${DPATH}${MPATH} ] ; then
     echo installing a sample ${DPATH}${MPATH};
-    echo "This is ircd-hybrid MOTD replace it with something better" > ${DPATH}${MPATH};
+    echo "This is a default MOTD. Replace me!" > ${DPATH}${MPATH};
   else
     echo You already have an ${DPATH}${MPATH}.....;
   fi;
 else
   if [ ! -f $MPATH ] ; then
     echo installing a sample ${MPATH};
-    echo "This is ircd-hybrid MOTD replace it with something better" > ${MPATH};
+    echo "This is a default MOTD. Replace me!" > ${MPATH};
   else
     echo You already have an $MPATH file ....;
   fi;

@@ -1,9 +1,8 @@
-  ircd-hybrid has been primarily geared for EFnet, where 40k clients
-is becoming the norm. But for smaller non EFnet nets, thats going
-to cost your server memory, because it will be expecting the large numbers
-of clients on EFnet that will never happen on a smaller net.
+bahamut has been primarily geared for DALnet, where large amounts of clients
+are the norm. But for smaller non nets, it will to cost your server memory, 
+because it will be expecting the larger numbers of clients.
 
-  You can easily tune your hybrid to use less memory on startup
+  You can easily tune your bahamut to use less memory on startup
 by modifying the file "list.c" in src
 
   These comments will be found in list.c
@@ -35,6 +34,3 @@ bit maps.
 
   - Dianora
 
-You may wish to #define NO_PRIORITY to make your small network run faster.
-
-- lucas
