@@ -1491,96 +1491,102 @@ static inline int m_message(aClient *cptr, aClient *sptr, int parc,
 	}
 	
 	/* nickname addressed? */
-	if (!ischan && (acptr = find_client(nick, NULL))) 
+	if (!ischan)
 	{
-	    /* A PRIVMSG or NOTICE to me.name! */
-	    if (IsServer(acptr) && IsMe(acptr) && ismine)
-	    {
-		if(call_hooks(CHOOK_MYMSG, sptr, notice, parv[2]) == FLUSH_BUFFER)
-		    return FLUSH_BUFFER;
-	    }
+	  if ((acptr = find_client(nick, NULL))) 
+	  {
+	      /* A PRIVMSG or NOTICE to me.name! */
+	      if (IsServer(acptr) && IsMe(acptr) && ismine)
+	      {
+		  if(call_hooks(CHOOK_MYMSG, sptr, notice, parv[2]) == FLUSH_BUFFER)
+		      return FLUSH_BUFFER;
+	      }
 
-	    if (!IsClient(acptr)) /* now back to our regularly scheduled programming */
-		acptr = NULL;
+	      if (!IsClient(acptr)) /* now back to our regularly scheduled programming */
+		  acptr = NULL;
+	  }
 
-	    if (IsNoNonReg(acptr) && !IsRegNick(sptr) && !IsULine(sptr) &&
-		!IsOper(sptr))
-	    {
-		sendto_one(sptr, rpl_str(ERR_NONONREG), me.name, parv[0],
-			   acptr->name);
-		continue;
-	    }
+	  if(acptr)
+	  {
+	      if (IsNoNonReg(acptr) && !IsRegNick(sptr) && !IsULine(sptr) &&
+		  !IsOper(sptr))
+	      {
+		  sendto_one(sptr, rpl_str(ERR_NONONREG), me.name, parv[0],
+			     acptr->name);
+		  continue;
+	      }
 #ifdef MSG_TARGET_LIMIT
-	    /* Only check target limits for my clients */
-	    if (ismine && check_target_limit(sptr, acptr))
-		continue;
+	      /* Only check target limits for my clients */
+	      if (ismine && check_target_limit(sptr, acptr))
+		  continue;
 #endif
 
 #ifdef FLUD
-	    if (!notice && MyFludConnect(acptr))
+	      if (!notice && MyFludConnect(acptr))
 #else
-	    if (!notice && MyConnect(acptr))
+	      if (!notice && MyConnect(acptr))
 #endif
-	    {
+	      {
 
-		switch(check_for_ctcp(parv[2], &dccmsg))
-		{
-		case CTCP_NONE:
-		    break;
+		  switch(check_for_ctcp(parv[2], &dccmsg))
+		  {
+		  case CTCP_NONE:
+		      break;
 		    
-		case CTCP_DCCSEND:
+		  case CTCP_DCCSEND:
 #ifdef FLUD
-		    if (check_for_flud(sptr, acptr, NULL, 1))
-			return 0;
+		      if (check_for_flud(sptr, acptr, NULL, 1))
+			  return 0;
 #endif
 		    
-		    if(check_dccsend(sptr, acptr, dccmsg))
-			continue;
-		    break;
+		      if(check_dccsend(sptr, acptr, dccmsg))
+			  continue;
+		      break;
 		    
-		default:
+		  default:
 #ifdef FLUD
-		    if (check_for_flud(sptr, acptr, NULL, 1))
-			return 0;
+		      if (check_for_flud(sptr, acptr, NULL, 1))
+			  return 0;
 #endif
-		    break;
-		}
-	    }
+		      break;
+		  }
+	      }
 #ifdef DENY_SERVICES_MSGS
 #define BSRV(x) (mycmp((x), nick) == 0)
-	    if(ismine)
-	    {
-		char *tservice = NULL;
-		if(BSRV(NICKSERV))
-		    tservice = NICKSERV;
-		else if(BSRV(CHANSERV))
-		    tservice = CHANSERV;
-		else if(BSRV(MEMOSERV))
-		    tservice = MEMOSERV;
-		else if(BSRV(ROOTSERV))
-		    tservice = ROOTSERV;
+	      if(ismine)
+	      {
+		  char *tservice = NULL;
+		  if(BSRV(NICKSERV))
+		      tservice = NICKSERV;
+		  else if(BSRV(CHANSERV))
+		      tservice = CHANSERV;
+		  else if(BSRV(MEMOSERV))
+		      tservice = MEMOSERV;
+		  else if(BSRV(ROOTSERV))
+		      tservice = ROOTSERV;
 
-		if(tservice != NULL)
-		{
-		    if(!notice)
-			sendto_one(sptr, rpl_str(ERR_MSGSERVICES), me.name, parv[0],
-				   tservice, tservice, tservice);
-		    continue;
-		}
-	    }
+		  if(tservice != NULL)
+		  {
+		      if(!notice)
+			  sendto_one(sptr, rpl_str(ERR_MSGSERVICES), me.name, parv[0],
+				     tservice, tservice, tservice);
+		      continue;
+		  }
+	      }
 #undef BSRV
 #endif
-	    if (!is_silenced(sptr, acptr)) 
-	    {				 
-		if (!notice && MyClient(acptr) && acptr->user &&
-		    acptr->user->away)
-		    sendto_one(sptr, rpl_str(RPL_AWAY), me.name, parv[0],
-			       acptr->name, acptr->user->away);
-		  sendto_prefix_one(acptr, sptr, ":%s %s %s :%s", parv[0], cmd,
-				  nick, parv[2]);
-	    }
-	    continue;
-	}
+	      if (!is_silenced(sptr, acptr)) 
+	      {				 
+		  if (!notice && MyClient(acptr) && acptr->user &&
+		      acptr->user->away)
+		      sendto_one(sptr, rpl_str(RPL_AWAY), me.name, parv[0],
+			         acptr->name, acptr->user->away);
+		    sendto_prefix_one(acptr, sptr, ":%s %s %s :%s", parv[0], cmd,
+				    nick, parv[2]);
+	      }
+	      continue;
+	  }
+	} /* if(!ischan) */
 	
 	if (nick[1] == '#' && nick[0]!='#') 
 	{
