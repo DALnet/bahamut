@@ -2264,7 +2264,7 @@ void do_rehash_akills(void) {
 
 int m_svsnoop(aClient *cptr, aClient *sptr, int parc, char *parv[]) {
 	 aConfItem *aconf;
-	 if (!(check_registered(sptr) && IsULine(sptr) && parc > 2)) return 0;
+	 if (!(IsULine(sptr) && parc > 2)) return 0;
 	 if (hunt_server(cptr, sptr, ":%s SVSNOOP %s :%s", 1, parc, parv) == HUNTED_ISME) {
 			if (parv[2][0] == '+') for(aconf=conf;aconf;aconf=aconf->next) {
 				 if (aconf->status & CONF_OPERATOR || aconf->status & CONF_LOCOP) aconf->status = CONF_ILLEGAL;
