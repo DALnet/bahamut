@@ -31,7 +31,7 @@ static char *replies[] =
     /* 005 RPL_PROTOCTL*/       ":%s 005 %s NOQUIT WATCH=%i SAFELIST MODES=%i "
                                 "MAXCHANNELS=%i MAXBANS=%i NICKLEN=%i "
                                 "TOPICLEN=%i KICKLEN=%i CHANTYPES=&# "
-                                "PREFIX=@+ NETWORK=DALnet SILENCE=%i "
+                                "PREFIX=(ov)@+ NETWORK=DALnet SILENCE=%i "
                                 ":are available on this server",
     /* 006 */	                NULL,
     /* 007 */	                NULL,
