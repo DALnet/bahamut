@@ -93,14 +93,17 @@ void initlists()
     free_remote_aClients =
 	BlockHeapCreate((size_t) CLIENT_REMOTE_SIZE, CLIENTS_PREALLOCATE);
 
-    /* Can't EVER have more than MAXCONNECTIONS number of local aClients */
+    /* Can't EVER have more than MAXCONNECTIONS number of local aClients 
+     * And that was stupid, because an idle server built for 32k would use
+     * 50 megs of ram.
+     */
 
     free_local_aClients = BlockHeapCreate((size_t) CLIENT_LOCAL_SIZE,
-					  MAXCONNECTIONS);
+					  CLIENTS_PREALLOCATE);
     /* anUser structs are used by both local aClients, and remote aClients */
 
     free_anUsers = BlockHeapCreate((size_t) sizeof(anUser),
-				   CLIENTS_PREALLOCATE + MAXCONNECTIONS);
+				   CLIENTS_PREALLOCATE * 2);
     
     /* channels are a very frequent thing in ircd. :) */
 
@@ -111,7 +114,7 @@ void initlists()
 #ifdef FLUD
     /* fludbot structs are used to track CTCP Flooders */
     free_fludbots = BlockHeapCreate((size_t) sizeof(struct fludbot),
-				    MAXCONNECTIONS);
+				    CLIENTS_PREALLOCATE);
     
 #endif /* FLUD */
 }
