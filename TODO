@@ -1,17 +1,14 @@
 TODO List for 1.8.0
 -------------------
    
-    - Fix /unkline routines to operate happily with the new conf parser.
-    - Write a new example.conf
-    - Split throttling off into its own hook module.
-    - Add more hooks.
-    - Integrate module.ini into ircd.conf
+    - Only bug testing!
 
 Future TODO List
 ----------------
 
 - Split up aClient into separate structures for local and remote users
 - Backport message tokenization from 1.6
+- Carve off throttling into its own hook module
 - Implement IPV6
 
 List to Ponder
