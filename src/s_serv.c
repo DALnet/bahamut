@@ -1561,7 +1561,7 @@ m_set(aClient *cptr, aClient *sptr, int parc, char *parv[])
                 }
                 else if (limit == 0)
                 {
-                    sendto_one(sptr, "%s NOTICE %s :no soft local clone limit"
+                    sendto_one(sptr, ":%s NOTICE %s :no soft local clone limit"
                                " for %s", me.name, parv[0], parv[2]);
                 }
                 else
