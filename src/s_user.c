@@ -2544,6 +2544,7 @@ int m_oper(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	send_umode_out(cptr, sptr, old);
 	sendto_one(sptr, rpl_str(RPL_YOUREOPER), me.name, parv[0]);
 	sptr->pingval = get_client_ping(sptr);
+	sptr->sendqlen = get_sendq(sptr);
 #if !defined(CRYPT_OPER_PASSWORD) && (defined(FNAME_OPERLOG) ||\
     (defined(USE_SYSLOG) && defined(SYSLOG_OPER)))
 	encr = "";
