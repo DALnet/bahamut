@@ -202,7 +202,7 @@ int dbuf_put(struct DBuf* dyn, const char* buf, size_t length)
 }
 
 
-const char* dbuf_map(const struct DBuf* dyn, size_t* length)
+const char* dbuf_map(struct DBuf* dyn, size_t* length)
 {
   assert(0 != dyn);
 

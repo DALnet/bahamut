@@ -23,6 +23,8 @@
 #ifndef	__config_include__
 #define	__config_include__
 
+#define USE_NOQUIT
+
 #include "setup.h"
 
 

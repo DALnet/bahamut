@@ -109,7 +109,7 @@ extern size_t dbuf_get(struct DBuf* dbuf, char* buf, size_t len);
  * dyn - Dynamic buffer header
  * len - Return number of bytes accessible 
  */
-extern const char* dbuf_map(const struct DBuf* dyn, size_t* len);
+extern const char* dbuf_map(struct DBuf* dyn, size_t* len);
 extern void        dbuf_delete(struct DBuf* dyn, size_t len);
 
 /*

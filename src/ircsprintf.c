@@ -8,7 +8,8 @@ char nullstring[]="(null)";
 
 int irc_printf(char *str, size_t size, const char *pattern, va_list vl) {
 	char *s;
-	char *buf=str, *format=pattern;
+	char *buf=str;
+	const char *format=pattern;
 	va_list ap=vl;
 	unsigned long i, u;
 	int len=0;

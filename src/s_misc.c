@@ -487,15 +487,18 @@ exit_client(
 				 */
 )
 {
+
+#ifndef USE_NOQUIT
    Reg aClient *acptr;
    Reg aClient *next;
+   char        comment1[HOSTLEN + HOSTLEN + 2];
+#endif
 
 #ifdef	FNAME_USERLOG
    time_t      on_for;
 
 #endif
-   char        comment1[HOSTLEN + HOSTLEN + 2];
-	
+
    if (MyConnect(sptr)) {
       if (sptr->flags & FLAGS_IPHASH)
 		  remove_one_ip(sptr->ip.s_addr);
@@ -686,8 +689,10 @@ exit_one_client(aClient *cptr,
 		aClient *from,
 		char *comment)
 {
+#ifndef USE_NOQUIT
    Reg aClient *acptr;
    Reg int     i;
+#endif
    Reg Link   *lp;
 
    /*

@@ -408,11 +408,12 @@ channel_modes(aClient *cptr, char *mbuf, char *pbuf, aChannel *chptr) {
       *mbuf++ = 'R';
    if (chptr->mode.limit) {
       *mbuf++ = 'l';
-      if (IsMember(cptr, chptr) || IsServer(cptr) || IsULine(cptr))
+      if (IsMember(cptr, chptr) || IsServer(cptr) || IsULine(cptr)) {
 	 if (*chptr->mode.key)
 	    ircsprintf(pbuf, "%d ", chptr->mode.limit);
 	 else
 	    ircsprintf(pbuf, "%d", chptr->mode.limit);	    
+      }
    }
    if (*chptr->mode.key) {
       *mbuf++ = 'k';

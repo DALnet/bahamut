@@ -743,7 +743,13 @@ m_server_estab(aClient *cptr)
 {
    Reg aChannel *chptr;
    Reg aClient *acptr = NULL;
+
+#ifndef USE_NOQUIT
    Reg aConfItem *aconf, *bconf, *tmp;
+#else
+   Reg aConfItem *aconf, *bconf;
+#endif
+
    char       *inpath, *host, *s, *encr;
    int         split, i;
 
