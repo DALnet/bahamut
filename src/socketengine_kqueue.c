@@ -121,8 +121,8 @@ void engine_change_fd_state(int fd, unsigned int stateplus)
    set_fd_internal(fd, (void *) stateplus);
 }
 
-#define ENGINE_MAX_EVENTS 512
-#define ENGINE_MAX_LOOPS (2 * (MAXCONNECTIONS / 512))
+#define ENGINE_MAX_EVENTS 128
+#define ENGINE_MAX_LOOPS 10
 
 int engine_read_message(time_t delay)
 {

@@ -723,12 +723,12 @@
 /* #undef NO_USER_SERVERNOTICES */
 /* #undef NO_USER_STATS */
 /* #undef NO_LOCAL_USER_STATS */
-/* #undef NO_USER_TRACE */
+#define NO_USER_TRACE
 /* #undef NO_USER_OPERTARGETED_COMMANDS */
 /* #undef HIDE_NUMERIC_SOURCE */
 /* #undef HIDE_KILL_ORIGINS */
 /* #undef HIDE_SPLIT_SERVERS */
-#define HIDE_LINKS */
+#define HIDE_LINKS
 /* #undef HIDE_SERVERMODE_ORIGINS */
 
 /***********************/
