@@ -357,6 +357,7 @@ typedef struct MotdItem aMotd;
 #define OFLAG_UMODEB    0x00800000  /* Oper can set umode +b */
 #define OFLAG_SADMIN    0x00080000  /* Oper can be a services admin */
 #define OFLAG_ZLINE	0x00100000  /* Oper can use /zline and /unzline */
+#define OFLAG_RSTAFF    0x01000000  /* Oper can view server IPs (routing staff) */
 #define OFLAG_LOCAL	(OFLAG_REHASH|OFLAG_HELPOP|OFLAG_GLOBOP|OFLAG_WALLOP|OFLAG_LOCOP|OFLAG_LROUTE|OFLAG_LKILL|OFLAG_KLINE|OFLAG_UNKLINE|OFLAG_LNOTICE|OFLAG_UMODEC|OFLAG_UMODEF)
 #define OFLAG_GLOBAL	(OFLAG_LOCAL|OFLAG_GROUTE|OFLAG_GKILL|OFLAG_GNOTICE)
 #define OFLAG_ISGLOBAL	(OFLAG_GROUTE|OFLAG_GKILL|OFLAG_GNOTICE)
@@ -378,6 +379,7 @@ typedef struct MotdItem aMotd;
 #define OPCanGNotice(x)	((x)->oflag & OFLAG_GNOTICE)
 #define OPIsAdmin(x)	((x)->oflag & OFLAG_ADMIN)
 #define OPIsSAdmin(x)	((x)->oflag & OFLAG_SADMIN)
+#define OPIsRStaff(x)   ((x)->oflag & OFLAG_RSTAFF)
 #define OPCanUModeC(x)	((x)->oflag & OFLAG_UMODEC)
 #define OPCanUModeF(x)	((x)->oflag & OFLAG_UMODEF)
 #define OPCanUModeY(x)  ((x)->oflag & OFLAG_UMODEY)     
@@ -400,6 +402,7 @@ typedef struct MotdItem aMotd;
 #define OPSetGNotice(x)	((x)->oflag |= OFLAG_GNOTICE)
 #define OPSSetAdmin(x)	((x)->oflag |= OFLAG_ADMIN)
 #define OPSSetSAdmin(x) ((x)->oflag |= OFLAG_SADMIN)
+#define OPSetRStaff(x)  ((x)->oflag |= OFLAG_RSTAFF)
 #define OPSetUModeC(x)	((x)->oflag |= OFLAG_UMODEC)
 #define OPSetUModeF(x)	((x)->oflag |= OFLAG_UMODEF)
 #define OPSetUModeY(x)  ((x)->oflag |= OFLAG_UMODEY)
@@ -423,6 +426,7 @@ typedef struct MotdItem aMotd;
 #define OPClearGNotice(x)	((x)->oflag &= ~OFLAG_GNOTICE)
 #define OPClearAdmin(x)		((x)->oflag &= ~OFLAG_ADMIN)
 #define OPClearSAdmin(x)	((x)->oflag &= ~OFLAG_SADMIN)
+#define OPClearRStaff(x) 	((x)->oflag &= ~OFLAG_RSTAFF)
 #define OPClearUModeC(x)	((x)->oflag &= ~OFLAG_UMODEC)
 #define OPClearUModeF(x)	((x)->oflag &= ~OFLAG_UMODEF)
 #define OPClearUModeY(x)        ((x)->oflag &= ~OFLAG_UMODEY) 

@@ -1532,10 +1532,15 @@ report_configured_links(aClient *sptr, int mask)
 
                   /* block out IP addresses of U: lined servers in 
                    * a C/N request - lucas/xpsycho
-                   */
+		   * modified on request by taz, hide all
+	  	   * ips to other than routing staff or admins
+		   * -epi
+		   */
 
                   if(tmp->status & CONF_SERVER_MASK)
                   {
+		     if(!OPIsRStaff(sptr) || !IsAdmin(sptr))
+  		        host = "*";
                      if(find_is_ulined(name))
                         host = "hidden@0.0.0.0";
                   }

@@ -1124,10 +1124,11 @@ openconf(char *filename)
 extern char *getfield();
 
 static int oper_access[] = {
-	~(OFLAG_ADMIN|OFLAG_SADMIN|OFLAG_ZLINE|OFLAG_ADMIN), '*',
+	~(OFLAG_ADMIN|OFLAG_SADMIN|OFLAG_ZLINE|OFLAG_ADMIN|OFLAG_RSTAFF), '*',
 	  OFLAG_LOCAL,   'o',
 	  OFLAG_GLOBAL,  'O',
 	  OFLAG_REHASH,  'r',
+          OFLAG_RSTAFF,  'S',
 	  OFLAG_DIE,     'D',
 	  OFLAG_RESTART, 'R',
 	  OFLAG_GLOBOP,  'h',
