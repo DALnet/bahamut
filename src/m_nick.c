@@ -479,8 +479,9 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 			       BadPtr(aconf->passwd) ? "Erroneous Nickname" :
 			       aconf->passwd,
 			       BadPtr(aconf->name) ? "N/A" : aconf->name);
-		    sendto_realops("Forbidding Q:lined nick %s from %s.",
-				   nick, get_client_name(cptr, FALSE));
+		    sendto_realops_lev(CCONN_LEV,
+				       "Forbidding Q:lined nick %s from %s.",
+				       nick, get_client_name(cptr, FALSE));
 		    return 0;
 		}
 	    }
@@ -583,9 +584,10 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 			       BadPtr(aconf->passwd) ? "Erroneous Nickname" :
 			       aconf->passwd,
 			       BadPtr(aconf->name) ? "N/A" : aconf->name);
-		    sendto_realops("Forbidding Q:lined nick %s from "
-				   "<unregistered>%s.", nick,
-				   get_client_name(cptr, FALSE));
+		    sendto_realops_lev(CCONN_LEV,
+				       "Forbidding Q:lined nick %s from "
+				       "<unregistered>%s.", nick,
+				       get_client_name(cptr, FALSE));
 		    return 0;
 		}
 	    }

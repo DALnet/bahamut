@@ -1560,7 +1560,7 @@ void accept_connection(aClient *cptr)
     if (newfd >= HARD_FDLIMIT - 10) 
     {
 	ircstp->is_ref++;
-	sendto_ops("All connections in use. (%s)",
+	sendto_realops_lev(CCONN_LEV,"All connections in use. (%s)",
 		   get_client_name(cptr, HIDEME));
 	send(newfd, "ERROR :All connections in use\r\n", 32, 0);
 	close(newfd);
