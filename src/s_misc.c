@@ -71,7 +71,8 @@ static char *weekdays[] =
 /* stats stuff */
 struct stats ircst, *ircstp = &ircst;
 
-char *date(time_t clock)
+char *
+date(time_t clock)
 {
     static char buf[80], plus;
     struct tm *lt, *gm;
@@ -79,48 +80,47 @@ char *date(time_t clock)
     int         minswest;
 
     if (!clock)
-	time(&clock);
+        time(&clock);
     gm = gmtime(&clock);
     memcpy((char *) &gmbuf, (char *) gm, sizeof(gmbuf));
     gm = &gmbuf;
     lt = localtime(&clock);
 
     if (lt->tm_yday == gm->tm_yday)
-	minswest = (gm->tm_hour - lt->tm_hour) * 60 + 
-	    (gm->tm_min - lt->tm_min);
+        minswest = (gm->tm_hour - lt->tm_hour) * 60 + (gm->tm_min - lt->tm_min);
     else if (lt->tm_yday > gm->tm_yday)
-	minswest = (gm->tm_hour - (lt->tm_hour + 24)) * 60;
+        minswest = (gm->tm_hour - (lt->tm_hour + 24)) * 60;
     else
-	minswest = ((gm->tm_hour + 24) - lt->tm_hour) * 60;
+        minswest = ((gm->tm_hour + 24) - lt->tm_hour) * 60;
 
     plus = (minswest > 0) ? '-' : '+';
     if (minswest < 0)
-	minswest = -minswest;
+        minswest = -minswest;
     
-    (void) ircsprintf(buf, "%s %s %d %04d -- %02d:%02d %c%02d:%02d",
-		      weekdays[lt->tm_wday], months[lt->tm_mon], lt->tm_mday,
-		      lt->tm_year + 1900, lt->tm_hour, lt->tm_min,
-		      plus, minswest / 60, minswest % 60);
+    ircsprintf(buf, "%s %s %d %04d -- %02d:%02d %c%02d:%02d",
+               weekdays[lt->tm_wday], months[lt->tm_mon], lt->tm_mday,
+               lt->tm_year + 1900, lt->tm_hour, lt->tm_min,
+               plus, minswest / 60, minswest % 60);
 
     return buf;
 }
 
-char *smalldate(time_t clock)
+char *
+smalldate(time_t clock)
 {
     static char buf[MAX_DATE_STRING];
     struct tm *lt, *gm;
     struct tm   gmbuf;
 
     if (!clock)
-	time(&clock);
+        time(&clock);
     gm = gmtime(&clock);
     memcpy((char *) &gmbuf, (char *) gm, sizeof(gmbuf));
     gm = &gmbuf;
     lt = localtime(&clock);
 
-    (void) ircsprintf(buf, "%04d/%02d/%02d %02d.%02d",
-		      lt->tm_year + 1900, lt->tm_mon + 1, lt->tm_mday,
-		      lt->tm_hour, lt->tm_min);
+    ircsprintf(buf, "%04d/%02d/%02d %02d.%02d", lt->tm_year + 1900, 
+               lt->tm_mon + 1, lt->tm_mday, lt->tm_hour, lt->tm_min);
 
     return buf;
 }
@@ -136,14 +136,15 @@ char *smalldate(time_t clock)
  **   might break things in other places...)
  **
  **/
-char *myctime(time_t value)
+char *
+myctime(time_t value)
 {
     static char buf[28];
     char   *p;
 
-    (void) strcpy(buf, ctime(&value));
+    strcpy(buf, ctime(&value));
     if ((p = (char *) strchr(buf, '\n')) != NULL)
-	*p = '\0';
+        *p = '\0';
 
     return buf;
 }
@@ -162,12 +163,13 @@ char *myctime(time_t value)
  * restricted to local clients and some * other thing generated for
  * remotes...
  */
-int check_registered_user(aClient *sptr)
+inline int 
+check_registered_user(aClient *sptr)
 {
     if (!IsRegisteredUser(sptr)) 
     {
-	sendto_one(sptr, err_str(ERR_NOTREGISTERED), me.name, "*");
-	return -1;
+        sendto_one(sptr, err_str(ERR_NOTREGISTERED), me.name, "*");
+        return -1;
     }
     return 0;
 }
@@ -176,23 +178,25 @@ int check_registered_user(aClient *sptr)
  * * check_registered user cancels message, if 'x' is not * registered
  * (e.g. we don't know yet whether a server * or user)
  */
-int check_registered(aClient *sptr)
+inline int 
+check_registered(aClient *sptr)
 {
     if (!IsRegistered(sptr))
     {
-	sendto_one(sptr, err_str(ERR_NOTREGISTERED), me.name, "*");
-	return -1;
+        sendto_one(sptr, err_str(ERR_NOTREGISTERED), me.name, "*");
+        return -1;
     }
     return 0;
 }
 
-char *get_listener_name(aListener *lptr)
+inline char *
+get_listener_name(aListener *lptr)
 {
    static char nbuf[HOSTLEN * 2 + USERLEN + 5];
 
    ircsprintf(nbuf, "%s[@%s.%d][%s]", me.name, BadPtr(lptr->vhost_string) ?
               "0.0.0.0" : lptr->vhost_string, lptr->port, 
-	       BadPtr(lptr->allow_string) ?  "*" : lptr->allow_string);
+               BadPtr(lptr->allow_string) ?  "*" : lptr->allow_string);
 
    return nbuf;
 }
@@ -216,80 +220,69 @@ char *get_listener_name(aListener *lptr)
  * (sptr) or *  to internal buffer (nbuf). *NEVER* use the returned
  * pointer *    to modify what it points!!!
  */
-char *get_client_name(aClient *sptr, int showip)
+char *
+get_client_name(aClient *sptr, int showip)
 {
     static char nbuf[HOSTLEN * 2 + USERLEN + 5];
 
     if (MyConnect(sptr)) 
     {
-	switch (showip) 
-	{
-	case TRUE:
+        switch (showip) 
+        {
+            case TRUE:
 #ifdef SHOW_UH
-	    (void) ircsprintf(nbuf, "%s[%s%s@%s]",
-			      sptr->name,
-			      (!(sptr->flags & FLAGS_GOTID)) ? "" :
-			      "(+)",
-			      sptr->user ? sptr->user->username :
-			      sptr->username,
-			      inetntoa((char *) &sptr->ip));
+                ircsprintf(nbuf, "%s[%s%s@%s]", sptr->name,
+                           (!(sptr->flags & FLAGS_GOTID)) ? "" : "(+)",
+                           sptr->user ? sptr->user->username : sptr->username,
+                           inetntoa((char *) &sptr->ip));
 #else
-	    (void) sprintf(nbuf, "%s[%s@%s]",
-			   sptr->name,
-			   (!(sptr->flags & FLAGS_GOTID)) ? "" :
-			   sptr->username,
-			   inetntoa((char *) &sptr->ip));
+                ircsprintf(nbuf, "%s[%s@%s]", sptr->name,
+                           (!(sptr->flags & FLAGS_GOTID)) ? "" : sptr->username,
+                           inetntoa((char *) &sptr->ip));
 #endif
-	    break;
-	case HIDEME:
+                break;
+            case HIDEME:
 #ifdef SHOW_UH
-	    (void) ircsprintf(nbuf, "%s[%s%s@%s]",
-			      sptr->name,
-			      (!(sptr->flags & FLAGS_GOTID)) ? "" :
-			      "(+)",
-			      sptr->user ? sptr->user->username :
-			      sptr->username,
-			      "0.0.0.0");
+                ircsprintf(nbuf, "%s[%s%s@%s]", sptr->name,
+                           (!(sptr->flags & FLAGS_GOTID)) ? "" : "(+)",
+                           sptr->user ? sptr->user->username : sptr->username,
+                           "0.0.0.0");
 #else
-	    (void) sprintf(nbuf, "%s[%s@%s]",
-			   sptr->name,
-			   (!(sptr->flags & FLAGS_GOTID)) ? "" :
-			   sptr->username,
-			   "0.0.0.0");
+                ircsprintf(nbuf, "%s[%s@%s]", sptr->name,
+                           (!(sptr->flags & FLAGS_GOTID)) ? "" : sptr->username,
+                           "0.0.0.0");
 #endif
-	    break;
-	default:
-	    if (mycmp(sptr->name, sptr->sockhost))
+                break;
+            default:
+                if (mycmp(sptr->name, sptr->sockhost))
 #ifdef USERNAMES_IN_TRACE
-		(void) ircsprintf(nbuf, "%s[%s@%s]",
-				  sptr->name,
-				  sptr->user ? sptr->user->username :
-				  sptr->username, sptr->sockhost);
+                    ircsprintf(nbuf, "%s[%s@%s]", sptr->name,
+                               sptr->user ? sptr->user->username :
+                               sptr->username, sptr->sockhost);
 #else
-	    (void) ircsprintf(nbuf, "%s[%s]",
-			      sptr->name, sptr->sockhost);
+                    ircsprintf(nbuf, "%s[%s]", sptr->name, sptr->sockhost);
 #endif
-	    else
-		return sptr->name;
-	}
-	return nbuf;
+                else
+                    return sptr->name;
+        }
+        return nbuf;
     }
     return sptr->name;
 }
 
-char *get_client_host(aClient *cptr)
+char *
+get_client_host(aClient *cptr)
 {
     static char nbuf[HOSTLEN * 2 + USERLEN + 5];
     
     if (!MyConnect(cptr))
-	return cptr->name;
+        return cptr->name;
     if (!cptr->hostp)
-	return get_client_name(cptr, FALSE);
+        return get_client_name(cptr, FALSE);
     else
-	(void) ircsprintf(nbuf, "%s[%-.*s@%-.*s]",
-			  cptr->name, USERLEN,
-			  (!(cptr->flags & FLAGS_GOTID)) ? "" : cptr->username,
-			  HOSTLEN, cptr->hostp->h_name);
+        ircsprintf(nbuf, "%s[%-.*s@%-.*s]", cptr->name, USERLEN,
+                          (!(cptr->flags & FLAGS_GOTID)) ? "" : cptr->username,
+                          HOSTLEN, cptr->hostp->h_name);
     return nbuf;
 }
 
@@ -297,14 +290,15 @@ char *get_client_host(aClient *cptr)
  * Form sockhost such that if the host is of form user@host, only the
  * host portion is copied.
  */
-void get_sockhost(aClient *cptr, char *host)
+void 
+get_sockhost(aClient *cptr, char *host)
 {
-    char   *s;
+    char *s;
 
     if ((s = (char *) strchr(host, '@')))
-	s++;
+        s++;
     else
-	s = host;
+        s = host;
     strncpyzt(cptr->sockhost, s, sizeof(cptr->sockhost));
 }
 
@@ -312,25 +306,26 @@ void get_sockhost(aClient *cptr, char *host)
  * Return wildcard name of my server name according to given config
  * entry --Jto
  */
-char *my_name_for_link(char *name, aConnect *aconn)
+char *
+my_name_for_link(char *name, aConnect *aconn)
 {
     static char namebuf[HOSTLEN];
     int count = aconn->port;
     char *start = name;
 
     if (count <= 0 || count > 5)
-	return start;
+        return start;
 
     while (count-- && name) 
     {
-	name++;
-	name = (char *) strchr(name, '.');
+        name++;
+        name = (char *) strchr(name, '.');
     }
     if (!name)
-	return start;
+        return start;
 
     namebuf[0] = '*';
-    (void) strncpy(&namebuf[1], name, HOSTLEN - 1);
+    strncpy(&namebuf[1], name, HOSTLEN - 1);
     namebuf[HOSTLEN - 1] = '\0';
     return namebuf;
 }
@@ -346,35 +341,35 @@ int remove_dcc_references(aClient *sptr)
             
     while(lp)
     {  
-	nextlp = lp->next;
-	acptr = lp->value.cptr;
-	for(found = 0, lpp = &(acptr->user->dccallow); 
-	    *lpp; lpp=&((*lpp)->next))
-	{  
-	    if(lp->flags == (*lpp)->flags)
-		continue; /* match only opposite types for sanity */
-	    if((*lpp)->value.cptr == sptr)
-	    {
-		if((*lpp)->flags == DCC_LINK_ME)
-		{  
-		    sendto_one(acptr, ":%s %d %s :%s has been removed from "
-			       "your DCC allow list for signing off",
-			       me.name, RPL_DCCINFO, acptr->name, sptr->name);
-		}
-		tmp = *lpp;
-		*lpp = tmp->next;
-		free_link(tmp);
-		found++;
-		break;
-	    }
-	}
+        nextlp = lp->next;
+        acptr = lp->value.cptr;
+        for(found = 0, lpp = &(acptr->user->dccallow); 
+            *lpp; lpp=&((*lpp)->next))
+        {  
+            if(lp->flags == (*lpp)->flags)
+                continue; /* match only opposite types for sanity */
+            if((*lpp)->value.cptr == sptr)
+            {
+                if((*lpp)->flags == DCC_LINK_ME)
+                {  
+                    sendto_one(acptr, ":%s %d %s :%s has been removed from "
+                               "your DCC allow list for signing off",
+                               me.name, RPL_DCCINFO, acptr->name, sptr->name);
+                }
+                tmp = *lpp;
+                *lpp = tmp->next;
+                free_link(tmp);
+                found++;
+                break;
+            }
+        }
          
-	if(!found)
-	    sendto_realops_lev(DEBUG_LEV, "rdr(): %s was in dccallowme "
-			       "list[%d] of %s but not in dccallowrem list!",
-			       acptr->name, lp->flags, sptr->name);
-	free_link(lp);
-	lp = nextlp;
+        if(!found)
+            sendto_realops_lev(DEBUG_LEV, "rdr(): %s was in dccallowme "
+                               "list[%d] of %s but not in dccallowrem list!",
+                               acptr->name, lp->flags, sptr->name);
+        free_link(lp);
+        lp = nextlp;
     }
     return 0;
 }  
@@ -389,7 +384,8 @@ int remove_dcc_references(aClient *sptr)
  * Original idea by Cabal95, implementation by lucas
  */
 
-void exit_one_client_in_split(aClient *cptr, aClient *dead, char *reason)
+void 
+exit_one_client_in_split(aClient *cptr, aClient *dead, char *reason)
 {
     Link *lp;
 
@@ -407,11 +403,11 @@ void exit_one_client_in_split(aClient *cptr, aClient *dead, char *reason)
     sendto_common_channels(cptr, ":%s QUIT :%s", cptr->name, reason);
     
     while ((lp = cptr->user->channel))
-	remove_user_from_channel(cptr, lp->value.chptr);
+        remove_user_from_channel(cptr, lp->value.chptr);
     while ((lp = cptr->user->invited))
-	del_invite(cptr, lp->value.chptr);
+        del_invite(cptr, lp->value.chptr);
     while ((lp = cptr->user->silence))
-	del_silence(cptr, lp->value.cp);
+        del_silence(cptr, lp->value.cp);
 
     remove_dcc_references(cptr);
 
@@ -437,8 +433,9 @@ void exit_one_client_in_split(aClient *cptr, aClient *dead, char *reason)
  * comment: comment provided
  */
 
-void exit_one_server(aClient *cptr, aClient *dead, aClient *from, 
-		     aClient *lcptr, char *spinfo, char *comment)
+void 
+exit_one_server(aClient *cptr, aClient *dead, aClient *from, 
+                aClient *lcptr, char *spinfo, char *comment)
 {
     aClient *acptr, *next;
     DLink *lp;
@@ -460,51 +457,51 @@ void exit_one_server(aClient *cptr, aClient *dead, aClient *from,
 
     for (acptr = client; acptr; acptr = next) 
     {
-	next = acptr->next; /* we might destroy this client record 
-			     * in the loop. */
-	
-	if(acptr->uplink != cptr || !IsPerson(acptr)) 
-	    continue;
+        next = acptr->next; /* we might destroy this client record 
+                             * in the loop. */
+        
+        if(acptr->uplink != cptr || !IsPerson(acptr)) 
+            continue;
 
-	exit_one_client_in_split(acptr, dead, spinfo);
+        exit_one_client_in_split(acptr, dead, spinfo);
     }
 
     for (acptr = client; acptr; acptr = next) 
     {
-	next = acptr->next; /* we might destroy this client record in 
-			     * the loop. */
+        next = acptr->next; /* we might destroy this client record in 
+                             * the loop. */
 
-	if(acptr->uplink != cptr || !IsServer(acptr)) 
-	    continue;
+        if(acptr->uplink != cptr || !IsServer(acptr)) 
+            continue;
 
-	exit_one_server(acptr, dead, from, lcptr, spinfo, comment);
-	next = client; /* restart the loop */
+        exit_one_server(acptr, dead, from, lcptr, spinfo, comment);
+        next = client; /* restart the loop */
     }
 
     Debug((DEBUG_NOTICE, "done exiting server: %s", cptr->name));
 
     for (lp = server_list; lp; lp = lp->next)
     {
-	acptr = lp->value.cptr;
+        acptr = lp->value.cptr;
 
-	if (acptr == cptr || IsMe(acptr) ||
-	    acptr == dead || acptr == lcptr)
-	    continue;
+        if (acptr == cptr || IsMe(acptr) ||
+            acptr == dead || acptr == lcptr)
+            continue;
 
-	/* if the server is noquit, we only want to send it
-	 *  information about 'dead'
-	 * if it's not, this server gets split information for ALL
-	 * dead servers.
-	 */
+        /* if the server is noquit, we only want to send it
+         *  information about 'dead'
+         * if it's not, this server gets split information for ALL
+         * dead servers.
+         */
 
-	if(cptr != dead)
-	    continue;
+        if(cptr != dead)
+            continue;
 
-	if (cptr->from == acptr) /* "upstream" squit */
-	    sendto_one(acptr, ":%s SQUIT %s :%s", from->name, cptr->name,
-		       comment);
-	else 
-	    sendto_one(acptr, "SQUIT %s :%s", cptr->name, comment);
+        if (cptr->from == acptr) /* "upstream" squit */
+            sendto_one(acptr, ":%s SQUIT %s :%s", from->name, cptr->name,
+                       comment);
+        else 
+            sendto_one(acptr, "SQUIT %s :%s", cptr->name, comment);
     }
 
     del_from_client_hash_table(cptr->name, cptr); 
@@ -532,7 +529,7 @@ void exit_server(aClient *lcptr, aClient *cptr, aClient *from, char *comment)
 #endif
 
     Debug((DEBUG_NOTICE, "exit_server(%s, %s, %s)", cptr->name, from->name,
-	   comment));
+           comment));
 
     exit_one_server(cptr, cptr, from, lcptr, splitname, comment);
 }
@@ -558,177 +555,172 @@ void exit_server(aClient *lcptr, aClient *cptr, aClient *from, char *comment)
  *      FLUSH_BUFFER    if (cptr == sptr) 
  *      0 if (cptr != sptr)
  */
-int exit_client(aClient *cptr, aClient *sptr, aClient *from, char *comment)
+int 
+exit_client(aClient *cptr, aClient *sptr, aClient *from, char *comment)
 {
-#ifdef	FNAME_USERLOG
+#ifdef  FNAME_USERLOG
     time_t on_for;
-
 #endif
     
     if (MyConnect(sptr)) 
     {
-	call_hooks(CHOOK_SIGNOFF, sptr);
+        call_hooks(CHOOK_SIGNOFF, sptr);
 
-	if (IsAnOper(sptr)) 
-	    remove_from_list(&oper_list, sptr, NULL);
-	if (sptr->flags & FLAGS_HAVERECVQ)
-	    remove_from_list(&recvq_clients, sptr, NULL);
-	if (IsClient(sptr))
-	    Count.local--;
-	if (IsNegoServer(sptr))
-	    sendto_realops("Lost server %s during negotiation: %s", 
-			   sptr->name, comment);
-	
-	if (IsServer(sptr)) 
-	{
-	    Count.myserver--;
-	    if (IsULine(sptr))
-		Count.myulined--;
-	    remove_from_list(&server_list, sptr, NULL);
+        if (IsAnOper(sptr)) 
+            remove_from_list(&oper_list, sptr, NULL);
+        if (sptr->flags & FLAGS_HAVERECVQ)
+            remove_from_list(&recvq_clients, sptr, NULL);
+        if (IsClient(sptr))
+            Count.local--;
+        if (IsNegoServer(sptr))
+            sendto_realops("Lost server %s during negotiation: %s", 
+                           sptr->name, comment);
+        
+        if (IsServer(sptr)) 
+        {
+            Count.myserver--;
+            if (IsULine(sptr))
+                Count.myulined--;
+            remove_from_list(&server_list, sptr, NULL);
 #ifdef NO_CHANOPS_WHEN_SPLIT
-	    if (server_list == NULL) 
-		server_was_split = YES;
+            if (server_list == NULL) 
+                server_was_split = YES;
 #endif
-	}
-	sptr->flags |= FLAGS_CLOSING;
-	if (IsPerson(sptr)) 
-	{
-	    Link *lp, *next;
-	    LOpts *lopt = sptr->user->lopt;
-	    /* poof goes their watchlist! */
-	    hash_del_watch_list(sptr);
-	    /* if they have listopts, axe those, too */
-	    if(lopt != NULL) 
-	    {
-		remove_from_list(&listing_clients, sptr, NULL);
-		for (lp = lopt->yeslist; lp; lp = next) 
-		{
-		    next = lp->next;
-		    free_link(lp);
-		}
-		for (lp = lopt->nolist; lp; lp = next) 
-		{
-		    next = lp->next;
-		    free_link(lp);
-		}
-				
-		MyFree(sptr->user->lopt);
-		sptr->user->lopt = NULL;
-	    }
-	    sendto_realops_lev(CCONN_LEV,
-			       "Client exiting: %s (%s@%s) [%s] [%s]",
-			       sptr->name, sptr->user->username,
-			       sptr->user->host,
-			       (sptr->flags & FLAGS_NORMALEX) ?
-			       "Client Quit" : comment,
-			       sptr->hostip);
-	}
+        }
+        sptr->flags |= FLAGS_CLOSING;
+        if (IsPerson(sptr)) 
+        {
+            Link *lp, *next;
+            LOpts *lopt = sptr->user->lopt;
+            /* poof goes their watchlist! */
+            hash_del_watch_list(sptr);
+            /* if they have listopts, axe those, too */
+            if(lopt != NULL) 
+            {
+                remove_from_list(&listing_clients, sptr, NULL);
+                for (lp = lopt->yeslist; lp; lp = next) 
+                {
+                    next = lp->next;
+                    free_link(lp);
+                }
+                for (lp = lopt->nolist; lp; lp = next) 
+                {
+                    next = lp->next;
+                    free_link(lp);
+                }
+                                
+                MyFree(sptr->user->lopt);
+                sptr->user->lopt = NULL;
+            }
+            sendto_realops_lev(CCONN_LEV,
+                               "Client exiting: %s (%s@%s) [%s] [%s]",
+                               sptr->name, sptr->user->username,
+                               sptr->user->host,
+                               (sptr->flags & FLAGS_NORMALEX) ?
+                               "Client Quit" : comment,
+                               sptr->hostip);
+        }
 #ifdef FNAME_USERLOG
-	on_for = timeofday - sptr->firsttime;
+        on_for = timeofday - sptr->firsttime;
 #endif
 #if defined(USE_SYSLOG) && defined(SYSLOG_USERS)
-	if (IsPerson(sptr))
-	    syslog(LOG_NOTICE, "%s (%3d:%02d:%02d): %s!%s@%s %d/%d\n",
-		   myctime(sptr->firsttime),
-		   on_for / 3600, (on_for % 3600) / 60,
-		   on_for % 60, sptr->name,
-		   sptr->user->username, sptr->user->host,
-		   sptr->sendK, sptr->receiveK);
+        if (IsPerson(sptr))
+            syslog(LOG_NOTICE, "%s (%3d:%02d:%02d): %s!%s@%s %d/%d\n",
+                   myctime(sptr->firsttime),
+                   on_for / 3600, (on_for % 3600) / 60,
+                   on_for % 60, sptr->name,
+                   sptr->user->username, sptr->user->host,
+                   sptr->sendK, sptr->receiveK);
 #endif
 #if defined(FNAME_USERLOG)
-	{
-	    char        linebuf[300];
-	    static int  logfile = -1;
-	    static long lasttime;
-	    
-	    /*
-	     * This conditional makes the logfile active only after it's
-	     * been created - thus logging can be turned off by removing
-	     * the file.
-	     * 
-	     * stop NFS hangs...most systems should be able to open a file in
-	     * 3 seconds. -avalon (curtesy of wumpus)
-	     * 
-	     * Keep the logfile open, syncing it every 10 seconds -Taner
-	     */
-	    if (IsPerson(sptr)) 
-	    {
-		if (logfile == -1) 
-		{
-		    (void) alarm(3);
-		    logfile = open(FNAME_USERLOG, O_WRONLY | O_APPEND);
-		    (void) alarm(0);
-		}
-		(void) ircsprintf(linebuf,
-				  "%s (%3d:%02d:%02d): %s!%s@%s %d/%d\n",
-				  myctime(sptr->firsttime), on_for / 3600,
-				  (on_for % 3600) / 60, on_for % 60,
-				  sptr->name,
-				  sptr->user->username,
-				  sptr->user->host,
-				  sptr->sendK,
-				  sptr->receiveK);
-		(void) alarm(3);
-		(void) write(logfile, linebuf, strlen(linebuf));
-		(void) alarm(0);
-		/* Resync the file evey 10 seconds*/
-		if (timeofday - lasttime > 10) 
-		{
-		    (void) alarm(3);
-		    (void) close(logfile);
-		    (void) alarm(0);
-		    logfile = -1;
-		    lasttime = timeofday;
-		}
-	    }
-	}
+        {
+            char        linebuf[300];
+            static int  logfile = -1;
+            static long lasttime;
+            
+            /*
+             * This conditional makes the logfile active only after it's
+             * been created - thus logging can be turned off by removing
+             * the file.
+             * 
+             * stop NFS hangs...most systems should be able to open a file in
+             * 3 seconds. -avalon (curtesy of wumpus)
+             * 
+             * Keep the logfile open, syncing it every 10 seconds -Taner
+             */
+            if (IsPerson(sptr)) 
+            {
+                if (logfile == -1) 
+                {
+                    alarm(3);
+                    logfile = open(FNAME_USERLOG, O_WRONLY | O_APPEND);
+                    alarm(0);
+                }
+                ircsprintf(linebuf, "%s (%3d:%02d:%02d): %s!%s@%s %d/%d\n",
+                           myctime(sptr->firsttime), on_for / 3600,
+                           (on_for % 3600) / 60, on_for % 60,
+                           sptr->name, sptr->user->username,
+                           sptr->user->host, sptr->sendK, sptr->receiveK);
+                alarm(3);
+                write(logfile, linebuf, strlen(linebuf));
+                alarm(0);
+                /* Resync the file evey 10 seconds*/
+                if (timeofday - lasttime > 10) 
+                {
+                    alarm(3);
+                    close(logfile);
+                    alarm(0);
+                    logfile = -1;
+                    lasttime = timeofday;
+                }
+            }
+        }
 #endif
-	if (sptr->fd >= 0) 
-	{
-	    if (cptr != NULL && sptr != cptr)
-		sendto_one(sptr, "ERROR :Closing Link: %s %s (%s)",
-			   IsPerson(sptr) ? sptr->sockhost : "0.0.0.0", 
-			   sptr->name, comment);
-	    else
-		sendto_one(sptr, "ERROR :Closing Link: %s (%s)",
-			   IsPerson(sptr) ? sptr->sockhost : "0.0.0.0", 
-			   comment);
-	}
-	/*
-	 * * Currently only server connections can have * depending
-	 * remote clients here, but it does no * harm to check for all
-	 * local clients. In * future some other clients than servers
-	 * might * have remotes too... *
-	 * 
-	 * Close the Client connection first and mark it * so that no
-	 * messages are attempted to send to it. *, The following *must*
-	 * make MyConnect(sptr) == FALSE!). * It also makes sptr->from ==
-	 * NULL, thus it's unnecessary * to test whether "sptr != acptr"
-	 * in the following loops.
-	 */
-	if (IsServer(sptr)) 
-	{
-	    sendto_ops("%s was connected for %lu seconds.  %lu/%lu "
-		       "sendK/recvK.", sptr->name, timeofday - sptr->firsttime,
-		       sptr->sendK, sptr->receiveK);
+        if (sptr->fd >= 0) 
+        {
+            if (cptr != NULL && sptr != cptr)
+                sendto_one(sptr, "ERROR :Closing Link: %s %s (%s)",
+                           IsPerson(sptr) ? sptr->sockhost : "0.0.0.0", 
+                           sptr->name, comment);
+            else
+                sendto_one(sptr, "ERROR :Closing Link: %s (%s)",
+                           IsPerson(sptr) ? sptr->sockhost : "0.0.0.0", 
+                           comment);
+        }
+        /*
+         * * Currently only server connections can have * depending
+         * remote clients here, but it does no * harm to check for all
+         * local clients. In * future some other clients than servers
+         * might * have remotes too... *
+         * 
+         * Close the Client connection first and mark it * so that no
+         * messages are attempted to send to it. *, The following *must*
+         * make MyConnect(sptr) == FALSE!). * It also makes sptr->from ==
+         * NULL, thus it's unnecessary * to test whether "sptr != acptr"
+         * in the following loops.
+         */
+        if (IsServer(sptr)) 
+        {
+            sendto_ops("%s was connected for %lu seconds.  %lu/%lu "
+                       "sendK/recvK.", sptr->name, timeofday - sptr->firsttime,
+                       sptr->sendK, sptr->receiveK);
 #ifdef USE_SYSLOG
-	    syslog(LOG_NOTICE, "%s was connected for %lu seconds.  %lu/%lu "
-		   "sendK/recvK.", sptr->name, 
-			(u_long) timeofday - sptr->firsttime,
-		   sptr->sendK, sptr->receiveK);
+            syslog(LOG_NOTICE, "%s was connected for %lu seconds.  %lu/%lu "
+                   "sendK/recvK.", sptr->name, 
+                        (u_long) timeofday - sptr->firsttime,
+                   sptr->sendK, sptr->receiveK);
 #endif
-	    close_connection(sptr);
-	    
-	    sptr->sockerr = 0;
-	    sptr->flags |= FLAGS_DEADSOCKET;
-	}
-	else
-	{
-	    close_connection(sptr);
-	    sptr->sockerr = 0;
-	    sptr->flags |= FLAGS_DEADSOCKET;
-	}
-		
+            close_connection(sptr);
+            sptr->sockerr = 0;
+            sptr->flags |= FLAGS_DEADSOCKET;
+        }
+        else
+        {
+            close_connection(sptr);
+            sptr->sockerr = 0;
+            sptr->flags |= FLAGS_DEADSOCKET;
+        }
+                
     }
     exit_one_client(cptr, sptr, from, comment);
     return cptr == sptr ? FLUSH_BUFFER : 0;
@@ -738,8 +730,8 @@ int exit_client(aClient *cptr, aClient *sptr, aClient *from, char *comment)
  * Exit one client, local or remote. Assuming all dependants have
  * been already removed, and socket closed for local client.
  */
-static void exit_one_client(aClient *cptr, aClient *sptr, aClient *from,
-			    char *comment)
+static void 
+exit_one_client(aClient *cptr, aClient *sptr, aClient *from, char *comment)
 {
     Link   *lp;
     
@@ -749,86 +741,88 @@ static void exit_one_client(aClient *cptr, aClient *sptr, aClient *from,
      */
     if (IsMe(sptr))
     {
-	sendto_ops("ERROR: tried to exit me! : %s", comment);
-	return;			/* ...must *never* exit self!! */
+        sendto_ops("ERROR: tried to exit me! : %s", comment);
+        return;                 /* ...must *never* exit self!! */
     }
     else if (IsServer(sptr))
     {
 #ifdef ALWAYS_SEND_DURING_SPLIT
-	currently_processing_netsplit = YES;
+        currently_processing_netsplit = YES;
 #endif
 
-	exit_server(cptr, sptr, from, comment);
-	
+        exit_server(cptr, sptr, from, comment);
+        
 #ifdef ALWAYS_SEND_DURING_SPLIT
-	currently_processing_netsplit = NO;
+        currently_processing_netsplit = NO;
 #endif
-	return;
+        return;
     }
     else if (!(IsPerson(sptr)))
-	/*
-	 * ...this test is *dubious*, would need * some thought.. but for
-	 * now it plugs a * nasty hole in the server... --msa
-	 */
-	;				/* Nothing */
+        /*
+         * ...this test is *dubious*, would need * some thought.. but for
+         * now it plugs a * nasty hole in the server... --msa
+         */
+        ;                               /* Nothing */
     else if (sptr->name[0])
-    {	
-	/* ...just clean all others with QUIT... */
-	/*
-	 * If this exit is generated from "m_kill", then there is no
-	 * sense in sending the QUIT--KILL's have been sent instead.
-	 */
-	if ((sptr->flags & FLAGS_KILLED) == 0) 
-	{
-	    sendto_serv_butone(cptr, ":%s QUIT :%s",
-			       sptr->name, comment);
-	}
-	/*
-	 * * If a person is on a channel, send a QUIT notice * to every
-	 * client (person) on the same channel (so * that the client can
-	 * show the "**signoff" message). * (Note: The notice is to the
-	 * local clients *only*)
-	 */
-	if (sptr->user)
-	{
-	    send_part_to_common_channels(sptr, comment);
-	    send_quit_to_common_channels(sptr, comment);
-	    while ((lp = sptr->user->channel))
-		remove_user_from_channel(sptr, lp->value.chptr);
-	    
-	    /* Clean up invitefield */
-	    while ((lp = sptr->user->invited))
-		del_invite(sptr, lp->value.chptr);
-	    /* Clean up silences */
-	    while ((lp = sptr->user->silence)) 
-		(void)del_silence(sptr, lp->value.cp);
-	    remove_dcc_references(sptr);
-	    /* again, this is all that is needed */
-	}
+    {   
+        /* ...just clean all others with QUIT... */
+        /*
+         * If this exit is generated from "m_kill", then there is no
+         * sense in sending the QUIT--KILL's have been sent instead.
+         */
+        if ((sptr->flags & FLAGS_KILLED) == 0) 
+        {
+            sendto_serv_butone(cptr, ":%s QUIT :%s",
+                               sptr->name, comment);
+        }
+        /*
+         * * If a person is on a channel, send a QUIT notice * to every
+         * client (person) on the same channel (so * that the client can
+         * show the "**signoff" message). * (Note: The notice is to the
+         * local clients *only*)
+         */
+        if (sptr->user)
+        {
+            send_part_to_common_channels(sptr, comment);
+            send_quit_to_common_channels(sptr, comment);
+            while ((lp = sptr->user->channel))
+                remove_user_from_channel(sptr, lp->value.chptr);
+            
+            /* Clean up invitefield */
+            while ((lp = sptr->user->invited))
+                del_invite(sptr, lp->value.chptr);
+            /* Clean up silences */
+            while ((lp = sptr->user->silence)) 
+                del_silence(sptr, lp->value.cp);
+            remove_dcc_references(sptr);
+            /* again, this is all that is needed */
+        }
     }
 
     /* Remove sptr from the client list */
     if (del_from_client_hash_table(sptr->name, sptr) != 1) 
     {
-	Debug((DEBUG_ERROR, "%#x !in tab %s[%s] %#x %#x %#x %d %d %#x",
-	       sptr, sptr->name,
-	       sptr->from ? sptr->from->sockhost : "??host",
-	       sptr->from, sptr->next, sptr->prev, sptr->fd,
-	       sptr->status, sptr->user));
+        Debug((DEBUG_ERROR, "%#x !in tab %s[%s] %#x %#x %#x %d %d %#x",
+               sptr, sptr->name,
+               sptr->from ? sptr->from->sockhost : "??host",
+               sptr->from, sptr->next, sptr->prev, sptr->fd,
+               sptr->status, sptr->user));
     }
     /* remove user from watchlists */
     if(IsRegistered(sptr))
-	hash_check_watch(sptr, RPL_LOGOFF);
+        hash_check_watch(sptr, RPL_LOGOFF);
     remove_client_from_list(sptr);
     return;
 }
 
-void initstats()
+void 
+initstats()
 {
     memset((char *) &ircst, '\0', sizeof(ircst));
 }
 
-char *make_parv_copy(char *pbuf, int parc, char *parv[])
+char *
+make_parv_copy(char *pbuf, int parc, char *parv[])
 {
    int pbpos = 0, i;
 
