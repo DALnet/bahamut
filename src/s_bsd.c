@@ -1518,6 +1518,7 @@ int read_message(time_t delay,
    int isdata;
    int auth = 0;
    register int i, j;
+   char errmsg[256];
 
 # ifdef USE_FAST_FD_ISSET
    int fd_read_mask;
@@ -1810,10 +1811,9 @@ int read_message(time_t delay,
 		     FD_CLR(i, read_set);
 		  }
 # endif
-		  (void) exit_client(cptr, cptr, &me,
-				     (cptr->flags & FLAGS_SENDQEX) ?
-				     "SendQ Exceeded" :
-				     strerror(get_sockerr(cptr)));
+		  ircsprintf(errmsg, "Write Error: %s", (cptr->flags & FLAGS_SENDQEX) ?
+			"SendQ Exceeded" : strerror(get_sockerr(cptr)));
+		  (void) exit_client(cptr, cptr, &me, errmsg);
 # ifdef USE_FAST_FD_ISSET
 		  fd_read_mask <<= 1;
 		  if (!fd_read_mask) {
@@ -1858,10 +1858,10 @@ int read_message(time_t delay,
 	       FD_CLR(i, read_set);
 	    }
 # endif
-	    (void) exit_client(cptr, cptr, &me,
-			       (cptr->flags & FLAGS_SENDQEX) ?
-			       "SendQ Exceeded" :
-			       strerror(get_sockerr(cptr)));
+	    ircsprintf(errmsg, "Read/Dead Error: %s", (cptr->flags & FLAGS_SENDQEX) ?
+			 "SendQ Exceeded" : strerror(get_sockerr(cptr)));
+	    (void) exit_client(cptr, cptr, &me, errmsg);
+
 # ifdef USE_FAST_FD_ISSET
 	    fd_read_mask <<= 1;
 	    if (!fd_read_mask) {
@@ -1945,8 +1945,6 @@ int read_message(time_t delay,
 	    }
 	 }
 	 if (length != FLUSH_BUFFER) {
-	    char errmsg[255];
-
 	    if (errno)
 	       (void) ircsprintf(errmsg, "Read error: %s", strerror(errno));
 	    else
@@ -2038,7 +2036,7 @@ int read_message(time_t delay, fdlist * listp)
    int auth, rr, rw;
    register int i, j;
    static aClient *authclnts[MAXCONNECTIONS];
-   char errmsg[255];
+   char errmsg[256];
 
    /* 
     * if it is called with NULL we check all active fd's
@@ -2237,8 +2235,9 @@ int read_message(time_t delay, fdlist * listp)
 	 if (!write_err)
 	    (void) send_queued(cptr);
 	 if (IsDead(cptr) || write_err) {
-	    (void) exit_client(cptr, cptr, &me,
-			       strerror(get_sockerr(cptr)));
+	    ircsprintf(errmsg, "Write Error: %s", (cptr->flags & FLAGS_SENDQEX) ?
+		       "SendQ Exceeded" : strerror(get_sockerr(cptr)));
+	    (void) exit_client(cptr, cptr, &me, errmsg);
 
 	    continue;
 	 }
@@ -2254,7 +2253,9 @@ int read_message(time_t delay, fdlist * listp)
       if (length == FLUSH_BUFFER)
 	 continue;
       if (IsDead(cptr)) {
-	 (void) exit_client(cptr, cptr, &me, strerror(get_sockerr(cptr)));
+	 ircsprintf(errmsg, "Read/Dead Error: %s", (cptr->flags & FLAGS_SENDQEX) ?
+		    "SendQ Exceeded" : strerror(get_sockerr(cptr)));
+	 (void) exit_client(cptr, cptr, &me, errmsg);
 	 continue;
       }
       if (length > 0)
@@ -2303,8 +2304,12 @@ int read_message(time_t delay, fdlist * listp)
  *						  connected % 60);
  */
       }
-      (void) ircsprintf(errmsg, "Read error: %d (%s)", errno,
-			strerror(errno));
+
+      if (errno)
+        (void) ircsprintf(errmsg, "Read error: %s", strerror(errno));
+      else
+	(void) ircsprintf(errmsg, "Client closed connection");
+
       (void) exit_client(cptr, cptr, &me, errmsg);
    }
    return 0;
