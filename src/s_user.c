@@ -2932,7 +2932,7 @@ m_quit(aClient *cptr,
    sptr->flags |= FLAGS_NORMALEX;
    if (!IsServer(cptr)) {
       strcpy(comment, "Quit: ");
-      strncpy(comment + 6, reason, TOPICLEN - 7);
+      strncpy(comment + 6, reason, sizeof(comment) - 7); 
       comment[TOPICLEN] = 0;
       return exit_client(cptr, sptr, sptr, comment);
    }
