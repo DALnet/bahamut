@@ -43,6 +43,7 @@
 #include "res.h"
 #include "h.h"
 #include "numeric.h"
+#include "blalloc.h"
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -50,6 +51,8 @@
 #include "queue.h"
 #include "throttle.h"
 
+BlockHeap *hashent_freelist;
+BlockHeap *throttle_freelist;
 
 /*******************************************************************************
  * hash code here.  why isn't it in hash.c?  see the license. :)
@@ -105,6 +108,16 @@ int hash_insert(hash_table *table, void *ent);
 int hash_delete(hash_table *table, void *ent);
 void *hash_find(hash_table *table, void *key);
 
+hashent *hashent_alloc()
+{
+   return BlockHeapALLOC(hashent_freelist, hashent);
+}
+
+void hashent_free(hashent *hp)
+{
+   BlockHeapFree(hashent_freelist, hp);
+}
+
 /* hash_table creation function.  given the user's paramters, allocate
  * and empty a new hash table and return it. */
 hash_table *create_hash_table(int elems, size_t offset, size_t len,
@@ -133,7 +146,7 @@ void destroy_hash_table(hash_table *table) {
 	while (!SLIST_EMPTY(&table->table[i])) {
 	    hep = SLIST_FIRST(&table->table[i]);
 	    SLIST_REMOVE_HEAD(&table->table[i], lp);
-	    free(hep);
+	    hashent_free(hep);
 	}
     }
     free(table->table);
@@ -162,7 +175,7 @@ void resize_hash_table(hash_table *table, int elems) {
 	    hep = SLIST_FIRST(&oldtable[i]);
 	    hash_insert(table, hep->ent);
 	    SLIST_REMOVE_HEAD(&oldtable[i], lp);
-	    free(hep);
+	    hashent_free(hep);
 	}
     }
     free(oldtable);
@@ -195,7 +208,7 @@ unsigned int hash_get_key_hash(hash_table *table, void *key, size_t offset) {
 /* add the given item onto the hash */
 int hash_insert(hash_table *table, void *ent) {
     int hash = hash_get_key_hash(table, ent, table->keyoffset);
-    hashent *hep = malloc(sizeof(hashent));
+    hashent *hep = hashent_alloc();
 
     hep->ent = ent;
     SLIST_INSERT_HEAD(&table->table[hash], hep, lp);
@@ -215,7 +228,7 @@ int hash_delete(hash_table *table, void *ent) {
     if (hep == NULL)
 	return 0;
     SLIST_REMOVE(&table->table[hash], hep, hashent_t, lp);
-    free(hep);
+    hashent_free(hep);
     return 1;
 }
 
@@ -272,11 +285,22 @@ int numthrottles = 0; /* number of throttles in existence */
 
 #ifdef THROTTLE_ENABLE
 void throttle_init(void) {
-
+    hashent_freelist = BlockHeapCreate(sizeof(hashent), 1024);
+    throttle_freelist = BlockHeapCreate(sizeof(throttle), 1024);
     /* create the throttle hash. */
     throttle_hash = create_hash_table(THROTTLE_HASHSIZE,
 	    offsetof(throttle, addr), HOSTIPLEN,
 	    HASH_FL_STRING, (int (*)(void *, void *))strcmp);
+}
+
+throttle *throttle_alloc()
+{
+   return BlockHeapALLOC(throttle_freelist, throttle);
+}
+
+void throttle_free(throttle *tp)
+{
+   BlockHeapFree(throttle_freelist, tp);
 }
 
 /* returns the zline time, in seconds */
@@ -322,7 +346,7 @@ int throttle_check(char *host, int fd, time_t sotime) {
 	 * the hash.  XXX: blockheap code should be used, but the blockheap
 	 * allocator available in ircd is broken beyond repair as far as I'm
 	 * concerned. -wd */
-	tp = malloc(sizeof(throttle));
+	tp = throttle_alloc();;
 	strcpy(tp->addr, host);
 
         tp->stage = -1; /* no zline stage yet */
@@ -447,7 +471,7 @@ void throttle_timer(time_t now) {
 	    /* delete this item */
 	    LIST_REMOVE(tp, lp);
 	    hash_delete(throttle_hash, tp);
-	    free(tp);
+	    throttle_free(tp);
 	    numthrottles--;
 	}
 	tp=tp2;
@@ -465,9 +489,21 @@ void throttle_resize(int size) {
 void throttle_stats(aClient *cptr, char *name) {
     int pending = 0, bans = 0;
     throttle *tp;
+    unsigned int tcnt, tsz, hcnt, hsz;
+
+    tcnt = throttle_freelist->blocksAllocated * 
+           throttle_freelist->elemsPerBlock;
+    tsz = tcnt * throttle_freelist->elemSize;
+
+    hcnt = hashent_freelist->blocksAllocated * 
+           hashent_freelist->elemsPerBlock;
+    hsz = hcnt * hashent_freelist->elemSize;
 
     sendto_one(cptr, ":%s %d %s :throttles: %d", me.name, RPL_STATSDEBUG, name,
 	    numthrottles);
+    sendto_one(cptr, ":%s %d %s :alloc memory: %d throttles (%d bytes), "
+            "%d hashents (%d bytes)", me.name, RPL_STATSDEBUG, name,
+            tcnt, tsz, hcnt, hsz);            
     sendto_one(cptr, ":%s %d %s :throttle hash table size: %d", me.name,
 	    RPL_STATSDEBUG, name, throttle_hash->size);
 
