@@ -38,6 +38,7 @@ extern int currently_processing_netsplit;
 #endif
 
 static char sendbuf[2048];
+static char remotebuf[2048];
 static int  send_message(aClient *, char *, int);
 
 static int  sentalong[MAXCONNECTIONS];
@@ -282,35 +283,107 @@ void vsendto_one(aClient *to, char *pattern, va_list vl) {
    send_message(to, sendbuf, len);
 }
 
-void sendto_channel_butone(aClient *one, aClient *from, aChannel *chptr, 
-									char *pattern, ...) {
-   chanMember   *cm;
+void sendto_channel_butone(aClient *one, aClient *from, aChannel *chptr, char *pattern, ...) 
+{
+   chanMember *cm;
    aClient *acptr;
-   int     i;
+   int i;
+   int didlocal = 0, didremote = 0;
    va_list vl;
+   char *pfix, *p;
    
    va_start(vl, pattern);
+
+   pfix = va_arg(vl, char *);
+
    memset((char *) sentalong, '\0', sizeof(sentalong));
-   for (cm = chptr->members; cm; cm = cm->next) {
+   for (cm = chptr->members; cm; cm = cm->next) 
+   {
       acptr = cm->cptr;
       if (acptr->from == one)
-		  continue;		/* ...was the one I should skip */
+         continue; /* ...was the one I should skip */
       i = acptr->from->fd;
-      if (MyConnect(acptr) && IsRegisteredUser(acptr)) {
-			vsendto_prefix_one(acptr, from, pattern, vl);
-			sentalong[i] = 1;
+      if (MyConnect(acptr) && IsRegisteredUser(acptr)) 
+      {
+         if(!didlocal)
+         {
+            int sidx = 1;
+
+            *sendbuf = ':';
+
+            if(IsPerson(from))
+            {
+               int flag = 0;
+               anUser *user = from->user;
+
+               for(p = from->name; *p; p++)
+                  sendbuf[sidx++] = *p;
+
+               if (user)
+               {
+                  if (*user->username) 
+                  {
+                     sendbuf[sidx++] = '!';
+                     for(p = user->username; *p; p++)
+                        sendbuf[sidx++] = *p;
+	          }
+                  if (*user->host && !MyConnect(from)) 
+                  {
+                     sendbuf[sidx++] = '@';
+                     for(p = user->host; *p; p++)
+                        sendbuf[sidx++] = *p;
+                     flag = 1;
+                  }
+               }
+
+               if (!flag && MyConnect(from) && *user->host) 
+               {
+                  sendbuf[sidx++] = '@';
+                  for(p = from->sockhost; *p; p++)
+                     sendbuf[sidx++] = *p;
+               }
+            }
+            else
+            {
+               for(p = pfix; *p; p++)
+                  sendbuf[sidx++] = *p;
+            }
+
+            didlocal = ircvsprintf(&sendbuf[sidx], pattern + 3, vl);
+            didlocal += sidx;
+         }
+         send_message(acptr, sendbuf, didlocal);
+         /* vsendto_prefix_one(acptr, from, pattern, vl); */
+         sentalong[i] = 1;
       }
-      else {
-			/*
-			 * Now check whether a message has been sent to this remote
-			 * link already
-			 */
-			if (sentalong[i] == 0) {
-				vsendto_prefix_one(acptr, from, pattern, vl);
-				sentalong[i] = 1;
-			}
+      else 
+      {
+         /*
+          * Now check whether a message has been sent to this remote
+          * link already
+          */
+         if(!didremote)
+         {
+            int ridx = 1;
+
+            *remotebuf = ':';
+
+            for(p = pfix; *p; p++)
+               remotebuf[ridx++] = *p;
+            didremote = ircvsprintf(&remotebuf[ridx], pattern + 3, vl);
+            didremote += ridx;
+         }
+
+         if (sentalong[i] == 0) 
+         {
+            send_message(acptr, remotebuf, didremote);
+            /* er, let's _not_ remake this entire buffer each time */
+            /* vsendto_prefix_one(acptr, from, pattern, vl); */
+            sentalong[i] = 1;
+         }
       }
    }
+
    va_end(vl);
    return;
 }
@@ -445,15 +518,17 @@ void sendto_channel_butlocal(aClient *one, aClient *from, aChannel *chptr, char 
 void
 sendto_channel_butserv(aChannel *chptr, aClient *from, char *pattern, ...)
 {
-	chanMember  *cm;
-	aClient *acptr;
-	va_list vl;
-	
-	va_start(vl, pattern);
+   chanMember  *cm;
+   aClient *acptr;
+   va_list vl;
+
+   va_start(vl, pattern);
    for (cm = chptr->members; cm; cm = cm->next)
-	  if (MyConnect(acptr = cm->cptr))
-		 vsendto_prefix_one(acptr, from, pattern, vl);
-	va_end(vl);
+   {
+      if (MyConnect(acptr = cm->cptr))
+         vsendto_prefix_one(acptr, from, pattern, vl);
+   }
+   va_end(vl);
    return;
 }
 
