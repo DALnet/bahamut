@@ -38,6 +38,11 @@
  * The outbuf should never be larger than 
  * the maximum block.. should it?
  * I'll account for any weirdness in zlib.
+ *
+ * WARNING:
+ * Please be aware that if you are using both encryption
+ * and ziplinks, rc4buf in send.c MUST be the same size
+ * as zipOutBuf in zlink.c!
  */
 #define zipOutBufSize (ZIP_MAX_BLOCK * 2)
 static char zipOutBuf[zipOutBufSize];

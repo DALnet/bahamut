@@ -38,7 +38,13 @@ static char remotebuf[2048];
 static int  send_message(aClient *, char *, int);
 
 #ifdef HAVE_ENCRYPTION_ON
-static char rc4buf[768];
+/*
+ * WARNING:
+ * Please be aware that if you are using both encryption
+ * and ziplinks, rc4buf in send.c MUST be the same size
+ * as zipOutBuf in zlink.c!
+ */
+static char rc4buf[16384];
 #endif
 
 static int  sentalong[MAXCONNECTIONS];
