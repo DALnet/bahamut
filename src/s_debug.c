@@ -215,6 +215,9 @@ void build_rplcache(void)
 #ifdef HIDE_KILL_ORIGINS
     *s++ = 'K';
 #endif
+#ifdef NO_USER_SERVERKILLS
+    *s++ = 'k';
+#endif
     if (!(confopts & FLAGS_SHOWLINKS))
         *s++ = 'L';
 #ifdef HIDE_SERVERMODE_ORIGINS
@@ -232,14 +235,14 @@ void build_rplcache(void)
 #ifdef NO_USER_STATS
     *s++ = 'S';
 #endif
+#ifdef NO_USER_OPERKILLS
+    *s++ = 's';
+#endif
 #ifdef NO_USER_TRACE
     *s++ = 'T';
 #endif
 #ifdef HIDEULINEDSERVS
     *s++ = 'U';
-#endif
-#ifdef NO_USER_SERVERNOTICES
-    *s++ = 'W';
 #endif
     *s++ = ']';
     *s++ = 0;

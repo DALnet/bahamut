@@ -12,28 +12,29 @@ Usermodes: (* designates that the umode is oper only)
 
  USERMODE      DESCRIPTION
 -----------------------------------------------------------------
-  +i        -  Designates the user is 'invisible'.
-  +w        -  User can recieve wallops messages.
-  +g        -  User can recieve globops messages.
-  +s        -  User can recieve server messages and oper kills.
-  +k        -  User can see server kill messages.
-  +r        -  User is marked as being registered/identified to services.
-  +R        -  User will not recieve messages from -r clients.
- *+O        -  Designates the user as being a local IRC Operator.
- *+o        -  Designates the user as being a global IRC Operator.
+  +i        -  Is 'invisible'.
+  +w        -  Can see wallops messages.
+  +r        -  Is registered/identified to services.
+  +s        -  Can see oper kill messages.
+  +R        -  Will not receive messages from -r clients.
  *+a        -  Designates the user as being a services administrator.
- *+A        -  Designates the user as being a server administrator.
- *+c        -  User can see client connections and exits.
- *+d        -  User can see debug messages.
- *+e        -  User can see dccallow failure notices.
- *+f        -  User can see flood messages.
+ *+b        -  Can see chatops messages.
+ *+c        -  Can see client connections and exits.
+ *+d        -  Can see debug messages.
+ *+e        -  Can see dccallow failure notices.
+ *+f        -  Can see flood messages.
+ *+g        -  Can recieve globops messages.
+ *+h        -  Is available for help, being listed in /stats P
+ *+j        -  Can see rejected connection notices 
+ *+k        -  Can see server kill messages.
+ *+m        -  Can see spambot notices.
+ *+n        -  Can see routing notices.
+ *+o        -  Is a global IRC Operator.
+ *+y        -  Can see certain information requests. (e.g. /stats)
+ *+A        -  Is a server administrator.
  *+F        -  Can bypass the ircd's recvq throttling
- *+h        -  Operator is available for help, being listed in /stats P
- *+K        -  Recieve U:lined server kill notices
- *+j        -  Recieve rejected connection notices 
- *+m        -  user can see spambot notices.
- *+n        -  User can see routing notices.
- *+y        -  User can see certain information requests. (e.g. /stats)
+ *+K        -  Can see U:lined kill messages
+ *+O        -  Is a local IRC Operator.
 
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 

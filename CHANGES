@@ -21,8 +21,10 @@ Changes for 1.8.3
 - Increased throughput on data sent to clients.
 - Fixed ERR_CHANNELISFULL to respond depending on which limit
   (+l/+j) is reached.  From Unim4trix0 (Unim4trix0@gmail.com),
-  discovered by Watchminister (stairway@gmail.com).
+  discovered by Watchminister (watchminister@gmail.com).
 - Added nothrottle option to allow blocks.
+- Changed cmode +O join rejection to use ERR_INVITEONLY numeric.
+- Enable umode +s (oper kills) for users, disable +g (useless).
 
 
 Changes for 1.8.2

@@ -110,7 +110,7 @@ report_clone(aClient *cptr, CloneEnt *ce, int limit, int global, int is24)
 {
     if (global)
     {
-        sendto_realops_lev(REJ_LEV, "local clone %s!%s@%s (%s %d/%d global)",
+        sendto_realops_lev(REJ_LEV, "clone %s!%s@%s (%s %d/%d global)",
                            cptr->name, cptr->user->username, cptr->user->host,
                            ce->ent, ce->gcount + 1, limit);
         if (is24)
@@ -120,7 +120,7 @@ report_clone(aClient *cptr, CloneEnt *ce, int limit, int global, int is24)
     }
     else
     {
-        sendto_realops_lev(REJ_LEV, "local clone %s!%s@%s (%s %d/%d local %s)",
+        sendto_realops_lev(REJ_LEV, "clone %s!%s@%s (%s %d/%d local %s)",
                            cptr->name, cptr->user->username, cptr->user->host,
                            ce->ent, ce->lcount + 1, limit,
                            cptr->user->allow->class->name);

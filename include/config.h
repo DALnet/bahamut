@@ -425,8 +425,11 @@
 #undef NETWORK_PARANOIA
 
 /*
- * NO_USER_SERVERNOTICES
- * Remove +s and +k from modes that users can set
+ * NO_USER_SERVERKILLS
+ * Users can't set mode +k
+ *
+ * NO_USER_OPERKILLS
+ * Users can't set mode +s
  *
  * NO_USER_STATS
  * Users can't get /stats from anything
@@ -450,8 +453,8 @@
  * 
  * HIDE_KILL_ORIGINS
  * All /kills appear, from a user standpoint, to come from HIDDEN_SERVER_NAME
- * Note that NO_USER_SERVERNOTICES must be defined for this to actually 
- * provide any security.
+ * Note that NO_USER_OPERKILLS and NO_USER_SERVERKILLS must be defined for
+ * this to actually provide any security.
  *
  * HIDE_SPLIT_SERVERS
  * Hide the names of servers during netsplits
@@ -460,7 +463,8 @@
  * Hide the origins of server modes (ie, in netjoins).
  * (They will all come from me.name)
  */
-#define NO_USER_SERVERNOTICES
+#define NO_USER_SERVERKILLS
+/* #undef NO_USER_OPERKILLS */
 /* #undef NO_USER_STATS */
 /* #undef NO_LOCAL_USER_STATS */
 /* #undef NO_USER_TRACE */
@@ -533,7 +537,8 @@
 /***************************/
 
 #ifdef NETWORK_PARANOIA
-# define NO_USER_SERVERNOTICES
+# define NO_USER_SERVERKILLS
+# define NO_USER_OPERKILLS
 # define NO_USER_STATS
 # define NO_USER_TRACE
 # define NO_USER_OPERTARGETED_COMMANDS

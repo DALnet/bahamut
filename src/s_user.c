@@ -2086,11 +2086,16 @@ do_user(char *nick, aClient *cptr, aClient *sptr, char *username, char *host,
                        me.name, nick);
             return 0;
         }
+        sptr->umode |= (USER_UMODES & atoi(host));
 #ifndef NO_DEFAULT_INVISIBLE
         sptr->umode |= UMODE_i;
 #endif
-        
-        sptr->umode |= (UFLAGS & atoi(host));
+#ifdef NO_USER_SERVERKILLS
+        sptr->umode &= ~UMODE_k;
+#endif
+#ifdef NO_USER_OPERKILLS
+        sptr->umode &= ~UMODE_s;
+#endif
         strncpyzt(user->host, host, sizeof(user->host));
         user->server = me.name;
     }
@@ -2276,14 +2281,7 @@ m_kill(aClient *cptr, aClient *sptr, int parc, char *parv[])
                            acptr->user ? acptr->user->host : unknownfmt,
                            parv[0], mypath, reason);
         else if (IsAnOper(sptr))
-#ifdef NO_USER_SERVERNOTICES
-            sendto_realops_lev(0,
-#else
             sendto_ops_lev(0,
-#endif 
-#ifdef VIM_COLORCODING_IS_STUPID
-            )   /* dont ask */
-#endif
                            "Received KILL message for %s!%s@%s. From %s "
                            "Path: %s %s", acptr->name, 
                            acptr->user ? acptr->user->username : unknownfmt,
@@ -3065,23 +3063,12 @@ m_umode(aClient *cptr, aClient *sptr, int parc, char *parv[])
      */
     if (!IsAnOper(sptr) && !IsServer(cptr))
     {
-        if (IsAdmin(sptr)) ClearAdmin(sptr);
-        if (IsSAdmin(sptr)) ClearSAdmin(sptr);
-        if (IsUmodef(sptr)) ClearUmodef(sptr);
-        if (IsUmodec(sptr)) ClearUmodec(sptr);
-        if (IsUmodey(sptr)) ClearUmodey(sptr);
-        if (IsUmoded(sptr)) ClearUmoded(sptr);
-        if (IsUmodeb(sptr)) ClearUmodeb(sptr);
-        if (IsUmoden(sptr)) ClearUmoden(sptr);
-        if (IsUmodem(sptr)) ClearUmodem(sptr);
-        if (IsUmodee(sptr)) ClearUmodee(sptr);
-        if (IsUmodej(sptr)) ClearUmodej(sptr);
-        if (IsUmodeh(sptr)) ClearUmodeh(sptr);
-        if (IsUmodeK(sptr)) ClearUmodeK(sptr);
-        if (NoMsgThrottle(sptr)) ClearNoMsgThrottle(sptr);
-#ifdef NO_USER_SERVERNOTICES
-        if (IsUmodes(sptr)) ClearUmodes(sptr);
-        if (IsUmodek(sptr)) ClearUmodek(sptr);
+        sptr->umode &= ~OPER_UMODES;
+#ifdef NO_USER_SERVERKILLS
+        sptr->umode &= ~UMODE_k;
+#endif
+#ifdef NO_USER_OPERKILLS
+        sptr->umode &= ~UMODE_s;
 #endif
     }
     if(MyClient(sptr))

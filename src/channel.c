@@ -2140,7 +2140,12 @@ static int can_join(aClient *sptr, aChannel *chptr, char *key)
     if (invited || IsULine(sptr))
         return 1;
 
-    if (chptr->mode.mode & MODE_INVITEONLY)
+    if (check_joinrate(chptr, NOW, 1, sptr) == 0)
+    {
+        r = "+j";
+        error = ERR_CHANNELISFULL;
+    }
+    else if (chptr->mode.mode & MODE_INVITEONLY)
     {
         r = "+i";
         error = ERR_INVITEONLYCHAN;
@@ -2153,11 +2158,6 @@ static int can_join(aClient *sptr, aChannel *chptr, char *key)
     else if (chptr->mode.limit && chptr->users >= chptr->mode.limit)
     {
         r = "+l";
-        error = ERR_CHANNELISFULL;
-    }
-    else if (check_joinrate(chptr, NOW, 1, sptr) == 0)
-    {
-        r = "+j";
         error = ERR_CHANNELISFULL;
     }
     else if (chptr->mode.mode & MODE_REGONLY && !IsRegNick(sptr))

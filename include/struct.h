@@ -318,20 +318,19 @@ typedef struct MotdItem aMotd;
  *  that mode will be 'silent.'
  */
 
-#define	SEND_UMODES (UMODE_i|UMODE_o|UMODE_r|UMODE_a|UMODE_A|\
-                     UMODE_R|UMODE_I)
-#define ALL_UMODES (SEND_UMODES|UMODE_w|UMODE_h|\
-	            UMODE_s|UMODE_c|UMODE_r|UMODE_k|UMODE_K|UMODE_f|\
-	            UMODE_y|UMODE_d|UMODE_g|UMODE_b|UMODE_n|UMODE_m|\
-	            UMODE_O|UMODE_R|UMODE_e|UMODE_F|UMODE_j)
-#ifdef DEFAULT_HELP_MODE
-#define OPER_UMODES (UMODE_o|UMODE_w|UMODE_s|UMODE_y|UMODE_d|UMODE_g|\
-                     UMODE_n|UMODE_h)
-#else
-#define OPER_UMODES (UMODE_o|UMODE_w|UMODE_s|UMODE_y|UMODE_d|UMODE_g|UMODE_n)
-#endif
-#define LOCOP_UMODES (UMODE_O|UMODE_w|UMODE_s|UMODE_y|UMODE_d|UMODE_g|\
-                      UMODE_n|UMODE_h)
+#define SEND_UMODES (UMODE_a|UMODE_i|UMODE_o|UMODE_r|UMODE_A|UMODE_I|UMODE_R)
+#define ALL_UMODES (SEND_UMODES|UMODE_b|UMODE_c|UMODE_d|UMODE_e|UMODE_f|\
+                    UMODE_g|UMODE_h|UMODE_j|UMODE_k|UMODE_m|UMODE_n|UMODE_s|\
+                    UMODE_w|UMODE_y|UMODE_F|UMODE_K|UMODE_O)
+
+/* modes users can set themselves */
+#define USER_UMODES (UMODE_i|UMODE_k|UMODE_w|UMODE_s|UMODE_R)
+
+/* modes only opers can have */
+#define OPER_UMODES (UMODE_a|UMODE_b|UMODE_c|UMODE_d|UMODE_e|UMODE_f|UMODE_g|\
+                     UMODE_h|UMODE_j|UMODE_m|UMODE_n|UMODE_y|UMODE_A|UMODE_F|\
+                     UMODE_K)
+
 #define	FLAGS_ID (FLAGS_DOID|FLAGS_GOTID)
 
 #define	IsOper(x)		((x)->umode & UMODE_o)
