@@ -345,8 +345,8 @@ find_oper(char *name, char *username, char *sockhost, char *hostip)
     /* sockhost OR hostip must match our host field */
 
 
-    (void) ircsprintf(userhost, "%s@%s", username, sockhost);
-    (void) ircsprintf(userip, "%s@%s", username, hostip);
+    ircsprintf(userhost, "%s@%s", username, sockhost);
+    ircsprintf(userip, "%s@%s", username, hostip);
 
     for(aoper = opers; aoper; aoper = aoper->next)
     {
@@ -579,7 +579,7 @@ confadd_oper(cVar *vars[], int lnum)
                 int         len = 3;
                 len += strlen(tmp->value);
                 newhost = (char *) MyMalloc(len);
-                (void) ircsprintf(newhost, "*@%s", tmp->value);
+                ircsprintf(newhost, "*@%s", tmp->value);
                 x->hosts[hc] = newhost;
             }
             else
@@ -700,7 +700,7 @@ confadd_connect(cVar *vars[], int lnum)
                 int         len = 3;
                 len += strlen(tmp->value);
                 newhost = (char *) MyMalloc(len);
-                (void) ircsprintf(newhost, "*@%s", tmp->value);
+                ircsprintf(newhost, "*@%s", tmp->value);
                 x->host = newhost;
             }
             else
