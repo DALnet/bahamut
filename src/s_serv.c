@@ -2524,11 +2524,11 @@ m_admin(aClient *cptr, aClient *sptr, int parc, char *parv[])
       sendto_one(sptr, rpl_str(RPL_ADMINME),
 		 me.name, parv[0], me.name);
       sendto_one(sptr, rpl_str(RPL_ADMINLOC1),
-		 me.name, parv[0], aconf->host);
+		 me.name, parv[0], aconf->host ? aconf->host : "");
       sendto_one(sptr, rpl_str(RPL_ADMINLOC2),
-		 me.name, parv[0], aconf->passwd);
+		 me.name, parv[0], aconf->passwd ? aconf->passwd : "");
       sendto_one(sptr, rpl_str(RPL_ADMINEMAIL),
-		 me.name, parv[0], aconf->name);
+		 me.name, parv[0], aconf->name ? aconf->name : "");
    }
    else
       sendto_one(sptr, err_str(ERR_NOADMININFO),
