@@ -1598,9 +1598,20 @@ int readwrite_client(aClient *cptr, int isread, int iswrite)
             /* this may be our problem with occational 100% cpu looping
              * we've experienced.  jason suggested this, here we will try
              * this and see if it happens at all -epi */
-            sendto_realops_lev(DEBUG_LEV, "socket: Socket %d reported ready"
-                               " for write, but not blocking",cptr->fd);
-            unset_fd_flags(cptr->fd, FDF_WANTWRITE);
+            sendto_realops_lev(DEBUG_LEV, "Removing socket %d: reported ready"
+                               " for write, but not blocking", cptr->fd);
+            /* This unset_fd_flags() does not appear to make any difference
+             * to the write set.  The socket appears stuck, and there has
+             * to be a reason for it.  Since we're experiencing a very low
+             * number of these, simply drop the client entirely, and treat
+             * this as a socket handling error.  This is essentially a kludge
+             * however tracking down this bug will take a serious amount of
+             * time and testing - since its not easily reproducable.  This 
+             * will in the meantime prevent maxing the CPU.  -epi 
+             *
+             * unset_fd_flags(cptr->fd, FDF_WANTWRITE);
+             */
+            exit_client(cptr, cptr, &me, "Socket error (write)");
         }
 
     }
