@@ -313,11 +313,19 @@ void remove_matching_bans(aChannel *chptr, aClient *cptr, aClient *from)
   aBan *ban, *bnext;
   char targhost[NICKLEN+USERLEN+HOSTLEN+6];
   char targip[NICKLEN+USERLEN+HOSTLEN+6];
+  char *m;
+  int count = 0, send = 0;
 
   if (!IsPerson(cptr)) return;
 
   strcpy(targhost, make_nick_user_host(cptr->name, cptr->user->username, cptr->user->host));
   strcpy(targip, make_nick_user_host(cptr->name, cptr->user->username, cptr->hostip));
+
+  m = modebuf;  
+  *m++ = '-';
+  *m = '\0'; 
+
+  *parabuf = '\0';
 
   ban = chptr->banlist;
 
@@ -326,11 +334,51 @@ void remove_matching_bans(aChannel *chptr, aClient *cptr, aClient *from)
      bnext = ban->next;
      if((match(ban->banstr, targhost) == 0) || (match(ban->banstr, targip) == 0))
      {
-        sendto_channel_butserv(chptr, from, ":%s MODE %s -b %s", from->name, chptr->chname, ban->banstr);
-        sendto_serv_butone(from, ":%s MODE %s -b %s", from->name, chptr->chname, ban->banstr);
+	if (strlen(parabuf) + strlen(ban->banstr) + 10 < (size_t) MODEBUFLEN)
+	{
+	   if(*parabuf)
+	      strcat(parabuf, " ");
+	   strcat(parabuf, ban->banstr);
+	   count++;
+           *m++ = 'b';
+           *m = '\0';
+	}
+	else 
+	   if(*parabuf)
+	      send = 1;
+
+	if(count == MAXMODEPARAMS)
+	   send = 1;
+
+	if(send)
+	{
+           sendto_channel_butserv(chptr, from, ":%s MODE %s %s %s", 
+		from->name, chptr->chname, modebuf, parabuf);
+           sendto_serv_butone(from, ":%s MODE %s %s %s", from->name, chptr->chname, modebuf, parabuf);
+	   send = 0;
+	   *parabuf = '\0';
+	   m = modebuf;
+	   *m++ = '-';
+	   if(count != MAXMODEPARAMS)
+	   {
+	      strcpy(parabuf, ban->banstr);
+	      *m++ = 'b';
+	      count = 1;
+	   }
+	   else
+	      count = 0;
+	   *m = '\0';
+	}
+
         del_banid(chptr, ban->banstr);
      }
      ban = bnext;
+  }
+
+  if(*parabuf)
+  {
+     sendto_channel_butserv(chptr, from, ":%s MODE %s %s %s", from->name, chptr->chname, modebuf, parabuf);
+     sendto_serv_butone(from, ":%s MODE %s %s %s", from->name, chptr->chname, modebuf, parabuf);
   }
 
   return;
@@ -524,8 +572,10 @@ static void send_ban_list(aClient *cptr, aChannel *chptr)
 	 if (count != MAXMODEPARAMS) {
 	    strcpy(parabuf, bp->banstr);
 	    *cp++ = 'b';
+	    count = 1;
 	 }
-	 count = 0;
+	 else
+	    count = 0;
 	 *cp = '\0';
       }
    }
@@ -2558,8 +2608,10 @@ static void kill_ban_list(aClient *cptr, aChannel *chptr)
          if (count != MAXMODEPARAMS) {
             strcpy(parabuf, bp->banstr);
             *cp++ = 'b';
+	    count = 1;
          }
-         count = 0; 
+	 else
+            count = 0; 
          *cp = '\0';
       }
    }  
