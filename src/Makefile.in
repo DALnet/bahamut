@@ -10,7 +10,7 @@ RES_SRC =
 #This is only for very old systems that NEED this
 #RES_SRC = res_mkquery.c res_init.c res_comp.c
 
-SOURCES = blalloc.c bsd.c channel.c class.c dbuf.c fdlist.c \
+SOURCES = blalloc.c bsd.c channel.c class.c dbuf.c fdlist.c\
           hash.c inet_addr.c ircd.c ircsprintf.c list.c match.c packet.c \
           parse.c res.c m_nick.c m_services.c m_who.c s_auth.c s_bsd.c \
           s_conf.c s_debug.c s_err.c s_misc.c s_numeric.c s_serv.c s_user.c \

@@ -53,7 +53,6 @@ static int          attach_iline(aClient *, aAllow *, char *, int);
 
 /* externally defined functions  */
 
-extern void outofmemory(void);  /* defined in list.c */
 extern Conf_Admin   *make_admin();
 extern aOper        *make_oper();
 extern aConnect     *make_connect();
@@ -61,26 +60,8 @@ extern aAllow       *make_allow();
 extern struct Conf_Me   *make_me();
 extern aPort        *make_port();
 extern aUserv       *make_userv();
+extern IP_ENTRY *find_or_add_ip(unsigned long);
 
-/*
- * usually, with hash tables, you use a prime number... but in this
- * case I am dealing with ip addresses, not ascii strings.
- */
-
-#define IP_HASH_SIZE 0x1000
-
-typedef struct ip_entry
-{
-    unsigned long ip;
-    int         count;
-    struct ip_entry *next;
-} IP_ENTRY;
-
-IP_ENTRY   *ip_hash_table[IP_HASH_SIZE];
-
-void             init_ip_hash(void);
-static int       hash_ip(unsigned long);
-static IP_ENTRY *find_or_add_ip(unsigned long);
 
 /* externally defined routines */
 
@@ -139,7 +120,7 @@ clear_conflinks(aClient *cptr)
     {
         clp->allow->class->links--;
         clp->allow->clients--;
-        if((clp->allow->clients <= 0) && (clp->allow->legal = -1))
+        if((clp->allow->clients <= 0) && (clp->allow->legal == -1))
         {
             /* remove this allow now that its empty */
             aAllow *allow = NULL, *allowl;
@@ -189,7 +170,7 @@ find_aConnect(char *name)
 {
     aConnect *tmp;
     for(tmp = connects; tmp; tmp = tmp->next)
-        if(!mycmp(name, tmp->name))
+        if(!match(name, tmp->name))
             break;
     return tmp;
 }
@@ -330,24 +311,13 @@ int attach_Iline(aClient *cptr, struct hostent *hp, char *sockhost)
  */
 static int attach_iline(aClient *cptr, aAllow *allow, char *uhost, int doid)
 {
-    IP_ENTRY    *ip_found;
     CLink       *clp;
     
     if (doid)
         cptr->flags |= FLAGS_DOID;
     get_sockhost(cptr, uhost);
     
-    /* every conf when created, has a class pointer set up. if it isn't,
-     * well.  *BOOM* ! */
-
-    ip_found = find_or_add_ip(cptr->ip.s_addr);
-    cptr->flags |= FLAGS_IPHASH;
-    ip_found->count++;
-    
     /* only check it if its non zero  */
-
-    if ((allow->class->conFreq) && (ip_found->count > allow->class->conFreq))
-        return -4;      /* Already at maximum allowed ip#'s  */
 
     if((clp = cptr->confs))
     {
@@ -362,284 +332,6 @@ static int attach_iline(aClient *cptr, aAllow *allow, char *uhost, int doid)
     cptr->confs = clp;
 
     return 0;
-}
-
-/* link list of free IP_ENTRY's */
-
-static IP_ENTRY *free_ip_entries;
-
-/*
- * init_ip_hash()
- * 
- * input        - NONE output           - NONE side effects     - clear
- * the ip hash table
- * 
- * stole the link list pre-allocator from list.c
- */
-void clear_ip_hash_table()
-{
-    void       *block_IP_ENTRIES;   /* block of IP_ENTRY's  */
-    IP_ENTRY   *new_IP_ENTRY;   /* new IP_ENTRY being made */
-    IP_ENTRY   *last_IP_ENTRY;  /* last IP_ENTRY in chain */
-    int         size,  n_left_to_allocate = MAXCONNECTIONS;
-
-    /*
-     * ok. if the sizeof the struct isn't aligned with that of the
-     * smallest guaranteed valid pointer (void *), then align it ya. you
-     * could just turn 'size' into a #define. do it. :-)
-     * 
-     * -Dianora
-     */
-
-    size = sizeof(IP_ENTRY) + (sizeof(IP_ENTRY) & (sizeof(void *) - 1));
-
-    block_IP_ENTRIES = (void *) MyMalloc((size * n_left_to_allocate));
-
-    free_ip_entries = (IP_ENTRY *) block_IP_ENTRIES;
-    last_IP_ENTRY = free_ip_entries;
-
-    /*
-     * *shudder* pointer arithmetic 
-     */
-    while (--n_left_to_allocate) 
-    {
-        block_IP_ENTRIES = (void *) ((unsigned long) block_IP_ENTRIES +
-                     (unsigned long) size);
-        new_IP_ENTRY = (IP_ENTRY *) block_IP_ENTRIES;
-        last_IP_ENTRY->next = new_IP_ENTRY;
-        new_IP_ENTRY->next = (IP_ENTRY *) NULL;
-        last_IP_ENTRY = new_IP_ENTRY;
-    }
-    memset((char *) ip_hash_table, '\0', sizeof(ip_hash_table));
-}
-
-/*
- * find_or_add_ip()
- * 
- * inputs               - unsigned long IP address value output         -
- * pointer to an IP_ENTRY element side effects  -
- * 
- * If the ip # was not found, a new IP_ENTRY is created, and the ip count
- * set to 0.
- */
-
-static IP_ENTRY *find_or_add_ip(unsigned long ip_in)
-{
-    int         hash_index;
-    IP_ENTRY   *ptr, *newptr;
-
-    newptr = (IP_ENTRY *) NULL;
-    ptr = ip_hash_table[hash_index = hash_ip(ip_in)];
-    while (ptr) 
-    {
-        if (ptr->ip == ip_in)
-            return (ptr);
-        else
-            ptr = ptr->next;
-    }
-
-    if ((ptr = ip_hash_table[hash_index]) != (IP_ENTRY *) NULL) 
-    {
-        if (free_ip_entries == (IP_ENTRY *) NULL)   /* it might be */
-        {                                           /* recoverable */
-            sendto_ops("s_conf.c free_ip_entries was found NULL in "
-                       "find_or_add");
-            sendto_ops("rehash_ip was done, this is an error.");
-            sendto_ops("Please report to the bahamut team! "
-                       "bahamut-bugs@bahamut.net");
-            rehash_ip_hash();
-            if (free_ip_entries == (IP_ENTRY *) NULL)
-                outofmemory();
-        }
-    
-        newptr = ip_hash_table[hash_index] = free_ip_entries;
-        free_ip_entries = newptr->next;
-    
-        newptr->ip = ip_in;
-        newptr->count = 0;
-        newptr->next = ptr;
-        return (newptr);
-    }
-    else 
-    {
-        if (free_ip_entries == (IP_ENTRY *) NULL)   /* it might be */
-        {                                           /* recoverable */
-            sendto_ops("s_conf.c free_ip_entries was found NULL in "
-                       "find_or_add");
-            sendto_ops("rehash_ip was done, this is an error.");
-            sendto_ops("Please report to the bahamut team! "
-                       "bahamut-bugs@bahamut.net");
-            rehash_ip_hash();
-            if (free_ip_entries == (IP_ENTRY *) NULL)
-                outofmemory();
-        }
-
-        ptr = ip_hash_table[hash_index] = free_ip_entries;
-        free_ip_entries = ptr->next;
-        ptr->ip = ip_in;
-        ptr->count = 0;
-        ptr->next = (IP_ENTRY *) NULL;
-        return (ptr);
-    }
-}
-
-/*
- * remove_one_ip
- * 
- * inputs               - unsigned long IP address value output         - NONE
- * side effects - ip address listed, is looked up in ip hash table and
- * number of ip#'s for that ip decremented. if ip # count reaches 0,
- * the IP_ENTRY is returned to the free_ip_enties link list.
- */
-void remove_one_ip(unsigned long ip_in)
-{
-    int         hash_index;
-    IP_ENTRY   *last_ptr, *ptr, *old_free_ip_entries;
-
-    last_ptr = ptr = ip_hash_table[hash_index = hash_ip(ip_in)];
-    while (ptr) 
-    {
-        if (ptr->ip == ip_in) 
-        {
-            if (ptr->count != 0)
-                ptr->count--;
-            if (ptr->count == 0) 
-            {
-                if (ip_hash_table[hash_index] == ptr)
-                    ip_hash_table[hash_index] = ptr->next;
-                else
-                    last_ptr->next = ptr->next;
-
-                if (free_ip_entries != (IP_ENTRY *) NULL) 
-                {
-                    old_free_ip_entries = free_ip_entries;
-                    free_ip_entries = ptr;
-                    ptr->next = old_free_ip_entries;
-                }
-                else 
-                {
-                    free_ip_entries = ptr;
-                    ptr->next = (IP_ENTRY *) NULL;
-                }
-            }
-            return;
-        }
-        else 
-        {
-            last_ptr = ptr;
-            ptr = ptr->next;
-        }
-    }
-    sendto_ops("s_conf.c couldn't find ip# in hash table in remove_one_ip()");
-    sendto_ops("Please report to the bahamut team! bahamut-bugs@bahamut.net");
-    return;
-}
-
-/*
- * hash_ip()
- * 
- * input                - unsigned long ip address output               -
- * integer value used as index into hash table side effects     -
- * hopefully, none
- */
-static int hash_ip(unsigned long ip)
-{
-    int         hash;
-
-    ip = ntohl(ip);
-    hash = ((ip >>= 12) + ip) & (IP_HASH_SIZE - 1);
-    return (hash);
-}
-
-/*
- * count_ip_hash
- * 
- * inputs               - pointer to counter of number of ips hashed - pointer
- * to memory used for ip hash output            - returned via pointers
- * input side effects   - NONE
- * 
- * number of hashed ip #'s is counted up, plus the amount of memory used
- * in the hash.
- * Added so s_debug could check memory usage in here -Dianora 
- */
-void count_ip_hash(int *number_ips_stored, u_long *mem_ips_stored)
-{
-    IP_ENTRY   *ip_hash_ptr;
-    int         i;
-
-    *number_ips_stored = 0;
-    *mem_ips_stored = 0;
-
-    for (i = 0; i < IP_HASH_SIZE; i++) 
-    {
-        ip_hash_ptr = ip_hash_table[i];
-        while (ip_hash_ptr) 
-        {
-            *number_ips_stored = *number_ips_stored + 1;
-            *mem_ips_stored = *mem_ips_stored +
-            sizeof(IP_ENTRY);
-
-            ip_hash_ptr = ip_hash_ptr->next;
-        }
-    }
-}
-
-/*
- * rehash_ip_hash
- * 
- * inputs               - NONE output           - NONE side effects     -
- * 
- * This function clears the ip hash table, then re-enters all the ip's
- * found in local clients.
- * 
- * N.B. This should never have to be called, and hopefully, we can remove
- * this function in future versions of hybrid. i.e. if everything is
- * working right, there should never ever be a case where an IP is
- * still in the ip_hash table and the corresponding client isn't.
- * 
- */
-void rehash_ip_hash()
-{
-    IP_ENTRY   *ip_hash_ptr;
-    IP_ENTRY   *tmp_ip_hash_ptr;
-    IP_ENTRY   *old_free_ip_entries;
-    int         i;
-
-    /* first, clear the ip hash */
-
-    for (i = 0; i < IP_HASH_SIZE; i++) 
-    {
-        ip_hash_ptr = ip_hash_table[i];
-        while (ip_hash_ptr) 
-        {
-            tmp_ip_hash_ptr = ip_hash_ptr->next;
-            if (free_ip_entries) 
-            {
-                old_free_ip_entries = free_ip_entries;
-                free_ip_entries = ip_hash_ptr;
-                ip_hash_ptr->next = old_free_ip_entries;
-            }
-            else 
-            {
-                free_ip_entries = ip_hash_ptr;
-                ip_hash_ptr->next = (IP_ENTRY *) NULL;
-            }
-            ip_hash_ptr = tmp_ip_hash_ptr;
-        }
-        ip_hash_table[i] = (IP_ENTRY *) NULL;
-    }
-
-    for (i = highest_fd; i >= 0; i--) 
-    {
-        if (local[i] && MyClient(local[i])) 
-        {
-            if ((local[i]->fd >= 0) && (local[i]->flags & FLAGS_IPHASH)) 
-            {
-                ip_hash_ptr = find_or_add_ip(local[i]->ip.s_addr);
-                ip_hash_ptr->count++;
-            }
-        }
-    }
 }
 
 /* rehasing routines

@@ -1507,12 +1507,12 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	    aConnect *tmp;
         if(!connects)
             break;
-	    for(tmp = connects; tmp; tmp = tmp->next);
+	    for( tmp = connects ; tmp; tmp = tmp->next)
 	    {
 		if(!IsAnOper(sptr) && !IsULine(sptr))
 		{
 		    sendto_one(sptr, rpl_str(RPL_STATSCLINE), me.name,
-			   sptr->name, "C", "*", tmp->name, tmp->port,
+			   sptr->name, "C", "*", tmp->name, (tmp->port ? tmp->port : 0),
 			   tmp->class->class);
 		    sendto_one(sptr, rpl_str(RPL_STATSNLINE), me.name,
 			   sptr->name, "N", "*", tmp->name, "1",
@@ -1521,8 +1521,8 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		else
 		{
                     sendto_one(sptr, rpl_str(RPL_STATSCLINE), me.name,
-                           sptr->name, "C", tmp->host, tmp->name, tmp->port,
-                           tmp->class->class);
+                           sptr->name, "C", tmp->host, tmp->name, 
+                           (tmp->port ? tmp->port : 0), tmp->class->class);
                     sendto_one(sptr, rpl_str(RPL_STATSNLINE), me.name,
                            sptr->name, "N", tmp->host, tmp->name, "1",
                            tmp->class->class);

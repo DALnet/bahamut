@@ -1,3 +1,10 @@
+THINGS TO FIX BEFORE RELEASE
+----------------------------
+   
+    - Iline attachment/matching
+    - Class assignment
+    - clear_* freeing - do it properly.
+
 TODO LIST
 ---------
 

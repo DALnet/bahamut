@@ -198,7 +198,7 @@ void report_error(char *text, aClient * cptr)
     sendto_realops_lev(DEBUG_LEV, text, host, strerror(errtmp));
 #ifdef USE_SYSLOG
     syslog(LOG_WARNING, text, host, strerror(errtmp));
-    if (bootopt & BOOT_STDERR)
+    if (!forked)
     {
 	fprintf(stderr, text, host, strerror(errtmp));
 	fprintf(stderr, "\n");
@@ -926,7 +926,7 @@ int check_server_init(aClient * cptr)
     aconn->class->links++;
 
     /* this may give cptr a new sendq length.. */
-    cptr->sendqlen = get_sendq(cptr);
+    cptr->sendqlen = aconn->class->maxSendq;
 
     if ((aconn->ipnum.s_addr == -1))
 	memcpy((char *) &aconn->ipnum, (char *) &cptr->ip,
@@ -1927,9 +1927,6 @@ int connect_server(aConnect *aconn, aClient * by, struct hostent *hp)
 	highest_fd = cptr->fd;
     local[cptr->fd] = cptr;
     SetConnecting(cptr);
-
-    /* sendq probably changed.. */
-    cptr->sendqlen = get_sendq(cptr);
 
     get_sockhost(cptr, aconn->host);
     add_client_to_list(cptr);
