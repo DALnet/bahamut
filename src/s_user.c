@@ -1842,7 +1842,7 @@ int m_whois(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		/* allow /whois nick nick, but nothing else */
 		if(mycmp(parv[1], parv[2]) == 0)
 		    parv[1] = acptr->user->server; /* And kludge it */
-		else
+		else if(MyClient(sptr))
 		{
 		    sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name, parv[0]);
 		    return 0;
