@@ -4219,13 +4219,13 @@ int m_svsmode(aClient *cptr, aClient *sptr, int parc, char *parv[]) {
 	 int 		flag, *s, what, setflags;
 	 char 	      **p, *m;
 	 aClient       *acptr;
-	 time_t         ts = NULL;
+	 time_t         ts = 0;
 
 	 if (!IsULine(sptr) || (parc < 3))
 	    	return 0;
 
 	 if ((parc >= 4) && ((parv[3][0] == '+') || (parv[3][0] == '-')))
-		ts = *parv[2];
+		ts = atol(parv[2]);
 
 	 what = MODE_ADD;
 
@@ -4283,7 +4283,7 @@ int m_svsmode(aClient *cptr, aClient *sptr, int parc, char *parv[]) {
 	 if (ts && parv[4])
 		sendto_serv_butone(cptr, ":%s SVSMODE %s %s %s %s",
 			parv[0], parv[1], parv[2], parv[3], parv[4]);
-	 else if ((ts) || (parv[3]))
+	 else if (parv[3])
 		sendto_serv_butone(cptr, ":%s SVSMODE %s %s %s", 
 			parv[0], parv[1], parv[2], parv[3]);
 	 else
