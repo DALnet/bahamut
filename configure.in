@@ -163,53 +163,6 @@ if test "X$cf_enable_openssl" != "Xno" ; then
   if test "X$cf_openssl_basedir" != "X" ; then
     LIBS="$save_LIBS $SSL_LIBS -lcrypto"
     AC_MSG_RESULT($cf_openssl_basedir)
-    AC_TRY_RUN([
-    #include <stdio.h>
-    #include <string.h>
-    #include <openssl/rand.h>
-    #include <openssl/opensslv.h>
-    #include <openssl/crypto.h>
-    int main(void)
-    {
-        FILE *fp;
-        char a[2048];
-
-        fp = fopen(".openssl_h_version", "w");
-        if(fp)
-        {
-            fprintf(fp, "%s\n", OPENSSL_VERSION_TEXT);
-            fclose(fp);
-        }
-
-        fp = fopen(".openssl_l_version", "w");
-        if(fp)
-        {
-            fprintf(fp, "%s\n", SSLeay_version(SSLEAY_VERSION));
-            fclose(fp);
-        }
-
-        memset(a, 0, 2048);
-        RAND_add(a, 2048, 2048);
-        if(RAND_status() <= 0)
-            return 1;
-        return 0;
-    }
-    ],
-    [ found_openssl=yes; ], [], AC_MSG_RESULT(cross compiler))
-    if test "X$found_openssl" = "X"; then
-        echo ""
-        echo "Insufficient version of openssl"
-        echo " - openssl library version: `cat .openssl_l_version`"
-        echo " - openssl header version : `cat .openssl_h_version`"
-        $RM -f .openssl_l_version .openssl_h_version
-        echo ""
-        echo "Bahamut requires OpenSSL version 0.9.5 or later to compile"
-        echo ""
-        exit 1
-    fi
-    echo " - openssl library version: `cat .openssl_l_version`"
-    echo " - openssl header version : `cat .openssl_h_version`"
-    $RM -f .openssl_l_version .openssl_h_version
     cf_enable_openssl="yes"
     encryption="enabled"
     AC_DEFINE(HAVE_ENCRYPTION_ON)
