@@ -31,6 +31,7 @@
 #include "channel.h"
 #include "nameser.h"
 #include "resolv.h"
+#include "dh.h"
 
 #if defined(AIX) || defined(DYNIXPTX) || defined(SVR3)
 # include <time.h>
@@ -698,110 +699,14 @@ sendnick_TS(aClient *cptr, aClient *acptr)
    }
 }
 
-int
-m_server_estab(aClient *cptr)
+int do_server_estab(aClient *cptr)
 {
+   aClient *acptr;
+   aConfItem *aconf;
    aChannel *chptr;
-   aClient *acptr = NULL;
-   aConfItem *aconf, *bconf;
+   int i;
+   char *inpath = get_client_name(cptr, HIDEME);  /* "refresh" inpath with host  */
 
-   char       *inpath, *host, *s, *encr;
-   int         split, i;
-
-   inpath = get_client_name(cptr, HIDEME);  /* "refresh" inpath with host  */
-   split = mycmp(cptr->name, cptr->sockhost);
-   host = cptr->name;
-
-   if (!(aconf = find_conf(cptr->confs, host, CONF_NOCONNECT_SERVER))) 
-   {
-      ircstp->is_ref++;
-      sendto_one(cptr, "ERROR :Access denied. No N line for server %s", inpath);
-      sendto_ops("Access denied. No N line for server %s", inpath);
-      return exit_client(cptr, cptr, cptr, "No N line for server");
-   }
-   if (!(bconf = find_conf(cptr->confs, host, CONF_CONNECT_SERVER))) 
-   {
-      ircstp->is_ref++;
-      sendto_one(cptr, "ERROR :Only N (no C) field for server %s", inpath);
-      sendto_ops("Only N (no C) field for server %s", inpath);
-      return exit_client(cptr, cptr, cptr, "No C line for server");
-   }
-
-   encr = cptr->passwd;
-   if (*aconf->passwd && !StrEq(aconf->passwd, encr)) 
-   {
-      ircstp->is_ref++;
-      sendto_one(cptr, "ERROR :No Access (passwd mismatch) %s", inpath);
-      sendto_ops("Access denied (passwd mismatch) %s", inpath);
-      return exit_client(cptr, cptr, cptr, "Bad Password");
-   }
-   memset(cptr->passwd, '\0', sizeof(cptr->passwd));
-
-#ifndef	HUB
-   for (i = 0; i <= highest_fd; i++)
-      if (local[i] && IsServer(local[i])) 
-      {
-	 ircstp->is_ref++;
-	 sendto_one(cptr, "ERROR :I'm a leaf not a hub");
-	 return exit_client(cptr, cptr, cptr, "I'm a leaf");
-      }
-#endif
-   if (IsUnknown(cptr)) 
-   {
-      if (bconf->passwd[0])
-	 sendto_one(cptr, "PASS %s :TS", bconf->passwd);
-      /* Pass my info to the new server */
-      sendto_one(cptr, "CAPAB TS3 NOQUIT SSJOIN BURST UNCONNECT");
-      sendto_one(cptr, "SERVER %s 1 :%s",
-		 my_name_for_link(me.name, aconf),
-		 (me.info[0]) ? (me.info) : "IRCers United");
-   }
-   else {
-      s = (char *) strchr(aconf->host, '@');
-      *s = '\0';	/* should never be NULL -- wanna bet? -Dianora */
-
-      Debug((DEBUG_INFO, "Check Usernames [%s]vs[%s]", aconf->host, cptr->username));
-      if (match(aconf->host, cptr->username)) 
-      {
-	 *s = '@';
-	 ircstp->is_ref++;
-	 sendto_ops("Username mismatch [%s]v[%s] : %s",
-		    aconf->host, cptr->username,
-		    get_client_name(cptr, HIDEME));
-	 sendto_one(cptr, "ERROR :No Username Match");
-	 return exit_client(cptr, cptr, cptr, "Bad User");
-      }
-      *s = '@';
-   }
-
-   /* send routing notice, this should never happen anymore */
-   if (!DoesTS(cptr)) 
-   {
-      sendto_gnotice("from %s: Warning: %s linked, non-TS server",
-		me.name, get_client_name(cptr, TRUE));
-      sendto_serv_butone(cptr, ":%s GNOTICE :Warning: %s linked, non-TS server",
-		me.name, get_client_name(cptr, TRUE));
-   }
-
-   sendto_one(cptr, "SVINFO %d %d 0 :%ld", TS_CURRENT, TS_MIN, (ts_val) timeofday);
-
-   /* sendto one(cptr, "CAPAB ...."); moved to after PASS but before SERVER
-    * now in two places.. up above and in s_bsd.c. - lucas
-    * This is to make sure we pass on our capabilities before we establish a server connection */
-
-   det_confs_butmask(cptr, CONF_LEAF | CONF_HUB | CONF_NOCONNECT_SERVER | CONF_ULINE);
-   /*
-    * * *WARNING* 
-    *   In the following code in place of plain
-    * server's name we send what is returned by
-    * get_client_name which may add the "sockhost" after the name.
-    * It's *very* *important* that there is a SPACE between 
-    * the name and sockhost (if present). The receiving server
-    * will start the information field from this first blank and
-    * thus puts the sockhost into info. ...a bit tricky, but
-    * you have been warned, besides code is more neat this way...
-    * --msa
-    */
    SetServer(cptr);
 
    Count.server++;
@@ -844,17 +749,11 @@ m_server_estab(aClient *cptr)
 		me.name, inpath, DoesTS(cptr) ? "TS link" : "Non-TS link!");
    (void) add_to_client_hash_table(cptr->name, cptr);
 
-   /* doesnt duplicate cptr->serv if allocated this struct already */
-
-   (void) make_server(cptr);
-   cptr->serv->up = me.name;
-
    /* add it to scache */
 
    (void) find_or_add(cptr->name);
 
-   cptr->serv->nline = aconf;
-
+//----------
    /*
     * * Old sendto_serv_but_one() call removed because we now need to
     * send different names to different servers (domain name
@@ -866,14 +765,11 @@ m_server_estab(aClient *cptr)
 	 continue;
       if ((aconf = acptr->serv->nline) && !match(my_name_for_link(me.name, aconf), cptr->name))
 	 continue;
-      if (split)
-	 sendto_one(acptr, ":%s SERVER %s 2 :%s", me.name, cptr->name, cptr->info);
-      else
-	 sendto_one(acptr, ":%s SERVER %s 2 :%s", me.name, cptr->name, cptr->info);
+      sendto_one(acptr, ":%s SERVER %s 2 :%s", me.name, cptr->name, cptr->info);
    }
 
    /*
-    * * Pass on my client information to the new server
+    * Pass on my client information to the new server
     * 
     * First, pass only servers (idea is that if the link gets 
     * cancelled beacause the server was already there, there are no
@@ -901,15 +797,7 @@ m_server_estab(aClient *cptr)
       {
 	   if (match(my_name_for_link(me.name, aconf), acptr->name) == 0)
 			  continue;
-	   split = (MyConnect(acptr) && mycmp(acptr->name, acptr->sockhost));
-	
-           if (split)
-		  sendto_one(cptr, ":%s SERVER %s %d :%s",
-			 acptr->serv->up, acptr->name,
-			 acptr->hopcount + 1,
-			 acptr->info);
-	    else
-		  sendto_one(cptr, ":%s SERVER %s %d :%s",
+           sendto_one(cptr, ":%s SERVER %s %d :%s",
 			 acptr->serv->up, acptr->name,
 			 acptr->hopcount + 1, acptr->info);
       }
@@ -983,10 +871,130 @@ m_server_estab(aClient *cptr)
    if (IsBurst(cptr)) cptr->flags |= FLAGS_SOBSENT;
    sendto_one(cptr, "PING :%s", me.name);
 
+   return 0;
+}
+
+int
+m_server_estab(aClient *cptr)
+{
+   aConfItem *aconf, *bconf;
+
+   char       *inpath, *host, *s, *encr;
+   int         split;
+
+   inpath = get_client_name(cptr, HIDEME);  /* "refresh" inpath with host  */
+   split = mycmp(cptr->name, cptr->sockhost);
+   host = cptr->name;
+
+   if (!(aconf = find_conf(cptr->confs, host, CONF_NOCONNECT_SERVER))) 
+   {
+      ircstp->is_ref++;
+      sendto_one(cptr, "ERROR :Access denied. No N line for server %s", inpath);
+      sendto_ops("Access denied. No N line for server %s", inpath);
+      return exit_client(cptr, cptr, cptr, "No N line for server");
+   }
+   if (!(bconf = find_conf(cptr->confs, host, CONF_CONNECT_SERVER))) 
+   {
+      ircstp->is_ref++;
+      sendto_one(cptr, "ERROR :Only N (no C) field for server %s", inpath);
+      sendto_ops("Only N (no C) field for server %s", inpath);
+      return exit_client(cptr, cptr, cptr, "No C line for server");
+   }
+
+   encr = cptr->passwd;
+   if (*aconf->passwd && !StrEq(aconf->passwd, encr)) 
+   {
+      ircstp->is_ref++;
+      sendto_one(cptr, "ERROR :No Access (passwd mismatch) %s", inpath);
+      sendto_ops("Access denied (passwd mismatch) %s", inpath);
+      return exit_client(cptr, cptr, cptr, "Bad Password");
+   }
+   memset(cptr->passwd, '\0', sizeof(cptr->passwd));
+
+#ifndef	HUB
+   for (i = 0; i <= highest_fd; i++)
+      if (local[i] && IsServer(local[i])) 
+      {
+	 ircstp->is_ref++;
+	 sendto_one(cptr, "ERROR :I'm a leaf not a hub");
+	 return exit_client(cptr, cptr, cptr, "I'm a leaf");
+      }
+#endif
+   if (IsUnknown(cptr)) 
+   {
+      if (bconf->passwd[0])
+	 sendto_one(cptr, "PASS %s :TS", bconf->passwd);
+      /* Pass my info to the new server */
+      sendto_one(cptr, "CAPAB TS3 NOQUIT SSJOIN BURST UNCONNECT DKEY");
+      sendto_one(cptr, "SERVER %s 1 :%s",
+		 my_name_for_link(me.name, aconf),
+		 (me.info[0]) ? (me.info) : "IRCers United");
+   }
+   else {
+      s = (char *) strchr(aconf->host, '@');
+      *s = '\0';	/* should never be NULL -- wanna bet? -Dianora */
+
+      Debug((DEBUG_INFO, "Check Usernames [%s]vs[%s]", aconf->host, cptr->username));
+      if (match(aconf->host, cptr->username)) 
+      {
+	 *s = '@';
+	 ircstp->is_ref++;
+	 sendto_ops("Username mismatch [%s]v[%s] : %s",
+		    aconf->host, cptr->username,
+		    get_client_name(cptr, HIDEME));
+	 sendto_one(cptr, "ERROR :No Username Match");
+	 return exit_client(cptr, cptr, cptr, "Bad User");
+      }
+      *s = '@';
+   }
+
+   /* send routing notice, this should never happen anymore */
+   if (!DoesTS(cptr)) 
+   {
+      sendto_gnotice("from %s: Warning: %s linked, non-TS server",
+		me.name, get_client_name(cptr, TRUE));
+      sendto_serv_butone(cptr, ":%s GNOTICE :Warning: %s linked, non-TS server",
+		me.name, get_client_name(cptr, TRUE));
+   }
+
+   sendto_one(cptr, "SVINFO %d %d 0 :%ld", TS_CURRENT, TS_MIN, (ts_val) timeofday);
+
+   /* sendto one(cptr, "CAPAB ...."); moved to after PASS but before SERVER
+    * now in two places.. up above and in s_bsd.c. - lucas
+    * This is to make sure we pass on our capabilities before we establish a server connection */
+
+   det_confs_butmask(cptr, CONF_LEAF | CONF_HUB | CONF_NOCONNECT_SERVER | CONF_ULINE);
+   /*
+    * * *WARNING* 
+    *   In the following code in place of plain
+    * server's name we send what is returned by
+    * get_client_name which may add the "sockhost" after the name.
+    * It's *very* *important* that there is a SPACE between 
+    * the name and sockhost (if present). The receiving server
+    * will start the information field from this first blank and
+    * thus puts the sockhost into info. ...a bit tricky, but
+    * you have been warned, besides code is more neat this way...
+    * --msa
+    */
+
+   /* doesnt duplicate cptr->serv if allocated this struct already */
+
+   (void) make_server(cptr);
+   cptr->serv->up = me.name;
+   cptr->serv->nline = aconf;
+
    /* now fill out the servers info so nobody knows dink about it. */
    memset((char *)&cptr->ip, '\0', sizeof(struct in_addr));
    strcpy(cptr->hostip, "127.0.0.1");
    strcpy(cptr->sockhost, "localhost");
+
+   if(!CanDoDKEY(cptr))
+      return do_server_estab(cptr);
+   else
+   {
+      SetNegoServer(cptr); /* VERY IMPORTANT THAT THIS IS HERE */
+      sendto_one(cptr, "DKEY START");
+   }
    return 0;
 }
 /* 
@@ -4769,6 +4777,8 @@ m_capab(aClient *cptr, aClient *sptr, int parc, char *parv[])
         SetBurst(cptr);
       else if (strcmp(parv[i], "UNCONNECT") == 0)
         SetUnconnect(cptr);
+      else if (strcmp(parv[i], "DKEY") == 0)
+        SetDKEY(cptr);
    }
 
    return 0;
@@ -5411,4 +5421,65 @@ int m_unszline(aClient *cptr, aClient *sptr, int parc, char *parv[])
     else
 	sendto_serv_butone(cptr, ":%s UNSZLINE %s", sptr->name, mask);
     return 0;
+}
+
+int m_dkey(aClient *cptr, aClient *sptr, int parc, char *parv[])
+{
+   if(!(IsNegoServer(sptr) && parc > 1))
+      return 0;
+
+   if(mycmp(parv[1], "START") == 0)
+   {
+      char keybuf[1024];
+
+      if(parc != 2)
+         return exit_client(sptr, sptr, sptr, "DKEY START failure");
+
+      if(sptr->serv->sessioninfo_in != NULL && sptr->serv->sessioninfo_out != NULL)
+         return exit_client(sptr, sptr, sptr, "DKEY START duplicate?!");
+
+      sptr->serv->sessioninfo_in = dh_start_session();
+      sptr->serv->sessioninfo_out = dh_start_session();
+
+      sendto_realops("Initiating diffie-hellman key exchange with %s", sptr->name);
+
+      dh_get_s_public(keybuf, 1024, sptr->serv->sessioninfo_in);
+      sendto_realops_lev(DEBUG_LEV, "In Public: %s", keybuf);
+      sendto_one(sptr, "DKEY PUB I %s", keybuf);
+
+      dh_get_s_public(keybuf, 1024, sptr->serv->sessioninfo_out);
+      sendto_realops_lev(DEBUG_LEV, "Out Public: %s", keybuf);
+      sendto_one(sptr, "DKEY PUB O %s", keybuf);
+      return 0;
+   }
+
+   if(mycmp(parv[1], "PUB") == 0)
+   {
+      char keybuf[1024];
+
+      if(parc != 4)
+         return exit_client(sptr, sptr, sptr, "DKEY PUB failure");
+
+      if(mycmp(parv[2], "O") == 0) /* their out is my in! */
+      {
+         if(!dh_generate_shared(sptr->serv->sessioninfo_in, parv[3]))
+            return exit_client(sptr, sptr, sptr, "DKEY PUB O invalid");
+         dh_get_s_shared(keybuf, 1024, sptr->serv->sessioninfo_in);
+         sendto_realops("Shared I: %s", keybuf);
+         return 0;
+      }
+
+      if(mycmp(parv[2], "I") == 0) /* their out is my in! */
+      {
+         if(!dh_generate_shared(sptr->serv->sessioninfo_out, parv[3]))
+            return exit_client(sptr, sptr, sptr, "DKEY PUB I invalid");
+         dh_get_s_shared(keybuf, 1024, sptr->serv->sessioninfo_out);
+         sendto_realops("Shared O: %s", keybuf);
+         return 0;
+      }
+
+      return exit_client(sptr, sptr, sptr, "DKEY PUB bad option");
+   }
+
+   return 0;
 }

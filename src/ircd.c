@@ -35,6 +35,7 @@
 #include "inet.h"
 #include "h.h"
 #include "patchlevel.h"
+#include "dh.h"
 
 #include "dich_conf.h"
 
@@ -636,7 +637,7 @@ main(int argc, char *argv[])
    }
 	
    build_version();
-	
+
    Count.server = 1;		/* us */
    Count.oper = 0;
    Count.chan = 0;
@@ -789,6 +790,7 @@ main(int argc, char *argv[])
    if (chdir(dpath)) 
    {
       perror("chdir");
+      fprintf(stderr, "Please ensure that your configuration directory exists and is accessable.\n");
       exit(-1);
    }
    if ((uid != euid) && !euid) 
@@ -800,6 +802,9 @@ main(int argc, char *argv[])
 	
    if (argc > 0)
 	  return bad_command();	/* This should exit out  */
+
+   if(dh_init() == -1)
+      return 0;
 	
    motd = (aMotd *) NULL;
    helpfile = (aMotd *) NULL;

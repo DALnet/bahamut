@@ -110,6 +110,7 @@
 #define MSG_UNSZLINE "UNSZLINE"         /* unszline */
 #define MSG_SGLINE   "SGLINE"           /* sgline */
 #define MSG_UNSGLINE "UNSGLINE"         /* unsgline */
+#define MSG_DKEY     "DKEY"		/* diffie-hellman negotiation */
 
 #define MAXPARA      15
 
@@ -199,7 +200,7 @@ extern int  m_szline(aClient *, aClient *, int, char **);
 extern int  m_unszline(aClient *, aClient *, int, char **);
 extern int  m_sgline(aClient *, aClient *, int, char **);
 extern int  m_unsgline(aClient *, aClient *, int, char **);
-
+extern int  m_dkey(aClient *, aClient *, int, char **);
 
 #ifdef MSGTAB
 struct Message msgtab[] = {
@@ -288,6 +289,7 @@ struct Message msgtab[] = {
    {MSG_UNSZLINE, m_unszline, 0, MAXPARA, 1, 0, 0, 0L},
    {MSG_SGLINE, m_sgline, 0, MAXPARA, 1, 0, 0, 0L},
    {MSG_UNSGLINE, m_unsgline, 0, MAXPARA, 1, 0, 0, 0L},
+   {MSG_DKEY, m_dkey, 0, MAXPARA, 1, 1, 0, 0L},
    {(char *) 0, (int (*)()) 0, 0, 0, 0, 0, 0, 0L}
 };
 

@@ -26,6 +26,7 @@
 #include "h.h"
 #include "numeric.h"
 #include "blalloc.h"
+#include "dh.h"
 
 extern int  BlockHeapGarbageCollect(BlockHeap *);
 
@@ -371,6 +372,8 @@ make_server(aClient *cptr)
    if (!serv) {
       serv = (aServer *) MyMalloc(sizeof(aServer));
 
+      memset(serv, 0, sizeof(aServer));
+
       *serv->bynick = '\0';
       *serv->byuser = '\0';
       *serv->byhost = '\0';
@@ -440,6 +443,10 @@ remove_client_from_list(aClient *cptr)
 						 * try this here 
 						 */
    if (cptr->serv) {
+      if(cptr->serv->sessioninfo_in)
+         dh_end_session(cptr->serv->sessioninfo_in);
+      if(cptr->serv->sessioninfo_out)
+         dh_end_session(cptr->serv->sessioninfo_out);
       MyFree((char *) cptr->serv);
    }
    /*

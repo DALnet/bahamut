@@ -148,6 +148,7 @@ typedef struct MotdItem aMotd;
 #define	STAT_HANDSHAKE	-3
 #define	STAT_ME		      -2
 #define	STAT_UNKNOWN	-1
+/* the line of truth lies here (truth == registeredness) */
 #define	STAT_SERVER	0
 #define	STAT_CLIENT	    1
 
@@ -163,6 +164,7 @@ typedef struct MotdItem aMotd;
 #define	IsServer(x)		((x)->status == STAT_SERVER)
 #define	IsClient(x)		((x)->status == STAT_CLIENT)
 #define	IsLog(x)		((x)->status == STAT_LOG)
+#define IsNegotiatingServer(x)	((x)->status == STAT_NEGOSERV)
 
 #define	SetMaster(x)		((x)->status = STAT_MASTER)
 #define	SetConnecting(x)	((x)->status = STAT_CONNECTING)
@@ -172,6 +174,7 @@ typedef struct MotdItem aMotd;
 #define	SetServer(x)		((x)->status = STAT_SERVER)
 #define	SetClient(x)		((x)->status = STAT_CLIENT)
 #define	SetLog(x)		((x)->status = STAT_LOG)
+#define SetNegotiatingServer(x)	((x)->status = STAT_NEGOSERV)
 
 #define	FLAGS_PINGSENT     0x000001	/* Unreplied ping sent */
 #define	FLAGS_DEADSOCKET   0x000002	/* Local socket is dead--Exiting soon */
@@ -198,6 +201,8 @@ typedef struct MotdItem aMotd;
 #define FLAGS_SOBSENT      0x200000     /* we've sent an SOB, just have to send an EOB */
 #define FLAGS_EOBRECV      0x400000     /* we're waiting on an EOB */
 #define FLAGS_BAD_DNS	   0x800000     /* spoofer-guy */
+#define FLAGS_SERV_NEGO	   0x1000000	/* This is a server that has passed connection tests,
+                                           but is a stat < 0 for handshake purposes */
 
 /* Capabilities of the ircd or clients */
 
@@ -206,6 +211,7 @@ typedef struct MotdItem aMotd;
 #define CAPAB_NSJOIN  0x0000004 /* server supports new smart sjoin */
 #define CAPAB_BURST   0x0000008 /* server supports BURST command */
 #define CAPAB_UNCONN  0x0000010 /* server supports UNCONNECT */
+#define CAPAB_DKEY    0x0000020 /* server supports dh-key exchange using "DKEY" */
 
 #define SetTS3(x)   	((x)->capabilities |= CAPAB_TS3)
 #define IsTS3       	((x)->capabilities & CAPAB_TS3)
@@ -221,6 +227,9 @@ typedef struct MotdItem aMotd;
 
 #define SetUnconnect(x)	((x)->capabilities |= CAPAB_UNCONN)
 #define IsUnconnect(x)	((x)->capabilities & CAPAB_UNCONN)
+
+#define SetDKEY(x)	((x)->capabilities |= CAPAB_DKEY)
+#define CanDoDKEY(x)    ((x)->capabilities & CAPAB_DKEY)
 
 /* flag macros. */
 #define IsULine(x) ((x)->flags & FLAGS_ULINE)
@@ -324,6 +333,10 @@ typedef struct MotdItem aMotd;
 #define	SetAccess(x)		((x)->flags |= FLAGS_CHKACCESS)
 #define	DoingAuth(x)		((x)->flags & FLAGS_AUTH)
 #define	NoNewLine(x)		((x)->flags & FLAGS_NONL)
+
+#define SetNegoServer(x)	((x)->flags |= FLAGS_SERV_NEGO)
+#define IsNegoServer(x)		((x)->flags & FLAGS_SERV_NEGO)
+#define ClearNegoServer(x)	((x)->flags &= ~FLAGS_SERV_NEGO)
 
 #define ClearSAdmin(x)  ((x)->umode &= ~UMODE_a)
 #define ClearAdmin(x)   ((x)->umode &= ~UMODE_A)
@@ -601,6 +614,11 @@ struct Server {
    char        byuser[USERLEN + 1];
    char        byhost[HOSTLEN + 1];
    aConfItem  *nline;		/* N-line pointer for this server */
+   int         dkey_random; 	/* negotiating who goes first */
+   void       *sessioninfo_in;     /* pointer to opaque sessioninfo structure */
+   void       *sessioninfo_out;     /* pointer to opaque sessioninfo structure */
+   void       *in_state;        /* etc */
+   void       *out_state;       /* etc */
 };
 
 struct Client {
