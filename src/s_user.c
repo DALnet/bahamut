@@ -1398,7 +1398,7 @@ static inline int m_message(aClient *cptr, aClient *sptr, int parc,
 	    || (sptr->join_leave_count >= MAX_JOIN_LEAVE_COUNT)
 #endif
 	    ) {
-	    if (strcasecmp(parv[0],parv[1])) {
+	    if (mycmp(parv[0],parv[1])) {
 		if (IsWSquelch(sptr))
 		    sendto_one(sptr, ":%s NOTICE %s :You are currently "
 			       "squelched.  Message not sent.", me.name,
