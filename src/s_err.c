@@ -524,7 +524,7 @@ static char *replies[] =
                                         "change that mode",
     /* 469 */	                NULL,
     /* 470 */	                NULL,
-    /* 471 ERR_CHANNELISFULL */	":%s 471 %s %s :Cannot join channel (+l)",
+    /* 471 ERR_CHANNELISFULL */	":%s 471 %s %s :Cannot join channel (%s)",
     /* 472 ERR_UNKNOWNMODE */	":%s 472 %s %c :is unknown mode char to me",
     /* 473 ERR_INVITEONLYCHAN */        ":%s 473 %s %s :Cannot join channel "
                                         "(+i)",

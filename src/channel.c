@@ -2124,10 +2124,11 @@ static int can_join(aClient *sptr, aChannel *chptr, char *key)
     Link   *lp;
     int invited = 0;
     int error = 0;
+    char *r = NULL;
 
-    for(lp = sptr->user->invited; lp; lp = lp->next) 
+    for(lp = sptr->user->invited; lp; lp = lp->next)
     {
-        if(lp->value.chptr == chptr) 
+        if(lp->value.chptr == chptr)
         {
             invited = 1;
             break;
@@ -2135,7 +2136,7 @@ static int can_join(aClient *sptr, aChannel *chptr, char *key)
     }
 
     if (invited || IsULine(sptr))
-        return 0;
+        return 1;
 
     if (chptr->mode.mode & MODE_INVITEONLY)
         error = ERR_INVITEONLYCHAN;
@@ -2145,11 +2146,17 @@ static int can_join(aClient *sptr, aChannel *chptr, char *key)
         error = ERR_NOPRIVILEGES;
     if (*chptr->mode.key && (BadPtr(key) || mycmp(chptr->mode.key, key)))
         error = ERR_BADCHANNELKEY;
-    if (chptr->mode.limit && chptr->users >= chptr->mode.limit) 
+    if (chptr->mode.limit && chptr->users >= chptr->mode.limit)
+    {
+        r = "+l";
         error = ERR_CHANNELISFULL;
+    }
     if (check_joinrate(chptr, NOW, 1, sptr) == 0)
+    {
+        r = "+j";
         error = ERR_CHANNELISFULL;
-    
+    }
+
 #ifdef INVITE_LISTS
     if (error && is_invited(sptr, chptr))
         error = 0;
@@ -2158,7 +2165,20 @@ static int can_join(aClient *sptr, aChannel *chptr, char *key)
     if (!error && is_banned(sptr, chptr, NULL))
         error = ERR_BANNEDFROMCHAN;
 
-    return error;
+    if (error)
+    {
+        if (error==ERR_NEEDREGGEDNICK)
+            sendto_one(sptr, getreply(ERR_NEEDREGGEDNICK), me.name, sptr->name,
+                       chptr->chname, "join", NS_Services_Name, NS_Register_URL);
+        else if (error==ERR_CHANNELISFULL)
+            sendto_one(sptr, getreply(ERR_CHANNELISFULL), me.name, sptr->name,
+                       chptr->chname, r);
+        else
+            sendto_one(sptr, getreply(error), me.name, sptr->name, chptr->chname);
+        return 0;
+    }
+
+    return 1;
 }
 
 /*
@@ -2649,14 +2669,8 @@ int m_join(aClient *cptr, aClient *sptr, int parc, char *parv[])
         if (chptr && IsMember(sptr, chptr))
             continue;
         
-        if (!chptr || (MyConnect(sptr) && (i = can_join(sptr, chptr, key))))
+        if (!chptr || (MyConnect(sptr) && !can_join(sptr, chptr, key)))
         {
-            if (i==ERR_NEEDREGGEDNICK)
-                sendto_one(sptr, getreply(i), me.name, parv[0], name, "join",
-                           NS_Services_Name, NS_Register_URL);
-            else 
-                sendto_one(sptr, getreply(i), me.name, parv[0], name);
-
 #ifdef ANTI_SPAMBOT
             if (successful_join_count > 0)
                 successful_join_count--;

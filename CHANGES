@@ -19,6 +19,9 @@ Changes for 1.8.3
 - Fixed rehash issue with module blocks.
 - Fixed samode with no mode arguments choosing one at random for you :)
 - Increased throughput on data sent to clients.
+- Fixed ERR_CHANNELISFULL to respond depending on which limit
+  (+l/+j) is reached.  From Unim4trix0 (Unim4trix0@gmail.com),
+  discovered by Watchminister (stairway@gmail.com).
 
 
 Changes for 1.8.2
