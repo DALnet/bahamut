@@ -527,7 +527,7 @@ static char *replies[] =
     /* 471 ERR_CHANNELISFULL */	":%s 471 %s %s :Cannot join channel (%s)",
     /* 472 ERR_UNKNOWNMODE */	":%s 472 %s %c :is unknown mode char to me",
     /* 473 ERR_INVITEONLYCHAN */        ":%s 473 %s %s :Cannot join channel "
-                                        "(+i)",
+                                        "(%s)",
     /* 474 ERR_BANNEDFROMCHAN */	":%s 474 %s %s :Cannot join channel "
                                         "(+b)",
     /* 475 ERR_BADCHANNELKEY */	":%s 475 %s %s :Cannot join channel (+k)",

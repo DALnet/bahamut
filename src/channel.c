@@ -2141,23 +2141,29 @@ static int can_join(aClient *sptr, aChannel *chptr, char *key)
         return 1;
 
     if (chptr->mode.mode & MODE_INVITEONLY)
+    {
+        r = "+i";
         error = ERR_INVITEONLYCHAN;
-    if (chptr->mode.mode & MODE_REGONLY && !IsRegNick(sptr))
-        error = ERR_NEEDREGGEDNICK;
-    if (chptr->mode.mode & MODE_OPERONLY && !IsOper(sptr))
-        error = ERR_NOPRIVILEGES;
-    if (*chptr->mode.key && (BadPtr(key) || mycmp(chptr->mode.key, key)))
-        error = ERR_BADCHANNELKEY;
-    if (chptr->mode.limit && chptr->users >= chptr->mode.limit)
+    }
+    else if (chptr->mode.mode & MODE_OPERONLY && !IsOper(sptr))
+    {
+        r = "+O";
+        error = ERR_INVITEONLYCHAN;
+    }
+    else if (chptr->mode.limit && chptr->users >= chptr->mode.limit)
     {
         r = "+l";
         error = ERR_CHANNELISFULL;
     }
-    if (check_joinrate(chptr, NOW, 1, sptr) == 0)
+    else if (check_joinrate(chptr, NOW, 1, sptr) == 0)
     {
         r = "+j";
         error = ERR_CHANNELISFULL;
     }
+    else if (chptr->mode.mode & MODE_REGONLY && !IsRegNick(sptr))
+        error = ERR_NEEDREGGEDNICK;
+    else if (*chptr->mode.key && (BadPtr(key) || mycmp(chptr->mode.key, key)))
+        error = ERR_BADCHANNELKEY;
 
 #ifdef INVITE_LISTS
     if (error && is_invited(sptr, chptr))
@@ -2171,12 +2177,11 @@ static int can_join(aClient *sptr, aChannel *chptr, char *key)
     {
         if (error==ERR_NEEDREGGEDNICK)
             sendto_one(sptr, getreply(ERR_NEEDREGGEDNICK), me.name, sptr->name,
-                       chptr->chname, "join", NS_Services_Name, NS_Register_URL);
-        else if (error==ERR_CHANNELISFULL)
-            sendto_one(sptr, getreply(ERR_CHANNELISFULL), me.name, sptr->name,
-                       chptr->chname, r);
+                       chptr->chname, "join", NS_Services_Name,
+                       NS_Register_URL);
         else
-            sendto_one(sptr, getreply(error), me.name, sptr->name, chptr->chname);
+            sendto_one(sptr, getreply(error), me.name, sptr->name,
+                       chptr->chname, r);
         return 0;
     }
 
