@@ -42,6 +42,7 @@ MHOST="`grep 'MONITOR_HOST' $OPTIONS_H | sed s/'.define MONITOR_HOST '// | sed s
 LOCALKLINE="`grep 'SERVER_KLINE_ADDRESS' $OPTIONS_H | sed s/'.define SERVER_KLINE_ADDRESS '// | sed s/'\"'//g | xargs echo -n`"
 NETWORKKLINE="`grep 'NETWORK_KLINE_ADDRESS' $OPTIONS_H | sed s/'.define NETWORK_KLINE_ADDRESS '// | sed s/'\"'//g | xargs echo -n`"
 MAXCHANNELSPERUSER="`grep 'MAXCHANNELSPERUSER' $OPTIONS_H | sed s/'.define MAXCHANNELSPERUSER '// | xargs echo -n`"
+SOCKETENGINE="`grep 'SOCKETENGINE' $OPTIONS_H | sed s/'.define SOCKETENGINE '// | sed s/'\"'//g | xargs echo -n`"
 #
 # Now to pull yucky defaults out.
 #
@@ -160,7 +161,8 @@ LOGKILL=""
 LOGSQUIT=""
 LOGCONN=""
 SOPER=""
-USEPOLL=""
+USESELECT=""
+SOCKETENGINE="poll"
 MAXSENDQ="5050000"
 BUFPOOL="(4 * MAXSENDQLENGTH)"
 HULINED="1" 
@@ -286,7 +288,7 @@ case "$OS" in
 esac
 
 if [ -n "$SOLARIS" ] ; then
-    USEPOLL="1"
+    SOCKETENGINE="poll"
 fi
 
 FOO=""
@@ -880,13 +882,18 @@ else
    FOO=""
    runonce=""
    while [ -z "$FOO" ] ; do
-       FOO="Yes"
+       FOO="$SOCKETENGINE"
        echo ""
-       echo "Do you want to use the poll system call?"
-       echo "If you are on a solaris machine, this is mandatory."
-       echo "Linux machines using a kernel older than 2.4 should use select."
-       echo "Poll works nicely on freebsd machines."
-       echo "Select is more economical for small networks."
+       echo "Which socket engine do you wish to use?"
+       echo ""
+       echo "The following choices are available"
+       echo "select - use the select() system call. More economical for small networks."
+       echo "         Has setbacks as to the maximum number of clients you can hold;"
+       echo "         Linux systems are generally locked to a maximum of 1024 clients."
+       echo "poll   - use the poll() system call. No limits, better performance than select,"
+       echo "         however some systems do not support it. Linux 2.2 uses select to wrap poll."
+       echo "kqueue - use the kqueue() system call. ONLY WORKS UNDER FREEBSD."
+       echo "         However, it works with little to no system load -- highly optimal."
        echo -n "[$FOO] -> $c"
        if [ -z "$AUTO_CONFIG" -o -n "$runonce" ] ; then
           read cc
@@ -898,15 +905,21 @@ else
           cc=$FOO
        fi
        case "$cc" in
-          [Yy]*)
-             USEPOLL="1"
+          [Pp][Oo][Ll][Ll])
+             SOCKETENGINE="poll"
+             USESELECT=""
              ;;
-          [Nn]*)
-             USEPOLL=""
+          [Kk][Qq][Uu][Ee][Uu][Ee])
+             SOCKETENGINE="kqueue"
+             USESELECT=""
+             ;;
+          [Ss][Ee][Ll][Ee][Cc][Tt])
+             SOCKETENGINE="select"
+             USESELECT="1"
              ;;
           *)
              echo ""
-             echo "You need to enter either Yes or No here..."
+             echo "You need to enter either poll, select, or kqueue here..."
              echo ""
              FOO=""
              ;;
@@ -1076,7 +1089,16 @@ cat > $OPTIONS_H << __EOF__
 #define MAX_BUFFER $MAXBUF
 #define SERVICES_NAME "$SERVICES_NAME"
 #define MAXCHANNELSPERUSER $MAXCHANNELSPERUSER
+
+#define SOCKETENGINE "$SOCKETENGINE"
 __EOF__
+
+if [ -n "$USESELECT" ] ; then
+    echo "#define USE_SELECT" >> $OPTIONS_H
+else
+    echo "#undef USE_SELECT" >> $OPTIONS_H
+fi
+
 if [ -n "$STATSN" ] ; then
     echo "#define STATS_NOTICE" >> $OPTIONS_H
 else
@@ -1172,18 +1194,20 @@ echo "#endif" >> $OPTIONS_H
 echo "" >> $OPTIONS_H
 echo "#endif /* This is the endif for the ifdef at the top. */" >> $OPTIONS_H
 ### use poll?
-if [ -n "$USEPOLL" ] ; then
-   cat Makefile | sed s/'XFLAGS=.*'/XFLAGS=-DUSE_POLL/ > Makefile.tmp
-   cat Makefile.tmp | sed s/'FDLIMIT=.*'/FDLIMIT=/ > Makefile
-else
+if [ -n "$USESELECT" ] ; then
    cat Makefile | sed s/'XFLAGS=.*'/XFLAGS=/ > Makefile.tmp
    ### now insert the FDLIMIT in the makefile
    cat Makefile.tmp | sed s/'FDLIMIT=.*'/FDLIMIT=-DFD_SETSIZE=${FDLIMIT}/ > Makefile
+else
+   cat Makefile | sed s/'XFLAGS=.*'/XFLAGS=/ > Makefile.tmp
+   cat Makefile.tmp | sed s/'FDLIMIT=.*'/FDLIMIT=/ > Makefile
 fi
+
+cat Makefile | sed s/'ENGINE=.*'/ENGINE=socketengine_${SOCKETENGINE}.c/ > Makefile.tmp
+cat Makefile.tmp > Makefile
+
 echo "Done."
 echo ""
 echo "Now your include/options.h is configured.  Please look over" 
 echo "include/config.h for more server specific options."
 echo "To compile your server, type 'make'."
-
-

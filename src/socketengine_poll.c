@@ -72,7 +72,7 @@ void engine_get_pollfds(struct pollfd **pfds, int *numpfds)
    *numpfds = (last_pfd + 1);
 }
 
-int read_message(time_t delay, fdlist * listp)
+int engine_read_message(time_t delay)
 {
    static char errmsg[512];
    static struct pollfd poll_fdarray[MAXCONNECTIONS];

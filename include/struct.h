@@ -1196,7 +1196,12 @@ typedef struct SearchOptions
     char spare:3; /* spare space for more stuff(?) */
 } SOpts;
 
-#define IsSendable(x)      (DBufLength(&(x)->sendQ) < ((x)->sendqlen / 2))
+/*
+ * Send /LIST as long as their output isn't blocking
+ * and we haven't used 2/3rds of their sendQ
+ */
+#define IsSendable(x)      (!((x)->flags & FLAGS_BLOCKED) && \
+                            DBufLength(&(x)->sendQ) < (int) ((float) (x)->sendqlen / 1.5))
 #define DoList(x)          (((x)->user) && ((x)->user->lopt))
 
 /* internal defines for cptr->sockerr */

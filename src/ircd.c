@@ -89,6 +89,7 @@ extern time_t 	 pending_kline_time;
 extern struct pkl *pending_klines;
 extern void 	 do_pending_klines(void);
 #endif
+extern void      engine_read_message(int);
 
 void        	server_reboot();
 void        	restart(char *);
@@ -1182,7 +1183,7 @@ void io_loop()
 	 * read servers AGAIN, and then flush any data to servers. -Taner
 	 */
 
-	read_message(delay, NULL);	/* check everything! */
+	engine_read_message(delay);	/* check everything! */
 
 	/*
 	 * * ...perhaps should not do these loops every time, but only if

@@ -1,4 +1,3 @@
-
 /************************************************************************
  *   IRC - Internet Relay Chat, src/s_bsd.c
  *   Copyright (C) 1990 Jarkko Oikarinen and
@@ -46,16 +45,6 @@
 #include <utmp.h>
 #include <sys/resource.h>
 
-/* Stuff for poll() */
-
-#ifdef USE_POLL
-#include <poll.h>
-#endif /* USE_POLL */
-
-#ifdef USE_KQUEUE
-#include <sys/event.h>
-#endif
-
 #ifdef	AIX
 #include <time.h>
 #include <arpa/nameser.h>
@@ -91,9 +80,8 @@ time_t timeofday;
 static struct sockaddr_in mysk;
 
 static struct sockaddr *connect_inet(aConfItem *, aClient *, int *);
-static int completed_connection(aClient *);
 static int check_init(aClient *, char *);
-static void do_dns_async(void), set_sock_opts(int, aClient *);
+static void set_sock_opts(int, aClient *);
 struct sockaddr_in vserv;
 char specific_virtual_host;
 
@@ -431,7 +419,7 @@ void init_sys()
 			   (long) limit.rlim_cur);
 	    exit(-1);
 	}
-#if !defined(USE_POLL) && !defined(USE_KQUEUE)
+#ifdef USE_SELECT
 	if (MAXCONNECTIONS > FD_SETSIZE)
 	{
 	    (void) fprintf(stderr,
@@ -846,7 +834,7 @@ int check_server(aClient * cptr, struct hostent *hp, aConfItem * c_conf,
  *      Return  TRUE, if successfully completed *               FALSE,
  * if failed and ClientExit
  */
-static int completed_connection(aClient * cptr)
+int completed_connection(aClient * cptr)
 {
     aConfItem *aconf;
     aConfItem *nconf;
@@ -1339,7 +1327,7 @@ aClient *add_connection(aClient * cptr, int fd)
 }
 
 /* handle taking care of the client's recvq here */
-static int do_client_queue(aClient *cptr)
+int do_client_queue(aClient *cptr)
 {
     int dolen = 0, done;
     
@@ -1400,7 +1388,7 @@ static int do_client_queue(aClient *cptr)
 
 #define MAX_CLIENT_RECVQ 8192	/* 4 dbufs */
 
-static int read_packet(aClient * cptr)
+int read_packet(aClient * cptr)
 {
     int length = 0, done;
 
@@ -1489,7 +1477,7 @@ static int read_packet(aClient * cptr)
     return 1;
 }
 
-static void read_error_exit(aClient *cptr, int length, int err)
+void read_error_exit(aClient *cptr, int length, int err)
 {
     char fbuf[512];
     char errmsg[512];
@@ -1641,7 +1629,7 @@ void accept_connection(aClient *cptr)
  * be processed. Also check for connections with data queued and
  * whether we can write it out.
  */
-#if !defined(USE_POLL) && !defined(USE_KQUEUE)
+#ifdef USE_SELECT
 int read_message(time_t delay, fdlist * listp)
 {                        
     aClient *cptr;
@@ -1881,17 +1869,6 @@ int read_message(time_t delay, fdlist * listp)
     }
     return 0;
 }
-
-#elif defined(USE_POLL)   /* USE_POLL */
-
-#include "socketengine_poll.c"
-
-#elif defined(USE_KQUEUE) /* END USE_POLL */
-
-int read_message(time_t delay, fdlist * listp)
-{
-}
-
 #endif /* USE_KQUEUE */
 
 /* connect_server */
@@ -2191,7 +2168,7 @@ void get_my_name(aClient * cptr, char *name, int len)
  * Called when the fd returned from init_resolver() has been selected for
  * reading.
  */
-static void do_dns_async()
+void do_dns_async()
 {
     static Link ln;
     aClient *cptr;

@@ -164,6 +164,14 @@ extern int  	  utmp_open(void);
 extern int  	  utmp_read(int, char *, char *, char *, int);
 extern int  	  utmp_close(int);
 
+extern void 	do_dns_async(void);
+extern int 	completed_connection(aClient *);
+extern void 	accept_connection(aClient *);
+extern char *	irc_get_sockerr(aClient *);
+extern int 	read_packet(aClient *);
+extern int 	do_client_queue(aClient *);
+extern void 	read_error_exit(aClient *, int, int);
+
 extern void 	  start_auth(aClient *);
 extern void 	  read_authports(aClient *);
 extern void 	  send_authports(aClient *);
