@@ -3016,6 +3016,9 @@ int m_sjoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	case 'R':
 	    mode.mode |= MODE_REGONLY;
 	    break;
+	case 'M':
+	    mode.mode |= MODE_MODREG;
+	    break;
 	case 'c':
 	    mode.mode |= MODE_NOCOLOR;
 	    break;
@@ -3167,6 +3170,11 @@ int m_sjoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	    INSERTSIGN(1,'+')
 		*mbuf++='R';
 	}
+	if((MODE_MODREG & mode.mode) && !(MODE_MODREG & oldmode->mode))
+	{
+	    INSERTSIGN(1,'+')
+		*mbuf++='M';
+	}
 	if((MODE_NOCOLOR & mode.mode) && !(MODE_NOCOLOR & oldmode->mode))
 	{
 	    INSERTSIGN(1,'+')
@@ -3220,6 +3228,11 @@ int m_sjoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	{
 	    INSERTSIGN(-1,'-')
 		*mbuf++='R';
+	}
+	if((MODE_MODREG & oldmode->mode) && !(MODE_MODREG & mode.mode))
+	{
+	    INSERTSIGN(-1,'-')
+		*mbuf++='M';
 	}
 	if((MODE_NOCOLOR & oldmode->mode) && !(MODE_NOCOLOR & mode.mode))
 	{

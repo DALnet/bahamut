@@ -330,13 +330,14 @@ int m_svsnick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	if ((acptr = find_person(parv[1], NULL))!=NULL)
 	{
 	    acptr->umode &= ~UMODE_r;
+	    acptr->tsinfo = atoi(parv[3]);
 #ifdef ANTI_NICK_FLOOD
 	    acptr->last_nick_change = atoi(parv[3]);
 #endif
 	    sendto_common_channels(acptr, ":%s NICK :%s", parv[1], parv[2]);
 	    if (IsPerson(acptr)) add_history(acptr, 1);
-	    sendto_serv_butone(NULL, ":%s NICK %s :%i", parv[1], parv[2],
-			       atoi(parv[3]));
+	    sendto_serv_butone(NULL, ":%s NICK %s :%d", parv[1], parv[2],
+			       acptr->tsinfo);
 	    if(acptr->name[0]) del_from_client_hash_table(acptr->name, acptr);
 	    strcpy(acptr->name, parv[2]);
 	    add_to_client_hash_table(parv[2], acptr);
