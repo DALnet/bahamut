@@ -235,6 +235,9 @@ typedef struct MotdItem aMotd;
 #define CAPAB_DODKEY  0x0008 /* do I do dkey with this link? */
 #define CAPAB_BURST   0x0010 /* server supports BURST command */
 #define CAPAB_UNCONN  0x0020 /* server supports UNCONNECT */
+#ifdef NOQUIT
+#define CAPAB_NOQUIT  0x0040 /* noquit support */
+#endif
 
 
 #define SetDKEY(x)	((x)->capabilities |= CAPAB_DKEY)
@@ -253,6 +256,11 @@ typedef struct MotdItem aMotd;
 
 #define SetUnconnect(x) ((x)->capabilities |= CAPAB_UNCONN)
 #define IsUnconnect(x)  ((x)->capabilities & CAPAB_UNCONN)
+
+#ifdef NOQUIT
+#define SetNoquit(x)    ((x)->capabilities |= CAPAB_NOQUIT)
+#define IsNoquit(x)     ((x)->capabilities & CAPAB_NOQUIT)
+#endif
 
 
 /* flag macros. */

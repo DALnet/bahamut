@@ -2852,6 +2852,10 @@ m_capab(aClient *cptr, aClient *sptr, int parc, char *parv[])
             SetDKEY(cptr);
         else if (strcmp(parv[i], "ZIP") == 0)
             SetZipCapable(cptr);
+#ifdef NOQUIT
+        else if (strcmp(parv[i], "NOQUIT") == 0)
+            SetNoquit(cptr);
+#endif
     }
 
     return 0;

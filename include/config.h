@@ -164,6 +164,11 @@
 #define FNAME_OPERLOG "/usr/local/ircd/opers"
 */
 
+/* define this if you want to support non-noquit servers.  handy for
+ * services that are not noquit compliant.
+ */
+#undef NOQUIT
+
 /* Don't change this... */
 #ifdef MAXCONNECTIONS
 # if (MAXCONNECTIONS > 16384)

@@ -395,8 +395,11 @@ exit_one_client_in_split(aClient *cptr, aClient *dead, char *reason)
      * we will have already recieved hundreds of QUIT messages
      * from it, which will be passed anyway, and this procedure
      * will never be called. - lucas
-     * noquit is not optional anymore -epi
      */
+
+#ifdef NOQUIT
+    sendto_non_noquit_servs_butone(dead, ":%s QUIT :%s", cptr->name, reason);
+#endif
 
     sendto_common_channels(cptr, ":%s QUIT :%s", cptr->name, reason);
     
