@@ -659,90 +659,136 @@ struct Server {
 };
 
 struct Client {
-	struct Client *next, *prev, *hnext;
-	anUser     *user;		    /* ...defined, if this is a User */
-	aServer    *serv;		    /* ...defined, if this is a server */
-	aWhowas    *whowas;     /* Pointers to whowas structs */
-	time_t      lasttime;	  /* ...should be only LOCAL clients? --msa */
-	time_t      firsttime;	/* time client was created */
-	time_t      since;		  /* last time we parsed something */
-	ts_val      tsinfo;		  /* TS on the nick, SVINFO on servers */
-	long        flags;		  /* client flags */
-	long        umode;		  /* We can illeviate overflow this way */
-	aClient    *from;		    /* == self, if Local Client, *NEVER* NULL! */
-	aClient    *uplink;		    /* this client's uplink to the network */
-	int         fd;		      /* >= 0, for local clients */
-  	int         hopcount;	  /* number of servers to this 0 = local */
-	short       status;		  /* Client type */
-	char        nicksent;
-	char        name[HOSTLEN + 1];	/* Unique name of the client, nick or host */
-	char        info[REALLEN + 1];	   /* Free form additional client information */
+  struct Client *next, *prev, *hnext;
+  anUser     *user;		    /* ...defined, if this is a User */
+  aServer    *serv;		    /* ...defined, if this is a server */
+  aWhowas    *whowas;     /* Pointers to whowas structs */
+  time_t      lasttime;	  /* ...should be only LOCAL clients? --msa */
+  time_t      firsttime;	/* time client was created */
+  time_t      since;		  /* last time we parsed something */
+  ts_val      tsinfo;		  /* TS on the nick, SVINFO on servers */
+  long        flags;		  /* client flags */
+  long        umode;		  /* We can illeviate overflow this way */
+  aClient    *from;	  /* == self, if Local Client, *NEVER* NULL! */
+  aClient    *uplink;		    /* this client's uplink to the network */
+  int         fd;		      /* >= 0, for local clients */
+  int         hopcount;	  /* number of servers to this 0 = local */
+  short       status;		  /* Client type */
+  char        nicksent;
+  char        name[HOSTLEN + 1];  /* Unique name of the client, nick or host */
+  char        info[REALLEN + 1];  /* Free form additional client information */
 #ifdef FLUD
-	Link       *fludees;
+  Link       *fludees;
 #endif
-	/*
-	 * The following fields are allocated only for local clients 
-	 * (directly connected to this server with a socket.  The first
-	 * of them MUST be the "count"--it is the field to which the
-	 * allocation is tied to! Never refer to  these fields, if (from != self).
-	 */
-	int         count;		/* Amount of data in buffer */
+  
+  struct in_addr ip;		 /* keep real ip# too */
+  char        hostip[HOSTIPLEN + 1]; /* Keep real ip as string too - Dianora */
+  
+  Link *watch; /* user's watch list */
+  int watches; /* how many watches this user has set */
+  
+/*
+####### #     # ### #     #  #####   #####
+   #    #     #  #  ##    # #     # #     #
+   #    #     #  #  # #   # #       #
+   #    #######  #  #  #  # #  ####  #####
+   #    #     #  #  #   # # #     #       #
+   #    #     #  #  #    ## #     # #     #
+   #    #     # ### #     #  #####   #####
+
+######  ####### #       ####### #     #
+#     # #       #       #     # #  #  #
+#     # #       #       #     # #  #  #
+######  #####   #       #     # #  #  #
+#     # #       #       #     # #  #  #
+#     # #       #       #     # #  #  #
+######  ####### ####### #######  ## ##
+
+ #####  ####### #     # #     # #######
+#     # #     # #     # ##    #    #
+#       #     # #     # # #   #    #
+#       #     # #     # #  #  #    #
+#       #     # #     # #   # #    #
+#     # #     # #     # #    ##    #
+ #####  #######  #####  #     #    #
+
+   #    ######  #######    #       #######  #####     #    #
+  # #   #     # #          #       #     # #     #   # #   #
+ #   #  #     # #          #       #     # #        #   #  #
+#     # ######  #####      #       #     # #       #     # #
+####### #   #   #          #       #     # #       ####### #
+#     # #    #  #          #       #     # #     # #     # #
+#     # #     # #######    ####### #######  #####  #     # #######
+
+####### #     # #       #     # ### ### ###
+#     # ##    # #        #   #  ### ### ###
+#     # # #   # #         # #   ### ### ###
+#     # #  #  # #          #     #   #   #
+#     # #   # # #          #
+#     # #    ## #          #    ### ### ###
+####### #     # #######    #    ### ### ###
+
+*/
+  /*
+   * The following fields are allocated only for local clients 
+   * (directly connected to this server with a socket.  The first
+   * of them MUST be the "count"--it is the field to which the
+   * allocation is tied to! Never refer to  these fields, if (from != self).
+   */
+  
+  int         count;		/* Amount of data in buffer */
 #ifdef FLUD
-	time_t      fludblock;
-	struct fludbot *fluders;
+  time_t      fludblock;
+  struct fludbot *fluders;
 #endif
 #ifdef ANTI_SPAMBOT
-	time_t      last_join_time;	 /* when this client last joined a channel */
-	time_t      last_leave_time; /* when this client last left a channel */
-	int         join_leave_count;	/*
-																 * count of JOIN/LEAVE in less 
-																 * than MIN_JOIN_LEAVE_TIME seconds */
-	int         oper_warn_count_down;	/*
-																		 * warn opers of this possible spambot 
-																		 * every time this gets to 0 */
+  time_t      last_join_time;	 /* when this client last joined a channel */
+  time_t      last_leave_time; /* when this client last left a channel */
+  int         join_leave_count;	/*
+				 * count of JOIN/LEAVE in less 
+				 * than MIN_JOIN_LEAVE_TIME seconds */
+  int         oper_warn_count_down;	/*
+					 * warn opers of this possible spambot 
+					 * every time this gets to 0 */
 #endif
-	char        buffer[BUFSIZE];	/* Incoming message buffer */
-	short       lastsq;		 /* # of 2k blocks when sendqueued called last */
-	struct DBuf        sendQ;		 /* Outgoing message queue--if socket full */
-	struct DBuf        recvQ;		 /* Hold for data incoming yet to be parsed */
-	long        sendM;		 /* Statistics: protocol messages send */
-	long        sendK;		 /* Statistics: total k-bytes send */
-	long        receiveM;	 /* Statistics: protocol messages received */
-	long        receiveK;	 /* Statistics: total k-bytes received */
-	u_short     sendB;		 /* counters to count upto 1-k lots of bytes */
-	u_short     receiveB;	 /* sent and received. */
-	long        lastrecvM; /* to check for activity --Mika */
-	int         priority;
-	aClient    *acpt;		   /* listening client which we accepted from */
-  	Link       *confs;		 /* Configuration record associated */
-  	int         authfd;	   /* fd for rfc931 authentication */
-	char        username[USERLEN + 1]; /* username here now for auth stuff */
-	struct in_addr ip;		 /* keep real ip# too */
-	char        hostip[HOSTIPLEN + 1];	/* Keep real ip as string too - Dianora */
-	unsigned short port;	 /* and the remote port# too :-) */
-	struct hostent *hostp;
+  char        buffer[BUFSIZE];	/* Incoming message buffer */
+  short       lastsq;	     /* # of 2k blocks when sendqueued called last */
+  struct DBuf        sendQ;	/* Outgoing message queue--if socket full */
+  struct DBuf        recvQ;	 /* Hold for data incoming yet to be parsed */
+  long        sendM;		 /* Statistics: protocol messages send */
+  long        sendK;		 /* Statistics: total k-bytes send */
+  long        receiveM;	 /* Statistics: protocol messages received */
+  long        receiveK;	 /* Statistics: total k-bytes received */
+  u_short     sendB;		 /* counters to count upto 1-k lots of bytes */
+  u_short     receiveB;	 /* sent and received. */
+  long        lastrecvM; /* to check for activity --Mika */
+  int         priority;
+  aClient    *acpt;	  /* listening client which we accepted from */
+  Link       *confs;		 /* Configuration record associated */
+  int         authfd;	   /* fd for rfc931 authentication */
+  char        username[USERLEN + 1]; /* username here now for auth stuff */
+  unsigned short port;	 /* and the remote port# too :-) */
+  struct hostent *hostp;
 #ifdef ANTI_NICK_FLOOD
-	time_t      last_nick_change;
-	int         number_of_nick_changes;
+  time_t      last_nick_change;
+  int         number_of_nick_changes;
 #endif
 #ifdef NO_AWAY_FLUD
-        time_t	    alas;	/* last time of away set */
-	int	    acount;	/* count of away settings */
+  time_t	    alas;	/* last time of away set */
+  int	    acount;	/* count of away settings */
 #endif
-
-	char        sockhost[HOSTLEN + 1];	/*
-																			 * This is the host name from
-																			 * the socket and after which the 
-																			 * connection was accepted. */
-	char        passwd[PASSWDLEN + 1];
-	/* try moving this down here to prevent weird problems... ? */
-	int         oflag;    /* Operator Flags */
-	Link *watch; /* user's watch list */
-        int sockerr; /* what was the last error returned for this socket? */
-	int watches; /* how many watches this user has set */
-        int capabilities; /* what this server/client supports */
-	int pingval;	  /* cache client class ping value here */
-        int sendqlen;	  /* cache client max sendq here */
+  
+  char        sockhost[HOSTLEN + 1];	/*
+					 * This is the host name from
+					 * the socket and after which the 
+					 * connection was accepted. */
+  char        passwd[PASSWDLEN + 1];
+  /* try moving this down here to prevent weird problems... ? */
+  int         oflag;    /* Operator Flags */
+  int sockerr; /* what was the last error returned for this socket? */
+  int capabilities; /* what this server/client supports */
+  int pingval;	  /* cache client class ping value here */
+  int sendqlen;	  /* cache client max sendq here */
 };
 
 #define	CLIENT_LOCAL_SIZE sizeof(aClient)
@@ -778,6 +824,7 @@ struct stats {
 #ifdef FLUD
 	unsigned int is_flud;	  /* users/channels flood protected */
 #endif	                  /* FLUD */
+  char pad[16];  /* Make this an even 1024 bytes */
 };
 
 /* mode structure for channels */
