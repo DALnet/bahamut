@@ -4386,7 +4386,8 @@ int m_trace(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	    continue;
 	if (!dow && mycmp(tname, acptr->name))
 	    continue;
-	if (IsAnOper(sptr))
+	/* only show IPs of unknowns or clients to opers */
+	if (IsAnOper(sptr) && (acptr->status == STAT_CLIENT || acptr->status == STAT_UNKNOWN))
 	    name = get_client_name(acptr, FALSE);
 	else
 	    name = get_client_name(acptr, HIDEME);
