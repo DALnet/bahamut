@@ -559,7 +559,7 @@ void sendto_channel_butone(aClient *one, aClient *from, aChannel *chptr,
     int didlocal = 0, didremote = 0;
     va_list vl;
     char *pfix;
-    void *share_bufs[2];
+    void *share_bufs[2] = { 0, 0 };
    
     va_start(vl, pattern);
 

@@ -274,14 +274,15 @@ int sbuf_begin_share(const char* theData, int theLength, void **thePtr)
 
 int sbuf_end_share(void **thePtr, int theNum)
 {
-    SBuffer *s, **shares = (SBuffer**)thePtr;
-
-    for (s = shares[0]; theNum; --theNum, ++s)
+    SBuffer **shares = (SBuffer**)thePtr;
+    int i;
+      
+    for (i = 0; i < theNum; ++i)
     {
-        if (!s) continue;
+        if (!shares[i]) continue;
         
-        s->shared = 0;
-        if (s->refcount == 0) sbuf_free(s);
+        shares[i]->shared = 0;
+        if (shares[i]->refcount == 0) sbuf_free(shares[i]);
     }
     
     return 0;
