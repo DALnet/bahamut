@@ -1047,7 +1047,7 @@ void reset_sock_opts(int fd, int type)
     if (setsockopt(fd, SOL_SOCKET, SO_RCVBUF, (char *) &opt, sizeof(opt)) < 0) 
 	sendto_realops("REsetsockopt(SO_RCVBUF) for fd %d (%s) failed",
 		       fd, type ? "server" : "client");
-    opt = type ? (SEND_BUF_SIZE * 4) : SEND_BUF_SIZE;
+    opt = type ? sndbufmax : SEND_BUF_SIZE;
     if (setsockopt(fd, SOL_SOCKET, SO_SNDBUF, (char *) &opt, sizeof(opt)) < 0) 
 	sendto_realops("REsetsockopt(SO_SNDBUF) for fd %d (%s) failed",
 		       fd, type ? "server" : "client");

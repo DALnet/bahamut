@@ -232,9 +232,17 @@ static int send_message(aClient *to, char *msg, int len)
      * Well, let's try every 4k for clients, and immediately for servers
      * -Taner
      */
+    /*
+     * Let's not waste time trying this on anyone who has a blocking socket.
+     * Also, let's send every 8k for servers, since there's lots of traffic
+     * there and we'd like to make it more efficient. - lucas
+     */
+
+    if(to->flags & FLAGS_BLOCKED)
+       return 0;
 
 #ifdef ALWAYS_SEND_DURING_SPLIT
-    if (currently_processing_netsplit && !(to->flags & FLAGS_BLOCKED))
+    if (currently_processing_netsplit)
     {
 	send_queued(to);
 	return 0;
@@ -244,7 +252,7 @@ static int send_message(aClient *to, char *msg, int len)
     SQinK = (DBufLength(&to->sendQ) >> 10);
     if (IsServer(to)) 
     {
-	if (SQinK > to->lastsq)
+	if (SQinK > (to->lastsq + 8))
 	    send_queued(to);
     }
     else 
