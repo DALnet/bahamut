@@ -2864,9 +2864,11 @@ m_capab(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
     /* If it's not local, or it has already set capabilities,
      * silently ignore it.
+     * Dont ignore clients where we have set some capabilities already
+     * that would suck for connecting TO servers.
      */
     
-    if(cptr != sptr || cptr->capabilities)
+    if(cptr != sptr)
         return 0;
 
     for (i = 1; i < parc; i++) 

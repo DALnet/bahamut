@@ -370,7 +370,8 @@ m_server_estab(aClient *cptr)
                    my_name_for_link(me.name, aconn),
                    (me.info[0]) ? (me.info) : "IRCers United");
     }
-    else {
+    else 
+    {
         s = (char *) strchr(aconn->host, '@');
         *s = '\0';      /* should never be NULL -- wanna bet? -Dianora */
 
