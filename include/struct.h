@@ -988,6 +988,7 @@ struct Channel
 #define MODE_NOCOLOR	0x04000
 #define MODE_OPERONLY   0x08000
 #define MODE_MODREG     0x10000
+#define MODE_LISTED	0x20000
 
 /* mode flags which take another parameter (With PARAmeterS) */
 
@@ -1132,7 +1133,7 @@ struct ListOptions
     LOpts *next;
     Link  *yeslist, *nolist;
     int   starthash;
-    short int   showall;
+    short int   showall, only_listed;
     unsigned short usermin;
     int   usermax;
     time_t   currenttime;

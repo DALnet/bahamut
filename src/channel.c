@@ -578,6 +578,10 @@ static void channel_modes(aClient *cptr, char *mbuf, char *pbuf,
 	*mbuf++ = 'O';
     if (chptr->mode.mode & MODE_MODREG)
 	*mbuf++ = 'M';
+#ifdef USE_CHANMODE_L
+    if (chptr->mode.mode & MODE_LISTED)
+        *mbuf++ = 'L';
+#endif
     if (chptr->mode.limit) {
 	*mbuf++ = 'l';
 	if (IsMember(cptr, chptr) || IsServer(cptr) || IsULine(cptr))
@@ -835,6 +839,9 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
 	MODE_TOPICLIMIT, 't', MODE_REGONLY, 'R',
 	MODE_INVITEONLY, 'i', MODE_NOCOLOR, 'c', MODE_OPERONLY, 'O',
 	MODE_MODREG, 'M',
+#ifdef USE_CHANMODE_L
+        MODE_LISTED, 'L',
+#endif
 	0x0, 0x0
     };
     
@@ -1155,6 +1162,27 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
 		    chptr->mode.mode&=~MODE_REGISTERED;
             }
             *mbuf++='r';
+            nmodes++;
+            break;
+
+        case 'L':
+            if (!IsServer(sptr) && !IsULine(sptr))
+            {
+                sendto_one(sptr, err_str(ERR_ONLYSERVERSCANCHANGE),
+                           me.name, cptr->name, chptr->chname);
+                break;
+            }
+            else
+            {       
+                if((prelen + (mbuf - morig) + pidx + 1) > REALMODEBUFLEN)
+                    break;
+             
+                if(change=='+')
+                    chptr->mode.mode|=MODE_LISTED;
+                else
+                    chptr->mode.mode&=~MODE_LISTED;
+            }
+            *mbuf++='L';
             nmodes++;
             break;
 	    
@@ -2279,6 +2307,10 @@ void send_list(aClient *cptr, int numsend)
 	    {
 		if (SecretChannel(chptr) && !IsMember(cptr, chptr))
 		    continue;
+#ifdef USE_CHANMODE_L
+                if (lopt->only_listed && !(chptr->mode.mode & MODE_LISTED))
+                    continue;
+#endif
 		if ((!lopt->showall) && ((chptr->users < lopt->usermin) ||
 					 ((lopt->usermax >= 0) && 
 					  (chptr->users > lopt->usermax)) ||
@@ -2349,7 +2381,7 @@ int m_list(aClient *cptr, aClient *sptr, int parc, char *parv[])
     char	*name, *p = NULL;
     LOpts	*lopt = NULL;
     Link	*lp, *next;
-    int		usermax, usermin, error = 0, doall = 0;
+    int		usermax, usermin, error = 0, doall = 0, only_listed = 1;
     int 	x;
     time_t	chantimemin, chantimemax;
     ts_val	topictimemin, topictimemax;
@@ -2411,6 +2443,9 @@ int m_list(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	memset(lopt, '\0', sizeof(LOpts));
 
 	lopt->showall = 1;
+#ifdef USE_CHANMODE_L
+        lopt->only_listed = 1;
+#endif
 
 	if (DBufLength(&cptr->sendQ) < 2048)
 	    send_list(cptr, 64);
@@ -2448,6 +2483,14 @@ int m_list(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	    usermin = atoi(name+1) + 1;
 	    doall = 1;
 	    break;
+#ifdef USE_CHANMODE_L
+        case '-':
+          if(!strcasecmp(++name,"all")) {
+            only_listed = 0;
+            doall = 1;
+          }
+          break;                          
+#endif
 	case 'C':
 	case 'c': /* Channel TS time -- creation time? */
 	    ++name;
@@ -2952,6 +2995,11 @@ int m_sjoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	case 'c':
 	    mode.mode |= MODE_NOCOLOR;
 	    break;
+#ifdef USE_CHANMODE_L
+        case 'L':
+            mode.mode |= MODE_LISTED;
+            break;
+#endif
 	case 'k':
 	    strncpyzt(mode.key, parv[4 + args], KEYLEN + 1);
 	    args++;
@@ -3078,6 +3126,13 @@ int m_sjoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	    INSERTSIGN(1,'+')
 		*mbuf++='c';
 	}
+#ifdef USE_CHANMODE_L
+        if((MODE_LISTED & mode.mode) && !(MODE_LISTED & oldmode->mode))
+        {
+            INSERTSIGN(1,'+')
+                *mbuf++='L';
+        }
+#endif
    
 	/* minus modes */
 	if((MODE_PRIVATE & oldmode->mode) && !(MODE_PRIVATE & mode.mode))
@@ -3125,6 +3180,13 @@ int m_sjoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	    INSERTSIGN(-1,'-')
 		*mbuf++='c';
 	}
+#ifdef USE_CHANMODE_L
+        if((MODE_LISTED & oldmode->mode) && !(MODE_LISTED & mode.mode))
+        {
+            INSERTSIGN(-1,'-')
+                *mbuf++='L';  
+        }
+#endif          
 	
 	if (oldmode->limit && !mode.limit)
 	{
