@@ -753,7 +753,7 @@ int register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
 	if(!(ban = check_userbanned(sptr, UBAN_IP|UBAN_CIDR4, UBAN_WILDUSER)))
             ban = check_userbanned(sptr, UBAN_HOST, 0);
 
-	if(ban)
+	if(ban && !find_eline(acptr)))
 	{
 	    char *reason, *ktype;
 	    int local;
