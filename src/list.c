@@ -54,6 +54,10 @@ extern int  BlockHeapGarbageCollect(BlockHeap *);
  */
 
 #define CLIENTS_PREALLOCATE 1024
+#if CLIENTS_PREALLOCATE > MAXCONNECTIONS
+#undef CLIENTS_PREALLOCATE
+#define CLIENTS_PREALLOCATE MAXCONNECTIONS
+#endif
 
 /* Number of channels to allocate per block, 1024 sounds nice. */
 
