@@ -742,7 +742,7 @@ void sendto_non_noquit_servs_butone(aClient *one, char *pattern, ...)
     {
         cptr = lp->value.cptr;
 
-        if (!IsNoquit(cptr) || (one == cptr))
+        if (IsNoquit(cptr) || (one == cptr))
             continue;
 
         send_fdlist.entry[++k] = cptr->fd;

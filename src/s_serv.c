@@ -2501,7 +2501,7 @@ m_trace(aClient *cptr, aClient *sptr, int parc, char *parv[])
     sendto_one(sptr, rpl_str(RPL_TRACESERVER),
                 me.name, parv[0], "NONE", link_s[me.fd],
                 link_u[me.fd], me.name, "*", "*", me.name,
-                timeofday - acptr->lasttime);
+                acptr ? timeofday - acptr->lasttime : 0);
 #ifdef HIDEULINEDSERVS
     if (IsOper(sptr))
 #endif
