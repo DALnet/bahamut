@@ -185,7 +185,7 @@ int user_match_ban(aClient *cptr, struct userBan *ban)
 
    if(ban->flags & UBAN_HOST)
    {
-      if(!(ban->flags & UBAN_WILD))
+      if(ban->flags & UBAN_WILD)
       {
          if((ban->flags & UBAN_WILDHOST) || match(ban->h, cptr->user->host) == 0)
             return 1;
