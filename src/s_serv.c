@@ -2425,7 +2425,7 @@ m_globops(aClient *cptr, aClient *sptr, int parc, char *parv[])
       return 0;
    }
    if (strlen(message) > TOPICLEN)
-      message[TOPICLEN] = (char) 0;
+      message[TOPICLEN] = '\0';
    sendto_serv_butone(IsServer(cptr) ? cptr : NULL, ":%s GLOBOPS :%s",
 		      parv[0], message);
    send_globops("from %s: %s", parv[0], message);
@@ -2454,7 +2454,7 @@ m_chatops(aClient *cptr, aClient *sptr, int parc, char *parv[])
    }
 
    if (strlen(message) > TOPICLEN)
-      message[TOPICLEN] = (char) 0;
+      message[TOPICLEN] = '\0';
    sendto_serv_butone(IsServer(cptr) ? cptr : NULL, ":%s CHATOPS :%s",
 		      parv[0], message);
    send_chatops("from %s: %s", parv[0], message);

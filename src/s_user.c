@@ -446,7 +446,7 @@ register_user(aClient *cptr,
 	      char *username)
 {
 	aClient *nsptr;
-   Reg aConfItem *aconf=NULL;
+   aConfItem *aconf = NULL, *pwaconf = NULL;
    char       *parv[3];
    static char ubuf[12];
    char       *p;
@@ -547,7 +547,7 @@ register_user(aClient *cptr,
 			strcpy(sptr->sockhost, sptr->hostip);
       }
 		
-      aconf = sptr->confs->value.aconf;
+      pwaconf = sptr->confs->value.aconf;
       if (sptr->flags & FLAGS_DOID && !(sptr->flags & FLAGS_GOTID)) {
 			/*
 			 * because username may point to user->username 
@@ -580,8 +580,8 @@ register_user(aClient *cptr,
       else
 		  strncpyzt(user->username, username, USERLEN + 1);
 		
-      if (!BadPtr(aconf->passwd) &&
-			 !StrEq(sptr->passwd, aconf->passwd)) {
+      if (!BadPtr(pwaconf->passwd) &&
+			 !StrEq(sptr->passwd, pwaconf->passwd)) {
 			ircstp->is_ref++;
 			sendto_one(sptr, err_str(ERR_PASSWDMISMATCH),
 						  me.name, parv[0]);
@@ -1003,13 +1003,14 @@ register_user(aClient *cptr,
 
    if(MyClient(sptr)) {
      /* if the I:line doesn't have a password and the user does, send it over to NickServ */
-     if(aconf->passwd==NULL && sptr->passwd[0] && (nsptr=find_person(NickServ,NULL))!=NULL) {
+     if(pwaconf->passwd == NULL && sptr->passwd[0] && (nsptr=find_person(NickServ,NULL))!=NULL) {
         sendto_one(nsptr,":%s PRIVMSG %s@%s :SIDENTIFY %s", sptr->name, NickServ, SERVICES_NAME, sptr->passwd);
      }
-     memset(sptr->passwd, '\0', PASSWDLEN);
      
      if (ubuf[1]) send_umode(cptr, sptr, 0, ALL_UMODES, ubuf);
    }
+
+   memset(sptr->passwd, '\0', PASSWDLEN);
 
    return 0;
 }
@@ -2815,13 +2816,13 @@ m_quit(aClient *cptr,
        char *parv[])
 {
    register char *reason = (parc > 1 && parv[1]) ? parv[1] : cptr->name;
-   char        comment[TOPICLEN];
+   char        comment[TOPICLEN + 1];
 
    sptr->flags |= FLAGS_NORMALEX;
    if (!IsServer(cptr)) {
       strcpy(comment, "Quit: ");
       strncpy(comment + 6, reason, TOPICLEN - 7);
-      comment[TOPICLEN-1] = 0;
+      comment[TOPICLEN] = 0;
       return exit_client(cptr, sptr, sptr, comment);
    }
    else
@@ -2839,7 +2840,7 @@ m_kill(aClient *cptr,
 {
    aClient    *acptr;
    char       *user, *path, *killer, *p, *nick;
-   char mypath[BUFSIZE];
+   char mypath[TOPICLEN + 1];
 	char       *unknownfmt = "<Unknown>";	/*
 						 * AFAIK this shouldnt happen
 						 * * but -Raist 

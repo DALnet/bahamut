@@ -1859,7 +1859,7 @@ m_topic(aClient *cptr,
 		if(IsServer(sptr) && !IsULine(sptr) && chptr->topic_time >= ts && chptr->topic[0])
 		   return 0;
 
-		strncpyzt(chptr->topic, topic, sizeof(chptr->topic));
+		strncpyzt(chptr->topic, topic, TOPICLEN + 1);
 		strcpy(chptr->topic_nick, tnick);
 		chptr->topic_time = ts;
 		
