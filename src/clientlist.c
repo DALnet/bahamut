@@ -51,7 +51,7 @@ void print_list_memory(aClient *cptr)
               me.name, RPL_STATSDEBUG, cptr->name, lc, lc * sizeof(DLink));
 }
 
-void add_to_list(DLink **list, void *ptr) 
+DLink *add_to_list(DLink **list, void *ptr) 
 {
    DLink *lp = make_dlink();
   
@@ -61,6 +61,8 @@ void add_to_list(DLink **list, void *ptr)
    if(lp->next)
       lp->next->prev = lp;
    *list = lp;
+
+   return lp;
 }
 
 static inline void remove_dlink_list(DLink **list, DLink *link)

@@ -332,7 +332,7 @@ extern int     	  hash_del_watch_list(aClient  *);
 extern aWatch 	 *hash_get_watch(char *);
 #define MAXWATCH       128
 
-void add_to_list(DLink **, void *);
+DLink *add_to_list(DLink **, void *);
 void remove_from_list(DLink **, void *, DLink *);
 void print_list_memory(aClient *);
 
