@@ -535,7 +535,7 @@ count_memory(aClient *cptr, char *nick)
 
    totch = chm + chbm + chu * sizeof(Link) + chi * sizeof(Link);
 
-   sendto_one(cptr, ":%s %d %s :Whowas users %d(%d))",
+   sendto_one(cptr, ":%s %d %s :Whowas users %d(%d)",
 	    me.name, RPL_STATSDEBUG, nick, wwu, wwu * sizeof(anUser));
 
    sendto_one(cptr, ":%s %d %s :Whowas array %d(%d)",
