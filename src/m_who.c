@@ -46,7 +46,7 @@ extern Link *find_channel_link(Link *, aChannel *);
 
 int build_searchopts(aClient *sptr, int parc, char *parv[])
 {
-  static char *who_help[] =
+  static char *who_oper_help[] =
   {
       "/WHO [+|-][acghimnsuCM] [args]",
       "Flags are specified like channel modes,",
@@ -61,8 +61,7 @@ int build_searchopts(aClient *sptr, int parc, char *parv[])
       "Flag h <host>: user has string <host> in their hostname,",
       "               wildcards accepted",
       "Flag i <ip>: user is from <ip> wildcards accepted,",
-      "Flag m <usermodes>: user has <usermodes> set on them,",
-      "                    only o/A/a for nonopers",
+      "Flag m <usermodes>: user has <usermodes> set on them",
       "Flag n <nick>: user has string <nick> in their nickname,",
       "               wildcards accepted",
       "Flag s <server>: user is on server <server>,",
@@ -74,6 +73,33 @@ int build_searchopts(aClient *sptr, int parc, char *parv[])
       "Flag M: check for user in channels I am a member of",
       NULL
   };
+
+  static char *who_user_help[] =
+  {
+      "/WHO [+|-][achmnsuCM] [args]",
+      "Flags are specified like channel modes,",
+      "The flags cghimnsu all have arguments",
+      "Flags are set to a positive check by +, a negative check by -",
+      "The flags work as follows:",
+      "Flag a: user is away",
+      "Flag c <channel>: user is on <channel>,",
+      "                  no wildcards accepted",
+      "Flag h <host>: user has string <host> in their hostname,",
+      "               wildcards accepted",
+      "Flag m <usermodes>: user has <usermodes> set on them,",
+      "                    only usermodes o/O/a/A will return a result",
+      "Flag n <nick>: user has string <nick> in their nickname,",
+      "               wildcards accepted",
+      "Flag s <server>: user is on server <server>,",
+      "                 wildcards not accepted",
+      "Flag u <user>: user has string <user> in their username,",
+      "               wildcards accepted",
+      "Behavior flags:",
+      "Flag C: show first visible channel user is in",
+      "Flag M: check for user in channels I am a member of",
+      NULL
+  };
+
   char *flags, change=1, *s;
   int args=1, i;
 
@@ -82,7 +108,17 @@ int build_searchopts(aClient *sptr, int parc, char *parv[])
   /* if it's /who ?, send them the help */
   if(parc < 1 || parv[0][0]=='?')
   {
-      char **ptr = who_help;
+      /* So we don't confuse users with flags they cannot use,
+         a different /who ? output will be given to users and
+         opers -srd */
+
+      char **ptr = NULL;
+
+      if (!IsAnOper(sptr))
+       ptr = who_user_help;
+      else
+       ptr = who_oper_help;
+
       for (; *ptr; ptr++)
 	  sendto_one(sptr, getreply(RPL_COMMANDSYNTAX), me.name,
 		     sptr->name, *ptr);
