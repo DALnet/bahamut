@@ -265,6 +265,9 @@ int send_queued(aClient *to) {
             return dead_link(to, "Zip output error for %s");
          }
 
+         if(IsRC4OUT(to))
+            rc4_process_stream(to->serv->rc4_out, msg, len);
+
          /* silently stick this on the sendq... */
          if (!dbuf_put(&to->sendQ, msg, len))
             return dead_link(to, "Buffer allocation error for %s");
@@ -298,6 +301,9 @@ int send_queued(aClient *to) {
             sendto_realops("Zipout error for %s: (%d) %s\n", to->name, ldata, msg);
             return dead_link(to, "Zip output error for %s");
          }
+
+         if(IsRC4OUT(to))
+            rc4_process_stream(to->serv->rc4_out, msg, len);
 
          /* silently stick this on the sendq... */
          if (!dbuf_put(&to->sendQ, msg, len))
