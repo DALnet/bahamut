@@ -52,10 +52,6 @@ extern aConfList KList3;	/*
 				 * what we can't sort 
 				 */
 
-extern aConfList BList1;
-extern aConfList BList2;
-extern aConfList BList3;
-
 extern aConfList ZList1;
 extern aConfList ZList2;
 extern aConfList ZList3;
@@ -276,11 +272,6 @@ extern void sendto_channelvoiceops_butone();
  */
 extern void sendto_serv_butone();
 
-#ifdef DF_COMPATIBILITY
-extern void sendto_df_butone();
-extern void sendto_hybrid_butone();
-
-#endif
 /*
  * VARARGS2 
  */
@@ -295,10 +286,6 @@ extern void sendto_channel_butserv();
  * VARARGS3 
  */
 extern void sendto_match_servs();
-#ifdef DF_COMPATIBILITY
-extern void sendto_match_df();
-extern void sendto_match_hybrid();
-#endif
 
 /*
  * VARARGS5 
@@ -352,13 +339,6 @@ extern void sendto_channelvoice_butone(aClient *one, aClient *from,
 extern void sendto_channelvoiceops_butone(aClient *one, aClient *from, 
 														aChannel *chptr, char *patern, ...);
 extern void sendto_serv_butone(aClient *one, char *pattern, ...);
-
-#ifdef DF_COMPATIBILITY
-extern void sendto_df_butone(aClient *one, char *pattern, ...);
-extern void sendto_hybrid_butone(aClient *one, char *pattern, ...);
-extern void sendto_match_df(aChannel *chptr, aClient *from, char *format, ...);
-extern void sendto_match_hybrid(aChannel *chptr, aClient *from, char *format, ...);
-#endif
 
 extern void sendto_common_channels(aClient *user, char *pattern, ...);
 extern void sendto_channel_butserv(aChannel *chptr, aClient *from, char *pattern, ...);

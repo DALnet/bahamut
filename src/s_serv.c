@@ -73,12 +73,6 @@ int         max_connection_count = 1, max_client_count = 1;
 extern void reset_sock_opts();
 
 #endif
-#ifdef DF_COMPATIBILITY
-extern void send_user_joins(aClient *, aClient *);	/*
-
-							 * in channel.c 
-							 */
-#endif
 extern char *smalldate(time_t);	/*
 
 				 * defined in s_misc.c 
@@ -322,12 +316,13 @@ m_squit(aClient *cptr,
     * *  Notify all opers, if my local link is remotely squitted *  In
     * df465, there's a sendto_ops() and a sendto_serv_butone() *  ..
     * make it so. -mjs
+    * notify everyone about any squit, local or remote - lucas
     */
-   if (MyConnect(acptr) && !IsAnOper(cptr)) {
-      sendto_ops("Received SQUIT %s from %s (%s)",
-		 acptr->name, get_client_name(sptr, HIDEME), comment);
+   if (MyConnect(acptr)) {
+      send_globops("from %s: Received SQUIT %s from %s (%s)",
+		 me.name, acptr->name, get_client_name(sptr, HIDEME), comment);
       sendto_serv_butone(&me,
-			 ":%s GNOTICE :Received SQUIT %s from %s (%s)",
+			 ":%s GLOBOPS :Received SQUIT %s from %s (%s)",
 	      me.name, server, get_client_name(sptr, HIDEME), comment);
 #
 #if defined(USE_SYSLOG) && defined(SYSLOG_SQUIT)
@@ -735,28 +730,10 @@ sendnick_TS(aClient *cptr, aClient *acptr)
 	  * original was        strcpy(ubuf, "+"); 
 	  */
       }
-#ifdef DF_COMPATIBILITY
-      if (!IsDf(cptr))
-				sendto_one(cptr, "NICK %s %d %ld %s %s %s %s %lu :%s",
-									 acptr->name, acptr->hopcount + 1,
-									 acptr->tsinfo, ubuf,
-									 acptr->user->username, acptr->user->host,
-									 acptr->user->server, acptr->user->servicestamp,
-									 acptr->info);
-      else {
-				 sendto_one(cptr, "NICK %s %d %ld %s %s %s %lu :%s",
-										acptr->name, acptr->hopcount + 1, acptr->tsinfo,
-										acptr->user->username, acptr->user->host,
-										acptr->user->server, acptr->user->servicestamp,
-										acptr->info);
-				 sendto_one(cptr, ":%s MODE %s :%s", acptr->name, acptr->name, ubuf);
-			}
-#else
       sendto_one(cptr, "NICK %s %d %ld %s %s %s %s %lu :%s", acptr->name,
 		 acptr->hopcount + 1, acptr->tsinfo, ubuf,
 		 acptr->user->username, acptr->user->host,
 		 acptr->user->server, acptr->user->servicestamp, acptr->info);
-#endif
    }
 }
 
@@ -893,7 +870,7 @@ m_server_estab(aClient *cptr)
    sendto_ops("Link with %s established: %s %s", inpath, IsULine(cptr) ? "ULined" : "Normal",
 		DoesTS(cptr) ? "TS link" : "Non-TS link!");
  
-   sendto_serv_butone(&me, ":%s GNOTICE :Link with %s established: %s", 
+   sendto_serv_butone(&me, ":%s GLOBOPS :Link with %s established: %s", 
 							 me.name, inpath, DoesTS(cptr) ? "TS link" : "Non-TS link!");
    (void) add_to_client_hash_table(cptr->name, cptr);
    /*
@@ -1010,10 +987,6 @@ m_server_estab(aClient *cptr)
 	       acptr->nicksent = nickissent;
 	       if (acptr->from != cptr) {
 		  sendnick_TS(cptr, acptr);
-#ifdef DF_COMPATIBILITY
-		  if (IsDf(cptr))
-		     send_user_joins(cptr, acptr);
-#endif
 	       }
 	    }
 	 }
@@ -1767,17 +1740,6 @@ m_stats(aClient *cptr,
 			CONF_NOCONNECT_SERVER);
 		break;
 		
-	 case 'B':
-	 case 'b':
-#ifdef B_LINES_OPER_ONLY
-		if (!IsAnOper(sptr))
-		  break;
-#endif
-		report_conf_links(sptr, &BList1, RPL_STATSBLINE, 'B');
-		report_conf_links(sptr, &BList2, RPL_STATSBLINE, 'B');
-		report_conf_links(sptr, &BList3, RPL_STATSBLINE, 'B');
-		break;
-		
 	 case 'D':
 	 case 'd':
 		if (!IsAnOper(sptr))
@@ -2030,15 +1992,6 @@ m_help(aClient *cptr,
 	 last_used = NOW;
 
    }
-
-    	/* Deny remote requests for /help
-    	 * DF's helpops tends to flood a client
-    	 * pretty damn good otherwise.
-    	 * -Epi */ 
-    #ifdef DF_COMPATIBILITY    
-	if (!MyClient(sptr)) 
-	   return 0;
-    #endif
 
    if (!IsAnOper(sptr) || (helpfile == (aMotd *) NULL)) {
       for (i = 0; msgtab[i].cmd; i++)
@@ -2361,17 +2314,22 @@ m_connect(aClient *cptr,
    }
    /*
     * * Notify all operators about remote connect requests *
+    * Let's notify about local connects, too. - lucas
     * sendto_ops_butone -> sendto_serv_butone(), like in df. -mjs
     */
-   if (!IsAnOper(cptr)) {
-      sendto_serv_butone(&me,
-			 ":%s GNOTICE :Remote CONNECT %s %s from %s",
-			 me.name, parv[1], parv[2] ? parv[2] : "",
-			 get_client_name(sptr, HIDEME));
+   send_globops("from %s: %s CONNECT %s %s from %s",
+		me.name, IsAnOper(cptr) ? "Local" : "Remote", 
+		parv[1], parv[2] ? parv[2] : "",
+		get_client_name(sptr, HIDEME));
+   sendto_serv_butone(&me, ":%s GLOBOPS :%s CONNECT %s %s from %s",
+		me.name, IsAnOper(cptr) ? "Local" : "Remote", 
+		parv[1], parv[2] ? parv[2] : "",
+		get_client_name(sptr, HIDEME));
+
 #if defined(USE_SYSLOG) && defined(SYSLOG_CONNECT)
-      syslog(LOG_DEBUG, "CONNECT From %s : %s %d", parv[0], parv[1], parv[2] ? parv[2] : "");
+   syslog(LOG_DEBUG, "CONNECT From %s : %s %s", parv[0], parv[1], parv[2] ? parv[2] : "");
 #endif
-   }
+
    aconf->port = port;
    switch (retval = connect_server(aconf, sptr, NULL)) {
       case 0:
@@ -4815,16 +4773,6 @@ m_die(aClient *cptr,
    return 0;
 }
 
-#ifdef DF_COMPATIBILITY
-int
-m_protoctl(aClient *cptr, aClient *sptr, int parc, char *parv[])
-{
-   sptr->flags |= FLAGS_DF;
-   send_globops("Server %s is Dreamforge.  Using compatibility code.\n",
-		sptr->name);
-   return 0;
-}
-#endif
 
 /*
  * m_capab * Communicate what I can do to another server 
@@ -4950,16 +4898,6 @@ int m_akill(aClient *cptr, aClient *sptr, int parc, char *parv[]) {
 
 	if(!IsServer(sptr))
 	  return 0;
-#ifdef DF_COMPATIBILITY  
-	if(IsDf(cptr) && parc<3) {
-		sendto_one(sptr, err_str(ERR_NEEDMOREPARAMS), me.name, parv[0], "AKILL");
-		return 0;
-	}
-	if(IsHybrid(cptr) && parc<6) {   
-		sendto_one(sptr, err_str(ERR_NEEDMOREPARAMS), me.name, parv[0], "AKILL");
-		return 0;
-	}
-#endif   
 	
 	if(!IsULine(sptr)) {
 		sendto_serv_butone(&me, ":%s GLOBOPS :Non-ULined server %s trying to AKILL!", 
@@ -4971,21 +4909,11 @@ int m_akill(aClient *cptr, aClient *sptr, int parc, char *parv[]) {
 	
 	host=parv[1];
 	user=parv[2];
-	
-	  
-	/* if our uplink is DF, we're not getting the whole story, FITB. */
-#ifdef DF_COMPATIBILITY
-	if(IsDf(cptr))
-	  reason=(parv[3] ? parv[3] : "<no reason>");
-	else {
-#endif
-		akiller=parv[4];
-		length=atoi(parv[3]);
-		timeset=atoi(parv[5]);
-		reason=(parv[6] ? parv[6] : "<no reason>");
-#ifdef DF_COMPATIBILITY
-	}
-#endif   
+	akiller=parv[4];
+	length=atoi(parv[3]);
+	timeset=atoi(parv[5]);
+	reason=(parv[6] ? parv[6] : "<no reason>");
+
 	current_date=smalldate((time_t)timeset);
 	/* cut reason down a little, eh? */
 	/* 250 chars max */

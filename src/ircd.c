@@ -46,10 +46,6 @@ aConfList   KList1 = {0, NULL};			/* ordered */
 aConfList   KList2 = {0, NULL};			/* ordered, reversed */
 aConfList   KList3 = {0, NULL};			/* what we can't sort */
 
-aConfList   BList1 = {0, NULL};			/* ordered */
-aConfList   BList2 = {0, NULL};			/* ordered, reversed */
-aConfList   BList3 = {0, NULL};			/* what we can't sort */
-
 aConfList   ZList1 = {0, NULL};			/* ordered */
 
 aConfList   EList1 = {0, NULL};			/* ordered */
@@ -495,9 +491,15 @@ char       *reason;
 	    continue;
 	 }
 	 if (IsServer(cptr) || IsConnecting(cptr) ||
-	     IsHandshake(cptr)) {
-	    sendto_ops("No response from %s, closing link",
-		       get_client_name(cptr, HIDEME));
+	     IsHandshake(cptr)) 
+	 {
+		char fbuf[512];
+		char *errtxt = "No response from %s, closing link";
+       
+		ircsprintf(fbuf, "from %s: %s", me.name, errtxt);
+		send_globops(fbuf, get_client_name(cptr, HIDEME));
+		ircsprintf(fbuf, ":%s GLOBOPS :%s", me.name, errtxt);                                
+		sendto_serv_butone(cptr, fbuf, get_client_name(cptr, HIDEME));
 	 }
 	 /*
 	  * this is used for KILL lines with time restrictions on them
@@ -784,13 +786,18 @@ int         die_index = 0;	/*
 	 }
 
 	 if (IsServer(cptr) || IsConnecting(cptr) ||
-	     IsHandshake(cptr)) {
+	     IsHandshake(cptr)) 
+	 {
 	    /*
 	     * Server ping out 
 	     */
-
-	    sendto_ops("No response from %s, closing link",
-		       get_client_name(cptr, HIDEME));
+	    char fbuf[512];
+	    char *errtxt = "No response from %s, closing link";
+       
+	    ircsprintf(fbuf, "from %s: %s", me.name, errtxt);
+	    send_globops(fbuf, get_client_name(cptr, HIDEME));
+	    ircsprintf(fbuf, ":%s GLOBOPS :%s", me.name, errtxt);                                
+	    sendto_serv_butone(cptr, fbuf, get_client_name(cptr, HIDEME));
 	 }
 
 	 dying_clients[die_index++] = cptr;

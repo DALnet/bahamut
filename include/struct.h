@@ -196,9 +196,6 @@ typedef struct MotdItem aMotd;
 #define FLAGS_GKILLFLAG    0x200000
 #define FLAGS_ZKILLFLAG    0x400000
 #define FLAGS_CONNECTION_TIMEDOUT 0x800000
-#ifdef DF_COMPATIBILITY
-#define FLAGS_DF           0x1000000
-#endif
 #define FLAGS_ULINE 			0x2000000
 
 /* User Modes */
@@ -244,11 +241,6 @@ typedef struct MotdItem aMotd;
 #define IsTS3       ((x)->flags & CAPAB_TS3)
 #define IsULine(x) ((x)->flags & FLAGS_ULINE)
 
-
-#ifdef DF_COMPATIBILITY
-#define IsDf(x)     ((x)->flags & FLAGS_DF)
-#define IsHybrid(x) (!((x)->flags & FLAGS_DF))
-#endif
 
 #define	IsOper(x)		((x)->umode & UMODE_o)
 #define	IsLocOp(x)		((x)->umode & UMODE_O)
@@ -497,7 +489,6 @@ struct ConfItem {
 #define	CONF_HUB		0x2000
 #define CONF_ELINE		0x4000
 #define CONF_FLINE		0x8000
-#define	CONF_BLINE		0x10000
 #define	CONF_ZLINE		0x20000
 #define CONF_QUARANTINED_NICK 	0x40000
 #define CONF_ULINE 		0x80000
@@ -525,7 +516,11 @@ struct User {
 	char        username[USERLEN + 1];
 	char        host[HOSTLEN + 1];
 	char       *server;		  /* pointer to scached server name */
+#ifdef OS_SOLARIS
+	uint_t    servicestamp; /* solaris is gay -epi */
+#else
 	u_int32_t servicestamp; /* Services id - Raistlin */
+#endif
    /*
     * In a perfect world the 'server' name should not be needed, a
     * pointer to the client describing the server is enough. 

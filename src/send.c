@@ -45,21 +45,27 @@ int
 		   char *, char *, char *, char *, char *, char *);
 
 /*
- * * dead_link *      An error has been detected. The link *must* be
- * closed, *    but *cannot* call ExitClient (m_bye) from here. *
- * Instead, mark it with FLAGS_DEADSOCKET. This should *
- * generate ExitClient from the main loop. *
+ * dead_link 
+ *     
+ * An error has been detected. The link *must* be closed, 
+ * but *cannot* call ExitClient (m_bye) from here. 
+ *
+ * Instead, mark it with FLAGS_DEADSOCKET. This should 
+ * generate ExitClient from the main loop.
  * 
- *      If 'notice' is not NULL, it is assumed to be a format * for a
- * message to local opers. I can contain only one *     '%s', which
- * will be replaced by the sockhost field of *  the failing link. *
+ * If 'notice' is not NULL, it is assumed to be a format for a
+ * message to local opers. I can contain only one '%s', which
+ * will be replaced by the sockhost field of the failing link.
  * 
- *      Also, the notice is skipped for "uninteresting" cases, *
+ * Also, the notice is skipped for "uninteresting" cases, 
  * like Persons and yet unknown connections...
  */
+
 static int
 dead_link(aClient *to, char *notice)
 {
+   int errtmp = errno;	/* so we don't munge this later */
+
    to->flags |= FLAGS_DEADSOCKET;
    /*
     * If because of BUFFERPOOL problem then clean dbuf's now so that
@@ -67,11 +73,25 @@ dead_link(aClient *to, char *notice)
     */
    DBufClear(&to->recvQ);
    DBufClear(&to->sendQ);
-   if (!IsPerson(to) && !(to->flags & FLAGS_CLOSING) && *(to->name))
-      sendto_ops(notice, get_client_name(to, HIDEME));
+   if (IsServer(to) && !(to->flags & FLAGS_CLOSING))
+   {
+      char fbuf[512];
+
+      /* 
+       * ick! what we have here is a server coming in as a dead link.
+       * we need to tell the entire network, as well as local operators, 
+       * just exactly why the server linked to us is dying. - lucas
+       */
+ 
+      ircsprintf(fbuf, "from %s: %s", me.name, notice);
+      send_globops(fbuf, get_client_name(to, HIDEME), strerror(errtmp));
+      ircsprintf(fbuf, ":%s GLOBOPS :%s", me.name, notice);
+      sendto_serv_butone(to, fbuf, get_client_name(to, HIDEME), strerror(errtmp));
+   }
    Debug((DEBUG_ERROR, notice, get_client_name(to, FALSE)));
    return -1;
 }
+
 /*
  * * flush_connections *      Used to empty all output buffers for
  * all connections. Should only *       be called once per scan of
@@ -125,15 +145,15 @@ send_message(aClient *to, char *msg, int len)
       return 0;
    if (DBufLength(&to->sendQ) > get_sendq(to)) {
       if (IsServer(to))
-		  sendto_ops_butone(to, "Max SendQ limit exceeded for %s: %d > %d",
-								  get_client_name(to, (IsServer(to) ? HIDEME : FALSE)),
+		  sendto_ops("Max SendQ limit exceeded for %s: %d > %d",
+								  get_client_name(to, HIDEME),
 								  DBufLength(&to->sendQ), get_sendq(to));
       if (IsClient(to))
 		  to->flags |= FLAGS_SENDQEX;
-      return dead_link(to, "Max Sendq exceeded");
+      return dead_link(to, "Max SendQ exceeded for %s, closing link");
    }
    else if (dbuf_put(&to->sendQ, msg, len) < 0)
-      return dead_link(to, "Buffer allocation error for %s");
+      return dead_link(to, "Buffer allocation error for %s, closing link");
    /*
     * * Update statistics. The following is slightly incorrect *
     * because it counts messages even if queued, but bytes * only
@@ -199,7 +219,7 @@ send_queued(aClient *to)
        * Returns always len > 0 
        */
       if ((rlen = deliver_it(to, msg, len)) < 0)
-	 return dead_link(to, "Write error to %s, closing link");
+	 return dead_link(to, "Write error to %s, closing link (%s)");
       (void) dbuf_delete(&to->sendQ, rlen);
       to->lastsq = DBufLength(&to->sendQ) / 1024;
       if (rlen < len)
@@ -406,122 +426,6 @@ fdlist      send_fdlist;
 #endif
    return;
 }
-#ifdef DF_COMPATIBILITY
-/*
- * sendto_df_butone
- * 
- * Send a message to all df servers except the client 'one'.
- */
-#ifndef	USE_VARARGS
-/*
- * VARARGS 
- */
-void
-sendto_df_butone(one, pattern, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10)
-     aClient    *one;
-     char       *pattern, *p1, *p2, *p3, *p4, *p5, *p6, *p7, *p8, *p9, *p10;
-{
-#else
-void
-sendto_df_butone(one, pattern, va_alist)
-     aClient    *one;
-     char       *pattern;
-     va_dcl
-{
-va_list     vl;
-
-#endif
-Reg int     i;
-Reg aClient *cptr;
-register int j, k = 0;
-fdlist      send_fdlist;
-
-#ifdef	USE_VARARGS
-   va_start(vl);
-#endif
-
-   for (i = serv_fdlist.entry[j = 1];
-	j <= serv_fdlist.last_entry; i = serv_fdlist.entry[++j]) {
-      if (!(cptr = local[i]) || (one && cptr == one->from) ||
-	  (IsHybrid(cptr)))
-	 continue;
-      /*
-       * if (IsServer(cptr)) 
-       */
-#ifdef	USE_VARARGS
-      sendto_one(cptr, pattern, vl);
-   }
-   va_end(vl);
-#else
-      /*
-       * sendto_one(cptr, pattern, p1, p2, p3, p4, p5, p6, p7, p8);
-       */
-      send_fdlist.entry[++k] = i;
-   }
-   send_fdlist.last_entry = k;
-   if (k)
-      sendto_fdlist(&send_fdlist, pattern, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10);
-#endif
-   return;
-}
-/*
- * sendto_hybrid_butone
- * 
- * Send a message to all connected hybrid servers except the client 'one'.
- */
-#ifndef	USE_VARARGS
-/*
- * VARARGS 
- */
-void
-sendto_hybrid_butone(one, pattern, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10)
-     aClient    *one;
-     char       *pattern, *p1, *p2, *p3, *p4, *p5, *p6, *p7, *p8, *p9, *p10;
-{
-#else
-void
-sendto_hybrid_butone(one, pattern, va_alist)
-     aClient    *one;
-     char       *pattern;
-     va_dcl
-{
-va_list     vl;
-
-#endif
-Reg int     i;
-Reg aClient *cptr;
-register int j, k = 0;
-fdlist      send_fdlist;
-
-#ifdef	USE_VARARGS
-   va_start(vl);
-#endif
-
-   for (i = serv_fdlist.entry[j = 1];
-	j <= serv_fdlist.last_entry; i = serv_fdlist.entry[++j]) {
-      if (!(cptr = local[i]) || (one && cptr == one->from) ||
-	  (IsDf(cptr)))
-	 continue;
-      /*
-       * if (IsServer(cptr)) 
-       */
-#ifdef	USE_VARARGS
-      sendto_one(cptr, pattern, vl);
-   }
-   va_end(vl);
-#else
-      /*
-       * sendto_one(cptr, pattern, p1, p2, p3, p4, p5, p6, p7, p8);
-       */
-      send_fdlist.entry[++k] = i;
-   }
-   send_fdlist.last_entry = k;
-   if (k)
-      sendto_fdlist(&send_fdlist, pattern, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10);
-#endif
-   return;
-}
-#endif
 /*
  * sendto_common_channels()
  * 
@@ -771,136 +675,6 @@ Reg aClient *cptr;
 #endif
    return;
 }
-#ifdef DF_COMPATIBILITY
-/*
- * sendto_match_df
- * 
- * send to all df servers which match the mask at the end of a channel
- * name (if there is a mask present) or to all if no mask.
- */
-#ifndef	USE_VARARGS
-/*
- * VARARGS 
- */
-void
-sendto_match_df(chptr, from, format, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10)
-     aChannel   *chptr;
-     aClient    *from;
-     char       *format, *p1, *p2, *p3, *p4, *p5, *p6, *p7, *p8, *p9, *p10;
-{
-#else
-void
-sendto_match_df(chptr, from, format, va_alist)
-     aChannel   *chptr;
-     aClient    *from;
-     char       *format;
-     va_dcl
-{
-va_list     vl;
-
-#endif
-Reg int     i;
-Reg aClient *cptr;
-char       *mask;
-
-#ifdef	USE_VARARGS
-   va_start(vl);
-#endif
-
-#ifdef NPATH
-   check_command((long) 3, format, p1, p2, p3);
-#endif
-   if (chptr) {
-      if (*chptr->chname == '&')
-	 return;
-      if ((mask = (char *) strrchr(chptr->chname, ':')))
-	 mask++;
-   }
-   else
-      mask = (char *) NULL;
-
-   for (i = 0; i <= highest_fd; i++) {
-      if (!(cptr = local[i]))
-	 continue;
-      if ((cptr == from) || !IsServer(cptr))
-	 continue;
-      if ((!BadPtr(mask) && IsServer(cptr) &&
-	   match(mask, cptr->name)) || IsHybrid(cptr))
-	 continue;
-#ifdef	USE_VARARGS
-      sendto_one(cptr, format, vl);
-   }
-   va_end(vl);
-#else
-      sendto_one(cptr, format, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10);
-   }
-#endif
-}
-/*
- * sendto_match_hybrid
- * 
- * send to all hybrid servers which match the mask at the end of a channel
- * name (if there is a mask present) or to all if no mask.
- */
-#ifndef	USE_VARARGS
-/*
- * VARARGS 
- */
-void
-sendto_match_hybrid(chptr, from, format, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10)
-     aChannel   *chptr;
-     aClient    *from;
-     char       *format, *p1, *p2, *p3, *p4, *p5, *p6, *p7, *p8, *p9, *p10;
-{
-#else
-void
-sendto_match_hybrid(chptr, from, format, va_alist)
-     aChannel   *chptr;
-     aClient    *from;
-     char       *format;
-     va_dcl
-{
-va_list     vl;
-
-#endif
-Reg int     i;
-Reg aClient *cptr;
-char       *mask;
-
-#ifdef	USE_VARARGS
-   va_start(vl);
-#endif
-
-#ifdef NPATH
-   check_command((long) 3, format, p1, p2, p3);
-#endif
-   if (chptr) {
-      if (*chptr->chname == '&')
-	 return;
-      if ((mask = (char *) strrchr(chptr->chname, ':')))
-	 mask++;
-   }
-   else
-      mask = (char *) NULL;
-
-   for (i = 0; i <= highest_fd; i++) {
-      if (!(cptr = local[i]))
-	 continue;
-      if ((cptr == from) || !IsServer(cptr))
-	 continue;
-      if ((!BadPtr(mask) && IsServer(cptr) &&
-	   match(mask, cptr->name)) || IsDf(cptr))
-	 continue;
-#ifdef	USE_VARARGS
-      sendto_one(cptr, format, vl);
-   }
-   va_end(vl);
-#else
-      sendto_one(cptr, format, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10);
-   }
-#endif
-}
-#endif
 /*
  * sendto_match_butone
  * 
@@ -1279,7 +1053,7 @@ char        nbuf[1024];
    for (i = 0; i <= highest_fd; i++)
       if ((cptr = local[i]) && !IsServer(cptr) && IsAnOper(cptr) &&
 	  !IsMe(cptr) && SendGlobops(cptr)) {
-	 (void) sprintf(nbuf, ":%s NOTICE %s :*** Global -- ",
+	 (void) ircsprintf(nbuf, ":%s NOTICE %s :*** Global -- ",
 			me.name, cptr->name);
 	 (void) strncat(nbuf, pattern,
 			sizeof(nbuf) - strlen(nbuf));

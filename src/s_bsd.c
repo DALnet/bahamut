@@ -578,7 +578,10 @@ check_init(aClient *cptr, char *sockn)
     */
 
    if (getpeername(cptr->fd, (struct sockaddr *) &sk, &len) == -1) {
-      report_error("connect failure: %s %s", cptr);
+/* 
+ * This fills syslog, if on, and is just annoying. Nobody needs it. -lucas
+ *    report_error("connect failure: %s %s", cptr);
+ */
       return -1;
    }
    (void) strcpy(sockn, (char *) inetntoa((char *) &sk.sin_addr));
@@ -1980,13 +1983,29 @@ read_message(time_t delay,
 		  /*
 		   * NOTE: if length == -2 then cptr has already been freed!
 		   */
-		  if (length != -2 && (IsServer(cptr) || IsHandshake(cptr))) {
+		  if (length != -2 && (IsServer(cptr) || IsHandshake(cptr))) 
+		  {
+			  char fbuf[512];
+
 			  if (length == 0)
-				 sendto_ops("Server %s closed the connection",
-								get_client_name(cptr, HIDEME));
+			  {
+				char *errtxt = "Server %s closed the connection";
+
+				ircsprintf(fbuf, "from %s: %s", me.name, errtxt);
+				send_globops(fbuf, get_client_name(cptr, HIDEME));
+				ircsprintf(fbuf, ":%s GLOBOPS :%s", me.name, errtxt);
+				sendto_serv_butone(cptr, fbuf, get_client_name(cptr, HIDEME));
+			  }
 			  else
-				 report_error("Lost connection to %s:%s",
-								  cptr);
+			  {
+				char *errtxt = "Read error from %s, closing link (%s)";
+				int errtmp = errno;
+
+				ircsprintf(fbuf, "from %s: %s", me.name, errtxt);
+				send_globops(fbuf, get_client_name(cptr, HIDEME), strerror(errtmp));
+				ircsprintf(fbuf, ":%s GLOBOPS :%s", me.name, errtxt);
+				sendto_serv_butone(cptr, fbuf, get_client_name(cptr, HIDEME), strerror(errtmp));
+			  }
 		  }
 		  if (length != FLUSH_BUFFER) {
 			  char        errmsg[255];
@@ -2319,19 +2338,41 @@ read_message(time_t delay, fdlist * listp)
        */
       Debug((DEBUG_ERROR, "READ ERROR: fd = %d %d %d",
 				 fd, errno, length));
-      if (IsServer(cptr) || IsHandshake(cptr)) {
-			int         connected = timeofday - cptr->firsttime;
-			
-			if (length == 0)
-			  sendto_ops("Server %s closed the connection",
-							 get_client_name(cptr, HIDEME));
-			else
-			  report_error("Lost connection to %s:%s", cptr);
-			sendto_ops("%s had been connected for %d day%s, %2d:%02d:%02d",
-						  cptr->name, connected / 86400,
-						  (connected / 86400 == 1) ? "" : "s",
-						  (connected % 86400) / 3600, (connected % 3600) / 60,
-						  connected % 60);
+      if (IsServer(cptr) || IsHandshake(cptr)) 
+      {
+		/* see below.. 
+ 		 *
+		 *	  int         connected = timeofday - cptr->firsttime;
+		 */	
+			  char fbuf[512];
+
+			  if (length == 0)
+			  {
+				char *errtxt = "Server %s closed the connection";
+
+				ircsprintf(fbuf, "from %s: %s", me.name, errtxt);
+				send_globops(fbuf, get_client_name(cptr, HIDEME));
+				ircsprintf(fbuf, ":%s GLOBOPS :%s", me.name, errtxt);
+				sendto_serv_butone(cptr, fbuf, get_client_name(cptr, HIDEME));
+			  }
+			  else
+			  {
+				char *errtxt = "Read error from %s, closing link (%s)";
+				int errtmp = errno;
+
+				ircsprintf(fbuf, "from %s: %s", me.name, errtxt);
+				send_globops(fbuf, get_client_name(cptr, HIDEME), strerror(errtmp));
+				ircsprintf(fbuf, ":%s GLOBOPS :%s", me.name, errtxt);
+				sendto_serv_butone(cptr, fbuf, get_client_name(cptr, HIDEME), strerror(errtmp));
+			  }
+/*
+ * eh, this is only in the poll() side.. I'm gonna comment it out for now. - lucas
+ *			sendto_ops("%s had been connected for %d day%s, %2d:%02d:%02d",
+ *						  cptr->name, connected / 86400,
+ *						  (connected / 86400 == 1) ? "" : "s",
+ *						  (connected % 86400) / 3600, (connected % 3600) / 60,
+ *						  connected % 60);
+ */
       }
       (void) ircsprintf(errmsg, "Read error: %d (%s)", errno,
 								strerror(errno));

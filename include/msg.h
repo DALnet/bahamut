@@ -92,9 +92,6 @@
 #define MSG_STATSERV "STATSERV" /* STATSERV */
 #define MSG_SERVICES "SERVICES"	/* SERVICES */
 #define MSG_IDENTIFY "IDENTIFY"	/* IDENTIFY */
-#ifdef DF_COMPATIBILITY
-#define MSG_PROTOCTL "PROTOCTL"	/* PROTOCTL */
-#endif
 #define MSG_CAPAB    "CAPAB"	   /* CAPAB */ 
 #define MSG_LOCOPS   "LOCOPS"	   /* LOCOPS */
 #define MSG_SVSNICK  "SVSNICK"   /* SVSNICK */
@@ -154,9 +151,6 @@ extern int  m_svsnick(aClient *, aClient *, int, char **);
 extern int  m_svsnoop(aClient *, aClient *, int, char **);
 extern int  m_svskill(aClient *, aClient *, int, char **);
 extern int  m_svsmode(aClient *, aClient *, int, char **);
-#ifdef DF_COMPATIBILITY
-extern int  m_protoctl(aClient *, aClient *, int, char **);
-#endif
 extern int  m_version(aClient *, aClient *, int, char **);
 extern int  m_help(aClient *, aClient *, int, char **);
 extern int  m_squit(aClient *, aClient *, int, char **);
@@ -279,9 +273,6 @@ struct Message msgtab[] = {
 #endif
 	{MSG_SQLINE, m_sqline, 0, MAXPARA, 1, 0, 0, 0L},
 	{MSG_UNSQLINE, m_unsqline, 0, MAXPARA, 1, 0, 0, 0L },
-#ifdef DF_COMPATIBILITY
-   {MSG_PROTOCTL, m_protoctl, 0, MAXPARA, 1, 1, 0, 0L},
-#endif
    {MSG_CAPAB, m_capab, 0, MAXPARA, 1, 1, 0, 0L},
    {(char *) 0, (int (*)()) 0, 0, 0, 0, 0, 0, 0L}
 };

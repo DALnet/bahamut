@@ -19,10 +19,12 @@
 
 RM=@RM@
 
+# Any extra compile options here:
+XFLAGS=
 # file descriptor size limit
 FDLIMIT=1024
 # Default CFLAGS
-CFLAGS= -Wall -g -O2 -DFD_SETSIZE=${FDLIMIT}
+CFLAGS= -Wall -g -O2 -DFD_SETSIZE=${FDLIMIT} ${XFLAGS}
 #
 # What I used on FreeBSD 2.1.7 with kernel compiled for 4096 descriptors
 # the -D"FD_SETSIZE=4096" is only needed if sys/types.h has not been updated
@@ -91,12 +93,6 @@ build:
 		cd $$i;\
 		${MAKE} build; cd ..;\
 	done
-	@echo "******************************************************************************"
-	@echo "*                Warning! Warning! Danger Will Robinson!                     *"
-	@echo "* Bahamut/DfHybrid has NOT been approved for general use on the main DALnet  *"
-	@echo "* IRC network yet. Do not run it on the main network unless you have prior   *"
-	@echo "* permission from the dfhybrid team. If you ignore this warning, you risk    *"
-	@echo "* having your machine juped until you are back on old code.                  *"
 	@echo "******************************************************************************"
 	@echo "* Note: Please do not send bug reports or feature inquiries to the mailing   *"
 	@echo "* lists or to the Bahamut coders. Instead, go to                             *"

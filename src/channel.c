@@ -1,4 +1,4 @@
-/************************************************************************
+/*
  *   IRC - Internet Relay Chat, src/channel.c
  *   Copyright (C) 1990 Jarkko Oikarinen and
  *                      University of Oulu, Co Center
@@ -455,16 +455,8 @@ send_mode_list(aClient *cptr, aChannel *chptr,
       if (count == 3)
 	 send = 1;
       if (send) {
-#ifdef DF_COMPATIBILITY
-			if (IsHybrid(cptr) || flag=='b')
-			  sendto_one(cptr, ":%s MODE %s %s %s",
-							 me.name, chname, modebuf, parabuf);
-			else sendto_one(cptr, ":%s MODE %s %s %s %lu",
-								 me.name, chname, modebuf, parabuf, chptr->creationtime);
-#else
 			sendto_one(cptr, ":%s MODE %s %s %s",
 						  me.name, chname, modebuf, parabuf);
-#endif				 
 	 send = 0;
 	 *parabuf = '\0';
 	 cp = modebuf;
@@ -493,146 +485,6 @@ send_channel_modes(aClient *cptr, aChannel *chptr)
    *modebuf = *parabuf = '\0';
    channel_modes(cptr, modebuf, parabuf, chptr);
 
-#ifdef DF_COMPATIBILITY
-   if (*parabuf)
-      strcat(parabuf, " ");
-   if (IsHybrid(cptr)) {
-      sprintf(buf, ":%s SJOIN %ld %ld %s %s %s :", me.name,
-				  chptr->channelts, chptr->creationtime,
-				  chptr->chname, modebuf, parabuf);
-      t = buf + strlen(buf);
-      for (l = chptr->members; l && l->value.cptr; l = l->next)
-				if (l->flags & MODE_CHANOP) {
-					 anop = l;
-					 break;
-				}
-      /*
-       * follow the channel, but doing anop first if it's defined *
-       * -orabidoo
-       */
-      l = NULL;
-      for (;;) {
-				 if (anop) {
-						l = skip = anop;
-						anop = NULL;
-				 }
-				 else {
-						if (l == NULL || l == skip)
-							l = chptr->members;
-						else
-							l = l->next;
-						if (l && l == skip)
-							l = l->next;
-						if (l == NULL)
-							break;
-				 }
-				 if (l->flags & MODE_CHANOP)
-					 *t++ = '@';
-				 if (l->flags & MODE_VOICE)
-					 *t++ = '+';
-				 strcpy(t, l->value.cptr->name);
-				 t += strlen(t);
-				 *t++ = ' ';
-				 n++;
-				 if (t - buf > BUFSIZE - 80) {
-						*t++ = '\0';
-						if (t[-1] == ' ')
-							t[-1] = '\0';
-						sendto_one(cptr, "%s", buf);
-						sprintf(buf, ":%s SJOIN %ld %ld %s 0 :",
-								  me.name, chptr->channelts,
-								  chptr->creationtime,
-								  chptr->chname);
-						t = buf + strlen(buf);
-						n = 0;
-				 }
-      }
-			
-      if (n) {
-				 *t++ = '\0';
-				 if (t[-1] == ' ')
-					 t[-1] = '\0';
-				 sendto_one(cptr, "%s", buf);
-      }
-      *parabuf = '\0';
-      *modebuf = '+';
-      modebuf[1] = '\0';
-      send_mode_list(cptr, chptr, chptr->chname, chptr->banlist, CHFL_BAN,
-										 'b');
-      if (modebuf[1] || *parabuf)
-				sendto_one(cptr, ":%s MODE %s %s %s",
-									 me.name, chptr->chname, modebuf, parabuf);
-   }
-   else {
-      n = 0;
-			if (*modebuf) 
-				sendto_one(cptr, ":%s MODE %s %s %s %lu", 
-									 me.name, chptr->chname, modebuf, parabuf, 
-									 chptr->creationtime);
-      *parabuf = '\0';
-      *modebuf = '\0';
-      sprintf(buf, ":%s MODE %s", me.name, chptr->chname);
-      for (l = chptr->members; l && l->value.cptr; l = l->next)
-				if (l->flags & MODE_CHANOP) {
-					 anop = l;
-					 break;
-				}
-      l = NULL;
-      for (;;) {
-				 if (anop) {
-						l = skip = anop;
-						anop = NULL;
-				 }
-				 else {
-						if (l == NULL || l == skip)
-							l = chptr->members;
-						else
-							l = l->next;
-						if (l && l == skip)
-							l = l->next;
-						if (l == NULL)
-							break;
-				 }
-				 if (l->flags & MODE_CHANOP) {
-						strcat(modebuf, "+o");
-						strcat(parabuf, l->value.cptr->name);
-						strcat(parabuf, " ");
-						n++;
-				 }
-				 if (n >= MAXMODEPARAMS) {
-						sendto_one(cptr, "%s %s %s %ld", buf, modebuf, parabuf,
-											 chptr->creationtime);
-						n = 0;
-						*modebuf = '\0';
-						*parabuf = '\0';
-				 }
-				 if (l->flags & MODE_VOICE) {
-						strcat(modebuf, "+v");
-						strcat(parabuf, l->value.cptr->name);
-						strcat(parabuf, " ");
-						n++;
-				 }
-				 if (n >= MAXMODEPARAMS) {
-						sendto_one(cptr, "%s %s %s %ld", buf, modebuf, parabuf,
-											 chptr->creationtime);
-						n = 0;
-						*modebuf = '\0';
-						*parabuf = '\0';
-				 }
-      }
-      if (n)
-				sendto_one(cptr, "%s %s %s %ld", buf, modebuf, parabuf,
-									 chptr->creationtime);
-      *parabuf = '\0';
-      *modebuf = '+';
-      modebuf[1] = '\0';
-      send_mode_list(cptr, chptr, chptr->chname, chptr->banlist, CHFL_BAN,
-										 'b');
-      if (modebuf[1] || *parabuf)
-				sendto_one(cptr, ":%s MODE %s %s %s %ld",
-									 me.name, chptr->chname, modebuf, parabuf, chptr->creationtime);
-   }
-#else
    sprintf(buf, ":%s SJOIN %ld %ld %s %s %s :", me.name,
 	   chptr->channelts, chptr->creationtime, chptr->chname, modebuf, parabuf);
    t = buf + strlen(buf);
@@ -697,7 +549,6 @@ send_channel_modes(aClient *cptr, aChannel *chptr)
    if (modebuf[1] || *parabuf)
       sendto_one(cptr, ":%s MODE %s %s %s",
 		 me.name, chptr->chname, modebuf, parabuf);
-#endif
 }
 /* m_mode parv[0] - sender parv[1] - channel */
 
@@ -742,20 +593,6 @@ m_mode(aClient *cptr,
 		 chptr->chname, chptr->creationtime);
       return 0;
    }
-#ifdef DF_COMPATIBILITY
-	/* if the server is df, get rid of the ts so we don't parse it! */
-	if(IsDf(cptr) && IsServer(sptr)) {
-		/* df is stupid, it doesn't send ts when synching bans, the easiest
-		 * way to check is with isdigit...*/
-		if(isdigit(*parv[parc-1])) {
-			int i=atoi(parv[parc-1]);
-			if(chptr->creationtime>i)
-			  chptr->creationtime=i;
-			parc--;
-			parv[parc]=NULL;
-		}
-	}
-#endif
 
 	mcount = set_mode(cptr, sptr, chptr, chanop, parc - 2, parv + 2,
 							  modebuf, parabuf);
@@ -778,22 +615,10 @@ m_mode(aClient *cptr,
 										  ":%s MODE %s %s %s", parv[0],
 										  chptr->chname, modebuf,
 										  parabuf);
-#ifdef DF_COMPATIBILITY
-			sendto_match_hybrid(chptr, cptr, ":%s MODE %s %s %s",
-									  parv[0], chptr->chname, modebuf, parabuf);
-			if(dont_send_ts_with_mode)
-			  sendto_match_df(chptr, cptr, ":%s MODE %s %s %s",
-									parv[0], chptr->chname, modebuf, parabuf);
-			else
-			  sendto_match_df(chptr, cptr, "%s MODE %s %s %s %lu", parv[0],
-									chptr->chname, modebuf, parabuf, 
-									chptr->creationtime);
-#else
 	    sendto_match_servs(chptr, cptr,
 			       ":%s MODE %s %s %s",
 			       parv[0], chptr->chname,
 			       modebuf, parabuf);
-#endif
       }
    return 0;
 }
@@ -833,12 +658,6 @@ set_mode(aClient *cptr, aClient *sptr, aChannel *chptr, int level, int parc,
 	char moreparmsstr[]="MODE   ";
 	
 	args=1;
-#ifdef DF_COMPATIBILITY
-	if(IsServer(sptr))
-	  dont_send_ts_with_mode=0;
-	else
-	  dont_send_ts_with_mode=1;
-#endif
 	
 	if(parc<1)
 	  return 0;
@@ -934,13 +753,11 @@ set_mode(aClient *cptr, aClient *sptr, aChannel *chptr, int level, int parc,
 			len+=i+1;
 			args++;
 			nmodes++;
-#ifndef DF_COMPATIBILITY
 			if (IsServer(sptr) && *modes == 'o' && change=='+') {
 				chptr->channelts = 0;
 				ts_warn("Server %s setting +o and blasting TS on %s", sptr->name,
 						  chptr->chname);
 			}
-#endif
 			break;
 		 case 'b':
 			/* if the user has no more arguments, then they just want
@@ -988,9 +805,6 @@ set_mode(aClient *cptr, aClient *sptr, aChannel *chptr, int level, int parc,
 			len+=i+1;
 			args++;
 			nmodes++;
-#ifdef DF_COMPATIBILITY
-			dont_send_ts_with_mode=1;
-#endif
 			break;
 		 case 'l':
 			/* if the user has no more arguments, then they just want
@@ -1048,15 +862,6 @@ set_mode(aClient *cptr, aClient *sptr, aChannel *chptr, int level, int parc,
 			
 			/* if they're an op, they can futz with the key in
 			 * any manner they like, we're not picky */
-#ifdef DF_COMPATIBILITY
-			/* we lie here and say they took the key off, even if they
-			 * didn't, only to make df happy though */
-			if(change=='+' && *chptr->mode.key) {
-				sendto_match_df(chptr,cptr, ":%s MODE %s -k %s",
-									 sptr->name, chptr->chname,
-									 chptr->mode.key);
-			}
-#endif
 			if(change=='+') {
 				strncpy(chptr->mode.key,parv[args],KEYLEN);
 				strcat(pbuf,parv[args]);
@@ -1460,7 +1265,7 @@ m_join(aClient *cptr,
 			
 			if (MyConnect(sptr) && !IsAnOper(sptr)) {
 				if (sptr->join_leave_count >= spam_num) {
-					sendto_realops("User %s (%s@%s) is a possible spambot",
+					sendto_ops_lev(FLOOD_LEV, "User %s (%s@%s) is a possible spambot",
 										sptr->name,
 										sptr->user->username, sptr->user->host);
 					sptr->oper_warn_count_down = OPER_SPAM_COUNTDOWN;
@@ -1562,7 +1367,7 @@ m_join(aClient *cptr,
 				  sptr->oper_warn_count_down = 0;
 				
 				if (sptr->oper_warn_count_down == 0) {
-					sendto_realops("User %s (%s@%s) trying to join %s is a possible spambot",
+					sendto_ops_lev(FLOOD_LEV, "User %s (%s@%s) trying to join %s is a possible spambot",
 										sptr->name,
 										sptr->user->username,
 										sptr->user->host,
@@ -1583,15 +1388,8 @@ m_join(aClient *cptr,
 			 * * complain for remote JOINs to existing channels * (they
 			 * should be SJOINs) -orabidoo
 			 */
-		  
-#ifdef DF_COMPATIBILITY
-			if(IsHybrid(cptr)) {
-#endif
 				if (!ChannelExists(name))
 				  ts_warn("User on %s remotely JOINing new channel", sptr->user->server);
-#ifdef DF_COMPATIBILITY
-			}
-#endif
       }
 			
       chptr = get_channel(sptr, name, CREATE);
@@ -1628,64 +1426,25 @@ m_join(aClient *cptr,
 			
 #ifdef USE_ALLOW_OP
 			if (allow_op)
-# ifdef DF_COMPATIBILITY
-			  {
-				  sendto_match_hybrid(chptr, cptr, ":%s SJOIN %ld %ld %s + :@%s",
-											 me.name, chptr->channelts, chptr->creationtime, name, parv[0]);
-				  sendto_match_df(chptr, cptr, ":%s JOIN %s", parv[0], name);
-				  sendto_match_df(chptr, cptr, ":%s MODE %s +o %s %lu", me.name, name,
-										parv[0], chptr->creationtime);
-			  }
-# else
 			sendto_match_servs(chptr, cptr, ":%s SJOIN %ld %ld %s + :@%s",
 									 me.name, chptr->channelts, chptr->creationtime, name, parv[0]);
-# endif 
 			else
-# ifdef DF_COMPATIBILITY
-			  {
-				  sendto_match_hybrid(chptr, cptr, ":%s SJOIN %ld %ld %s + :%s",
-											 me.name, chptr->channelts, chptr->creationtime, name, parv[0]);
-				  sendto_match_df(chptr, cptr, ":%s JOIN %s", parv[0], name);
-			  }
-# else
 			sendto_match_servs(chptr, cptr,
 									 ":%s SJOIN %ld %ld %s + :%s", me.name,
 									 chptr->channelts, chptr->creationtime, name, parv[0]);
-# endif
 #else
-# ifdef DF_COMPATIBILITY
-			sendto_match_hybrid(chptr, cptr, ":%s SJOIN %ld %ld %s + :@%s",
-									  me.name, chptr->channelts, chptr->creationtime,
-									  name, parv[0]);
-			sendto_match_df(chptr, cptr, ":%s JOIN %s", parv[0], name);
-			sendto_match_df(chptr, cptr, ":%s MODE %s +o %s %lu", me.name, name,
-								 parv[0], chptr->channelts);
-# else
 			sendto_match_servs(chptr, cptr, ":%s SJOIN %ld %ld %s + :@%s",
 									 me.name, chptr->channelts, chptr->creationtime, name, parv[0]);
-# endif
 #endif
       }
       else if (MyClient(sptr)) {
-#ifdef DF_COMPATIBILITY
-			sendto_match_hybrid(chptr, cptr, ":%s SJOIN %ld %ld %s + :%s",
-									  me.name, chptr->channelts, chptr->creationtime, name, parv[0]);
-			sendto_match_df(chptr, cptr, ":%s JOIN %s", parv[0], name);
-#else
 			sendto_match_servs(chptr, cptr,
 									 ":%s SJOIN %ld %ld %s + :%s", me.name,
 									 chptr->channelts, chptr->creationtime, name, parv[0]);
-#endif
       }
       else {
-#ifdef DF_COMPATIBILITY
-			sendto_match_df(chptr, cptr, ":%s JOIN %s", parv[0], name);
-			sendto_match_hybrid(chptr, cptr, ":%s SJOIN %ld %ld %s + :%s",
-									  me.name, chptr->channelts, chptr->creationtime, name, parv[0]);
-#else
 			sendto_match_servs(chptr, cptr, ":%s JOIN :%s", parv[0],
 									 name);
-#endif
 		}
 		/*
        * * notify all other users on the new channel
@@ -2004,7 +1763,7 @@ m_topic(aClient *cptr,
 						  me.name, parv[0], name);
 			return 0;
 		}
-		 if (parc>3 && (IsULine(sptr) || IsServer(sptr))) {
+		 if (parc>3 && (!MyConnect(sptr) || IsULine(sptr) || IsServer(sptr))) {
 				topic=(parc>4 ? parv[4] : "");
 				tnick=parv[2];
 				ts=atoi(parv[3]);
@@ -2664,10 +2423,6 @@ sjoin_sendit(aClient *cptr,
 {
    sendto_channel_butserv(chptr, sptr, ":%s MODE %s %s %s", from,
 			  chptr->chname, modebuf, parabuf);
-#ifdef DF_COMPATIBILITY
-	sendto_df_butone(cptr, ":%s MODE %s %s %s", from, chptr->chname, 
-						  modebuf, parabuf);
-#endif
 }
 
 /*
@@ -2995,9 +2750,6 @@ m_sjoin(aClient *cptr,
 			add_user_to_channel(chptr, acptr, fl);
 			sendto_channel_butserv(chptr, acptr, ":%s JOIN :%s",
 										  s, parv[3]);
-#ifdef DF_COMPATIBILITY
-			sendto_df_butone(cptr, ":%s JOIN :%s", s, parv[3]);
-#endif
       }
       if (keepnewmodes)
 		  strcpy(t, s0);
@@ -3076,15 +2828,8 @@ int m_samode(aClient *cptr, aClient *sptr, int parc, char *parv[]) {
 	  {
 		  sendto_channel_butserv(chptr, sptr, ":%s MODE %s %s %s",
 										 me.name, chptr->chname, modebuf, parabuf);
-#ifdef DF_COMPATIBILITY
-		  sendto_match_hybrid(chptr, cptr, ":%s MODE %s %s %s",
-									 parv[0], chptr->chname, modebuf, parabuf);
-		  sendto_match_df(chptr, cptr, ":%s MODE %s %s %s 1",
-								parv[0], chptr->chname, modebuf, parabuf);
-#else
 		  sendto_match_servs(chptr, cptr, ":%s MODE %s %s %s",
 									parv[0], chptr->chname, modebuf, parabuf);
-#endif
 		  if(MyClient(sptr)) {
 			  sendto_serv_butone(&me, ":%s GLOBOPS :%s used SAMODE (%s %s%s%s)",
 										me.name, sptr->name, chptr->chname, modebuf,
