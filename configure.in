@@ -41,6 +41,7 @@ AC_ARG_WITH(socketengine,
 
 dnl Checks for programs.
 AC_PROG_CC
+AC_CANONICAL_SYSTEM
 AC_ISC_POSIX
 AC_PROG_MAKE_SET
 AC_PATH_PROG(RM, rm)
@@ -254,7 +255,7 @@ if test "$check_sengine" = "yes"; then
     if test "$freebsd" = "yes"; then
         AC_CHECK_FUNC(kevent, [ engine="kqueue" ], )
     elif test "$solaris2" = "yes"; then
-        AC_CHECK_FUNC(poll, [ engine="poll" ], )
+        engine="poll"
     elif test "$linux" = "yes"; then
         AC_CHECK_FUNC(poll, [ engine="poll" ], )
     else
