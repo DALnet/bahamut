@@ -4079,23 +4079,13 @@ m_trace(aClient *cptr, aClient *sptr, int parc, char *parv[])
    tname = (parc > 1) ? parv[1] : me.name;
 
 #ifdef HIDEULINEDSERVS
-   if ((acptr = find_client(tname, NULL)))
+   acptr = next_client_double(client, tname);
+   if (!(IsAnOper(sptr)) && IsULine(acptr))
    {
-	if (!(IsAnOper(sptr)) && IsULine(acptr))
-	{
-		sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name, parv[0]);
-		return 0;
-	}
-    } 
-    else if ((acptr = find_server(tname, NULL)))
-    {
-        if (!(IsAnOper(sptr)) && IsULine(acptr)) 
-        {       
-                sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name, parv[0]);
-                return 0;
-        }
-     }
-     acptr = NULL; /* shrug, we borrowed it, reset it just in case */
+	sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name, parv[0]);
+	return 0;
+   }
+   acptr = NULL; /* shrug, we borrowed it, reset it just in case */
 #endif
 
    if (parc > 2)
