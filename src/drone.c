@@ -70,7 +70,7 @@ void drone_init()
    }
    
    drone_module_func = dlsym(drone_module_handle, "check_drone");
-   if((err = dlerror()) != NULL)
+   if((err = (char *) dlerror()) != NULL)
    {
       fprintf(stderr, "Error loading functions in " DRONEMODULENAME ": %s\n", err);
       dlclose(drone_module_handle);
@@ -79,7 +79,7 @@ void drone_init()
    }
 
    get_drone_module_version = dlsym(drone_module_handle, "get_drone_module_version");
-   if((err = dlerror()) != NULL)
+   if((err = (char *) dlerror()) != NULL)
    {
       fprintf(stderr, "Error loading functions in " DRONEMODULENAME ": %s\n", err);
       dlclose(drone_module_handle);
@@ -113,7 +113,7 @@ void drone_rehash()
    }
    
    drone_module_func = dlsym(drone_module_handle, "check_drone");
-   if((err = dlerror()) != NULL)
+   if((err = (char *) dlerror()) != NULL)
    {
       sendto_realops("Error loading functions in " DRONEMODULENAME ": %s\n", err);
       dlclose(drone_module_handle);
@@ -122,7 +122,7 @@ void drone_rehash()
    }
 
    get_drone_module_version = dlsym(drone_module_handle, "get_drone_module_version");
-   if((err = dlerror()) != NULL)
+   if((err = (char *) dlerror()) != NULL)
    {
       sendto_realops("Error loading functions in " DRONEMODULENAME ": %s\n", err);
       dlclose(drone_module_handle);
