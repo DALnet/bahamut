@@ -646,7 +646,7 @@ int m_server(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	    sendto_gnotice("from %s: Non-Hub link %s introduced %s(%s).",
 			   me.name, get_client_name(cptr, HIDEME), host,
 			   aconf ? (aconf->host ? aconf->host : "*") : "!");
-	    sendto_serv_butone(cptr,":%s GNOTICE :Non-Hub link %s introduced"
+	    sendto_serv_butone(cptr,":%s GNOTICE :Non-Hub link %s introduced "
 			       "%s(%s).", me.name, 
 			       get_client_name(cptr, HIDEME), host,
 			       aconf ? (aconf->host ? aconf->host : "*") :
