@@ -1380,10 +1380,12 @@ int m_info(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	    sendto_one(sptr, rpl_str(RPL_INFO),
 		       me.name, parv[0], outstr);
 
+	    sprintf(outstr, " RIDICULOUS_PARANOIA_LEVEL=%d",
+		   RIDICULOUS_PARANOIA_LEVEL);
 #ifdef SEPARATE_QUOTE_KLINES_BY_DATE
-	    strcpy(outstr, "SEPARATE_QUOTE_KLINES_BY_DATE=1");
+	    strcat(outstr, "SEPARATE_QUOTE_KLINES_BY_DATE=1");
 #else
-	    strcpy(outstr, "SEPARATE_QUOTE_KLINES_BY_DATE=0");
+	    strcat(outstr, "SEPARATE_QUOTE_KLINES_BY_DATE=0");
 #endif
 #ifdef SHORT_MOTD
 	    strcat(outstr, " SHORT_MOTD=1");
