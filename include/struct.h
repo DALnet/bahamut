@@ -874,7 +874,7 @@ struct Channel {
 
 #define	BadPtr(x) (!(x) || (*(x) == '\0'))
 
-#define	isvalid(c) (((c) >= 'A' && (c) <= '~') || isdigit(c) || (c) == '-')
+#define	isvalid(c) (((c) >= 'A' && (c) < '~') || isdigit(c) || (c) == '-')
 
 #define	MyConnect(x)			((x)->fd >= 0)
 #define	MyClient(x)			(MyConnect(x) && IsClient(x))

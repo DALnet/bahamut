@@ -997,26 +997,28 @@ register_user(aClient *cptr,
 }
 
 /*
- * * m_nick * parv[0] = sender prefix *       parv[1] = nickname *
- * parv[2]      = optional hopcount when new user; TS when nick change *
- * parv[3] = optional TS *      parv[4] = optional umode *      parv[5]
- * = optional username *        parv[6] = optional hostname *   parv[7]
- * = optional server * * parv[8] = optional serviceid parv[9] = optional 
- * ircname
+ * 
+ * m_nick 
+ * parv[0] = sender prefix 
+ * parv[1] = nickname 
+ * parv[2] = hopcount when new user; TS when nick change 
+ * parv[3] = TS
+ * ---- new user only below ---- 
+ * parv[4] = umode 
+ * parv[5] = username 
+ * parv[6] = hostname 
+ * parv[7] = server 
+ * parv[8] = serviceid
+ * parv[9] = ircname
  */
-int
-m_nick(aClient *cptr,
-       aClient *sptr,
-       int parc,
-       char *parv[])
-
+int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
    aConfItem  *aconf;
    aClient    *acptr, *uplink;
    Link       *lp;
-   char        nick[NICKLEN + 2], *s;
+   char        nick[NICKLEN + 2];
    ts_val      newts = 0;
-   int         sameuser = 0, fromTS = 0, samenick = 0;
+   int         sameuser = 0, samenick = 0;
         
    if (parc < 2) {
       sendto_one(sptr, err_str(ERR_NONICKNAMEGIVEN),
@@ -1033,9 +1035,9 @@ m_nick(aClient *cptr,
    /*
     * parc == 2 on a normal client sign on (local) and a normal client nick change 
     * parc == 4 on a normal server-to-server client nick change
-    * parc == 9 on a normal TS style server-to-server NICK introduction
+    * parc == 10 on a normal TS style server-to-server NICK introduction
     */
-   if ((parc > 4) && (parc < 9))
+   if ((IsServer(sptr) || (parc > 4)) && (parc < 10))
    {
       /*
        * We got the wrong number of params. Someone is trying to trick
@@ -1044,14 +1046,15 @@ m_nick(aClient *cptr,
        * also be more annoying then its worth, just note the problem,
        * and continue -Dianora
        */
-      sendto_realops("BAD NICK: %s[%s@%s] on %s (from %s)", parv[1],
+      sendto_realops("IGNORING BAD NICK: %s[%s@%s] on %s (from %s)", parv[1],
                      (parc >= 6) ? parv[5] : "-",
                      (parc >= 7) ? parv[6] : "-",
                      (parc >= 8) ? parv[7] : "-", parv[0]);
+      return 0;
                 
    }
         
-   if ((parc >= 7) && (!strchr(parv[6], '.')))
+   if ((parc == 10) && (!strchr(parv[6], '.')))
    {
       /*
        * Ok, we got the right number of params, but there isn't a
@@ -1062,10 +1065,6 @@ m_nick(aClient *cptr,
                      parv[0], parv[5], parv[6], parv[7], parv[0]);
    }
         
-   fromTS = (parc > 6);
-        
-   if (MyConnect(sptr) && (s = (char *) strchr(parv[1], '~')))
-          *s = '\0';
    strncpyzt(nick, parv[1], NICKLEN + 1);
    /*
     * if do_nick_name() returns a null name OR if the server sent a
@@ -1073,8 +1072,7 @@ m_nick(aClient *cptr,
     * of nick creation) then reject it. If from a server and we reject
     * it, and KILL it. -avalon 4/4/92
     */
-   if (do_nick_name(nick) == 0 ||
-       (IsServer(cptr) && strcmp(nick, parv[1])))
+   if (do_nick_name(nick) == 0 || (IsServer(cptr) && strcmp(nick, parv[1])))
    {
       sendto_one(sptr, err_str(ERR_ERRONEUSNICKNAME),
                           me.name, parv[0], parv[1]);
@@ -1189,7 +1187,7 @@ m_nick(aClient *cptr,
          exit_client(NULL, acptr, &me, "Overridden");
          break;
       }
-      else if (fromTS && !(acptr->user))
+      else if (!(acptr->user))
       {
          sendto_ops_lev(SKILL_LEV,
                 "Nick Collision on %s(%s(NOUSER) <- %s!%s@%s)(TS:%s)",
@@ -1257,7 +1255,7 @@ m_nick(aClient *cptr,
       }
       else
       {
-         sameuser = fromTS && (acptr->user) &&
+         sameuser = (acptr->user) &&
             mycmp(acptr->user->username, parv[5]) == 0 &&
             mycmp(acptr->user->host, parv[6]) == 0;
          if ((sameuser && newts < acptr->tsinfo) ||
@@ -1406,7 +1404,7 @@ m_nick(aClient *cptr,
        */
       (void) strcpy(sptr->name, nick);
       (void) add_to_client_hash_table(nick, sptr);
-      if (parc > 8)
+      if (parc == 10)
       {
          Reg int    *s, flag;
          Reg char   *m;
