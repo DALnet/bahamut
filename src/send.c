@@ -45,18 +45,22 @@ int
 		   char *, char *, char *, char *, char *, char *);
 
 /*
- * * dead_link *      An error has been detected. The link *must* be
- * closed, *    but *cannot* call ExitClient (m_bye) from here. *
- * Instead, mark it with FLAGS_DEADSOCKET. This should *
- * generate ExitClient from the main loop. *
+ * dead_link 
+ *     
+ * An error has been detected. The link *must* be closed, 
+ * but *cannot* call ExitClient (m_bye) from here. 
+ *
+ * Instead, mark it with FLAGS_DEADSOCKET. This should 
+ * generate ExitClient from the main loop.
  * 
- *      If 'notice' is not NULL, it is assumed to be a format * for a
- * message to local opers. I can contain only one *     '%s', which
- * will be replaced by the sockhost field of *  the failing link. *
+ * If 'notice' is not NULL, it is assumed to be a format for a
+ * message to local opers. I can contain only one '%s', which
+ * will be replaced by the sockhost field of the failing link.
  * 
- *      Also, the notice is skipped for "uninteresting" cases, *
+ * Also, the notice is skipped for "uninteresting" cases, 
  * like Persons and yet unknown connections...
  */
+
 static int
 dead_link(aClient *to, char *notice)
 {
@@ -67,11 +71,25 @@ dead_link(aClient *to, char *notice)
     */
    DBufClear(&to->recvQ);
    DBufClear(&to->sendQ);
-   if (!IsPerson(to) && !(to->flags & FLAGS_CLOSING) && *(to->name))
-      sendto_ops(notice, get_client_name(to, HIDEME));
+   if (IsServer(to) && !(to->flags & FLAGS_CLOSING))
+   {
+      char fbuf[512];
+
+      /* 
+       * ick! what we have here is a server coming in as a dead link.
+       * we need to tell the entire network, as well as local operators, 
+       * just exactly why the server linked to us is dying. - lucas
+       */
+ 
+      ircsprintf(fbuf, "from %s: %s", me.name, notice);
+      send_globops(fbuf, get_client_name(to, HIDEME));
+      ircsprintf(fbuf, ":%s GLOBOPS :%s", me.name, notice);
+      sendto_serv_butone(to, fbuf, get_client_name(to, HIDEME));
+   }
    Debug((DEBUG_ERROR, notice, get_client_name(to, FALSE)));
    return -1;
 }
+
 /*
  * * flush_connections *      Used to empty all output buffers for
  * all connections. Should only *       be called once per scan of
@@ -130,10 +148,10 @@ send_message(aClient *to, char *msg, int len)
 								  DBufLength(&to->sendQ), get_sendq(to));
       if (IsClient(to))
 		  to->flags |= FLAGS_SENDQEX;
-      return dead_link(to, "Max Sendq exceeded");
+      return dead_link(to, "Max SendQ exceeded for %s, closing link");
    }
    else if (dbuf_put(&to->sendQ, msg, len) < 0)
-      return dead_link(to, "Buffer allocation error for %s");
+      return dead_link(to, "Buffer allocation error for %s, closing link");
    /*
     * * Update statistics. The following is slightly incorrect *
     * because it counts messages even if queued, but bytes * only
@@ -1279,7 +1297,7 @@ char        nbuf[1024];
    for (i = 0; i <= highest_fd; i++)
       if ((cptr = local[i]) && !IsServer(cptr) && IsAnOper(cptr) &&
 	  !IsMe(cptr) && SendGlobops(cptr)) {
-	 (void) sprintf(nbuf, ":%s NOTICE %s :*** Global -- ",
+	 (void) ircsprintf(nbuf, ":%s NOTICE %s :*** Global -- ",
 			me.name, cptr->name);
 	 (void) strncat(nbuf, pattern,
 			sizeof(nbuf) - strlen(nbuf));
