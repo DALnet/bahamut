@@ -225,6 +225,8 @@
  */
 #define MAXCHANNELSPERUSER  10	/* Recommended value: 10 */
 
+#define THROTTLE_ENABLE /* enable throttling, see below */
+
 /*******************************************************/
 
 #endif /** OPTIONS_H **/
@@ -933,7 +935,7 @@
  *  fourth zline: 30 minutes
  *  anything more is an hour
  * tuneable at runtime.  -wd */
-#define THROTTLE_ENABLE
+/* part of options.h now #define THROTTLE_ENABLE */
 #define THROTTLE_TRIGCOUNT 3
 #define THROTTLE_TRIGTIME 15
 #define THROTTLE_RECORDTIME 1800
