@@ -160,15 +160,15 @@ debug(int level, char *pattern, ...)
    int         err = errno;
 
    va_start(vl, pattern);
+   (void) vsprintf(debugbuf, pattern, vl);
+   va_end(vl);
 
 #ifdef USE_SYSLOG
    if (level == DEBUG_ERROR)
-      syslog(LOG_ERR, pattern, vl);
+      syslog(LOG_ERR, pattern, debugbuf);
 #endif
 
    if ((debuglevel >= 0) && (level <= debuglevel)) {
-
-      (void) vsprintf(debugbuf, pattern, vl);
 
       if (local[2]) {
 	 local[2]->sendM++;
@@ -177,7 +177,6 @@ debug(int level, char *pattern, ...)
       (void) fprintf(stderr, "%s", debugbuf);
       (void) fputc('\n', stderr);
    }
-   va_end(vl);
    errno = err;
 }
 
