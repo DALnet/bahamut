@@ -396,8 +396,13 @@ int chk_who(aClient *ac, int showall)
      * -wd */
     /* welcome to the future... :) - lucas */
     if(wsopts.serv_plus)
+    {
 	if(wsopts.server != ac->uplink)
 	    return 0;
+	/* don't let people find hidden opers via /who +s server */
+	if(IsUmodeI(ac) && !showall)
+	    return 0;
+    }
     /* we only call match once, since if the first condition
      * isn't true, most (all?) compilers will never try the
      * second...phew :) */
@@ -467,7 +472,8 @@ inline char *first_visible_channel(aClient *cptr, aClient *sptr)
 
 /* allow lusers only 200 replies from /who */
 #define MAXWHOREPLIES 200
-#define WHO_HOPCOUNT(s, a) ((IsULine((a)) && !IsOper((s))) ? 0 : a->hopcount)
+#define WHO_HOPCOUNT(s, a) ( ( (IsULine((a)) || IsUmodeI((a))) && !IsAnOper((s)) ) ? 0 : a->hopcount)
+#define WHO_SERVER(s ,a) ((IsUmodeI((a)) && !IsAnOper((s))) ? HIDDEN_SERVER_NAME : a->user->server)
 int m_who(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     aClient *ac;
@@ -541,7 +547,7 @@ int m_who(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		status[++i]=0;
 		sendto_one(sptr, getreply(RPL_WHOREPLY), me.name, sptr->name,
 			   wsopts.channel->chname, ac->user->username,
-			   ac->user->host,ac->user->server, ac->name, status,
+			   ac->user->host,WHO_SERVER(sptr, ac), ac->name, status,
 			   WHO_HOPCOUNT(sptr, ac),
 			   ac->info);
 	    }
@@ -572,7 +578,7 @@ int m_who(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		sendto_one(sptr, getreply(RPL_WHOREPLY), me.name, sptr->name,
 			   wsopts.show_chan ? first_visible_channel(ac, sptr)
 			   : "*", ac->user->username, ac->user->host,
-			   ac->user->server, ac->name, status,
+			   WHO_SERVER(sptr, ac), ac->name, status,
 			   WHO_HOPCOUNT(sptr, ac),
 			   ac->info);
 		sendto_one(sptr, getreply(RPL_ENDOFWHO), me.name, sptr->name,
@@ -618,7 +624,7 @@ int m_who(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		status[++i]=0;
 		sendto_one(sptr, getreply(RPL_WHOREPLY), me.name, sptr->name,
 			   lp->value.chptr->chname, ac->user->username,
-			   ac->user->host,ac->user->server, ac->name,
+			   ac->user->host,WHO_SERVER(sptr, ac), ac->name,
 			   status, WHO_HOPCOUNT(sptr, ac), ac->info);
 		shown++;
 	    }
@@ -645,7 +651,7 @@ int m_who(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	    sendto_one(sptr, getreply(RPL_WHOREPLY), me.name, sptr->name,
 		       wsopts.show_chan ? first_visible_channel(ac, sptr) :
 		       "*", ac->user->username, ac->user->host,
-		       ac->user->server, ac->name, status,
+		       WHO_SERVER(sptr, ac), ac->name, status,
 		       WHO_HOPCOUNT(sptr, ac), ac->info);
 	    shown++;
 	}
