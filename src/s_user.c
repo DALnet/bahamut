@@ -3034,11 +3034,11 @@ int m_umode(aClient *cptr, aClient *sptr, int parc, char *parv[])
     {
 	if (IsAdmin(sptr) && !OPIsAdmin(sptr)) ClearAdmin(sptr);
 	if (IsSAdmin(sptr) && !OPIsSAdmin(sptr)) ClearSAdmin(sptr);
-	if (IsUmodef(sptr) && !OPSetUModeF(sptr)) ClearUmodef(sptr);
-	if (IsUmodec(sptr) && !OPSetUModeC(sptr)) ClearUmodec(sptr);
-	if (IsUmodey(sptr) && !OPSetUModeY(sptr)) ClearUmodey(sptr);
-	if (IsUmoded(sptr) && !OPSetUModeD(sptr)) ClearUmoded(sptr);
-	if (IsUmodeb(sptr) && !OPSetUModeB(sptr)) ClearUmodeb(sptr);
+	if (IsUmodef(sptr) && !OPSetUModef(sptr)) ClearUmodef(sptr);
+	if (IsUmodec(sptr) && !OPSetUModec(sptr)) ClearUmodec(sptr);
+	if (IsUmodey(sptr) && !OPSetUModey(sptr)) ClearUmodey(sptr);
+	if (IsUmoded(sptr) && !OPSetUModed(sptr)) ClearUmoded(sptr);
+	if (IsUmodeb(sptr) && !OPSetUModeb(sptr)) ClearUmodeb(sptr);
     }
     send_umode_out(cptr, sptr, setflags);
     

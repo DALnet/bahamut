@@ -1135,8 +1135,8 @@ static int oper_access[] =
     OFLAG_GNOTICE, 'N',
     OFLAG_ADMIN,   'A',
     OFLAG_SADMIN,  'a',
-    OFLAG_UMODEC,  'u',
-    OFLAG_UMODEF,  'f',
+    OFLAG_UMODEc,  'u',
+    OFLAG_UMODEf,  'f',
     OFLAG_ZLINE,   'z',
     0, 0 };
 

@@ -430,16 +430,16 @@ typedef struct MotdItem aMotd;
 #define OFLAG_LNOTICE	0x00004000  /* Oper can send local serv notices */
 #define OFLAG_GNOTICE	0x00008000  /* Oper can send global notices */
 #define OFLAG_ADMIN	0x00010000  /* Admin */
-#define OFLAG_UMODEC	0x00020000  /* Oper can set umode +c */
-#define OFLAG_UMODEF	0x00040000  /* Oper can set umode +f */
+#define OFLAG_UMODEc	0x00020000  /* Oper can set umode +c */
+#define OFLAG_UMODEf	0x00040000  /* Oper can set umode +f */
 #define OFLAG_SADMIN    0x00080000  /* Oper can be a services admin */
 #define OFLAG_ZLINE	0x00100000  /* Oper can use /zline and /unzline */
-#define OFLAG_UMODEY    0x00200000  /* Oper can set umode +y */
-#define OFLAG_UMODED    0x00400000  /* Oper can set umode +d */
-#define OFLAG_UMODEB    0x00800000  /* Oper can set umode +b */
+#define OFLAG_UMODEy    0x00200000  /* Oper can set umode +y */
+#define OFLAG_UMODEd    0x00400000  /* Oper can set umode +d */
+#define OFLAG_UMODEb    0x00800000  /* Oper can set umode +b */
 #define OFLAG_LOCAL	(OFLAG_REHASH|OFLAG_HELPOP|OFLAG_GLOBOP|OFLAG_WALLOP|\
                          OFLAG_LOCOP|OFLAG_LROUTE|OFLAG_LKILL|OFLAG_KLINE|\
-                         OFLAG_UNKLINE|OFLAG_LNOTICE|OFLAG_UMODEC|OFLAG_UMODEF)
+                         OFLAG_UNKLINE|OFLAG_LNOTICE|OFLAG_UMODEc|OFLAG_UMODEf)
 #define OFLAG_GLOBAL	(OFLAG_LOCAL|OFLAG_GROUTE|OFLAG_GKILL|OFLAG_GNOTICE)
 #define OFLAG_ISGLOBAL	(OFLAG_GROUTE|OFLAG_GKILL|OFLAG_GNOTICE)
 #define OPCanZline(x)	        ((x)->oflag & OFLAG_SADMIN)
@@ -460,11 +460,11 @@ typedef struct MotdItem aMotd;
 #define OPCanGNotice(x)	        ((x)->oflag & OFLAG_GNOTICE)
 #define OPIsAdmin(x)	        ((x)->oflag & OFLAG_ADMIN)
 #define OPIsSAdmin(x)	        ((x)->oflag & OFLAG_SADMIN)
-#define OPCanUModeC(x)	        ((x)->oflag & OFLAG_UMODEC)
-#define OPCanUModeF(x)	        ((x)->oflag & OFLAG_UMODEF)
-#define OPCanUModeY(x)          ((x)->oflag & OFLAG_UMODEY)     
-#define OPCanUModeD(x)          ((x)->oflag & OFLAG_UMODED)     
-#define OPCanUModeB(x)          ((x)->oflag & OFLAG_UMODEB)
+#define OPCanUModec(x)	        ((x)->oflag & OFLAG_UMODEc)
+#define OPCanUModef(x)	        ((x)->oflag & OFLAG_UMODEf)
+#define OPCanUModey(x)          ((x)->oflag & OFLAG_UMODEy)     
+#define OPCanUModed(x)          ((x)->oflag & OFLAG_UMODEd)     
+#define OPCanUModeb(x)          ((x)->oflag & OFLAG_UMODEb)
 #define OPSetRehash(x)	        ((x)->oflag |= OFLAG_REHASH)
 #define OPSetDie(x)	        ((x)->oflag |= OFLAG_DIE)
 #define OPSetRestart(x)	        ((x)->oflag |= OFLAG_RESTART)
@@ -482,11 +482,11 @@ typedef struct MotdItem aMotd;
 #define OPSetGNotice(x)	        ((x)->oflag |= OFLAG_GNOTICE)
 #define OPSSetAdmin(x)	        ((x)->oflag |= OFLAG_ADMIN)
 #define OPSSetSAdmin(x)         ((x)->oflag |= OFLAG_SADMIN)
-#define OPSetUModeC(x)	        ((x)->oflag |= OFLAG_UMODEC)
-#define OPSetUModeF(x)	        ((x)->oflag |= OFLAG_UMODEF)
-#define OPSetUModeY(x)          ((x)->oflag |= OFLAG_UMODEY)
-#define OPSetUModeD(x)          ((x)->oflag |= OFLAG_UMODED)
-#define OPSetUModeB(x)          ((x)->oflag |= OFLAG_UMODEB)
+#define OPSetUModec(x)	        ((x)->oflag |= OFLAG_UMODEc)
+#define OPSetUModef(x)	        ((x)->oflag |= OFLAG_UMODEf)
+#define OPSetUModey(x)          ((x)->oflag |= OFLAG_UMODEy)
+#define OPSetUModed(x)          ((x)->oflag |= OFLAG_UMODEd)
+#define OPSetUModeb(x)          ((x)->oflag |= OFLAG_UMODEb)
 #define OPSetZLine(x)	        ((x)->oflag |= OFLAG_ZLINE)
 #define OPClearRehash(x)	((x)->oflag &= ~OFLAG_REHASH)
 #define OPClearDie(x)		((x)->oflag &= ~OFLAG_DIE)  
@@ -505,11 +505,11 @@ typedef struct MotdItem aMotd;
 #define OPClearGNotice(x)	((x)->oflag &= ~OFLAG_GNOTICE)
 #define OPClearAdmin(x)		((x)->oflag &= ~OFLAG_ADMIN)
 #define OPClearSAdmin(x)	((x)->oflag &= ~OFLAG_SADMIN)
-#define OPClearUModeC(x)	((x)->oflag &= ~OFLAG_UMODEC)
-#define OPClearUModeF(x)	((x)->oflag &= ~OFLAG_UMODEF)
-#define OPClearUModeY(x)        ((x)->oflag &= ~OFLAG_UMODEY) 
-#define OPClearUModeD(x)        ((x)->oflag &= ~OFLAG_UMODED) 
-#define OPClearUModeB(x)        ((x)->oflag &= ~OFLAG_UMODEB)
+#define OPClearUModec(x)	((x)->oflag &= ~OFLAG_UMODEc)
+#define OPClearUModef(x)	((x)->oflag &= ~OFLAG_UMODEf)
+#define OPClearUModey(x)        ((x)->oflag &= ~OFLAG_UMODEy) 
+#define OPClearUModed(x)        ((x)->oflag &= ~OFLAG_UMODEd) 
+#define OPClearUModeb(x)        ((x)->oflag &= ~OFLAG_UMODEb)
 #define OPClearZLine(x)		((x)->oflag &= ~OFLAG_ZLINE)
 
 /* defined debugging levels */
