@@ -180,6 +180,16 @@ static int send_message(aClient *to, char *msg, int len)
 	return dead_link(to, "Max Sendq exceeded for %s, closing link", 0);
     }
     
+    /*
+     * Update statistics. The following is slightly incorrect
+     * because it counts messages even if queued, but bytes only
+     * really sent. Queued bytes get updated in SendQueued.
+     */
+    to->sendM += 1;
+    me.sendM += 1;
+    if (to->acpt != &me)
+	to->acpt->sendM += 1;
+
     if(ZipOut(to))
     {
 	int ldata = (to->flags & FLAGS_BURST);
@@ -208,15 +218,7 @@ static int send_message(aClient *to, char *msg, int len)
     if (dbuf_put(&to->sendQ, msg, len) < 0)
 	return dead_link(to, "Buffer allocation error for %s, closing link",
 			 IRCERR_BUFALLOC);
-    /*
-     * Update statistics. The following is slightly incorrect
-     * because it counts messages even if queued, but bytes only
-     * really sent. Queued bytes get updated in SendQueued.
-     */
-    to->sendM += 1;
-    me.sendM += 1;
-    if (to->acpt != &me)
-	to->acpt->sendM += 1;
+
     /*
      * This little bit is to stop the sendQ from growing too large
      * when there is no need for it to. Thus we call send_queued()
