@@ -6,8 +6,7 @@
 # remains intact. 
 #
 if [ ! -f Makefile ] ; then  
-echo "You've not run configure, running it for you..."
-./configure
+echo "You've not run configure, please run that first."
 fi
 
 ##############   SET THESE VARIABLES CORRECTLY!@ ##############
