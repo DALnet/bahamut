@@ -127,11 +127,11 @@ extern char 	 *find_or_add(char *);
 extern void 	  count_scache(int *, u_long *);
 extern void 	  list_scache(aClient *, aClient *, int, char **);
 
-extern char 	 *MyMalloc(size_t);
-extern char 	 *MyRealloc(char *, size_t);
+extern void 	 *MyMalloc(size_t);
+extern void 	 *MyRealloc(void *, size_t);
 
 /* MyFree is defined as a macro in sys.h 
- * extern  void     MyFree (char *); 
+ * extern  void     MyFree (void *); 
  */
 
 extern char 	 *debugmode, configfile[], *sbrk0;

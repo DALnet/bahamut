@@ -21,10 +21,12 @@
 /* $Id$ */
 
 #include "struct.h"
+#include "common.h"
+#include "sys.h"
+#include "h.h"
 #include "patchlevel.h"
 #include "numeric.h"
 #include "channel.h"
-#include "h.h"
 
 /* This file is hereby declared the nexus of all things ugly and preprocessed */
 
@@ -246,28 +248,6 @@ void build_rplcache(void)
                     debugmode, me.name, scratchbuf);
 }
 
-
-#include "common.h"
-#include "sys.h"
-#include "hash.h"
-#include <sys/file.h>
-#include <sys/param.h>
-#if defined( HAVE_GETRUSAGE )
-#ifdef SOL20
-#include <sys/time.h>
-#endif
-#include <sys/resource.h>
-#else
-#if defined( HAVE_TIMES )
-#include <sys/times.h>
-#endif
-#endif /* HAVE_GETRUSAGE */
-#include "h.h"
-#include "userban.h"
-
-#ifndef ssize_t
-#define ssize_t unsigned int
-#endif
 
 #if defined(DNS_DEBUG) || defined(DEBUGMODE)
 static char debugbuf[1024];

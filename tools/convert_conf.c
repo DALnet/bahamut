@@ -220,7 +220,7 @@ aClass *make_class()
 void free_class(tmp)
     aClass *tmp;
 {
-    MyFree((char *) tmp);
+    MyFree(tmp);
 }
 
 aOper *make_oper()

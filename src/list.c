@@ -306,7 +306,7 @@ aServer *make_server(aClient *cptr)
 void free_user(anUser *user, aClient *cptr)
 {
     if (user->away)
-	MyFree((char *) user->away);
+	MyFree(user->away);
 #if (RIDICULOUS_PARANOIA_LEVEL>=1)
     if (user->real_oper_host)
 	MyFree(user->real_oper_host);
@@ -388,7 +388,7 @@ void remove_client_from_list(aClient *cptr)
 	    zip_destroy_input_session(cptr->serv->zip_in);
 	if(cptr->serv->zip_out)
 	    zip_destroy_output_session(cptr->serv->zip_out);
-	MyFree((char *) cptr->serv);
+	MyFree(cptr->serv);
     }
 
     free_client(cptr);

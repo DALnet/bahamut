@@ -296,13 +296,13 @@ static void rem_request(ResRQ * old)
     r2ptr = old;
     
     if (r2ptr->he.h_name)
-	MyFree((char *) r2ptr->he.h_name);
+	MyFree(r2ptr->he.h_name);
     for (i = 0; i < IRC_MAXALIASES; i++)
 	if ((s = r2ptr->he.h_aliases[i]))
 	    MyFree(s);
     
     if (r2ptr->he_rev.h_name)
-	MyFree((char *) r2ptr->he_rev.h_name);
+	MyFree(r2ptr->he_rev.h_name);
     for (i = 0; i < IRC_MAXALIASES; i++)
 	if ((s = r2ptr->he_rev.h_aliases[i]))
 	    MyFree(s);
@@ -1545,7 +1545,7 @@ static void update_list(ResRQ * rptr, aCache * cachep)
 	    base = cp->he.h_aliases;
 	    
 	    addrcount++;
-	    base = (char **) MyRealloc((char *) base,
+	    base = (char **) MyRealloc(base,
 				       sizeof(char *) * (addrcount + 1));
 	    
 	    cp->he.h_aliases = base;
@@ -1586,7 +1586,7 @@ static void update_list(ResRQ * rptr, aCache * cachep)
 	    t = (char *) MyRealloc(*base,
 				   addrcount * sizeof(struct in_addr));
 	    
-	    base = (char **) MyRealloc((char *) base,
+	    base = (char **) MyRealloc(base,
 				       (addrcount + 1) * sizeof(char *));
 	    
 	    cp->he.h_addr_list = base;
@@ -1870,17 +1870,17 @@ static void rem_cache(aCache * ocp)
     {
 	for (hashv = 0; hp->h_aliases[hashv]; hashv++)
 	    MyFree(hp->h_aliases[hashv]);
-	MyFree((char *) hp->h_aliases);
+	MyFree(hp->h_aliases);
     }
     /* free memory used to hold ip numbers and the array of them. */
     if (hp->h_addr_list)
     {
 	if (*hp->h_addr_list)
-	    MyFree((char *) *hp->h_addr_list);
-	MyFree((char *) hp->h_addr_list);
+	    MyFree(*hp->h_addr_list);
+	MyFree(hp->h_addr_list);
     }
     
-    MyFree((char *) ocp);
+    MyFree(ocp);
     
     incache--;
     cainfo.ca_dels++;

@@ -148,9 +148,9 @@ int inet_netof(struct in_addr in)
 
 #endif /* !HAVE_INET_NETOF */
 
-char *MyMalloc(size_t x)
+void *MyMalloc(size_t x)
 {
-    char       *ret = (char *) malloc(x);
+    void       *ret = malloc(x);
 
     if (!ret)
     {
@@ -159,9 +159,9 @@ char *MyMalloc(size_t x)
     return ret;
 }
 
-char *MyRealloc(char *x, size_t y)
+void *MyRealloc(void *x, size_t y)
 {
-    char       *ret = (char *) realloc(x, y);
+    void       *ret = realloc(x, y);
 
     if (!ret)
     {
