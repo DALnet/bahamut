@@ -9,6 +9,8 @@
 #include <string.h>
 #include <time.h>
 #include <gmp.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 
 struct session_info {
    mpz_t session_secret;
@@ -162,6 +164,7 @@ static int init_random()
    unsigned char rand_out_buf[RAND_BYTES_HEX + 1];
    int need_make_entropy = 0, i;
    mpz_t tmp;
+   int oumask;
 
    if(!fp)
       need_make_entropy++;
@@ -204,17 +207,21 @@ static int init_random()
    mpz_urandomb(tmp, randomstate, RAND_BITS - 1);
    mpz_setbit(tmp, RAND_BITS - 1);
 
+   oumask = umask(077);
+
    if(!(fp = fopen(".ircd.entropy", "w")) || mpz_sizeinbase(tmp, 16) > RAND_BYTES_HEX)
    {
       if(!fp)
          perror("fopen .ircd.entropy");
       else
          fclose(fp);
+      umask(oumask);
       gmp_randclear(randomstate);
       mpz_clear(tmp);
       fprintf(stderr, "strange error outputting entropy.. hrmmm...\n");
       return -1;
    }
+   umask(oumask);
 
    mpz_get_str(rand_out_buf, 16, tmp);
    mpz_clear(tmp);
