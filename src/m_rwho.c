@@ -222,7 +222,7 @@ static int rwho_compile(aClient *cptr, char *remap[])
         return 0;
     }
 
-    i = pcre_fullinfo(rwho_opts.re, NULL, PCRE_INFO_CAPTURECOUNT, &ei);
+    pcre_fullinfo(rwho_opts.re, NULL, PCRE_INFO_CAPTURECOUNT, &ei);
     if (ei > MAX_SUBMATCHES)
     {
         rwho_synerr(cptr, "too many capturing submatches, use (?:)");
@@ -606,6 +606,24 @@ static int rwho_match(aClient *cptr, int *failcode, aClient **failclient)
     int   m1, m2;
     int   ovec[NVEC];
 
+    if (rwho_opts.check & RWM_SERVER)
+    {
+        m1 = !(rwho_opts.check_pos & RWM_SERVER);
+        m2 = !(cptr->uplink == rwho_opts.server);
+
+        if (m1 != m2)
+            return 0;
+    }
+
+    if (rwho_opts.check & RWM_TS)
+    {
+        m1 = !(rwho_opts.check_pos & RWM_TS);
+        m2 = !(cptr->tsinfo < rwho_opts.ts);
+
+        if (m1 != m2)
+            return 0;
+    }
+
     if (rwho_opts.check & RWM_AWAY)
     {
         m1 = !(rwho_opts.check_pos & RWM_AWAY);
@@ -615,10 +633,10 @@ static int rwho_match(aClient *cptr, int *failcode, aClient **failclient)
             return 0;
     }
 
-    if (rwho_opts.check & RWM_HOST)
+    if (rwho_opts.check & RWM_STYPE)
     {
-        m1 = !(rwho_opts.check_pos & RWM_HOST);
-        m2 = !!rwho_opts.host_func(rwho_opts.host_pat, cptr->user->host);
+        m1 = !(rwho_opts.check_pos & RWM_STYPE);
+        m2 = !(cptr->user->servicetype == rwho_opts.stype);
 
         if (m1 != m2)
             return 0;
@@ -644,28 +662,10 @@ static int rwho_match(aClient *cptr, int *failcode, aClient **failclient)
             return 0;
     }
 
-    if (rwho_opts.check & RWM_SERVER)
+    if (rwho_opts.check & RWM_HOST)
     {
-        m1 = !(rwho_opts.check_pos & RWM_SERVER);
-        m2 = !(cptr->uplink == rwho_opts.server);
-
-        if (m1 != m2)
-            return 0;
-    }
-
-    if (rwho_opts.check & RWM_TS)
-    {
-        m1 = !(rwho_opts.check_pos & RWM_TS);
-        m2 = !(cptr->tsinfo < rwho_opts.ts);
-
-        if (m1 != m2)
-            return 0;
-    }
-
-    if (rwho_opts.check & RWM_STYPE)
-    {
-        m1 = !(rwho_opts.check_pos & RWM_STYPE);
-        m2 = !(cptr->user->servicetype == rwho_opts.stype);
+        m1 = !(rwho_opts.check_pos & RWM_HOST);
+        m2 = !!rwho_opts.host_func(rwho_opts.host_pat, cptr->user->host);
 
         if (m1 != m2)
             return 0;
