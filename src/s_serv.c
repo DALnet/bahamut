@@ -446,40 +446,49 @@ m_server(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		
       return 0;
    } 
-   else {
+   else
+   /* hostile servername check */	
+   {
       /*
        * Lets check for bogus names and clean them up we don't bother
        * cleaning up ones from users, becasuse we will never see them
        * any more - Dianora
        */
 		
-	int         bogus_server = 0;
-	int         found_dot = 0;
-	char        clean_host[(2 * HOSTLEN) + 1];
-	char       *s;
-	char       *d;
-		
-	s = host;
-      	d = clean_host;
+      int bogus_server = 0;
+      int found_dot = 0;
+      char clean_host[(2 * HOSTLEN) + 1];
+      char *s;
+      char *d;
+      int n;
 
-      	while (*s) {
-		if (*s < ' ') 			/* Is it a control character? */
-			{
-			bogus_server = 1;
-			*d++ = '^';
-			*d++ = (*s + 0x40);	/* turn it into a printable */
-			s++;
-			}
-			else if (*s > '~') {
-				bogus_server = 1;
-				*d++ = '.';
-				s++;
-			}
-			else {
-				if (*s == '.')
-				  found_dot = 1;
-				*d++ = *s++;
-			}
+      s = host;
+      d = clean_host;
+      n = (2 * HOSTLEN) - 2;
+
+      while (*s && n > 0) 
+      {
+         if ((unsigned char) *s < (unsigned char) ' ')   /* Is it a control character? */
+         {
+            bogus_server = 1;
+            *d++ = '^';
+            *d++ = (char) ((unsigned char) *s + 0x40);   /* turn it into a printable */
+            n =- 2;
+         }
+         else if ((unsigned char) *s > (unsigned char) '~')
+         {
+            bogus_server = 1;
+            *d++ = '.';
+            n--;
+         }
+         else 
+         {
+            if (*s == '.')
+               found_dot = 1;
+            *d++ = *s;
+            n--;
+         }
+         s++;
       }
       *d = '\0';
 		
@@ -1496,32 +1505,35 @@ m_links(aClient *cptr, aClient *sptr, int parc, char *parv[])
     * * -Dianora
     */
 
-   if (mask) {		/* only necessary if there is a mask */
+   if (mask) 
+   {      /* only necessary if there is a mask */
       s = mask;
       d = clean_mask;
       n = (2 * HOSTLEN) - 2;
-      while (*s && n) 
+      while (*s && n > 0) 
       {
-	 if (*s < ' ') /* Is it a control character? */
-	 {
-	    *d++ = '^';
-	    *d++ = (*s + 0x40);	/* turn it into a printable */
-	    s++;
-	    n--;
-	 }
-	 else if (*s > '~') 
-	 {
-	    *d++ = '.';
-	    s++;
-	    n--;
-	 }
-	 else {
-	    *d++ = *s++;
-	    n--;
-	 }
+         if ((unsigned char) *s < (unsigned char) ' ') /* Is it a control character? */
+         {
+            *d++ = '^';
+            *d++ = (char) ((unsigned char)*s + 0x40);   /* turn it into a printable */
+            s++;
+            n -= 2;
+         }
+         else if ((unsigned char) *s > (unsigned char) '~') 
+         {
+            *d++ = '.';
+            s++;
+            n--;
+         }
+         else 
+         {
+            *d++ = *s++;
+            n--;
+         }
       }
       *d = '\0';
    }
+
    if (MyConnect(sptr))
       sendto_realops_lev(SPY_LEV,
 			 "LINKS %s requested by %s (%s@%s) [%s]",
