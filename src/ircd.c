@@ -186,7 +186,7 @@ VOIDSIG s_die()
 		fclose(fp);
 	}
 #endif
-   exit(-1);
+   exit(0);
 }
 
 static  VOIDSIG s_rehash() 

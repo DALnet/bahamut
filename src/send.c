@@ -111,7 +111,7 @@ static int send_message(aClient *to, char *msg, int len) {
    static int  SQinK;
    
 #ifdef DUMP_DEBUG
-   fprintf(dumpfp, "-> %s: %s"\n, (to->name ? to->name : "*"), msg);
+   fprintf(dumpfp, "-> %s: %s\n", (to->name ? to->name : "*"), msg);
 #endif
 
    if (to->from)
@@ -881,7 +881,6 @@ void sendto_match_servs(aChannel *chptr, aClient *from, char *pattern, ...)
 	int     i;
 	aClient *cptr;
 	va_list vl;
-	
    if (chptr) {
       if (*chptr->chname == '&')
 		  return;

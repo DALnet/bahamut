@@ -1292,8 +1292,8 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
          sendto_ops_lev(SKILL_LEV,
 			"Nick Collision on %s", parv[1]);
          sendto_serv_butone(NULL,
-                ":%s KILL %s :Nick Collision", me.name,
-                parv[1]);
+                ":%s KILL %s :Nick Collission", me.name,
+                acptr->name);
          acptr->flags |= FLAGS_KILLED;
 
          /* Having no USER struct should be ok... */
@@ -1343,7 +1343,7 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
          sendto_one(acptr, err_str(ERR_NICKCOLLISION),
                     me.name, acptr->name, acptr->name);
          sendto_serv_butone(NULL, ":%s KILL %s :Nick Collission",
-			    me.name,parv[0]);
+			    me.name,acptr->name);
          acptr->flags |= FLAGS_KILLED;
          return exit_client(cptr, acptr, &me, "Nick collision");
        } else {
@@ -1363,7 +1363,7 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		      me.name, acptr->name, acptr->name);
 	   sendto_serv_butone(sptr,
 			      ":%s KILL %s :Nick Collision",
-			      me.name, parv[1]);
+			      me.name, acptr->name);
 	   acptr->flags |= FLAGS_KILLED;
 	   (void) exit_client(cptr, acptr, &me, "Nick collision");
 	   break;
@@ -1386,10 +1386,10 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
        sendto_one(acptr, err_str(ERR_NICKCOLLISION),
 		  me.name, acptr->name, acptr->name);
        sendto_serv_butone(NULL,
-			  ":%s KILL %s :Nick Collision", me.name, parv[1]);
+			  ":%s KILL %s :Nick Collision",me.name, sptr->name);
        ircstp->is_kill++;
        sendto_serv_butone(NULL,
-			  ":%s KILL %s :Nick Collision", me.name, parv[1]);
+			  ":%s KILL %s :Nick Collision",me.name, acptr->name);
        acptr->flags |= FLAGS_KILLED;
        (void) exit_client(NULL, acptr, &me, "Nick collision(new)");
        sptr->flags |= FLAGS_KILLED;
@@ -1407,7 +1407,7 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 			  sptr->name, acptr->name);
          ircstp->is_kill++;
          sendto_serv_butone(cptr,
-			    ":%s KILL %s :Nick Collision", me.name, parv[1]);
+			    ":%s KILL %s :Nick Collision",me.name,sptr->name);
          sptr->flags |= FLAGS_KILLED;
          if (sameuser)
 	   return exit_client(cptr, sptr, &me, "Nick collision(old)");
@@ -1423,7 +1423,7 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
          sendto_one(acptr, err_str(ERR_NICKCOLLISION),
 		    me.name, acptr->name, acptr->name);
          sendto_serv_butone(sptr,
-			    ":%s KILL %s :Nick Collision", me.name, parv[1]);
+			    ":%s KILL %s :Nick Collision",me.name,acptr->name);
          acptr->flags |= FLAGS_KILLED;
          (void) exit_client(cptr, acptr, &me, "Nick collision");
        }
