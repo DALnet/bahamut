@@ -369,10 +369,22 @@ myncmp(char *str1, char *str2, int n)
    }
    return (-1);
 }
- 
-int match(char *wild, char *string) {
+
+#define MAX_CALLS 512
+static int  calls = 0;
+
+static inline int _match(char *string, char *wild);
+
+int match(char *n, char *m) {
+    calls=0;
+    return _match(n,m);
+}
+
+static inline int _match(char *wild, char *string) {
    /* the *! in a match is such a common case that we optimize
 	 * for it inherently */
+    if (calls++ > MAX_CALLS)
+	return 1;
 	if(wild[0]=='*' && wild[1]=='!') {
 		wild+=2;
 		while(*string!='!' && *string)
@@ -422,7 +434,7 @@ int match(char *wild, char *string) {
 			  continue;
 			while(*string) {
 				if(touppertab[(u_char)*string]==touppertab[(u_char)*wild] &&
-					!match((wild+1), (string+1)))
+					!_match((wild+1), (string+1)))
 				  return 0;
 				string++;
 			}

@@ -50,6 +50,7 @@ char        specific_virtual_host;
 static int  		lookup_confhost(aConfItem *);
 static int  		attach_iline(aClient *, aConfItem *, char *);
 static aConfItem       *temporary_klines = (aConfItem *) NULL;
+static aConfItem       *szlines = (aConfItem *) NULL;
 
 /* externally defined functions  */
 
@@ -1039,7 +1040,9 @@ rehash(aClient *cptr, aClient *sptr, int sig)
    clear_conf_list(&KList3);
 	
    clear_conf_list(&ZList1);	/* Only z lines of this form allowed */
-	
+
+   /* Don't clear SZLine list */
+   
    clear_conf_list(&EList1);
    clear_conf_list(&EList2);
    clear_conf_list(&EList3);
@@ -1700,19 +1703,28 @@ lookup_confhost(aConfItem *aconf)
 int
 find_zline(char *host)
 {
-   if (strlen(host) > (size_t) HOSTLEN)
-      return (0);
-
-   /*
-    * Try hostnames of the form "word*" -Sol 
-    * For D lines most of them are going to be nnn.nnn.nnn.* to  deny a
-    * /24 - Dianora I won't check for any other kind of Zline now...
-    */
-
-   if (find_matching_conf(&ZList1, host))
-      return (-1);
-   else
-      return (0);
+    aConfItem *tmp;
+    if (strlen(host) > (size_t) HOSTLEN)
+	return (0);
+    
+    if (szlines) {
+	tmp=szlines;
+	while(szlines) {
+	    if (match(tmp->host, host)) return -1;
+	    tmp=tmp->next;
+	}
+    }
+    
+    /*
+     * Try hostnames of the form "word*" -Sol 
+     * For D lines most of them are going to be nnn.nnn.nnn.* to  deny a
+     * /24 - Dianora I won't check for any other kind of Zline now...
+     */
+    
+    if (find_matching_conf(&ZList1, host))
+	return (-1);
+    else
+	return (0);
 }
 
 int
@@ -1979,11 +1991,18 @@ find_is_zlined(char *host)
     * active quote zline, the loser deserves to know why they are being
     * zlined don't they? - Dianora
     */
+   
+   if (szlines) {
+       tmp=szlines;
+       while(szlines) {
+	   if (match(tmp->host, host)) return tmp;
+	   tmp=tmp->next;
+       }
+   }
 
-   if ((tmp = find_matching_conf(&ZList1, host)) == NULL) 
-      return ((aConfItem *) NULL);
-
-   return (tmp);
+   if ((tmp = find_matching_conf(&ZList1, host))) 
+       if (tmp!=NULL) return (tmp);
+   return NULL;
 }
 
 int
@@ -2036,6 +2055,47 @@ find_conf_match(aClient *cptr, aConfList *List1, aConfList *List2, aConfList *Li
 
    return (tmp ? -1 : 0);
 }
+
+void add_szline(aConfItem *aconf)
+{
+    aconf->next = szlines;
+    szlines=aconf;
+}
+
+void remove_szline(char *mask, int m) {
+    aConfItem *aconf, *ac2=NULL;
+    aconf=szlines;
+    while(aconf)
+    {
+        if(aconf->host && (m ? match(mask, aconf->host) :
+			   !mycmp(mask, aconf->host)))
+        {
+            MyFree(aconf->passwd);
+            MyFree(aconf->host);
+
+            if(ac2 == NULL)     /* at top of list */
+                szlines = aconf->next;
+            else                /* inside the list */
+                ac2->next = aconf->next;
+            MyFree(aconf);
+        } else {
+            ac2 = aconf;
+            aconf = aconf->next;
+        }
+    }
+}
+
+void report_szlines(aClient *sptr) {
+    aConfItem *tmp;
+    tmp=szlines;
+    while(tmp) {
+	sendto_one(sptr, rpl_str(RPL_STATSZLINE), me.name,
+		   sptr->name, 'z' , tmp->host, 
+		   BadPtr(tmp->passwd) ? "No Reason" : tmp->passwd);
+	tmp=tmp->next;
+    }
+}
+
 /*
  * add_temp_kline
  * 

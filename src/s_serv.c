@@ -1705,12 +1705,15 @@ m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		break;
 		
 	 case 'D':
-	 case 'd':
 		if (!IsAnOper(sptr))
 		  break;
 		report_conf_links(sptr, &ZList1, RPL_STATSZLINE, 'Z');
 		break;
-		
+         case 'd':
+	        if (!IsAnOper(sptr))
+		  break;
+		report_szlines(sptr);
+		break;
 	 case 'E':
 	 case 'e':
 #ifdef E_LINES_OPER_ONLY
@@ -5158,41 +5161,89 @@ int m_sqline(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	
 int m_unsqline(aClient *cptr, aClient *sptr, int parc, char *parv[]) 
 {
-	aConfItem *aconf, *ac2=NULL;
+   aConfItem *aconf, *ac2=NULL;
+   
+   if(!IsServer(sptr))
+      return 0;
+   
+   if(parc<2) 
+   {
+      sendto_one(sptr, err_str(ERR_NEEDMOREPARAMS), me.name, parv[0], "UNSQLINE");
+      return 0;
+   }
+   
+   /* find the sqline and remove it */
+   /* this was way too complicated and ugly. Fixed. -lucas */
+   /* Changed this to use match.  Seems to make more sense? */
+   /* Therefore unsqline * will clear the sqline list. */
+   
+   aconf = conf;
+   while(aconf)
+   {
+      if((aconf->status & (CONF_QUARANTINED_NICK|CONF_SQLINE)) && 
+	 aconf->name && ((parc==3 && atoi(parv[2])==1) 
+			   ? match(parv[1], aconf->name) 
+			   : !mycmp(parv[1], aconf->name))) 
+      {
+	 MyFree(aconf->passwd);
+	 MyFree(aconf->name);
+	 
+	 if(ac2 == NULL)	/* at top of list */
+	    conf = aconf->next;
+	 else 		/* inside the list */
+	    ac2->next = aconf->next;
+	 
+	 MyFree(aconf);
+      }
+      
+      ac2 = aconf;
+      aconf = aconf->next;
+   }
+   sendto_serv_butone(cptr, ":%s UNSQLINE %s %s", sptr->name, parv[1],
+		      (parc==3) ? parv[2] : "");
+   return 0;
+}
 
-	if(!IsServer(sptr))
-	  return 0;
+int m_szline(aClient *cptr, aClient *sptr, int parc, char *parv[]) 
+{
+   aConfItem *aconf;
 
-	if(parc<2) 
-	{
-		sendto_one(sptr, err_str(ERR_NEEDMOREPARAMS), me.name, parv[0], "UNSQLINE");
-		return 0;
-	}
-	
-	/* find the sqline and remove it */
-	/* this was way too complicated and ugly. Fixed. -lucas */
-
-	aconf = conf;
-	while(aconf)
-	{
-		if((aconf->status & (CONF_QUARANTINED_NICK|CONF_SQLINE)) && aconf->name &&
-		    !(mycmp(parv[1], aconf->name))) 
-		{
-			MyFree(aconf->passwd);
-			MyFree(aconf->name);
-			
-			if(ac2 == NULL)	/* at top of list */
-				conf = aconf->next;
-			else 		/* inside the list */
-				ac2->next = aconf->next;
-							
-			MyFree(aconf);
-			return 0;
-		}
-
-		ac2 = aconf;
-		aconf = aconf->next;
-	}
-	sendto_serv_butone(cptr, ":%s UNSQLINE %s", sptr->name, parv[1]);
+   if(!IsServer(sptr))
+      return 0;
+   if(parc<2) 
+   {
+	sendto_one(sptr, err_str(ERR_NEEDMOREPARAMS), me.name, parv[0], "SZLINE");
 	return 0;
+   }
+	
+   if (!(aconf=find_conf_name(parv[1], CONF_ZLINE)))
+   {
+	/* okay, it doesn't suck, build a new conf for it */
+	aconf=make_conf();
+	aconf->status=(CONF_ZLINE|CONF_SZLINE); /* Z:line and SZline, woo */
+	DupString(aconf->host, parv[1]);
+	DupString(aconf->passwd, (parv[2]!=NULL ? parv[2] : "No Reason"));
+	aconf->name=(char *)NULL;
+	add_szline(aconf);
+   }
+   sendto_serv_butone(cptr, ":%s SZLINE %s :%s", sptr->name, parv[1],
+		      aconf->passwd);
+   return 0;
+}
+	
+int m_unszline(aClient *cptr, aClient *sptr, int parc, char *parv[]) 
+{
+    if(!IsServer(sptr))
+	return 0;
+    
+    if(parc<2) 
+    {
+	sendto_one(sptr, err_str(ERR_NEEDMOREPARAMS), me.name, parv[0],
+		   "UNSZLINE");
+	return 0;
+    }
+    remove_szline(parv[1], (parc==3&&atoi(parv[2])==1) ? 1 : 0);
+    sendto_serv_butone(cptr, ":%s UNSZLINE %s %s", sptr->name, parv[1],
+		       (parc==3) ? parv[2] : "");
+    return 0;
 }

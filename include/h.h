@@ -48,8 +48,7 @@ extern aConfList KList2;	/* ordered, reversed  */
 extern aConfList KList3;	/* what we can't sort */
 
 extern aConfList ZList1;
-extern aConfList ZList2;
-extern aConfList ZList3;
+
 
 extern aConfList EList1;
 extern aConfList EList2;
@@ -135,6 +134,11 @@ extern void 	  flush_temp_klines(void);
 extern void 	  report_temp_klines(aClient *);
 extern void 	  do_rehash_akills(void);
 extern int 	  remove_temp_kline(char *host, char *user, int type);
+
+extern void       add_szline(aConfItem *);
+extern void       remove_szline(char *, int);
+extern void       report_szlines(aClient *);
+
 
 extern int  	  find_restrict(aClient *);
 extern int  	  rehash(aClient *, aClient *, int);
