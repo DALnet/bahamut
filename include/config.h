@@ -686,7 +686,7 @@
  *
  * If level 3 is selected, USE_SYSLOG must be defined.
  */
-#define RIDICULOUS_PARANOIA_LEVEL 3
+#define RIDICULOUS_PARANOIA_LEVEL 1
 #if (RIDICULOUS_PARANOIA_LEVEL==3)
 #ifndef USE_SYSLOG
 #error "USE_SYSLOG MUST BE DEFINED FOR LEVEL 3"
