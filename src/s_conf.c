@@ -2093,6 +2093,7 @@ merge_confs()
         MyFree(modules);
     }
     modules = new_modules;
+    new_modules = NULL;
     return;
 }
 
