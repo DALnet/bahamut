@@ -853,6 +853,7 @@ static int completed_connection(aClient * cptr)
 
     if(!(cptr->flags & FLAGS_BLOCKED))
        unset_fd_flags(cptr->fd, FDF_WANTWRITE);
+    unset_fd_flags(cptr->fd, FDF_WANTREAD);
 
     SetHandshake(cptr);
 
@@ -1274,13 +1275,13 @@ aClient *add_connection(aClient * cptr, int fd)
     }
 
     add_fd(fd, FDT_CLIENT, acptr);
+    local[fd] = acptr;
 
     if (aconf)
 	aconf->clients++;
     acptr->fd = fd;
     if (fd > highest_fd)
 	highest_fd = fd;
-    local[fd] = acptr;
     acptr->acpt = cptr;
     add_client_to_list(acptr);
     set_non_blocking(acptr->fd, acptr);

@@ -477,7 +477,8 @@ static time_t check_pings(time_t currenttime)
 		continue;
 	    } /* don't send pings during a burst, as we send them already. */
 	    
-	    else if (!(cptr->flags & (FLAGS_PINGSENT|FLAGS_BURST))) {
+	    else if (!(cptr->flags & (FLAGS_PINGSENT|FLAGS_BURST)) && 
+		     !(IsConnecting(cptr) || IsHandshake(cptr))) {
 		/*
 		 * if we havent PINGed the connection and we havent heard from
 		 * it in a while, PING it to make sure it is still alive.

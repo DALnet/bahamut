@@ -2040,7 +2040,12 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
     case 'V':
 	show_servers(sptr, parv[0]);
 	break;
-		
+
+    case 'W':
+    case 'w':
+	report_fds(sptr);	
+	break;
+
     case 'Y':
     case 'y':
 	report_classes(sptr);
@@ -2056,6 +2061,7 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		
     case '?':
 	serv_info(sptr, parv[0]);
+	break;
 		
     default:
 	stat = '*';

@@ -13,6 +13,7 @@
 #include "sys.h"
 #include "h.h"
 #include "fds.h"
+#include "numeric.h"
 
 #include <sys/poll.h>
 
@@ -28,6 +29,89 @@ struct afd_entry {
 };
 
 struct afd_entry fd_list[MAXCONNECTIONS];
+
+#define FDT_AUTH      1
+#define FDT_RESOLVER  2
+#define FDT_CLIENT    3
+#define FDT_LISTENER  4
+
+static char *type_string(int type)
+{
+   switch(type)
+   {
+      case FDT_NONE:
+         return "NONE";
+
+      case FDT_CLIENT:
+         return "client";
+
+      case FDT_AUTH:
+         return "auth";
+
+      case FDT_RESOLVER:
+         return "resolver";
+
+      case FDT_LISTENER:
+         return "listener";
+   }
+
+   return "???";
+}
+
+static char *flags_string(unsigned int flags)
+{
+   static char fbuf[512];
+
+   fbuf[0] = '\0';
+
+   if(flags & FDF_WANTREAD)
+   {
+      if(fbuf[0])
+         strcat(fbuf, ", ");
+      strcat(fbuf, "read");
+   }
+
+   if(flags & FDF_WANTWRITE)
+   {
+      if(fbuf[0])
+         strcat(fbuf, ", ");
+      strcat(fbuf, "write");
+   }
+
+   return fbuf;
+}
+
+void report_fds(aClient *cptr)
+{
+   int i;
+   char *name, *blocking;
+
+   for(i = 0; i < MAXCONNECTIONS; i++)
+   {
+      if(fd_list[i].type == FDT_NONE)
+         continue;
+
+      if(fd_list[i].type == FDT_CLIENT ||
+         fd_list[i].type == FDT_AUTH)
+      {
+         name = get_client_name((aClient *) fd_list[i].value, 0);
+         blocking = ((aClient *) fd_list[i].value)->flags & FLAGS_BLOCKED ?
+                    "BLOCKED" : "_";
+      }
+      else
+      {
+         name = "-";
+         blocking = "-";
+      }
+
+      sendto_one(cptr, ":%s %d %s :%d - %s [%s] %s %s",
+                 me.name, RPL_STATSDEBUG, cptr->name,
+                 i, type_string(fd_list[i].type),
+                 flags_string(fd_list[i].flags),
+                 name, blocking);
+
+   }
+}
 
 static inline void fd_range_assert(int fd)
 {

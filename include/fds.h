@@ -27,3 +27,5 @@ void set_fd_internal(int fd, void *ptr);
 void *get_fd_internal(int fd);
 
 void check_client_fd(aClient *cptr);
+
+void report_fds(aClient *cptr);

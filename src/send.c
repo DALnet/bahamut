@@ -1905,12 +1905,19 @@ void flush_connections(int fd)
     if (fd == me.fd) 
     {
 	for (i = highest_fd; i >= 0; i--)
-	    if ((cptr = local[i]) && !(cptr->flags & FLAGS_BLOCKED) &&
-		DBufLength(&cptr->sendQ) > 0)
+	{
+	    if (!(cptr = local[i]))
+               continue;
+	    if(!(cptr->flags & FLAGS_BLOCKED) &&
+		(DBufLength(&cptr->sendQ) > 0 ||
+		(ZipOut(cptr) && zip_is_data_out(cptr->serv->zip_out))))
 		send_queued(cptr);
+	}
     }
     else if (fd >= 0 && (cptr = local[fd]) &&
-	     !(cptr->flags & FLAGS_BLOCKED) && DBufLength(&cptr->sendQ) > 0)
+	     !(cptr->flags & FLAGS_BLOCKED) && 
+	     (DBufLength(&cptr->sendQ) > 0 || 
+	     (ZipOut(cptr) && zip_is_data_out(cptr->serv->zip_out))))
 	send_queued(cptr);
 }
 
@@ -1922,10 +1929,14 @@ void dump_connections(int fd)
     if (fd == me.fd) 
     {
 	for (i = highest_fd; i >= 0; i--)
-	    if ((cptr = local[i]) && DBufLength(&cptr->sendQ) > 0)
+	    if ((cptr = local[i]) && 
+		(DBufLength(&cptr->sendQ) > 0 || 
+		(ZipOut(cptr) && zip_is_data_out(cptr->serv->zip_out))))
 		send_queued(cptr);
     }
-    else if (fd >= 0 && (cptr = local[fd]) && DBufLength(&cptr->sendQ) > 0)
+    else if (fd >= 0 && (cptr = local[fd]) && 
+	(DBufLength(&cptr->sendQ) > 0 || 
+	(ZipOut(cptr) && zip_is_data_out(cptr->serv->zip_out))))
 	send_queued(cptr);
 }
 
@@ -1938,6 +1949,7 @@ void flush_fdlist_connections(fdlist *listp)
     for (fd = listp->entry[i = 1]; i <= listp->last_entry;
 	 fd = listp->entry[++i])
 	if ((cptr = local[fd]) && !(cptr->flags & FLAGS_BLOCKED) &&
-	    DBufLength(&cptr->sendQ) > 0)
+	    (DBufLength(&cptr->sendQ) > 0 ||
+	    (ZipOut(cptr) && zip_is_data_out(cptr->serv->zip_out))))
 	    send_queued(cptr);
 }
