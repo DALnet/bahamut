@@ -578,7 +578,10 @@ check_init(aClient *cptr, char *sockn)
     */
 
    if (getpeername(cptr->fd, (struct sockaddr *) &sk, &len) == -1) {
-      report_error("connect failure: %s %s", cptr);
+/* 
+ * This fills syslog, if on, and is just annoying. Nobody needs it. -lucas
+ *    report_error("connect failure: %s %s", cptr);
+ */
       return -1;
    }
    (void) strcpy(sockn, (char *) inetntoa((char *) &sk.sin_addr));
