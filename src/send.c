@@ -141,8 +141,7 @@ static int send_message(aClient *to, char *msg, int len) {
       if (IsServer(to)) 
 	sendto_ops("Max SendQ limit exceeded for %s: %d > %d",
 		get_client_name(to, HIDEME), DBufLength(&to->sendQ), get_sendq(to));
-      if (IsClient(to))
-	to->flags |= FLAGS_SENDQEX;
+      to->flags |= FLAGS_SENDQEX;
       return dead_link(to, "Max Sendq exceeded for %s, closing link");
    }
    else if (dbuf_put(&to->sendQ, msg, len) < 0)
