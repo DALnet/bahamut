@@ -34,7 +34,7 @@
 #define MINOR 4
 #define PATCH 30
 
-#define PATCH1 ""
+#define PATCH1 "cvs"
 
 #define PATCH2 ""
 
