@@ -1006,7 +1006,7 @@ static void channel_modes(aClient *cptr, char *mbuf, char *pbuf,
     *mbuf++ = '+';
     if (chptr->mode.mode & MODE_SECRET)
         *mbuf++ = 's';
-    else if (chptr->mode.mode & MODE_PRIVATE)
+    if (chptr->mode.mode & MODE_PRIVATE)
         *mbuf++ = 'p';
     if (chptr->mode.mode & MODE_MODERATED)
         *mbuf++ = 'm';
