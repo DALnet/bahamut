@@ -92,11 +92,11 @@ inet_addr(const char *cp)
 int
 inet_aton(const u_char *cp, struct in_addr *addr)
 {
-   register u_long val;
-   register int base, n;
-   register u_char c;
+   u_long val;
+   int base, n;
+   u_char c;
    u_int       parts[4];
-   register u_int *pp = parts;
+   u_int *pp = parts;
 
    for (;;) {
       /*

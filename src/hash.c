@@ -64,10 +64,10 @@ unsigned
 hash_nick_name(nname)
      char       *nname;
 {
-Reg unsigned hash = 0;
-Reg int     hash2 = 0;
-Reg int     ret;
-Reg char    lower;
+unsigned hash = 0;
+int     hash2 = 0;
+int     ret;
+char    lower;
 
    while (*nname) {
       lower = tolower(*nname);
@@ -90,11 +90,11 @@ Reg char    lower;
 int
 hash_channel_name(char *name)
 {
-   register unsigned char *hname = (unsigned char *) name;
-   register unsigned int hash = 0;
-   register int hash2 = 0;
-   register char lower;
-   register int i = 30;
+   unsigned char *hname = (unsigned char *) name;
+   unsigned int hash = 0;
+   int hash2 = 0;
+   char lower;
+   int i = 30;
 
    while (*hname && --i) {
       lower = tolower(*hname);
@@ -109,11 +109,11 @@ hash_channel_name(char *name)
 unsigned int
 hash_whowas_name(char *name)
 {
-   register unsigned char *nname = (unsigned char *) name;
-   register unsigned int hash = 0;
-   register int hash2 = 0;
-   register int ret;
-   register char lower;
+   unsigned char *nname = (unsigned char *) name;
+   unsigned int hash = 0;
+   int hash2 = 0;
+   int ret;
+   char lower;
 
    while (*nname) {
       lower = tolower(*nname);
@@ -147,7 +147,7 @@ clear_channel_hash_table()
 int
 add_to_client_hash_table(char *name, aClient *cptr)
 {
-   Reg int     hashv;
+   int     hashv;
 
    hashv = hash_nick_name(name);
    cptr->hnext = (aClient *) clientTable[hashv].list;
@@ -162,7 +162,7 @@ add_to_client_hash_table(char *name, aClient *cptr)
 int
 add_to_channel_hash_table(char *name, aChannel *chptr)
 {
-   Reg int     hashv;
+   int     hashv;
 
    hashv = hash_channel_name(name);
    chptr->hnextch = (aChannel *) channelTable[hashv].list;
@@ -177,8 +177,8 @@ add_to_channel_hash_table(char *name, aChannel *chptr)
 int
 del_from_client_hash_table(char *name, aClient *cptr)
 {
-   Reg aClient *tmp, *prev = NULL;
-   Reg int     hashv;
+   aClient *tmp, *prev = NULL;
+   int     hashv;
 
    hashv = hash_nick_name(name);
    for (tmp = (aClient *) clientTable[hashv].list; tmp; tmp = tmp->hnext) {
@@ -209,8 +209,8 @@ del_from_client_hash_table(char *name, aClient *cptr)
 int
 del_from_channel_hash_table(char *name, aChannel *chptr)
 {
-   Reg aChannel *tmp, *prev = NULL;
-   Reg int     hashv;
+   aChannel *tmp, *prev = NULL;
+   int     hashv;
 
    hashv = hash_channel_name(name);
    for (tmp = (aChannel *) channelTable[hashv].list; tmp;
@@ -302,8 +302,8 @@ hash_find_server(char *server, aClient *cptr)
 {
    aClient *tmp;
 #if 0
-   Reg char   *t;
-   Reg char    ch;
+   char   *t;
+   char    ch;
 #endif
    aHashEntry *tmp3;
 
@@ -364,7 +364,7 @@ aChannel   *
 hash_find_channel(char *name, aChannel *chptr)
 {
    int         hashv;
-   Reg aChannel *tmp;
+   aChannel *tmp;
    aHashEntry *tmp3;
 
    hashv = hash_channel_name(name);

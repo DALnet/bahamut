@@ -14,7 +14,7 @@
 void
 addto_fdlist(int fd, fdlist * listp)
 {
-   register int index;
+   int index;
 
    if ((index = ++listp->last_entry) >= MAXCONNECTIONS) {
       /*
@@ -35,7 +35,7 @@ addto_fdlist(int fd, fdlist * listp)
 void
 delfrom_fdlist(int fd, fdlist * listp)
 {
-   register int i;
+   int i;
 
    for (i = listp->last_entry; i; i--) {
       if (listp->entry[i] == fd)

@@ -296,14 +296,14 @@ void count_memory(aClient *cptr, char *nick)
 
    extern int num_msg_trees;
 
-   Reg aClient *acptr;
-   Reg Link   *link;
-   Reg chanMember *cm;
-   Reg aBan   *bp;
-   Reg aChannel *chptr;
-   Reg aConfItem *aconf;
-   Reg aClass *cltmp;
-   Reg aMotd *amo;
+   aClient *acptr;
+   Link   *link;
+   chanMember *cm;
+   aBan   *bp;
+   aChannel *chptr;
+   aConfItem *aconf;
+   aClass *cltmp;
+   aMotd *amo;
 
    int         lc = 0;		/*
 				 * local clients 

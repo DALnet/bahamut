@@ -88,7 +88,7 @@ extern int  spam_time;		/* defined in s_serv.c */
 
 /* return the length (>=0) of a chain of links. */
 static int list_length(Link *lp) {
-   Reg int     count = 0;
+   int     count = 0;
 
    for (; lp; lp = lp->next)
       count++;
@@ -103,7 +103,7 @@ static int list_length(Link *lp) {
  *   history, chasing will be 1 and otherwise 0.
  */
 aClient *find_chasing(aClient *sptr, char *user, int *chasing) {
-   Reg aClient *who = find_client(user, (aClient *) NULL);
+   aClient *who = find_client(user, (aClient *) NULL);
 
    if (chasing)
       *chasing = 0;
@@ -146,7 +146,7 @@ static char * check_string(char *s) {
 static char *make_nick_user_host(char *nick, char *name, char *host) {
    static char namebuf[NICKLEN + USERLEN + HOSTLEN + 6];
    int         n;
-   Reg char   *ptr1, *ptr2;
+   char   *ptr1, *ptr2;
 
    ptr1 = namebuf;
    for (ptr2 = check_string(nick), n = NICKLEN; *ptr2 && n--;)
@@ -393,8 +393,8 @@ void remove_matching_bans(aChannel *chptr, aClient *cptr, aClient *from)
  * member chain.
  */
 static void add_user_to_channel(aChannel *chptr, aClient *who, int flags) {
-   Reg Link   *ptr;
-   Reg chanMember *cm;
+   Link   *ptr;
+   chanMember *cm;
 
    if (who->user) {
       cm = make_chanmember();
@@ -414,8 +414,8 @@ static void add_user_to_channel(aChannel *chptr, aClient *who, int flags) {
 }
 
 void remove_user_from_channel(aClient *sptr, aChannel *chptr) {
-   Reg chanMember  **curr, *tmp;
-   Reg Link  	   **lcurr, *ltmp;
+   chanMember  **curr, *tmp;
+   Link  	   **lcurr, *ltmp;
 
    for (curr = &chptr->members; (tmp = *curr); curr = &tmp->next)
       if (tmp->cptr == sptr) {
@@ -435,7 +435,7 @@ void remove_user_from_channel(aClient *sptr, aChannel *chptr) {
 }
 
 int is_chan_op(aClient *cptr, aChannel *chptr) {
-   Reg chanMember   *cm;
+   chanMember   *cm;
 
    if (chptr)
       if ((cm = find_user_member(chptr->members, cptr)))
@@ -445,7 +445,7 @@ int is_chan_op(aClient *cptr, aChannel *chptr) {
 }
 
 int is_deopped(aClient *cptr, aChannel *chptr) {
-   Reg chanMember   *cm;
+   chanMember   *cm;
 
    if (chptr)
       if ((cm = find_user_member(chptr->members, cptr)))
@@ -455,7 +455,7 @@ int is_deopped(aClient *cptr, aChannel *chptr) {
 }
 
 int has_voice(aClient *cptr, aChannel *chptr) {
-   Reg chanMember   *cm;
+   chanMember   *cm;
 
    if (chptr)
       if ((cm = find_user_member(chptr->members, cptr)))
@@ -465,8 +465,8 @@ int has_voice(aClient *cptr, aChannel *chptr) {
 }
 
 int can_send(aClient *cptr, aChannel *chptr) {
-   Reg chanMember   *cm;
-   Reg int     member;
+   chanMember   *cm;
+   int     member;
 
    if (IsServer(cptr) || IsULine(cptr))
       return 0;
@@ -538,8 +538,8 @@ channel_modes(aClient *cptr, char *mbuf, char *pbuf, aChannel *chptr) {
 
 static void send_ban_list(aClient *cptr, aChannel *chptr)
 {
-   Reg aBan   *bp;
-   Reg char   *cp;
+   aBan   *bp;
+   char   *cp;
    int         count = 0, send = 0;
 
    cp = modebuf + strlen(modebuf);
@@ -1148,7 +1148,7 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr, int level, in
 static int
 can_join(aClient *sptr, aChannel *chptr, char *key)
 {
-   Reg Link   *lp;
+   Link   *lp;
    int invited=0;
    for(lp=sptr->user->invited;lp;lp=lp->next) {
       if(lp->value.chptr==chptr) {
@@ -1212,7 +1212,7 @@ get_channel(aClient *cptr,
 	    char *chname,
 	    int flag)
 {
-   Reg aChannel *chptr;
+   aChannel *chptr;
    int         len;
 
    if (BadPtr(chname))
@@ -1244,7 +1244,7 @@ get_channel(aClient *cptr,
 static void
 add_invite(aClient *cptr, aChannel *chptr)
 {
-   Reg Link   *inv, **tmp;
+   Link   *inv, **tmp;
 
    del_invite(cptr, chptr);
    /*
@@ -1281,7 +1281,7 @@ add_invite(aClient *cptr, aChannel *chptr)
 void
 del_invite(aClient *cptr, aChannel *chptr)
 {
-   Reg Link  **inv, *tmp;
+   Link  **inv, *tmp;
 
    for (inv = &(chptr->invites); (tmp = *inv); inv = &tmp->next)
       if (tmp->value.cptr == cptr) {
@@ -1304,7 +1304,7 @@ del_invite(aClient *cptr, aChannel *chptr)
 static void
 sub1_from_channel(aChannel *chptr)
 {
-   Reg Link   *tmp;
+   Link   *tmp;
    aBan	      *bp, *bprem;
 
    if (--chptr->users <= 0) {
@@ -1348,9 +1348,9 @@ m_join(aClient *cptr,
        char *parv[])
 {
    static char jbuf[BUFSIZE];
-   Reg Link   *lp;
-   Reg aChannel *chptr;
-   Reg char   *name, *key = NULL;
+   Link   *lp;
+   aChannel *chptr;
+   char   *name, *key = NULL;
    int         i, flags = 0, chanlen=0;	
    int         allow_op = YES;
    char       *p = NULL, *p2 = NULL;
@@ -1675,9 +1675,9 @@ m_part(aClient *cptr,
        int parc,
        char *parv[])
 {
-   Reg aChannel *chptr;
+   aChannel *chptr;
    char       *p, *name;
-   register char *reason = (parc > 2 && parv[2]) ? parv[2] : NULL;
+   char *reason = (parc > 2 && parv[2]) ? parv[2] : NULL;
 
    if (parc < 2 || parv[1][0] == '\0') {
       sendto_one(sptr, err_str(ERR_NEEDMOREPARAMS),
@@ -1916,8 +1916,8 @@ m_kick(aClient *cptr,
 int
 count_channels(aClient *sptr)
 {
-   Reg aChannel *chptr;
-   Reg int     count = 0;
+   aChannel *chptr;
+   int     count = 0;
 
    for (chptr = channel; chptr; chptr = chptr->nextch)
       count++;
@@ -2533,9 +2533,9 @@ int m_names(aClient *cptr, aClient *sptr, int parc, char *parv[])
 void
 send_user_joins(aClient *cptr, aClient *user)
 {
-   Reg Link   *lp;
-   Reg aChannel *chptr;
-   Reg int     cnt = 0, len = 0, clen;
+   Link   *lp;
+   aChannel *chptr;
+   int     cnt = 0, len = 0, clen;
    char       *mask;
 
    *buf = ':';
@@ -3212,7 +3212,7 @@ int m_samode(aClient *cptr, aClient *sptr, int parc, char *parv[]) {
 
 char  *pretty_mask(char *mask)
 {
-	register  char  *cp, *user, *host;
+	char  *cp, *user, *host;
 	
 	if ((user = strchr((cp = mask), '!')))
 	  *user++ = '\0';

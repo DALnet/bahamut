@@ -174,7 +174,7 @@ static int  was_here = 0;
  */
 aClient    *make_client(aClient *from, aClient *uplink)
 {
-   Reg aClient *cptr = NULL;
+   aClient *cptr = NULL;
 
    if (!from) {			/*
 				 * from is NULL 
@@ -306,7 +306,7 @@ free_client(aClient *cptr)
 
 aChannel *make_channel()
 {
-   Reg aChannel *chan;
+   aChannel *chan;
 
    chan = BlockHeapALLOC(free_channels, aChannel);
 
@@ -333,7 +333,7 @@ void free_channel(aChannel *chan)
 anUser     *
 make_user(aClient *cptr)
 {
-   Reg anUser *user;
+   anUser *user;
 
    user = cptr->user;
    if (!user) {
@@ -363,7 +363,7 @@ make_user(aClient *cptr)
 aServer    *
 make_server(aClient *cptr)
 {
-   Reg aServer *serv = cptr->serv;
+   aServer *serv = cptr->serv;
 
    if (!serv) {
       serv = (aServer *) MyMalloc(sizeof(aServer));
@@ -537,7 +537,7 @@ find_str_link(Link *lp, char *charptr)
 Link       *
 make_link()
 {
-Reg Link   *lp;
+Link   *lp;
 lp = BlockHeapALLOC(free_Links, Link);
 
    if (lp == (Link *) NULL)
@@ -561,7 +561,7 @@ free_link(Link *lp)
 
 chanMember *make_chanmember()
 {
-Reg chanMember   *mp;
+chanMember   *mp;
 mp = BlockHeapALLOC(free_chanMembers, chanMember);
 
    if (mp == (chanMember *) NULL)
@@ -582,7 +582,7 @@ free_chanmember(chanMember *mp)
 aClass     *
 make_class()
 {
-Reg aClass *tmp;
+aClass *tmp;
 
    tmp = (aClass *) MyMalloc(sizeof(aClass));
    return tmp;
@@ -590,7 +590,7 @@ Reg aClass *tmp;
 
 void
 free_class(tmp)
-     Reg aClass *tmp;
+     aClass *tmp;
 {
    MyFree((char *) tmp);
 }
@@ -598,7 +598,7 @@ free_class(tmp)
 aConfItem  *
 make_conf()
 {
-Reg aConfItem *aconf;
+aConfItem *aconf;
    aconf = (struct ConfItem *) MyMalloc(sizeof(aConfItem));
    memset((char *) aconf, '\0', sizeof(aConfItem));
 

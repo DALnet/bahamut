@@ -227,8 +227,8 @@ authsenderr(aClient *cptr)
 void
 read_authports(aClient *cptr)
 {
-   Reg char   *s, *t;
-   Reg int     len;
+   char   *s, *t;
+   int     len;
    char        ruser[USERLEN + 1], tuser[USERLEN + 1];
    u_short     remp = 0, locp = 0;
 

@@ -71,9 +71,9 @@ struct state _res =
  */
 res_init()
 {
-register FILE *fp;
-register char *cp, *dp, **pp;
-register int n;
+FILE *fp;
+char *cp, *dp, **pp;
+int n;
 char        buf[BUFSIZ];
 extern u_long inet_addr();
 extern char *getenv();

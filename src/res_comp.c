@@ -48,8 +48,8 @@ dn_expand(u_char *msg,
 	  u_char *exp_dn,
 	  int length)
 {
-   register u_char *cp, *dn;
-   register int n, c;
+   u_char *cp, *dn;
+   int n, c;
    u_char     *eom;
    int         len = -1, checked = 0;
 
@@ -132,8 +132,8 @@ dn_comp(u_char *exp_dn,
 	u_char **dnptrs,
 	u_char **lastdnptr)
 {
-register u_char *cp, *dn;
-register int c, l;
+u_char *cp, *dn;
+int c, l;
 u_char    **cpp, **lpp, *sp, *eob;
 u_char     *msg;
 
@@ -218,8 +218,8 @@ u_char     *msg;
  */
 dn_skipname(u_char *comp_dn, u_char *eom)
 {
-register u_char *cp;
-register int n;
+u_char *cp;
+int n;
 
    cp = comp_dn;
    while (cp < eom && (n = *cp++)) {
@@ -257,8 +257,8 @@ dn_find(u_char *exp_dn,
 	u_char **dnptrs,
 	u_char **lastdnptr)
 {
-   register u_char *dn, *cp, **cpp;
-   register int n;
+   u_char *dn, *cp, **cpp;
+   int n;
    u_char     *sp;
 
    for (cpp = dnptrs; cpp < lastdnptr; cpp++) {
@@ -314,16 +314,16 @@ dn_find(u_char *exp_dn,
 u_short
 _getshort(u_char *msgp)
 {
-   register u_char *p = (u_char *) msgp;
+   u_char *p = (u_char *) msgp;
 
 #ifdef vax
    /*
     * vax compiler doesn't put shorts in registers
     */
-   register u_long u;
+   u_long u;
 
 #else
-   register u_short u;
+   u_short u;
 
 #endif
 
@@ -334,8 +334,8 @@ _getshort(u_char *msgp)
 u_long
 _getlong(u_char *msgp)
 {
-   register u_char *p = (u_char *) msgp;
-   register u_long u;
+   u_char *p = (u_char *) msgp;
+   u_long u;
 
    u = *p++;
    u <<= 8;

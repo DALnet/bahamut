@@ -38,9 +38,9 @@
 int
 dopacket(aClient *cptr, char *buffer, int length)
 {
-   Reg char   *ch1;
-   Reg char   *ch2;
-   register char *cptrbuf;
+   char   *ch1;
+   char   *ch2;
+   char *cptrbuf;
    aClient    *acpt = cptr->acpt;
 
    cptrbuf = cptr->buffer;
@@ -70,7 +70,7 @@ dopacket(aClient *cptr, char *buffer, int length)
    ch1 = cptrbuf + cptr->count;
    ch2 = buffer;
    while (--length >= 0) {
-   register char g;
+   char g;
 
       g = (*ch1 = *ch2++);
       /*

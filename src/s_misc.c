@@ -74,7 +74,7 @@ char       *
 date(time_t clock)
 {
 static char buf[80], plus;
-Reg struct tm *lt, *gm;
+struct tm *lt, *gm;
 struct tm   gmbuf;
 int         minswest;
 
@@ -110,7 +110,7 @@ char       *
 smalldate(time_t clock)
 {
 static char buf[MAX_DATE_STRING];
-Reg struct tm *lt, *gm;
+struct tm *lt, *gm;
 struct tm   gmbuf;
 
    if (!clock)
@@ -142,7 +142,7 @@ char       *
 myctime(time_t value)
 {
 static char buf[28];
-Reg char   *p;
+char   *p;
 
    (void) strcpy(buf, ctime(&value));
    if ((p = (char *) strchr(buf, '\n')) != NULL)
@@ -289,7 +289,7 @@ get_client_host(aClient *cptr)
 void
 get_sockhost(aClient *cptr, char *host)
 {
-   Reg char   *s;
+   char   *s;
 
    if ((s = (char *) strchr(host, '@')))
       s++;
@@ -305,8 +305,8 @@ char       *
 my_name_for_link(char *name, aConfItem *aconf)
 {
    static char namebuf[HOSTLEN];
-   register int count = aconf->port;
-   register char *start = name;
+   int count = aconf->port;
+   char *start = name;
 
    if (count <= 0 || count > 5)
       return start;
@@ -513,8 +513,8 @@ exit_client(
 {
 
 #ifndef USE_NOQUIT
-   Reg aClient *acptr;
-   Reg aClient *next;
+   aClient *acptr;
+   aClient *next;
    char        comment1[HOSTLEN + HOSTLEN + 2];
 #endif
 
@@ -720,10 +720,10 @@ exit_one_client(aClient *cptr,
 		char *comment)
 {
 #ifndef USE_NOQUIT
-   Reg aClient *acptr;
-   Reg int     i;
+   aClient *acptr;
+   int     i;
 #endif
-   Reg Link   *lp;
+   Link   *lp;
 
    /*
     * *  For a server or user quitting, propogate the information to *
@@ -754,7 +754,7 @@ exit_one_client(aClient *cptr,
        * matching)
        */
       for (i = 0; i <= highest_fd; i++) {
-   Reg aConfItem *aconf;
+   aConfItem *aconf;
 
 	 if (!(acptr = local[i]) || !IsServer(acptr) ||
 	     acptr == cptr || IsMe(acptr))
@@ -858,8 +858,8 @@ exit_one_client(aClient *cptr,
 void
 checklist()
 {
-Reg aClient *acptr;
-Reg int     i, j;
+aClient *acptr;
+int     i, j;
 
    if (!(bootopt & BOOT_AUTODIE))
       return;
@@ -886,9 +886,9 @@ initstats()
 void
 tstats(aClient *cptr, char *name)
 {
-   Reg aClient *acptr;
-   Reg int     i;
-   Reg struct stats *sp;
+   aClient *acptr;
+   int     i;
+   struct stats *sp;
    struct stats tmp;
 
    sp = &tmp;
@@ -1031,8 +1031,8 @@ serv_info(aClient *cptr, char *name)
 void
 show_opers(aClient *cptr, char *name)
 {
-   Reg aClient *cptr2;
-   Reg int     i, j = 0, fd;
+   aClient *cptr2;
+   int     i, j = 0, fd;
    fdlist     *l;
 
    l = &oper_fdlist;
@@ -1072,8 +1072,8 @@ show_opers(aClient *cptr, char *name)
 void
 show_servers(aClient *cptr, char *name)
 {
-   Reg aClient *cptr2;
-   Reg int     i, j = 0, fd;
+   aClient *cptr2;
+   int     i, j = 0, fd;
    fdlist     *l;
 
    l = &serv_fdlist;

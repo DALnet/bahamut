@@ -148,9 +148,9 @@ add_request(ResRQ * new)
 static void
 rem_request(ResRQ * old)
 {
-Reg ResRQ **rptr, *r2ptr = NULL;
-Reg int     i;
-Reg char   *s;
+ResRQ **rptr, *r2ptr = NULL;
+int     i;
+char   *s;
 
    if (!old)
       return;
@@ -183,7 +183,7 @@ Reg char   *s;
 static ResRQ *
 make_request(Link *lp)
 {
-   Reg ResRQ  *nreq;
+   ResRQ  *nreq;
 
    nreq = (ResRQ *) MyMalloc(sizeof(ResRQ));
    memset((char *) nreq, '\0', sizeof(ResRQ));
@@ -216,8 +216,8 @@ make_request(Link *lp)
 time_t
 timeout_query_list(time_t now)
 {
-Reg ResRQ  *rptr, *r2ptr;
-Reg time_t  next = 0, tout;
+ResRQ  *rptr, *r2ptr;
+time_t  next = 0, tout;
 aClient    *cptr;
 
    Debug((DEBUG_DNS, "timeout_query_list at %s", myctime(now)));
@@ -272,7 +272,7 @@ aClient    *cptr;
 void
 del_queries(char *cp)
 {
-   Reg ResRQ  *rptr, *r2ptr;
+   ResRQ  *rptr, *r2ptr;
 
    for (rptr = first; rptr; rptr = r2ptr) {
       r2ptr = rptr->next;
@@ -290,7 +290,7 @@ del_queries(char *cp)
 static int
 send_res_msg(char *msg, int len, int rcount)
 {
-   Reg int     i;
+   int     i;
    int         sent = 0, max;
 
    if (!msg)
@@ -323,7 +323,7 @@ send_res_msg(char *msg, int len, int rcount)
 static ResRQ *
 find_id(int id)
 {
-   Reg ResRQ  *rptr;
+   ResRQ  *rptr;
 
    for (rptr = first; rptr; rptr = rptr->next)
       if (rptr->id == id)
@@ -334,7 +334,7 @@ find_id(int id)
 struct hostent *
 gethost_byname(char *name, Link *lp)
 {
-   Reg aCache *cp;
+   aCache *cp;
 
    if (name == (char *) NULL)
       return ((struct hostent *) NULL);
@@ -403,7 +403,7 @@ do_query_number(Link *lp,
 		ResRQ * rptr)
 {
    char        ipbuf[32];
-   Reg u_char *cp;
+   u_char *cp;
 
    cp = (u_char *) &numb->s_addr;
    (void) ircsprintf(ipbuf, "%u.%u.%u.%u.in-addr.arpa.",
@@ -494,8 +494,8 @@ proc_answer(ResRQ * rptr,
 	    char *buf,
 	    char *eob)
 {
-   Reg char   *cp, **alias;
-   Reg struct hent *hp;
+   char   *cp, **alias;
+   struct hent *hp;
    int         class, type, dlen, len, ans = 0, n;
    struct in_addr dr, *adr;
    cp = buf + sizeof(HEADER);
@@ -660,8 +660,8 @@ struct hostent *
 get_res(char *lp)
 {
    static char buf[sizeof(HEADER) + MAXPACKET];
-   Reg HEADER *hptr;
-   Reg ResRQ  *rptr = NULL;
+   HEADER *hptr;
+   ResRQ  *rptr = NULL;
    aCache     *cp = (aCache *) NULL;
    struct sockaddr_in sin;
    int         rc, a, len = sizeof(sin), max;
@@ -826,7 +826,7 @@ getres_err(ResRQ * rptr, char *lp)
 static int
 hash_number(unsigned char *ip)
 {
-   Reg u_int   hashv = 0;
+   u_int   hashv = 0;
 
    /*
     * could use loop but slower 
@@ -842,7 +842,7 @@ hash_number(unsigned char *ip)
 static int
 hash_name(char *name)
 {
-   Reg u_int   hashv = 0;
+   u_int   hashv = 0;
 
    for (; *name && *name != '.'; name++)
       hashv += *name;
@@ -855,8 +855,8 @@ hash_name(char *name)
 static aCache *
 add_to_cache(aCache * ocp)
 {
-Reg aCache *cp = NULL;
-Reg int     hashv;
+aCache *cp = NULL;
+int     hashv;
 
 #ifdef DEBUG
    Debug((DEBUG_INFO,
@@ -913,9 +913,9 @@ Reg int     hashv;
 static void
 update_list(ResRQ * rptr, aCache * cachep)
 {
-Reg aCache **cpp, *cp = cachep;
-Reg char   *s, *t, **base;
-Reg int     i, j;
+aCache **cpp, *cp = cachep;
+char   *s, *t, **base;
+int     i, j;
 int         addrcount;
 
    /*
@@ -1022,9 +1022,9 @@ int         addrcount;
 static aCache *
 find_cache_name(char *name)
 {
-   Reg aCache *cp;
-   Reg char   *s;
-   Reg int     hashv, i;
+   aCache *cp;
+   char   *s;
+   int     hashv, i;
 
    if (name == (char *) NULL)
       return (aCache *) NULL;
@@ -1072,8 +1072,8 @@ find_cache_name(char *name)
 static aCache *
 find_cache_number(ResRQ * rptr, char *numb)
 {
-   Reg aCache *cp;
-   Reg int     hashv, i;
+   aCache *cp;
+   int     hashv, i;
 
 #ifdef	DEBUG
    struct in_addr *ip = (struct in_addr *) numb;
@@ -1125,10 +1125,10 @@ find_cache_number(ResRQ * rptr, char *numb)
 static aCache *
 make_cache(ResRQ * rptr)
 {
-Reg aCache *cp;
-Reg int     i, n;
-Reg struct hostent *hp;
-Reg char   *s, **t;
+aCache *cp;
+int     i, n;
+struct hostent *hp;
+char   *s, **t;
 
    /*
     * * shouldn't happen but it just might...
@@ -1207,10 +1207,10 @@ Reg char   *s, **t;
 static void
 rem_cache(aCache * ocp)
 {
-Reg aCache **cp;
-Reg struct hostent *hp = &ocp->he;
-Reg int     hashv;
-Reg aClient *cptr;
+aCache **cp;
+struct hostent *hp = &ocp->he;
+int     hashv;
+aClient *cptr;
 
 #ifdef	DEBUG
    Debug((DEBUG_DNS, "rem_cache: ocp %#x hp %#x l_n %#x aliases %#x",
@@ -1299,8 +1299,8 @@ Reg aClient *cptr;
 time_t
 expire_cache(time_t now)
 {
-Reg aCache *cp, *cp2;
-Reg time_t  next = 0;
+aCache *cp, *cp2;
+time_t  next = 0;
 
    for (cp = cachetop; cp; cp = cp2) {
       cp2 = cp->list_next;
@@ -1320,7 +1320,7 @@ Reg time_t  next = 0;
 void
 flush_cache()
 {
-Reg aCache *cp;
+aCache *cp;
 
    while ((cp = cachetop))
       rem_cache(cp);
@@ -1332,8 +1332,8 @@ m_dns(aClient *cptr,
       int parc,
       char *parv[])
 {
-   Reg aCache *cp;
-   Reg int     i;
+   aCache *cp;
+   int     i;
 
    if (parv[1] && *parv[1] == 'l') {
       for (cp = cachetop; cp; cp = cp->list_next) {
@@ -1369,9 +1369,9 @@ m_dns(aClient *cptr,
 u_long
 cres_mem(aClient *sptr)
 {
-   register aCache *c = cachetop;
-   register struct hostent *h;
-   register int i;
+   aCache *c = cachetop;
+   struct hostent *h;
+   int i;
    u_long      nm = 0, im = 0, sm = 0, ts = 0;
 
    for (; c; c = c->list_next) {

@@ -311,9 +311,9 @@ int m_squit(aClient *cptr, aClient *sptr, int parc, char *parv[])
 int
 ts_servcount()
 {
-Reg int     i;
-Reg aClient *acptr;
-Reg int     r = 0;
+int     i;
+aClient *acptr;
+int     r = 0;
 
    for (i = 0; i <= highest_fd; i++)
       if ((acptr = local[i]) && IsServer(acptr) && DoesTS(acptr))
@@ -375,7 +375,7 @@ m_svinfo(aClient *cptr, aClient *sptr, int parc, char *parv[])
 int
 m_server(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
-   Reg int     i;
+   int     i;
    char        info[REALLEN + 1], *inpath, *host;
    aClient    *acptr, *bcptr;
    aConfItem  *aconf;
@@ -701,9 +701,9 @@ sendnick_TS(aClient *cptr, aClient *acptr)
 int
 m_server_estab(aClient *cptr)
 {
-   Reg aChannel *chptr;
-   Reg aClient *acptr = NULL;
-   Reg aConfItem *aconf, *bconf;
+   aChannel *chptr;
+   aClient *acptr = NULL;
+   aConfItem *aconf, *bconf;
 
    char       *inpath, *host, *s, *encr;
    int         split, i;
@@ -1588,7 +1588,7 @@ m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
    struct Message 	*mptr;
    aClient    		*acptr;
    char        		 stat = parc > 1 ? parv[1][0] : '\0';
-   Reg int     		 i;
+   int     		 i;
    int         		 doall = 0, wilds = 0;
    char       		*name;
    time_t      		 sincetime;
@@ -1842,7 +1842,7 @@ m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		
 	 case 'u':
 		  {
-			  register time_t now;
+			  time_t now;
 			  
 			  now = timeofday - me.since;
 			  sendto_one(sptr, rpl_str(RPL_STATSUPTIME), me.name, parv[0],
@@ -1910,7 +1910,7 @@ m_users(aClient *cptr, aClient *sptr, int parc, char *parv[])
 int
 m_error(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
-   Reg char   *para;
+   char   *para;
 
    para = (parc > 1 && *parv[1] != '\0') ? parv[1] : "<>";
 
@@ -1940,7 +1940,7 @@ int
 m_help(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
    int         i;
-   register aMotd *helpfile_ptr;
+   aMotd *helpfile_ptr;
 
    static time_t last_used = 0L;
 
@@ -4160,8 +4160,8 @@ m_restart(aClient *cptr, aClient *sptr, int parc, char *parv[])
 int
 m_trace(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
-   Reg int      i;
-   Reg aClient *acptr=NULL;
+   int      i;
+   aClient *acptr=NULL;
    aClass      *cltmp;
    char        *tname;
    int          doall, link_s[MAXCONNECTIONS], link_u[MAXCONNECTIONS];
@@ -4442,7 +4442,7 @@ m_motd(aClient *cptr, aClient *sptr, int parc, char *parv[])
 int 
 send_motd(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
-   register aMotd *temp;
+   aMotd *temp;
    struct tm  *tm;
 
    tm = motd_tm;
@@ -4473,7 +4473,7 @@ send_motd(aClient *cptr, aClient *sptr, int parc, char *parv[])
  */
 void read_motd(char *filename)
 {
-   register aMotd *temp, *last;
+   aMotd *temp, *last;
    struct stat sb;
    char        buffer[MOTDLINELEN], *tmp;
    int         fd;
@@ -4524,7 +4524,7 @@ void read_motd(char *filename)
 #ifdef SHORT_MOTD
 void read_shortmotd(char *filename)
 {
-   register aMotd *temp, *last;
+   aMotd *temp, *last;
    char        buffer[MOTDLINELEN], *tmp;
    int         fd;
 
@@ -4571,7 +4571,7 @@ void read_shortmotd(char *filename)
 void
 read_help(char *filename)
 {
-   register aMotd *temp, *last;
+   aMotd *temp, *last;
    char        buffer[MOTDLINELEN], *tmp;
    int         fd;
 
@@ -4614,8 +4614,8 @@ read_help(char *filename)
 int
 m_close(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
-   Reg aClient *acptr;
-   Reg int     i;
+   aClient *acptr;
+   int     i;
    int         closed = 0;
 
    if (!MyOper(sptr)) 
@@ -4642,8 +4642,8 @@ m_close(aClient *cptr, aClient *sptr, int parc, char *parv[])
 int
 m_die(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
-   Reg aClient *acptr;
-   Reg int     i;
+   aClient *acptr;
+   int     i;
    char       *pass = NULL;
 
    if (!OPCanDie(sptr))
@@ -4953,8 +4953,8 @@ show_watch(aClient *cptr, char *name, int rpl1, int rpl2)
  */
 int   m_watch(aClient *cptr, aClient *sptr, int parc, char *parv[]) 
 {
-	Reg aClient  *acptr;
-	Reg char  *s, *user;
+	aClient  *acptr;
+	char  *s, *user;
 	char *def = "l";
 	if (check_registered(sptr))
 	  return 0;

@@ -58,8 +58,8 @@ get_conf_ping(aConfItem *aconf)
 int
 get_client_class(aClient *acptr)
 {
-   Reg Link   *tmp;
-   Reg aClass *cl;
+   Link   *tmp;
+   aClass *cl;
    int         retc = BAD_CLIENT_CLASS;
 
    if (acptr && !IsMe(acptr) && (acptr->confs))
@@ -166,7 +166,7 @@ find_class(int cclass)
 void
 check_class()
 {
-Reg aClass *cltmp, *cltmp2;
+aClass *cltmp, *cltmp2;
 
    Debug((DEBUG_DEBUG, "Class check:"));
 
@@ -203,7 +203,7 @@ Class       (FirstClass()) = 0;
 void
 report_classes(aClient *sptr)
 {
-   Reg aClass *cltmp;
+   aClass *cltmp;
 
    for (cltmp = FirstClass(); cltmp; cltmp = NextClass(cltmp))
       sendto_one(sptr, rpl_str(RPL_STATSYLINE), me.name, sptr->name,
@@ -214,9 +214,9 @@ report_classes(aClient *sptr)
 long
 get_sendq(aClient *cptr)
 {
-   Reg int     sendq = MAXSENDQLENGTH, retc = BAD_CLIENT_CLASS;
-   Reg Link   *tmp;
-   Reg aClass *cl;
+   int     sendq = MAXSENDQLENGTH, retc = BAD_CLIENT_CLASS;
+   Link   *tmp;
+   aClass *cl;
 
    if (cptr && !IsMe(cptr) && (cptr->confs))
       for (tmp = cptr->confs; tmp; tmp = tmp->next) {

@@ -46,7 +46,7 @@ static int wdmatch(const char *string, const char *wild);
 
 static int _match(char *mask, char *name)
 {
-   Reg u_char *m = (u_char *) mask, *n = (u_char *) name;
+   u_char *m = (u_char *) mask, *n = (u_char *) name;
    char       *ma = mask, *na = name;
    int         wild = 0, q = 0;
 
@@ -114,7 +114,7 @@ int match(char *n, char *m) {
 char       *
 collapse(char *pattern)
 {
-   Reg char   *s = pattern, *s1, *t;
+   char   *s = pattern, *s1, *t;
 
    if (BadPtr(pattern))
       return pattern;
@@ -345,8 +345,8 @@ unsigned char char_atribs[] =
 int
 mycmp(char *s1, char *s2)
 {
-   Reg unsigned char *str1 = (unsigned char *) s1;
-   Reg unsigned char *str2 = (unsigned char *) s2;
+   unsigned char *str1 = (unsigned char *) s1;
+   unsigned char *str2 = (unsigned char *) s2;
 	while (touppertab[*str1] == touppertab[*str2]) {
 		if (*str1 == '\0')
 		  return 0;
@@ -358,8 +358,8 @@ mycmp(char *s1, char *s2)
 int
 myncmp(char *str1, char *str2, int n)
 {
-   Reg unsigned char *s1 = (unsigned char *) str1;
-   Reg unsigned char *s2 = (unsigned char *) str2;
+   unsigned char *s1 = (unsigned char *) str1;
+   unsigned char *s2 = (unsigned char *) str2;
    while (touppertab[*s1] == touppertab[*s2]) {
 		s1++;
 		s2++;

@@ -98,11 +98,6 @@ error You defined too many signal types in setup.h
 # define HAVE_RELIABLE_SIGNALS
 #endif
 
-#ifdef DONT_USE_REGISTER
-# define Reg
-#else
-# define Reg register
-#endif
 #endif				/*
  * DEFS_H_INCLUDED 
 						 */

@@ -66,9 +66,9 @@ res_mkquery(
 				 */
 )
 {
-   register HEADER *hp;
-   register char *cp;
-   register int n;
+   HEADER *hp;
+   char *cp;
+   int n;
    char       *dnptrs[10], **dpp, **lastdnptr;
 
 #ifdef DEBUG

@@ -206,7 +206,7 @@ next_client(aClient *next,	/*
 {				/*
 				 * search string (may include wilds) 
 				 */
-   Reg aClient *tmp = next;
+   aClient *tmp = next;
 
    next = find_client(ch, tmp);
    if (tmp && tmp->prev == next)
@@ -233,7 +233,7 @@ next_client_double(aClient *next,	/*
 {				/*
 				 * search string (may include wilds) 
 				 */
-   Reg aClient *tmp = next;
+   aClient *tmp = next;
 
    next = find_client(ch, tmp);
    if (tmp && tmp->prev == next)
@@ -362,7 +362,7 @@ hunt_server(aClient *cptr,
 static int
 do_nick_name(char *nick)
 {
-   Reg char   *ch;
+   char   *ch;
 
    if (*nick == '-' || isdigit(*nick))	/*
 					 * first character in [0..9-] 
@@ -388,8 +388,8 @@ char       *
 canonize(char *buffer)
 {
    static char cbuf[BUFSIZ];
-   register char *s, *t, *cp = cbuf;
-   register int l = 0;
+   char *s, *t, *cp = cbuf;
+   int l = 0;
    char       *p = NULL, *p2;
 
    *cp = '\0';
@@ -674,9 +674,9 @@ register_user(aClient *cptr,
       /* hostile username checks begin here */
 
 		  {
-			  register char *tmpstr;
+			  char *tmpstr;
 			  u_char      c, cc;
-			  register int lower, upper, special;
+			  int lower, upper, special;
 			  
 			  lower = upper = special = cc = 0;
 			  
@@ -1413,8 +1413,8 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
       (void) add_to_client_hash_table(nick, sptr);
       if (parc == 10)
       {
-         Reg int    *s, flag;
-         Reg char   *m;
+         int    *s, flag;
+         char   *m;
                         
          /* parse the usermodes -orabidoo */
          m = &parv[4][1];
@@ -2672,8 +2672,8 @@ m_whois(aClient *cptr,
 		NULL /* silenced */
    };
 	
-   Reg Link   *lp;
-   Reg anUser *user;
+   Link   *lp;
+   anUser *user;
    aClient    *acptr, *a2cptr;
    aChannel   *chptr;
    char       *nick, *tmp, *name;
@@ -2914,7 +2914,7 @@ m_quit(aClient *cptr,
        int parc,
        char *parv[])
 {
-   register char *reason = (parc > 1 && parv[1]) ? parv[1] : cptr->name;
+   char *reason = (parc > 1 && parv[1]) ? parv[1] : cptr->name;
    char        comment[TOPICLEN + 1];
 
    sptr->flags |= FLAGS_NORMALEX;
@@ -3509,8 +3509,8 @@ m_userhost(aClient *cptr,
 {
    char       *p = NULL;
    aClient    *acptr;
-   Reg char   *s;
-   Reg int     i, len;
+   char   *s;
+   int     i, len;
 
    if (parc > 2)
       (void) m_userhost(cptr, sptr, parc - 1, parv + 1);
@@ -3563,11 +3563,11 @@ m_ison(aClient *cptr,
        int parc,
        char *parv[])
 {
-   Reg aClient *acptr;
-   Reg char   *s, **pav = parv;
+   aClient *acptr;
+   char   *s, **pav = parv;
    char       *p = (char *) NULL;
-   Reg int     len;
-   Reg int     len2;
+   int     len;
+   int     len2;
 
    if (parc < 2) {
       sendto_one(sptr, err_str(ERR_NEEDMOREPARAMS),
@@ -3612,9 +3612,9 @@ m_umode(aClient *cptr,
 	int parc,
 	char *parv[])
 {
-   Reg int     flag;
-   Reg int    *s;
-   Reg char  **p, *m;
+   int     flag;
+   int    *s;
+   char  **p, *m;
    aClient    *acptr;
    int         what, setflags;
    int         badflag = NO;	/*
@@ -3805,8 +3805,8 @@ send_umode(aClient *cptr,
 	   int sendmask,
 	   char *umode_buf)
 {
-   Reg int    *s, flag;
-   Reg char   *m;
+   int    *s, flag;
+   char   *m;
    int         what = MODE_NULL;
 
    /*
@@ -3856,8 +3856,8 @@ send_umode_out(aClient *cptr,
 	       aClient *sptr,
 	       int old)
 {
-   Reg int     i, j;
-   Reg aClient *acptr;
+   int     i, j;
+   aClient *acptr;
    fdlist      fdl = serv_fdlist;
 
    send_umode(NULL, sptr, old, SEND_UMODES, buf);

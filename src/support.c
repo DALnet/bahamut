@@ -51,7 +51,7 @@ char       *pos = *save;	/*
 
 				 * keep last position across calls 
 				 */
-Reg char   *tmp;
+char   *tmp;
 
    if (str)
       pos = str;		/*
@@ -161,8 +161,8 @@ inetntoa(in)
      char       *in;
 {
 static char buf[16];
-Reg u_char *s = (u_char *) in;
-Reg int     a, b, c, d;
+u_char *s = (u_char *) in;
+int     a, b, c, d;
 
    a = (int) *s++;
    b = (int) *s++;
@@ -235,8 +235,8 @@ dgets(int fd, char *buf, int num)
 {
    static char dgbuf[8192];
    static char *head = dgbuf, *tail = dgbuf;
-   register char *s, *t;
-   register int n, nr;
+   char *s, *t;
+   int n, nr;
 
    /*
     * * Sanity checks.

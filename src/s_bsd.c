@@ -360,9 +360,9 @@ int add_listener(aConfItem * aconf)
  */
 void close_listeners()
 {
-   Reg aClient *cptr;
-   Reg int i;
-   Reg aConfItem *aconf;
+   aClient *cptr;
+   int i;
+   aConfItem *aconf;
 
    /* 
     * close all 'extra' listening ports we have and unlink the file
@@ -389,7 +389,7 @@ fd_set *write_set, *read_set;
 /* init_sys */
 void init_sys()
 {
-   Reg int fd;
+   int fd;
 
 #ifdef RLIMIT_FD_MAX
    struct rlimit limit;
@@ -548,8 +548,8 @@ static int check_init(aClient * cptr, char *sockn)
 int check_client(aClient * cptr)
 {
    static char sockname[HOSTLEN + 1];
-   Reg struct hostent *hp = NULL;
-   Reg int i;
+   struct hostent *hp = NULL;
+   int i;
 
    ClearAccess(cptr);
    Debug((DEBUG_DNS, "ch_cl: check access for %s[%s]",
@@ -604,8 +604,8 @@ int check_client(aClient * cptr)
  */
 int check_server_init(aClient * cptr)
 {
-   Reg char *name;
-   Reg aConfItem *c_conf = NULL, *n_conf = NULL;
+   char *name;
+   aConfItem *c_conf = NULL, *n_conf = NULL;
    struct hostent *hp = NULL;
    Link *lp;
 
@@ -639,11 +639,11 @@ int check_server_init(aClient * cptr)
     * to check for servername as hostname.
     */
    if (!cptr->hostp) {
-      Reg aConfItem *aconf;
+      aConfItem *aconf;
 
       aconf = count_cnlines(lp);
       if (aconf) {
-	 Reg char *s;
+	 char *s;
 	 Link lin;
 
 	 /* 
@@ -671,7 +671,7 @@ int check_server(aClient * cptr,
 		 struct hostent *hp,
 		 aConfItem * c_conf, aConfItem * n_conf, int estab)
 {
-   Reg char *name;
+   char *name;
    char abuff[HOSTLEN + USERLEN + 2];
    char sockname[HOSTLEN + 1], fullname[HOSTLEN + 1];
    Link *lp = cptr->confs;
@@ -838,8 +838,8 @@ static int completed_connection(aClient * cptr)
  */
 void close_connection(aClient * cptr)
 {
-   Reg aConfItem *aconf;
-   Reg int i, j;
+   aConfItem *aconf;
+   int i, j;
    int empty = cptr->fd;
 
    if (IsServer(cptr)) {
@@ -1190,7 +1190,7 @@ aClient *add_connection(aClient * cptr, int fd)
     *
     */
    {
-      Reg char *s, *t;
+      char *s, *t;
       struct sockaddr_in addr;
       int len = sizeof(struct sockaddr_in);
 
@@ -1565,8 +1565,8 @@ void accept_connection(aClient *cptr)
 #ifndef USE_POLL
 int read_message(time_t delay, fdlist * listp)
 {                        
-   Reg aClient *cptr;
-   Reg int nfds;
+   aClient *cptr;
+   int nfds;
    struct timeval wait;
 
 # ifndef HAVE_FD_ALLOC
@@ -1576,7 +1576,7 @@ int read_message(time_t delay, fdlist * listp)
    time_t delay2 = delay, now;
    int res, length;
    int auth = 0;
-   register int i, j;
+   int i, j;
    char errmsg[256];
 
 # ifdef USE_FAST_FD_ISSET
@@ -2054,9 +2054,9 @@ int read_message(time_t delay, fdlist * listp)
  */
 int connect_server(aConfItem * aconf, aClient * by, struct hostent *hp)
 {
-   Reg struct sockaddr *svp;
-   Reg aClient *cptr, *c2ptr;
-   Reg char *s;
+   struct sockaddr *svp;
+   aClient *cptr, *c2ptr;
+   char *s;
    int errtmp, len;
 
    Debug((DEBUG_NOTICE, "Connect to %s[%s] @%s",
@@ -2199,7 +2199,7 @@ static struct sockaddr *connect_inet(aConfItem * aconf,
 				     aClient * cptr, int *lenp)
 {
    static struct sockaddr_in server;
-   Reg struct hostent *hp;
+   struct hostent *hp;
 
    /* 
     * Might as well get sockhost from here, the connection is attempted

@@ -837,7 +837,7 @@ main(int argc, char *argv[])
 	
    init_fdlist(&default_fdlist);
 	  {
-		  register int i;
+		  int i;
 		  
 		  for (i = MAXCONNECTIONS + 1; i > 0; i--) 
 		  {
@@ -1403,8 +1403,8 @@ void check_fdlists()
 #endif
 #define FDLISTCHKFREQ  2
 
-register aClient *cptr;
-register int i, j;
+aClient *cptr;
+int i, j;
 
    j = 0;
    for (i = highest_fd; i >= 0; i--) 

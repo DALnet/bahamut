@@ -84,8 +84,8 @@ report_conf_links(aClient *sptr,
 		  int numeric,
 		  char c)
 {
-   register aConfItem *tmp;
-   register int current;
+   aConfItem *tmp;
+   int current;
    char       *host, *pass, *name;
    static char null[] = "<NULL>";
    int         port;
@@ -373,10 +373,10 @@ addto_conf_list(aConfList *my_list,
    char       *field = cmp_field(my_conf);
    unsigned int length = my_list->length;
    aConfEntry *base = my_list->conf_list;
-   register unsigned int lower = 0;
-   register unsigned int upper = length - 1;
-   register unsigned int compare = (length - 1) / 2;
-   register int pos;
+   unsigned int lower = 0;
+   unsigned int upper = length - 1;
+   unsigned int compare = (length - 1) / 2;
+   int pos;
 
    if (!field)
       return;			/*
