@@ -1820,7 +1820,7 @@ int read_message(time_t delay, fdlist * listp)
 		{
 		    MYFD_CLR_READ
 		}
-		ircprintf(errmsg, "Write Error: %s", 
+		ircsprintf(errmsg, "Write Error: %s", 
 			  (cptr->flags & FLAGS_SENDQEX) ?
 			  "SendQ Exceeded" : irc_get_sockerr(cptr));
 		exit_client(cptr, cptr, &me, errmsg);
