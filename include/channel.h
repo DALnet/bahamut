@@ -28,11 +28,7 @@
 #define REALMODEBUFLEN		512    /* max actual modebuf */
 #define NullChn 		((aChannel *) NULL)
 #define ChannelExists(n) 	(find_channel(n, NullChn) != NullChn)
-#ifndef	V28PlusOnly
-#define	MAXMODEPARAMS	6
-#else
 #include "msg.h"
 #define	MAXMODEPARAMS	(MAXPARA-2)
 #define	MAXTSMODEPARAMS	(MAXPARA-3)
-#endif
 #endif
