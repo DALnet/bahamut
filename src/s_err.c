@@ -32,6 +32,7 @@ static char *replies[] =
                                 "MAXCHANNELS=%i MAXBANS=%i NICKLEN=%i "
                                 "TOPICLEN=%i KICKLEN=%i CHANTYPES=&# "
                                 "PREFIX=(ov)@+ NETWORK=DALnet SILENCE=%i "
+                                "CASEMAPPING=ascii "
                                 ":are available on this server",
     /* 006 */	                NULL,
     /* 007 */	                NULL,
