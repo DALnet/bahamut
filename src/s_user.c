@@ -3575,7 +3575,7 @@ m_umode(aClient *cptr,
 		if (IsUmodec(sptr)) ClearUmodec(sptr);
 		if (IsUmodey(sptr)) ClearUmodey(sptr);
 		if (IsUmoded(sptr)) ClearUmoded(sptr);
-		if (IsUmodeb(sptr)) ClearUmoded(sptr);
+		if (IsUmodeb(sptr)) ClearUmodeb(sptr);
 		if (IsUmoden(sptr)) ClearUmoden(sptr);
 		if (IsUmodeh(sptr)) ClearUmodeh(sptr);
 	}
