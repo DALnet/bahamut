@@ -31,8 +31,8 @@
 #define BRANCHSTATUS ALPHA
 
 #define BASENAME "bahamut"
-#define MAJOR 2
-#define MINOR 0
+#define MAJOR 1
+#define MINOR 8
 #define PATCH 0
 
 #define PATCHES "cvs"
