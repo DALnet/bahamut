@@ -1180,6 +1180,7 @@ typedef struct SearchOptions
     char *ip;
     aChannel *channel;
     aClient *server;
+    unsigned int channelflags;
     char umode_plus:1;
     char nick_plus:1;
     char user_plus:1;

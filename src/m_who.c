@@ -199,7 +199,30 @@ int build_searchopts(aClient *sptr, int parc, char *parv[])
 			 sptr->name);
 	      return 0;
 	  }
-	  wsopts.channel=find_channel(parv[args],NullChn);
+	  if(*parv[args] == '@' || *parv[args] == '+')
+	  {
+	      char *cname = parv[args] + 1;
+
+              if(*parv[args] == '@')
+	      {
+		  wsopts.channelflags = CHFL_CHANOP;
+		  if(*cname == '+')
+		  {
+		      wsopts.channelflags |= CHFL_VOICE;
+		      cname++;
+		  }
+	      }
+	      else
+		  wsopts.channelflags = CHFL_VOICE;
+
+	      wsopts.channel=find_channel(cname, NullChn);
+	  }
+	  else
+	  {
+	      wsopts.channelflags = 0;
+	      wsopts.channel=find_channel(parv[args],NullChn);
+	  }
+ 
 	  if(wsopts.channel==NULL)
 	  {
 	      sendto_one(sptr, getreply(ERR_NOSUCHCHANNEL), me.name,
@@ -534,6 +557,9 @@ int m_who(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		ac=cm->cptr;
 		i=0;
 		if(!chk_who(ac,showall))
+		    continue;
+		/* If we have channel flags set, verify they match */
+		if(wsopts.channelflags && ((cm->flags & wsopts.channelflags) == 0))
 		    continue;
 		/* get rid of the pidly stuff first */
 		/* wow, they passed it all, give them the reply...
