@@ -32,8 +32,8 @@
 #define BASENAME "bahamut"
 #define BRANCH "pelennor"
 #define MAJOR 1
-#define MINOR 9
-#define PATCH 0
+#define MINOR 2
+#define PATCH 3
 
 #define PATCH1 \
 \
