@@ -56,6 +56,9 @@ extern void outofmemory(void);  /* defined in list.c */
 extern void reset_sock_opts();
 extern int send_lusers(aClient *,aClient *,int, char **);
 #endif
+#ifdef NO_CHANOPS_WHEN_SPLIT
+extern int server_was_split;
+#endif
 
 static char buf[BUFSIZE], buf2[BUFSIZE];
 int  user_modes[] =
@@ -2525,6 +2528,10 @@ m_pong(aClient *cptr, aClient *sptr, int parc, char *parv[])
             sptr->flags &= ~FLAGS_TOPICBURST;
             sendto_gnotice("from %s: %s has processed topic burst (synched "
                            "to network data).", me.name, sptr->name);
+#ifdef NO_CHANOPS_WHEN_SPLIT
+            if(server_was_split)
+                server_was_split = NO;
+#endif
             if(confopts & FLAGS_HUB)
                 sendto_serv_butone(sptr, ":%s GNOTICE :%s has synched to"
                                " network data.", me.name, sptr->name);

@@ -47,7 +47,6 @@ extern float curSendK, curRecvK;
 
 #ifdef NO_CHANOPS_WHEN_SPLIT
 extern int  server_was_split;
-extern time_t server_split_time;
 #endif
 
 #ifdef ALWAYS_SEND_DURING_SPLIT
@@ -588,10 +587,7 @@ int exit_client(aClient *cptr, aClient *sptr, aClient *from, char *comment)
 	    remove_from_list(&server_list, sptr, NULL);
 #ifdef NO_CHANOPS_WHEN_SPLIT
 	    if (server_list == NULL) 
-	    {
 		server_was_split = YES;
-		server_split_time = NOW;
-	    }
 #endif
 	}
 	sptr->flags |= FLAGS_CLOSING;

@@ -1290,10 +1290,6 @@ extern unsigned long tsdms;
 /* allow 5 minutes after server rejoins the network before allowing
  * chanops new channel */
 
-#ifdef NO_CHANOPS_WHEN_SPLIT
-#define MAX_SERVER_SPLIT_RECOVERY_TIME 5
-#endif
-
 #ifdef FLUD
 struct fludbot 
 {

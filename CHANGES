@@ -34,3 +34,6 @@ Changes for 1.8.0:
 - Moved m_server and m_dkey into m_server.c
 - Moved m_stats into m_stats.c
 - Fixed memory counting routines.  Thanks Quension!
+- Outdated modules.ini and all inifile uses - now a modules {} conf block
+- Updated m_module to allow non-admin viewing of hooks and loaded modules
+- Added module hooks for user and channel targetted privmsgs
