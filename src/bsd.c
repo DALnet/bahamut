@@ -72,14 +72,22 @@ void dummy()
  * *NOTE*  alarm calls have been preserved, so this should work equally 
  *  well whether blocking or non-blocking mode is used...
  */
+#ifdef WRITEV_IOV
+int deliver_it(aClient *cptr, struct iovec *iov, int len)
+#else
 int deliver_it(aClient *cptr, char *str, int len)
+#endif
 {
     int         retval;
     aListener    *lptr = cptr->lstn;    
 #ifdef  DEBUGMODE
     writecalls++;
 #endif
+#ifdef WRITEV_IOV
+    retval = writev(cptr->fd, iov, len);
+#else
     retval = send(cptr->fd, str, len, 0);
+#endif
     /*
      * Convert WOULDBLOCK to a return of "0 bytes moved". This 
      * should occur only if socket was non-blocking. Note, that all is

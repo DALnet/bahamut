@@ -204,7 +204,11 @@ extern int  	  match(char *, char *);
 extern char  	 *collapse(char *);
 
 extern int  	  writecalls, writeb[];
+#ifdef WRITEV_IOV
+extern int        deliver_it(aClient *, struct iovec *, int);
+#else
 extern int  	  deliver_it(aClient *, char *, int);
+#endif
 
 extern inline int check_registered(aClient *);
 extern inline int check_registered_user(aClient *);

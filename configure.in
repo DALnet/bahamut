@@ -7,7 +7,7 @@ AC_INIT
 AC_CONFIG_HEADER(include/setup.h)
 
 PACKAGE=bahamut-release
-VERSION=1.4
+VERSION=1.8
 AC_SUBST(PACKAGE)
 AC_SUBST(VERSION)
 
@@ -23,6 +23,7 @@ AH_TEMPLATE([USE_HOOKMODULES],[Do we support loadable modules])
 AH_TEMPLATE([MAXCONNECTIONS],[Maximum Connections we allow])
 AH_TEMPLATE([NEED_EPOLL_DEFS],[epoll behavior])
 AH_TEMPLATE([AIX],[AIX support])
+AH_TEMPLATE([WRITEV_IOV],[Maxmimum number of iovecs supported by writev()])
 
 dnl Put our options of here for ease of reading.
 
@@ -202,12 +203,21 @@ case "$target" in
         solaris2="yes"
         AC_DEFINE(OS_SOLARIS2)
         AC_DEFINE(OS_SOLARIS)
+        AC_DEFINE_UNQUOTED(WRITEV_IOV, 16)
         ;;
     *-freebsd*)
         freebsd="yes"
+        AC_DEFINE_UNQUOTED(WRITEV_IOV, 32)
+        ;;
+    *-netbsd*)
+        AC_DEFINE_UNQUOTED(WRITEV_IOV, 32)
+        ;;
+    *-openbsd*)
+        AC_DEFINE_UNQUOTED(WRITEV_IOV, 32)
         ;;
     *-linux*)
         linux="yes"
+        AC_DEFINE_UNQUOTED(WRITEV_IOV, 32)
         ;;
     *aix*)
         aix="yes"
@@ -215,6 +225,7 @@ case "$target" in
         ;;
     *-darwin*)
         check_hmodules="no"
+        AC_DEFINE_UNQUOTED(WRITEV_IOV, 32)
         ;;
 esac
 

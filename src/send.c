@@ -302,6 +302,9 @@ int send_queued(aClient *to)
     char       *msg;
     int         len, rlen;
     int more_data = 0; /* the hybrid approach.. */
+#ifdef WRITEV_IOV
+    struct iovec iov[WRITEV_IOV];
+#endif
         
     /*
      * Once socket is marked dead, we cannot start writing to it,
@@ -340,8 +343,13 @@ int send_queued(aClient *to)
    
     while (SBufLength(&to->sendQ) > 0) 
     {
+#ifdef WRITEV_IOV
+        len = sbuf_mapiov(&to->sendQ, iov);
+        if ((rlen = deliver_it(to, iov, len)) < 0)
+#else
         msg = sbuf_map(&to->sendQ, &len);
         if ((rlen = deliver_it(to, msg, len)) < 0)
+#endif
             return dead_link(to, "Write error to %s, closing link (%s)", errno);
         sbuf_delete(&to->sendQ, rlen);
         to->lastsq = (SBufLength(&to->sendQ) >> 10);

@@ -930,7 +930,7 @@ void close_connection(aClient *cptr)
 void reset_sock_opts(int fd, int type)
 {
 #define CLIENT_BUFFER_SIZE  4096
-#define SEND_BUF_SIZE       2048
+#define SEND_BUF_SIZE       2920
     int opt;
 
     opt = type ? rcvbufmax : CLIENT_BUFFER_SIZE;

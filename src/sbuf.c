@@ -449,6 +449,27 @@ char* sbuf_map(SBuf* theBuf, int* theLength)
     return NULL;
 }
 
+#ifdef WRITEV_IOV
+int sbuf_mapiov(SBuf *theBuf, struct iovec *iov)
+{
+    int i = 0;
+    SBufUser *sbu;
+
+    if (theBuf->length == 0)
+        return 0;
+
+    for (sbu = theBuf->head; sbu; sbu = sbu->next)
+    {
+        iov[i].iov_base = sbu->start;
+        iov[i].iov_len = sbu->buf->end - sbu->start;
+        if (++i == WRITEV_IOV)
+            break;
+    }
+
+    return i;
+}
+#endif
+
 int sbuf_flush(SBuf* theBuf)
 {
     SBufUser *tmp;

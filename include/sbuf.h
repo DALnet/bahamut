@@ -58,4 +58,8 @@ extern void         sbuf_count(int* userUsed, int* userTotal, int* userSize,
                                int* largeUsed, int* largeTotal, int* largeSize,
                                int* blockUsed, int* blockSize, int* userblockUsed, int* userblockSize);
 
+#ifdef WRITEV_IOV
+extern int          sbuf_mapiov(SBuf *, struct iovec *);
+#endif
+
 #endif /* #ifndef SBUF_H */

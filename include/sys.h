@@ -71,6 +71,10 @@
 #include <time.h>
 #endif
 
+#ifdef WRITEV_IOV
+#include <sys/uio.h>
+#endif
+
 #define MyFree(x)       do { if (x) free(x); (x) = NULL; } while(0)
 
 extern void dummy();

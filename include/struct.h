@@ -30,6 +30,8 @@
 #error Incorrect config.h for this revision of ircd.
 #endif
 
+#include "sys.h"
+
 #include <stdio.h>
 #include <sys/types.h>
 #include <netinet/in.h>
