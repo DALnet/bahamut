@@ -42,19 +42,6 @@
 
 #define	RES_TIMEOUT	5	/* min. seconds between retries */
 
-struct state {
-    int         retrans;		/* retransmition time interval */
-    int         retry;		        /* number of times to retransmit */
-    long        options;		/* option flags - see below. */
-    int         nscount;		/* number of name servers */
-    struct sockaddr_in nsaddr_list[MAXNS];	/* address of name server */
-#define	nsaddr	nsaddr_list[0]	        /* for backward compatibility */
-    unsigned short id;		        /* current packet id */
-    char        defdname[MAXDNAME];	/* default domain */
-    char       *dnsrch[MAXDNSRCH + 1];	/* components of domain to search */
-    unsigned short order[MAXSERVICES + 1];	/* search service order */
-};
-
 #define RES_SERVICE_NONE	0
 #define RES_SERVICE_BIND	1
 #define RES_SERVICE_LOCAL	2
@@ -72,7 +59,53 @@ struct state {
 
 #define RES_DEFAULT	(RES_RECURSE | RES_DEFNAMES | RES_DNSRCH)
 
+#if ((__GNU_LIBRARY__ == 6) && (__GLIBC__ >= 2) && (__GLIBC_MINOR__ >= 3))
+# define MAXRESOLVSORT		10	/* number of net to sort on */
+
+struct __res_state {
+	int	retrans;	 	/* retransmition time interval */
+	int	retry;			/* number of times to retransmit */
+	u_long	options;		/* option flags - see below. */
+	int	nscount;		/* number of name servers */
+	struct sockaddr_in
+		nsaddr_list[MAXNS];	/* address of name server */
+# define nsaddr	nsaddr_list[0]		/* for backward compatibility */
+	u_short	id;			/* current message id */
+	char	*dnsrch[MAXDNSRCH+1];	/* components of domain to search */
+	char	defdname[256];		/* default domain (deprecated) */
+	u_long	pfcode;			/* RES_PRF_ flags - see below. */
+	unsigned ndots:4;		/* threshold for initial abs. query */
+	unsigned nsort:4;		/* number of elements in sort_list[] */
+	char	unused[3];
+	struct {
+		struct in_addr	addr;
+		u_int32_t	mask;
+	} sort_list[MAXRESOLVSORT];
+};
+
+typedef struct __res_state *res_state;
+
+extern struct __res_state *__res_state(void) __attribute__ ((__const__));
+#define _res (*__res_state())
+
+#else
+
+struct state {
+    int         retrans;		/* retransmition time interval */
+    int         retry;		        /* number of times to retransmit */
+    long        options;		/* option flags - see below. */
+    int         nscount;		/* number of name servers */
+    struct sockaddr_in nsaddr_list[MAXNS];	/* address of name server */
+#define	nsaddr	nsaddr_list[0]	        /* for backward compatibility */
+    unsigned short id;		        /* current packet id */
+    char        defdname[MAXDNAME];	/* default domain */
+    char       *dnsrch[MAXDNSRCH + 1];	/* components of domain to search */
+    unsigned short order[MAXSERVICES + 1];	/* search service order */
+};
+
 extern struct state _res;
+#endif
+
 extern char *p_cdname(), *p_rr(), *p_type(), *p_class(), *p_time();
 
 #if ((__GNU_LIBRARY__ == 6) && (__GLIBC__ >=2) && (__GLIBC_MINOR__ >= 2))
