@@ -592,7 +592,10 @@ m_server(aClient *cptr, aClient *sptr, int parc, char *parv[])
       acptr->serv->up = find_or_add(parv[0]);
 		
       SetServer(acptr);
-      if ((find_uline(cptr->confs, acptr->name))) 
+
+      /* if this server is behind a U-lined server, make it U-lined as well. - lucas */
+
+      if (IsULine(sptr) || (find_uline(cptr->confs, acptr->name))) 
       {
 	  acptr->flags |= FLAGS_ULINE;
 	  sendto_ops("%s introducing U:lined server %s", cptr->name, acptr->name);
@@ -637,14 +640,6 @@ m_server(aClient *cptr, aClient *sptr, int parc, char *parv[])
     * * Reject a direct nonTS server connection if we're TS_ONLY
     * -orabidoo
     */
-   /* send routing notice, this should never happen anymore */
-   if (!DoesTS(cptr)) 
-   {
-      sendto_gnotice("from %s: Warning: %s linked, non-TS server",
-		me.name, get_client_name(cptr, TRUE));
-      sendto_serv_butone(cptr, ":%s GNOTICE :Warning: %s linked, non-TS server",
-		me.name, get_client_name(cptr, TRUE));
-   }
 	
    strncpyzt(cptr->name, host, sizeof(cptr->name));
    strncpyzt(cptr->info, info[0] ? info : me.name, REALLEN);
@@ -761,6 +756,15 @@ m_server_estab(aClient *cptr)
 	 return exit_client(cptr, cptr, cptr, "Bad User");
       }
       *s = '@';
+   }
+
+   /* send routing notice, this should never happen anymore */
+   if (!DoesTS(cptr)) 
+   {
+      sendto_gnotice("from %s: Warning: %s linked, non-TS server",
+		me.name, get_client_name(cptr, TRUE));
+      sendto_serv_butone(cptr, ":%s GNOTICE :Warning: %s linked, non-TS server",
+		me.name, get_client_name(cptr, TRUE));
    }
 
    sendto_one(cptr, "SVINFO %d %d 0 :%ld", TS_CURRENT, TS_MIN, (ts_val) timeofday);
