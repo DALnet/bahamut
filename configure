@@ -5650,16 +5650,17 @@ if test `eval echo '${'$as_ac_var'}'` = yes; then
   cat >>confdefs.h <<_ACEOF
 #define `echo "HAVE_$ac_func" | $as_tr_cpp` 1
 _ACEOF
-
+ set_hmodules="enabled"
 fi
 done
 
-    cat >>confdefs.h <<\_ACEOF
+    if test "$set_hmodules" = "enabled"; then
+        cat >>confdefs.h <<\_ACEOF
 #define USE_HOOKMODULES 1
 _ACEOF
 
-    set_hmodules="enabled"
-    MOD_LIBS="-Wl,-export-dynamic"
+        MOD_LIBS="-Wl,-export-dynamic"
+    fi
 fi
 
 echo "$as_me:$LINENO: checking for sys_errlist declaration" >&5
@@ -7187,7 +7188,7 @@ _ACEOF
 fi
 
 if test $prefix = NONE; then
-    prefix=$HOME/ircd
+    prefix=${HOME}/ircd
 fi
 
 INSTALL_DIR="${prefix}"

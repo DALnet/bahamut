@@ -112,16 +112,16 @@ int inet_aton(const u_char *cp, struct in_addr *addr)
 	}
 	while ((c = *cp) != '\0')
 	{
-	    if (isascii(c) && isdigit(c))
+	    if (IsAscii(c) && IsDigit(c))
 	    {
 		val = (val * base) + (c - '0');
 		cp++;
 		continue;
 	    }
-	    if (base == 16 && isascii(c) && isxdigit(c))
+	    if (base == 16 && IsAscii(c) && IsXDigit(c))
 	    {
 		val = (val << 4) +
-		    (c + 10 - (islower(c) ? 'a' : 'A'));
+		    (c + 10 - (IsLower(c) ? 'a' : 'A'));
 		cp++;
 		continue;
 	    }
@@ -141,7 +141,7 @@ int inet_aton(const u_char *cp, struct in_addr *addr)
 	    break;
     }
     /* Check for trailing characters. */
-    if (*cp && (!isascii(*cp) || !isspace(*cp)))
+    if (*cp && (!IsAscii(*cp) || !IsSpace(*cp)))
 	return (0);
     /* Concoct the address according to the number of parts specified. */
     n = pp - parts + 1;

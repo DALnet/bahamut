@@ -161,7 +161,7 @@ static char * check_string(char *s)
         return star;
     
     for (; *s; s++)
-        if (isspace(*s))
+        if (IsSpace(*s))
         {
             *s = '\0';
             break;
@@ -1110,7 +1110,7 @@ int m_mode(aClient *cptr, aClient *sptr, int parc, char *parv[])
         return 0;
     }
 
-    if(IsServer(cptr) && isdigit(parv[2][0]))
+    if(IsServer(cptr) && IsDigit(parv[2][0]))
     {
         ts_val modets = atol(parv[2]);
         if(modets != 0 && (modets > chptr->channelts))
@@ -3723,7 +3723,7 @@ int m_sjoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
     if(parc == 3 && IsPerson(sptr))
         clientjoin = 1;
     else 
-        if(isdigit(parv[2][0]))
+        if(IsDigit(parv[2][0]))
         {
             int i;
             

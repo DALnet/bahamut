@@ -244,7 +244,7 @@ void read_authports(aClient *cptr)
             break;
          s++;
 
-         while(isspace(*s))
+         while(IsSpace(*s))
             s++;
 
          reply = s;
@@ -256,7 +256,7 @@ void read_authports(aClient *cptr)
             break;
          s++;
 
-         while(isspace(*s))
+         while(IsSpace(*s))
             s++;
 
          os = s;
@@ -266,7 +266,7 @@ void read_authports(aClient *cptr)
             break;
          s++;
 
-         while(isspace(*s))
+         while(IsSpace(*s))
             s++;
 
          userid = tmp = usern;
@@ -276,7 +276,7 @@ void read_authports(aClient *cptr)
             if(*s == '@')
                break;
 
-            if(!isspace(*s) && *s != ':')
+            if(!IsSpace(*s) && *s != ':')
             {
                *tmp++ = *s;
                userncnt--;

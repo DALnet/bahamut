@@ -69,7 +69,7 @@ unsigned hash_nick_name(char *nname)
 
     while (*nname)
     {
-	lower = tolower(*nname);
+	lower = ToLower(*nname);
 	hash = (hash << 1) + lower;
 	hash2 = (hash2 >> 1) + lower;
 	nname++;
@@ -97,7 +97,7 @@ int hash_channel_name(char *name)
 
     while (*hname && --i)
     {
-	lower = tolower(*hname);
+	lower = ToLower(*hname);
 	hash = (hash << 1) + lower;
 	hash2 = (hash2 >> 1) + lower;
 	hname++;
@@ -116,7 +116,7 @@ unsigned int hash_whowas_name(char *name)
 
     while (*nname)
     {
-	lower = tolower(*nname);
+	lower = ToLower(*nname);
 	hash = (hash << 1) + lower;
 	hash2 = (hash2 >> 1) + lower;
 	nname++;

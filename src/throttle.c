@@ -70,7 +70,7 @@ typedef struct hash_table_t
     size_t  keylen;         /* the length of the key. if 0, assume key
                                is a NULL terminated string */
 
-#define HASH_FL_NOCASE 0x1      /* ignore case (tolower before hash) */
+#define HASH_FL_NOCASE 0x1      /* ignore case (ToLower before hash) */
 #define HASH_FL_STRING 0x2      /* key is a nul-terminated string, treat len
                                    as a maximum length to hash */
     int     flags;
@@ -206,7 +206,7 @@ hash_get_key_hash(hash_table *table, void *key, size_t offset)
     /* I borrowed this algorithm from perl5.  Kudos to Larry Wall & co. */
     if (table->flags & HASH_FL_NOCASE)
         while (len--)
-            hash = hash * 33 + tolower(*rkey++);
+            hash = hash * 33 + ToLower(*rkey++);
     else
         while (len--)
             hash = hash * 33 + *rkey++;

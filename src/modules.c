@@ -67,6 +67,11 @@ init_modules()
 
 #include <dlfcn.h>
 
+/* XXX hack.  check on RTLD_NOW later. */
+#ifndef RLTD_NOW
+#define RLTD_NOW 0
+#endif
+
 DLink *module_list = NULL;
 
 typedef struct loaded_module 

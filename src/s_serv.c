@@ -1480,10 +1480,10 @@ m_set(aClient *cptr, aClient *sptr, int parc, char *parv[])
            if (parc > 3) {
                if (!strcasecmp(parv[2], "ENABLE"))  {
                   changed = "ENABLE";
-                  if (tolower(*parv[3]) == 'y' || !strcasecmp(parv[3], "on")) {
+                  if (ToLower(*parv[3]) == 'y' || !strcasecmp(parv[3], "on")) {
                      throttle_enable = 1;
                      to = "ON";
-                  } else if (tolower(*parv[3]) == 'n' ||
+                  } else if (ToLower(*parv[3]) == 'n' ||
                            !strcasecmp(parv[3], "off")) {
                      throttle_enable = 0;
                      to = "OFF";
@@ -1621,7 +1621,7 @@ static char *cluster(char *hostname)
                 zap_point = ipp;
             ipp++;
         }
-        else if (!isdigit(*ipp)) 
+        else if (!IsDigit(*ipp)) 
         {
             is_ip_number = NO;
             break;
@@ -2036,7 +2036,7 @@ static int isnumber(char *p)
 
     while (*p) 
     {
-        if (isdigit(*p)) 
+        if (IsDigit(*p)) 
         {
             result *= 10;
             result += ((*p) & 0xF);
@@ -3314,7 +3314,7 @@ m_watch(aClient *cptr, aClient *sptr, int parc, char *parv[])
                  * But actually, only show them offline if its a capital
                  * 'L' (full list wanted).
                  */
-                else if (isupper(*s))
+                else if (IsUpper(*s))
                     sendto_one(sptr, rpl_str(RPL_NOWOFF), me.name, parv[0],
                                lp->value.wptr->nick, "*", "*",
                                lp->value.wptr->lasttime);

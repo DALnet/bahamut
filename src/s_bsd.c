@@ -1796,7 +1796,7 @@ connect_inet(aConnect *aconn, aClient *cptr, int *lenp)
      * being present instead. If we dont know it, then the connect
      * fails.
      */
-    if (isdigit(*aconn->host) && (aconn->ipnum.s_addr == -1))
+    if (IsDigit(*aconn->host) && (aconn->ipnum.s_addr == -1))
         aconn->ipnum.s_addr = inet_addr(aconn->host);
     if (aconn->ipnum.s_addr == -1)
     {

@@ -203,10 +203,11 @@ set_hmodules="disabled"
 if test "$check_hmodules" = "yes"; then
     AC_CHECK_LIB(dl, dlopen)
     AC_CHECK_HEADER(dlfcn.h)
-    AC_CHECK_FUNCS(dlopen dlsym)
-    AC_DEFINE(USE_HOOKMODULES)
-    set_hmodules="enabled"
-    MOD_LIBS="-Wl,-export-dynamic"
+    AC_CHECK_FUNCS(dlopen dlsym, [set_hmodules="enabled"])
+    if test "$set_hmodules" = "enabled"; then
+        AC_DEFINE(USE_HOOKMODULES)
+        MOD_LIBS="-Wl,-export-dynamic"
+    fi
 fi
 
 dnl Check for sys_errlist

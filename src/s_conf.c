@@ -2177,7 +2177,7 @@ static int lookup_confhost(aConnect *aconn)
      * Do name lookup now on hostnames given and store the ip
      * numbers in conf structure.
      */
-    if (!isalpha(*s) && !isdigit(*s)) 
+    if (!IsAlpha(*s) && !IsDigit(*s)) 
     {
     if (aconn->ipnum.s_addr == -1)
         memset((char *) &aconn->ipnum, '\0', sizeof(struct in_addr));
@@ -2193,7 +2193,7 @@ static int lookup_confhost(aConnect *aconn)
     ln.value.aconn = aconn;
     ln.flags = ASYNC_CONF;
     
-    if (isdigit(*s))
+    if (IsDigit(*s))
     aconn->ipnum.s_addr = inet_addr(s);
     else if ((hp = gethost_byname(s, &ln)))
     memcpy((char *) &(aconn->ipnum), hp->h_addr,

@@ -510,7 +510,7 @@ register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
         bad_dns = NO;
         while (*p) 
         {
-            if (!isalnum(*p)) 
+            if (!IsAlnum(*p)) 
             {
 #ifdef RFC1035_ANAL
                 if ((*p != '-') && (*p != '.'))
@@ -676,7 +676,7 @@ register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
              */
             cc = (user->username[0] == '~' ? user->username[1] :
                   user->username[0]);
-            if ((!isalnum(cc) && !strchr(" -_.", cc)) || (cc > 127))
+            if ((!IsAlnum(cc) && !strchr(" -_.", cc)) || (cc > 127))
                 special++;
 #else
             tmpstr = (user->username[0] == '~' ? &user->username[1] :
@@ -686,17 +686,17 @@ register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
             while (*tmpstr) 
             {
                 c = *(tmpstr++);
-                if (islower(c)) 
+                if (IsLower(c)) 
                 {
                     lower++;
                     continue;
                 }
-                if (isupper(c)) 
+                if (IsUpper(c)) 
                 {
                     upper++;
                     continue;
                 }
-                if ((!isalnum(c) && !strchr(" -_.", c)) || (c > 127) || (c<32))
+                if ((!IsAlnum(c) && !strchr(" -_.", c)) || (c > 127) || (c<32))
                     special++;
             }
             if (special) 
@@ -722,7 +722,7 @@ register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
                  */
                 cc = (username[0] == '~' ? username[1] : username[0]);
                                   
-                if ((!isalnum(cc) && !strchr(" -_.", cc)) || (cc > 127))
+                if ((!IsAlnum(cc) && !strchr(" -_.", cc)) || (cc > 127))
                     special++;
 #else
                 tmpstr = (username[0] == '~' ? &username[1] : username);
@@ -730,17 +730,17 @@ register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
                 while (*tmpstr) 
                 {
                     c = *(tmpstr++);
-                    if (islower(c)) 
+                    if (IsLower(c)) 
                     {
                         lower++;
                         continue;
                     }
-                    if (isupper(c)) 
+                    if (IsUpper(c)) 
                     {
                         upper++;
                         continue;
                     }
-                    if ((!isalnum(c) && !strchr(" -_.", c)) || (c > 127))
+                    if ((!IsAlnum(c) && !strchr(" -_.", c)) || (c > 127))
                         special++;
                 }
 #ifdef NO_MIXED_CASE
@@ -771,7 +771,7 @@ register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
          * -Dianora
          */
                 
-        if ((user->username[1] == '\0') && !isalpha(user->username[0])) 
+        if ((user->username[1] == '\0') && !IsAlpha(user->username[0])) 
         {
             sendto_realops_lev(REJ_LEV, "Invalid username: %s (%s@%s)",
                                nick, user->username, user->host);

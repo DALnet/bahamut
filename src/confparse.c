@@ -566,7 +566,7 @@ parse_block(tConf *block, char *cur, FILE *file, int *lnum)
             var2 = var;
             while(*var) 
             {
-                if(isdigit(*var))
+                if(IsDigit(*var))
                     var++;
                 else
                 {
