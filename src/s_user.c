@@ -779,13 +779,6 @@ int register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
 #endif
 	}
 		
-	sendto_realops_lev(CCONN_LEV,
-			   "Client connecting: %s (%s@%s) [%s] {%d}",
-			   nick,
-			   user->username,
-			   user->host,
-			   sptr->hostip,
-			   get_client_class(sptr));
 	if ((++Count.local) > Count.max_loc) 
 	{
 	    Count.max_loc = Count.local;
@@ -918,6 +911,15 @@ int register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
 		    sptr->passwd[0] = '\0';
 	    } while(0);
 #endif
+
+	sendto_realops_lev(CCONN_LEV,
+			   "Client connecting: %s (%s@%s) [%s] {%d}",
+			   nick,
+			   user->username,
+			   user->host,
+			   sptr->hostip,
+			   get_client_class(sptr));
+
 	(void) send_lusers(sptr, sptr, 1, parv);
 		
 	sendto_one(sptr,
