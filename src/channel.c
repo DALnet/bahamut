@@ -929,7 +929,7 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
             break;
 
 	case 'O':
-	    if (!IsUlined(sptr) && (level<1 || !IsOper(sptr)))
+	    if (!IsULine(sptr) && (level<1 || !IsOper(sptr)))
 	    {
 		errors |= SM_ERR_NOTOPER;
 		break;
