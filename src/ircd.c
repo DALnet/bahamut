@@ -32,6 +32,9 @@
 #include <pwd.h>
 #include <signal.h>
 #include <fcntl.h>
+#if defined PROFILING && defined __GLIBC__ && (__GLIBC__ >= 2)
+#include <sys/gmon.h>
+#endif
 #include "inet.h"
 #include "h.h"
 #include "patchlevel.h"
@@ -143,29 +146,20 @@ time_t      nextping = 1;	   /* same as above for check_pings() */
 time_t      nextdnscheck = 0;	   /* next time to poll dns to force timeout */
 time_t      nextexpire = 1;	   /* next expire run on the dns cache */
 
-#ifdef	PROFIL
+#if defined PROFILING && defined __GLIBC__ && (__GLIBC__ >= 2)
+extern void _start, etext;
 
-extern      etext();
-
-VOIDSIG s_monitor() 
+VOIDSIG s_dumpprof()
 {
-    static int  mon = 0;
-# ifdef	POSIX_SIGNALS
-    struct sigaction act;
-# endif
-    (void) moncontrol(mon);
-    mon = 1 - mon;
-# ifdef	POSIX_SIGNALS
-    act.sa_handler = s_rehash;
-    act.sa_flags = 0;
-    (void) sigemptyset(&act.sa_mask);
-    (void) sigaddset(&act.sa_mask, SIGUSR1);
-    (void) sigaction(SIGUSR1, &act, NULL);
-# else
-    (void) signal(SIGUSR1, s_monitor);
-# endif
+    char buf[32];
+
+    sprintf(buf, "gmon.%d", (int)time(NULL));
+    setenv("GMON_OUT_PREFIX", buf, 1);
+    _mcleanup();
+    __monstartup ((u_long) &_start, (u_long) &etext);
+    setenv("GMON_OUT_PREFIX", "gmon.auto", 1);
 }
-#endif /* PROFIL */
+#endif
 
 VOIDSIG s_die() 
 {
@@ -686,10 +680,10 @@ int main(int argc, char *argv[])
     sbrk0 = (char *) sbrk((size_t) 0);
     uid = getuid();
     euid = geteuid();
-#ifdef	PROFIL
-    (void) monstartup(0, etext);
-    (void) moncontrol(1);
-    (void) signal(SIGUSR1, s_monitor);
+
+#if defined PROFILING && defined __GLIBC__ && (__GLIBC__ >= 2)
+    setenv("GMON_OUT_PREFIX", "gmon.out", 1);
+    (void) signal(SIGUSR1, s_dumpprof);
 #endif
 	
     myargv = argv;

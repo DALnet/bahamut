@@ -1,8 +1,12 @@
-Outstanding bugs in 1.4.23
+Outstanding bugs
 - "Sux mode," where a server<->server connection can take a long time to
   establish if one or both sides filters ident connections
 - Source address support on /connect may not work under some conditions
 - Temp kline/akill matching on user connections is very slow with many klines
+
+Changes for 1.4.30
+- Updated 'make profile'; now on glibc2 systems, you can kill -USR1 the
+  process and get a current profile dump, and restart profiling
 
 Changes for 1.4.29
 - Umode +R to not allow msgs from non registered nicks
