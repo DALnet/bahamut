@@ -604,7 +604,8 @@ proc_answer(ResRQ * rptr,
    char   *cp, **alias, *acc;
    struct hent *hp;
    int class, type, dlen, len, ans = 0, n, origtype = rptr->type;
-   struct in_addr ptrrep, dr, *adr;
+   int adr = 0;
+   struct in_addr ptrrep, dr;
 
    num_acc_answers = 0;
 
@@ -617,9 +618,10 @@ proc_answer(ResRQ * rptr,
 
    cp = buf + sizeof(HEADER);
    hp = (struct hent *) &(rptr->he);
-   adr = &hp->h_addr;
-   while (adr->s_addr)
+
+   while (hp->h_addr_list[adr].s_addr)
       adr++;
+
    alias = hp->h_aliases;
    while (*alias)
       alias++;
@@ -770,14 +772,20 @@ proc_answer(ResRQ * rptr,
 	       Debug((DEBUG_DNS, "Bad IP length (%d) returned for %s", dlen, hostbuf));
 	       return PROCANSWER_MALICIOUS;						
 	    }
-	    memcpy((char *)&dr, cp, sizeof(dr));
-	    adr->s_addr = dr.s_addr;
-	    Debug((DEBUG_INFO, "got ip # %s for %s",
-		   inetntoa((char *) adr), hostbuf));
+
+            if(adr < MAXADDRS)
+            {
+               /* ensure we never go over the bounds of our adr array */
+               memcpy((char *)&dr, cp, sizeof(dr));
+               hp->h_addr_list[adr].s_addr = dr.s_addr;
+               Debug((DEBUG_INFO, "got ip # %s for %s",
+		   inetntoa((char *) &hp->h_addr_list[adr]), hostbuf));
 
 #ifdef DNS_ANS_DEBUG_MAX
-            sendto_realops_lev(DEBUG_LEV, "%s A %s", dhostbuf, inetntoa((char *) adr));
+               sendto_realops_lev(DEBUG_LEV, "%s A %s", dhostbuf, inetntoa((char *) &hp->h_addr_list[adr]));
 #endif
+               adr++;
+            }
 
 	    if (!hp->h_name) 
             {
@@ -785,7 +793,6 @@ proc_answer(ResRQ * rptr,
 	       strcpy(hp->h_name, hostbuf);
 	    }
 	    ans++;
-	    adr++;
 	    cp += dlen;
 	    rptr->type = type;
 	    break;
