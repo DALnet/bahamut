@@ -508,7 +508,7 @@ m_server(aClient *cptr, aClient *sptr, int parc, char *parv[])
       strcpy(nbuf, get_client_name(bcptr, HIDEME));
       sendto_gnotice("from %s: Link %s cancelled, server %s reintroduced by %s",
 		me.name, nbuf, host, get_client_name(cptr, HIDEME));
-      sendto_serv_butone(&me, ":%s GNOTICE :Link %s cancelled, server %s reintroduced by %s",
+      sendto_serv_butone(cptr, ":%s GNOTICE :Link %s cancelled, server %s reintroduced by %s",
 		me.name, nbuf, host, get_client_name(cptr, HIDEME));
       (void) exit_client(bcptr, bcptr, &me, "Server Exists");
    }
@@ -533,7 +533,7 @@ m_server(aClient *cptr, aClient *sptr, int parc, char *parv[])
       strcpy(nbuf, get_client_name(bcptr, HIDEME));
       sendto_gnotice("from %s: Link %s cancelled, servername/nick collision",
                 me.name, nbuf);
-      sendto_serv_butone(&me, ":%s GNOTICE :Link %s cancelled, servername/nick collision",
+      sendto_serv_butone(cptr, ":%s GNOTICE :Link %s cancelled, servername/nick collision",
                 me.name, nbuf);
       return exit_client(cptr, cptr, cptr, "Nick as Server");
    }
@@ -573,7 +573,7 @@ m_server(aClient *cptr, aClient *sptr, int parc, char *parv[])
           sendto_gnotice("from %s: Non-Hub link %s introduced %s(%s).",
 		me.name, get_client_name(cptr, HIDEME), host,
 		aconf ? (aconf->host ? aconf->host : "*") : "!");
-	  sendto_serv_butone(&me, ":%s GNOTICE :Non-Hub link %s introduced %s(%s).",
+	  sendto_serv_butone(cptr, ":%s GNOTICE :Non-Hub link %s introduced %s(%s).",
 		me.name, get_client_name(cptr, HIDEME), host,
 		aconf ? (aconf->host ? aconf->host : "*") : "!");
 	  sendto_one(cptr, "ERROR :%s has no H: line for %s.",
@@ -614,7 +614,7 @@ m_server(aClient *cptr, aClient *sptr, int parc, char *parv[])
    		{
 			sendto_gnotice("from %s: Lost N-line for %s on %s. Closing",
 				me.name, get_client_name(cptr, HIDEME), host);
-			sendto_serv_butone(&me, "%s GNOTICE :Lost N-line for %s on %s. Closing",
+			sendto_serv_butone(cptr, ":%s GNOTICE :Lost N-line for %s on %s. Closing",
 				me.name, get_client_name(cptr, HIDEME), host);
 			return exit_client(cptr, cptr, cptr, "Lost N line");
 		}
@@ -642,7 +642,7 @@ m_server(aClient *cptr, aClient *sptr, int parc, char *parv[])
    {
       sendto_gnotice("from %s: Warning: %s linked, non-TS server",
 		me.name, get_client_name(cptr, HIDEME));
-      sendto_serv_butone(&me, ":%s GNOTICE :Warning: %s linked, non-TS server",
+      sendto_serv_butone(cptr, ":%s GNOTICE :Warning: %s linked, non-TS server",
 		me.name, get_client_name(cptr, HIDEME));
    }
 	
@@ -807,7 +807,9 @@ m_server_estab(aClient *cptr)
 
    sendto_gnotice("Link with %s established: %s %s", inpath, IsULine(cptr) ? "ULined" : "Normal", 
 		DoesTS(cptr) ? "TS link" : "Non-TS link!"); 
-   sendto_serv_butone(&me, ":%s GNOTICE :Link with %s established: %s",
+   /* dont send to remove server connection has just been established
+    * with, they should send the notice to their servers. -Epi */
+   sendto_serv_butone(cptr, ":%s GNOTICE :Link with %s established: %s",
 		me.name, inpath, DoesTS(cptr) ? "TS link" : "Non-TS link!");
    (void) add_to_client_hash_table(cptr->name, cptr);
 
