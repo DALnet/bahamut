@@ -26,7 +26,7 @@ extern aClient *ac_next(aClient *);
 extern aClient *ac_prev(aClient *);
 extern anUser *ac_user(aClient *);
 extern aServer *ac_server(aClient *);
-extern aWhoWas *ac_whowas(aClient *);
+extern aWhowas *ac_whowas(aClient *);
 extern aClient *ac_from(aClient *);
 extern aClient *ac_uplink(aClient *);
 extern time_t ac_lasttime(aClient *);
