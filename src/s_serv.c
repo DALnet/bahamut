@@ -295,7 +295,7 @@ int m_squit(aClient *cptr, aClient *sptr, int parc, char *parv[])
    {
       sendto_ops_lev(DEBUG_LEV, "Exiting server %s due to non-unconnect server %s [%s]",
          acptr->name, acptr->from->name, comment);
-      return exit_client(cptr, acptr, sptr, comment);
+      return exit_client(&me, acptr, sptr, comment);
    }
 
    sendto_ops_lev(DEBUG_LEV, "Passing along SQUIT for %s by %s [%s]",
