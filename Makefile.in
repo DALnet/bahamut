@@ -22,9 +22,9 @@ RM=@RM@
 # Any extra compile options here:
 XFLAGS=
 # file descriptor size limit
-FDLIMIT=@DFDSS@
+FDLIMIT=1024
 # Default CFLAGS
-CFLAGS= -Wall -g -O2 ${FDLIMIT} ${XFLAGS}
+CFLAGS= -Wall -g -O2 -DFD_SETSIZE=${FDLIMIT} ${XFLAGS}
 #
 # What I used on FreeBSD 2.1.7 with kernel compiled for 4096 descriptors
 # the -D"FD_SETSIZE=4096" is only needed if sys/types.h has not been updated

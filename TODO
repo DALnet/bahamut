@@ -1,4 +1,13 @@
 This will be the TODO list.
 
--Implement +bsilent
--Fix dbuf stablilty issues
+(More like an ideas list)
+
+Epi {
+- Completely remove aClient crap - separate structs for users and servers
+- Implement a second server<>server pipe for oper communications (GLOBOPS,
+	CHATOPS, GNOTICE ect.. even STATS requests?)
+- Fixe the damn parser to use something more effiecient (hash?)
+- Implement TOKEN
+- rework the socket engine
+} thoughts?;
+
