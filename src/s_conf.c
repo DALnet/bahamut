@@ -480,7 +480,7 @@ int         i;
    {
       if (local[i] && MyClient(local[i])) 
       {
-	 if (local[i]->fd >= 0) 
+	 if ((local[i]->fd >= 0) && (local[i]->flags & FLAGS_IPHASH)) 
 	 {
 	    ip_hash_ptr = find_or_add_ip(local[i]->ip.s_addr);
 	    ip_hash_ptr->count++;
