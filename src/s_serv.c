@@ -1768,7 +1768,9 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	      (stat=='l') || (stat=='L')) && !MyConnect(sptr))
 	    return 0;
 
-	sptr->since+=5;
+	/* if they're my user, penalize them. */
+	if (MyConnect(sptr))
+  	   sptr->since += 5;
 		
 	if ((last_used + MOTD_WAIT) > NOW)
 	    return 0;
