@@ -316,10 +316,11 @@ m_squit(aClient *cptr,
     * *  Notify all opers, if my local link is remotely squitted *  In
     * df465, there's a sendto_ops() and a sendto_serv_butone() *  ..
     * make it so. -mjs
+    * notify everyone about any squit, local or remote - lucas
     */
-   if (MyConnect(acptr) && !IsAnOper(cptr)) {
-      sendto_ops("Received SQUIT %s from %s (%s)",
-		 acptr->name, get_client_name(sptr, HIDEME), comment);
+   if (MyConnect(acptr)) {
+      send_globops("from %s: Received SQUIT %s from %s (%s)",
+		 me.name, acptr->name, get_client_name(sptr, HIDEME), comment);
       sendto_serv_butone(&me,
 			 ":%s GLOBOPS :Received SQUIT %s from %s (%s)",
 	      me.name, server, get_client_name(sptr, HIDEME), comment);
