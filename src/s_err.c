@@ -543,7 +543,7 @@ static char *replies[] =
                                         "operator",
     /* 483 ERR_CANTKILLSERVER */	":%s 483 %s :You cant kill a server!",
     /* 484 */	                NULL,	/* In use by Undernet */
-    /* 485 */	                NULL,
+    /* 485 */	                ":%s 485 %s %s :Cannot join channel (%s)",
     /* 486 */	                NULL,
     /* 487 */	                NULL,
     /* 488 */	                NULL,

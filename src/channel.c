@@ -1241,8 +1241,6 @@ static int can_join(aClient *sptr, aChannel *chptr, char *key)
     }
     if (invited || IsULine(sptr))
 	return 0;
-    if (!IsOper(sptr) && find_conf_name(chptr->chname, CONF_QUARANTINED_CHAN))
-	return (ERR_NOPRIVILEGES);
     if (is_banned(sptr, chptr))
 	return (ERR_BANNEDFROMCHAN);
     if (chptr->mode.mode & MODE_INVITEONLY)
@@ -1438,6 +1436,7 @@ int m_join(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     static char jbuf[BUFSIZE];
     Link   *lp;
+    aConfItem *aconf=NULL;
     aChannel *chptr;
     char   *name, *key = NULL;
     int         i, flags = 0, chanlen=0;	
@@ -1664,10 +1663,19 @@ int m_join(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	chptr = get_channel(sptr, name, CREATE);
 	
 	if (!chptr ||
+	    (MyConnect(sptr) && !IsOper(sptr) && 
+	     (aconf = find_conf_name(chptr->chname, CONF_QUARANTINED_CHAN))) ||
 	    (MyConnect(sptr) && (i = can_join(sptr, chptr, key))))
 	{
-	    sendto_one(sptr,
-		       getreply(i), me.name, parv[0], name);
+	    if(aconf)
+		sendto_one(sptr,
+			   getreply(ERR_CHANBANREASON), me.name, parv[0], name,
+			   BadPtr(aconf->passwd) ? "Reserved channel" :
+					  aconf->passwd);
+            else
+		sendto_one(sptr,
+			   getreply(i), me.name, parv[0], name);
+
 #ifdef ANTI_SPAMBOT
 	    if (successful_join_count > 0)
 		successful_join_count--;
