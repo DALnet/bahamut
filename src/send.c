@@ -895,9 +895,9 @@ void send_part_to_common_channels(aClient *from, char *reason)
                     continue;
                 send_message(cptr, sendbuf, msglen, share_buf);
             }
+            sbuf_end_share(&share_buf, 1);
         }
     }
-    sbuf_end_share(&share_buf, 1);
 }
 
 #ifdef FLUD
