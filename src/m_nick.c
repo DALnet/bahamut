@@ -119,7 +119,9 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
    * parc == 4 on a normal server-to-server client nick change
    * parc == 11 on a normal TS style server-to-server NICK introduction
    */
-   if ((IsServer(sptr) || (parc > 4)) && (parc < 10)) {
+   if ((IsServer(sptr) || (parc > 4)) &&
+       ((IsNICKIP(sptr) && (parc < 11)) || (!IsNICKIP(sptr) && (parc < 10))))
+   {
      /*
       * We got the wrong number of params. Someone is trying to trick
       * us. Kill it. -ThemBones As discussed with ThemBones, not much
@@ -135,7 +137,8 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
      
    }
    
-   if (((parc == 10)||(parc == 11)) && (!strchr(parv[6], '.')))
+   if (((!IsNICKIP(sptr) && (parc == 10)) || (IsNICKIP(sptr) && (parc == 11)))
+        && (!strchr(parv[6], '.')))
    {
      /*
       * Ok, we got the right number of params, but there isn't a
@@ -155,8 +158,8 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
     */
    if (do_nick_name(nick) == 0 || (IsServer(cptr) && strcmp(nick, parv[1]))) {
      sendto_one(sptr, err_str(ERR_ERRONEUSNICKNAME),
-		me.name, parv[0], parv[1]);
-     
+		me.name, parv[0], parv[1], "Erroneous Nickname", "N/A");
+
      if (IsServer(cptr)) {
        ircstp->is_kill++;
        sendto_realops_lev(DEBUG_LEV, "Bad Nick: %s From: %s %s",
@@ -442,8 +445,8 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	     && (!IsULine(sptr))) {
 	   sendto_one(sptr, err_str(ERR_ERRONEUSNICKNAME), me.name,
 		      BadPtr(parv[0]) ? "*" : parv[0], nick,
-		      BadPtr(aconf->passwd) ? "reason unspecified" :
-		      aconf->passwd);
+                      BadPtr(aconf->passwd) ? "Erroneous Nickname" : aconf->passwd,
+                      BadPtr(aconf->name) ? "N/A" : aconf->name);
 	   sendto_realops("Forbidding Q:lined nick %s from %s.",
 			  nick, get_client_name(cptr, FALSE));
 	   return 0;
@@ -526,8 +529,8 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	     && (!IsULine(sptr))) {
 	   sendto_one(sptr, err_str(ERR_ERRONEUSNICKNAME), me.name,
 		      BadPtr(parv[0]) ? "*" : parv[0], nick,
-		      BadPtr(aconf->passwd) ? "reason unspecified" :
-		      aconf->passwd);
+                      BadPtr(aconf->passwd) ? "Erroneous Nickname" : aconf->passwd,
+                      BadPtr(aconf->name) ? "N/A" : aconf->name);
 	   sendto_realops("Forbidding Q:lined nick %s from <unregistered>%s.",
 			  nick, get_client_name(cptr, FALSE));
 	   return 0;

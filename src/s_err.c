@@ -463,7 +463,7 @@ static char *replies[] = {
 	/* 429 ERR_TOOMANYAWAY */	":%s 429 %s :Too Many aways - Flood Protection activated",
 	/* 430 */	NULL,
 	/* 431 ERR_NONICKNAMEGIVEN */	":%s 431 %s :No nickname given",
-	/* 432 ERR_ERRONEOUSNICKNAME */	":%s 432 %s %s :Erroneus Nickname",
+	/* 432 ERR_ERRONEOUSNICKNAME */ ":%s 432 %s %s :%s [%s]",
 	/* 433 ERR_NICKNAMEINUSE */	":%s 433 %s %s :Nickname is already in use.",
 	/* 434 */	NULL,
 	/* 435 ERR_BANONCHAN */	        ":%s 435 %s %s %s :Cannot change to a banned nickname",

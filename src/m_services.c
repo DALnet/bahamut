@@ -294,7 +294,9 @@ int m_svsnick(aClient *cptr, aClient *sptr, int parc, char *parv[]) {
         if (!hunt_server(cptr, sptr, ":%s SVSNICK %s %s :%s", 1, parc, parv) != HUNTED_ISME) {
                         if ((acptr = find_person(parv[1], NULL))!=NULL) {
                                  acptr->umode &= ~UMODE_r;
+#ifdef ANTI_NICK_FLOOD
                                  acptr->last_nick_change = atoi(parv[3]);
+#endif
                                  sendto_common_channels(acptr, ":%s NICK :%s", parv[1], parv[2]);
                                  if (IsPerson(acptr)) add_history(acptr, 1);
                                  sendto_serv_butone(NULL, ":%s NICK %s :%i", parv[1], parv[2], atoi(parv[3]));

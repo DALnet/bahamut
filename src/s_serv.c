@@ -5265,7 +5265,7 @@ int m_sqline(aClient *cptr, aClient *sptr, int parc, char *parv[])
    /* if we have any Q:lines (SQ or Q) that match
     * this Q:line, just return (no need to waste cpu */
 
-   if (!(aconf=find_conf_name(parv[1], CONF_QUARANTINE)))
+   if (!(aconf=find_conf_name(parv[1], *parv[1]=='#' ? CONF_QUARANTINED_CHAN : CONF_QUARANTINED_NICK)))
    {
 	/* okay, it doesn't suck, build a new conf for it */
 	aconf=make_conf();
