@@ -33,5 +33,6 @@
 #else
 #include "msg.h"
 #define	MAXMODEPARAMS	(MAXPARA-2)
+#define	MAXTSMODEPARAMS	(MAXPARA-3)
 #endif
 #endif

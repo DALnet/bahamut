@@ -375,7 +375,7 @@ void remove_matching_bans(aChannel *chptr, aClient *cptr, aClient *from)
 	      if(*parabuf)
 		  send = 1;
 	  
-	  if(count == MAXMODEPARAMS)
+	  if(count == MAXTSMODEPARAMS)
 	      send = 1;
 	  
 	  if(send)
@@ -391,7 +391,7 @@ void remove_matching_bans(aChannel *chptr, aClient *cptr, aClient *from)
 	      *parabuf = '\0';
 	      m = modebuf;
 	      *m++ = '-';
-	      if(count != MAXMODEPARAMS)
+	      if(count != MAXTSMODEPARAMS)
 	      {
 		  strcpy(parabuf, ban->banstr);
 		  *m++ = 'b';
@@ -631,7 +631,7 @@ static void send_ban_list(aClient *cptr, aChannel *chptr)
 	else if (*parabuf)
 	    send = 1;
 
-	if (count == MAXMODEPARAMS)
+	if (count == MAXTSMODEPARAMS)
 	    send = 1;
 
 	if (send) {
@@ -645,7 +645,7 @@ static void send_ban_list(aClient *cptr, aChannel *chptr)
 	    *parabuf = '\0';
 	    cp = modebuf;
 	    *cp++ = '+';
-	    if (count != MAXMODEPARAMS) {
+	    if (count != MAXTSMODEPARAMS) {
 		strcpy(parabuf, bp->banstr);
 		*cp++ = 'b';
 		count = 1;
