@@ -42,13 +42,7 @@
 
 #include "dich_conf.h"
 #include "throttle.h"
-
-/* Lists to do K: line matching -Sol */
-aConfList   KList1 = {0, NULL};			/* ordered */
-aConfList   KList2 = {0, NULL};			/* ordered, reversed */
-aConfList   KList3 = {0, NULL};			/* what we can't sort */
-
-aConfList   ZList1 = {0, NULL};			/* ordered */
+#include "userban.h"
 
 aConfList   EList1 = {0, NULL};			/* ordered */
 aConfList   EList2 = {0, NULL};			/* ordered, reversed */
@@ -146,6 +140,7 @@ time_t      nextconnect = 1;	   /* time for next try_connections call */
 time_t      nextping = 1;	   /* same as above for check_pings() */
 time_t      nextdnscheck = 0;	   /* next time to poll dns to force timeout */
 time_t      nextexpire = 1;	   /* next expire run on the dns cache */
+time_t      nextbanexpire = 1;     /* next time to expire the throttles/userbans */
 
 #if defined PROFILING && defined __GLIBC__ && (__GLIBC__ >= 2)
 extern void _start, etext;
@@ -369,11 +364,9 @@ static time_t try_connections(time_t currenttime)
 static time_t check_pings(time_t currenttime)
 {
     aClient 	*cptr;
-    aConfItem 	*aconf = (aConfItem *) NULL;
-    int     	 killflag, zkillflag, ping = 0, i;
+    int     	 ping = 0, i;
     time_t       oldest = 0; /* timeout removed, see EXPLANATION below */
-    char       	*reason, *ktype, fbuf[512];
-    char 		*errtxt = "No response from %s, closing link";
+    char 	 fbuf[512], *errtxt = "No response from %s, closing link";
 
 
     for (i = 0; i <= highest_fd; i++) 
@@ -393,45 +386,6 @@ static time_t check_pings(time_t currenttime)
 	    continue;
 	}
 
-	killflag = zkillflag = NO;
-
-	if (rehashed && IsPerson(cptr)) 
-	{
-	    if ((aconf = find_zkill_perm(cptr)))	
-		zkillflag = YES;
-
-            if (!zline_in_progress && !zkillflag && (aconf = find_kill_perm(cptr)))	
-		killflag = YES;
-
-	    if (killflag || zkillflag)
-	    {
-		ktype = zkillflag ? "Z-lined" : 
-		    ((aconf->status == CONF_KILL) ? "K-lined" : "Autokilled");
-
-		if (killflag)    
-		{   
-		    sendto_ops("%s active for %s",   
-			       (aconf->status == CONF_KILL) ? "K-line" :   
-			       "Autokill", get_client_name(cptr, FALSE));   
-		    reason = aconf->passwd ? aconf->passwd : ktype;   
-	    	}   
-		else /* its a Z line */ 
-		{ 
-		    sendto_ops("Z-line active for %s",
-			       get_client_name(cptr, FALSE));
-		    reason = aconf->passwd ? aconf->passwd : "Z-lined";
-		}
-	    
-		sendto_one(cptr, err_str(ERR_YOUREBANNEDCREEP),
-			   me.name, cptr->name, ktype);
-	    
-		ircsprintf(fbuf, "%s: %s", ktype, reason);
-		exit_client(cptr, cptr, &me, fbuf);
-		i--;   /* subtract out this fd so we check it again.. */
-		continue;
-	    }
-	}
-	
 	if (IsRegistered(cptr))
 	    ping = cptr->pingval;
 	else
@@ -471,9 +425,9 @@ static time_t check_pings(time_t currenttime)
 		    }
 #ifdef SHOW_HEADERS
 		    if (DoingDNS(cptr))
-			send(cptr->fd, REPORT_FAIL_DNS, R_fail_dns, 0);
+			sendto_one(cptr, REPORT_FAIL_DNS);
 		    if (DoingAuth(cptr))
-			send(cptr->fd, REPORT_FAIL_ID, R_fail_id, 0);
+			sendto_one(cptr, REPORT_FAIL_ID);
 #endif
 		    Debug((DEBUG_NOTICE, "DNS/AUTH timeout %s",
 			   get_client_name(cptr, TRUE)));
@@ -817,6 +771,8 @@ int main(int argc, char *argv[])
     /* init the throttle system -wd */
     throttle_init();
 
+    init_userban();
+
     initlists();
     initclass();
     initwhowas();
@@ -884,7 +840,7 @@ int main(int argc, char *argv[])
 		      configfile);
 	exit(-1);
     }
-    (void) initconf(bootopt, fd);
+    (void) initconf(bootopt, fd, NULL);
 	
     /* comstuds SEPARATE_QUOTE_KLINES_BY_DATE code */
 #ifdef SEPARATE_QUOTE_KLINES_BY_DATE
@@ -903,7 +859,7 @@ int main(int argc, char *argv[])
 			  filename);
 	}
 	else
-	    (void) initconf(0, fd);
+	    (void) initconf(0, fd, NULL);
     }
 #else
 # ifdef KPATH
@@ -913,7 +869,7 @@ int main(int argc, char *argv[])
 	(void) printf("Couldn't open kline file %s\n", klinefile);
     }
     else
-	(void) initconf(0, fd);
+	(void) initconf(0, fd, NULL);
 # endif
 #endif
     if (!(bootopt & BOOT_INETD)) 
@@ -1154,6 +1110,18 @@ void io_loop()
 	if (timeofday >= nextexpire)
 	    nextexpire = expire_cache(timeofday);
 
+	if (timeofday >= nextbanexpire)
+	{
+            /*
+             * magic number: 31 seconds
+             * space out these heavy tasks at semi-random intervals, so as not to coincide
+             * with anything else ircd does regularly 
+             */
+	    nextbanexpire += 31;
+	    expire_userbans();
+	    throttle_timer(NOW);
+	}
+
 	/*
 	 * take the smaller of the two 'timed' event times as the time
 	 * of next event (stops us being late :) - avalon WARNING -
@@ -1280,9 +1248,6 @@ void io_loop()
 	check_fdlists();
 #endif
 	
-	/* call the throttle timer to possibly flush extra gunk  -wd */
-	throttle_timer(NOW);
-
 #ifdef	LOCKFILE
 	/*
 	 * * If we have pending klines and CHECK_PENDING_KLINES minutes

@@ -132,9 +132,6 @@ void outofmemory()
 	abort();
     
     was_here = YES;
-    clear_conf_list(&KList1);
-    clear_conf_list(&KList2);
-    clear_conf_list(&KList3);
     
     Debug((DEBUG_FATAL, "Out of memory: restarting server..."));
     restart("Out of Memory");

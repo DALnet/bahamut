@@ -240,11 +240,6 @@ static int 	ckinitconf(int opt)
 	    aconf->status = CONF_CONNECT_SERVER;
 	    break;
 
-	case 'Z':
-	case 'z':
-	    aconf->status = CONF_ZLINE;
-	    break;
-
 	case 'E':
 	case 'e':
 	    aconf->status = CONF_ELINE;

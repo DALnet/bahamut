@@ -33,6 +33,7 @@
 #include "resolv.h"
 #include "dh.h"
 #include "zlink.h"
+#include "userban.h"
 
 #if defined(AIX) || defined(DYNIXPTX) || defined(SVR3)
 #include <time.h>
@@ -58,7 +59,6 @@ extern int  lifesux;
 extern int  HTMLOCK;
 static char buf[BUFSIZE];
 extern int  rehashed;
-extern int  zline_in_progress;
 
 #ifdef HIGHEST_CONNECTION
 int         max_connection_count = 1, max_client_count = 1;
@@ -924,9 +924,6 @@ int do_server_estab(aClient *cptr)
 		       strlen(aconf->name), aconf->name, aconf->passwd);
     }
     
-    /* Lets do szlines */
-    send_szlines(cptr);
-    
     /* Bursts are about to start.. send a BURST */
     if (IsBurst(cptr))
 	sendto_one(cptr, "BURST"); 
@@ -1276,11 +1273,6 @@ int m_info(aClient *cptr, aClient *sptr, int parc, char *parv[])
 #else
 	    strcpy(outstr, " CUSTOM_ERR=0");
 #endif
-#ifdef ZLINES_IN_KPATH
-	    strcat(outstr, " ZLINES_IN_KPATH=1");
-#else
-	    strcat(outstr, " ZLINES_IN_KPATH=0");
-#endif
 #ifdef DNS_DEBUG
 	    strcat(outstr, " DNS_DEBUG=1");
 #else
@@ -1425,11 +1417,6 @@ int m_info(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
 	    sprintf(outstr, " RIDICULOUS_PARANOIA_LEVEL=%d",
 		   RIDICULOUS_PARANOIA_LEVEL);
-#ifdef SEPARATE_QUOTE_KLINES_BY_DATE
-	    strcat(outstr, "SEPARATE_QUOTE_KLINES_BY_DATE=1");
-#else
-	    strcat(outstr, "SEPARATE_QUOTE_KLINES_BY_DATE=0");
-#endif
 #ifdef SHORT_MOTD
 	    strcat(outstr, " SHORT_MOTD=1");
 #else
@@ -1693,11 +1680,7 @@ static void report_configured_links(aClient *sptr, int mask)
 	    if(tmp->status & CONF_SERVER_MASK)
 		host = "*";
 
-	    if (tmp->status == CONF_KILL)
-		sendto_one(sptr, rpl_str(p[1]), me.name,
-			   sptr->name, c, host,
-			   name, pass);
-	    else if (tmp->status & CONF_QUARANTINE)
+	    if (tmp->status & CONF_QUARANTINE)
 		sendto_one(sptr, rpl_str(p[1]), me.name,
 			   sptr->name, c, pass, name, port,
 			   get_conf_class(tmp));
@@ -1871,16 +1854,6 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
 				    CONF_NOCONNECT_SERVER);
 	break;
 		
-    case 'D':
-	if (!IsAnOper(sptr))
-	    break;
-	report_conf_links(sptr, &ZList1, RPL_STATSZLINE, 'Z');
-	break;
-    case 'd':
-	if (!IsAnOper(sptr))
-	    break;
-	report_szlines(sptr);
-	break;
     case 'E':
     case 'e':
 #ifdef E_LINES_OPER_ONLY
@@ -1924,20 +1897,20 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	break;
 		
     case 'k':
-	if(IsAnOper(sptr))
-	    report_temp_klines(sptr);
+        if(IsAnOper(cptr))
+           report_userbans_match_flags(cptr, UBAN_TEMPORARY|UBAN_LOCAL, 0);
+        break;
 
     case 'K':
-	if (parc > 3)
-	    report_matching_host_klines(sptr, parv[3]);
-	else if (IsAnOper(sptr)) {
-	    report_conf_links(sptr, &KList1, RPL_STATSKLINE, 'K');
-	    report_conf_links(sptr, &KList2, RPL_STATSKLINE, 'K');
-	    report_conf_links(sptr, &KList3, RPL_STATSKLINE, 'K');
-	}
-	else if(sptr->user)
-	    report_matching_host_klines(sptr, sptr->user->host);
+	if (IsAnOper(sptr))
+           report_userbans_match_flags(cptr, UBAN_LOCAL, UBAN_TEMPORARY);
 	break;
+
+    case 'A':
+    case 'a':
+        if(IsAnOper(cptr))
+           report_userbans_match_flags(cptr, UBAN_NETWORK, 0);
+        break;
 		
     case 'M':
     case 'm':
@@ -3321,17 +3294,10 @@ static char *cluster(char *hostname)
     return (result);
 }
 
-/*
- * m_kline()
- * 
- * re-worked a tad ... -Dianora
- * 
- * Added comstuds SEPARATE_QUOTE_KLINES_BY_DATE code -Dianora
- */
 int m_kline(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
-
-#if defined (LOCKFILE) && !defined(SEPARATE_QUOTE_KLINES_BY_DATE)
+    struct userBan *ban, *oban;
+#if defined (LOCKFILE)
     struct pkl *k;
 #else
     int         out;
@@ -3339,19 +3305,13 @@ int m_kline(aClient *cptr, aClient *sptr, int parc, char *parv[])
     
     char        buffer[1024];
 
-#ifdef SEPARATE_QUOTE_KLINES_BY_DATE
-    char        timebuffer[MAX_DATE_STRING];
-    char        filenamebuf[1024];
-    struct tm  *tmptr;
-#endif
     char       *filename;	/* filename to use for kline */
     char       *user, *host;
     char       *reason;
     char       *current_date;
-    aClient    *acptr,*acptr2;
+    aClient    *acptr;
     char        tempuser[USERLEN + 2];
     char        temphost[HOSTLEN + 1];
-    aConfItem  *aconf;
     int         temporary_kline_time = 0;	/* -Dianora */
     time_t      temporary_kline_time_seconds = 0;
     int         time_specified = 0;
@@ -3359,7 +3319,7 @@ int m_kline(aClient *cptr, aClient *sptr, int parc, char *parv[])
     int         i;
     char       fbuf[512];
 
-    if (!MyClient(sptr) || !OPCanKline(sptr)) 
+    if (!MyClient(sptr) || !IsAnOper(sptr) || !OPCanKline(sptr)) 
     {
 	sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name, parv[0]);
 	return 0;
@@ -3382,8 +3342,8 @@ int m_kline(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		       me.name, parv[0], "KLINE");
 	    return 0;
 	}
-	if (temporary_kline_time > (24 * 60))
-	    temporary_kline_time = (24 * 60);	/*  Max it at 24 hours */
+	if (temporary_kline_time > (24 * 60 * 7))
+	    temporary_kline_time = (24 * 60 * 7);	/*  Max it at 1 week */
 
 	temporary_kline_time_seconds = 
 	    (time_t) temporary_kline_time *(time_t) 60;
@@ -3477,22 +3437,6 @@ int m_kline(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
     if (parc > 2) 
     {
-	if (strchr(argv, ':')) 
-	{
-	    sendto_one(sptr,
-		       ":%s NOTICE %s :Invalid character ':' in comment",
-		       me.name, parv[0]);
-	    return 0;
-	}
-
-	if (strchr(argv, '#')) 
-	{
-	    sendto_one(sptr,
-		       ":%s NOTICE %s :Invalid character '#' in comment",
-		       me.name, parv[0]);
-	    return 0;
-	}
-
 	if (*argv)
 	    reason = argv;
 	else
@@ -3509,105 +3453,83 @@ int m_kline(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	return 0;
     }
 
-#ifdef NON_REDUNDANT_KLINES
-    if ((aconf = find_is_klined(host, user))) 
+    /* we can put whatever we want in temp K: lines */
+    if (temporary_kline_time == 0 && strchr(reason, ':')) 
     {
-	char       *reason;
-
-	reason = aconf->passwd ? aconf->passwd : "<No Reason>";
-
 	sendto_one(sptr,
-		   ":%s NOTICE %s :[%s@%s] already K-lined by [%s@%s] - %s",
-		   me.name, parv[0], user, host, aconf->name, aconf->host,
-		   reason);
+		   ":%s NOTICE %s :Invalid character ':' in comment",
+		   me.name, parv[0]);
 	return 0;
-
     }
-#endif
+
+    if (temporary_kline_time == 0 && strchr(reason, '#')) 
+    {
+	sendto_one(sptr,
+		   ":%s NOTICE %s :Invalid character '#' in comment",
+		   me.name, parv[0]);
+	return 0;
+    }
+
+    ban = make_hostbased_ban(user, host);
+    if(!ban)
+    {
+	sendto_one(sptr, ":%s NOTICE %s :Malformed ban %s@%s", me.name, parv[0],
+		   user, host);
+	return 0;
+    }
+
+    if ((oban = find_userban_exact(ban, 0)))
+    {
+        char *ktype = (oban->flags & UBAN_LOCAL) ? "local-banned" : "network-banned";
+
+	sendto_one(sptr, ":%s NOTICE %s :[%s@%s] already %s for %s",
+		   me.name, parv[0], user, host, ktype, oban->reason ? oban->reason : "<No Reason>");
+
+	userban_free(ban);
+	return 0;
+    }
 
     current_date = smalldate((time_t) 0);
+    ircsprintf(buffer, "%s (%s)", reason, current_date);
 
-    aconf = make_conf();
-    aconf->status = CONF_KILL;
-    DupString(aconf->host, host);
-
-    (void) ircsprintf(buffer, "%s (%s)", reason, current_date);
+    ban->flags |= UBAN_LOCAL;
+    ban->reason = (char *) MyMalloc(strlen(buffer + 1));
+    strcpy(ban->reason, buffer);
     
-    DupString(aconf->passwd, buffer);
-    DupString(aconf->name, user);
-    aconf->port = 0;
-
     if (temporary_kline_time) 
     {
-	aconf->hold = timeofday + temporary_kline_time_seconds;
-	add_temp_kline(aconf);
-	for (i = 0; i <= highest_fd; i++)
-	{
-	    if (!(acptr2 = local[i]) || IsMe(acptr2) || IsLog(acptr2))
-		continue;
-	    if (IsPerson(acptr2)) 
-	    {
-		if ((acptr2->user->username)&&(((acptr2->sockhost)&&
-					       (!match(host,acptr2->sockhost)&&
-						!match(user,
-						       acptr2->user->username)
-						   ))||((acptr2->hostip)&&
-					       (!match(host,acptr2->hostip)&&
-						!match(user,
-						       acptr2->user->username)
-						   ))))
-		    
-		{
-		    sendto_ops("K-Line active for %s",
-			       get_client_name(acptr2, FALSE));
-		    ircsprintf(fbuf,"K-Lined: %s",reason);
-		    (void) exit_client(acptr2,acptr2,&me,fbuf);
-		    i--;
-		}
-	    }
-	}
-	
-	zline_in_progress = NO;
-	sendto_realops("%s added temporary %d min. K-Line for [%s@%s] [%s]",
+	ban->flags |= UBAN_TEMPORARY;
+	ban->timeset = timeofday;
+	ban->duration = temporary_kline_time_seconds;
+    }
+
+    add_hostbased_userban(ban);
+
+    /* Check local users against it */
+    for (i = 0; i <= highest_fd; i++)
+    {
+        if (!(acptr = local[i]) || IsMe(acptr) || IsLog(acptr))
+            continue;
+
+        if (IsPerson(acptr) && user_match_ban(acptr, ban))
+        {
+            sendto_ops("Local-ban active for %s",
+                       get_client_name(acptr, FALSE));
+            ircsprintf(fbuf, "Local-banned: %s", reason);
+            exit_client(acptr, acptr, &me, fbuf);
+            i--;
+        }
+    }
+
+    host = get_userban_host(ban, fbuf, 512);
+
+    if(temporary_kline_time)
+    {	
+	sendto_realops("%s added temporary %d min. local-ban for [%s@%s] [%s]",
 		       parv[0], temporary_kline_time, user, host, reason);
 	return 0;
     }
 
-    Class       (aconf) = find_class(0);
-
-    /*
-     * when can aconf->host ever be a NULL pointer though? or for that
-     * matter, when is aconf->status ever not going to be CONF_KILL at
-     * this point?  -Dianora
-     */
-
-    switch (sortable(host)) 
-    {
-    case 0:
-	l_addto_conf_list(&KList3, aconf, host_field);
-	break;
-    case 1:
-	addto_conf_list(&KList1, aconf, host_field);
-	break;
-    case -1:
-	addto_conf_list(&KList2, aconf, rev_host_field);
-	break;
-    }
-
-    /* comstud's SEPARATE_QUOTE_KLINES_BY_DATE code */
-    /*
-     * Note, that if SEPARATE_QUOTE_KLINES_BY_DATE is defined, it
-     * doesn't make sense to have LOCKFILE on the kline file
-     */
-
-#ifdef SEPARATE_QUOTE_KLINES_BY_DATE
-    tmptr = localtime(&NOW);
-    strftime(timebuffer, MAX_DATE_STRING, "%y%m%d", tmptr);
-    (void) sprintf(filenamebuf, "%s.%s", klinefile, timebuffer);
-    filename = filenamebuf;
-    sendto_one(sptr, ":%s NOTICE %s :Added K-Line [%s@%s] to %s",
-	       me.name, parv[0], user, host, filenamebuf);
-#else
     filename = klinefile;
 
 #ifdef KPATH
@@ -3617,16 +3539,11 @@ int m_kline(aClient *cptr, aClient *sptr, int parc, char *parv[])
     sendto_one(sptr, ":%s NOTICE %s :Added K-Line [%s@%s] to server "
 	       "configfile", me.name, parv[0], user, host);
 #endif /* KPATH */
-#endif  /* SEPARATE_QUOTE_KLINES_BY_DATE */
 
-    rehashed = YES;
-    zline_in_progress = NO;
     sendto_realops("%s added K-Line for [%s@%s] [%s]",
 		   parv[0], user, host, reason);
     
-#if defined(LOCKFILE) && !defined(SEPARATE_QUOTE_KLINES_BY_DATE)
-    /* MDP - Careful, don't cut & paste that ^O */
-
+#if defined(LOCKFILE)
     if ((k = (struct pkl *) malloc(sizeof(struct pkl))) == NULL) 
     {
 	sendto_one(sptr, ":%s NOTICE %s :Problem allocating memory",
@@ -3667,7 +3584,7 @@ int m_kline(aClient *cptr, aClient *sptr, int parc, char *parv[])
     do_pending_klines();
     return (0);
 
-#else /*  LOCKFILE - MDP and not SEPARATE_KLINES_BY_DATE */
+#else /*  LOCKFILE - MDP */
 
     if ((out = open(filename, O_RDWR | O_APPEND | O_CREAT)) == -1) 
     {
@@ -3675,10 +3592,6 @@ int m_kline(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		   me.name, parv[0], filename);
 	return 0;
     }
-
-# ifdef SEPARATE_QUOTE_KLINES_BY_DATE
-    fchmod(out, 0660);
-# endif
 
     (void) ircsprintf(buffer, "#%s!%s@%s K'd: %s@%s:%s\n",
 		      sptr->name, sptr->user->username,
@@ -3771,36 +3684,26 @@ static int isnumber(char *p)
  * 
  * re-worked and cleanedup for use in hybrid-5 -Dianora
  * 
- * Added comstuds SEPARATE_QUOTE_KLINES_BY_DATE
  */
 int m_unkline(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
+    struct userBan *ban;
     int         in, out;
     int         pairme = NO;
     char        buf[256], buff[256];
     char        temppath[256];
-
-#ifdef SEPARATE_QUOTE_KLINES_BY_DATE
-    char        timebuffer[MAX_DATE_STRING];
-    char        filenamebuf[1024];
-    struct tm  *tmptr;
-#endif
 
     char       *filename;	/* filename to use for unkline */
     char       *user, *host;
     char       *p;
     int         nread;
     int         error_on_write = NO;
-    aConfItem  *aconf;
     struct stat oldfilestat;
     mode_t      oldumask;
 
     ircsprintf(temppath, "%s.tmp", klinefile);
 
-    if (check_registered(sptr)) 
-	return -1;
-
-    if (!OPCanUnKline(sptr))
+    if (!IsAnOper(sptr) || !OPCanUnKline(sptr))
     {
 	sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name, parv[0]);
 	return 0;
@@ -3842,7 +3745,34 @@ int m_unkline(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	return 0;
     }
 
-# if defined(LOCKFILE) && !defined(SEPARATE_QUOTE_KLINES_BY_DATE)
+    ban = make_hostbased_ban(user, host);
+    if(ban)
+    {
+	struct userBan *oban;
+
+	ban->flags |= (UBAN_LOCAL|UBAN_TEMPORARY);
+	if((oban = find_userban_exact(ban, UBAN_LOCAL|UBAN_TEMPORARY)))
+	{
+	    char tmp[512];
+
+	    host = get_userban_host(oban, tmp, 512);
+
+	    remove_userban(oban);
+	    userban_free(oban);
+	    userban_free(ban);
+
+	    sendto_one(sptr, ":%s NOTICE %s :K-Line for [%s@%s] is removed",
+		       me.name, parv[0], user, host);
+	    sendto_ops("%s has removed the K-Line for: [%s@%s] (%d matches)",
+		       parv[0], user, host, 1);
+
+	    return 0;
+	}
+
+	userban_free(ban);
+    }    
+
+# if defined(LOCKFILE)
     if (lock_kline_file() < 0) 
     {
 	sendto_one(sptr, ":%s NOTICE %s :%s is locked try again in a "
@@ -3851,20 +3781,13 @@ int m_unkline(aClient *cptr, aClient *sptr, int parc, char *parv[])
     }
 # endif
     
-# ifdef SEPARATE_QUOTE_KLINES_BY_DATE
-    tmptr = localtime(&NOW);
-    strftime(timebuffer, MAX_DATE_STRING, "%y%m%d", tmptr);
-    (void) sprintf(filenamebuf, "%s.%s", klinefile, timebuffer);
-    filename = filenamebuf;
-# else
     filename = klinefile;
-# endif
 
     if ((in = open(filename, O_RDONLY)) == -1) 
     {
 	sendto_one(sptr, ":%s NOTICE %s :Cannot open %s",
 		   me.name, parv[0], filename);
-# if defined(LOCKFILE) && !defined(SEPARATE_QUOTE_KLINES_BY_DATE)
+# if defined(LOCKFILE)
 	(void) unlink(LOCKFILE);
 # endif
 	return 0;
@@ -3879,7 +3802,7 @@ int m_unkline(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	sendto_one(sptr, ":%s NOTICE %s :Cannot open %s",
 		   me.name, parv[0], temppath);
 	(void) close(in);
-# if defined (LOCKFILE) && !defined(SEPARATE_QUOTE_KLINES_BY_DATE)
+# if defined (LOCKFILE)
 	(void) unlink(LOCKFILE);
 # endif
 	umask(oldumask);		/* Restore the old umask */
@@ -3891,10 +3814,8 @@ int m_unkline(aClient *cptr, aClient *sptr, int parc, char *parv[])
      * #Dianora!db@ts2-11.ottawa.net K'd: foo@bar:No reason K:bar:No
      * reason (1997/08/30 14.56):foo
      */
-    
-    clear_conf_list(&KList1);
-    clear_conf_list(&KList2);
-    clear_conf_list(&KList3);
+
+    remove_userbans_match_flags(UBAN_LOCAL, UBAN_TEMPORARY);    
     
     while ((nread = dgets(in, buf, sizeof(buf))) > 0)
     {
@@ -3960,30 +3881,29 @@ int m_unkline(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	     */
 	    if (strcasecmp(host, found_host) || strcasecmp(user, found_user)) 
 	    {
+		struct userBan *tban;
+		char *ub_u, *ub_r;
+
 		if (!error_on_write)
 		    error_on_write = flush_write(sptr, parv[0],
 						 out, buf, strlen(buf),
 						 temppath);
-		aconf = make_conf();
-		aconf->status = CONF_KILL;
-		DupString(aconf->host, found_host);
-		DupString(aconf->name, found_user);
-		DupString(aconf->passwd, found_comment);
-		aconf->port = 0;
-		Class       (aconf) = find_class(0);
 
-		switch (sortable(found_host)) 
-		{
-		case 0:
-		    l_addto_conf_list(&KList3, aconf, host_field);
-		    break;
-		case 1:
-		    addto_conf_list(&KList1, aconf, host_field);
-		    break;
-		case -1:
-		    addto_conf_list(&KList2, aconf, rev_host_field);
-		    break;
-		}
+		if(BadPtr(found_host))
+		    continue;
+
+		ub_u = BadPtr(found_user) ? "*" : found_user;
+		ub_r = BadPtr(found_comment) ? "<No Reason>" : found_comment;
+
+		if(!(tban = make_hostbased_ban(ub_u, found_host)))
+		    continue;
+
+		tban->flags |= UBAN_LOCAL;
+		tban->reason = (char *) MyMalloc(strlen(ub_r) + 1);
+		strcpy(tban->reason, ub_r);
+		tban->timeset = NOW;
+
+		add_hostbased_userban(tban);
 	    }
 	    else
 		pairme++;
@@ -4075,25 +3995,23 @@ int m_unkline(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	sendto_one(sptr,
 		   ":%s NOTICE %s :Couldn't write temp kline file, aborted",
 		   me.name, parv[0]);
-# if defined (LOCKFILE) && !defined(SEPARATE_QUOTE_KLINES_BY_DATE)
+# if defined (LOCKFILE)
 	(void) unlink(LOCKFILE);
 # endif
 	return -1;
     }
     
-# if defined (LOCKFILE) && !defined(SEPARATE_QUOTE_KLINES_BY_DATE)
+# if defined (LOCKFILE)
     (void) unlink(LOCKFILE);
 # endif
     
     if (pairme == NO) 
     {
-	if(!(pairme = remove_temp_kline(host, user, CONF_KILL)))
-	{
-	    sendto_one(sptr, ":%s NOTICE %s :No K-Line for %s@%s",
-		       me.name, parv[0], user, host);
-	    return 0;
-	}
+	sendto_one(sptr, ":%s NOTICE %s :No K-Line for %s@%s",
+	           me.name, parv[0], user, host);
+	return 0;
     }
+
     sendto_one(sptr, ":%s NOTICE %s :K-Line for [%s@%s] is removed",
 	       me.name, parv[0], user, host);
     sendto_ops("%s has removed the K-Line for: [%s@%s] (%d matches)",
@@ -4144,264 +4062,6 @@ static int flush_write(aClient *sptr, char *opernick, int out, char *buf,
 }
 #endif /* UNKLINE */
 
-/*
- * re-worked a tad added Rodders dated KLINE code -Dianora
- * 
- * BUGS:        There is a concern here with LOCKFILE handling the LOCKFILE
- * code only knows how to talk to the kline file. Having an extra
- * define allowing D lines to go into ircd.conf or the kline file
- * complicates life. LOCKFILE code should still respect any lock
- * placed.. The fix I believe is that we are going to have to also pass
- * along in the struct pkl struct, which file the entry is to go
- * into... or.. just remove the ZLINES_IN_KPATH option. -Dianora
- */
-
-int m_zline(aClient *cptr, aClient *sptr, int parc, char *parv[])
-{
-#if defined(LOCKFILE) && defined(ZLINES_IN_KPATH)
-    struct pkl *k;
-#else
-    int         out;
-#endif
-    char        buffer[1024];
-    char       *host, *reason, *p;
-    char       *current_date;
-    int         number_of_dots = 0;
-    aClient    *acptr;
-    aConfItem  *aconf;
-
-    if (!MyClient(sptr) || !IsOper(sptr))
-    {
-	sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name, parv[0]);
-	return 0;
-    }
-
-    if (parc < 2) 
-    {
-	if (MyClient(sptr))
-	    sendto_one(sptr, err_str(ERR_NEEDMOREPARAMS),
-		       me.name, parv[0], "ZLINE");
-	return 0;
-    }
-
-    host = parv[1];
-
-    p = host;
-    while (*p) 
-    {
-	if (*p == '.') 
-	{
-	    number_of_dots++;
-	    p++;
-	}
-	else if (*p == '*') 
-	{
-	    if (number_of_dots != 3) 
-	    {
-		sendto_one(sptr, ":%s NOTICE %s :Z-line format error, "
-			   "use xxx.xxx.xxx.xxx or xxx.xxx.xxx.*",
-			   me.name, parv[0]);
-		return 0;
-	    }
-	    else 
-	    {
-		*(p + 1) = '\0';
-		break;
-	    }
-	}
-	else 
-	{
-	    if (!isdigit(*p)) 
-	    {
-		if (!(acptr = find_chasing(sptr, parv[1], NULL)))
-		    return 0;
-
-		if (!acptr->user)
-		    return 0;
-
-		if (IsServer(acptr)) 
-		{
-		    sendto_one(sptr,
-			       ":%s NOTICE %s :Can't ZLINE a server silly",
-			       me.name, parv[0]);
-		    return 0;
-		}
-
-		if (!MyConnect(acptr)) 
-		{
-		    sendto_one(sptr,
-			       ":%s NOTICE :%s :Can't ZLINE nick on another "
-			       "server", me.name, parv[0]);
-		    return 0;
-		}
-
-		host = cluster(acptr->hostip);
-		break;
-	    }
-	    p++;
-	}
-    }
-
-    if (parc > 2) 		/* host :reason */
-    {
-	if (strchr(parv[2], ':')) 
-	{
-	    sendto_one(sptr,
-		       ":%s NOTICE %s :Invalid character ':' in comment",
-		       me.name, parv[0]);
-	    return 0;
-	}
-
-	if (strchr(parv[2], '#')) 
-	{
-	    sendto_one(sptr,
-		       ":%s NOTICE %s :Invalid character '#' in comment",
-		       me.name, parv[0]);
-	    return 0;
-	}
-	
-	if (*parv[2])
-	    reason = parv[2];
-	else
-	    reason = "No reason";
-    }
-    else
-	reason = "No reason";
-
-#ifdef NON_REDUNDANT_KLINES
-    if ((aconf = find_is_zlined(host))) 
-    {
-	char       *reason = aconf->passwd ? aconf->passwd : "<No Reason>";
-
-	sendto_one(sptr, ":%s NOTICE %s :[%s] already Z-lined by [%s] - %s",
-		   me.name,
-		   parv[0],
-		   host,
-		   aconf->host, reason);
-	return 0;
-
-    }
-#endif
-
-    current_date = smalldate((time_t) 0);
-
-    aconf = make_conf();
-    aconf->status = CONF_ZLINE;
-    DupString(aconf->host, host);
-
-    (void) ircsprintf(buffer, "%s (%s)", reason, current_date);
-
-    DupString(aconf->passwd, buffer);
-    aconf->name = (char *) NULL;
-    aconf->port = 0;
-    Class       (aconf) = find_class(0);
-
-    /*
-     * since a quote zline always ensures a sortable pattern there is no
-     * need to check sortable() - Dianora
-     */
-
-    addto_conf_list(&ZList1, aconf, host_field);
-
-    sendto_realops("%s added Z-Line for [%s] [%s]",
-		   parv[0], host, reason);
-
-#ifdef ZLINES_IN_KPATH
-    sendto_one(sptr, ":%s NOTICE %s :Added Z-Line [%s] to server klinefile",
-	       me.name, parv[0], host);
-#else
-    sendto_one(sptr, ":%s NOTICE %s :Added Z-Line [%s] to server configfile",
-	       me.name, parv[0], host);
-#endif
-    /*
-     * * I moved the following 2 lines up here because we still want
-     * the server to hunt for 'targetted' clients even if there are
-     * problems adding the Z-line the the appropriate file. -ThemBones
-     */
-    rehashed = YES;
-    zline_in_progress = YES;
-
-#if defined(LOCKFILE) && defined(ZLINES_IN_KPATH)
-
-    if ((k = (struct pkl *) MyMalloc(sizeof(struct pkl))) == NULL) 
-    {
-	sendto_one(sptr, ":%s NOTICE %s :Problem allocating memory",
-		   me.name, parv[0]);
-	return (0);
-    }
-
-    (void) ircsprintf(buffer, "#%s!%s@%s D'd: %s:%s (%s)\n",
-		      sptr->name, sptr->user->username,
-		      sptr->user->host, host,
-		      reason, current_date);
-
-    if ((k->comment = strdup(buffer)) == NULL) 
-    {
-	free(k);
-	sendto_one(sptr, ":%s NOTICE %s :Problem allocating memory",
-		   me.name, parv[0]);
-	return (0);
-    }
-
-    (void) ircsprintf(buffer, "D:%s:%s (%s):\n",
-		      host,
-		      reason,
-		      current_date);
-
-    if ((k->kline = strdup(buffer)) == NULL) 
-    {
-	free(k->comment);
-	free(k);
-	sendto_one(sptr, ":%s NOTICE %s :Problem allocating memory",
-		   me.name, parv[0]);
-	return (0);
-    }
-    k->next = pending_klines;
-    pending_klines = k;
-
-    do_pending_klines();
-    return (0);
-
-#else /* LOCKFILE - MDP */
-
-    if ((out = open(zlinefile, O_RDWR | O_APPEND | O_CREAT)) == -1) 
-    {
-	sendto_one(sptr, ":%s NOTICE %s :Problem opening %s ",
-		   me.name, parv[0], zlinefile);
-	return 0;
-    }
-
-    (void) ircsprintf(buffer, "#%s!%s@%s Z'd: %s:%s (%s)\n",
-		      sptr->name, sptr->user->username,
-		      sptr->user->host, host,
-		      reason, current_date);
-
-    if (write(out, buffer, strlen(buffer)) <= 0) 
-    {
-	sendto_one(sptr,
-		   ":%s NOTICE %s :Problem writing to %s",
-		   me.name, parv[0], zlinefile);
-	close(out);
-	return 0;
-    }
-
-    (void) ircsprintf(buffer, "Z:%s:%s (%s):\n", host, reason,
-		      current_date);
-
-    if (write(out, buffer, strlen(buffer)) <= 0) 
-    {
-	sendto_one(sptr,
-		   ":%s NOTICE %s :Problem writing to %s",
-		   me.name, parv[0], zlinefile);
-	close(out);
-	return 0;
-    }
-
-    (void) close(out);
-    return 0;
-#endif /* LOCKFILE */
-}
-
 /* m_rehash */
 int m_rehash(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
@@ -4422,20 +4082,11 @@ int m_rehash(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		       parv[0]);
 	    return 0;
 	}
-	if (mycmp(parv[1], "SZLINES") == 0) 
-	{
-	    sendto_one(sptr, rpl_str(RPL_REHASHING), me.name, parv[0],
-		       "SLINES");
-	    remove_szline("*", 1);		/* flush the dns cache */
-	    sendto_ops("%s is removing SZLINES while whistling innocently",
-		       parv[0]);
-	    return 0;
-	}
 	else if (mycmp(parv[1], "TKLINES") == 0)
 	{
 	    sendto_one(sptr, rpl_str(RPL_REHASHING), me.name, parv[0],
 		       "temp klines");
-	    flush_temp_klines();
+            remove_userbans_match_flags(UBAN_LOCAL|UBAN_TEMPORARY, 0);
 	    sendto_ops("%s is clearing temp klines while whistling innocently",
 		       parv[0]);
 	    return 0;
@@ -4470,7 +4121,7 @@ int m_rehash(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	{
 	    sendto_one(sptr, rpl_str(RPL_REHASHING), me.name, parv[0],
 		       "akills");
-	    do_rehash_akills();
+            remove_userbans_match_flags(UBAN_NETWORK, 0);
 	    sendto_ops("%s is rehashing akills", parv[0]);
 	    return 0;
 	}
@@ -5236,12 +4887,12 @@ int m_svskill(aClient *cptr, aClient *sptr, int parc, char *parv[])
  */      
 int m_akill(aClient *cptr, aClient *sptr, int parc, char *parv[]) 
 {
-    aConfItem *aconf, *ac2;
     aClient *acptr;
     char *user, *host, *reason, *akiller, buffer[1024], *current_date, 
 	fbuf[512];
     time_t length=0, timeset=0;
     int i;
+    struct userBan *ban, *oban;
 
     if(!IsServer(sptr) || (parc < 6))
 	return 0;
@@ -5262,81 +4913,77 @@ int m_akill(aClient *cptr, aClient *sptr, int parc, char *parv[])
     timeset=atoi(parv[5]);
     reason=(parv[6] ? parv[6] : "<no reason>");
 
+    if(length == 0) /* a "permanent" akill? */
+       length = (86400 * 7); /* hold it for a week */
+
+    /* is this an old bogus akill? */
+    if(timeset + length <= NOW)
+       return 0;
+
     current_date=smalldate((time_t)timeset);
     /* cut reason down a little, eh? */
     /* 250 chars max */
     if(strlen(reason)>250)
 	reason[251]=0;
-	
-    /* if this is already klined, don't akill it now */
-    ac2=find_is_klined(host, user);
-    if(ac2!=NULL) 
+
+    ban = make_hostbased_ban(user, host);
+    if(!ban)
+    {
+       sendto_realops_lev(DEBUG_LEV, "make_hostbased_ban(%s, %s) failed on akill", user, host);
+       return 0;
+    }
+
+    /* if it already exists, pass it on */
+    oban = find_userban_exact(ban, 0);
+    if(oban)
     {
 	/* pass along the akill anyways */
 	sendto_serv_butone(cptr, ":%s AKILL %s %s %d %s %d :%s",
 			   sptr->name, host, user, length, akiller,
 			   timeset, reason);
-	return 0;
+       userban_free(ban);
+       return 0;
     }
-    /* fill out aconf */
-    aconf=make_conf();
-    aconf->status=CONF_AKILL;
-    DupString(aconf->host, host);
-    DupString(aconf->name, user);
-    
+    	
     ircsprintf(buffer, "%s (%s)", reason, current_date);
+    ban->flags |= (UBAN_NETWORK|UBAN_TEMPORARY);
+    ban->reason = (char *) MyMalloc(strlen(buffer) + 1);
+    strcpy(ban->reason, buffer);
+    ban->timeset = timeset;
+    ban->duration = length;
 
-    DupString(aconf->passwd, buffer);
-	        
-    /* whether or not we have a length, this is still a temporary akill */
-    /* if the length is over a day, or nonexistant, we call this a 'forever'
-     * akill and set ->hold to 0xFFFFFFFF to indicate such
-     * this is a hack to prevent
-     * forever akills from being removed unless by an explicit /rehash */
-    if(length>86400 || !length)
-	aconf->hold=0xFFFFFFFF;  
-    else
-	aconf->hold=timeset+length;
-	
-    add_temp_kline(aconf);
+    add_hostbased_userban(ban);
+
+    /* send it off to any other servers! */
+    sendto_serv_butone(cptr, ":%s AKILL %s %s %d %s %d :%s",
+		       sptr->name, host, user, length, akiller,
+		       timeset, reason);
+
     /* Check local users against it */
     for (i = 0; i <= highest_fd; i++)
     {
 	if (!(acptr = local[i]) || IsMe(acptr) || IsLog(acptr))
             continue;
-	if (IsPerson(acptr))
+	if (IsPerson(acptr) && user_match_ban(acptr, ban))
 	{
-	    if ((acptr->user->username)&&(((acptr->sockhost)&& 
-					   (!match(host,acptr->sockhost)&&
-					    !match(user,
-						   acptr->user->username)))||
-					  ((acptr->hostip)&&
-					   (!match(host,acptr->hostip)&&
-					    !match(user,
-						   acptr->user->username)))))
-		
-	    {
-		sendto_ops("Autokill active for %s",
-			   get_client_name(acptr, FALSE));
-		ircsprintf(fbuf,"Autokilled: %s",reason);
-		(void) exit_client(acptr,acptr,&me,fbuf);
-		i--;
-	    }
+	    sendto_ops("Network-ban active for %s",
+		       get_client_name(acptr, FALSE));
+	    ircsprintf(fbuf, "Network-banned: %s", reason);
+	    exit_client(acptr, acptr, &me, fbuf);
+	    i--;
 	}
     }
-    zline_in_progress=NO;
 	
-    /* now finally send it off to any other servers! */
-    sendto_serv_butone(cptr, ":%s AKILL %s %s %d %s %d :%s",
-		       sptr->name, host, user, length, akiller,
-		       timeset, reason);
     return 0;
 }
   
 int m_rakill(aClient *cptr, aClient *sptr, int parc, char *parv[]) 
 {
+    struct userBan *ban, *oban;
+
     if(!IsServer(sptr))
 	return 0;
+
     /* just quickly find the akill and be rid of it! */
     if(parc<3) 
     {
@@ -5344,6 +4991,7 @@ int m_rakill(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		   "RAKILL");
 	return 0;
     }
+
     if(!IsULine(sptr)) 
     {
 	sendto_serv_butone(&me, ":%s GLOBOPS :Non-ULined server %s trying to "
@@ -5353,7 +5001,21 @@ int m_rakill(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		     sptr->name);
 	return 0;
     }
-    remove_temp_kline(parv[1], parv[2], CONF_AKILL);
+
+    ban = make_hostbased_ban(parv[2], parv[1]);
+    if(!ban)
+       return 0;
+
+    ban->flags |= UBAN_NETWORK;
+    oban = find_userban_exact(ban, UBAN_NETWORK);
+    if(oban)
+    {
+       remove_userban(oban);
+       userban_free(oban);
+    }
+
+    userban_free(ban);
+
     sendto_serv_butone(cptr, ":%s RAKILL %s %s", sptr->name, parv[1], parv[2]);
     return 0;
 }
@@ -5738,66 +5400,6 @@ int m_unsgline(aClient *cptr, aClient *sptr, int parc, char *parv[])
 			   mask);
     else
 	sendto_serv_butone(cptr, ":%s UNSGLINE :%s",sptr->name,mask);
-    return 0;
-}
-
-int m_szline(aClient *cptr, aClient *sptr, int parc, char *parv[]) 
-{
-    aConfItem *aconf;
-
-    if(!(IsServer(sptr) || IsULine(sptr)))
-	return 0;
-
-    if(parc<2) 
-    {
-	sendto_one(sptr, err_str(ERR_NEEDMOREPARAMS), me.name, parv[0],
-		   "SZLINE");
-	return 0;
-    }
-	
-    if (!(aconf=find_is_zlined(parv[1])))
-    {
-	/* okay, it doesn't suck, build a new conf for it */
-	aconf=make_conf();
-	aconf->status=(CONF_ZLINE|CONF_SZLINE); /* Z:line and SZline, woo */
-	DupString(aconf->host, parv[1]);
-	DupString(aconf->passwd, (parv[2]!=NULL ? parv[2] : "No Reason"));
-	aconf->name=(char *)NULL;
-	add_szline(aconf);
-    }
-    sendto_serv_butone(cptr, ":%s SZLINE %s :%s", sptr->name, parv[1],
-		       aconf->passwd);
-    return 0;
-}
-	
-int m_unszline(aClient *cptr, aClient *sptr, int parc, char *parv[]) 
-{
-    int matchit = 0;
-    char *mask;
-
-    if(!IsServer(sptr) || !IsULine(sptr))
-	return 0;
-    
-    if(parc<2) 
-    {
-	sendto_one(sptr, err_str(ERR_NEEDMOREPARAMS), me.name, parv[0],
-		   "UNSZLINE");
-	return 0;
-    }
-    if (parc==3)
-    {
-	matchit=atoi(parv[1]);
-	mask=parv[2];
-    }
-    else
-	mask=parv[1];
-    
-    remove_szline(mask, matchit ? 1 : 0);
-    if (parc==3)
-	sendto_serv_butone(cptr, ":%s UNSZLINE %d %s", sptr->name, matchit,
-			   mask);
-    else
-	sendto_serv_butone(cptr, ":%s UNSZLINE %s", sptr->name, mask);
     return 0;
 }
 

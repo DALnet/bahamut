@@ -416,6 +416,8 @@ int channel_svsmode(aClient *cptr, aClient *sptr, int parc, char *parv[])
     return 0;
 }
 
+#include "userban.h"
+
 /* m_svsmode - df function integrated
  *  - Raistlin
  * -- Behaviour changed - Epi (11/30/99)

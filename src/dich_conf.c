@@ -101,17 +101,9 @@ void report_conf_links(aClient *sptr, aConfList *List, int numeric, char c)
 	    pass = BadPtr(tmp->passwd) ? null : tmp->passwd;
 	    name = BadPtr(tmp->name) ? null : tmp->name;
 	    port = (int) tmp->port;
-	    if (tmp->status == CONF_KILL)
-		sendto_one(sptr, rpl_str(numeric), me.name,
-			   sptr->name, c, host,
-			   name, 0, pass);
-	    else if (tmp->status == CONF_ZLINE)
-		sendto_one(sptr, rpl_str(numeric), me.name,
-			   sptr->name, c, host, pass);
-	    else
-		sendto_one(sptr, rpl_str(numeric), me.name,
-			   sptr->name, c, host, name, port,
-			   get_conf_class(tmp));
+	    sendto_one(sptr, rpl_str(numeric), me.name,
+		       sptr->name, c, host, name, port,
+		       get_conf_class(tmp));
 	}
     }
 }

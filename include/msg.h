@@ -81,7 +81,6 @@
 #ifdef UNKLINE
 #define MSG_UNKLINE  "UNKLINE"		/* UNKLINE */
 #endif
-#define MSG_ZLINE    "ZLINE"	   	/* ZLINE */
 #define MSG_HTM      "HTM"	      	/* HTM */
 #define MSG_SET      "SET"	      	/* SET */
 #define MSG_SAMODE   "SAMODE"    	/* SAMODE */
@@ -108,8 +107,6 @@
 #define MSG_UNSQLINE "UNSQLINE" 	/* UNSQLINE */
 #define MSG_BURST    "BURST"     	/* BURST */
 #define MSG_DCCALLOW "DCCALLOW"		/* dccallow */
-#define MSG_SZLINE   "SZLINE"           /* szline */
-#define MSG_UNSZLINE "UNSZLINE"         /* unszline */
 #define MSG_SGLINE   "SGLINE"           /* sgline */
 #define MSG_UNSGLINE "UNSGLINE"         /* unsgline */
 #define MSG_DKEY     "DKEY"		/* diffie-hellman negotiation */
@@ -125,7 +122,6 @@
 
 extern int  m_kline(aClient *, aClient *, int, char **);
 extern int  m_unkline(aClient *, aClient *, int, char **);
-extern int  m_zline(aClient *, aClient *, int, char **);
 extern int  m_akill(aClient *, aClient *, int, char **);
 extern int  m_rakill(aClient *, aClient *, int, char **);
 extern int  m_locops(aClient *, aClient *, int, char **);
@@ -207,8 +203,6 @@ extern int  m_sqline(aClient *, aClient *, int, char **);
 extern int  m_unsqline(aClient *, aClient *, int, char **);
 extern int  m_burst(aClient *, aClient *, int, char **);
 extern int  m_dccallow(aClient *, aClient *, int, char **);
-extern int  m_szline(aClient *, aClient *, int, char **);
-extern int  m_unszline(aClient *, aClient *, int, char **);
 extern int  m_sgline(aClient *, aClient *, int, char **);
 extern int  m_unsgline(aClient *, aClient *, int, char **);
 extern int  m_dkey(aClient *, aClient *, int, char **);
@@ -270,7 +264,6 @@ struct Message msgtab[] =
 #ifdef UNKLINE
     {MSG_UNKLINE, m_unkline, 0, MAXPARA, 1, 0, 0, 0L},
 #endif
-    {MSG_ZLINE, m_zline, 0, MAXPARA, 1, 0, 0, 0L},
     {MSG_HASH, m_hash, 0, MAXPARA, 1, 0, 0, 0L},
     {MSG_DNS, m_dns, 0, MAXPARA, 1, 0, 0, 0L},
     {MSG_REHASH, m_rehash, 0, MAXPARA, 1, 0, 0, 0L},
@@ -300,8 +293,6 @@ struct Message msgtab[] =
     {MSG_UNSQLINE, m_unsqline, 0, MAXPARA, 1, 0, 0, 0L },
     {MSG_CAPAB, m_capab, 0, MAXPARA, 1, 1, 0, 0L},
     {MSG_BURST, m_burst, 0, MAXPARA, 1, 0, 0, 0L},
-    {MSG_SZLINE, m_szline, 0, MAXPARA, 1, 0, 0, 0L},
-    {MSG_UNSZLINE, m_unszline, 0, MAXPARA, 1, 0, 0, 0L},
     {MSG_SGLINE, m_sgline, 0, MAXPARA, 1, 0, 0, 0L},
     {MSG_UNSGLINE, m_unsgline, 0, MAXPARA, 1, 0, 0, 0L},
     {MSG_DKEY, m_dkey, 0, MAXPARA, 1, 1, 0, 0L},

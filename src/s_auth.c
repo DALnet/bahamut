@@ -77,7 +77,7 @@ void start_auth(aClient *cptr)
 	return;
     }
 #ifdef SHOW_HEADERS
-    send(cptr->fd, REPORT_DO_ID, R_do_id, 0);
+    sendto_one(cptr, REPORT_DO_ID);
 #endif
     set_non_blocking(cptr->authfd, cptr);
     /*
@@ -118,7 +118,7 @@ void start_auth(aClient *cptr)
 	if (!DoingDNS(cptr))
 	    SetAccess(cptr);
 #ifdef SHOW_HEADERS
-	send(cptr->fd, REPORT_FAIL_ID, R_fail_id, 0);
+	sendto_one(cptr, REPORT_FAIL_ID);
 #endif
 	return;
     }
@@ -191,7 +191,7 @@ static void authsenderr(aClient *cptr)
     cptr->authfd = -1;
     cptr->flags &= ~(FLAGS_AUTH | FLAGS_WRAUTH);
 #ifdef SHOW_HEADERS
-    send(cptr->fd, REPORT_FAIL_ID, R_fail_id, 0);
+    sendto_one(cptr, REPORT_FAIL_ID);
 #endif
 
     if (!DoingDNS(cptr))
@@ -311,7 +311,7 @@ void read_authports(aClient *cptr)
    }
 #ifdef SHOW_HEADERS
    else
-      send(cptr->fd, REPORT_FIN_ID, R_fin_id, 0);
+      sendto_one(cptr, REPORT_FIN_ID);
 #endif
 
    ircstp->is_asuc++;

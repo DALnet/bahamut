@@ -38,6 +38,7 @@
 #include <signal.h>
 #include "h.h"
 #include "dich_conf.h"
+#include "userban.h"
 
 extern int  rehashed;
 
@@ -49,8 +50,6 @@ char        specific_virtual_host;
 
 static int  		lookup_confhost(aConfItem *);
 static int  		attach_iline(aClient *, aConfItem *, char *, int);
-static aConfItem       *temporary_klines = (aConfItem *) NULL;
-static aConfItem       *szlines = (aConfItem *) NULL;
 
 /* externally defined functions  */
 
@@ -954,7 +953,8 @@ int rehash(aClient *cptr, aClient *sptr, int sig)
 	    exit(0);
 	write_pidfile();
 #endif
-	do_rehash_akills();
+        remove_userbans_match_flags(UBAN_NETWORK, 0);
+        remove_userbans_match_flags(UBAN_LOCAL|UBAN_TEMPORARY, 0);
     }
 
     if ((fd = openconf(configfile)) == -1) 
@@ -1016,12 +1016,9 @@ int rehash(aClient *cptr, aClient *sptr, int sig)
 
     if (sig != SIGINT)
 	flush_cache();		/* Flush DNS cache */
-	
-    clear_conf_list(&KList1);
-    clear_conf_list(&KList2);
-    clear_conf_list(&KList3);
-	
-    clear_conf_list(&ZList1);	/* Only z lines of this form allowed */
+
+    /* remove perm klines */
+    remove_userbans_match_flags(UBAN_LOCAL, UBAN_TEMPORARY);
 
     /* Don't clear SZLine list */
    
@@ -1033,7 +1030,7 @@ int rehash(aClient *cptr, aClient *sptr, int sig)
     clear_conf_list(&FList2);
     clear_conf_list(&FList3);
 	
-    (void) initconf(0, fd);
+    (void) initconf(0, fd, sptr);
 
 #ifdef SEPARATE_QUOTE_KLINES_BY_DATE
     {
@@ -1049,14 +1046,14 @@ int rehash(aClient *cptr, aClient *sptr, int sig)
 	    sendto_ops("Can't open %s file klines could be missing!",
 		       filenamebuf);
 	else
-	    (void) initconf(0, fd);
+	    (void) initconf(0, fd, sptr);
     }
 #else
 # ifdef KLINEFILE
     if ((fd = openconf(klinefile)) == -1)
 	sendto_ops("Can't open %s file klines could be missing!", klinefile);
     else
-	(void) initconf(0, fd);
+	(void) initconf(0, fd, sptr);
 # endif
 #endif
 
@@ -1152,7 +1149,7 @@ static int oper_access[] =
 #define MAXCONFLINKS 150
 
 int
-initconf(int opt, int fd)
+initconf(int opt, int fd, aClient *rehasher)
 {
     static char quotes[9][2] =
     {
@@ -1241,11 +1238,6 @@ initconf(int opt, int fd)
 	case 'c':		
 	    ccount++;
 	    aconf->status = CONF_CONNECT_SERVER;
-	    break;
-
-	case 'Z':		/* Zap lines (immediate refusal)  */
-	case 'z':
-	    aconf->status = CONF_ZLINE;
 	    break;
 
 	case 'E':		/* kline exception lines */
@@ -1569,42 +1561,46 @@ initconf(int opt, int fd)
 	
 	if ((aconf->status & CONF_KILL) && aconf->host) 
 	{
-	    char       *host = host_field(aconf);
+	    struct userBan *ban;
+	    char *ub_u, *ub_r;
+	    int ii;
+	    char fbuf[512];
+	    aClient *ub_acptr;
 
-	    dontadd = 1;
-	    switch (sortable(host)) 
-	    {
-	    case 0:
-		l_addto_conf_list(&KList3, aconf, host_field);
-		break;
-	    case 1:
-		addto_conf_list(&KList1, aconf, host_field);
-		break;
-	    case -1:
-		addto_conf_list(&KList2, aconf, rev_host_field);
-		break;
-	    }
+	    if(BadPtr(aconf->host))
+		continue;
 
-	    MyFree(host);
-	}
+	    ub_u = BadPtr(aconf->name) ? "*" : aconf->name;
+	    ub_r = BadPtr(aconf->passwd) ? "<No Reason>" : aconf->passwd;
 
-	if (aconf->host && (aconf->status & CONF_ZLINE)) 
-	{
-	    char       *host = host_field(aconf);
+	    ban = make_hostbased_ban(ub_u, aconf->host);
+	    if(!ban)
+		continue;
 
-	    dontadd = 1;
-	    switch (sortable(host)) 
-	    {
-	    case 0:
-		break;
-	    case 1:
-		addto_conf_list(&ZList1, aconf, host_field);
-		break;
-	    case -1:
-		break;
-	    }
+	    ban->flags |= UBAN_LOCAL;
+	    ban->reason = (char *) MyMalloc(strlen(ub_r) + 1);
+	    strcpy(ban->reason, ub_r);
+	    ban->timeset = NOW;
 	    
-	    MyFree(host);
+	    add_hostbased_userban(ban);
+
+	    /* Check local users against it */
+	    for (ii = 0; ii <= highest_fd; ii++)
+	    {
+		if (!(ub_acptr = local[i]) || IsMe(ub_acptr) || IsLog(ub_acptr) || ub_acptr == rehasher)
+		    continue;
+        
+		if (IsPerson(ub_acptr) && user_match_ban(ub_acptr, ban))
+		{
+		    sendto_ops("Local-ban active for %s",
+			       get_client_name(ub_acptr, FALSE));
+		    ircsprintf(fbuf, "Local-banned: %s", ub_r);
+		    exit_client(ub_acptr, ub_acptr, &me, fbuf);
+		    ii--;
+		}
+	    }
+
+	    continue;
 	}
 
 	if (aconf->host && (aconf->status & CONF_ELINE)) 
@@ -1740,369 +1736,6 @@ int find_fline(aClient *cptr)
     return find_conf_match(cptr, &FList1, &FList2, &FList3);
 }
 
-/*
- * find_kill
- * 
- * See if this user is klined already, and if so, return aConfItem pointer
- * to the entry for this kline. This wildly changes the way find_kill
- * works -Dianora
- * 
- */
-aConfItem *find_kill(aClient *cptr)
-{
-    char       *host, *name;
-    aConfItem  *ret;
-    if (!cptr->user)
-	return 0;
-
-    host = cptr->sockhost;
-    name = cptr->user->username;
-
-    if (strlen(host) > (size_t) HOSTLEN ||
-	(name ? strlen(name) : 0) > (size_t) HOSTLEN)
-	return (0);
-
-    if (find_eline(cptr))
-	return 0;
-   
-    ret=find_is_klined(host, name);
-    if (ret!=NULL) return ret;
-    host=cptr->hostip;
-    return (find_is_klined(host, name));
-}
-
-aConfItem *find_kill_perm(aClient *cptr)
-{
-    char       *host, *name;
-    aConfItem  *ret;
-    if (!cptr->user)
-	return 0;
-
-    host = cptr->sockhost;
-    name = cptr->user->username;
-
-    if (strlen(host) > (size_t) HOSTLEN ||
-	(name ? strlen(name) : 0) > (size_t) HOSTLEN)
-	return (0);
-
-    if (find_eline(cptr))
-	return 0;
-   
-    ret=find_is_klined_perm(host, name);
-    if (ret!=NULL) return ret;
-    host=cptr->hostip;
-    return (find_is_klined_perm(host, name));
-}
-
-/*
- * WARNING, no sanity checking on length of name,host etc. thats
- * expected to be done by caller.... *sigh* -Dianora
- */
-aConfItem *find_is_klined(char *host, char *name)
-{
-    aConfList  *list;
-    char        rev[HOSTLEN + 1];	
-    aConfItem  *kill_list_ptr;	/* used for the link list only  */
-    aConfItem  *last_list_ptr;
-    aConfItem  *tmp_list_ptr;
-    aConfItem  *tmp;
-
-    /*
-     * Temporary kline handling... I expect this list to be very tiny.
-     * (crosses fingers) so CPU time in this, should be minimum.
-     * -Dianora
-     */
-    
-    if (temporary_klines) 
-    {
-	kill_list_ptr = last_list_ptr = temporary_klines;
-	
-	while (kill_list_ptr) 
-	{
-	    if (kill_list_ptr->hold <= NOW && kill_list_ptr->hold!=0xFFFFFFFF) 
-	    {			/* a kline has expired */
-		if (temporary_klines == kill_list_ptr) 
-		{
-		    /*
-		     * Its pointing to first one in link list 
-		     * so, bypass this one, remember bad things can happen
-		     * if you try to use an already freed pointer..
-		     */
-		    
-		    temporary_klines = last_list_ptr = tmp_list_ptr =
-			kill_list_ptr->next;
-		}
-		else 
-		{
-		    /* its in the middle of the list, so link around it */
-		    tmp_list_ptr = last_list_ptr->next = kill_list_ptr->next;
-		}
-
-		MyFree(kill_list_ptr->host);
-		MyFree(kill_list_ptr->name);
-		MyFree(kill_list_ptr->passwd);
-		MyFree(kill_list_ptr);
-		kill_list_ptr = tmp_list_ptr;
-	    }
-	    else 
-	    {
-		if ((kill_list_ptr->name && 
-		     (!name || !match(kill_list_ptr->name, name))) && 
-		    (kill_list_ptr->host && 
-		     (!host || !match(kill_list_ptr->host, host))))
-		    return (kill_list_ptr);
-		last_list_ptr = kill_list_ptr;
-		kill_list_ptr = kill_list_ptr->next;
-	    }
-	}
-    }
-    
-    reverse(rev, host);
-
-    /*
-     * I have NEVER seen a kline with a port field, have you? I have
-     * removed the testing of the port number from here -Dianora
-     */
-    /* Start with hostnames of the form "*word" (most frequent) -Sol */
-
-    list = &KList2;
-    while ((tmp = find_matching_conf(list, rev)) != NULL) 
-    {
-	if (tmp->name && (!name || !match(tmp->name, name)))
-	    return (tmp);
-	list = NULL;
-    }
-
-    /* Try hostnames of the form "word*" -Sol */
-    
-    list = &KList1;
-    while ((tmp = find_matching_conf(list, host)) != NULL) 
-    {
-	if (tmp->name && (!name || !match(tmp->name, name)))
-	    return (tmp);
-	list = NULL;
-    }
-
-    /* If none of the above worked, try non-sorted entries -Sol */
-
-    list = &KList3;
-    while ((tmp = l_find_matching_conf(list, host)) != NULL) 
-    {
-	if (tmp->host && tmp->name && (!name || !match(tmp->name, name)))
-	    return (tmp);
-	list = NULL;
-    }
-    return ((aConfItem *) NULL);
-}
-
-aConfItem *find_is_klined_perm(char *host, char *name)
-{
-    aConfList  *list;
-    aConfItem  *tmp;
-    char        rev[HOSTLEN + 1];	
-    
-    reverse(rev, host);
-
-    /*
-     * I have NEVER seen a kline with a port field, have you? I have
-     * removed the testing of the port number from here -Dianora
-     */
-    /* Start with hostnames of the form "*word" (most frequent) -Sol */
-
-    list = &KList2;
-    while ((tmp = find_matching_conf(list, rev)) != NULL) 
-    {
-	if (tmp->name && (!name || !match(tmp->name, name)))
-	    return (tmp);
-	list = NULL;
-    }
-
-    /* Try hostnames of the form "word*" -Sol */
-    
-    list = &KList1;
-    while ((tmp = find_matching_conf(list, host)) != NULL) 
-    {
-	if (tmp->name && (!name || !match(tmp->name, name)))
-	    return (tmp);
-	list = NULL;
-    }
-
-    /* If none of the above worked, try non-sorted entries -Sol */
-
-    list = &KList3;
-    while ((tmp = l_find_matching_conf(list, host)) != NULL) 
-    {
-	if (tmp->host && tmp->name && (!name || !match(tmp->name, name)))
-	    return (tmp);
-	list = NULL;
-    }
-    return ((aConfItem *) NULL);
-}
-
-/*
- * report_matching_host_klines
- * 
- * inputs               - aClient pointer pointing to user who requested stats
- * k output             - NONE side effects     -
- * 
- * report klines that are in the same "close" domain as user
- * 
- * -Dianora
- */
-void report_matching_host_klines(aClient *cptr, char *host)
-{
-    char       *pass;
-    char       *name = (char *) NULL;
-    char       *found_host = (char *) NULL;
-    aConfItem  *tmp;
-    aConfList  *list;
-    static char null[] = "<NULL>";
-    char        rev[HOSTLEN + 1];	
-
-    if (strlen(host) > (size_t) HOSTLEN ||
-	(name ? strlen(name) : 0) > (size_t) HOSTLEN)
-	return;
-
-    reverse(rev, host);
-    
-    /*  Start with hostnames of the form "*word" (most frequent) -Sol */
-
-    list = &KList2;
-    while ((tmp = find_matching_conf(list, rev)) != NULL) 
-    {
-	pass = BadPtr(tmp->passwd) ? null : tmp->passwd;
-	name = BadPtr(tmp->name) ? null : tmp->name;
-	found_host = BadPtr(tmp->host) ? null : tmp->host;
-	if (tmp->status == CONF_KILL)
-	    sendto_one(cptr, rpl_str(RPL_STATSKLINE), me.name,
-		       cptr->name, 'K', found_host,
-		       name, 0, pass);
-	list = NULL;
-    }
-
-    /* Try hostnames of the form "word*" -Sol */
-
-    list = &KList1;
-    while ((tmp = find_matching_conf(list, host)) != NULL) 
-    {
-	pass = BadPtr(tmp->passwd) ? null : tmp->passwd;
-	name = BadPtr(tmp->name) ? null : tmp->name;
-	found_host = BadPtr(tmp->host) ? null : tmp->host;
-	if (tmp->status == CONF_KILL)
-	    sendto_one(cptr, rpl_str(RPL_STATSKLINE), me.name,
-		       cptr->name, 'K', found_host,
-		       name, 0, pass);
-	list = NULL;
-    }
-
-    /* If none of the above worked, try non-sorted entries -Sol */
-
-    list = &KList3;
-    while ((tmp = l_find_matching_conf(list, host)) != NULL) 
-    {
-	pass = BadPtr(tmp->passwd) ? null : tmp->passwd;
-	name = BadPtr(tmp->name) ? null : tmp->name;
-	found_host = BadPtr(tmp->host) ? null : tmp->host;
-	if (tmp->status == CONF_KILL)
-	    sendto_one(cptr, rpl_str(RPL_STATSKLINE), me.name,
-		       cptr->name, 'K', found_host,
-		       name, 0, pass);
-	list = NULL;
-    }
-}
-
-/*
- * find_zkill is only called when a /quote zline is applied all quote
- * zlines are sortable, of the form nnn.nnn.nnn.* or nnn.nnn.nnn.nnn
- * There is no reason to check for all three possible formats as in
- * klines
- * 
- * - Dianora
- * 
- * inputs               - client pointer output         - return 1 if match is
- * found, and loser should die return 0 if no match is found and loser
- * shouldn't die side effects   - only sortable zline tree is searched
- */
-
-aConfItem *find_zkill(aClient *cptr)
-{
-    char       *host;
-
-    if (!cptr->user)
-	return 0;
-    
-    host = cptr->hostip;		/* guaranteed to always be less than
-					 * HOSTIPLEN - Dianora 
-					 */
-
-    if (find_eline(cptr))
-	return 0;
-
-    return (find_is_zlined(host));
-}
-
-aConfItem *find_zkill_perm(aClient *cptr)
-{
-    char       *host;
-
-    if (!cptr->user)
-	return 0;
-    
-    host = cptr->hostip;		/* guaranteed to always be less than
-					 * HOSTIPLEN - Dianora 
-					 */
-
-    if (find_eline(cptr))
-	return 0;
-
-    return (find_is_zlined_perm(host));
-}
-
-/*
- * find_is_zlined
- * 
- * inputs               - pointer to host ip# output            - pointer to
- * aConfItem if found, NULL pointer if not side effects -
- */
-
-aConfItem *find_is_zlined(char *host)
-{
-    aConfItem  *tmp;
-
-    /*
-     * This code is almost identical to find_zline but in the case of an
-     * active quote zline, the loser deserves to know why they are being
-     * zlined don't they? - Dianora
-     */
-   
-    if (szlines) {
-	tmp=szlines;
-	while(tmp) {
-	    if (match(tmp->host,host)==0) return tmp;
-	    tmp=tmp->next;
-	}
-    }
-
-    if ((tmp = find_matching_conf(&ZList1, host))) 
-	if (tmp!=NULL) return (tmp);
-    return NULL;
-}
-
-aConfItem *find_is_zlined_perm(char *host)
-{
-    aConfItem  *tmp;
-
-    /*
-     * This code is almost identical to find_zline but in the case of an
-     * active quote zline, the loser deserves to know why they are being
-     * zlined don't they? - Dianora
-     */
-   
-    if ((tmp = find_matching_conf(&ZList1, host))) 
-	if (tmp!=NULL) return (tmp);
-    return NULL;
-}
-
 int find_conf_match(aClient *cptr, aConfList *List1, aConfList *List2,
 		    aConfList *List3)
 {
@@ -2153,269 +1786,6 @@ int find_conf_match(aClient *cptr, aConfList *List1, aConfList *List2,
     }
 
     return (tmp ? -1 : 0);
-}
-
-void add_szline(aConfItem *aconf)
-{
-    aconf->next = szlines;
-    szlines=aconf;
-}
-
-void remove_szline(char *mask, int m) {
-    aConfItem *aconf, *ac2, *ac3;
-    ac2 = ac3 = aconf = szlines;
-    while(aconf)
-    {
-        if((aconf->status & (CONF_ZLINE))
-           && (aconf->status & (CONF_SZLINE)) &&
-           aconf->host && (m==1 ? !match(mask, aconf->host) 
-			   : !mycmp(mask, aconf->host)))
-        {
-            if (aconf == szlines)
-                ac2 = ac3 = szlines = aconf->next;
-            else
-                ac2 = ac3->next = aconf->next;
-            MyFree(aconf->passwd);
-            MyFree(aconf->host);
-            MyFree(aconf);
-            aconf=ac2;
-        }
-	else
-	{
-            ac3=aconf;
-            aconf=aconf->next;
-        }
-    }
-}
-
-void report_szlines(aClient *sptr)
-{
-    aConfItem *tmp;
-    tmp=szlines;
-    while(tmp)
-    {
-	sendto_one(sptr, rpl_str(RPL_STATSZLINE), me.name,
-		   sptr->name, 'z' , tmp->host, 
-		   BadPtr(tmp->passwd) ? "No Reason" : tmp->passwd);
-	tmp=tmp->next;
-    }
-}
-
-void send_szlines(aClient *cptr)
-{
-    aConfItem *tmp;
-    tmp=szlines;
-    while (tmp)
-    {
-	sendto_one(cptr, ":%s SZLINE %s :%s", me.name, tmp->host, tmp->passwd);
-	tmp=tmp->next;
-    }
-}
-
-/*
- * add_temp_kline
- * 
- * inputs               - pointer to aConfItem output           - none Side
- * effects      - links in given aConfItem into temporary kline link
- * list
- * 
- * -Dianora
- */
-
-void add_temp_kline(aConfItem *aconf)
-{
-    aconf->next = temporary_klines;
-    temporary_klines = aconf;
-}
-
-/*
- * flush_temp_klines
- * 
- * inputs               - NONE output           - NONE side effects     - All
- * temporary klines are flushed out. really should be used only for
- * cases of extreme goof up for now.
- */
-void flush_temp_klines()
-{
-    aConfItem  *kill_list_ptr;
-
-    if ((kill_list_ptr = temporary_klines)) 
-    {
-	while (kill_list_ptr) 
-	{
-	    temporary_klines = kill_list_ptr->next;
-	    MyFree(kill_list_ptr->host);
-	    MyFree(kill_list_ptr->name);
-	    MyFree(kill_list_ptr->passwd);
-	    MyFree(kill_list_ptr);
-	    kill_list_ptr = temporary_klines;
-	}
-    }
-}
-
-/*
- * report_temp_klines
- * 
- * inputs               - aClient pointer output                - NONE side
- * effects      -
- * 
- */
-void report_temp_klines(aClient *sptr) 
-{
-    aConfItem  *kill_list_ptr;
-    aConfItem  *last_list_ptr;
-    aConfItem  *tmp_list_ptr;
-    char       *host, *name, *reason, type;
-    int         len;
-	
-    if (temporary_klines) 
-    {
-	kill_list_ptr = last_list_ptr = temporary_klines;
-		
-	while (kill_list_ptr) 
-	{
-	    if (kill_list_ptr->hold <= NOW && kill_list_ptr->hold!=0xFFFFFFFF) 
-	    {	
-				/* kline has expired */
-		if (temporary_klines == kill_list_ptr) 
-		{
-		    temporary_klines = last_list_ptr = tmp_list_ptr =
-			kill_list_ptr->next;
-		}
-		else 
-		{
-		    tmp_list_ptr = last_list_ptr->next = kill_list_ptr->next;
-		}
-			
-		MyFree(kill_list_ptr->host);
-		MyFree(kill_list_ptr->name);
-		MyFree(kill_list_ptr->passwd);
-		MyFree(kill_list_ptr);
-		kill_list_ptr = tmp_list_ptr;
-	    }
-	    else 
-	    {
-		if (kill_list_ptr->host)
-		    host = kill_list_ptr->host;
-		else
-		    host = "*";
-			
-		if (kill_list_ptr->name)
-		    name = kill_list_ptr->name;
-		else
-		    name = "*";
-			
-		if (kill_list_ptr->passwd)
-		    reason = kill_list_ptr->passwd;
-		else
-		    reason = "No Reason";
-
-		len = (kill_list_ptr->hold - NOW) / 60;
-				
-		if(kill_list_ptr->status==CONF_KILL)
-		    type='k';
-		else if(kill_list_ptr->status==CONF_AKILL &&
-			kill_list_ptr->hold==0xFFFFFFFF)
-		{
-		    len = 0;
-		    type='A';
-		}
-		else
-		    type='a';
-				
-		sendto_one(sptr, rpl_str(RPL_STATSKLINE), me.name,
-			   sptr->name, type, host, name, len, reason);
-				
-		last_list_ptr = kill_list_ptr;
-		kill_list_ptr = kill_list_ptr->next;
-	    }
-	}
-    }
-}
-
-
-/* a few handy functions */
-/* third param (type):
- * 0: remove anything matching
- * CONF_AKILL: remove only CONF_AKILL
- * CONF_KILL: remove only CONF_KILL
- * or whatever.   - lucas
- * also returns number removed. - lucas
-*/
-
-int remove_temp_kline(char *host, char *user, int type) 
-{
-    aConfItem  *kill_list_ptr;
-    aConfItem  *last_list_ptr;
-    aConfItem  *tmp_list_ptr;
-    int num_removed = 0;
-	
-    if (temporary_klines) 
-    {
-	kill_list_ptr = last_list_ptr = temporary_klines;
-		
-	while (kill_list_ptr) 
-	{
-	    if (!mycmp(kill_list_ptr->host, host) && 
-		!mycmp(kill_list_ptr->name, user) &&
-		(!type || type == kill_list_ptr->status)) 
-	    {	/* kline has expired */
-		if (temporary_klines == kill_list_ptr) 
-		    temporary_klines = last_list_ptr = 
-			tmp_list_ptr = kill_list_ptr->next;
-		else 
-		    tmp_list_ptr = last_list_ptr->next = kill_list_ptr->next;
-		
-		MyFree(kill_list_ptr->host);
-		MyFree(kill_list_ptr->name);
-		MyFree(kill_list_ptr->passwd);
-		MyFree(kill_list_ptr);
-		kill_list_ptr = tmp_list_ptr;
-		num_removed++;
-	    }
-	    else 
-	    {
-		last_list_ptr = kill_list_ptr;
-		kill_list_ptr = kill_list_ptr->next;
-	    }                               
-	}
-    }
-    return num_removed;
-}
-
-void do_rehash_akills(void) 
-{
-    aConfItem  *kill_list_ptr;
-    aConfItem  *last_list_ptr;
-    aConfItem  *tmp_list_ptr;
-   
-    if (temporary_klines) 
-    {
-	kill_list_ptr = last_list_ptr = temporary_klines;
-		
-	while (kill_list_ptr) 
-	{
-	    if (kill_list_ptr->hold <= NOW || kill_list_ptr->hold==0xFFFFFFFF) 
-	    {			/* kline has expired */		
-		if (temporary_klines == kill_list_ptr) 
-		    temporary_klines = last_list_ptr =
-			tmp_list_ptr = kill_list_ptr->next;
-		else 
-		    tmp_list_ptr = last_list_ptr->next = kill_list_ptr->next;
-				
-		MyFree(kill_list_ptr->host);
-		MyFree(kill_list_ptr->name);
-		MyFree(kill_list_ptr->passwd);
-		MyFree(kill_list_ptr);
-		kill_list_ptr = tmp_list_ptr;
-	    }
-	    else 
-	    {
-		last_list_ptr = kill_list_ptr;
-		kill_list_ptr = kill_list_ptr->next;
-	    }                               
-	}
-    }
 }
 
 /* m_svsnoop - Remove all ops from a server

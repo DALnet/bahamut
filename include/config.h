@@ -369,15 +369,6 @@
 #define	CHECK_PENDING_KLINES	10	/* in minutes */
 
 /*
- * SEPARATE_QUOTE_KLINES_BY_DATE If you define this, then klines will
- * be read and written to a separate kline file according to date. You
- * =must= then run a daily/nightly script to consolidate your klines,
- * or the previous days klines are lost. If you define this, LOCKFILE
- * on kline file makes no sense
- */
-#undef SEPARATE_QUOTE_KLINES_BY_DATE
-
-/*
  * FOLLOW_IDENT_RFC
  * 
  * From RFC 1413, "The Identification Protocol is not intended as an

@@ -48,14 +48,14 @@
 #endif
 #endif
 
-#define REPORT_DO_DNS_	   ":%s NOTICE AUTH :*** Looking up your hostname...\n"
-#define REPORT_FIN_DNS_	   ":%s NOTICE AUTH :*** Found your hostname\n"
-#define REPORT_FIN_DNSC_   ":%s NOTICE AUTH :*** Found your hostname, cached\n"
+#define REPORT_DO_DNS_	   ":%s NOTICE AUTH :*** Looking up your hostname..."
+#define REPORT_FIN_DNS_	   ":%s NOTICE AUTH :*** Found your hostname"
+#define REPORT_FIN_DNSC_   ":%s NOTICE AUTH :*** Found your hostname, cached"
 #define REPORT_FAIL_DNS_   ":%s NOTICE AUTH :*** Couldn't look up your "\
-                           "hostname\n"
-#define REPORT_DO_ID_	   ":%s NOTICE AUTH :*** Checking Ident\n"
-#define REPORT_FIN_ID_	   ":%s NOTICE AUTH :*** Got Ident response\n"
-#define REPORT_FAIL_ID_	   ":%s NOTICE AUTH :*** No Ident response\n"
+                           "hostname"
+#define REPORT_DO_ID_	   ":%s NOTICE AUTH :*** Checking Ident"
+#define REPORT_FIN_ID_	   ":%s NOTICE AUTH :*** Got Ident response"
+#define REPORT_FAIL_ID_	   ":%s NOTICE AUTH :*** No Ident response"
 
 extern char REPORT_DO_DNS[256], REPORT_FIN_DNS[256], REPORT_FIN_DNSC[256], 
     REPORT_FAIL_DNS[256], REPORT_DO_ID[256], REPORT_FIN_ID[256], 
@@ -603,16 +603,13 @@ struct ConfItem
 #define	CONF_HUB		0x2000
 #define CONF_ELINE		0x4000
 #define CONF_FLINE		0x8000
-#define	CONF_ZLINE		0x20000
 #define CONF_QUARANTINED_NICK 	0x40000
 #define CONF_ULINE 		0x80000
 #define CONF_DRPASS		0x100000    /* die/restart pass, from df465 */
-#define CONF_AKILL		0x200000
 #define CONF_SQLINE     	0x400000
 #define CONF_MONINFO		0x800000    /* proxy monitor info */
 #define CONF_GCOS               0x1000000
 #define CONF_SGLINE             0x2000000
-#define CONF_SZLINE             0x4000000   /* Services placed zlines */
 #define CONF_QUARANTINED_CHAN	0x8000000
 #define CONF_QUARANTINE         (CONF_QUARANTINED_NICK|CONF_QUARANTINED_CHAN)
 #define	CONF_OPS		(CONF_OPERATOR | CONF_LOCOP)

@@ -37,6 +37,7 @@
 #ifdef FLUD
 #include "blalloc.h"
 #endif /* FLUD */
+#include "userban.h"
 
 #if defined( HAVE_STRING_H)
 #include <string.h>
@@ -389,12 +390,13 @@ char *canonize(char *buffer)
 int register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
 {
     aClient *nsptr;
-    aConfItem *aconf = NULL, *pwaconf = NULL;
+    aConfItem  *pwaconf = NULL;
     char       *parv[3];
     static char ubuf[12];
     char       *p;
     short       oldstatus = sptr->status;
     anUser     *user = sptr->user;
+    struct userBan    *ban;
 #ifdef SHORT_MOTD
     aMotd      *smotd;
 #endif
@@ -750,47 +752,43 @@ int register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
                       "You match the pattern of a known trojan, please check your system.");
         }
 
-	/* following block for the benefit of time-dependent K:-lines */
-	if ((aconf = find_kill(sptr))) 
+	if(!(ban = check_userbanned(sptr, UBAN_IP|UBAN_CIDR4, UBAN_WILDUSER)))
+            ban = check_userbanned(sptr, UBAN_HOST, 0);
+
+	if(ban)
 	{
-	    char       *reason;
-	    char	   *ktype;
-	    int         kline;
-			
-	    kline = (aconf->status == CONF_KILL) ? 1 : 0;
-	    ktype = kline ? "K-lined" : "Autokilled";
-	    reason = aconf->passwd ? aconf->passwd : ktype;
-			
-#ifdef RK_NOTICES
-	    sendto_realops("%s %s@%s. for %s", ktype, sptr->user->username,
-			   sptr->sockhost, reason);
-#endif
-	    sendto_one(sptr, err_str(ERR_YOUREBANNEDCREEP),
-		       me.name, sptr->name, ktype);
-	    sendto_one(sptr,
-		       ":%s NOTICE %s :*** You are not welcome on this %s.",
-		       me.name, sptr->name,
-		       kline ? "server" : "network");
+	    char *reason, *ktype;
+	    int local;
+
+	    local = (ban->flags & UBAN_LOCAL) ? 1 : 0;
+	    ktype = local ? "Local-Banned" : "Network-Banned";
+	    reason = ban->reason ? ban->reason : ktype;
+
+	    sendto_one(sptr, err_str(ERR_YOUREBANNEDCREEP), me.name, sptr->name, ktype);
+	    sendto_one(sptr, ":%s NOTICE %s :*** You are not welcome on this %s.",
+	               me.name, sptr->name, local ? "server" : "network");
 	    sendto_one(sptr, ":%s NOTICE %s :*** %s for %s",
-		       me.name, sptr->name, ktype, reason);
+	               me.name, sptr->name, ktype, reason);
 	    sendto_one(sptr, ":%s NOTICE %s :*** Your hostmask is %s!%s@%s",
 		       me.name, sptr->name, sptr->name, sptr->user->username,
 		       sptr->sockhost);
-	    sendto_one(sptr, ":%s NOTICE %s :*** For more information, please "
-		       "mail %s and include everything shown here.",
-		       me.name, sptr->name,
-		       kline ? SERVER_KLINE_ADDRESS : NETWORK_KLINE_ADDRESS);
-	    
+	    sendto_one(sptr, ":%s NOTICE %s :*** Your IP is %s",
+	               me.name, sptr->name, inetntoa((char *)&sptr->ip.s_addr));
+	    sendto_one(sptr, ":%s NOTICE %s :*** For assistance, please email %s and "
+	               "include everything shown here.", me.name, sptr->name,
+	               local ? SERVER_KLINE_ADDRESS : NETWORK_KLINE_ADDRESS);
+
 #ifdef USE_REJECT_HOLD
 	    cptr->flags |= FLAGS_REJECT_HOLD;
 #endif
 	    ircstp->is_ref++;
-	    
+
 #ifndef USE_REJECT_HOLD			
+            throttle_force(sptr->hostip);
 	    return exit_client(cptr, sptr, &me, reason);
 #endif
 	}
-		
+
 	if ((++Count.local) > Count.max_loc) 
 	{
 	    Count.max_loc = Count.local;
@@ -1051,7 +1049,7 @@ int register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
 	
 	if (ubuf[1]) send_umode(cptr, sptr, 0, ALL_UMODES, ubuf);
     }
-    
+
     return 0;
 }
 

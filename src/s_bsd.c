@@ -29,6 +29,7 @@
 #include "patchlevel.h"
 #include "zlink.h"
 #include "throttle.h"
+#include "userban.h"
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/file.h>
@@ -1238,91 +1239,68 @@ aClient *add_connection(aClient * cptr, int fd)
     Link lin;
     aClient *acptr;
     aConfItem *aconf = NULL;
+    char *s, *t;
+    struct sockaddr_in addr;
+    int len;
+    struct userBan *ban;
     
     acptr = make_client(NULL, &me);
     
     if (cptr != &me)
 	aconf = cptr->confs->value.aconf;
-    /* 
-     * Removed preliminary access check. Full check is performed in
-     * m_server and m_user instead. Also connection time out help to get
-     * rid of unwanted connections.
-     */
     
-    /* Why is this isatty even here? everything is a socket no? */
-    /* 
-     * if (isatty(fd)) / * If descriptor is a tty, special checking... *
-     * / get_sockhost(acptr, cptr->sockhost); else
-     *
-     */
-    {
-	char *s, *t;
-	struct sockaddr_in addr;
-	int len = sizeof(struct sockaddr_in);
-	
-	if (getpeername(fd, (struct sockaddr *) &addr, &len) == -1)
-	{ 
-	    ircstp->is_ref++;
-	    acptr->fd = -2;
-	    free_client(acptr);
-	    (void) close(fd);
-	    return NULL;
-	}
-	/* don't want to add "Failed in connecting to" here.. */
-	if (aconf && IsIllegal(aconf))
-	{
-	    ircstp->is_ref++;
-	    acptr->fd = -2;
-	    free_client(acptr);
-	    (void) close(fd);
-	    return NULL;
-	}
-	/* 
-	 * Copy ascii address to 'sockhost' just in case. Then we have
-	 * something valid to put into error messages...
-	 */
-	get_sockhost(acptr, (char *) inetntoa((char *) &addr.sin_addr));
-	memcpy((char *) &acptr->ip, (char *) &addr.sin_addr,
-	       sizeof(struct in_addr));
-	
-	acptr->port = ntohs(addr.sin_port);
-	/* 
-	 * Check that this socket (client) is allowed to accept
-	 * connections from this IP#.
-	 */
-	for (s = (char *) &cptr->ip, t = (char *) &acptr->ip, len = 4;
-	     len > 0; len--, s++, t++)
-	{
-	    if (!*s)
-		continue;
-	    if (*s != *t)
-		break;
-	}
-	
-	if (len)
-	{
-	    ircstp->is_ref++;
-	    acptr->fd = -2;
-	    free_client(acptr);
-	    (void) close(fd);
-	    return NULL;
-	}
-#ifdef SHOW_HEADERS
-	send(fd, REPORT_DO_DNS, R_do_dns, 0);
-#endif
-	lin.flags = ASYNC_CLIENT;
-	lin.value.cptr = acptr;
-	Debug((DEBUG_DNS, "lookup %s", inetntoa((char *) &addr.sin_addr)));
-	acptr->hostp = gethost_byaddr((char *) &acptr->ip, &lin);
-	if (!acptr->hostp)
-	    SetDNS(acptr);
-#ifdef SHOW_HEADERS
-	else
-	    send(fd, REPORT_FIN_DNSC, R_fin_dnsc, 0);
-#endif
-	nextdnscheck = 1;
+    len = sizeof(struct sockaddr_in);
+
+    if (getpeername(fd, (struct sockaddr *) &addr, &len) == -1)
+    { 
+	ircstp->is_ref++;
+	acptr->fd = -2;
+	free_client(acptr);
+	close(fd);
+	return NULL;
     }
-    
+
+    /* don't want to add "Failed in connecting to" here.. */
+    if (aconf && IsIllegal(aconf))
+    {
+	ircstp->is_ref++;
+	acptr->fd = -2;
+	free_client(acptr);
+	close(fd);
+	return NULL;
+    }
+
+    /* 
+     * Copy ascii address to 'sockhost' just in case. Then we have
+     * something valid to put into error messages...
+     */
+    get_sockhost(acptr, (char *) inetntoa((char *) &addr.sin_addr));
+    memcpy((char *) &acptr->ip, (char *) &addr.sin_addr,
+	sizeof(struct in_addr));
+	
+    acptr->port = ntohs(addr.sin_port);
+    /* 
+     * Check that this socket (client) is allowed to accept
+     * connections from this IP#.
+     */
+    for (s = (char *) &cptr->ip, t = (char *) &acptr->ip, len = 4;
+	 len > 0; len--, s++, t++)
+    {
+	if (!*s)
+	    continue;
+	if (*s != *t)
+	    break;
+    }
+
+    if (len)
+    {
+	ircstp->is_ref++;
+	acptr->fd = -2;
+	free_client(acptr);
+	close(fd);
+	return NULL;
+    }
+
     if (aconf)
 	aconf->clients++;
     acptr->fd = fd;
@@ -1333,6 +1311,47 @@ aClient *add_connection(aClient * cptr, int fd)
     add_client_to_list(acptr);
     set_non_blocking(acptr->fd, acptr);
     set_sock_opts(acptr->fd, acptr);
+
+    ban = check_userbanned(acptr, UBAN_IP|UBAN_CIDR4|UBAN_WILDUSER, 0);
+    if(ban)
+    {
+	char *reason, *ktype;
+	int local;
+
+	local = (ban->flags & UBAN_LOCAL) ? 1 : 0;
+	ktype = local ? "Local-Banned" : "Network-Banned";
+	reason = ban->reason ? ban->reason : ktype;
+
+	sendto_one(acptr, err_str(ERR_YOUREBANNEDCREEP), me.name, "*", ktype);
+	sendto_one(acptr, ":%s NOTICE * :*** You are not welcome on this %s.",
+		   me.name, local ? "server" : "network");
+	sendto_one(acptr, ":%s NOTICE * :*** %s for %s", 
+		   me.name, ktype, reason);
+	sendto_one(acptr, ":%s NOTICE * :*** Your IP is %s",
+		   me.name, inetntoa((char *)&acptr->ip.s_addr));
+	sendto_one(acptr, ":%s NOTICE * :*** For assistance, please email %s and "
+		   "include everything shown here.", me.name, 
+		   local ? SERVER_KLINE_ADDRESS : NETWORK_KLINE_ADDRESS);
+
+        exit_client(acptr, acptr, &me, reason);
+	return NULL;
+    }
+
+#ifdef SHOW_HEADERS
+    sendto_one(acptr, REPORT_DO_DNS);
+#endif
+    lin.flags = ASYNC_CLIENT;
+    lin.value.cptr = acptr;
+    Debug((DEBUG_DNS, "lookup %s", inetntoa((char *) &addr.sin_addr)));
+    acptr->hostp = gethost_byaddr((char *) &acptr->ip, &lin);
+    if (!acptr->hostp)
+	SetDNS(acptr);
+#ifdef SHOW_HEADERS
+    else
+	sendto_one(acptr, REPORT_FIN_DNSC);
+#endif
+    nextdnscheck = 1;
+    
 #ifdef DO_IDENTD
     start_auth(acptr);
 #endif
@@ -1528,8 +1547,6 @@ static void read_error_exit(aClient *cptr, int length, int err)
 
 void accept_connection(aClient *cptr)
 {
-    aConfItem *tmp;
-    char dumpstring[491];
     static struct sockaddr_in addr;
     int addrlen = sizeof(struct sockaddr_in);
     char host[HOSTLEN + 2];
@@ -1540,7 +1557,6 @@ void accept_connection(aClient *cptr)
     
     for (i = 0; i < 100; i++) /* accept up to 100 times per call to deal with high connect rates */
     {
-        set_non_blocking(cptr->fd, cptr);
         if ((newfd = accept(cptr->fd, (struct sockaddr *) &addr, &addrlen)) < 0) 
         {
 	    switch(errno)
@@ -1562,14 +1578,6 @@ void accept_connection(aClient *cptr)
 
         strncpyzt(host, (char *) inetntoa((char *) &addr.sin_addr), sizeof(host));
 
-        if ((tmp=find_is_zlined(host))!=NULL) 
-        {
-	    ircstp->is_ref++;
-	    ircsprintf(dumpstring,"ERROR :Host zlined: %s\r\n",tmp->passwd);
-	    write(newfd, dumpstring, strlen(dumpstring));
-	    close(newfd);
-	    return;
-        }
         /* if they are throttled, drop them silently. */
         if (throttle_check(host, newfd, NOW) == 0) {
            ircstp->is_ref++;
@@ -2160,7 +2168,6 @@ int read_message(time_t delay, fdlist * listp)
 int connect_server(aConfItem * aconf, aClient * by, struct hostent *hp)
 {
     struct sockaddr *svp;
-    struct sockaddr_in myaddr;
     aClient *cptr, *c2ptr;
     char *s;
     int errtmp, len;
@@ -2219,29 +2226,6 @@ int connect_server(aConfItem * aconf, aClient * by, struct hostent *hp)
 	cptr->fd = -2;
 	free_client(cptr);
 	return -1;
-    }
-    
-    if (aconf->localhost)
-    {
-	myaddr.sin_family = AF_INET;
-	myaddr.sin_port = 0;
-	myaddr.sin_addr.s_addr = inet_addr(aconf->localhost);
-	bzero(&(myaddr.sin_zero), 8);
-	if (bind(cptr->fd, (struct sockaddr *) &myaddr, 
-		 sizeof(struct sockaddr)))
-	{
-	    errtmp = errno;
-	    report_error("Connect to host %s failed: %s", cptr);
-	    if (by && IsPerson(by) && !MyClient(by))
-		sendto_one(by,
-			   ":%s NOTICE %s :Connect to server %s failed.",
-			   me.name, by->name, cptr->name);
-	    close(cptr->fd);
-	    cptr->fd = -2;
-	    free_client(cptr);
-	    errno = errtmp;
-	    return -1;
-	}
     }
     
     set_non_blocking(cptr->fd, cptr);
@@ -2325,6 +2309,7 @@ static struct sockaddr *connect_inet(aConfItem * aconf,
 {
     static struct sockaddr_in server;
     struct hostent *hp;
+    struct sockaddr_in sin;
     
     /* 
      * Might as well get sockhost from here, the connection is attempted
@@ -2336,13 +2321,15 @@ static struct sockaddr *connect_inet(aConfItem * aconf,
 	sendto_realops("No more connections allowed (%s)", cptr->name);
 	return NULL;
     }
-    mysk.sin_port = 0;
     memset((char *) &server, '\0', sizeof(server));
-    server.sin_family = AF_INET;
+    memset((char *) &sin, '\0', sizeof(sin));
+    server.sin_family = sin.sin_family = AF_INET;
     get_sockhost(cptr, aconf->host);
 
-    if (specific_virtual_host == 1)
-	mysk.sin_addr = vserv.sin_addr;
+    if (aconf->localhost)
+	sin.sin_addr.s_addr = inet_addr(aconf->localhost);
+    else if (specific_virtual_host == 1)
+	sin.sin_addr = vserv.sin_addr;
 
     if (cptr->fd == -1)
     {
@@ -2359,7 +2346,7 @@ static struct sockaddr *connect_inet(aConfItem * aconf,
      * already bound socket, different ip# might occur anyway leading to
      * a freezing select() on this side for some time.
      */
-    if (specific_virtual_host)
+    if (specific_virtual_host || aconf->localhost)
     {
 	/* 
 	 * * No, we do bind it if we have virtual host support. If we
@@ -2367,7 +2354,7 @@ static struct sockaddr *connect_inet(aConfItem * aconf,
 	 * we lose due to the other server not allowing our base IP
 	 * --smg
 	 */
-	if (bind(cptr->fd, (struct sockaddr *) &mysk, sizeof(mysk)) == -1)
+	if (bind(cptr->fd, (struct sockaddr *) &sin, sizeof(sin)) == -1)
 	{
 	    report_error("error binding to local port for %s:%s", cptr);
 	    return NULL;
@@ -2499,7 +2486,7 @@ static void do_dns_async()
 	    {
 		del_queries((char *) cptr);
 #ifdef SHOW_HEADERS
-		send(cptr->fd, REPORT_FIN_DNS, R_fin_dns, 0);
+		sendto_one(cptr, REPORT_FIN_DNS);
 #endif
 		ClearDNS(cptr);
 		cptr->hostp = hp;
