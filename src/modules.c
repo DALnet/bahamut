@@ -84,7 +84,7 @@ aModule *find_module_opaque(void *opaque)
 int modsym_load(aClient *sptr, char *modname, char *symbol, void *modulehandle, void **retfunc)
 {
    void *ret;
-   char *error;
+   const char *error;
 
    ret = dlsym(modulehandle, symbol);
 
