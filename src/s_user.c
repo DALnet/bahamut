@@ -96,6 +96,7 @@ int  user_modes[] =
     UMODE_x, 'x',
     UMODE_X, 'X',
     UMODE_j, 'j',
+    UMODE_K, 'K',
     0, 0
 };
 
@@ -2188,8 +2189,16 @@ int m_kill(aClient *cptr, aClient *sptr, int parc, char *parv[])
 			   acptr->user ? acptr->user->username : unknownfmt,
 			   acptr->user ? acptr->user->host : unknownfmt,
 			   parv[0], mypath);
+	else if(IsULine(sptr))
+	    sendto_realops_lev(USKILL_LEV, 
+			   "Received KILL message for %s!%s@%s. "
+			   "From %s Path: %s", acptr->name,
+			   acptr->user ? acptr->user->username : unknownfmt,
+			   acptr->user ? acptr->user->host : unknownfmt,
+			   parv[0], mypath);
 	else
-	    sendto_ops_lev(SKILL_LEV, "Received KILL message for %s!%s@%s. "
+	    sendto_ops_lev(SKILL_LEV, 
+			   "Received KILL message for %s!%s@%s. "
 			   "From %s Path: %s", acptr->name,
 			   acptr->user ? acptr->user->username : unknownfmt,
 			   acptr->user ? acptr->user->host : unknownfmt,
@@ -2979,6 +2988,7 @@ int m_umode(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	if (IsUmodee(sptr)) ClearUmodee(sptr);
 	if (IsUmodej(sptr)) ClearUmodej(sptr);
 	if (IsUmodeh(sptr)) ClearUmodeh(sptr);
+	if (IsUmodeK(sptr)) ClearUmodeK(sptr);
 	if (NoMsgThrottle(sptr)) ClearNoMsgThrottle(sptr);
     }
     if(MyClient(sptr))

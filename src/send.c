@@ -1169,6 +1169,10 @@ void sendto_ops_lev(int lev, char *pattern, ...)
 		if (!SendSkillNotice(cptr))
 		    continue;
 		break;
+	    case USKILL_LEV:
+		if (!SendSUkillNotice(cptr) || !IsAnOper(cptr))
+		    continue;
+		break;
 	    case SPY_LEV:
 		if (!SendSpyNotice(cptr) || !IsAnOper(cptr))
 		    continue;
@@ -1676,6 +1680,10 @@ void sendto_realops_lev(int lev, char *pattern, ...)
 			 * can go to normal people 
 			 */
 	    if (!SendSkillNotice(cptr))
+		continue;
+	    break;
+	case USKILL_LEV:
+	    if (!SendSUkillNotice(cptr))
 		continue;
 	    break;
 	case SPY_LEV:
