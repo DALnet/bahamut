@@ -587,16 +587,6 @@ register_user(aClient *cptr,
 						  me.name, parv[0]);
 			return exit_client(cptr, sptr, &me, "Bad Password");
       }
-		/* if the I:line doesn't have a password and the user does, send it
-		 * over to NickServ */
-		if(MyConnect(sptr)) {
-			if(aconf->passwd==NULL && sptr->passwd[0] && 
-				(nsptr=find_person(NickServ,NULL))!=NULL) {
-				sendto_one(nsptr,":%s PRIVMSG %s@%s :SIDENTIFY %s",
-							  sptr->name, NickServ, SERVICES_NAME, sptr->passwd);
-			}
-		}
-		memset(sptr->passwd, '\0', PASSWDLEN);
 		
       
 		/*
@@ -1011,8 +1001,15 @@ register_user(aClient *cptr,
 							 user->username, user->host, user->server, sptr->user->servicestamp,
 							 sptr->info);
 
-   if(MyClient(sptr) && ubuf[1])
-     send_umode(cptr, sptr, 0, ALL_UMODES, ubuf);
+   if(MyClient(sptr)) {
+     /* if the I:line doesn't have a password and the user does, send it over to NickServ */
+     if(aconf->passwd==NULL && sptr->passwd[0] && (nsptr=find_person(NickServ,NULL))!=NULL) {
+        sendto_one(nsptr,":%s PRIVMSG %s@%s :SIDENTIFY %s", sptr->name, NickServ, SERVICES_NAME, sptr->passwd);
+     }
+     memset(sptr->passwd, '\0', PASSWDLEN);
+     
+     if (*ubuf) send_umode(cptr, sptr, 0, ALL_UMODES, ubuf);
+   }
 
    return 0;
 }
