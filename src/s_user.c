@@ -30,6 +30,7 @@
 #include "msg.h"
 #include "channel.h"
 #include "throttle.h"
+#include "clones.h"
 #include <sys/stat.h>
 #include <utmp.h>
 #include <fcntl.h>
@@ -466,33 +467,33 @@ register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
     {
         if ((i = check_client(sptr))) 
         {
-            /* -2 is a socket error, already reported.*/
-            if (i != -2) 
+            switch (i)
             {
-                if (i == -4) 
-                {
+                case -1:
                     ircstp->is_ref++;
-                    return exit_client(cptr, sptr, &me,
-                                       "Too many connections from your "
-                                       "hostname");
-                }
-                else if (i == -3)
-                    sendto_realops_lev(REJ_LEV, "%s for %s [%s] ",
-                                       "Allow class is full (server is full)",
-                                       get_client_host(sptr),p);
-                else
-                    sendto_realops_lev(REJ_LEV, "%s from %s [%s]",
-                                       "Unauthorized client connection",
-                                       get_client_host(sptr),p);
-                ircstp->is_ref++;
-                return exit_client(cptr, sptr, &me, i == -3 ?
-                                   "No more connections allowed in your "
-                                   "connection class (the server is full)" :
-                                   "You are not authorized to use this "
-                                   "server");
+                    sendto_realops_lev(REJ_LEV, "%s from %s [Unauthorized"
+                                       " client connection]",
+                                       get_client_host(sptr), p);
+                    return exit_client(cptr, sptr, &me, "You are not"
+                                       " authorized to use this server");
+
+                case -2:
+                    return exit_client(cptr, sptr, &me, "Socket Error");
+
+                case -3:
+                    ircstp->is_ref++;
+                    sendto_realops_lev(REJ_LEV, "%s for %s [Allow class is"
+                                       " full (server is full)]",
+                                       get_client_host(sptr), p);
+                    return exit_client(cptr, sptr, &me, "No more connections"
+                                       " allowed in your connection class (the"
+                                       " server is full)");
+
+                default:
+                    sendto_realops_lev(DEBUG_LEV, "I don't know why I dropped"
+                                       " %s (%d)", get_client_host(sptr), i);
+                    return exit_client(cptr, sptr, &me, "Internal error");
             }
-            else
-                return exit_client(cptr, sptr, &me, "Socket Error");
         }
         
 #ifdef ANTI_SPAMBOT
@@ -781,6 +782,14 @@ register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
             return exit_client(cptr, sptr, &me, tmpstr2);
         }
 
+        if ((i = clones_check(cptr)))
+        {
+            ircstp->is_ref++;
+            return exit_client(cptr, sptr, &me, i == 1
+                               ? "Too many connections from your host"
+                               : "Too many connections from your site");
+        }
+
         if(!(ban = check_userbanned(sptr, UBAN_IP|UBAN_CIDR4, UBAN_WILDUSER)))
             ban = check_userbanned(sptr, UBAN_HOST, 0);
 
@@ -923,7 +932,8 @@ register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
                     sptr->umode |= UMODE_I;
 #endif
 
-                    throttle_remove(sptr->hostip);                  
+                    throttle_remove(sptr->hostip);
+                    clones_remove(sptr);
                     sptr->user->real_oper_host = 
                         MyMalloc(strlen(sptr->user->host) + 1);
                     sptr->user->real_oper_username = 
@@ -1060,6 +1070,10 @@ register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
         if(call_hooks(CHOOK_POSTMOTD, sptr) == FLUSH_BUFFER)
             return FLUSH_BUFFER;
     }
+
+    if (sptr->ip.s_addr)
+        clones_add(sptr);
+
     return 0;
 }
 

@@ -30,6 +30,7 @@
 #include "numeric.h"
 #include "zlink.h"
 #include "hooks.h"
+#include "clones.h"
 #include <sys/stat.h>
 #include <fcntl.h>
 #if !defined(ULTRIX) && !defined(SGI) && !defined(sequent) && \
@@ -410,6 +411,9 @@ exit_one_client_in_split(aClient *cptr, aClient *dead, char *reason)
     while ((lp = cptr->user->silence))
         del_silence(cptr, lp->value.cp);
 
+    if (cptr->ip.s_addr)
+        clones_remove(cptr);
+
     remove_dcc_references(cptr);
 
     del_from_client_hash_table(cptr->name, cptr); 
@@ -786,6 +790,9 @@ exit_one_client(aClient *cptr, aClient *sptr, aClient *from, char *comment)
             send_quit_to_common_channels(sptr, comment);
             while ((lp = sptr->user->channel))
                 remove_user_from_channel(sptr, lp->value.chptr);
+
+            if (sptr->ip.s_addr)
+                clones_remove(sptr);
             
             /* Clean up invitefield */
             while ((lp = sptr->user->invited))

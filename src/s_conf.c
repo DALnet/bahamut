@@ -135,6 +135,10 @@ void init_globals()
     maxchannelsperuser = DEFAULT_MAXCHANNELSPERUSER;
     tsmaxdelta = DEFAULT_TSMAXDELTA;
     tswarndelta = DEFAULT_TSWARNDELTA;
+    local_ip_limit = DEFAULT_LOCAL_IP_CLONES;
+    local_ip24_limit = DEFAULT_LOCAL_IP24_CLONES;
+    global_ip_limit = DEFAULT_GLOBAL_IP_CLONES;
+    global_ip24_limit = DEFAULT_GLOBAL_IP24_CLONES;
 }
 
 
@@ -872,6 +876,7 @@ confadd_options(cVar *vars[], int lnum)
     cVar *tmp;
     int c = 0;
     char ctmp[512];
+    char *s;
 
     /* here, because none of the option peice are interdependent
      * all the items are added immediately.   Makes life easier
@@ -912,13 +917,13 @@ confadd_options(cVar *vars[], int lnum)
         else if(tmp->type && (tmp->type->flag & OPTF_WGMONHOST))
         {
             tmp->type = NULL;
-            new_confopts |= FLAGS_WGMONURL;
+            new_confopts |= FLAGS_WGMONHOST;
             strncpyzt(ProxyMonHost, tmp->value, sizeof(ProxyMonHost));
         }
         else if(tmp->type && (tmp->type->flag & OPTF_WGMONURL))
         {
             tmp->type = NULL;
-            new_confopts |= FLAGS_WGMONHOST;
+            new_confopts |= FLAGS_WGMONURL;
             strncpyzt(ProxyMonURL, tmp->value, sizeof(ProxyMonURL));
         }
         else if(tmp->type && (tmp->type->flag & OPTF_NSREGURL))
@@ -968,6 +973,28 @@ confadd_options(cVar *vars[], int lnum)
         {
             tmp->type = NULL;
             strncpyzt(Staff_Address, tmp->value, sizeof(Staff_Address));
+        }
+        else if(tmp->type && (tmp->type->flag & OPTF_LCLONES))
+        {
+            tmp->type = NULL;
+            local_ip_limit = strtol(tmp->value, &s, 10);
+            if (*s == ':')
+                local_ip24_limit = atoi(s+1);
+            if (local_ip_limit < 1)
+                local_ip_limit = DEFAULT_LOCAL_IP_CLONES;
+            if (local_ip24_limit < 1)
+                local_ip24_limit = DEFAULT_LOCAL_IP24_CLONES;
+        }
+        else if(tmp->type && (tmp->type->flag & OPTF_GCLONES))
+        {
+            tmp->type = NULL;
+            global_ip_limit = strtol(tmp->value, &s, 10);
+            if (*s == ':')
+                global_ip24_limit = atoi(s+1);
+            if (global_ip_limit < 1)
+                global_ip_limit = DEFAULT_GLOBAL_IP_CLONES;
+            if (global_ip24_limit < 1)
+                global_ip24_limit = DEFAULT_GLOBAL_IP24_CLONES;
         }
         else if(tmp->type && (tmp->type->flag & OPTF_SMOTD))
         {
@@ -1291,6 +1318,7 @@ confadd_class(cVar *vars[], int lnum)
     cVar *tmp;
     aClass *x = make_class();
     int c = 0;
+    char *s;
 
     for(tmp = vars[c]; tmp; tmp = vars[++c])
     {
@@ -1326,7 +1354,13 @@ confadd_class(cVar *vars[], int lnum)
                 return -1;
             }
             tmp->type = NULL;
-            x->connfreq = atoi(tmp->value);
+            x->connfreq = strtol(tmp->value, &s, 10);
+            if (*s == ':')
+                x->ip24clones = atoi(s+1);
+            if (x->connfreq < 1)
+                x->connfreq = 0;
+            if (x->ip24clones < 1)
+                x->ip24clones = 0;
         }
         else if(tmp->type && (tmp->type->flag & SCONFF_MAXUSERS))
         {
@@ -1990,6 +2024,7 @@ merge_classes()
             old_class->pingfreq = class->pingfreq;
             old_class->maxlinks = class->maxlinks;
             old_class->maxsendq = class->maxsendq;
+            old_class->ip24clones = class->ip24clones;
             class->maxlinks = -1;
         }
     }

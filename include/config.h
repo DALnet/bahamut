@@ -82,7 +82,7 @@
 /* Defaults for things in option block of ircd.conf */
 
 /* WGMON notices are sent to users to warn them about the proxy scans. */
-#define DEFAULT_WGMON_URL "http://kline.dal.net/proxy"
+#define DEFAULT_WGMON_URL "http://kline.dal.net/proxy/"
 #define DEFAULT_WGMON_HOST "some.bot.host"
 
 /* Hostmasking address */
@@ -108,6 +108,12 @@
 /* Default difference in time sync between servers before we complain */
 #define DEFAULT_TSMAXDELTA 120
 #define DEFAULT_TSWARNDELTA 15
+
+/* default clone limits */
+#define DEFAULT_LOCAL_IP_CLONES    5
+#define DEFAULT_LOCAL_IP24_CLONES  15
+#define DEFAULT_GLOBAL_IP_CLONES   10
+#define DEFAULT_GLOBAL_IP24_CLONES 30
 
 /* 
  * HIDEULINEDSERVS 
@@ -860,5 +866,5 @@ extern void debug(int level, char *pattern, ...);
 #define LOGFILE "/dev/null"
 #endif
 
-#define CONFIG_H_LEVEL_182
+#define CONFIG_H_LEVEL_183
 #endif				/* __config_include__ */

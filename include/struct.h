@@ -26,7 +26,7 @@
 #define __struct_include__
 
 #include "config.h"
-#if !defined(CONFIG_H_LEVEL_182)
+#if !defined(CONFIG_H_LEVEL_183)
 #error Incorrect config.h for this revision of ircd.
 #endif
 
@@ -730,6 +730,7 @@ struct Conf_Class
     int          pingfreq;
     int          maxlinks;
     long         maxsendq;
+    int          ip24clones;
     int          links;
     int          refs;
     aClass      *next;
@@ -837,6 +838,13 @@ struct Client
     
     Link *watch; /* user's watch list */
     int watches; /* how many watches this user has set */
+
+#ifdef THROTTLE_ENABLE
+    struct {                /* clone tracking */
+        aClient     *prev;
+        aClient     *next;
+    } clone;
+#endif
     
 /*
 ####### #     # ### #     #  #####   #####

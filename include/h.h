@@ -70,6 +70,8 @@ extern char Network_Kline_Address[HOSTLEN+1];
 extern char Local_Kline_Address[HOSTLEN+1];
 extern int  maxchannelsperuser, tsmaxdelta, tswarndelta;
 extern int  confopts, new_confopts;
+extern int  local_ip_limit, local_ip24_limit, global_ip_limit,
+            global_ip24_limit;
 
 #ifndef PATH_MAX
 #define PATH_MAX 4096

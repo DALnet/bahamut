@@ -45,6 +45,7 @@
 
 #include "throttle.h"
 #include "userban.h"
+#include "clones.h"
 #include "hooks.h"
 #include "fds.h"
 
@@ -73,6 +74,7 @@ char Local_Kline_Address[HOSTLEN+1];
 char Staff_Address[HOSTLEN+1];
 int  maxchannelsperuser, tsmaxdelta, tswarndelta;
 int  confopts, new_confopts;
+int  local_ip_limit, local_ip24_limit, global_ip_limit, global_ip24_limit;
 
 /* this stuff by mnystrom@mit.edu */
 #include "fdlist.h"
@@ -820,6 +822,9 @@ main(int argc, char *argv[])
 
     /* init the throttle system -wd */
     throttle_init();
+
+    /* clone tracking and limiting */
+    clones_init();
 
     /* init the file descriptor tracking system */
     init_fds();

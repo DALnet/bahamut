@@ -79,5 +79,60 @@ void throttle_stats(aClient *cptr, char *name);
 #define throttle_stats(x,y) ((void)0)
 #endif
 
+
+#include "queue.h"
+
+SLIST_HEAD(hashent_list_t, hashent_t);
+typedef struct hashent_list_t hashent_list;
+
+typedef struct hashent_t
+{
+    void    *ent;
+    SLIST_ENTRY(hashent_t) lp;
+} hashent;
+
+typedef struct hash_table_t
+{
+    int     size;           /* this should probably always be prime :) */
+    hashent_list *table;    /* our table */
+    size_t  keyoffset;      /* this stores the offset of the key from the
+        given structure */
+    size_t  keylen;         /* the length of the key. if 0, assume key
+        is a NULL terminated string */
+
+#define HASH_FL_NOCASE 0x1      /* ignore case (ToLower before hash) */
+#define HASH_FL_STRING 0x2      /* key is a nul-terminated string, treat len
+    as a maximum length to hash */
+    int     flags;
+    /* our comparison function, used in hash_find_ent().  this behaves much
+        * like the the compare function is used in qsort().  This means that a
+        * return of 0 (ZERO) means success! (this lets you use stuff like
+                                             * strncmp easily) */
+    int     (*cmpfunc)(void *, void *);
+} hash_table;
+
+/* this function creates a hashtable with 'elems' buckets (elems should be
+* prime for best efficiency).  'offset' is the offset of the key from
+* structures being added (this should be obtained with the 'offsetof()'
+                          * function).  len is the length of the key, and flags are any flags for the
+* table (see above).  cmpfunc is the function which should be used for
+* comparison when calling 'hash_find' */
+hash_table *create_hash_table(int elems, size_t offset, size_t len, int flags,
+                              int (*cmpfunc)(void *, void *));
+/* this function destroys a previously created hashtable */
+void destroy_hash_table(hash_table *table);
+/* this function resizes a hash-table to the new size given with 'elems'.
+* this is not in any way inexpensive, and should really not be done very
+* often.  */
+void resize_hash_table(hash_table *table, int elems);
+/* this function gets the hash value of a given key, relative to the size of
+* the hashtable */
+unsigned int hash_get_key_hash(hash_table *table, void *key, size_t offset);
+/* these functions do what you would expect, adding/deleting/finding items
+* in a hash table */
+int hash_insert(hash_table *table, void *ent);
+int hash_delete(hash_table *table, void *ent);
+void *hash_find(hash_table *table, void *key);
+
 #endif /* THROTTLE_H */
 /* vi:set ts=8 sts=4 sw=4 tw=79: */

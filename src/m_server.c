@@ -27,6 +27,7 @@
 #include "userban.h"
 #include "zlink.h"
 #include "throttle.h"
+#include "clones.h"
 
 /* externally defined functions */
 
@@ -221,6 +222,9 @@ do_server_estab(aClient *cptr)
 
     /* Send out fake server list and other 'fake' stuff */
     fakeserver_sendserver(cptr);
+
+    /* send clone list */
+    clones_send(cptr);
 
     /* Bursts are about to start.. send a BURST */
     if (IsBurst(cptr))

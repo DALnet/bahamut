@@ -33,6 +33,7 @@
 #include <fcntl.h>
 #include "h.h"
 #include "userban.h"
+#include "clones.h"
 
 /* Externally defined stuffs */
 extern int user_modes[];
@@ -670,3 +671,29 @@ int m_svshold(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
     return 0;
 }
+
+
+/* m_svsclone
+*   Sets a clone limit for an IP mask (1.2.3.4 or 1.2.3.*).
+* parv[0] - sender
+* parv[1] - mask
+* parv[2] - duration (0 to revert to default limit)
+*/
+int
+m_svsclone(aClient *cptr, aClient *sptr, int parc, char *parv[])
+{
+    int d;
+
+    if (parc != 3)
+        return 0;
+
+    if (!(IsServer(sptr) || IsULine(sptr)))
+        return 0;
+
+    d = atoi(parv[2]);
+    clones_set(parv[1], d);
+    sendto_serv_butone(cptr, ":%s SVSCLONE %s %s", parv[0], parv[1], parv[2]);
+
+    return 0;
+}
+
