@@ -1399,6 +1399,11 @@ confadd_restrict(cVar *vars[], int lnum)
     ban = make_simpleban(type, mask);
     if(!ban)
         return lnum;
+    if(find_simban_exact(ban) != NULL)  /* dont add duplicates */
+    {
+        simban_free(ban);
+        return lnum;
+    }
     if(!reason)
     {
         if(type & SBAN_CHAN)
@@ -1492,14 +1497,14 @@ merge_connects()
             old_aconn->flags = aconn->flags;
             old_aconn->class = find_class(aconn->class_name);
             old_aconn->legal = 1;       /* the old entry is ok now */
-            (void) lookup_confhost(old_aconn);
+            lookup_confhost(old_aconn);
             aconn->legal = -1;          /* new new entry is not */
             aconn = aconn->next;
         }
         else
         {   
             aconn->class = find_class(aconn->class_name);
-            (void) lookup_confhost(aconn);
+            lookup_confhost(aconn);
             /* tag the new entry onto the begining of the list */
             ptr = aconn->next;
             aconn->legal = 1;
@@ -1702,7 +1707,7 @@ merge_ports()
             if(ptr)
                 ptr->next = aport->next;
             else
-                ports = aport->next;
+                new_ports = aport->next;
             free_port(aport);
         }
         else
