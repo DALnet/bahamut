@@ -111,7 +111,7 @@ static int send_message(aClient *to, char *msg, int len) {
    if (to->from)
      to = to->from;   /* shouldn't be necessary */
 
-   if(IsServer(to))
+   if(IsServer(to) || IsNegoServer(to))
    {
       if(len>510) 
         {
