@@ -34,6 +34,9 @@ extern int  R_do_dns, R_fin_dns, R_fin_dnsc, R_fail_dns, R_do_id,
             R_fin_id, R_fail_id;
 
 extern aMotd *motd;
+#ifdef SHORT_MOTD
+extern aMotd *shortmotd;
+#endif
 extern struct tm *motd_tm;
 
 extern aMotd *helpfile;		/*

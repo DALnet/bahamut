@@ -56,6 +56,9 @@ aConfList   FList2 = {0, NULL};			/* ordered, reversed */
 aConfList   FList3 = {0, NULL};			/* what we can't sort */
 
 aMotd      *motd;
+#ifdef SHORT_MOTD
+aMotd	   *shortmotd;		/* short motd */
+#endif
 aMotd      *helpfile;		/* misnomer, aMotd could be generalized */
 
 struct tm  *motd_tm;
@@ -101,6 +104,9 @@ static time_t io_loop(time_t);
 extern void init_fdlist(fdlist *);	 /* defined in fdlist.c */
 extern void dbuf_init();	          /* defined in dbuf.c */
 extern void read_motd(char *);	    /* defined in s_serv.c */
+#ifdef SHORT_MOTD
+extern void read_shortmotd(char *);	    /* defined in s_serv.c */
+#endif
 extern void read_help(char *);	    /* defined in s_serv.c */
 
 char      **myargv;
@@ -1187,9 +1193,15 @@ normal user.\n");
    motd = (aMotd *) NULL;
    helpfile = (aMotd *) NULL;
    motd_tm = NULL;
+#ifdef SHORT_MOTD
+   shortmotd = NULL;
+#endif
 	
    read_motd(MOTD);
    read_help(HELPFILE);
+#ifdef SHORT_MOTD
+   read_shortmotd(SHORTMOTD);
+#endif
 	
    clear_client_hash_table();
    clear_channel_hash_table();

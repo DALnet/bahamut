@@ -451,6 +451,9 @@ register_user(aClient *cptr,
    char       *p;
    short       oldstatus = sptr->status;
    anUser     *user = sptr->user;
+#ifdef SHORT_MOTD
+   aMotd      *smotd;
+#endif
    int         i, dots;
    int         bad_dns;		/*
 
@@ -900,12 +903,20 @@ register_user(aClient *cptr,
 		
       sendto_one(sptr, rpl_str(RPL_MOTDSTART),
 					  me.name, parv[0], me.name);
-		
-      sendto_one(sptr,
+      if((smotd = shortmotd) == NULL)
+      {
+         sendto_one(sptr,
 					  rpl_str(RPL_MOTD),
 					  me.name, parv[0],
 					  "*** This is the short motd ***"
 					  );
+      }
+      else {
+         while (smotd) {
+            sendto_one(sptr, rpl_str(RPL_MOTD), me.name, parv[0], smotd->line);
+            smotd = smotd->next;
+         }
+      }
 		
       sendto_one(sptr, rpl_str(RPL_ENDOFMOTD),
 					  me.name, parv[0]);

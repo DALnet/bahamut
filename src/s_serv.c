@@ -111,6 +111,9 @@ static char *cluster(char *);
 
 int         send_motd(aClient *, aClient *, int, char **);
 void        read_motd(char *);
+#ifdef SHORT_MOTD
+void        read_shortmotd(char *);
+#endif
 
 char        motd_last_changed_date[MAX_DATE_STRING];	/*
 
@@ -4192,6 +4195,9 @@ int m_rehash(aClient *cptr,
       else if (mycmp(parv[1], "MOTD") == 0) {
 			sendto_ops("%s is forcing re-reading of MOTD file", parv[0]);
 			read_motd(MOTD);
+#ifdef SHORT_MOTD
+			read_shortmotd(SHORTMOTD);
+#endif
 			return (0);
       }
       else if (mycmp(parv[1], "IP") == 0) {
@@ -4589,8 +4595,7 @@ send_motd(aClient *cptr,
 /*
  * read_motd() - From CoMSTuD, added Aug 29, 1996
  */
-void
-read_motd(char *filename)
+void read_motd(char *filename)
 {
    register aMotd *temp, *last;
    struct stat sb;
@@ -4638,6 +4643,46 @@ read_motd(char *filename)
 		     motd_tm->tm_hour,
 		     motd_tm->tm_min);
 }
+
+#ifdef SHORT_MOTD
+void read_shortmotd(char *filename)
+{
+   register aMotd *temp, *last;
+   char        buffer[MOTDLINELEN], *tmp;
+   int         fd;
+
+   /*
+    * Clear out the old MOTD
+    */
+   while (shortmotd) {
+      temp = shortmotd->next;
+      MyFree(shortmotd);
+      shortmotd = temp;
+   }
+   fd = open(filename, O_RDONLY);
+   if (fd == -1)
+      return;
+
+   last = (aMotd *) NULL;
+
+   while (dgets(fd, buffer, MOTDLINELEN - 1) > 0) {
+      if ((tmp = (char *) strchr(buffer, '\n')))
+	 *tmp = '\0';
+      if ((tmp = (char *) strchr(buffer, '\r')))
+	 *tmp = '\0';
+      temp = (aMotd *) MyMalloc(sizeof(aMotd));
+
+      strncpyzt(temp->line, buffer, MOTDLINELEN);
+      temp->next = (aMotd *) NULL;
+      if (!shortmotd)
+	 shortmotd = temp;
+      else
+	 last->next = temp;
+      last = temp;
+   }
+   close(fd);
+}
+#endif
 
 /*
  * read_help() - modified from from CoMSTuD's read_motd added Aug 29,

@@ -229,6 +229,7 @@
 #define	CPATH	"ircd.conf"
 #define KPATH   "kline.conf"
 #define	MPATH	"ircd.motd"
+#define	SMPATH	"ircd.smotd"
 #define	LPATH	"ircd.log"
 #define	PPATH	"ircd.pid"
 #define HPATH	"opers.txt"
@@ -927,6 +928,7 @@
 
 #define HELPFILE HPATH
 #define MOTD MPATH
+#define SHORTMOTD SMPATH
 #define MYNAME SPATH
 #define CONFIGFILE CPATH
 #ifdef  KPATH
