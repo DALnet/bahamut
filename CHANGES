@@ -4,6 +4,25 @@ Outstanding bugs
 - Source address support on /connect may not work under some conditions
 - Squelching needs finished - Release was too important
 
+Changes for 1.4.34
+- Fixed split riding ability left over from hybrid (where a channel
+  with a newer TS could 'take over' if it had ops and the older TS channel
+  did not)
+- Fixed 'topic riding' ability that allowed topics from newer TS'd channels
+  to propogate.
+- Fixed channel ban desync on netjoin
+- all channel modes are now sent with a TS
+- Target limiting anti-spam measure installed
+- Reject acebot-style drones by default
+- Minor fixes to prevent annoying auth error messages
+
+-- WARNING --
+1.4.34 may cause desynch in net joins if used on a network with newer servers!
+This is because the algorithm for determining which channel modes to keep
+when servers rejoin has changed. You should upgrade your entire network 
+to 1.4.34.
+-- WARNING --
+
 Changes for 1.4.33
 - Only ops can invite on channels
 - Various desync-causing memory-corrupting bugs fixed
