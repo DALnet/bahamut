@@ -2124,6 +2124,25 @@ int     send_lusers(aClient *cptr, aClient *sptr, int parc, char *parv[])
       }				/* Complain & reset loop */
    }				/* Recount loop */
 
+#ifdef SAVE_MAXCLIENT_STATS
+   if ((timeofday - last_stat_save) > SAVE_MAXCLIENT_STATS_TIME) { /* save stats */
+     FILE *fp;
+
+     last_stat_save = timeofday;
+
+     fp=fopen(DPATH "/.maxclients", "w");
+     if (fp!=NULL) {
+       fprintf(fp, "%d %d %li %li %li %ld %ld %ld %ld", Count.max_loc,
+               Count.max_tot, Count.weekly, Count.monthly,
+               Count.yearly, Count.start, Count.week, Count.month,
+               Count.year);
+       fclose(fp);
+       sendto_realops_lev(DEBUG_LEV, "Saved maxclient statistics");
+     }
+   }
+#endif
+     
+
 #ifndef	SHOW_INVISIBLE_LUSERS
    if (IsAnOper(sptr) && i_count)
 #endif

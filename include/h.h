@@ -80,6 +80,7 @@ extern int  MAXCLIENTS;
 extern struct Counter Count;
 
 extern time_t NOW;
+extern time_t last_stat_save;
 extern time_t nextconnect, nextdnscheck, nextping, timeofday;
 extern aClient *client, me, *local[];
 extern aChannel *channel;

@@ -88,6 +88,7 @@ int         R_do_dns, R_fin_dns, R_fin_dnsc, R_fail_dns, R_do_id,
             R_fin_id, R_fail_id;
 
 time_t      	 NOW;
+time_t		 last_stat_save;
 aClient     	 me;		/* That's me */
 aClient    	*client = &me;	/* Pointer to beginning of Client list */
 #ifdef  LOCKFILE

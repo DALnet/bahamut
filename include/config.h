@@ -622,6 +622,9 @@
  * appear more attractive to the opposite sex. --wd */
 #define SAVE_MAXCLIENT_STATS
 
+/* Define the time (in seconds) that you want to save the statistics after. 
+ * Don't undef this unless you have undeffed SAVE_MAXCLIENT_STATS --sed */
+#define SAVE_MAXCLIENT_STATS_TIME	3600
 
 /*
  * UNKLINE - /quote unkline - remove klines on the fly if you choose to
