@@ -474,7 +474,7 @@ m_server(aClient *cptr, aClient *sptr, int parc, char *parv[])
             bogus_server = 1;
             *d++ = '^';
             *d++ = (char) ((unsigned char) *s + 0x40);   /* turn it into a printable */
-            n =- 2;
+            n -= 2;
          }
          else if ((unsigned char) *s > (unsigned char) '~')
          {
