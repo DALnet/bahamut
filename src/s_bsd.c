@@ -1868,7 +1868,7 @@ int read_message(time_t delay, fdlist * listp)
 	
 	if(MYFD_ISSET_READ)
 	    length = read_packet(cptr);
-	else if(IsPerson(cptr) && !NoNewLine(cptr))
+	else if(DBufLength(&cptr->recvQ) && IsPerson(cptr) && !NoNewLine(cptr))
 	    length = do_client_queue(cptr);
 	
 #ifdef DEBUGMODE
@@ -2129,7 +2129,7 @@ int read_message(time_t delay, fdlist * listp)
 	
            if (rr)
               length = read_packet(cptr);
-           else if(IsPerson(cptr) && !NoNewLine(cptr))
+           else if(DBufLength(&cptr->recvQ) && IsPerson(cptr) && !NoNewLine(cptr))
               length = do_client_queue(cptr);
         }
         else /* nfds == 0 or there are no events for this socket */
@@ -2137,7 +2137,7 @@ int read_message(time_t delay, fdlist * listp)
            if(!(cptr = local[fd]))
               continue;
 
-           if(IsPerson(cptr) && !NoNewLine(cptr))
+           if(DBufLength(&cptr->recvQ) && IsPerson(cptr) && !NoNewLine(cptr))
               length = do_client_queue(cptr);
            else
               continue;
