@@ -358,7 +358,8 @@ int m_svsnick(aClient *cptr, aClient *sptr, int parc, char *parv[])
     acptr->last_nick_change = atoi(parv[3]);
 #endif
     sendto_common_channels(acptr, ":%s NICK :%s", parv[1], newnick);
-    add_history(acptr, 1);
+    if(!IsUmodeI(acptr))
+	add_history(acptr, 1);
     sendto_serv_butone(NULL, ":%s NICK %s :%d", parv[1], newnick,
 		       acptr->tsinfo);
     if(acptr->name[0]) 
