@@ -38,11 +38,14 @@
  */
 
 #include "struct.h"
-#include "numeric.h"
+#include "common.h"
+#include "sys.h"
+#include "res.h"
 #include "h.h"
-#include <stdlib.h>
-#include <ctype.h>
-#include <string.h>
+#include "numeric.h"
+
+#include <sys/types.h>
+#include <sys/socket.h>
 
 #include "queue.h"
 #include "throttle.h"
@@ -242,9 +245,13 @@ typedef struct throttle_t {
     char    addr[HOSTIPLEN + 1];    /* address of the throttle */
     int	    conns;		    /* number of connections seen from this
 				       address. */
-    time_t  added;		    /* time this throttle was added */
-    int	    zlined;		    /* if this is a zline placeholder, this is
-				       set to one */
+    time_t  first;		    /* first time we saw this IP in this stage */
+    time_t  last;                   /* last time we saw this IP */
+    time_t  zline_start;            /* time we placed a zline for this host,
+                                       or 0 if no zline */
+    int stage;			    /* how many times this host has been z-lined */
+    int re_zlines;                  /* just a statistic -- how many times has this
+                                       host reconnected and had their ban reset */
 
     LIST_ENTRY(throttle_t) lp;
 } throttle;
@@ -253,7 +260,7 @@ typedef struct throttle_t {
 hash_table *throttle_hash;
 int throttle_tcount = THROTTLE_TRIGCOUNT;
 int throttle_ttime = THROTTLE_TRIGTIME;
-int throttle_ztime = THROTTLE_LENGTH;
+int throttle_rtime = THROTTLE_RECORDTIME;
 
 #ifdef THROTTLE_ENABLE
 int throttle_enable = 1;
@@ -272,11 +279,43 @@ void throttle_init(void) {
 	    HASH_FL_STRING, (int (*)(void *, void *))strcmp);
 }
 
-int throttle_check(char *host, int local) {
+/* returns the zline time, in seconds */
+static int throttle_get_zline_time(int stage)
+{
+   switch(stage)
+   {
+      case -1: 
+         return 0; /* no throttle */
+
+      case 0:
+         return 120; /* 2 minutes */
+
+      case 1:
+         return 300; /* 5 minutes */
+
+      case 2:
+         return 900; /* 15 minutes */
+
+      case 3:
+         return 1800; /* a half hour */
+
+      default:
+         return 3600; /* an hour */
+   }
+  
+   return 0; /* dumb compiler */
+}
+
+/* fd is -1 for remote signons */
+int throttle_check(char *host, int fd, time_t sotime) {
     throttle *tp = hash_find(throttle_hash, host);
 
     if (!throttle_enable)
 	return 1; /* always successful */
+
+    /* If this is an old remote signon, just ignore it */
+    if(fd == -1 && (NOW - sotime > throttle_ttime))
+       return 1;
 
     if (tp == NULL) {
 	/* we haven't seen this one before, create a new throttle and add it to
@@ -285,43 +324,96 @@ int throttle_check(char *host, int local) {
 	 * concerned. -wd */
 	tp = malloc(sizeof(throttle));
 	strcpy(tp->addr, host);
-	tp->conns = tp->zlined = 0;
-	tp->added = NOW;
+
+        tp->stage = -1; /* no zline stage yet */
+        tp->zline_start = 0;
+        tp->conns = 0;
+        tp->first = sotime;
+        tp->re_zlines = 0;
 
 	hash_insert(throttle_hash, tp);
 	LIST_INSERT_HEAD(&throttles, tp, lp);
 	numthrottles++;
-    } else if (tp->zlined)
-	return 0; /* if they're z:lined (as such) drop them. */
+    } 
+    else if(tp->zline_start)
+    {
+       time_t zlength = throttle_get_zline_time(tp->stage);
+
+       /* If they're zlined, drop them */
+       /* Also, reset the zline counter */
+       if(sotime - tp->zline_start < zlength)
+       {
+          /* 
+           * Reset the z-line period to start now
+           * Mean, but should get the bots and help the humans
+           */
+          tp->re_zlines++;
+          tp->zline_start = sotime;
+          return 0;
+       }
+
+       /* may look redundant, but it fixes it if 
+          someone sets throttle_ttime to something insane */
+       tp->conns = 0;
+       tp->first = sotime;
+       tp->zline_start = 0;
+    }
 
     /* got a throttle, up the conns */
     tp->conns++;
+    tp->last = sotime;
 
     /* check the time bits, if they exceeded the throttle timeout, we should
      * actually remove this structure from the hash and free it and create a
      * new one, except that would be preposterously expensive, so we just
      * re-set variables ;) -wd */
-    if (NOW - tp->added > throttle_ttime) {
+    if (sotime - tp->first > throttle_ttime) {
 	tp->conns = 1;
-	tp->added = NOW;
+	tp->first = sotime;
 
 	/* we can probably gaurantee they aren't going to be throttled, return
 	 * success */
 	return 1;
     }
 
-    if (tp->conns >= throttle_tcount) {
+    if (tp->conns >= throttle_tcount) 
+    {
 	/* mark them as z:lined (we do not actually add a Z:line as this would
 	 * be wasteful) and let local +c ops know about this */
-	if (local) {
+	if (fd != -1) 
+        {
+            char errbufr[512];
+            int zlength, elength;
+
+            tp->stage++;
+            zlength = throttle_get_zline_time(tp->stage);
+
 	    /* let +c ops know */
 	    sendto_ops_lev(CCONN_LEV,
-		    "throttled connections from %s (%d in %d seconds)",
-		    tp->addr, tp->conns, NOW - tp->added);
+		    "throttled connections from %s (%d in %d seconds) for %d minutes (offense %d)",
+		    tp->addr, tp->conns, sotime - tp->first, zlength / 60, tp->stage + 1);
 
-	    tp->added = NOW; /* the z:line was added at this point */
-	    tp->zlined = 1;
-	} else {
+            elength = ircsnprintf(errbufr, 512, ":%s NOTICE ZUSR :You have been throttled for %d minutes for too "
+               "many connections in a short period of time. Further connections in this period will reset "
+               "your throttle and you will have to wait longer.\r\n", me.name, zlength / 60);
+            send(fd, errbufr, elength, 0);
+
+            if(throttle_get_zline_time(tp->stage+1) != zlength)
+            {
+               elength = ircsnprintf(errbufr, 512, ":%s NOTICE ZUSR :When you return, if you are throttled again, "
+                  "your throttle will last longer.\r\n", me.name);
+               send(fd, errbufr, elength, 0);
+            }
+
+            /* We steal this message from undernet, because mIRC detects it and doesn't try to 
+               autoreconnect */
+            elength = ircsnprintf(errbufr, 512, "ERROR :Your host is trying to (re)connect too fast -- throttled.\r\n", tp->addr);
+            send(fd, errbufr, elength, 0);
+
+	    tp->zline_start = sotime;
+	} 
+        else 
+        {
 	    /* it might be desireable at some point to let people know about
 	     * these problems.  for now, however, don't. */
 	}
@@ -334,8 +426,10 @@ int throttle_check(char *host, int local) {
 		
 /* walk through our list of throttles, expire any as necessary.  in the case of
  * Z:lines, expire them at the end of the Z:line timeout period. */
+/* Expire at the end of the zline timeout period plus throttle_rtime */
 void throttle_timer(time_t now) {
     throttle *tp, *tp2;
+    time_t zlength;
 
     if (!throttle_enable)
 	return;
@@ -343,9 +437,13 @@ void throttle_timer(time_t now) {
     tp = LIST_FIRST(&throttles);
     while (tp != NULL)
     {
+        zlength = throttle_get_zline_time(tp->stage);
 	tp2=LIST_NEXT(tp, lp);
-	if ((tp->zlined && now - tp->added >= throttle_ztime) ||
-		(!tp->zlined && now - tp->added >= throttle_ttime)) {
+	if ((now == 0) ||
+            (tp->zline_start && (now - tp->zline_start) >= (zlength + throttle_rtime)) ||
+            (!tp->zline_start && (now - tp->last) >= throttle_rtime)
+           ) 
+        {
 	    /* delete this item */
 	    LIST_REMOVE(tp, lp);
 	    hash_delete(throttle_hash, tp);
@@ -357,10 +455,7 @@ void throttle_timer(time_t now) {
 }
 
 void throttle_rehash(void) {
-    /* be sneaky, to force expires, just pretend time leapt forward
-     * considerably. */
-
-    throttle_timer(NOW + throttle_ztime * 2);
+    throttle_timer(0);
 }
 
 void throttle_resize(int size) {
@@ -378,17 +473,21 @@ void throttle_stats(aClient *cptr, char *name) {
 
     /* now count bans/pending */
     LIST_FOREACH(tp, &throttles, lp) {
-	if (tp->zlined)
+	if (tp->zline_start)
 	    bans++;
 	else
 	    pending++;
     }
     sendto_one(cptr, ":%s %d %s :throttles pending=%d bans=%d", me.name,
 	    RPL_STATSDEBUG, name, pending, bans);
-    LIST_FOREACH(tp, &throttles, lp) {
-	if (tp->zlined)
-	    sendto_one(cptr, ":%s %d %s :throttled: %s", me.name,
-		    RPL_STATSDEBUG, name, tp->addr);
+    LIST_FOREACH(tp, &throttles, lp) 
+    {
+        int ztime = throttle_get_zline_time(tp->stage);
+
+	if (tp->zline_start && tp->zline_start + ztime > NOW)
+	    sendto_one(cptr, ":%s %d %s :throttled: %s [stage %d, %d secs remain, %d futile retries]", me.name,
+		    RPL_STATSDEBUG, name, tp->addr, tp->stage, 
+		    (tp->zline_start + ztime) - NOW, tp->re_zlines);
     }
 }
 

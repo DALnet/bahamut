@@ -29,6 +29,7 @@
 #include "numeric.h"
 #include "msg.h"
 #include "channel.h"
+#include "throttle.h"
 #include <sys/stat.h>
 #include <utmp.h>
 #include <fcntl.h>
@@ -1922,14 +1923,15 @@ int do_user(char *nick, aClient *cptr, aClient *sptr, char *username,
     strncpyzt(sptr->info, realname, sizeof(sptr->info));
     
     sptr->user->servicestamp = serviceid;
-    if (!MyConnect(sptr))  {
+    if (!MyConnect(sptr))  
+    {
 	sptr->ip.s_addr=ntohl(ip);
 	
 	/* add non-local clients to the throttle checker.  obviously, we only
 	 * do this for REMOTE clients!@$$@!  throttle_check() is called
 	 * elsewhere for the locals! -wd */
 	if (ip != 0) 
-	   throttle_check(inet_ntoa(sptr->ip), 0);
+	   throttle_check(inetntoa((char *)&sptr->ip), -1, sptr->tsinfo);
     }
     if(MyConnect(sptr))
 	sptr->oflag=0;

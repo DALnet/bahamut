@@ -28,6 +28,7 @@
 #include "numeric.h"
 #include "patchlevel.h"
 #include "zlink.h"
+#include "throttle.h"
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/file.h>
@@ -1557,7 +1558,7 @@ void accept_connection(aClient *cptr)
 	return;
     }
     /* if they are throttled, drop them silently. */
-    if (throttle_check(host, 1) == 0) {
+    if (throttle_check(host, newfd, NOW) == 0) {
        ircstp->is_ref++;
        close(newfd);
        return;

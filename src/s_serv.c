@@ -2960,7 +2960,7 @@ int m_set(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	    * ENABLE [on|off] to enable the code
 	    * COUNT [n] to set a max count, must be > 1
 	    * TIME [n] to set a max time before expiry, must be > 5
-	    * BANTIME [n] to set a time for the throttle bans to expire
+	    * RECORDTIME [n] to set a time for the throttle records to expire
 	    * HASH [n] to set the size of the hash table, must be bigger than
 	    *          the default */
 
@@ -2993,13 +2993,13 @@ int m_set(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		  if (cnt >= 5) {
 		     throttle_ttime = cnt;
 		     to = parv[3];
-		  }
-	       } else if (!strcasecmp(parv[2], "BANTIME")) {
+		  } 
+	       } else if (!strcasecmp(parv[2], "RECORDTIME")) {
 		  int cnt;
-		  changed = "BANTIME";
+		  changed = "RECORDTIME";
 		  cnt = atoi(parv[3]);
 		  if (cnt >= 30) {
-		     throttle_ztime = cnt;
+		     throttle_rtime = cnt;
 		     to = parv[3];
 		  }
 	       } else if (!strcasecmp(parv[2], "HASH")) {
@@ -3025,10 +3025,10 @@ int m_set(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		    throttle_enable ? "enabled" : "disabled");
 	      sendto_one(sptr, ":%s NOTICE %s :THROTTLE COUNT=%d", me.name,
 		    parv[0], throttle_tcount);
-	      sendto_one(sptr, ":%s NOTICE %s :THROTTLE TIME=%d", me.name,
+	      sendto_one(sptr, ":%s NOTICE %s :THROTTLE TIME=%d sec", me.name,
 		    parv[0], throttle_ttime);
-	      sendto_one(sptr, ":%s NOTICE %s :THROTTLE BANTIME=%d", me.name,
-		    parv[0], throttle_ztime);
+	      sendto_one(sptr, ":%s NOTICE %s :THROTTLE RECORDTIME=%d sec", me.name,
+		    parv[0], throttle_rtime);
 	   }
 	}
     }

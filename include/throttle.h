@@ -53,10 +53,10 @@
  */
 
 /* setting bits */
-extern int throttle_enable, throttle_tcount, throttle_ttime, throttle_ztime;
+extern int throttle_enable, throttle_tcount, throttle_ttime, throttle_rtime;
 
 #ifdef THROTTLE_ENABLE
-int throttle_check(char *ip, int local);
+int throttle_check(char *ip, int fd, time_t sotime);
 void throttle_timer(time_t now);
 
 void throttle_init(void);
@@ -66,7 +66,7 @@ void throttle_stats(aClient *cptr, char *name);
 
 #else
 
-#define throttle_check(x,y) ((int)1)
+#define throttle_check(x,y,z) ((int)1)
 #define throttle_timer() ((void)0)
 
 #define throttle_init() ((void)0)
