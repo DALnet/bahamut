@@ -599,24 +599,24 @@ void sendto_channel_butone(aClient *one, aClient *from, aChannel *chptr,
  */
 void sendto_serv_butone_services(aClient *one, char *pattern, ...) 
 {
-    int i;
     aClient *cptr;
-    int j, k = 0;
+    int k = 0;
     fdlist send_fdlist;
     va_list vl;
+    Link *lp;
 
     va_start(vl, pattern);
-    for (i = serv_fdlist.entry[j = 1];
-	 j <= serv_fdlist.last_entry; i = serv_fdlist.entry[++j]) 
+    for (lp = server_list; lp; lp = lp->next)
     {
+	cptr = lp->value.cptr;
 #ifdef SERVICESHUB
-	if (!(cptr = local[i]) || (one && cptr == one->from) || 
-         !strcasecmp(cptr->name,SERVICES_NAME) || !strcasecmp(cptr->name,STATS_NAME))
+	if ((one && cptr == one->from) || 
+            !strcasecmp(cptr->name,SERVICES_NAME) || !strcasecmp(cptr->name,STATS_NAME))
 #else
-	if (!(cptr = local[i]) || (one && cptr == one->from))
+	if (one && cptr == one->from)
 #endif
 	    continue;
-	send_fdlist.entry[++k] = i;
+	send_fdlist.entry[++k] = cptr->fd;
     }
     send_fdlist.last_entry = k;
     if (k)
@@ -632,19 +632,19 @@ void sendto_serv_butone_services(aClient *one, char *pattern, ...)
  */
 void sendto_serv_butone(aClient *one, char *pattern, ...) 
 {
-    int i;
     aClient *cptr;
-    int j, k = 0;
+    int k = 0;
     fdlist send_fdlist;
     va_list vl;
+    Link *lp;
 	
     va_start(vl, pattern);
-    for (i = serv_fdlist.entry[j = 1];
-	 j <= serv_fdlist.last_entry; i = serv_fdlist.entry[++j]) 
+    for(lp = server_list; lp; lp = lp->next)
     {
-	if (!(cptr = local[i]) || (one && cptr == one->from))
+	cptr = lp->value.cptr;
+	if (one && cptr == one->from)
 	    continue;
-	send_fdlist.entry[++k] = i;
+	send_fdlist.entry[++k] = cptr->fd;
     }
     send_fdlist.last_entry = k;
     if (k)
@@ -662,23 +662,23 @@ void sendto_serv_butone(aClient *one, char *pattern, ...)
  */
 void sendto_noquit_servs_butone(int noquit, aClient *one, char *pattern, ...) 
 {
-    int i;
     aClient *cptr;
-    int j, k = 0;
+    int k = 0;
     fdlist send_fdlist;
     va_list vl;
+    Link *lp;
 	
     va_start(vl, pattern);
-    for (i = serv_fdlist.entry[j = 1];
-	 j <= serv_fdlist.last_entry; i = serv_fdlist.entry[++j]) 
+    for(lp = server_list; lp; lp = lp->next)
     {
-	if (!(cptr = local[i]) || 
-	    (noquit && !IsNoQuit(cptr)) || 
+        cptr = lp->value.cptr;
+
+	if ((noquit && !IsNoQuit(cptr)) || 
 	    (!noquit && IsNoQuit(cptr)) || 
             one == cptr)
 	    continue;
 
-	send_fdlist.entry[++k] = i;
+	send_fdlist.entry[++k] = cptr->fd;
     }
     send_fdlist.last_entry = k;
     if (k)
@@ -697,23 +697,22 @@ void sendto_noquit_servs_butone(int noquit, aClient *one, char *pattern, ...)
  */
 void sendto_nickip_servs_butone(int nickip, aClient *one, char *pattern, ...) 
 {
-    int i;
     aClient *cptr;
-    int j, k = 0;
+    int k = 0;
     fdlist send_fdlist;
     va_list vl;
+    Link *lp;
 	
     va_start(vl, pattern);
-    for (i = serv_fdlist.entry[j = 1];
-	 j <= serv_fdlist.last_entry; i = serv_fdlist.entry[++j]) 
+    for(lp = server_list; lp; lp = lp->next)
     {
-	if (!(cptr = local[i]) || 
-	    (nickip && !IsNICKIP(cptr)) || 
+	cptr = lp->value.cptr;
+	if ((nickip && !IsNICKIP(cptr)) || 
 	    (!nickip && IsNICKIP(cptr)) || 
             one == cptr)
 	    continue;
 
-	send_fdlist.entry[++k] = i;
+	send_fdlist.entry[++k] = cptr->fd;
     }
     send_fdlist.last_entry = k;
     if (k)
@@ -951,11 +950,11 @@ void sendto_channel_butserv(aChannel *chptr, aClient *from, char *pattern, ...)
 void sendto_tsmode_servs(int tsmode, aChannel *chptr, aClient *from, 
 			 char *pattern, ...)
 {
-    int j, k = 0;
-    fdlist      send_fdlist;
-    int     i;
+    fdlist send_fdlist;
+    int k = 0;
     aClient *cptr;
     va_list vl;
+    Link *lp;
 	
     if (chptr) 
     {
@@ -963,16 +962,16 @@ void sendto_tsmode_servs(int tsmode, aChannel *chptr, aClient *from,
 	    return;
     }
     va_start(vl, pattern);
-    for (i = serv_fdlist.entry[j = 1]; j <= serv_fdlist.last_entry;
-	 i = serv_fdlist.entry[++j]) 
+
+    for(lp = server_list; lp; lp = lp->next)
     {
-	if (!(cptr = local[i]) || 
-	    (cptr == from) ||
+	cptr = lp->value.cptr;
+	if ((cptr == from) ||
 	    (tsmode && !IsTSMODE(cptr)) ||
 	    (!tsmode && IsTSMODE(cptr)))
 	    continue;
 	
-	send_fdlist.entry[++k] = i;
+	send_fdlist.entry[++k] = cptr->fd;
     }
     send_fdlist.last_entry = k;
     if (k)
@@ -981,6 +980,40 @@ void sendto_tsmode_servs(int tsmode, aChannel *chptr, aClient *from,
     return;
 }
 
+
+/*
+ * sendto_match_servs
+ * 
+ * send to all servers which match the mask at the end of a channel name
+ * (if there is a mask present) or to all if no mask.
+ */
+void sendto_match_servs(aChannel *chptr, aClient *from, char *pattern, ...)
+{
+    fdlist send_fdlist;
+    int k = 0;
+    aClient *cptr;
+    va_list vl;
+    Link *lp;
+
+    if (chptr) 
+    {
+	if (*chptr->chname == '&')
+	    return;
+    }
+    va_start(vl, pattern);
+    for(lp = server_list; lp; lp = lp->next)
+    {
+        cptr = lp->value.cptr;
+	if (cptr == from)
+	    continue;
+	send_fdlist.entry[++k] = cptr->fd;
+    }
+    send_fdlist.last_entry = k;
+    if (k)
+	vsendto_fdlist(&send_fdlist, pattern, vl);
+    va_end(vl);
+    return;
+}
 
 /*
  * * send a msg to all ppl on servers/hosts that match a specified mask *
@@ -994,41 +1027,6 @@ static int match_it(aClient *one, char *mask, int what)
 	return (match(mask, one->user->host) == 0);
     else
 	return (match(mask, one->user->server) == 0);
-}
-
-/*
- * sendto_match_servs
- * 
- * send to all servers which match the mask at the end of a channel name
- * (if there is a mask present) or to all if no mask.
- */
-void sendto_match_servs(aChannel *chptr, aClient *from, char *pattern, ...)
-{
-    int j, k = 0;
-    fdlist      send_fdlist;
-    int     i;
-    aClient *cptr;
-    va_list vl;
-    if (chptr) 
-    {
-	if (*chptr->chname == '&')
-	    return;
-    }
-    va_start(vl, pattern);
-    for (i = serv_fdlist.entry[j = 1]; j <= serv_fdlist.last_entry;
-	 i = serv_fdlist.entry[++j]) 
-    {
-	if (!(cptr = local[i]))
-	    continue;
-	if (cptr == from)
-	    continue;
-	send_fdlist.entry[++k] = i;
-    }
-    send_fdlist.last_entry = k;
-    if (k)
-	vsendto_fdlist(&send_fdlist, pattern, vl);
-    va_end(vl);
-    return;
 }
 
 /*
@@ -1256,18 +1254,17 @@ void sendto_wallops_butone(aClient *one, aClient *from, char *pattern, ...)
 void send_globops(char *pattern, ...)
 {
     aClient *cptr;
-    int     i;
-    char        nbuf[1024];
-    fdlist     *l;
-    int         fd;
+    char nbuf[1024];
     va_list vl;
+    Link *lp;
 	  
     va_start(vl, pattern);
-    l = &oper_fdlist;
-    for (fd = l->entry[i = 1]; i <= l->last_entry; fd = l->entry[++i])
+    for (lp = oper_list; lp; lp = lp->next)
     {
-	if (!(cptr = local[fd]) || !SendGlobops(cptr) || !IsAnOper(cptr))
+        cptr = lp->value.cptr;
+	if (!SendGlobops(cptr) || !IsAnOper(cptr))
 	    continue;
+
 	if (IsAnOper(cptr))
 	{
 	    ircsprintf(nbuf, ":%s NOTICE %s :*** Global -- %s",
@@ -1282,18 +1279,17 @@ void send_globops(char *pattern, ...)
 void send_chatops(char *pattern, ...)
 {
     aClient *cptr;
-    int     i;
-    char        nbuf[1024];
-    fdlist     *l;
-    int         fd;
+    char nbuf[1024];
     va_list vl;
+    Link *lp;
 	  
     va_start(vl, pattern);
-    l = &oper_fdlist;
-    for (fd = l->entry[i = 1]; i <= l->last_entry; fd = l->entry[++i])
+    for (lp = oper_list; lp; lp = lp->next)
     {
-	if (!(cptr = local[fd]) || !SendChatops(cptr) || !IsAnOper(cptr))
+	cptr = lp->value.cptr;
+	if (!SendChatops(cptr) || !IsAnOper(cptr))
 	    continue;
+
 	if (IsAnOper(cptr))
 	{
 	    ircsprintf(nbuf, ":%s NOTICE %s :*** ChatOps -- %s",
@@ -1554,6 +1550,26 @@ void vsendto_fdlist(fdlist *listp, char *pattern, va_list vl)
 	send_message(local[fd], sendbuf, len);
 }
 
+
+void vsendto_realops(char *pattern, va_list vl)
+{
+    aClient *cptr;
+    char nbuf[1024];
+    Link *lp;
+
+    for (lp = oper_list; lp; lp = lp->next)
+    {
+	cptr = lp->value.cptr;
+	if (IsAnOper(cptr))
+	{
+	    ircsprintf(nbuf, ":%s NOTICE %s :*** Notice -- %s",
+		       me.name, cptr->name, pattern);
+	    vsendto_one(cptr, nbuf, vl);
+	}
+    }
+    return;
+}
+
 /*
  * sendto_realops
  * 
@@ -1563,51 +1579,11 @@ void vsendto_fdlist(fdlist *listp, char *pattern, va_list vl)
  */
 void sendto_realops(char *pattern, ...)
 {
-    aClient *cptr;
-    int     i;
-    char        nbuf[1024];
-    fdlist     *l;
-    int         fd;
     va_list vl;
 	  
     va_start(vl, pattern);
-    l = &oper_fdlist;
-    for (fd = l->entry[i = 1]; i <= l->last_entry; fd = l->entry[++i])
-    {
-	if (!(cptr = local[fd]))
-	    continue;
-	if (IsAnOper(cptr))
-	{
-	    ircsprintf(nbuf, ":%s NOTICE %s :*** Notice -- %s",
-		       me.name, cptr->name, pattern);
-	    vsendto_one(cptr, nbuf, vl);
-	}
-    }
+    vsendto_realops(pattern, vl);
     va_end(vl);
-    return;
-}
-
-void vsendto_realops(char *pattern, va_list vl)
-{
-    aClient *cptr;
-    int     i;
-    char        nbuf[1024];
-    fdlist     *l;
-    int         fd;
-
-    l = &oper_fdlist;
-    for (fd = l->entry[i = 1]; i <= l->last_entry; fd = l->entry[++i])
-    {
-	if (!(cptr = local[fd]))
-	    continue;
-	if (IsAnOper(cptr))
-	{
-	    ircsprintf(nbuf, ":%s NOTICE %s :*** Notice -- %s",
-		       me.name, cptr->name, pattern);
-	    vsendto_one(cptr, nbuf, vl);
-	}
-    }
-    return;
 }
 
 /*
@@ -1618,18 +1594,15 @@ void vsendto_realops(char *pattern, va_list vl)
 void sendto_realops_lev(int lev, char *pattern, ...)
 {
     aClient *cptr;
-    int     i;
-    char        nbuf[1024];
-    fdlist     *l;
-    int         fd;
+    char nbuf[1024];
     va_list vl;
-	
-    l = &oper_fdlist;
+    Link *lp;
+
     va_start(vl, pattern);
-    for (fd = l->entry[i = 1]; i <= l->last_entry; fd = l->entry[++i])
+
+    for (lp = oper_list; lp; lp = lp->next)
     {
-	if (!(cptr = local[fd]))
-	    continue;
+	cptr = lp->value.cptr;
 	switch (lev)
 	{
 	case CCONN_LEV:
@@ -1640,9 +1613,7 @@ void sendto_realops_lev(int lev, char *pattern, ...)
 	    if (!SendRejNotice(cptr))
 		continue;
 	    break;
-	case SKILL_LEV:	/* This should not be sent, since this 
-			 * can go to normal people 
-			 */
+	case SKILL_LEV:
 	    if (!SendSkillNotice(cptr))
 		continue;
 	    break;
@@ -1671,10 +1642,8 @@ void sendto_realops_lev(int lev, char *pattern, ...)
 		continue;
 	    break;
 	}
-	(void) ircsprintf(nbuf, ":%s NOTICE %s :*** Notice -- ",
-			  me.name, cptr->name);
-	(void) strncat(nbuf, pattern,
-		       sizeof(nbuf) - strlen(nbuf));
+	ircsprintf(nbuf, ":%s NOTICE %s :*** Notice -- %s",
+		   me.name, cptr->name, pattern);
 	vsendto_one(cptr, nbuf, vl);
     }
     va_end(vl);
@@ -1724,24 +1693,20 @@ void ts_warn(char * pattern, ...)
 void sendto_locops(char *pattern, ...)
 {
     aClient *cptr;
-    int     i;
-    char        nbuf[1024];
-    fdlist     *l;
-    int         fd;
+    char nbuf[1024];
     va_list vl;
-	
+    Link *lp;
+
     va_start(vl, pattern);
-    l = &oper_fdlist;
-    for (fd = l->entry[i = 1]; i <= l->last_entry; fd = l->entry[++i])
+
+    for (lp = oper_list; lp; lp = lp->next)
     {
-	if (!(cptr = local[fd]))
-	    continue;
+	cptr = lp->value.cptr;
+
 	if (SendGlobops(cptr))
 	{
-	    (void) ircsprintf(nbuf, ":%s NOTICE %s :*** LocOps -- ",
-			      me.name, cptr->name);
-	    (void) strncat(nbuf, pattern,
-			   sizeof(nbuf) - strlen(nbuf));
+	    ircsprintf(nbuf, ":%s NOTICE %s :*** LocOps -- %s",
+		       me.name, cptr->name, pattern);
 	    vsendto_one(cptr, nbuf, vl);
 	}
     }
@@ -1753,21 +1718,19 @@ void sendto_locops(char *pattern, ...)
 void sendto_gnotice(char *pattern, ...)
 {
     aClient *cptr;
-    int     i;
-    char        nbuf[1024];
+    char nbuf[1024];
     va_list vl;
+    Link *lp;
 	
     va_start(vl, pattern);
 
-    for (i = 0; i <= highest_fd; i++)
+    for (lp = oper_list; lp; lp = lp->next)
     {
-	if ((cptr = local[i]) && !IsServer(cptr) && !IsMe(cptr) &&
-	    SendRnotice(cptr)) {
-	    
-	    (void) ircsprintf(nbuf, ":%s NOTICE %s :*** Routing -- ",
-			      me.name, cptr->name);
-	    (void) strncat(nbuf, pattern,
-			   sizeof(nbuf) - strlen(nbuf));
+	cptr = lp->value.cptr;
+	if (SendRnotice(cptr)) 
+	{
+	    ircsprintf(nbuf, ":%s NOTICE %s :*** Routing -- %s",
+		       me.name, cptr->name, pattern);
 	    vsendto_one(cptr, nbuf, vl);
 	}
     }

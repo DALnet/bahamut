@@ -54,7 +54,6 @@
 #include "fdlist.h"
 #include "throttle.h"
 
-extern fdlist serv_fdlist;
 extern int  lifesux;
 extern int  HTMLOCK;
 static char buf[BUFSIZE];
@@ -798,13 +797,8 @@ int do_server_estab(aClient *cptr)
     reset_sock_opts(cptr->fd, 1);
 #endif 
 
-    /* adds to fdlist */
-    addto_fdlist(cptr->fd, &serv_fdlist);
-
-#ifndef NO_PRIORITY
-    /* this causes the server to be marked as "busy" */
-    check_fdlists();
-#endif
+    /* adds to server list */
+    add_to_list(&server_list, cptr);
 
     cptr->pingval = get_client_ping(cptr);
     cptr->sendqlen = get_sendq(cptr);
@@ -1400,11 +1394,6 @@ int m_info(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	    strcpy(outstr, " NO_OPER_FLOOD=1");
 #else
 	    strcpy(outstr, " NO_OPER_FLOOD=0");
-#endif
-#ifdef NO_PRIORITY
-	    strcat(outstr, " NO_PRIORITY=1");
-#else
-	    strcat(outstr, " NO_PRIORITY=0");
 #endif
 	    sendto_one(sptr, rpl_str(RPL_INFO),
 		       me.name, parv[0], outstr);

@@ -29,7 +29,6 @@
 
 #ifdef NO_CHANOPS_WHEN_SPLIT
 #include "fdlist.h"
-extern fdlist serv_fdlist;
 
 int         server_was_split = YES;
 time_t      server_split_time = 0;
@@ -1663,7 +1662,7 @@ int m_join(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	    {
 		if ((server_split_time + server_split_recovery_time) < NOW)
 		{
-		    if (serv_fdlist.last_entry)
+		    if (server_list != NULL)
 			server_was_split = NO;
 		    else
 		    {

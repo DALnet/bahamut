@@ -69,12 +69,6 @@
 
 #include "h.h"
 #include "fdlist.h"
-extern fdlist serv_fdlist;
-
-#ifndef NO_PRIORITY
-extern fdlist busycli_fdlist;
-#endif
-
 extern fdlist default_fdlist;
 
 #ifndef IN_LOOPBACKNET
@@ -1002,32 +996,8 @@ void close_connection(aClient * cptr)
 	    local[i] = local[j];
 	    local[i]->fd = i;
 	    local[j] = NULL;
-	    /* update server list */
-	    if (IsServer(local[i]))
-	    {
 
-#ifndef NO_PRIORITY
-		delfrom_fdlist(j, &busycli_fdlist);
-#endif
-		delfrom_fdlist(j, &serv_fdlist);
-#ifndef NO_PRIORITY
-		addto_fdlist(i, &busycli_fdlist);
-#endif
-		addto_fdlist(i, &serv_fdlist);
-	    }
-	    /* update oper list */
-	    if (IsAnOper(local[i]))
-	    {
-#ifndef NO_PRIORITY
-		delfrom_fdlist(j, &busycli_fdlist);
-#endif
-		delfrom_fdlist(j, &oper_fdlist);
-#ifndef NO_PRIORITY
-		addto_fdlist(i, &busycli_fdlist);
-#endif
-		addto_fdlist(i, &oper_fdlist);
-	    }
-	    (void) close(j);
+	    close(j);
 	    while (!local[highest_fd])
 		highest_fd--;
 	}

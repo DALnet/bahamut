@@ -41,7 +41,6 @@
 #endif
 #include "h.h"
 #include "fdlist.h"
-extern fdlist serv_fdlist;
 
 #ifdef NO_CHANOPS_WHEN_SPLIT
 extern int  server_was_split;
@@ -432,7 +431,7 @@ void exit_one_server(aClient *cptr, aClient *dead, aClient *from,
 		     aClient *lcptr, char *spinfo, char *comment)
 {
     aClient *acptr, *next;
-    int i, j;
+    Link *lp;
 
     /* okay, this is annoying.
      * first off, we need two loops.
@@ -474,10 +473,11 @@ void exit_one_server(aClient *cptr, aClient *dead, aClient *from,
 
     Debug((DEBUG_NOTICE, "done exiting server: %s", cptr->name));
 
-    for (i = serv_fdlist.entry[j = 1]; j <= serv_fdlist.last_entry;
-	 i = serv_fdlist.entry[++j]) 
+    for (lp = server_list; lp; lp = lp->next)
     {
-	if (!(acptr = local[i]) || acptr == cptr || IsMe(acptr) ||
+	acptr = lp->value.cptr;
+
+	if (acptr == cptr || IsMe(acptr) ||
 	    acptr == dead || acptr == lcptr)
 	    continue;
 
@@ -566,7 +566,7 @@ int exit_client(aClient *cptr, aClient *sptr, aClient *from, char *comment)
 	    remove_one_ip(sptr->ip.s_addr);
 	if (IsAnOper(sptr)) 
 	{
-	    delfrom_fdlist(sptr->fd, &oper_fdlist);
+	    remove_from_list(&oper_list, sptr);
 	}
 	if (IsClient(sptr))
 	    Count.local--;
@@ -579,9 +579,9 @@ int exit_client(aClient *cptr, aClient *sptr, aClient *from, char *comment)
 	    Count.myserver--;
 	    if (IsULine(sptr))
 		Count.myulined--;
-	    delfrom_fdlist(sptr->fd, &serv_fdlist);
+	    remove_from_list(&server_list, sptr);
 #ifdef NO_CHANOPS_WHEN_SPLIT
-	    if (serv_fdlist.last_entry) 
+	    if (server_list == NULL) 
 	    {
 		server_was_split = YES;
 		server_split_time = NOW;
@@ -1035,19 +1035,17 @@ void tstats(aClient *cptr, char *name)
 void serv_info(aClient *cptr, char *name)
 {
     static char Lformat[] = ":%s %d %s %s %u %u %u %u %u :%u %u %s";
-    int         i = 0, j, fd;
     long        sendK, receiveK, uptime;
-    fdlist      l;
     aClient    *acptr;
-
-    l = serv_fdlist;
+    Link       *lp;
+    int         i = 0;
 
     sendK = receiveK = 0;
 
-    for (fd = l.entry[j = 1]; j <= l.last_entry; fd = l.entry[++j])
+    for (lp = server_list; lp; lp = lp->next)
     {
-	if (!(acptr = local[fd]))
-	    continue;
+	acptr = lp->value.cptr;
+
 #ifdef HIDEULINEDSERVS
 	if (IsULine(acptr) && !IsAnOper(cptr))
 	    continue;
@@ -1100,26 +1098,13 @@ void serv_info(aClient *cptr, char *name)
 void show_opers(aClient *cptr, char *name)
 {
     aClient *cptr2;
-    int     i, j = 0, fd;
-    fdlist     *l;
+    Link *lp;
+    int j = 0;
 
-    l = &oper_fdlist;
-    for (fd = l->entry[i = 1]; i <= l->last_entry; fd = l->entry[++i])
+    for (lp = oper_list; lp; lp = lp->next)
     {
-	if (!(cptr2 = local[fd]))
-	    continue;
-	if (!IsClient(cptr2))
-	{
-	    sendto_one(cptr, ":%s %d %s :Weird fd %d(%d) - not client (%d)",
-		       me.name, RPL_STATSDEBUG, name, fd, cptr2->fd,
-		       cptr2->status);
-	    continue;
-	}
-	if (!IsAnOper(cptr2))
-	{
-	    delfrom_fdlist(cptr2->fd, &oper_fdlist);
-	    continue;
-	}
+	cptr2 = lp->value.cptr;
+
 	if (!IsAnOper(cptr))
 	{
 	    if (cptr2->umode & UMODE_h)
@@ -1147,21 +1132,13 @@ void show_opers(aClient *cptr, char *name)
 void show_servers(aClient *cptr, char *name)
 {
     aClient *cptr2;
-    int     i, j = 0, fd;
-    fdlist     *l;
+    Link *lp;
+    int j = 0;
 
-    l = &serv_fdlist;
-    for (fd = l->entry[i = 1]; i <= l->last_entry; fd = l->entry[++i])
+    for (lp = server_list; lp; lp = lp->next)
     {
-	if (!(cptr2 = local[fd]))
-	    continue;
-	if (!IsServer(cptr2))
-	{
-	    sendto_one(cptr, ":%s %d %s :Weird fd %d(%d) - not server (%d)",
-		       me.name, RPL_STATSDEBUG, name, fd, cptr2->fd,
-		       cptr2->status);
-	    continue;
-	}
+	cptr2 = lp->value.cptr;
+
 #ifdef HIDEULINEDSERVS
 	if(IsULine(cptr2) && !IsAnOper(cptr))
 	    continue;

@@ -71,14 +71,6 @@ char ProxyMonHost[HOSTLEN+1];
 /* this stuff by mnystrom@mit.edu */
 #include "fdlist.h"
 
-fdlist      serv_fdlist;
-fdlist      oper_fdlist;
-fdlist      listen_fdlist;
-
-#ifndef NO_PRIORITY
-fdlist      busycli_fdlist;	/* high-priority clients */
-#endif
-
 fdlist      default_fdlist;	/* just the number of the entry */
 
 int         MAXCLIENTS = MAX_CLIENTS;	/* semi-configurable if
@@ -815,13 +807,6 @@ int main(int argc, char *argv[])
     NOW = time(NULL);
     open_debugfile();
     NOW = time(NULL);
-    init_fdlist(&serv_fdlist);
-    init_fdlist(&oper_fdlist);
-    init_fdlist(&listen_fdlist);
-	
-#ifndef NO_PRIORITY
-    init_fdlist(&busycli_fdlist);
-#endif
 	
     init_fdlist(&default_fdlist);
     {
@@ -971,10 +956,6 @@ int main(int argc, char *argv[])
     syslog(LOG_NOTICE, "Server Ready");
 #endif
     NOW = time(NULL);
-	
-#ifndef NO_PRIORITY
-    check_fdlists();
-#endif
 	
     if ((timeofday = time(NULL)) == -1) 
     {
@@ -1169,56 +1150,8 @@ void io_loop()
 	 * read servers AGAIN, and then flush any data to servers. -Taner
 	 */
 
-#ifndef NO_PRIORITY
-	read_message(0, &serv_fdlist);
-	read_message(1, &busycli_fdlist);
-	if (lifesux) 
-	{
-	    (void) read_message(1, &serv_fdlist);
-	    if (lifesux > 9) 		/* life really sucks */
-	    {
-		(void) read_message(1, &busycli_fdlist);
-		(void) read_message(1, &serv_fdlist);
-	    }
-	    flush_fdlist_connections(&serv_fdlist);
-	}
-	
-	if ((timeofday = time(NULL)) == -1) 
-	{
-#ifdef USE_SYSLOG
-	    syslog(LOG_WARNING, "Clock Failure (%d), TS can be corrupted",
-		   errno);
-#endif
-	    sendto_ops("Clock Failure (%d), TS can be corrupted", errno);
-	}
-	/*
-	 * CLIENT_SERVER = TRUE: If we're in normal mode, or if "lifesux"
-	 * and a few seconds have passed, then read everything.
-	 * CLIENT_SERVER = FALSE: If it's been more than lifesux*2 seconds
-	 * (that is, at most 1 second, or at least 2s when lifesux is != 0)
-	 * check everything. -Taner
-	 */
-	{ 
-	    static time_t lasttime = 0;
-	    
-# ifdef CLIENT_SERVER
-	    if (!lifesux || (lasttime + lifesux) < timeofday)
-	    {
-# else
-		if ((lasttime + (lifesux + 1)) < timeofday)
-		{
-# endif
-		    (void) read_message(delay ? delay : 1, NULL);	
-		    /* check everything! */
-		    lasttime = timeofday;
-		}
-	    }
-#if 0 /* We do this to appease emacs */
-	}
-#endif
-#else
-	(void) read_message(delay, NULL);	/* check everything! */
-#endif
+	read_message(delay, NULL);	/* check everything! */
+
 	/*
 	 * * ...perhaps should not do these loops every time, but only if
 	 * there is some chance of something happening (but, note that
@@ -1265,10 +1198,6 @@ void io_loop()
 	/* Only flush non-blocked sockets. */
 	
 	flush_connections(me.fd);
-	
-#ifndef NO_PRIORITY
-	check_fdlists();
-#endif
 	
 #ifdef	LOCKFILE
 	/*
@@ -1394,63 +1323,6 @@ static void setup_signals()
     (void) siginterrupt(SIGALRM, 1);
 #endif
 }
-
-#ifndef NO_PRIORITY
-/*
- * This is a pretty expensive routine -- it loops through all the fd's,
- * and finds the active clients (and servers and opers) and places them
- * on the "busy client" list
- */
-void check_fdlists()
-{
-#ifdef CLIENT_SERVER
-#define BUSY_CLIENT(x)	(((x)->priority < 55) || \
-                         (!lifesux && ((x)->priority < 75)))
-#else
-#define BUSY_CLIENT(x)	(((x)->priority < 40) || \
-                         (!lifesux && ((x)->priority < 60)))
-#endif
-#define FDLISTCHKFREQ  2
-
-    aClient *cptr;
-    int i, j;
-
-    j = 0;
-    for (i = highest_fd; i >= 0; i--) 
-    {
-	if (!(cptr = local[i]))
-	    continue;
-	if (IsServer(cptr) || IsListening(cptr) || IsOper(cptr)) 
-	{
-	    busycli_fdlist.entry[++j] = i;
-	    continue;
-	}
-	if (cptr->receiveM == cptr->lastrecvM) 
-	{
-	    cptr->priority += 2;	/* lower a bit */
-	    if (cptr->priority > 90)
-		cptr->priority = 90;
-	    else if (BUSY_CLIENT(cptr))
-		busycli_fdlist.entry[++j] = i;
-	    continue;
-	}
-	else 
-	{
-	    cptr->lastrecvM = cptr->receiveM;
-	    cptr->priority -= 30;	/* active client */
-	    if (cptr->priority < 0) 
-	    {
-		cptr->priority = 0;
-		busycli_fdlist.entry[++j] = i;
-	    }
-	    else if (BUSY_CLIENT(cptr))
-		busycli_fdlist.entry[++j] = i;
-	}
-    }
-    busycli_fdlist.last_entry = j;	/* rest of the fdlist is garbage */
-/*   return (now + FDLISTCHKFREQ + (lifesux + 1)); */
-}
-#endif
 
 void build_version(void) 
 {

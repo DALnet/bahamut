@@ -43,12 +43,8 @@ extern aMotd *shortmotd;
 extern aMotd *helpfile;		/* oper helpfile is a link list of aMotd */
 #include "dich_conf.h"
 
-extern aConfList KList1;	/* ordered */
-extern aConfList KList2;	/* ordered, reversed  */
-extern aConfList KList3;	/* what we can't sort */
-
-extern aConfList ZList1;
-
+extern Link *server_list;
+extern Link *oper_list;
 
 extern aConfList EList1;
 extern aConfList EList2;
@@ -320,5 +316,8 @@ extern int     	  hash_check_watch(aClient *, int);
 extern int     	  hash_del_watch_list(aClient  *);
 extern aWatch 	 *hash_get_watch(char *);
 #define MAXWATCH       128
+
+void add_to_list(Link **, aClient *);
+void remove_from_list(Link **, aClient *);
 
 #include "find.h"

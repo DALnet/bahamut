@@ -2697,7 +2697,7 @@ int m_oper(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	sptr->oflag = aconf->port;
 	Count.oper++;
 	*--s = '@';
-	addto_fdlist(sptr->fd, &oper_fdlist);
+	add_to_list(&oper_list, sptr);
         throttle_remove(oper_ip);
 	sendto_ops("%s (%s@%s) is now operator (%c)", parv[0],
 		   sptr->user->username, sptr->sockhost,
@@ -3038,7 +3038,7 @@ int m_umode(aClient *cptr, aClient *sptr, int parc, char *parv[])
     {
 	Count.oper--;
 	if (MyConnect(sptr))
-	    delfrom_fdlist(sptr->fd, &oper_fdlist);
+	    remove_from_list(&oper_list, sptr);
 
         /*
          * Now that the user is no longer opered, let's return
@@ -3169,22 +3169,21 @@ void send_umode(aClient *cptr, aClient *sptr, int old, int sendmask,
  */
 void send_umode_out(aClient *cptr, aClient *sptr, int old)
 {
-    int     i, j;
     aClient *acptr;
-    fdlist      fdl = serv_fdlist;
+    Link *lp;
 
     send_umode(NULL, sptr, old, SEND_UMODES, buf);
-    /*
-     * Cycling through serv_fdlist here should be MUCH faster than
-     * looping through every client looking for servers. -ThemBones
-     */
 
-    for (i = fdl.entry[j = 1]; j <= fdl.last_entry; i = fdl.entry[++j])
-	if ((acptr = local[i]) && (acptr != cptr) &&
-	    (acptr != sptr) && (*buf))
-	    sendto_one(acptr, ":%s MODE %s :%s",
-		       sptr->name, sptr->name, buf);
-    
+    if(*buf)
+    {
+	for(lp = server_list; lp; lp = lp->next)
+	{
+	    acptr = lp->value.cptr;
+	    if((acptr != cptr) && (acptr != sptr))
+		sendto_one(acptr, ":%s MODE %s :%s", sptr->name, sptr->name, buf);
+	}
+    }
+
     if (cptr && MyClient(cptr))
 	send_umode(cptr, sptr, old, ALL_UMODES, buf);
 }
