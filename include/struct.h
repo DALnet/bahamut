@@ -68,6 +68,7 @@ typedef struct Channel aChannel;
 typedef struct User anUser;
 typedef struct Server aServer;
 typedef struct SLink Link;
+typedef struct ChanLink chanMember;
 typedef struct SMode Mode;
 typedef struct Watch aWatch;
 typedef struct Ban aBan;
@@ -726,6 +727,14 @@ struct Ban {
 	aBan 	   *next;
 };
 
+/* channel member link structure, used for chanmember chains */
+struct ChanLink {
+        struct ChanLink *next;
+        aClient *cptr;
+        int flags;
+        int bans;	/* for bquiet: number of bans against this user */
+};
+
 /* general link structure used for chains */
 
 struct SLink {
@@ -751,7 +760,7 @@ struct Channel {
    char        topic_nick[NICKLEN + 1];
 	time_t      topic_time;
 	int         users;
-	Link       *members;
+	chanMember       *members;
 	Link       *invites;
 	aBan       *banlist;
 	ts_val      channelts;

@@ -907,7 +907,7 @@ m_server_estab(aClient *cptr)
     * saving a few seconds in the handling of a split -orabidoo
     */
    {
-		Link       *l;
+		chanMember       *cm;
 		static char nickissent = 1;
 
       nickissent = 3 - nickissent;
@@ -918,9 +918,9 @@ m_server_estab(aClient *cptr)
        */
       for (chptr = channel; chptr; chptr = chptr->nextch) 
       {
-	 for (l = chptr->members; l; l = l->next) 
+	 for (cm = chptr->members; cm; cm = cm->next) 
 	 {
-	    acptr = l->value.cptr;
+	    acptr = cm->cptr;
 	    if (acptr->nicksent != nickissent) 
 	    {
 	       acptr->nicksent = nickissent;

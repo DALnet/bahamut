@@ -299,6 +299,7 @@ void count_memory(aClient *cptr, char *nick)
    extern BlockHeap *free_remote_aClients;
    extern BlockHeap *free_anUsers;
    extern BlockHeap *free_channels;
+   extern BlockHeap *free_chanMembers;
 #ifdef FLUD
    extern BlockHeap *free_fludbots;
 #endif
@@ -313,6 +314,7 @@ void count_memory(aClient *cptr, char *nick)
 
    Reg aClient *acptr;
    Reg Link   *link;
+   Reg chanMember *cm;
    Reg aBan   *bp;
    Reg aChannel *chptr;
    Reg aConfItem *aconf;
@@ -420,8 +422,9 @@ void count_memory(aClient *cptr, char *nick)
    int linkalloc = 0; 	/* allocated links */
    int totallinks = 0; /* total links used */
    int chanalloc = 0; /* total channels alloc'd */
+   int cmemballoc = 0;
    u_long lcallocsz = 0, rcallocsz = 0; /* size for stuff above */
-   u_long userallocsz = 0, linkallocsz = 0, chanallocsz = 0;
+   u_long userallocsz = 0, linkallocsz = 0, chanallocsz = 0, cmemballocsz = 0;
 
    int fludalloc = 0;
    u_long fludallocsz = 0;
@@ -479,7 +482,7 @@ void count_memory(aClient *cptr, char *nick)
    for (chptr = channel; chptr; chptr = chptr->nextch) {
       ch++;
 
-      for (link = chptr->members; link; link = link->next)
+      for (cm = chptr->members; cm; cm = cm->next)
 	 chu++;
       for (link = chptr->invites; link; link = link->next)
 	 chi++;
@@ -524,12 +527,15 @@ void count_memory(aClient *cptr, char *nick)
    chanalloc = free_channels->blocksAllocated * free_channels->elemsPerBlock;
    chanallocsz = chanalloc * free_channels->elemSize;
 
+   cmemballoc = free_chanMembers->blocksAllocated * free_chanMembers->elemsPerBlock;
+   cmemballocsz = cmemballoc * free_chanMembers->elemSize;
+
 #ifdef FLUD
    fludalloc = free_fludbots->blocksAllocated * free_fludbots->elemsPerBlock;
    fludallocsz = fludalloc * free_fludbots->elemSize;
 #endif
 
-   totallinks = lcc + usi +  uss + usc + chu + chi + wle + fludlink;
+   totallinks = lcc + usi +  uss + usc + chi + wle + fludlink;
 
    sendto_one(cptr, ":%s %d %s :Memory Use Summary",
 	      me.name, RPL_STATSDEBUG, nick);
@@ -550,9 +556,8 @@ void count_memory(aClient *cptr, char *nick)
               linkalloc, linkallocsz);
    sendto_one(cptr, ":%s %d %s :   UserInvites %d(%d) ChanInvites %d(%d)",
 	  me.name, RPL_STATSDEBUG, nick, usi, usi * sizeof(Link), chi, chi * sizeof(Link));
-   sendto_one(cptr, ":%s %d %s :   UserChannels %d(%d) ChannelUsers %d(%d)",
-	      me.name, RPL_STATSDEBUG, nick, usc, usc * sizeof(Link),
-              chu, chu * sizeof(Link));
+   sendto_one(cptr, ":%s %d %s :   UserChannels %d(%d)",
+	      me.name, RPL_STATSDEBUG, nick, usc, usc * sizeof(Link));
    sendto_one(cptr, ":%s %d %s :   WATCH entries %d(%d)",
 	      me.name, RPL_STATSDEBUG, nick, wle, wle*sizeof(Link));
    sendto_one(cptr, ":%s %d %s :   Attached confs %d(%d)",
@@ -581,11 +586,12 @@ void count_memory(aClient *cptr, char *nick)
    sendto_one(cptr, ":%s %d %s :Fludbots ALLOC %d(%d)",
 	      me.name, RPL_STATSDEBUG, nick, fludalloc, fludallocsz);
 
-   sendto_one(cptr, ":%s %d %s :Channels %d(%d) ALLOC %d(%d) Bans %d(%d)",
+   sendto_one(cptr, ":%s %d %s :Channels %d(%d) ALLOC %d(%d) Bans %d(%d) Members %d(%d) ALLOC %d(%d)",
 	      me.name, RPL_STATSDEBUG, nick, ch, ch * sizeof(aChannel), 
-	      chanalloc, chanallocsz, chb, chbm);
+	      chanalloc, chanallocsz, chb, chbm,
+              chu, chu * sizeof(chanMember), cmemballoc, cmemballocsz);
 
-   totch = chanallocsz + chbm;
+   totch = chanallocsz + cmemballocsz + chbm;
 
    sendto_one(cptr, ":%s %d %s :Whowas users %d(%d)",
 	    me.name, RPL_STATSDEBUG, nick, wwu, wwu * sizeof(anUser));

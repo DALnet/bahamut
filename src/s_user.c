@@ -2341,7 +2341,7 @@ int chk_who(aClient *ac, int showall) {
 #define MAXWHOREPLIES 200
 int m_who(aClient *cptr, aClient *sptr, int parc, char *parv[]) {
 	aClient *ac;
-	Link *list;
+        chanMember *cm;
 	int shown=0, i=0, showall=IsAnOper(sptr);
 	char status[4];
 	
@@ -2384,8 +2384,8 @@ int m_who(aClient *cptr, aClient *sptr, int parc, char *parv[]) {
 		else
 		  showall=0;
 		if(showall || !SecretChannel(wsopts.channel)) {
-			for(list=wsopts.channel->members;list;list=list->next) {
-				ac=list->value.cptr;
+			for(cm=wsopts.channel->members; cm; cm=cm->next) {
+				ac=cm->cptr;
 				i=0;
 				if(!chk_who(ac,showall))
 				  continue;
@@ -2394,7 +2394,7 @@ int m_who(aClient *cptr, aClient *sptr, int parc, char *parv[]) {
 				 * IF they haven't reached the max, or they're an oper */
 				status[i++]=(ac->user->away==NULL ? 'H' : 'G');
 				status[i]=(IsAnOper(ac) ? '*' : ((IsInvisible(ac) && IsOper(sptr)) ? '%' : 0));
-				status[((status[i]) ? ++i : i)]=((list->flags&CHFL_CHANOP) ? '@' : ((list->flags&CHFL_VOICE) ? '+' : 0));
+				status[((status[i]) ? ++i : i)]=((cm->flags&CHFL_CHANOP) ? '@' : ((cm->flags&CHFL_VOICE) ? '+' : 0));
 				status[++i]=0;
 				sendto_one(sptr, getreply(RPL_WHOREPLY), me.name, sptr->name,
 						  wsopts.channel->chname, ac->user->username, 

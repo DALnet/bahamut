@@ -267,15 +267,15 @@ void vsendto_one(aClient *to, char *pattern, va_list vl) {
 
 void sendto_channel_butone(aClient *one, aClient *from, aChannel *chptr, 
 									char *pattern, ...) {
-   Link   *lp;
+   chanMember   *cm;
    aClient *acptr;
    int     i;
    va_list vl;
    
    va_start(vl, pattern);
    memset((char *) sentalong, '\0', sizeof(sentalong));
-   for (lp = chptr->members; lp; lp = lp->next) {
-      acptr = lp->value.cptr;
+   for (cm = chptr->members; cm; cm = cm->next) {
+      acptr = cm->cptr;
       if (acptr->from == one)
 		  continue;		/* ...was the one I should skip */
       i = acptr->from->fd;
@@ -365,7 +365,7 @@ void sendto_noquit_servs_butone(int noquit, aClient *one, char *pattern, ...) {
 void sendto_common_channels(aClient *user, char *pattern, ...)
 {
 	Link *channels;
-	Link *users;
+	chanMember *users;
 	aClient *cptr;
 	va_list vl;
 	
@@ -376,7 +376,7 @@ void sendto_common_channels(aClient *user, char *pattern, ...)
    if (user->user)
 	  for (channels = user->user->channel; channels; channels = channels->next)
 		 for (users = channels->value.chptr->members; users; users = users->next) {
-			 cptr = users->value.cptr;
+			 cptr = users->cptr;
 			 if (!MyConnect(cptr) || sentalong[cptr->fd])
 				continue;
 			 sentalong[cptr->fd]++;
@@ -390,7 +390,7 @@ void sendto_common_channels(aClient *user, char *pattern, ...)
 #ifdef FLUD
 void sendto_channel_butlocal(aClient *one, aClient *from, aChannel *chptr, char *pattern, ...)
 {
-	Link *lp;
+	chanMember *cm;
 	aClient *acptr;
 	int i;
 	int sentalong[MAXCONNECTIONS];
@@ -398,8 +398,8 @@ void sendto_channel_butlocal(aClient *one, aClient *from, aChannel *chptr, char 
 	  
 	va_start(vl, pattern);
    memset((char *) sentalong, '\0', sizeof(sentalong));
-   for (lp = chptr->members; lp; lp = lp->next) {
-      acptr = lp->value.cptr;
+   for (cm = chptr->members; cm; cm = cm->next) {
+      acptr = cm->cptr;
       if (acptr->from == one)
 		  continue;		/* ...was the one I should skip */
       i = acptr->from->fd;
@@ -428,13 +428,13 @@ void sendto_channel_butlocal(aClient *one, aClient *from, aChannel *chptr, char 
 void
 sendto_channel_butserv(aChannel *chptr, aClient *from, char *pattern, ...)
 {
-	Link   *lp;
+	chanMember  *cm;
 	aClient *acptr;
 	va_list vl;
 	
 	va_start(vl, pattern);
-   for (lp = chptr->members; lp; lp = lp->next)
-	  if (MyConnect(acptr = lp->value.cptr))
+   for (cm = chptr->members; cm; cm = cm->next)
+	  if (MyConnect(acptr = cm->cptr))
 		 vsendto_prefix_one(acptr, from, pattern, vl);
 	va_end(vl);
    return;
@@ -1160,17 +1160,17 @@ void sendto_gnotice(char *pattern, ...)
 void sendto_channelops_butone(aClient *one, aClient *from, aChannel *chptr, 
 										char *pattern, ...)
 {
-	Link   *lp;
+	chanMember   *cm;
 	aClient *acptr;
 	int     i;
 	va_list vl;
 	
 	va_start(vl, pattern);
    memset((char *) sentalong, '\0', sizeof(sentalong));
-   for (lp = chptr->members; lp; lp = lp->next) {
-      acptr = lp->value.cptr;
+   for (cm = chptr->members; cm; cm = cm->next) {
+      acptr = cm->cptr;
       if (acptr->from == one ||
-	  !(lp->flags & CHFL_CHANOP))
+	  !(cm->flags & CHFL_CHANOP))
 	 continue;
       i = acptr->from->fd;
       if (MyConnect(acptr) && IsRegisteredUser(acptr)) {
@@ -1201,17 +1201,17 @@ void sendto_channelops_butone(aClient *one, aClient *from, aChannel *chptr,
 void sendto_channelvoice_butone(aClient *one, aClient *from, aChannel *chptr, 
 										  char *pattern, ...)
 {
-	Link   *lp;
+	chanMember   *cm;
 	aClient *acptr;
 	int     i;
 	va_list vl;
 	
 	va_start(vl, pattern);
    memset((char *) sentalong, '\0', sizeof(sentalong));
-   for (lp = chptr->members; lp; lp = lp->next) {
-      acptr = lp->value.cptr;
+   for (cm = chptr->members; cm; cm = cm->next) {
+      acptr = cm->cptr;
       if (acptr->from == one ||
-			 !(lp->flags & CHFL_VOICE))
+			 !(cm->flags & CHFL_VOICE))
 		  continue;
       i = acptr->from->fd;
       if (MyConnect(acptr) && IsRegisteredUser(acptr)) {
@@ -1241,17 +1241,17 @@ void sendto_channelvoice_butone(aClient *one, aClient *from, aChannel *chptr,
 void sendto_channelvoiceops_butone(aClient *one, aClient *from, aChannel 
 											  *chptr, char *pattern, ...)
 {
-	Link   *lp;
+	chanMember   *cm;
 	aClient *acptr;
 	int     i;
 	va_list vl;
 	
 	va_start(vl, pattern);
    memset((char *) sentalong, '\0', sizeof(sentalong));
-   for (lp = chptr->members; lp; lp = lp->next) {
-      acptr = lp->value.cptr;
+   for (cm = chptr->members; cm; cm = cm->next) {
+      acptr = cm->cptr;
       if (acptr->from == one ||
-			 !((lp->flags & CHFL_VOICE) || (lp->flags & CHFL_CHANOP)))
+			 !((cm->flags & CHFL_VOICE) || (cm->flags & CHFL_CHANOP)))
 		  continue;
       i = acptr->from->fd;
       if (MyConnect(acptr) && IsRegisteredUser(acptr)) {

@@ -46,6 +46,7 @@ extern int  BlockHeapGarbageCollect(BlockHeap *);
  */
 
 #define LINK_PREALLOCATE 1024
+#define CHANMEMBER_PREALLOCATE 1024
 /*
  * Number of aClient structures to preallocate at a time for Efnet 1024
  * is reasonable for smaller nets who knows? -Dianora
@@ -70,6 +71,7 @@ int         numclients = 0;
  */
 BlockHeap  *free_local_aClients;
 BlockHeap  *free_Links;
+BlockHeap  *free_chanMembers;
 BlockHeap  *free_remote_aClients;
 BlockHeap  *free_anUsers;
 BlockHeap  *free_channels;
@@ -88,6 +90,7 @@ initlists()
     * Might want to bump up LINK_PREALLOCATE if FLUD is defined 
     */
    free_Links = BlockHeapCreate((size_t) sizeof(Link), LINK_PREALLOCATE);
+   free_chanMembers = BlockHeapCreate((size_t) sizeof(chanMember), CHANMEMBER_PREALLOCATE);
 
    /*
     * start off with CLIENTS_PREALLOCATE for now... on typical efnet
@@ -491,16 +494,15 @@ add_client_to_list(aClient *cptr)
 /*
  * Look for ptr in the linked listed pointed to by link.
  */
-Link       *
-find_user_link(Link *lp, aClient *ptr)
+chanMember *find_user_member(chanMember *cm, aClient *ptr)
 {
    if (ptr)
-      while (lp) {
-	 if (lp->value.cptr == ptr)
-	    return (lp);
-	 lp = lp->next;
+      while (cm) {
+	 if (cm->cptr == ptr)
+	    return (cm);
+	 cm = cm->next;
       }
-   return ((Link *) NULL);
+   return ((chanMember *) NULL);
 }
 
 Link       *
@@ -552,6 +554,26 @@ free_link(Link *lp)
 {
    if (BlockHeapFree(free_Links, lp)) {
       sendto_ops("list.c couldn't BlockHeapFree(free_Links,lp) lp = %lX", lp);
+      sendto_ops("Please report to the hybrid team!");
+   }
+}
+
+chanMember *make_chanmember()
+{
+Reg chanMember   *mp;
+mp = BlockHeapALLOC(free_chanMembers, chanMember);
+
+   if (mp == (chanMember *) NULL)
+      outofmemory();
+
+   return mp;
+}
+
+void
+free_chanmember(chanMember *mp)
+{
+   if (BlockHeapFree(free_chanMembers, mp)) {
+      sendto_ops("list.c couldn't BlockHeapFree(free_chanMembers,mp) mp = %lX", mp);
       sendto_ops("Please report to the hybrid team!");
    }
 }
@@ -640,6 +662,7 @@ void
 block_garbage_collect()
 {
    BlockHeapGarbageCollect(free_Links);
+   BlockHeapGarbageCollect(free_chanMembers);
    BlockHeapGarbageCollect(free_local_aClients);
    BlockHeapGarbageCollect(free_remote_aClients);
    BlockHeapGarbageCollect(free_anUsers);
