@@ -372,6 +372,9 @@ int throttle_check(char *host, int fd, time_t sotime) {
        /* Also, reset the zline counter */
        if(sotime - tp->zline_start < zlength)
        {
+          /* don't reset throttle time for new remote signons */
+          if(fd == -1)
+             return 0;
           /* 
            * Reset the z-line period to start now
            * Mean, but should get the bots and help the humans
