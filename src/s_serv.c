@@ -444,8 +444,8 @@ int m_server(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	strncpyzt(info, parv[2], REALLEN);
 	if ((parc > 3) && ((i = strlen(info)) < (REALLEN - 2))) 
 	{
-	    (void) strcat(info, " ");
-	    (void) strncat(info, parv[3], REALLEN - i - 2);
+	    strcat(info, " ");
+	    strncat(info, parv[3], REALLEN - i - 2);
 	    info[REALLEN] = '\0';
 	}
     }
@@ -569,12 +569,18 @@ int m_server(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	sendto_one(bcptr, "ERROR :Server %s already exists", host);
 	if (bcptr == cptr) 
 	{
-	    sendto_gnotice("from %s: Link %s cancelled, server %s already "
-			   "exists", me.name, get_client_name(bcptr, HIDEME),
-			   host);
-	    sendto_serv_butone(bcptr, ":%s GNOTICE :Link %s cancelled, "
-			       "server %s already exists", me.name,
-			       get_client_name(bcptr, HIDEME), host);
+	    /* Don't complain for servers that are juped */
+	    /* (don't complain if the server that already exists is U: lined,
+                unless I actually have a .conf U: line for it */
+	    if(!IsULine(acptr) || (find_uline(cptr->confs, acptr->name) != NULL))
+	    {
+		sendto_gnotice("from %s: Link %s cancelled, server %s already "
+			       "exists", me.name, get_client_name(bcptr, HIDEME),
+			       host);
+		sendto_serv_butone(bcptr, ":%s GNOTICE :Link %s cancelled, "
+				   "server %s already exists", me.name,
+				   get_client_name(bcptr, HIDEME), host);
+	    }
 	    return exit_client(bcptr, bcptr, &me, "Server Exists");
 	}
 	/* inform all those who care (set +n) -epi */
@@ -585,7 +591,7 @@ int m_server(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	sendto_serv_butone(bcptr, ":%s GNOTICE :Link %s cancelled, server %s "
 			   "reintroduced by %s", me.name, nbuf, host,
 			   get_client_name(cptr, HIDEME));
-	(void) exit_client(bcptr, bcptr, &me, "Server Exists");
+	exit_client(bcptr, bcptr, &me, "Server Exists");
     }
     /*
      * The following if statement would be nice to remove since user
@@ -648,7 +654,7 @@ int m_server(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	}
 	
 	acptr = make_client(cptr, sptr);
-	(void) make_server(acptr);
+	make_server(acptr);
 	acptr->hopcount = hop;
 	strncpyzt(acptr->name, host, sizeof(acptr->name));
 	strncpyzt(acptr->info, info, REALLEN);
@@ -665,16 +671,16 @@ int m_server(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	if (IsULine(sptr) || (find_uline(cptr->confs, acptr->name))) 
 	{
 	    acptr->flags |= FLAGS_ULINE;
-	    sendto_ops("%s introducing U:lined server %s", cptr->name,
-		       acptr->name);
+	    sendto_realops_lev(DEBUG_LEV, "%s introducing U:lined server %s", cptr->name,
+		               acptr->name);
 	}
 	
 	Count.server++;
 	
 	add_client_to_list(acptr);
-	(void) add_to_client_hash_table(acptr->name, acptr);
+	add_to_client_hash_table(acptr->name, acptr);
 	/*
-	 * * Old sendto_serv_but_one() call removed because we now need
+	 * Old sendto_serv_but_one() call removed because we now need
 	 * to send different names to different servers (domain name matching)
 	 */
 	for (i = 0; i <= highest_fd; i++) 
