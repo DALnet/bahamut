@@ -1572,9 +1572,9 @@ initconf(int opt, int fd, aClient *rehasher)
         
 		if (IsPerson(ub_acptr) && user_match_ban(ub_acptr, ban))
 		{
-		    sendto_ops("Local-ban active for %s",
+		    sendto_ops(LOCAL_BAN_NAME " active for %s",
 			       get_client_name(ub_acptr, FALSE));
-		    ircsprintf(fbuf, "Local-banned: %s", ub_r);
+		    ircsprintf(fbuf, LOCAL_BANNED_NAME ": %s", ub_r);
 		    exit_client(ub_acptr, ub_acptr, &me, fbuf);
 		    ii--;
 		}

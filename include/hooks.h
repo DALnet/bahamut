@@ -18,8 +18,11 @@ enum c_hooktype {
    CHOOK_MSG,         /* called for every privmsg or notice */
                       /* Params: 3: (aClient *, int isnotice, char *msgtext), returns int */
 
-   CHOOK_MYMSG        /* called for every privmsg or notice to 'me.name' */
+   CHOOK_MYMSG,       /* called for every privmsg or notice to 'me.name' */
                       /* Params: 3: (aClient *, int isnotice, char *msgtext), returns int */
+
+   CHOOK_SIGNOFF      /* called on client exit (exit_client) */
+                      /* Params: 1: (aClient *), returns void */
 };
 
 extern int call_hooks(enum c_hooktype hooktype, ...);

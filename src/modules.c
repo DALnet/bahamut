@@ -300,8 +300,39 @@ static DLink *postaccess_hooks = NULL;
 static DLink *msg_hooks = NULL;
 static DLink *mymsg_hooks = NULL;
 static DLink *every10_hooks = NULL;
+static DLink *signoff_hooks = NULL;
 
 static DLink *all_hooks = NULL;
+
+char *get_texthooktype(enum c_hooktype hooktype)
+{
+   static char ubuf[32];
+
+   switch(hooktype)
+   {
+      case CHOOK_10SEC:
+         return "10 seconds";
+
+      case CHOOK_PREACCESS:
+         return "Pre-access";
+
+      case CHOOK_POSTACCESS:
+         return "Post-access";
+
+      case CHOOK_MSG:
+         return "Message";
+
+      case CHOOK_MYMSG:
+         return "Message to me";
+
+      case CHOOK_SIGNOFF:
+         return "Signoff";
+
+      default:
+         ircsnprintf(ubuf, 32, "Unknown (%d)", hooktype);
+         return ubuf;
+   }
+}
 
 DLink **get_hooklist(enum c_hooktype hooktype)
 {
@@ -327,6 +358,10 @@ DLink **get_hooklist(enum c_hooktype hooktype)
 
       case CHOOK_MYMSG:
          hooklist = &mymsg_hooks;
+         break;
+
+      case CHOOK_SIGNOFF:
+         hooklist = &signoff_hooks;
          break;
 
       default:
@@ -408,33 +443,6 @@ void bircmodule_del_hook(void *opaque)
    }
 }
 
-char *get_texthooktype(enum c_hooktype hooktype)
-{
-   static char ubuf[32];
-
-   switch(hooktype)
-   {
-      case CHOOK_10SEC:
-         return "10 seconds";
-
-      case CHOOK_PREACCESS:
-         return "Pre-access";
-
-      case CHOOK_POSTACCESS:
-         return "Post-access";
-
-      case CHOOK_MSG:
-         return "Message";
-
-      case CHOOK_MYMSG:
-         return "Message to me";
-
-      default:
-         ircsnprintf(ubuf, 32, "Unknown (%d)", hooktype);
-         return ubuf;
-   }
-}
-
 int call_hooks(enum c_hooktype hooktype, ...)
 {
    va_list vl;
@@ -497,6 +505,15 @@ int call_hooks(enum c_hooktype hooktype, ...)
             int (*rfunc) (aClient *, int, char *) = ((aHook *)lp->value.cp)->funcptr;
             if((ret = (*rfunc)(acptr, aint, txtptr)) == FLUSH_BUFFER)
                break;
+         }
+         break;
+
+      case CHOOK_SIGNOFF:
+         acptr = va_arg(vl, aClient *);
+         for(lp = signoff_hooks; lp; lp = lp->next)
+         {
+            void (*rfunc) (aClient *) = ((aHook *)lp->value.cp)->funcptr;
+            (*rfunc)(acptr);
          }
          break;
       

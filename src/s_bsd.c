@@ -1288,7 +1288,7 @@ aClient *add_connection(aClient * cptr, int fd)
 	int local;
 
 	local = (ban->flags & UBAN_LOCAL) ? 1 : 0;
-	ktype = local ? "Local-Banned" : "Network-Banned";
+	ktype = local ? LOCAL_BANNED_NAME : NETWORK_BANNED_NAME;
 	reason = ban->reason ? ban->reason : ktype;
 
 	sendto_one(acptr, err_str(ERR_YOUREBANNEDCREEP), me.name, "*", ktype);
