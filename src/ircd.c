@@ -1035,9 +1035,8 @@ int delay = 0;
 
    if (timeofday < lasttimeofday) 
    {
-      (void) ircsprintf(to_send,
-		      "System clock is running backwards - (%d < %d)",
-			timeofday, lasttimeofday);
+      ircsprintf(to_send, "System clock is running backwards - (%d < %d)",
+		 timeofday, lasttimeofday);
       report_error(to_send, &me);
    }
 
@@ -1082,36 +1081,23 @@ int delay = 0;
 	    lifesux = 1;
 
 	    if (noisy_htm) 
-	    {
-	       (void) sprintf(to_send,
-		     "Entering high-traffic mode - (%dk/s > %dk/s)",
-			      currlife, LRV);
-	       sendto_ops(to_send);
-	    }
+	       sendto_ops("Entering high-traffic mode - (%dk/s > %dk/s)", currlife, LRV);
 	 }
 	 else 
 	 {
 	    lifesux++;		/* Ok, life really sucks! */
 	    LCF += 2;		/* Wait even longer */
 	    if (noisy_htm) 
-	    {
-	       (void) sprintf(to_send,
-		   "Still high-traffic mode %d%s (%d delay): %dk/s",
-			  lifesux, (lifesux > 9) ? " (TURBO)" : "",
-			      (int) LCF, currlife);
-	       sendto_ops(to_send);
-	    }
+	       sendto_ops("Still high-traffic mode %d%s (%d delay): %dk/s",
+			  lifesux, (lifesux > 9) ? " (TURBO)" : "", (int) LCF, currlife);
+
 	   /* Reset htm here, because its been on a little too long.
 	    * Bad Things(tm) tend to happen with HTM on too long -epi */
+
 	    if (lifesux>15) 
 	    {
 	       if (noisy_htm) 
-	       {
-		  (void) sprintf(to_send,
-				 "Resetting HTM and raising limit to: %dk/s\n",
-				 LRV + 5);
-		  sendto_ops(to_send);
-	       }
+		  sendto_ops("Resetting HTM and raising limit to: %dk/s\n", LRV + 5);
 	       LCF=LOADCFREQ;
 	       lifesux=0;
 	       LRV+=5;
