@@ -138,7 +138,7 @@ extern char 	 *getreply(int);
 extern char 	 *strerror(int);
 extern int  	  dgets(int, char *, int);
 extern char 	 *inetntoa(char *);
-extern int  	  dbufalloc, dbufblocks, debuglevel, errno, h_errno;
+extern int  	  dbufalloc, dbufblocks, debuglevel, errno;
 extern int  	  highest_fd, debuglevel, portnum,
     debugtty, maxusersperchannel;
 extern int  	  readcalls, udpfd, resfd;

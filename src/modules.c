@@ -419,7 +419,7 @@ m_module(aClient *cptr, aClient *sptr, int parc, char *parv[])
 }
 
 
-/////// module memory functions
+/* module memory functions */
 
 char *
 bircmodule_strdup(char *string)
@@ -441,7 +441,7 @@ bircmodule_free(void *p)
     MyFree(p);
 }
 
-//////// hook functions
+/* hook functions */
 
 typedef struct module_hook 
 {

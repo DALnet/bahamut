@@ -51,7 +51,9 @@
 				 * don't do DNS on this ip. */
 
 #undef	DEBUG			/* because theres alot of debug code in here */
+#ifndef AIX
 extern void debug();
+#endif
 
 extern int  dn_expand(char *, char *, char *, char *, int);
 extern int  dn_skipname(char *, char *);
@@ -59,7 +61,9 @@ extern int
 res_mkquery(int, char *, int, int, char *, int,
 	    struct rrec *, char *, int);
 
+#ifndef AIX
 extern int  errno, h_errno;
+#endif
 extern int  highest_fd;
 extern aClient *local[];
 

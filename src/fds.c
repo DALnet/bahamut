@@ -222,8 +222,6 @@ void *get_fd_internal(int fd)
    return fd_list[fd].internal;
 }
 
-/////////////////////////////////////////////////////////
-
 /*
  * check_client_fd
  * 

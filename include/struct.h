@@ -1343,6 +1343,25 @@ typedef struct SearchOptions
     aClient *server;
     unsigned int channelflags;
     unsigned int client_type;
+#ifdef AIX
+    unsigned umode_plus:1;
+    unsigned nick_plus:1;
+    unsigned user_plus:1;
+    unsigned host_plus:1;
+    unsigned gcos_plus:1;
+    unsigned ip_plus:1;
+    unsigned cidr4_plus:1;
+    unsigned chan_plus:1;
+    unsigned serv_plus:1;
+    unsigned away_plus:1;
+    unsigned check_away:1;
+    unsigned check_umode:1;
+    unsigned show_chan:1;
+    unsigned search_chan:1;
+    unsigned ip_show:1;
+    unsigned client_type_plus:1;
+    /* unsigned spare:0; spare space for more stuff(?) */
+#else
     char umode_plus:1;
     char nick_plus:1;
     char user_plus:1;
@@ -1360,6 +1379,7 @@ typedef struct SearchOptions
     char ip_show:1;
     char client_type_plus:1;
     /* char spare:0; spare space for more stuff(?) */
+#endif
 } SOpts;
 
 /*

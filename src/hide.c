@@ -195,8 +195,6 @@ void fakeserver_sendserver(aClient *sptr)
    }
 }
 
-/////////////////////////////////////////////////////////////
-
 /* -1 if lusers isn't locked */
 static time_t luserslock_expiretime = -1;
 
@@ -344,6 +342,3 @@ void fakelusers_sendlock(aClient *sptr)
    else
       sendto_one(sptr, ":%s LUSERSLOCK UNTIL %d", (int) luserslock_expiretime);
 }
-
-/////////////// ARGH
-

@@ -1,17 +1,20 @@
-//#define FDSDEBUG /* Print out stuff on stderr! */
-#undef FDSDEBUG // please no!
+/* we recommend to not print,
+ * but if you want to, just switch undef and define
+#define FDSDEBUG
+ */
+#undef FDSDEBUG
 #ifdef FDSDEBUG
-#define fdfprintf(x, y...) if(isatty(2)) fprintf(x, y);
+#define fdfprintf(x, y, ...) if(isatty(2)) fprintf(x, y);
 #else
-#define fdfprintf(x, y...)
+#define fdfprintf(x, y, ...)
 #endif
 
 struct fd_callbackp {
    void (*callback)(struct fd_callbackp *);
    void *param;
-   int fd;  // fd number
-   int rdf; // fd is set for reading
-   int wrf; // fd is set for writing
+   int fd;  /* fd number                */
+   int rdf; /* fd is set for reading    */
+   int wrf; /* fd is set for writing    */
 };
 
 #define FDT_NONE      0
