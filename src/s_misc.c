@@ -331,16 +331,32 @@ my_name_for_link(char *name, aConfItem *aconf)
    return namebuf;
 }
 
-/* exit_server and exit_one_server 
- * very gross recursive function
- * exit_one_server is called for each server behind each link. yum. */
+#ifdef USE_NOQUIT
+
+/*
+ * NOQUIT
+ * a method of reducing the stress on the network during server splits
+ * by sending only a simple "SQUIT" message for the server that is dropping,
+ * instead of thousands upon thousands of QUIT messages for each user,
+ * plus an SQUIT for each server behind the dead link.
+ *
+ * Original idea by Cabal95, implementation by lucas
+ */
 
 void exit_one_client_in_split(aClient *cptr, aClient *dead, char *reason)
 {
    Link *lp;
 
    /* send all the quit reasons to all the non-noquit servers we have */
-   sendto_noquit_servs_butone(0, dead, ":%s QUIT :%s", cptr->name, reason);
+
+   /* yikes. We only want to do this if dead was OUR server. However,
+      close_connection sets dead->from to NULL, so we can't do a MyConnect().
+      This only happens, however, if this is a LOCAL client, so dead->from == 
+      NULL if dead was a local client. There are other conditions where
+      cptr->from == NULL, but not when they're from established servers. */
+
+   if(dead->from == NULL)
+      sendto_noquit_servs_butone(0, dead, ":%s QUIT :%s", cptr->name, reason)
 
    sendto_common_channels(cptr, ":%s QUIT :%s", cptr->name, reason);
 
@@ -363,7 +379,7 @@ void exit_one_client_in_split(aClient *cptr, aClient *dead, char *reason)
  * recursive function!
  * therefore, we pass dead and reason to ourselves.
  * in the beginning, dead == cptr, so it will be the one
- * out of the loop last. therefore, dead should remain a good pointer.
+ *  out of the loop last. therefore, dead should remain a good pointer.
  * cptr: the server being exited
  * dead: the actual server that split (if this belongs to us, we
  *       absolutely CANNOT send to it)
@@ -384,6 +400,8 @@ void exit_one_server(aClient *cptr, aClient *dead, aClient *from, char *spinfo, 
     * HOWEVER! removing a server may cause removal of more servers and more clients.
     *  and this may make our pointer to next bad. therefore, we have to restart
     *  the server loop each time we find a server.
+    * We _NEED_ two different loops: all clients must be removed before the server is
+    *  removed. Otherwise, bad things (tm) can happen.
     */
 
    Debug((DEBUG_NOTICE, "server noquit: %s", cptr->name));
@@ -422,7 +440,7 @@ void exit_one_server(aClient *cptr, aClient *dead, aClient *from, char *spinfo, 
       if(IsNoQuit(acptr) && cptr != dead)
          continue;
 
-      if (cptr->from == acptr)
+      if (cptr->from == acptr) /* "upstream" squit */
 	    sendto_one(acptr, ":%s SQUIT %s :%s", from->name, cptr->name, comment);
 	 else 
 	    sendto_one(acptr, "SQUIT %s :%s", cptr->name, comment);
@@ -452,6 +470,7 @@ void exit_server(aClient *cptr, aClient *from, char *comment)
    exit_one_server(cptr, cptr, from, splitname, comment);
 }
 
+#endif /* USE_NOQUIT */
 
 /*
  * * exit_client *    This is old "m_bye". Name  changed, because
