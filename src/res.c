@@ -21,6 +21,9 @@
 #include "resolv.h"
 #include "inet.h"
 
+#define PROCANSWER_STRANGE   -2 /* invalid answer or query, try again */
+#define PROCANSWER_MALICIOUS -3 /* obviously malicious reply, don't do DNS on this ip. */
+
 #undef	DEBUG			/*
 				 * because there is a lot of debug code in here
 				 * * :-) 
@@ -528,7 +531,8 @@ int arpa_to_ip(char *arpastring, unsigned int *saddr)
    return 1;
 }
 
-#undef DNS_ANS_DEBUG
+#undef DNS_ANS_DEBUG_MAX
+#define DNS_ANS_DEBUG
 
 #define MAX_ACCEPTABLE_ANS 10
 
@@ -538,19 +542,19 @@ static int num_acc_answers = 0;
 #define add_acceptable_answer(x) do { if(num_acc_answers < MAX_ACCEPTABLE_ANS) \
                                  strcpy(acceptable_answers[num_acc_answers++], x); } while (0);
 
-static inline int is_acceptable_answer(char *h)
+static inline char *is_acceptable_answer(char *h)
 {
    int i;
 
    for (i = 0; i < num_acc_answers; i++) 
    {
       if(mycmp(acceptable_answers[i], h) == 0)
-        return 1;
+        return acceptable_answers[i];
    }
    return 0;
 }
 
-#ifdef DNS_ANS_DEBUG
+#ifdef DNS_ANS_DEBUG_MAX
 static char dhostbuf[HOSTLEN + 1];
 #endif
 
@@ -563,13 +567,20 @@ proc_answer(ResRQ * rptr,
 	    char *buf,
 	    char *eob)
 {
-   char   *cp, **alias;
+   char   *cp, **alias, *acc;
    struct hent *hp;
    int class, type, dlen, len, ans = 0, n, origtype = rptr->type;
-   int checked_acc;      
    struct in_addr ptrrep, dr, *adr;
 
    num_acc_answers = 0;
+
+   /*
+    * remove the "bad dns" flag
+    * if it was assigned earlier. this can be caused by nameserver flakiness.
+    */
+   if(rptr->cinfo.flags == ASYNC_CLIENT && rptr->cinfo.value.cptr)
+      rptr->cinfo.value.cptr->flags &= ~(FLAGS_BAD_DNS);
+
    cp = buf + sizeof(HEADER);
    hp = (struct hent *) &(rptr->he);
    adr = &hp->h_addr;
@@ -631,7 +642,7 @@ proc_answer(ResRQ * rptr,
 	 }
       }
 
-#ifdef DNS_ANS_DEBUG
+#ifdef DNS_ANS_DEBUG_MAX
       strcpy(dhostbuf, hostbuf);
 #endif
 
@@ -639,15 +650,15 @@ proc_answer(ResRQ * rptr,
 	 case T_A:
             if(mycmp(rptr->name, hostbuf) != 0)
             {
-               if(!num_acc_answers || !is_acceptable_answer(hostbuf))
+               if(!num_acc_answers || !(acc = is_acceptable_answer(hostbuf)))
                {
                   sendto_realops_lev(DEBUG_LEV, "Received DNS_A answer for %s, but asked question for %s", hostbuf, rptr->name);
                   if(rptr->cinfo.flags == ASYNC_CLIENT && rptr->cinfo.value.cptr)
                      rptr->cinfo.value.cptr->flags |= FLAGS_BAD_DNS; /* yell about this client later, to all opers */
-                  return -2;
+                  return PROCANSWER_STRANGE;
                }
 #ifdef DNS_ANS_DEBUG
-               sendto_realops_lev(DEBUG_LEV, "DNS_A answer from an acceptable");
+               sendto_realops_lev(DEBUG_LEV, "DNS_A answer from an acceptable (%s)", acc);
 #endif
             }
 	    hp->h_length = dlen;
@@ -658,14 +669,14 @@ proc_answer(ResRQ * rptr,
             {
 	       sendto_realops("Bad IP length (%d) returned for %s", dlen, hostbuf);
 	       Debug((DEBUG_DNS, "Bad IP length (%d) returned for %s", dlen, hostbuf));
-	       return(-2);						
+	       return PROCANSWER_MALICIOUS;						
 	    }
 	    memcpy((char *)&dr, cp, sizeof(dr));
 	    adr->s_addr = dr.s_addr;
 	    Debug((DEBUG_INFO, "got ip # %s for %s",
 		   inetntoa((char *) adr), hostbuf));
 
-#ifdef DNS_ANS_DEBUG
+#ifdef DNS_ANS_DEBUG_MAX
             sendto_realops_lev(DEBUG_LEV, "%s A %s", dhostbuf, inetntoa((char *) adr));
 #endif
 
@@ -681,14 +692,14 @@ proc_answer(ResRQ * rptr,
 	    break;
 
 	 case T_PTR:
-            checked_acc = 0;
-            if(!num_acc_answers || !(checked_acc = is_acceptable_answer(hostbuf)))
+            acc = NULL;
+            if(!num_acc_answers || !(acc = is_acceptable_answer(hostbuf)))
             {
                if(!(arpa_to_ip(hostbuf, &ptrrep.s_addr)))
                {
                   sendto_realops_lev(DEBUG_LEV, "Received strangely formed PTR answer for %s (asked for %s) -- ignoring", 
                                      hostbuf, inetntoa((char *)&rptr->addr));
-                  return -2;
+                  return PROCANSWER_STRANGE;
                }
 
                if(ptrrep.s_addr != rptr->addr.s_addr)
@@ -700,13 +711,13 @@ proc_answer(ResRQ * rptr,
                                      ipbuf, inetntoa((char*)&rptr->addr));
                   if(rptr->cinfo.flags == ASYNC_CLIENT && rptr->cinfo.value.cptr)
                      rptr->cinfo.value.cptr->flags |= FLAGS_BAD_DNS; /* yell about this client later, to all opers */
-                  return -2;
+                  return PROCANSWER_STRANGE;
                }
             }
 
 #ifdef DNS_ANS_DEBUG
-            if(checked_acc)
-               sendto_realops_lev(DEBUG_LEV, "DNS_PTR from an acceptable");
+            if(acc)
+               sendto_realops_lev(DEBUG_LEV, "DNS_PTR from an acceptable (%s)", acc);
 #endif
 
 	    if ((n = dn_expand(buf, eob, cp, hostbuf,
@@ -730,7 +741,7 @@ proc_answer(ResRQ * rptr,
 	    cp += n;
 	    len = strlen(hostbuf);
 
-#ifdef DNS_ANS_DEBUG
+#ifdef DNS_ANS_DEBUG_MAX
             sendto_realops_lev(DEBUG_LEV, "%s PTR %s", dhostbuf, hostbuf);
 #endif
 
@@ -741,17 +752,19 @@ proc_answer(ResRQ * rptr,
 	     */
             if (hp->h_name) 
             {
-                  sendto_realops_lev(DEBUG_LEV, "PTR IS CNAME??? (%s)", hostbuf);
                   /*
                    * This is really fishy. In fact, so fishy,
                    * that I say we just don't do this in this case.
                    *
-	           * if (alias >= &(hp->h_aliases[MAXALIASES - 1]))
-		   *    break;
-	           * *alias = (char *) MyMalloc(len + 1);
-	           * strcpy(*alias++, hostbuf);
-	           * *alias = NULL;
+                   * seems to happen with a whole host of .my addresses.
+                   * interesting. - lucas
                    */
+
+	           if (alias >= &(hp->h_aliases[MAXALIASES - 1]))
+		      break;
+	           *alias = (char *) MyMalloc(len + 1);
+	           strcpy(*alias++, hostbuf);
+	           *alias = NULL;
 	    }
 	    else 
             {
@@ -763,17 +776,17 @@ proc_answer(ResRQ * rptr,
 	    break;
 
 	 case T_CNAME:
-            checked_acc = 0;
+            acc = NULL;
 
             if(origtype == T_PTR)
             {
-               if(!num_acc_answers || !(checked_acc = is_acceptable_answer(hostbuf)))
+               if(!num_acc_answers || !(acc = is_acceptable_answer(hostbuf)))
                {
                   if(!(arpa_to_ip(hostbuf, &ptrrep.s_addr)))
                   {
                      sendto_realops_lev(DEBUG_LEV, "Received strangely formed CNAME(PTR) answer for %s (asked for %s) -- ignoring", 
                                         hostbuf, inetntoa((char *)&rptr->addr));
-                     return -2;
+                     return PROCANSWER_STRANGE;
                   }
 
                   if(ptrrep.s_addr != rptr->addr.s_addr)
@@ -785,25 +798,29 @@ proc_answer(ResRQ * rptr,
                                         ipbuf, inetntoa((char*)&rptr->addr));
                      if(rptr->cinfo.flags == ASYNC_CLIENT && rptr->cinfo.value.cptr)
                         rptr->cinfo.value.cptr->flags |= FLAGS_BAD_DNS; /* yell about this client later, to all opers */
-                     return -2;
+                     return PROCANSWER_STRANGE;
                   }
                }
-               if(checked_acc)
-                  sendto_realops_lev(DEBUG_LEV, "DNS_CNAME (PTR) answer from an acceptable");
+#ifdef DNS_ANS_DEBUG
+               if(acc)
+                  sendto_realops_lev(DEBUG_LEV, "DNS_CNAME (PTR) answer from an acceptable (%s)", acc);
+#endif
             }
             else if(origtype == T_A)
             {
                if(mycmp(rptr->name, hostbuf) != 0)
                {
-                  if(!num_acc_answers || !(checked_acc = is_acceptable_answer(hostbuf)))
+                  if(!num_acc_answers || !(acc = is_acceptable_answer(hostbuf)))
                   {
                      sendto_realops_lev(DEBUG_LEV, "Received DNS_CNAME(A) answer for %s, but asked question for %s", 
                                         hostbuf, rptr->name);
                      if(rptr->cinfo.flags == ASYNC_CLIENT && rptr->cinfo.value.cptr)
                         rptr->cinfo.value.cptr->flags |= FLAGS_BAD_DNS; /* yell about this client later, to all opers */
-                     return -2;
+                     return PROCANSWER_STRANGE;
                   }
-                  sendto_realops_lev(DEBUG_LEV, "DNS_CNAME (A) answer from an acceptable");
+#ifdef DNS_ANS_DEBUG
+                  sendto_realops_lev(DEBUG_LEV, "DNS_CNAME (A) answer from an acceptable (%s)", acc);
+#endif
                }
             }
 
@@ -828,7 +845,7 @@ proc_answer(ResRQ * rptr,
 
             add_acceptable_answer(hostbuf);
 
-#ifdef DNS_ANS_DEBUG
+#ifdef DNS_ANS_DEBUG_MAX
             sendto_realops_lev(DEBUG_LEV, "%s CNAME %s", dhostbuf, hostbuf);
 #endif
 
@@ -935,9 +952,35 @@ get_res(char *lp)
       return getres_err(rptr, lp);
    }
    a = proc_answer(rptr, hptr, buf, buf + rc);
+
 #ifdef DEBUG
    Debug((DEBUG_INFO, "get_res:Proc answer = %d", a));
 #endif
+
+   switch(a)
+   {
+      case PROCANSWER_STRANGE:
+         rptr->resend = 1;
+         rptr->retries--;
+         if(rptr->retries <= 0)
+         {
+            h_errno = TRY_AGAIN; /* fail this lookup.. */
+            return getres_err(rptr, lp);
+         }
+         else 
+            resend_query(rptr);
+         return NULL;
+
+      case PROCANSWER_MALICIOUS:
+         if (lp)
+            memcpy(lp, (char *) &rptr->cinfo, sizeof(Link));
+         rem_request(rptr);
+         return NULL;
+
+      default:
+         break;
+   }
+
    if (a > 0 && rptr->type == T_PTR) {
    struct hostent *hp2 = NULL;
 
