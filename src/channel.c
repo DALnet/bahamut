@@ -2501,7 +2501,7 @@ int m_names(aClient *cptr, aClient *sptr, int parc, char *parv[])
    /* If we go through the following loop and never add anything,
       we need this to be empty, otherwise spurious things from the
       LAST /names call get stuck in there.. - lucas */
-   buf[idx+1] = '\0';
+   buf[idx] = '\0';
 
    spos = idx; /* starting point in buffer for names!*/
 
