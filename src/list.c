@@ -216,7 +216,7 @@ aClient    *make_client(aClient *from, aClient *uplink)
       cptr->status = STAT_UNKNOWN;
       cptr->fd = -1;
       cptr->uplink = uplink;
-      /* (void) strcpy(cptr->username, "unknown");  only in local structs now  */
+      (void) strcpy(cptr->username, "unknown");  only in local structs now
       cptr->since = cptr->lasttime = cptr->firsttime = timeofday;
       /*
        * cptr->confs = NULL; 
@@ -268,7 +268,7 @@ aClient    *make_client(aClient *from, aClient *uplink)
       cptr->status = STAT_UNKNOWN;
       cptr->fd = -1;
       cptr->uplink = uplink;
-      (void) strcpy(cptr->username, "unknown");
+      /* (void) strcpy(cptr->username, "unknown"); only in local structs now */
       return (cptr);
    }
 }
