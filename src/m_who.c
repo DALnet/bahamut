@@ -66,6 +66,8 @@ int build_searchopts(aClient *sptr, int parc, char *parv[])
       "               wildcards accepted",
       "Flag s <server>: user is on server <server>,",
       "                 wildcards not accepted",
+      "Flag +t <seconds>: show users on for more than <seconds> seconds,",
+      "Flag -t <seconds>: show users on for less than <seconds> seconds,",
       "Flag u <user>: user has string <user> in their username,",
       "               wildcards accepted",
       "Behavior flags:",
@@ -100,7 +102,7 @@ int build_searchopts(aClient *sptr, int parc, char *parv[])
       NULL
   };
 
-  char *flags, change=1, *s;
+  char *flags, change=1, *s, *err;
   int args=1, i;
 
   memset((char *)&wsopts, '\0', sizeof(SOpts));
@@ -252,6 +254,18 @@ int build_searchopts(aClient *sptr, int parc, char *parv[])
 	  }
 	  wsopts.host=parv[args];
 	  wsopts.host_plus=change;
+	  args++;
+	  break;
+      case 't': 
+	  if(parv[args]==NULL || !IsAnOper(sptr) || 
+             strtol(parv[args], &err, 0) == 0 || *err != '\0')
+	  {
+	      sendto_one(sptr, getreply(ERR_WHOSYNTAX), me.name,
+			 sptr->name);
+	      return 0;
+	  }
+	  wsopts.ts=strtol(parv[args], NULL, 0);
+	  wsopts.ts_value=change ? 2 : 1;
 	  args++;
 	  break;
       case 'i':
@@ -453,6 +467,14 @@ int chk_who(aClient *ac, int showall)
 	if((wsopts.gcos_plus && gchkfn(wsopts.gcos, ac->info)) ||
 	   (!wsopts.gcos_plus && !gchkfn(wsopts.gcos, ac->info)))
 	    return 0;
+
+    if(wsopts.ts_value == 2 && /* +t */
+        NOW - ac->tsinfo < wsopts.ts)
+        return 0;
+    else if(wsopts.ts_value == 1 && /* -t */
+        NOW - ac->tsinfo > wsopts.ts)
+        return 0;
+
     return 1;
 }
 

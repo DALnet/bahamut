@@ -1178,6 +1178,8 @@ typedef struct SearchOptions
     char *host;
     char *gcos;
     char *ip;
+    int ts;
+    int ts_value;
     aChannel *channel;
     aClient *server;
     unsigned int channelflags;
