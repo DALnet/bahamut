@@ -35,6 +35,7 @@
 
 /* Externally defined stuffs */
 extern int user_modes[];
+extern unsigned long my_rand();
 
 /* internally defined stuffs */
 
@@ -307,42 +308,59 @@ int m_identify(aClient *cptr, aClient *sptr, int parc, char *parv[])
  */
 int m_svsnick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
-    aClient *acptr;
+    aClient *acptr, *ocptr;
+    char newnick[NICKLEN + 1];
 
-    if (!IsULine(sptr)||parc < 4||(strlen(parv[2]) > NICKLEN)) return 0;
-    /* if we can't SVSNICK them to something because the nick 
-     * is in use, KILL them
-     */
-    acptr=find_person(parv[2], NULL);
-    if(acptr!=NULL)
-    {
-	/* send a kill out for the person instead --wd */
-	sendto_serv_butone(cptr, ":%s KILL %s :%s (SVSNICK Collide)",
-			   sptr->name, parv[1], sptr->name);
-	/* now send back a kill for the nick they were presumably changed to */
-	sendto_one(cptr, ":%s KILL %s :%s (SVSNICK Collide)",
-		   sptr->name, parv[2], sptr->name);
+    if (!IsULine(sptr)||parc < 4||(strlen(parv[2]) > NICKLEN)) 
 	return 0;
-    }
-    if (!hunt_server(cptr, sptr, ":%s SVSNICK %s %s :%s", 1, parc, parv) !=
-	HUNTED_ISME)
+
+    if(hunt_server(cptr, sptr, ":%s SVSNICK %s %s :%s", 1, parc, parv) != HUNTED_ISME)
+	return 0;
+
+    /* can't find them? oh well. */
+    if ((acptr = find_person(parv[1], NULL)) == NULL)
+	return 0;
+
+    strncpyzt(newnick, parv[2], NICKLEN+1);
+
+    /* does the nick we're changing them to already exist? */
+    /* Try to make a unique nickname */
+    if((ocptr = find_person(newnick, NULL)) != NULL)
     {
-	if ((acptr = find_person(parv[1], NULL))!=NULL)
-	{
-	    acptr->umode &= ~UMODE_r;
-	    acptr->tsinfo = atoi(parv[3]);
-#ifdef ANTI_NICK_FLOOD
-	    acptr->last_nick_change = atoi(parv[3]);
-#endif
-	    sendto_common_channels(acptr, ":%s NICK :%s", parv[1], parv[2]);
-	    if (IsPerson(acptr)) add_history(acptr, 1);
-	    sendto_serv_butone(NULL, ":%s NICK %s :%d", parv[1], parv[2],
-			       acptr->tsinfo);
-	    if(acptr->name[0]) del_from_client_hash_table(acptr->name, acptr);
-	    strcpy(acptr->name, parv[2]);
-	    add_to_client_hash_table(parv[2], acptr);
-	}
+        char servprefix[HOSTLEN + 1], *pptr;
+        int tries = 0, nprefix;
+
+        strncpyzt(servprefix, me.name, NICKLEN+1);
+        pptr = strchr(servprefix, '.');
+        if(pptr)
+           *pptr = '\0';
+
+        do 
+        {
+	    nprefix = my_rand() % 999;
+  	    ircsnprintf(newnick, NICKLEN, "%s-%d[%s]", parv[2], nprefix, servprefix);
+            tries++;
+        } while (((ocptr = find_person(newnick, NULL)) != NULL) && (tries < 10));
+
+	/* well, we tried.. */
+        if(ocptr)
+           return exit_client(acptr, acptr, &me, "SVSNICK Collide");
     }
+
+    acptr->umode &= ~UMODE_r;
+    acptr->tsinfo = atoi(parv[3]);
+#ifdef ANTI_NICK_FLOOD
+    acptr->last_nick_change = atoi(parv[3]);
+#endif
+    sendto_common_channels(acptr, ":%s NICK :%s", parv[1], newnick);
+    add_history(acptr, 1);
+    sendto_serv_butone(NULL, ":%s NICK %s :%d", parv[1], newnick,
+		       acptr->tsinfo);
+    if(acptr->name[0]) 
+	del_from_client_hash_table(acptr->name, acptr);
+    strcpy(acptr->name, newnick);
+    add_to_client_hash_table(acptr->name, acptr);
+
     return 0;
 }
 
@@ -415,8 +433,6 @@ int channel_svsmode(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
     return 0;
 }
-
-#include "userban.h"
 
 /* m_svsmode - df function integrated
  *  - Raistlin
