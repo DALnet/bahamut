@@ -5160,9 +5160,12 @@ int m_svskill(aClient *cptr, aClient *sptr, int parc, char *parv[])
 			   get_client_name(sptr, HIDEME));
 	    return 0;
 	}
-	else 
-	    sendto_serv_butone(cptr, ":%s SVSKILL %s :%s", parv[0], parv[1],
+	else if(ts == 0) 
+	    sendto_one(acptr->from, ":%s SVSKILL %s :%s", parv[0], parv[1],
 			       comment);
+	else
+	    sendto_one(acptr->from, ":%s SVSKILL %s %ld :%s", parv[0], parv[1],
+			       ts, comment);
     }
     return 0;
 }
