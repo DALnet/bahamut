@@ -2963,8 +2963,6 @@ int m_sjoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
     memset((char *) &mode, '\0', sizeof(mode));
 
-    doesop = (parv[4 + args][0] == '@' || parv[4 + args][1] == '@');
-
     s = parv[3];
     while (*s)
 	switch (*(s++))
@@ -3014,6 +3012,9 @@ int m_sjoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		return 0;
 	    break;
 	}
+
+
+    doesop = (parv[4 + args][0] == '@' || parv[4 + args][1] == '@');
 
     oldmode = &chptr->mode;
 	
