@@ -2661,8 +2661,12 @@ m_sjoin(aClient *cptr,
       mode.mode |= oldmode->mode;
       if (oldmode->limit > mode.limit)
 		  mode.limit = oldmode->limit;
-      if (strcmp(mode.key, oldmode->key))
-		  strcpy(mode.key, oldmode->key);
+      if(*oldmode->key && *mode.key && strcmp(mode.key, oldmode->key) > 0)
+      {
+         /* sketchy: keep the key that's lexographically greater
+            if we both have a differing key. */
+         strcpy(mode.key, oldmode->key);
+      }
    }
 
    /*
