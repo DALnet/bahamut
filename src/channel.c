@@ -2311,7 +2311,7 @@ m_list(aClient *cptr,
 	     else /* Just a normal channel */
 	     {
 		chptr = find_channel(name, NullChn);
-		if (chptr && ShowChannel(sptr, chptr))
+		if (chptr && (ShowChannel(sptr, chptr) || IsAdmin(sptr)))
 		   sendto_one(sptr, rpl_str(RPL_LIST), me.name, parv[0],
 			ShowChannel(sptr, chptr) ? name : "*",
 			chptr->users, chptr->topic);
