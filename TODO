@@ -1,18 +1,17 @@
-THINGS TO FIX BEFORE RELEASE
-----------------------------
+TODO List for 1.8.0
+-------------------
    
     - Fix /unkline routines to operate happily with the new conf parser.
     - Write a new example.conf
-    - Fix make install
+    - Split throttling off into its own hook module.
+    - Add more hooks.
+    - Integrate module.ini into ircd.conf
 
-TODO LIST
----------
+Future TODO List
+----------------
 
 - Split up aClient into separate structures for local and remote users
 - Backport message tokenization from 1.6
-- Split throttling off into its own hook module.
-- Add more hooks.
-- Integrate module.ini into ircd.conf
 - Implement IPV6
 
 List to Ponder
