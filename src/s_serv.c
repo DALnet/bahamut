@@ -904,12 +904,7 @@ m_server_estab(aClient *cptr)
 	 sendto_one(acptr, ":%s SERVER %s 2 :%s",
 		    me.name, cptr->name, cptr->info);
    }
-	/* Pass on sqlines to new server */
-	for (tmp=conf;tmp;tmp=tmp->next) {
-		if (tmp->status==CONF_SQLINE)
-			sendto_one(acptr, ":%s SQLINE %s :%s", me.name, tmp->name,
-						  tmp->passwd);
-	}
+
    /*
     * * Pass on my client information to the new server *
     * 
