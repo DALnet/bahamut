@@ -3533,11 +3533,11 @@ m_umode(aClient *cptr,
    if (!(setflags & UMODE_y) && (!IsOper(sptr) && !IsLocOp(sptr))
        && !IsServer(cptr))
           sptr->umode &= ~UMODE_y;
-/* COMMENTED OUT FOR NOW
+
    if (!(setflags & UMODE_n) && (!IsOper(sptr) && !IsLocOp(sptr))
        && !IsServer(cptr))
 	  sptr->umode &= ~UMODE_n;
-*/
+
    if (!(setflags & UMODE_d) && (!IsOper(sptr) && !IsLocOp(sptr))
        && !IsServer(cptr))
           sptr->umode &= ~UMODE_d;
@@ -3559,6 +3559,7 @@ m_umode(aClient *cptr,
 		if (IsUmodey(sptr)) ClearUmodey(sptr);
 		if (IsUmoded(sptr)) ClearUmoded(sptr);
 		if (IsUmodeb(sptr)) ClearUmoded(sptr);
+		if (IsUmoden(sptr)) ClearUmoden(sptr);
 	}
 	if(MyClient(sptr)) {
 		if (IsAdmin(sptr) && !OPIsAdmin(sptr)) ClearAdmin(sptr);

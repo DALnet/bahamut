@@ -22,7 +22,7 @@ Usermodes: (* designates that the umode is oper only)
        * +f     - Can see flood messages.
        * +y     - Can see stats/links/admin requests to name a few.
        * +d     - Can see server debug messages.
-       * +n     - Can see client nick changes.
+       * +n     - Can see server routing notices.
   
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
