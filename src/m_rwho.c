@@ -1195,11 +1195,7 @@ int m_rwho(aClient *cptr, aClient *sptr, int parc, char *parv[])
                     continue;
 
                 if (!left)
-                {
-                    sendto_one(sptr, getreply(ERR_WHOLIMEXCEED), me.name,
-                               parv[0], rwho_opts.limit, "RWHO");
                     break;
-                }
 
                 if (!rwho_opts.countonly)
                 {
@@ -1209,6 +1205,17 @@ int m_rwho(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
                 results++;
                 left--;
+            }
+
+            /* This may be inaccurate.  If the loop above finished without
+               hitting the limit, this reply is too early -- it suggests there
+               are more matches when there may not be.  But it's the easiest
+               way to handle this case at present. */
+            if (!left)
+            {
+                sendto_one(sptr, getreply(ERR_WHOLIMEXCEED), me.name, parv[0],
+                           rwho_opts.limit, "RWHO");
+                break;
             }
         }
     }
