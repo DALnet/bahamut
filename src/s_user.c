@@ -679,13 +679,11 @@ register_user(aClient *cptr,
       /*
        * Except "F:" clients 
        */
-      if ((
-			  (sptr->fd >= (MAXCLIENTS + MAX_BUFFER))) || ((sptr->fd >= (MAXCLIENTS - 5)) && !(find_fline(sptr)))) {
-			sendto_realops_lev(SPY_LEV, "Too many clients, rejecting %s[%s].",
-									 nick, sptr->sockhost);
-			ircstp->is_ref++;
-			return exit_client(cptr, sptr, &me,
-									 "Sorry, server is full - try later");
+      if ((Count.local >= (MAXCLIENTS - 10)) && !(find_fline(sptr))) 
+      { 
+		sendto_realops_lev(SPY_LEV, "Too many clients, rejecting %s[%s].", nick, sptr->sockhost);
+		ircstp->is_ref++;
+		return exit_client(cptr, sptr, &me, "Sorry, server is full - try later");
       }
 		
 #ifdef ANTI_SPAMBOT
