@@ -1437,7 +1437,7 @@ static unsigned int hash_id(unsigned int id)
 
 static unsigned int hash_cp(char *cp)
 {
-   return ((int) cp) % ARES_IDCACSIZE;
+   return ((unsigned int) cp) % ARES_IDCACSIZE;
 }
 
 /* Add a new cache item to the queue and hash table. */

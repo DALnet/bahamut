@@ -1601,8 +1601,8 @@ find_new_class(char *name)
     return tmp;
 }
 
-int
-set_classes()
+char *
+set_classes(void)
 {
     aConnect *aconn;
     aAllow   *allow;
@@ -1623,14 +1623,14 @@ set_classes()
 
     for(aconn = new_connects; aconn; aconn = aconn->next)
         if(!(aconn->class = find_new_class(aconn->class_name)))
-            return 0;
+            return aconn->class_name;
     for(allow = new_allows; allow; allow = allow->next)
         if(!(allow->class = find_new_class(allow->class_name)))
-            return 0;
+            return allow->class_name;
     for(aoper = new_opers; aoper; aoper = aoper->next)
         if(!(aoper->class = find_new_class(aoper->class_name)))
-            return 0;
-    return 1;
+            return aoper->class_name;
+    return NULL;
 }
 
 
@@ -2218,6 +2218,7 @@ int rehash(aClient *cptr, aClient *sptr, int sig)
     }
     
     merge_confs();
+    build_rplcache();
 
     rehashed = 1;
 

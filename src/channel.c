@@ -599,9 +599,9 @@ void remove_matching_bans(aChannel *chptr, aClient *cptr, aClient *from)
               sendto_channel_butserv_me(chptr, from, ":%s MODE %s %s %s", 
                                         from->name, chptr->chname, modebuf,
                                         parabuf);
-              sendto_match_servs(chptr, from, ":%s MODE %s %ld %s %s", 
-                                   from->name, chptr->chname, chptr->channelts, 
-                                   modebuf, parabuf);
+              sendto_serv_butone(from, ":%s MODE %s %ld %s %s", from->name,
+                                 chptr->chname, chptr->channelts, modebuf,
+                                 parabuf);
               send = 0;
               *parabuf = '\0';
               m = modebuf;
@@ -626,9 +626,8 @@ void remove_matching_bans(aChannel *chptr, aClient *cptr, aClient *from)
   {
       sendto_channel_butserv_me(chptr, from, ":%s MODE %s %s %s", from->name,
                                 chptr->chname, modebuf, parabuf);
-      sendto_match_servs(chptr, from, ":%s MODE %s %ld %s %s", 
-                          from->name, chptr->chname, chptr->channelts,
-                          modebuf, parabuf);
+      sendto_serv_butone(from, ":%s MODE %s %ld %s %s", from->name,
+                         chptr->chname, chptr->channelts, modebuf, parabuf);
   }
   
   return;
@@ -685,9 +684,9 @@ void remove_matching_exempts(aChannel *chptr, aClient *cptr, aClient *from)
                 sendto_channel_butserv_me(chptr, from, ":%s MODE %s %s %s",
                                           from->name, chptr->chname, modebuf,
                                           parabuf);
-                sendto_match_servs(chptr, from, ":%s MODE %s %ld %s %s",
-                                   from->name, chptr->chname, chptr->channelts,
-                                   modebuf, parabuf);
+                sendto_serv_butone(from, ":%s MODE %s %ld %s %s", from->name,
+                                   chptr->chname, chptr->channelts, modebuf,
+                                   parabuf);
                 send = 0;
                 *parabuf = '\0';
                 m = modebuf;
@@ -712,9 +711,8 @@ void remove_matching_exempts(aChannel *chptr, aClient *cptr, aClient *from)
     {
         sendto_channel_butserv_me(chptr, from, ":%s MODE %s %s %s", from->name,
                                   chptr->chname, modebuf, parabuf);
-        sendto_match_servs(chptr, from, ":%s MODE %s %ld %s %s",
-                           from->name, chptr->chname, chptr->channelts,
-                           modebuf, parabuf);
+        sendto_serv_butone(from, ":%s MODE %s %ld %s %s", from->name,
+                           chptr->chname, chptr->channelts, modebuf, parabuf);
     }
 
     return;
@@ -772,9 +770,9 @@ void remove_matching_invites(aChannel *chptr, aClient *cptr, aClient *from)
                 sendto_channel_butserv_me(chptr, from, ":%s MODE %s %s %s",
                                           from->name, chptr->chname, modebuf,
                                           parabuf);
-                sendto_match_servs(chptr, from, ":%s MODE %s %ld %s %s",
-                                   from->name, chptr->chname, chptr->channelts,
-                                   modebuf, parabuf);
+                sendto_serv_butone(from, ":%s MODE %s %ld %s %s", from->name,
+                                   chptr->chname, chptr->channelts, modebuf,
+                                   parabuf);
                 send = 0;
                 *parabuf = '\0';
                 m = modebuf;
@@ -799,9 +797,8 @@ void remove_matching_invites(aChannel *chptr, aClient *cptr, aClient *from)
     {
         sendto_channel_butserv_me(chptr, from, ":%s MODE %s %s %s", from->name,
                                   chptr->chname, modebuf, parabuf);
-        sendto_match_servs(chptr, from, ":%s MODE %s %ld %s %s",
-                           from->name, chptr->chname, chptr->channelts,
-                           modebuf, parabuf);
+        sendto_serv_butone(from, ":%s MODE %s %ld %s %s", from->name,
+                           chptr->chname, chptr->channelts, modebuf, parabuf);
     }
 
     return;
@@ -1342,10 +1339,9 @@ int m_mode(aClient *cptr, aClient *sptr, int parc, char *parv[])
                                       ":%s MODE %s %s %s", parv[0],
                                       chptr->chname, modebuf,
                                       parabuf);
-                sendto_match_servs(chptr, cptr,
-                               ":%s MODE %s %ld %s %s",
-                               parv[0], chptr->chname, chptr->channelts,
-                               modebuf, parabuf);
+                sendto_serv_butone(cptr, ":%s MODE %s %ld %s %s", parv[0],
+                                   chptr->chname, chptr->channelts, modebuf,
+                                   parabuf);
         }
     return 0;
 }
@@ -2504,7 +2500,7 @@ int m_join(aClient *cptr, aClient *sptr, int parc, char *parv[])
                 }
             }
 #endif
-            sendto_match_servs(NULL, cptr, ":%s JOIN 0", parv[0]);
+            sendto_serv_butone(cptr, ":%s JOIN 0", parv[0]);
             continue;
         }
         
@@ -2628,17 +2624,17 @@ int m_join(aClient *cptr, aClient *sptr, int parc, char *parv[])
                so we can bounce modes and stuff if our ts is older. */
             
             if (allow_op)
-                sendto_match_servs(chptr, cptr, ":%s SJOIN %ld %s + :@%s",
-                                   me.name, chptr->channelts, name, parv[0]);
+                sendto_serv_butone(cptr, ":%s SJOIN %ld %s + :@%s", me.name,
+                                   chptr->channelts, name, parv[0]);
             else
-                sendto_match_servs(chptr, cptr, ":%s SJOIN %ld %s + :%s",
-                                   me.name, chptr->channelts, name, parv[0]);
+                sendto_serv_butone(cptr, ":%s SJOIN %ld %s + :%s", me.name,
+                                   chptr->channelts, name, parv[0]);
         }
         else if (MyClient(sptr)) 
-            sendto_match_servs(chptr, cptr, CliSJOINFmt,
-                               parv[0], chptr->channelts, name);
+            sendto_serv_butone(cptr, CliSJOINFmt, parv[0], chptr->channelts,
+                               name);
         else 
-            sendto_match_servs(chptr, cptr, ":%s JOIN :%s", parv[0], name);
+            sendto_serv_butone(cptr, ":%s JOIN :%s", parv[0], name);
 
         /* notify all other users on the new channel */
         sendto_channel_butserv(chptr, sptr, ":%s JOIN :%s", parv[0], name);
@@ -2721,8 +2717,7 @@ int m_sajoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
                        " /SAJOIN for %s", me.name, parv[0], chptr->chname);
 
         add_user_to_channel(chptr, sptr, 0);
-        sendto_match_servs(chptr, cptr, CliSJOINFmt, parv[0], 
-                           chptr->channelts, name);
+        sendto_serv_butone(cptr, CliSJOINFmt, parv[0], chptr->channelts, name);
         sendto_channel_butserv(chptr, sptr, ":%s JOIN :%s", parv[0], name);
         if(MyClient(sptr))
         {
@@ -2823,9 +2818,9 @@ int m_part(aClient *cptr, aClient *sptr, int parc, char *parv[])
         /* Remove user from the old channel (if any) */
 
         if (parc < 3 || can_send(sptr,chptr,reason))
-            sendto_match_servs(chptr, cptr, PartFmt, parv[0], name);
+            sendto_serv_butone(cptr, PartFmt, parv[0], name);
         else
-            sendto_match_servs(chptr, cptr, PartFmt2, parv[0], name, reason);
+            sendto_serv_butone(cptr, PartFmt2, parv[0], name, reason);
         if (parc < 3 || can_send(sptr,chptr,reason))
             sendto_channel_butserv(chptr, sptr, PartFmt, parv[0], name);
         else
@@ -2961,9 +2956,7 @@ int m_kick(aClient *cptr, aClient *sptr, int parc, char *parv[])
                 sendto_channel_butserv(chptr, sptr,
                                        ":%s KICK %s %s :%s", parv[0],
                                        name, who->name, comment);
-                sendto_match_servs(chptr, cptr,
-                                   ":%s KICK %s %s :%s",
-                                   parv[0], name,
+                sendto_serv_butone(cptr, ":%s KICK %s %s :%s", parv[0], name,
                                    who->name, comment);
                 remove_user_from_channel(who, chptr);
             }
@@ -3105,9 +3098,9 @@ int m_topic(aClient *cptr, aClient *sptr, int parc, char *parv[])
          * sends with the topic, so I changed everything to work like that. 
          * -wd */
         
-        sendto_match_servs(chptr, cptr, ":%s TOPIC %s %s %lu :%s", parv[0],
-                           chptr->chname, chptr->topic_nick, 
-                           chptr->topic_time, chptr->topic);
+        sendto_serv_butone(cptr, ":%s TOPIC %s %s %lu :%s", parv[0],
+                           chptr->chname, chptr->topic_nick, chptr->topic_time,
+                           chptr->topic);
         sendto_channel_butserv_me(chptr, sptr, ":%s TOPIC %s :%s", parv[0],
                                   chptr->chname, chptr->topic);
     }
@@ -3122,79 +3115,89 @@ int m_topic(aClient *cptr, aClient *sptr, int parc, char *parv[])
  * m_invite 
  * parv[0] - sender prefix 
  * parv[1] - user to invite 
- * parv[2] - channel number
+ * parv[2] - channel name
  */
 int m_invite(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     aClient    *acptr;
-    aChannel   *chptr;
+    aChannel   *chptr = NULL;
     
-    if (parc < 3 || *parv[1] == '\0')
+    if (parc < 3 || *parv[1] == 0)
     {
-        sendto_one(sptr, err_str(ERR_NEEDMOREPARAMS),
-                   me.name, parv[0], "INVITE");
+        sendto_one(sptr, err_str(ERR_NEEDMOREPARAMS), me.name, parv[0],
+                   "INVITE");
         return -1;
     }
 
-    if (!(acptr = find_person(parv[1], (aClient *) NULL)))
+    if (!(acptr = find_person(parv[1], NULL)))
     {
-        sendto_one(sptr, err_str(ERR_NOSUCHNICK),
-                   me.name, parv[0], parv[1]);
-        return 0;
-    }
-    
-    if(!check_channelname(sptr, (unsigned char *)parv[2]))
-        return 0;
-
-    if (!(chptr = find_channel(parv[2], NullChn)))
-    {
-        sendto_prefix_one(acptr, sptr, ":%s INVITE %s :%s",
-                          parv[0], parv[1], parv[2]);
-        return 0;
-    }
-    
-    if (chptr && !IsMember(sptr, chptr) && !IsULine(sptr))
-    {
-        sendto_one(sptr, err_str(ERR_NOTONCHANNEL),
-                   me.name, parv[0], parv[2]);
-        return -1;
-    }
-
-    if (IsMember(acptr, chptr))
-    {
-        sendto_one(sptr, err_str(ERR_USERONCHANNEL),
-                   me.name, parv[0], parv[1], parv[2]);
+        sendto_one(sptr, err_str(ERR_NOSUCHNICK), me.name, parv[0], parv[1]);
         return 0;
     }
 
-    if (!is_chan_op(sptr, chptr) && (!IsULine(sptr)))
+    if (MyClient(sptr))
     {
-        sendto_one(sptr, err_str(ERR_CHANOPRIVSNEEDED),
-                   me.name, parv[0], chptr->chname);
-        return -1;
-    }
-    
-    if (MyConnect(sptr))
-    {
-        sendto_one(sptr, rpl_str(RPL_INVITING), me.name, parv[0],
-                   acptr->name, ((chptr) ? (chptr->chname) : parv[2]));
+        if (!(chptr = find_channel(parv[2], NULL)))
+        {
+            sendto_one(sptr, err_str(ERR_NOSUCHCHANNEL), me.name, parv[0],
+                       parv[2]);
+            return 0;
+        }
+
+        if (!IsMember(sptr, chptr))
+        {
+            sendto_one(sptr, err_str(ERR_NOTONCHANNEL), me.name, parv[0],
+                       parv[2]);
+            return 0;
+        }
+
+        if (IsMember(acptr, chptr))
+        {
+            sendto_one(sptr, err_str(ERR_USERONCHANNEL), me.name, parv[0],
+                       parv[1], chptr->chname);
+            return 0;
+        }
+
+        if (!is_chan_op(sptr, chptr))
+        {
+            sendto_one(sptr, err_str(ERR_CHANOPRIVSNEEDED), me.name, parv[0],
+                       chptr->chname);
+            return 0;
+        }
+
+        sendto_one(sptr, rpl_str(RPL_INVITING), me.name, parv[0], acptr->name,
+                   chptr->chname);
+
         if (acptr->user->away)
-            sendto_one(sptr, rpl_str(RPL_AWAY), me.name, parv[0],
-                       acptr->name, acptr->user->away);
+            sendto_one(sptr, rpl_str(RPL_AWAY), me.name, parv[0], acptr->name,
+                       acptr->user->away);
     }
 
-    if ((chptr && sptr->user && is_chan_op(sptr, chptr)) || IsULine(sptr))
+    if (MyClient(acptr))
     {
-        if (MyConnect(acptr))
-            add_invite(acptr, chptr);
-        /* Every server locally notifies the ops of invites */
-        sendto_channelops_butserv(chptr, &me, ":%s NOTICE @%s :%s invited"
-                                " %s into channel %s.", me.name, chptr->chname,
-                                sptr->name, acptr->name, chptr->chname);
+        /* stuff already done above */
+        if (!MyClient(sptr))
+        {
+            if (!(chptr = find_channel(parv[2], NullChn)))
+                return 0;
+
+            if (IsMember(acptr, chptr))
+                return 0;
+        }
+
+        add_invite(acptr, chptr);
+
+        sendto_prefix_one(acptr, sptr, ":%s INVITE %s :%s", parv[0],
+                          acptr->name, chptr->chname);
+        sendto_channelops_butone(NULL, &me, chptr, ":%s NOTICE @%s :%s invited"
+                                 " %s into channel %s", me.name, chptr->chname,
+                                 parv[0], acptr->name, chptr->chname);
+
+        return 0;
     }
 
-    sendto_prefix_one(acptr, sptr, ":%s INVITE %s :%s", parv[0],
-                      acptr->name, ((chptr) ? (chptr->chname) : parv[2]));
+    sendto_one(acptr, ":%s INVITE %s :%s", parv[0], parv[1], parv[2]);
+
     return 0;
 }
 
@@ -4050,8 +4053,7 @@ int m_sjoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
                                    parv[2]);
         }
 
-        sendto_match_servs(chptr, cptr, CliSJOINFmt, parv[0],
-                           tstosend, parv[2]);
+        sendto_serv_butone(cptr, CliSJOINFmt, parv[0], tstosend, parv[2]);
 
         /* if the channel is created in client sjoin, 
          * we lost some channel modes. */
@@ -4472,11 +4474,11 @@ int m_sjoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
         sjbuf[sjbufpos] = '\0';
 
         if(keep_parabuf[0] != '\0')
-            sendto_match_servs(chptr, cptr, SJOINFmt, parv[0], tstosend,
-                                parv[2], keep_modebuf, keep_parabuf, sjbuf);
+            sendto_serv_butone(cptr, SJOINFmt, parv[0], tstosend, parv[2],
+                               keep_modebuf, keep_parabuf, sjbuf);
         else
-            sendto_match_servs(chptr, cptr, SJOINFmtNP, parv[0],
-                               tstosend, parv[2], keep_modebuf, sjbuf);
+            sendto_serv_butone(cptr, SJOINFmtNP, parv[0], tstosend, parv[2],
+                               keep_modebuf, sjbuf);
     }
     else if(created && chptr->users == 0) 
        sub1_from_channel(chptr);
@@ -4524,8 +4526,8 @@ int m_samode(aClient *cptr, aClient *sptr, int parc, char *parv[])
     {
         sendto_channel_butserv(chptr, sptr, ":%s MODE %s %s %s",
                                parv[0], chptr->chname, modebuf, parabuf);
-        sendto_match_servs(chptr, cptr, ":%s MODE %s 0 %s %s",
-                            parv[0], chptr->chname, modebuf, parabuf);
+        sendto_serv_butone(cptr, ":%s MODE %s 0 %s %s", parv[0], chptr->chname,
+                           modebuf, parabuf);
         if(MyClient(sptr))
         {
             sendto_serv_butone(NULL, ":%s GLOBOPS :%s used SAMODE (%s %s%s%s)",

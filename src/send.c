@@ -1103,35 +1103,6 @@ void sendto_channelops_butserv(aChannel *chptr, aClient *from, char *pattern, ..
 }
 
 /*
- * sendto_match_servs
- * 
- * send to all servers which match the mask at the end of a channel name
- * (if there is a mask present) or to all if no mask.
- */
-void sendto_match_servs(aChannel *chptr, aClient *from, char *pattern, ...)
-{
-    fdlist send_fdlist;
-    int k = 0;
-    aClient *cptr;
-    va_list vl;
-    DLink *lp;
-
-    va_start(vl, pattern);
-    for(lp = server_list; lp; lp = lp->next)
-    {
-        cptr = lp->value.cptr;
-            if (cptr == from)
-                continue;
-        send_fdlist.entry[++k] = cptr->fd;
-    }
-    send_fdlist.last_entry = k;
-    if (k)
-        vsendto_fdlist(&send_fdlist, pattern, vl);
-    va_end(vl);
-    return;
-}
-
-/*
  * * send a msg to all ppl on servers/hosts that match a specified mask *
  * (used for enhanced PRIVMSGs) *
  * 

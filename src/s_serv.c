@@ -151,14 +151,11 @@ time_t      pending_kline_time = 0;
 int 
 m_version(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
-    extern char serveropts[];
 
     if (hunt_server(cptr, sptr, ":%s VERSION :%s", 1, parc, parv) ==
         HUNTED_ISME)
-    {
-        sendto_one(sptr, rpl_str(RPL_VERSION), me.name,
-                   parv[0], version, debugmode, me.name, serveropts);
-    }
+        send_rplversion(sptr);
+
     return 0;
 }
 
@@ -852,8 +849,7 @@ int send_lusers(aClient *cptr, aClient *sptr, int parc, char *parv[])
         char tmp[PATH_MAX];
         
         last_stat_save = timeofday;
-        strcat(tmp, dpath);
-    strcat(tmp, "/.maxclients");
+        ircsprintf(tmp, "%s/.maxclients", dpath);
         fp = fopen(tmp, "w");
         if (fp != NULL)
         {
@@ -1286,21 +1282,16 @@ m_set(aClient *cptr, aClient *sptr, int parc, char *parv[])
             {
                 int new_value = atoi(parv[2]);
 
-                if (new_value > MASTER_MAX) 
+                if (new_value > MAX_ACTIVECONN) 
                 {
                     sendto_one(sptr,
-                               ":%s NOTICE %s :You cannot set MAXCLIENTS to "
-                               "> MASTER_MAX (%d)", me.name, parv[0],
-                               MASTER_MAX);
+                               ":%s NOTICE %s :You cannot set MAXCLIENTS "
+                               "above the compiled FD limit (%d)", me.name,
+                               parv[0], MAX_ACTIVECONN);
                     return 0;
                 }
-                if (new_value < 32) 
-                {
-                    sendto_one(sptr, ":%s NOTICE %s :You cannot set "
-                               "MAXCLIENTS to < 32 (%d:%d)", me.name, parv[0],
-                               MAXCLIENTS, highest_fd);
-                    return 0;
-                }
+                if (new_value < 0)
+                    new_value = 0;
                 MAXCLIENTS = new_value;
                 sendto_one(sptr, ":%s NOTICE %s :NEW MAXCLIENTS = %d (Current "
                            "= %d)", me.name, parv[0], MAXCLIENTS, Count.local);
@@ -1309,7 +1300,7 @@ m_set(aClient *cptr, aClient *sptr, int parc, char *parv[])
                                sptr->sockhost, MAXCLIENTS, Count.local);
                 return 0;
             }
-            sendto_one(sptr, ":%s NOTICE %s :Current Maxclients = %d (%d)",
+            sendto_one(sptr, ":%s NOTICE %s :MAXCLIENTS is %d (%d online)",
                        me.name, parv[0], MAXCLIENTS, Count.local);
             return 0;
         }

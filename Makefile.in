@@ -21,7 +21,6 @@ RM=@RM@
 MV=@MV@
 
 ENGINE=@SENGINE@
-FDSETSIZE=@FDSETSIZE@
 
 SHELL=/bin/sh
 SUBDIRS=zlib src doc tools

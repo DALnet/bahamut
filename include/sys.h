@@ -71,7 +71,7 @@
 #include <time.h>
 #endif
 
-#define MyFree(x)       if ((x) != NULL) free(x)
+#define MyFree(x)       do { if (x) free(x); (x) = NULL; } while(0)
 
 extern void dummy();
 

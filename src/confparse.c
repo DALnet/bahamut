@@ -71,7 +71,7 @@
  */
 
 extern int forked;
-extern int set_classes();
+extern char *set_classes(void);
 extern aPort *new_ports;
 extern Conf_Me *new_MeLine;
 
@@ -731,10 +731,17 @@ initconf(char *filename)
 inline char *
 finishconf(void)
 {
+    static char buf[256];
+    char *ret;
+
     if (!new_MeLine || !new_MeLine->servername)
         return "Missing global block";
-    if (!set_classes())
-        return "Nonexistant class referenced";
+    if ((ret = set_classes()))
+    {
+        ircsnprintf(buf, sizeof(buf), "Missing class block for referenced "
+                    "class '%s'", ret);
+        return buf;
+    }
     if (!new_ports)
         return "No ports defined";
     return NULL;

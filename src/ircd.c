@@ -79,8 +79,8 @@ int  confopts, new_confopts;
 
 fdlist      default_fdlist;     /* just the number of the entry */
 
-int         MAXCLIENTS = MAX_CLIENTS;   /* semi-configurable if
-                                         *  QUOTE_SET is def  */
+int         MAXCLIENTS = MAX_ACTIVECONN;   /* runtime configurable by m_set */
+
 struct Counter Count;
 int         R_do_dns, R_fin_dns, R_fin_dnsc, R_fail_dns, R_do_id,
             R_fin_id, R_fail_id;
@@ -113,7 +113,6 @@ extern void     read_motd(char *);          /* defined in s_serv.c */
 extern void     read_shortmotd(char *);     /* defined in s_serv.c */
 extern void     read_help(char *);          /* defined in s_serv.c */
 extern void     init_globals();
-extern int      set_classes();
 
 char        **myargv;
 char        configfile[PATH_MAX] = {0};     /* Server configuration file */
@@ -185,8 +184,7 @@ void s_die()
 #ifdef  USE_SYSLOG
     (void) syslog(LOG_CRIT, "Server killed By SIGTERM");
 #endif
-    strcat(tmp, dpath);
-    strcat(tmp, "/.maxclients");
+    ircsprintf(tmp, "%s/.maxclients", dpath);
     fp=fopen(tmp, "w");
     if(fp!=NULL) 
     {
@@ -781,8 +779,7 @@ main(int argc, char *argv[])
         exit(0);
     }
 
-    strcpy(tmp, dpath);
-    strcat(tmp, "/.maxclients");
+    ircsprintf(tmp, "%s/.maxclients", dpath);
     mcsfp = fopen(tmp, "r");
     if(mcsfp != NULL)
     {
@@ -852,6 +849,7 @@ main(int argc, char *argv[])
         exit(-1);
     }
     merge_confs();
+    build_rplcache();
     read_motd(MOTD);
     read_help(HELPFILE);
     if(confopts & FLAGS_SMOTD)

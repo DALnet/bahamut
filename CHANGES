@@ -53,7 +53,20 @@ Changes for 1.8.2
 - Corrected structfunc.h prototypes for modules (from wshs)
 - Added SVSMODE -e/-I support for channels
 - Fixed .maxclients not being read on startup
-
+- Rewrote m_invite(), behaves logically now
+- Enabled cmode +j (joins:secs rate limit)
+- Fixed resolver cache corruption (and crash), mostly affected newer RedHat
+- More conf documentation clarity
+- Unresolved class reference in conf now reports class name
+- Updated RPL_VERSION, RPL_ISUPPORT; now running from a cache in s_debug.c
+- Removed sockhost data from RPL_YOURHOST, since it was always zeroed
+- Squished more memory corruption bugs
+- Module support is now unconditionally disabled under OS X
+- Build system now handles FD_SETSIZE properly when using the select engine
+- Internal maxconnections and SET MAX handling is rational again
+  ircd can run with as few as 20 FDs and support 10 clients
+- Ripped out obsolete sendto_match_servs()
+- Added support for non-noquit servers in #define NOQUIT
 
 
 Changes for 1.8.0

@@ -611,8 +611,10 @@ register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
          * want to decrease this, and it should probably be just a
          * percentage of the MAXCLIENTS... -Taner
          * Flines are now no different than Elines
+         * And now there are no special clients, and this is the only thing
+         * MAXCLIENTS is checked against.  So no more buffer space.
          */
-        if ((Count.local >= (MAXCLIENTS - 10)))
+        if (Count.local > MAXCLIENTS)
         { 
             sendto_realops_lev(SPY_LEV, "Too many clients, rejecting %s[%s].",
                                nick, sptr->sockhost);
@@ -878,72 +880,18 @@ register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
          * um, why were we hiding it? they did make it on to the
          * server and all.. -wd
          */
-        sendto_one(sptr, rpl_str(RPL_YOURHOST), me.name, nick,
-                   get_client_name(&me, TRUE), version);
+        sendto_one(sptr, rpl_str(RPL_YOURHOST), me.name, nick, me.name,
+                   version);
 #ifdef  IRCII_KLUDGE
         /* Don't mess with this one - IRCII needs it! -Avalon */
         sendto_one(sptr, "NOTICE %s :*** Your host is %s, running version %s",
-                   nick, get_client_name(&me, TRUE), version);
+                   nick, me.name, version);
 #endif
         sendto_one(sptr, rpl_str(RPL_CREATED), me.name, nick, creation);
         sendto_one(sptr, rpl_str(RPL_MYINFO), me.name, parv[0],
                    me.name, version);
 
-
-        /* Most of this tracks draft-brocklesby-irc-isupport-03, with a
-         * few differences:
-         * STD is not sent since there is no RFC
-         * MAXCHANNELS and MAXBANS are sent for compatibility with old clients
-         * SILENCE WATCH and ELIST are sent but not documented
-         */
-
-        /* send MAXBANS and MAXCHANNELS first so better tokens override them */
-        ircsprintf(tmpstr2,"NETWORK=%s SAFELIST MAXBANS=%i MAXCHANNELS=%i "
-                   "CHANNELLEN=%i KICKLEN=%i NICKLEN=%i TOPICLEN=%i MODES=%i "
-                   "CHANTYPES=# CHANLIMIT=#:%i PREFIX=(ov)@+ STATUSMSG=@+",
-                   Network_Name, MAXBANS, maxchannelsperuser, CHANNELLEN,
-                   TOPICLEN, NICKLEN, TOPICLEN, MAXMODEPARAMSUSER,
-                   maxchannelsperuser, MAXSILES);
-        sendto_one(sptr, rpl_str(RPL_PROTOCTL), me.name, parv[0], tmpstr2);
-
-        /* ugly conditional building now */
-        ircsprintf(tmpstr2, "CASEMAPPING=ascii "
-#ifdef EXEMPT_LISTS
-                   "EXCEPTS "
-#endif
-#ifdef INVITE_LISTS
-                   "INVEX "
-#endif
-                   "CHANMODES=b"
-#ifdef EXEMPT_LISTS
-                   "e"
-#endif
-#ifdef INVITE_LISTS
-                   "I"
-#endif
-                   ",k,jl,ci"
-#ifdef USE_CHANMODE_L
-                   "L"
-#endif
-                   "mMnOprRst MAXLIST=b:%i"
-#ifdef EXEMPT_LISTS
-                   ",e:%i"
-#endif
-#ifdef INVITE_LISTS
-                   ",I:%i"
-#endif
-                   " WATCH=%i SILENCE=%i ELIST=cmntu TARGMAX=DCCALLOW:,JOIN:,"
-                   "KICK:4,KILL:20,NOTICE:20,PART:,PRIVMSG:20,WHOIS:,WHOWAS:",
-                   MAXBANS,
-#ifdef EXEMPT_LISTS
-                   MAXEXEMPTLIST,
-#endif
-#ifdef INVITE_LISTS
-                   MAXINVITELIST,
-#endif
-                   MAXWATCH, MAXSILES);
-        sendto_one(sptr, rpl_str(RPL_PROTOCTL), me.name, parv[0], tmpstr2);
-
+        send_rplisupport(sptr);
 
 #ifdef FORCE_EVERYONE_HIDDEN
         sptr->umode |= UMODE_I;

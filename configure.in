@@ -195,6 +195,29 @@ AC_CHECK_FUNCS([strtoul index strerror strtoken strtok inet_addr inet_netof])
 AC_CHECK_FUNCS([inet_aton gettimeofday lrand48 sigaction bzero bcmp bcopy])
 AC_CHECK_FUNCS([dn_skipname __dn_skipname getrusage times break])
 
+dnl check for various OSes
+
+case "$target" in
+    *-solaris2*)
+        solaris2="yes"
+        AC_DEFINE(OS_SOLARIS2)
+        AC_DEFINE(OS_SOLARIS)
+        ;;
+    *-freebsd*)
+        freebsd="yes"
+        ;;
+    *-linux*)
+        linux="yes"
+        ;;
+    *aix*)
+        aix="yes"
+        AC_DEFINE(AIX)
+        ;;
+    *-darwin*)
+        check_hmodules="no"
+        ;;
+esac
+
 dnl Checks for loadable hook module support
 
 set_hmodules="disabled"
@@ -295,26 +318,6 @@ fi
 unset save_LIBS
 
 dnl end of openssl library test
-
-dnl check for various OSes
-
-case "$target" in
-    *-solaris2*)
-        solaris2="yes"
-        AC_DEFINE(OS_SOLARIS2)
-        AC_DEFINE(OS_SOLARIS)
-        ;;
-    *-freebsd*)
-        freebsd="yes"
-        ;;
-    *-linux*)
-        linux="yes"
-        ;;
-    *aix*)
-        aix="yes"
-        AC_DEFINE(AIX)
-        ;;
-esac
 
 dnl once we add epoll and /dev/poll support, these will be
 dnl updated with the appropriate checks
@@ -425,11 +428,6 @@ SENGINE="socketengine_$engine.c"
 
 dnl Check to see if we have a broken FD_SETSIZE
 if test $engine = "select"; then
-    AC_MSG_WARN()
-    AC_MSG_WARN(select is not reccomended!)
-    AC_MSG_WARN()
-    FDSETSIZE='-DFD_SETSIZE=1024'
-
     AC_MSG_CHECKING(to see if FD_SETSIZE is broken)
     AC_TRY_RUN([
     #define FD_SETSIZE 666
@@ -449,7 +447,7 @@ if test $engine = "select"; then
     AC_MSG_WARN(FD_SETSIZE is hard set by your operating system)
     AC_MSG_WARN(MAXCONNECTIONS must be no higher than the hardwired FD_SETSIZE)
     AC_DEFINE(BROKEN_FD_SETSIZE)
-    FDSETSIZE=' # FD_SETSIZE is broken on this machine!'
+    broken_fd_setsize="yes"
     ],
     AC_MSG_RESULT(can't tell))
 fi
@@ -464,7 +462,9 @@ if test "$check_maxconnections" = "auto"; then
     AC_MSG_CHECKING(Maximum file descriptors);
     AC_CACHE_VAL(maxconnections,
 [
-cat << _EOF_ > test.c
+
+AC_LANG_CONFTEST(
+   [AC_LANG_SOURCE([[
     #include <sys/types.h>
     #include <sys/time.h>
     #include <sys/resource.h>
@@ -486,7 +486,9 @@ cat << _EOF_ > test.c
 
     int main()
     {
-        #ifdef RLIMIT_FD_MAX
+    #ifndef BROKEN_FD_SETSIZE
+
+    #ifdef RLIMIT_FD_MAX
         struct rlimit limit;
         
         if(!getrlimit(RLIMIT_FD_MAX, &limit))
@@ -497,21 +499,31 @@ cat << _EOF_ > test.c
                 printf("%ld", (long) limit.rlim_max);
         }
         else
-        #endif
+    #endif
             printf("256");
-        return 1;
+
+    #else
+        printf("%d", FD_SETSIZE);
+    #endif
+        return 0;
     }
-_EOF_
-    $CC -o test test.c >/dev/null 2>&1
-    maxconnections=`./test`
+   ]])
+])
+
+    $CC -o conftest conftest.c >/dev/null 2>&1
+    maxconnections=`./conftest`
     AC_MSG_RESULT($maxconnections)
-    $RM -f test test.c
+    $RM -f conftest conftest.c
 ])
     AC_DEFINE_UNQUOTED(MAXCONNECTIONS, ${maxconnections})
 
 else
     maxconnections=$check_maxconnections
     AC_DEFINE_UNQUOTED(MAXCONNECTIONS, ${maxconnections})
+fi
+
+if test "$engine" = "select" && test "$broken_fd_setsize" != "yes"; then
+    CFLAGS="$CFLAGS -DFD_SETSIZE=$maxconnections"
 fi
 
 if test $prefix = NONE; then
@@ -524,7 +536,6 @@ AC_SUBST(SSL_INCLUDES)
 AC_SUBST(SSL_LIBS)
 AC_SUBST(LIBS)
 AC_SUBST(SENGINE)
-AC_SUBST(FDSETSIZE)
 AC_SUBST(INSTALL_DIR)
 
 AC_OUTPUT(Makefile src/Makefile tools/Makefile doc/Makefile)

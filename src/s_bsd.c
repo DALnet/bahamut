@@ -456,33 +456,22 @@ void init_sys()
     {
         if (limit.rlim_max < MAXCONNECTIONS)
         {
-            printf("ircd fd table too big\n");
-            printf("Hard Limit: %ld IRC max: %d\n",
-                    (long) limit.rlim_max, MAXCONNECTIONS);
-            printf("Fix MAXCONNECTIONS\n");
+            printf("FATAL: System is only allowing %ld open files.\n",
+                   (long)limit.rlim_max);
+            printf("ircd requires at least %ld.\n", (long)MAXCONNECTIONS);
+            printf("Fix the system account limits or recompile ircd.\n");
             printf("Aborting...\n");
             exit(-1);
         }
-        limit.rlim_cur = limit.rlim_max;    /* make soft limit the max */
+        /* set limit to exactly what we can handle */
+        limit.rlim_cur = MAXCONNECTIONS;
         if (setrlimit(RLIMIT_FD_MAX, &limit) == -1)
         {
-            printf("error setting max fd's to %ld\n",
-                (long) limit.rlim_cur);
+            printf("FATAL: Unable to set open file limit to %ld:\n%s\n",
+                   (long)limit.rlim_cur, strerror(errno));
             printf("Aborting...\n");
             exit(-1);
         }
-#ifdef USE_SELECT
-        if (MAXCONNECTIONS > FD_SETSIZE)
-        {
-            printf("FD_SETSIZE = %d MAXCONNECTIONS = %d\n",
-                    FD_SETSIZE, MAXCONNECTIONS);
-            printf("Make sure your kernel supports a larger "
-                    "FD_SETSIZE then recompile with -DFD_SETSIZE=%d\n",
-                    MAXCONNECTIONS);
-            printf("Aborting...\n");
-            exit(-1);
-        }
-#endif
     }
 #endif
 
@@ -1539,7 +1528,7 @@ void accept_connection(aListener *lptr)
             return;
         }
 
-        if (newfd >= HARD_FDLIMIT - 10) 
+        if (newfd >= MAX_ACTIVECONN) 
         {
             ircstp->is_ref++;
             sendto_realops_lev(CCONN_LEV,"All connections in use. fd: %d (%s)",
@@ -1766,7 +1755,7 @@ connect_inet(aConnect *aconn, aClient *cptr, int *lenp)
      * with it so if it fails its useless.
      */
     cptr->fd = socket(AF_INET, SOCK_STREAM, 0);
-    if (cptr->fd >= (HARD_FDLIMIT - 10))
+    if (cptr->fd >= MAX_ACTIVECONN)
     {
         sendto_realops("No more connections allowed (%s)", cptr->name);
         return NULL;

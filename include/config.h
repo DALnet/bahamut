@@ -24,6 +24,8 @@
 #define	__config_include__
 
 #include "setup.h"
+#include "defs.h"
+
 
 /* READ THIS FIRST BEFORE EDITING!!!
  *
@@ -168,27 +170,6 @@
  * services that are not noquit compliant.
  */
 #undef NOQUIT
-
-/* Don't change this... */
-#ifdef MAXCONNECTIONS
-# if (MAXCONNECTIONS > 16384)
-#  define MAX_BUFFER 128
-# elif (MAXCONNECTIONS > 8192)
-#  define MAX_BUFFER 64
-# elif (MAXCONNECTIONS > 4096)
-#  define MAX_BUFFER 32
-# else
-#  define MAX_BUFFER 24
-# endif
-# define INIT_MAXCLIENTS (MAXCONNECTIONS - MAX_BUFFER - 24)
-# define HARD_FDLIMIT (INIT_MAXCLIENTS - 10)
-#elif
-# error MAXCONNECTIONS UNDEFINED!
-#endif
-
-#define MASTER_MAX	(HARD_FDLIMIT - MAX_BUFFER)
-
-#include "defs.h"
 
 /*
  * DEFAULT_KLINE_TIME
@@ -807,7 +788,7 @@
 #define DEFAULT_JOIN_NUM  8
 #define DEFAULT_JOIN_TIME 4
 #undef NO_DEFAULT_JOINRATE
-#define JOINRATE_SERVER_ONLY
+#undef JOINRATE_SERVER_ONLY
 
 /* Debugging configs */
 
@@ -848,7 +829,19 @@
 #define SHORTMOTD SMPATH
 #define IRCD_PIDFILE PPATH
 
-#define MAX_CLIENTS INIT_MAXCLIENTS
+/* enforce a minimum, even though it'll probably break at runtime */
+#if (MAXCONNECTIONS < 20)
+# undef MAXCONNECTIONS
+# define MAXCONNECTIONS 20
+#endif
+
+#if (MAXCONNECTIONS > 1000)
+# define MAX_BUFFER (MAXCONNECTIONS / 100)
+#else
+# define MAX_BUFFER 10
+#endif
+
+#define MAX_ACTIVECONN (MAXCONNECTIONS - MAX_BUFFER)
 
 #if defined(CLIENT_FLOOD) && ((CLIENT_FLOOD > 8000) || (CLIENT_FLOOD < 512))
 #error CLIENT_FLOOD needs redefining.

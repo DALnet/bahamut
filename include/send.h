@@ -63,8 +63,6 @@ extern void sendto_fdlist(fdlist *listp, char *pattern, ...);
 extern void sendto_locops(char *pattern, ...);
 extern void sendto_match_butone(aClient *one, aClient *from, char *mask,
 				int what, char *pattern, ...);
-extern void sendto_match_servs(aChannel *chptr, aClient *from,
-			       char *format, ...);
 extern void sendto_one(aClient *to, char *pattern, ...);
 extern void sendto_one_services(aClient *to, char *pattern, ...);
 extern void sendto_ops(char *pattern, ...);

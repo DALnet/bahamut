@@ -285,6 +285,10 @@ extern int  	  client_dopacket(aClient *, char *, int);
 
 /* VARARGS2 */
 
+extern void       send_rplversion(aClient *);
+extern void       send_rplisupport(aClient *);
+extern void       build_rplcache(void);
+
 extern void 	  debug(int level, char *pattern, ...);
 
 #ifdef DEBUGMODE
