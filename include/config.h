@@ -390,13 +390,6 @@
 #define IGNORE_FIRST_CHAR
 
 /*
- * NO_SPECIAL - reject usernames containing strange chars define this
- * if you want no "special" characters in usernames. A character is
- * "special" if it's not "a-z", "A-Z", "0-9", ".", "-", and "_"
- */
-#define NO_SPECIAL
-
-/*
  * REJECT_IPHONE - reject I-phone clients Define if you want to reject
  * I-phoners
  */

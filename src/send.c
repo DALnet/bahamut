@@ -229,7 +229,7 @@ int send_queued(aClient *to) {
 	break;
    }
 
-   if (to->flags & FLAGS_SOBSENT && !(to->flags & FLAGS_BURST) && DBufLength(&to->sendQ) < 20480) { /* 20k */
+   if (to->flags & FLAGS_SOBSENT && IsBurst(to) && !(to->flags & FLAGS_BURST) && DBufLength(&to->sendQ) < 20480) { /* 20k */
      sendto_one(to, "BURST %d", DBufLength(&to->sendQ));
      to->flags &= (~FLAGS_SOBSENT);
      if (!(to->flags & FLAGS_EOBRECV)) { /* hey we're the last to synch.. let's notify */

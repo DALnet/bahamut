@@ -665,7 +665,7 @@ register_user(aClient *cptr,
 
       if (oldstatus == STAT_MASTER && MyConnect(sptr))
 		  (void) m_oper(&me, sptr, 1, parv);
-#if defined(NO_MIXED_CASE) || defined(NO_SPECIAL)
+#if defined(NO_MIXED_CASE)
 		  {
 			  register char *tmpstr;
 			  u_char      c, cc;
@@ -731,7 +731,6 @@ register_user(aClient *cptr,
 # endif /*
 			  * NO_MIXED_CASE 
 			*/
-# ifdef NO_SPECIAL
 			  if (special) {
 				  sendto_realops_lev(REJ_LEV, "Invalid username: %s (%s@%s)",
 											nick, user->username, user->host);
@@ -740,12 +739,7 @@ register_user(aClient *cptr,
 										  user->username);
 				  return exit_client(cptr, sptr, &me, tmpstr2);
 			  }
-# endif /*
-			  * NO_SPECIAL 
-			*/
-			  /*
-				* Ok, now check the username they provided, if different
-				*/
+		  /* Ok, now check the username they provided, if different */
 			  lower = upper = special = cc = 0;
 			  
 			  if (strcmp(user->username, username)) {
@@ -791,7 +785,6 @@ register_user(aClient *cptr,
 # endif /*
 				  * NO_MIXED_CASE 
 			*/
-# ifdef NO_SPECIAL
 				  if (special) {
 					  sendto_realops_lev(REJ_LEV, "Invalid username: %s (%s@%s)",
 												nick, username, user->host);
@@ -800,16 +793,9 @@ register_user(aClient *cptr,
 											  username);
 					  return exit_client(cptr, sptr, &me, tmpstr2);
 				  }
-# endif /*
-				  * NO_SPECIAL 
-			*/
-			  }			/*
-							 * usernames different 
-							 */
+			  }			/* usernames different  */
 		  }
-#endif /*
-		* NO_MIXED_CASE || NO_SPECIAL 
-        */
+#endif /* NO_MIXED_CASE */
       /*
        * reject single character usernames which aren't alphabetic i.e.
        * reject jokers who have '?@somehost' or '.@somehost'

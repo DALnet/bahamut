@@ -735,7 +735,7 @@ m_server_estab(aClient *cptr)
       if (bconf->passwd[0])
 	 sendto_one(cptr, "PASS %s :TS", bconf->passwd);
       /* Pass my info to the new server */
-      sendto_one(cptr, "CAPAB TS3 NOQUIT SSJOIN");
+      sendto_one(cptr, "CAPAB TS3 NOQUIT SSJOIN BURST");
       sendto_one(cptr, "SERVER %s 1 :%s",
 		 my_name_for_link(me.name, aconf),
 		 (me.info[0]) ? (me.info) : "IRCers United");
@@ -976,7 +976,9 @@ int m_burst(aClient *cptr, aClient *sptr, int parc, char *parv[]) {
     sptr->flags &= ~(FLAGS_EOBRECV);
     if (sptr->flags & FLAGS_SOBSENT || sptr->flags & FLAGS_BURST) return 0;
 
- /* we've already sent our EOB.. we synched first */
+ /* we've already sent our EOB.. we synched first
+  * no need to check IsBurst because we shouldn't receive a BURST if they're not BURST capab */
+
  #ifdef HTM_LOCK_ON_NETBURST
     HTMLOCK = NO;
  #endif
@@ -1215,11 +1217,6 @@ m_info(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	 strcat(outstr, " NO_PRIORITY=1");
 #else
 	 strcat(outstr, " NO_PRIORITY=0");
-#endif
-#ifdef NO_SPECIAL
-	 strcat(outstr, " NO_SPECIAL=1");
-#else
-	 strcat(outstr, " NO_SPECIAL=0");
 #endif
 	 sendto_one(sptr, rpl_str(RPL_INFO),
 		    me.name, parv[0], outstr);
@@ -2794,12 +2791,6 @@ m_htm(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	 {
    	    int new_value = atoi(parv[2]);
 
-#ifdef HTM_LOCK_ON_NETBURST
-            if (HTMLOCK == YES) {
-               sendto_one(sptr, ":%s NOTICE %s :Cannot change HTM - Currently LOCKED");
-               return;
-            }
-#endif 
 	    if (new_value < 10) 
 	       sendto_one(sptr, ":%s NOTICE %s :\002Cannot set LRV < 10!\002",
 			  me.name, parv[0]);
@@ -2826,6 +2817,23 @@ m_htm(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	 }
 	 else if (!strcasecmp(command, "OFF")) 
 	 {
+#ifdef HTM_LOCK_ON_NETBURST
+            if (HTMLOCK == YES) {
+               if (!IsAdmin(sptr)) {
+                 sendto_one(sptr, ":%s NOTICE %s :Cannot change HTM - Currently LOCKED");
+                 return 0;
+               }
+               else {
+                 sendto_one(sptr, ":%s NOTICE %s :Removing HTM LOCK");
+                 sendto_ops("Resuming standard operation through HTM LOCK: Forced by %s!%s@%s",
+                       parv[0], sptr->user->username, sptr->sockhost);
+                  lifesux = 0;
+                  LCF = LOADCFREQ;
+                 return 0;
+               }
+            }
+#endif 
+
 	    lifesux = 0;
 	    LCF = LOADCFREQ;
 	    sendto_one(sptr, ":%s NOTICE %s :HTM is now OFF.", me.name, parv[0]);
@@ -4671,12 +4679,12 @@ m_capab(aClient *cptr, aClient *sptr, int parc, char *parv[])
    {
       if (strcmp(parv[i], "TS3") == 0)
  	SetTS3(cptr);
-      if (strcmp(parv[i], "NOQUIT") == 0)
+      else if (strcmp(parv[i], "NOQUIT") == 0)
  	SetNoQuit(cptr);
-      if (strcmp(parv[i], "SSJOIN") == 0)
+      else if (strcmp(parv[i], "SSJOIN") == 0)
  	SetSSJoin(cptr);
-      if (strcmp(parv[i], "SPLIT") == 0)
-       	SetSplit(cptr);
+      else if (strcmp(parv[i], "BURST") == 0)
+        SetBurst(cptr);
    }
 
    return 0;
