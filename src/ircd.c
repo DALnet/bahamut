@@ -367,7 +367,7 @@ check_pings(time_t currenttime)
 aClient 	*cptr;
 aConfItem 	*aconf = (aConfItem *) NULL;
 int     	 killflag, zkillflag, ping = 0, i;
-time_t      	 oldest = 0, timeout;
+time_t      	 oldest = 0; /* timeout removed, see EXPLANATION below */
 char       	*reason, *ktype, fbuf[512];
 char 		*errtxt = "No response from %s, closing link";
 
@@ -521,11 +521,14 @@ char 		*errtxt = "No response from %s, closing link";
          }
       }
 
-      timeout = cptr->lasttime + ping;
-      while (timeout <= currenttime)
-	 timeout += ping;
-      if (timeout < oldest || !oldest)
-	 oldest = timeout;
+      /* see EXPLANATION below
+       *
+       * timeout = cptr->lasttime + ping;
+       * while (timeout <= currenttime)
+       *  timeout += ping;
+       * if (timeout < oldest || !oldest)
+       *   oldest = timeout;
+       */
 
       /*
        * Check UNKNOWN connections - if they have been in this state
@@ -539,13 +542,29 @@ char 		*errtxt = "No response from %s, closing link";
    rehashed = 0;
    zline_in_progress = 0;
 
-   if (!oldest || oldest < currenttime)
-      oldest = currenttime + PINGFREQUENCY;
+   /* EXPLANATION
+    * on a server with a large volume of clients, at any given point
+    * there may be a client which needs to be pinged the next second,
+    * or even right away (a second may have passed while running
+    * check_pings). Preserving CPU time is more important than
+    * pinging clients out at exact times, IMO. Therefore, I am going to make
+    * check_pings always return currenttime + 9. This means that it may take
+    * a user up to 9 seconds more than pingfreq to timeout. Oh well.
+    * Plus, the number is 9 to 'stagger' our check_pings calls out over
+    * time, to avoid doing it and the other tasks ircd does at the same time
+    * all the time (which are usually done on intervals of 5 seconds or so). 
+    * - lucas
+    *
+    *  if (!oldest || oldest < currenttime)
+    *     oldest = currenttime + PINGFREQUENCY;
+    */
+
+   oldest = currenttime + 9;
 
    Debug((DEBUG_NOTICE, "Next check_ping() call at: %s, %d %d %d",
 	  myctime(oldest), ping, oldest, currenttime));
 
-   return (oldest);
+   return oldest;
 }
 
 /*
