@@ -1954,7 +1954,8 @@ static inline int m_message(aClient *cptr, aClient *sptr, int parc, char *parv[]
 
                case CTCP_DCCSEND:
                case CTCP_DCC:
-                  sendto_one(sptr, "%s NOTICE %s :You may not send a DCC command to a channel (%s)", me.name, parv[0], nick);
+                  sendto_one(sptr, ":%s NOTICE %s :You may not send a DCC command to a channel (%s)", 
+                             me.name, parv[0], nick);
                   continue;
 
                default:
