@@ -1061,8 +1061,6 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
         case 'c':
         /* this should be fixed and combined into a more reasonable
          * single responce.  Will work on this later -epi
-         * for now, assume all field are filled.  if they're not, 
-         * we could be complaining at our config parser, not here.
          */
 #ifdef HIDEULINEDSERVS
         if (!IsAnOper(sptr))
@@ -1073,9 +1071,9 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
             aConnect *tmp;
             if(!connects)
                 break;
-            for( tmp = connects ; tmp; tmp = tmp->next)
+            for(tmp = connects; tmp; tmp = tmp->next)
             {
-                if(!IsAnOper(sptr) && !IsULine(sptr))
+                if(!IsULine(sptr) || (!IsAnOper(sptr) && !IsAdmin(sptr)))
                 {
                     sendto_one(sptr, rpl_str(RPL_STATSCLINE), me.name,
                                 sptr->name, "C", "*", tmp->name, 
