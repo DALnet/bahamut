@@ -4066,32 +4066,40 @@ m_trace(aClient *cptr, aClient *sptr, int parc, char *parv[])
    int          doall, link_s[MAXCONNECTIONS], link_u[MAXCONNECTIONS];
    int          cnt = 0, wilds = 0, dow = 0;
 	
+   tname = (parc > 1) ? parv[1] : me.name;
+
+#ifdef HIDEULINEDSERVS
+   if ((acptr = find_client(tname, NULL)))
+   {
+	if (!(IsAnOper(sptr)) && IsULine(acptr))
+	{
+		sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name, parv[0]);
+		return 0;
+	}
+    } 
+    else if ((acptr = find_server(tname, NULL)))
+    {
+        if (!(IsAnOper(sptr)) && IsULine(acptr)) 
+        {       
+                sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name, parv[0]);
+                return 0;
+        }
+     }
+     acptr = NULL; /* shrug, we borrowed it, reset it just in case */
+#endif
+
    if (parc > 2)
 	if (hunt_server(cptr, sptr, ":%s TRACE %s :%s", 2, parc, parv))
 		 return 0;
-	
-   tname = (parc > 1) ? parv[1] : me.name;
 
    switch (hunt_server(cptr, sptr, ":%s TRACE :%s", 1, parc, parv)) {
 	 case HUNTED_PASS:	/*  note: gets here only if parv[1] exists */
 		  {
 			  aClient    *ac2ptr = next_client_double(client, tname);
 			  if (ac2ptr)
-#ifdef HIDEULINEDSERVS
-			  {
-				if (!IsOper(sptr) && IsULine(ac2ptr) &&
-						IsClient(cptr))
-				{
-					sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name, parv[0]);
-					return 0;
-				}
-#endif
 				sendto_one(sptr, rpl_str(RPL_TRACELINK), me.name, parv[0],
 						version, debugmode, tname, 
 						ac2ptr->from->name);
-#ifdef HIDEULINEDSERVS
-			  }
-#endif
 			  else
 				sendto_one(sptr, rpl_str(RPL_TRACELINK), me.name, parv[0],
 						version, debugmode, tname, 
