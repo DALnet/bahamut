@@ -74,6 +74,12 @@ typedef struct ChanLink chanMember;
 typedef struct SMode Mode;
 typedef struct Watch aWatch;
 typedef struct Ban aBan;
+#ifdef INVITE_LISTS
+typedef struct LInvite anInvite;
+#endif
+#ifdef EXEMPT_LISTS
+typedef struct Exempt aBanExempt;
+#endif
 typedef struct ListOptions LOpts;
 typedef struct Listener aListener;
 typedef struct Conf_Connect aConnect;
@@ -114,6 +120,8 @@ typedef struct MotdItem aMotd;
 #define	BUFSIZE		    512	/* WARNING: *DONT* CHANGE THIS!!!! */
 #define	MAXRECIPIENTS       20
 #define	MAXBANS	 	    100
+#define MAXINVITELIST       45
+#define MAXEXEMPTLIST       45
 
 #define MOTDLINELEN	    90
 
@@ -1003,6 +1011,30 @@ struct Ban
     aBan 	   *next;
 };
 
+#ifdef INVITE_LISTS
+/* channel invite list structure */
+
+struct LInvite
+{
+    char*        invstr;
+    char*        who;
+    time_t       when;
+    anInvite*    next;
+};
+#endif
+
+#ifdef EXEMPT_LISTS
+/* channel ban exempt list structure */
+
+struct Exempt
+{
+    char*        banstr;
+    char*        who;
+    time_t       when;
+    aBanExempt*  next;
+};
+#endif
+
 /* channel member link structure, used for chanmember chains */
 struct ChanLink 
 {
@@ -1066,9 +1098,15 @@ struct Channel
     char        topic_nick[NICKLEN + 1];
     time_t      topic_time;
     int         users;
-    chanMember       *members;
-    Link       *invites;
-    aBan       *banlist;
+    chanMember* members;
+    Link*       invites; /* users invited to the channel */
+    aBan*       banlist;
+#ifdef INVITE_LISTS
+    anInvite*   invite_list; /* +I list */
+#endif
+#ifdef EXEMPT_LISTS
+    aBanExempt* banexempt_list;
+#endif
     ts_val      channelts;
 #ifdef FLUD
     time_t      fludblock;

@@ -748,6 +748,14 @@
 # define HIDE_SERVERMODE_ORIGINS
 #endif
 
+/* EXEMPT_LISTS and INVITE_LISTS
+ * Written by Sedition, Feb.04
+ * Both working, but EXEMPT_LISTS are disabled until services
+ * can be made to interact with them. -epi
+ */
+#undef EXEMPT_LISTS
+#define INVITE_LISTS
+
 /******************************************************************
  * STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP
  *

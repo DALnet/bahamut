@@ -375,10 +375,20 @@ static char *replies[] =
     /* 343 */	                NULL,
     /* 344 */	                NULL,
     /* 345 */	                NULL,
-    /* 346 */	                NULL,
-    /* 347 */	                NULL,
-    /* 348 */	                NULL,
-    /* 349 */	                NULL,
+#ifdef INVITE_LISTS
+    /* 346 RPL_INVITELIST */	":%s 346 %s %s %s %s %lu",
+    /* 347 RPL_ENDOFINVITELIST */ ":%s 347 %s %s :End of Channel Invite List",
+#else
+    /* 346 */                   NULL,
+    /* 347 */                   NULL,
+#endif
+#ifdef EXEMPT_LISTS
+    /* 348 RPL_EXEMPTLIST */	":%s 348 %s %s %s %s %lu",
+    /* 349 RPL_ENDOFEXEMPTLIST */ ":%s 349 %s %s :End of Channel Exempt List",
+#else
+    /* 348 */                   NULL,
+    /* 349 */                   NULL,
+#endif
     /* 350 */	                NULL,
     /* 351 RPL_VERSION */	":%s 351 %s %s.%s %s :%s",
     /* 352 RPL_WHOREPLY */	":%s 352 %s %s %s %s %s %s %s :%d %s",

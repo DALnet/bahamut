@@ -39,7 +39,20 @@ int         server_split_recovery_time = (MAX_SERVER_SPLIT_RECOVERY_TIME * 60);
 
 aChannel   *channel = NullChn;
 
-static void add_invite(aClient *, aChannel *);
+#ifdef INVITE_LISTS
+/* +I list functions */
+int       add_invite_id(aClient*, aChannel*, char*);
+int       del_invite_id(aChannel*, char*);
+anInvite* is_invited(aClient*, aChannel*);
+#endif
+
+#ifdef EXEMPT_LISTS
+/* +e list functions */
+int       add_exempt_id(aClient*, aChannel*, char*);
+int       del_exempt_id(aChannel*, char*);
+aBanExempt* is_exempt(aClient*, aChannel*);
+#endif
+
 static int  add_banid(aClient *, aChannel *, char *);
 static int  can_join(aClient *, aChannel *, char *);
 static void channel_modes(aClient *, char *, char *, aChannel *);
@@ -51,6 +64,7 @@ static void sub1_from_channel(aChannel *);
 
 int         check_channelname(aClient *, unsigned char *);
 void        clean_channelname(unsigned char *);
+static void add_invite(aClient *, aChannel *);
 void        del_invite(aClient *, aChannel *);
 
 #ifdef ORATIMING
@@ -164,6 +178,170 @@ static char *make_nick_user_host(char *nick, char *name, char *host)
     *ptr1 = '\0';
     return (namebuf);
 }
+
+#ifdef EXEMPT_LISTS
+/* Exempt list functions (+e) */
+
+int add_exempt_id(aClient* cptr, aChannel* chptr, char* exempt_id)
+{
+    aBanExempt*   exempt = NULL;
+    int           cnt = 0;
+
+    for (exempt = chptr->banexempt_list; exempt; exempt = exempt->next)
+    {
+        if (MyClient(cptr) && ++cnt >= MAXEXEMPTLIST)
+        {
+            sendto_one(cptr, getreply(ERR_BANLISTFULL), me.name, cptr->name,
+                chptr->chname, exempt_id);
+            return -1;
+        }
+        else if (!match(exempt->banstr, exempt_id))
+            return -1;
+    }
+    exempt = (aBanExempt*)MyMalloc(sizeof(aBanExempt));
+    exempt->banstr = (char*)MyMalloc(strlen(exempt_id)+1);
+    strcpy(exempt->banstr, exempt_id);
+    exempt->when = timeofday;
+    exempt->next = chptr->banexempt_list;
+    chptr->banexempt_list = exempt;
+
+    if (IsPerson(cptr))
+    {
+        exempt->who = (char *) MyMalloc(strlen(cptr->name) +
+                                     strlen(cptr->user->username) +
+                                     strlen(cptr->user->host) + 3);
+        (void) ircsprintf(exempt->who, "%s!%s@%s",
+                          cptr->name, cptr->user->username, cptr->user->host);
+    }
+    else
+    {
+        exempt->who = (char *) MyMalloc(strlen(cptr->name) + 1);
+        (void) strcpy(exempt->who, cptr->name);
+    }
+
+    return 0;
+}
+
+int del_exempt_id(aChannel* chptr, char* exempt_id)
+{
+   aBanExempt**  exempt;
+   aBanExempt*   tmp;
+
+   if (!exempt_id)
+       return -1;
+   for (exempt = &chptr->banexempt_list; *exempt; exempt = &((*exempt)->next))
+   {
+       if (mycmp(exempt_id, (*exempt)->banstr) == 0)
+       {
+           tmp = *exempt;
+           *exempt = tmp->next;
+           
+           MyFree(tmp->banstr);
+           MyFree(tmp->who);
+           MyFree(tmp);
+           
+           break;
+       }
+   }
+   return 0;
+}
+
+aBanExempt* is_exempt(aClient* cptr, aChannel* chptr)
+{
+    char* s = make_nick_user_host(cptr->name, cptr->user->username, cptr->user->host);
+    aBanExempt*    exempt;
+
+    for (exempt = chptr->banexempt_list; exempt; exempt = exempt->next)
+    {
+        if (!match(exempt->banstr, s))
+            break;
+    }
+    return exempt;
+}
+
+#endif
+
+#ifdef INVITE_LISTS
+/* Invite list functions (+I) */
+
+int add_invite_id(aClient* cptr, aChannel* chptr, char* invite_id)
+{
+    anInvite*     invite;
+    int           cnt = 0;
+    
+    for (invite = chptr->invite_list; invite; invite = invite->next)
+    {
+        if (MyClient(cptr) && ++cnt >= MAXINVITELIST)
+        {
+            sendto_one(cptr, getreply(ERR_BANLISTFULL), me.name, cptr->name,
+                chptr->chname, invite_id);
+            return -1;
+        }
+        else if (!match(invite->invstr, invite_id))
+            return -1;
+    }
+
+    invite = (anInvite*)MyMalloc(sizeof(anInvite));
+    invite->invstr = (char*)MyMalloc(strlen(invite_id)+1);
+    strcpy(invite->invstr, invite_id);
+    invite->when = timeofday;
+    invite->next = chptr->invite_list;
+    chptr->invite_list = invite;
+    
+    if (IsPerson(cptr))
+    {
+        invite->who = (char *) MyMalloc(strlen(cptr->name) +
+                                     strlen(cptr->user->username) +
+                                     strlen(cptr->user->host) + 3);
+        (void) ircsprintf(invite->who, "%s!%s@%s",
+                          cptr->name, cptr->user->username, cptr->user->host);
+    }
+    else
+    {
+        invite->who = (char *) MyMalloc(strlen(cptr->name) + 1);
+        (void) strcpy(invite->who, cptr->name);
+    }
+    return 0;
+}
+
+int del_invite_id(aChannel* chptr, char* invite_id)
+{
+   anInvite**    invite;
+   anInvite*     tmp;
+
+   if (!invite_id)
+       return -1;
+   for (invite = &chptr->invite_list; *invite; invite = &((*invite)->next))
+   {
+       if (mycmp(invite_id, (*invite)->invstr) == 0)
+       {
+           tmp = *invite;
+           *invite = tmp->next;
+           
+           MyFree(tmp->invstr);
+           MyFree(tmp->who);
+           MyFree(tmp);
+           
+           break;
+       }
+   }
+   return 0;
+}
+
+anInvite* is_invited(aClient* cptr, aChannel* chptr)
+{
+    char* s = make_nick_user_host(cptr->name, cptr->user->username, cptr->user->host);
+    anInvite*    invite;
+
+    for (invite = chptr->invite_list; invite; invite = invite->next)
+    {
+        if (!match(invite->invstr, s))
+            break;
+    }
+    return invite;
+}
+
+#endif
 
 /* Ban functions to work with mode +b */
 /* add_banid - add an id to be banned to the channel  (belongs to cptr) */
@@ -909,7 +1087,7 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
     aBan *bp; /* for walking banlists */
     char *modes=parv[0]; /* user's idea of mode changes */
     int args; /* counter for what argument we're on */
-    int banlsent = 0; /* Only list bans once in a command. */
+    int anylistsent = IsServer(sptr) ? 1 : 0; /* Only send 1 list and not to servers */
     char change='+'; /* by default we + things... */
     int errors=0; /*
                    * errors returned, set with bitflags
@@ -1037,7 +1215,117 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
                            sptr->name, chptr->chname);
             }
             break;
+
+#ifdef INVITE_LISTS
+        case 'I':
+            if (level < 1)
+            {
+                errors |= SM_ERR_NOPRIVS;
+                break;
+            }
+            else if (parv[args] == NULL)
+            {
+                if (anylistsent) /* don't send the list if they have received one */
+                    break;
+
+                anInvite    *invite;
+                for (invite = chptr->invite_list; invite; invite = invite->next)
+                    sendto_one(sptr, rpl_str(RPL_INVITELIST), me.name, cptr->name,
+                               chptr->chname, invite->invstr, invite->who, invite->when);
+                sendto_one(cptr, rpl_str(RPL_ENDOFINVITELIST), me.name,
+                           cptr->name, chptr->chname);
+                anylistsent = 1;
+                break;
+            }
+
+            if (*parv[args] == ':' || *parv[args] == '\0')
+            {
+                args++; 
+                break;
+            }
+
+            strcpy(nuhbuf, collapse(pretty_mask(parv[args])));
+            parv[args] = nuhbuf;
+            /* if we're going to overflow our mode buffer,
+             * drop the change instead */
+            if((prelen + (mbuf - morig) + pidx + strlen(nuhbuf) + 1) > 
+               REALMODEBUFLEN) 
+            {
+                args++;
+                break;
+            }
+            /* if we can't add or delete (depending) the ban, change is
+             * worthless anyhow */
             
+            if(!(change=='+' && !add_invite_id(sptr, chptr, parv[args])) && 
+               !(change=='-' && !del_invite_id(chptr, parv[args])))
+            {
+                args++;
+                break;
+            }
+            
+            *mbuf++ = 'I';
+            ADD_PARA(parv[args])
+                args++;
+            nmodes++;
+            break;
+#endif
+
+#ifdef EXEMPT_LISTS
+        case 'e':
+            if (level < 1)
+            {
+                errors |= SM_ERR_NOPRIVS;
+                break;
+            }
+            else if (parv[args] == NULL)
+            {
+                aBanExempt*    exempt;
+                
+                if (anylistsent) /* don't send the list if they have received one */
+                    break;
+                for (exempt = chptr->banexempt_list; exempt; exempt = exempt->next)
+                    sendto_one(sptr, rpl_str(RPL_EXEMPTLIST), me.name, cptr->name,
+                               chptr->chname, exempt->banstr, exempt->who, exempt->when);
+                sendto_one(cptr, rpl_str(RPL_ENDOFEXEMPTLIST), me.name,
+                           cptr->name, chptr->chname);
+                anylistsent = 1;
+                break;
+            }
+
+            if (*parv[args] == ':' || *parv[args] == '\0')
+            {
+                args++; 
+                break;
+            }
+
+            strcpy(nuhbuf, collapse(pretty_mask(parv[args])));
+            parv[args] = nuhbuf;
+            /* if we're going to overflow our mode buffer,
+             * drop the change instead */
+            if((prelen + (mbuf - morig) + pidx + strlen(nuhbuf) + 1) > 
+               REALMODEBUFLEN) 
+            {
+                args++;
+                break;
+            }
+            /* if we can't add or delete (depending) the exempt, change is
+             * worthless anyhow */
+            
+            if(!(change=='+' && !add_exempt_id(sptr, chptr, parv[args])) && 
+               !(change=='-' && !del_exempt_id(chptr, parv[args])))
+            {
+                args++;
+                break;
+            }
+
+            *mbuf++ = 'e';
+            ADD_PARA(parv[args])
+                args++;
+            nmodes++;
+            break;
+#endif
+    
         case 'b':
             /* if the user has no more arguments, then they just want
              * to see the bans, okay, cool. */
@@ -1049,14 +1337,14 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
             /* show them the bans, woowoo */
             if(parv[args]==NULL)
             {
-                if (banlsent || IsServer(sptr))
-                    break; /* Send only once -- and not to servers */
+                if (anylistsent)
+                    break;
                 for(bp=chptr->banlist;bp;bp=bp->next)
                     sendto_one(sptr, rpl_str(RPL_BANLIST), me.name, cptr->name,
                                chptr->chname, bp->banstr, bp->who, bp->when);
                 sendto_one(cptr, rpl_str(RPL_ENDOFBANLIST), me.name,
                            cptr->name, chptr->chname);
-                banlsent = 1;
+                anylistsent = 1;
                 break; /* we don't pass this along, either.. */
             }
             
@@ -1439,6 +1727,11 @@ static int can_join(aClient *sptr, aChannel *chptr, char *key)
             break;
         }
     }
+#ifdef INVITE_LISTS
+    /* Check +I list if this user was not explicitly invited */
+    if (!invited && is_invited(sptr, chptr) != NULL)
+        invited = 1;
+#endif
 
     if (invited || IsULine(sptr))
         return 0;
@@ -1455,7 +1748,11 @@ static int can_join(aClient *sptr, aChannel *chptr, char *key)
         return (ERR_CHANNELISFULL);
     if (check_joinrate(chptr, NOW, 1, sptr) == 0)
         return (ERR_CHANNELISFULL);
+#ifdef EXEMPT_LISTS
+    if (!is_exempt(sptr, chptr) && is_banned(sptr, chptr))
+#else
     if (is_banned(sptr, chptr))
+#endif
         return (ERR_BANNEDFROMCHAN);
     return 0;
 }
@@ -1480,6 +1777,11 @@ can_join_whynot(aClient *sptr, aChannel *chptr, char *key, char *reasonbuf)
             break;
         }
     }
+#ifdef INVITE_LISTS
+    /* Check +I list if this user was not explicitly invited */
+    if (!invited && is_invited(sptr, chptr) != NULL)
+        invited = 1;
+#endif
 
     if (invited || IsULine(sptr))
         return 0;
@@ -1496,7 +1798,11 @@ can_join_whynot(aClient *sptr, aChannel *chptr, char *key, char *reasonbuf)
         reasonbuf[rbufpos++] = 'l';
     if (check_joinrate(chptr, NOW, 1, sptr) == 0)
         reasonbuf[rbufpos++] = 'j';
+#ifdef EXEMPT_LISTS
+    if (!is_exempt(sptr, chptr) && is_banned(sptr, chptr))
+#else
     if (is_banned(sptr, chptr))
+#endif
         reasonbuf[rbufpos++] = 'b';
 
     reasonbuf[rbufpos] = '\0';
@@ -1650,6 +1956,12 @@ static void sub1_from_channel(aChannel *chptr)
 {
     Link   *tmp;
     aBan              *bp, *bprem;
+#ifdef INVITE_LISTS
+    anInvite          *invite, *invrem;
+#endif
+#ifdef EXEMPT_LISTS
+    aBanExempt        *exempt, *exrem;
+#endif
     
     if (--chptr->users <= 0) 
     {
@@ -1668,6 +1980,29 @@ static void sub1_from_channel(aChannel *chptr)
             MyFree(bprem->who);
             MyFree(bprem);
         }
+#ifdef INVITE_LISTS
+        invite = chptr->invite_list;
+        while (invite)
+	 {
+            invrem = invite;
+            invite = invite->next;
+            MyFree(invrem->invstr);
+            MyFree(invrem->who);
+            MyFree(invrem);
+        }
+#endif
+#ifdef EXEMPT_LISTS
+        exempt = chptr->banexempt_list;
+        while (exempt)
+        {
+            exrem = exempt;
+            exempt = exempt->next;
+            MyFree(exrem->banstr);
+            MyFree(exrem->who);
+            MyFree(exrem);
+        }
+#endif
+
         if (chptr->prevch)
             chptr->prevch->nextch = chptr->nextch;
         else
