@@ -900,7 +900,7 @@ m_server_estab(aClient *cptr)
 
    /* Bursts are about to start.. send a BURST */
    sendto_one(cptr, "BURST"); 
-   /* we're not going to set SOBSENT until after the TOPIC burst is about to be sent.. 
+   /* we're not going to set SOBSENT until after the TOPIC burst has been processed
     * we don't want a premature EOB sent to the server */
     
 	
@@ -959,24 +959,26 @@ m_server_estab(aClient *cptr)
 }
 /* 
  * m_burst
- *      parv[0] = SendQ if an EOB
+ *      parv[0] = sender prefix
+ *      parv[1] = SendQ if an EOB
 */
 int m_burst(aClient *cptr, aClient *sptr, int parc, char *parv[]) {
   
-  if (!IsServer(sptr) || sptr != cptr) return 0;
-  if (parc) { /* This is an EOB */
+  if (!IsServer(sptr) || sptr != cptr || parc > 2) return 0;
+  if (parc == 2) { /* This is an EOB */
     sptr->flags &= ~(FLAGS_EOBRECV);
-    if (!(sptr->flags & FLAGS_SOBEOB)) { /* ok, we've sent our last BURST and we just got ours.. we're synched */
+    if (sptr->flags & FLAGS_SOBSENT) return 0;
+
+ /* we've already sent our EOB.. we synched first */
  #ifdef HTM_LOCK_ON_NETBURST
-      HTMLOCK = NO;
+    HTMLOCK = NO;
  #endif
-      sendto_gnotice("synched to %s in %d %s at %s sendq", sptr->name, (timeofday-sptr->firsttime),
-        (timeofday-sptr->firsttime)==1?"sec":"secs", parv[0]);
+    sendto_gnotice("from %s: synched to %s in %d %s at %s sendq", me.name, *parv,
+        (timeofday-sptr->firsttime), (timeofday-sptr->firsttime)==1?"sec":"secs", parv[1]);
  #ifdef HUB
-      sendto_serv_butone(sptr, ":%s GNOTICE :synched to %s in %d %s at %s sendq", me.name,
-        sptr->name, (timeofday-sptr->firsttime), (timeofday-sptr->firsttime)==1?"sec":"secs", parv[0]);
+    sendto_serv_butone(sptr, ":%s GNOTICE :synched to %s in %d %s at %s sendq", me.name,
+        sptr->name, (timeofday-sptr->firsttime), (timeofday-sptr->firsttime)==1?"sec":"secs", parv[1]);
  #endif
-    }
 
   }
   else { /* SOB.. lock HTM if defined by admin */
@@ -984,6 +986,7 @@ int m_burst(aClient *cptr, aClient *sptr, int parc, char *parv[]) {
     HTMLOCK = YES;
 #endif
     sptr->flags |= FLAGS_EOBRECV;
+    sendto_gnotice("from %s: RECEIVED SOB FROM %s", me.name, *parv);
   }
   return 0;
 }
@@ -2786,9 +2789,9 @@ m_htm(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	    else
 	       LRV = new_value;
 
-	    sendto_one(sptr, ":%s NOTICE %s :NEW Max rate = %dk/s. Current = %dk/s",
+	    sendto_one(sptr, ":%s NOTICE %s :NEW Max rate = %dk/s. Current = %.1fk/s",
 		       me.name, parv[0], LRV, currlife);
-	    sendto_realops("%s!%s@%s set new HTM rate to %dk/s (%dk/s current)",
+	    sendto_realops("%s!%s@%s set new HTM rate to %dk/s (%.1fk/s current)",
 			parv[0], sptr->user->username, sptr->sockhost,
 			   LRV, currlife);
 	 }
@@ -2800,7 +2803,7 @@ m_htm(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	 {
 	    lifesux = 1;
 	    sendto_one(sptr, ":%s NOTICE %s :HTM is now ON.", me.name, parv[0]);
-	    sendto_ops("Entering happy-traffic mode: Forced by %s!%s@%s",
+	    sendto_ops("Entering high-traffic mode: Forced by %s!%s@%s",
 		       parv[0], sptr->user->username, sptr->sockhost);
 	    LCF = 30;		/* 30s */
 	 }
@@ -2809,7 +2812,7 @@ m_htm(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	    lifesux = 0;
 	    LCF = LOADCFREQ;
 	    sendto_one(sptr, ":%s NOTICE %s :HTM is now OFF.", me.name, parv[0]);
-	    sendto_ops("Resuming non-happy operation: Forced by %s!%s@%s",
+	    sendto_ops("Resuming standard operation: Forced by %s!%s@%s",
 		       parv[0], sptr->user->username, sptr->sockhost);
 	 }
 	 else if (!strcasecmp(command, "QUIET")) 

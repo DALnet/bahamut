@@ -193,7 +193,6 @@ typedef struct MotdItem aMotd;
 #define FLAGS_BURST	(FLAGS_USERBURST | FLAGS_TOPICBURST)
 #define FLAGS_SOBSENT      0x200000     /* we've sent an SOB, just have to send an EOB */
 #define FLAGS_EOBRECV      0x400000     /* we're waiting on an EOB */
-#define FLAGS_SOBEOB    (FLAGS_EOBRECV|FLAGS_SOBSENT)
 
 /* Capabilities of the ircd or clients */
 
