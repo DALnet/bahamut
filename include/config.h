@@ -23,10 +23,7 @@
 #ifndef	__config_include__
 #define	__config_include__
 
-#define USE_NOQUIT
-
 #include "setup.h"
-
 
 /*******************************************************************
  * Ok boys and girls, you can edit this file by hand, its totally 
@@ -655,6 +652,22 @@
  * You shouldn't change anything below this line, unless absolutely
  * needed.
  */
+
+/*
+ * USE_NOQUIT use the noquit system to save bandwidth and network stress 
+ * on netsplits. 
+ */
+#define USE_NOQUIT
+
+/*
+ * ALWAYS_SEND_DURING_SPLIT
+ * on a large network, if your server is carrying large amounts of clients,
+ * and your server splits from the main network, the amount of allocated
+ * dbufs will skyrocket as buffers fill up with QUIT messages. This code
+ * attempts to combat this by sending out data whenever possible during a
+ * split. - lucas
+ */
+#define ALWAYS_SEND_DURING_SPLIT
 
 /* INITIAL_DBUFS - how many dbufs to preallocate */
 #define INITIAL_DBUFS 1000	/* preallocate 2 megs of dbufs */
