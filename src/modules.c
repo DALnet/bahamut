@@ -349,7 +349,7 @@ DLink **get_hooklist(enum c_hooktype hooktype)
          break;
 
       case CHOOK_POSTACCESS:
-         hooklist = &preaccess_hooks;
+         hooklist = &postaccess_hooks;
          break;
 
       case CHOOK_MSG:
