@@ -97,6 +97,7 @@ int  user_modes[] =
     UMODE_X, 'X',
     UMODE_j, 'j',
     UMODE_K, 'K',
+    UMODE_I, 'I',
     0, 0
 };
 
@@ -304,6 +305,13 @@ int hunt_server(aClient *cptr, aClient *sptr, char *command, int server,
 
     if (acptr) 
     {
+#ifdef NO_USER_OPERTARGETED_COMMANDS
+	if (!IsServer(acptr) && IsUmodeI(acptr) && !IsAnOper(sptr))
+        {
+	    sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name, parv[0]);
+	    return (HUNTED_NOSUCH);
+	}
+#endif
 	if (IsMe(acptr) || MyClient(acptr))
 	    return HUNTED_ISME;
 	if (match(acptr->name, parv[server]))
@@ -869,6 +877,10 @@ int register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
 		   MAXMODEPARAMSUSER, MAXCHANNELSPERUSER, MAXBANS, NICKLEN,
 		   TOPICLEN, TOPICLEN, MAXSILES);
 
+#ifdef FORCE_EVERYONE_HIDDEN
+	sptr->umode |= UMODE_I;
+#endif
+
 #if (RIDICULOUS_PARANOIA_LEVEL>=1)
 	if(!BadPtr(sptr->passwd) && (pwaconf->flags & CONF_FLAGS_I_OPERPORT))
 	    do 
@@ -890,6 +902,10 @@ int register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
 		    sendto_one(sptr, ":%s NOTICE %s :*** Your hostname has "
 			       "been masked.",
 			       me.name, sptr->name);
+
+#ifdef DEFAULT_MASKED_HIDDEN
+		    sptr->umode |= UMODE_I;
+#endif
 
 		    throttle_remove(sptr->hostip);		    
 		    sptr->user->real_oper_host = 
@@ -1798,7 +1814,7 @@ int m_whois(aClient *cptr, aClient *sptr, int parc, char *parv[])
     aChannel   *chptr;
     char       *nick, *tmp, *name;
     char       *p = NULL;
-    int         found, len, mlen;
+    int         len, mlen;
 
     if (parc < 2)
     {
@@ -1809,18 +1825,39 @@ int m_whois(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
     if (parc > 2)
     {
+#ifdef NO_USER_OPERTARGETED_COMMANDS
+	/* 
+	 * gross! prevent someone from doing /whois servername opername
+	 * again and again for all servers until a reply is found
+	 */
+	if(!IsAnOper(sptr))
+	{
+	    char tmppv2[512];
+
+	    strcpy(tmppv2, parv[2]);
+	    for (tmp = tmppv2; (nick = strtoken(&p, tmp, ",")); tmp = NULL)
+	    {
+		acptr = hash_find_client(nick, (aClient *) NULL);
+		if (!acptr || !IsPerson(acptr))
+		    continue;
+		if(IsUmodeI(acptr))
+		{
+		    sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name, parv[0]);
+		    return 0;
+		}
+	    }
+	}
+#endif
 	if (hunt_server(cptr, sptr, ":%s WHOIS %s :%s", 1, parc, parv) !=
 	    HUNTED_ISME)
 	    return 0;
 	parv[1] = parv[2];    
     }
-	
-    for (tmp = parv[1]; (nick = strtoken(&p, tmp, ",")); tmp = NULL)
+
+    for (p = NULL, tmp = parv[1]; (nick = strtoken(&p, tmp, ",")); tmp = NULL)
     {
 	int         invis, member, showchan;
 		
-	found = 0;
-	(void) collapse(nick);
 	acptr = hash_find_client(nick, (aClient *) NULL);
 	if (!acptr || !IsPerson(acptr))
 	{
@@ -1834,7 +1871,7 @@ int m_whois(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	invis = IsInvisible(acptr);
 	member = (user->channel) ? 1 : 0;
 		
-	a2cptr = find_server(user->server, NULL);
+	a2cptr = acptr->uplink;
 		
 	sendto_one(sptr, rpl_str(RPL_WHOISUSER), me.name,
 		   parv[0], name,
@@ -1898,10 +1935,18 @@ int m_whois(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	if (buf[0] != '\0')
 	    sendto_one(sptr, rpl_str(RPL_WHOISCHANNELS),
 		       me.name, parv[0], name, buf);
-	
-	sendto_one(sptr, rpl_str(RPL_WHOISSERVER),
-		   me.name, parv[0], name, user->server,
-		   a2cptr ? a2cptr->info : "*Not On This Net*");
+
+	if(!(IsUmodeI(acptr) && !IsAnOper(sptr)))
+	{	
+	     sendto_one(sptr, rpl_str(RPL_WHOISSERVER),
+			me.name, parv[0], name, user->server,
+			a2cptr ? a2cptr->info : "*Not On This Net*");
+	}
+        else /* hidden oper! */
+	{	
+	     sendto_one(sptr, rpl_str(RPL_WHOISSERVER),
+			me.name, parv[0], name, HIDDEN_SERVER_NAME, HIDDEN_SERVER_DESC);
+	}
 	
 	if(IsOper(sptr) && IsSquelch(acptr))
 	    sendto_one(sptr, rpl_str(RPL_WHOISTEXT),
@@ -1925,18 +1970,14 @@ int m_whois(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	    sendto_one(sptr, rpl_str(RPL_WHOISOPERATOR),
 		       me.name, parv[0], name, buf);
 	
-	if (acptr->user && MyConnect(acptr))
+	/* don't give away that this oper is on this server if they're hidden! */
+	if (acptr->user && MyConnect(acptr) && !(IsUmodeI(acptr) && !IsAnOper(sptr)))
 	    sendto_one(sptr, rpl_str(RPL_WHOISIDLE),
 		       me.name, parv[0], name,
 		       timeofday - user->last,
 		       acptr->firsttime);
 	
 	continue;
-	if (!found)
-	    sendto_one(sptr, err_str(ERR_NOSUCHNICK),
-		       me.name, parv[0], nick);
-	if (p)
-	    p[-1] = ',';
     }
     sendto_one(sptr, rpl_str(RPL_ENDOFWHOIS), me.name, parv[0], parv[1]);
     
@@ -2183,16 +2224,21 @@ int m_kill(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	    sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name, parv[0]);
 	    return 0;
 	}
-	if (IsAnOper(sptr))
-	    sendto_ops_lev(0, "Received KILL message for %s!%s@%s. From %s "
-			   "Path: %s", acptr->name, 
-			   acptr->user ? acptr->user->username : unknownfmt,
-			   acptr->user ? acptr->user->host : unknownfmt,
-			   parv[0], mypath);
-	else if(IsULine(sptr))
+	if(IsULine(sptr))
 	    sendto_realops_lev(USKILL_LEV, 
 			   "Received KILL message for %s!%s@%s. "
 			   "From %s Path: %s", acptr->name,
+			   acptr->user ? acptr->user->username : unknownfmt,
+			   acptr->user ? acptr->user->host : unknownfmt,
+			   parv[0], mypath);
+	else if (IsAnOper(sptr))
+#ifdef NO_USER_SERVERNOTICES
+	    sendto_realops_lev(0,
+#else
+	    sendto_ops_lev(0,
+#endif 
+			   "Received KILL message for %s!%s@%s. From %s "
+			   "Path: %s", acptr->name, 
 			   acptr->user ? acptr->user->username : unknownfmt,
 			   acptr->user ? acptr->user->host : unknownfmt,
 			   parv[0], mypath);
@@ -2560,6 +2606,11 @@ int m_oper(aClient *cptr, aClient *sptr, int parc, char *parv[])
 #else
 	sptr->umode |= UMODE_o;
 	sendto_serv_butone(cptr, ":%s MODE %s :+o", parv[0], parv[0]);
+#endif
+
+#ifdef ALL_OPERS_HIDDEN
+	sptr->umode |= UMODE_I;
+	sendto_serv_butone(cptr, ":%s MODE %s :+I", parv[0], parv[0]);
 #endif
 	Count.oper++;
 	if (IsMe(cptr))
@@ -2990,6 +3041,10 @@ int m_umode(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	if (IsUmodeh(sptr)) ClearUmodeh(sptr);
 	if (IsUmodeK(sptr)) ClearUmodeK(sptr);
 	if (NoMsgThrottle(sptr)) ClearNoMsgThrottle(sptr);
+#ifdef NO_USER_SERVERNOTICES
+	if (IsUmodes(sptr)) ClearUmodes(sptr);
+	if (IsUmodek(sptr)) ClearUmodek(sptr);
+#endif
     }
     if(MyClient(sptr))
     {
@@ -3002,6 +3057,23 @@ int m_umode(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	if (IsUmoded(sptr) && !OPCanUModed(sptr)) ClearUmoded(sptr);
 	if (IsUmodeb(sptr) && !OPCanUModeb(sptr)) ClearUmodeb(sptr);
 	if (NoMsgThrottle(sptr) && !OPCanUModeF(sptr)) ClearNoMsgThrottle(sptr);
+#ifdef ALLOW_HIDDEN_OPERS
+# ifdef FORCE_EVERYONE_HIDDEN
+	sptr->umode |= UMODE_I;
+# else
+#  if (RIDICULOUS_PARANOIA_LEVEL>=1)
+	if (IsUmodeI(sptr) && !(sptr->user->real_oper_host || IsAnOper(sptr))) ClearUmodeI(sptr);
+#  endif
+
+#  ifdef FORCE_OPERS_HIDDEN
+	if (IsAnOper(sptr)
+#   if (RIDICULOUS_PARANOIA_LEVEL>=1)
+	    || (sptr->user->real_oper_host != NULL)
+#   endif
+	   ) sptr->umode |= UMODE_I;
+#  endif /* FORCE_OPERS_HIDDEN */
+# endif /* FORCE_EVERYONE_HIDDEN */
+#endif /* ALLOW_HIDDEN_OPERS */
     }
     send_umode_out(cptr, sptr, setflags);
     

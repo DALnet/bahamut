@@ -675,7 +675,7 @@
  * If you are actually a dalnet server, you should not change this.
  * The idea is to make it universal for the entire network.
  */
-#define STAFF_ADDRESS "DALnet"
+#define STAFF_ADDRESS "staff.dalnet"
 
 /*
  * RIDICULOUS_PARANOIA_LEVEL
@@ -711,6 +711,93 @@
 #define HELP_FORWARD_HS
 #ifdef HELP_FORWARD_HS
 # define DEF_HELP_CMD "?"
+#endif
+
+/*
+ * For all of these options below, #define NETWORK_PARANOIA
+ * and leave the individual ones alone.
+ */
+#define NETWORK_PARANOIA
+
+/*
+ * NO_USER_SERVERNOTICES
+ * Remove +s and +k from modes that users can set
+ *
+ * NO_USER_STATS
+ * Users can't get /stats from anything
+ *
+ * NO_LOCAL_USER_STATS
+ * Local users can't get /stats from anything, each server does its own checking (not recommended)
+ * No effect if NO_USER_STATS is defined 
+ *
+ * NO_USER_TRACE
+ * Users can't use TRACE
+ */
+/* #undef NO_USER_SERVERNOTICES */
+/* #undef NO_USER_STATS */
+/* #undef NO_USER_TRACE */
+/* #undef NO_LOCAL_USER_TRACE */
+/* #undef NO_USER_OPERTARGETED_COMMANDS */
+
+/***********************/
+/* OPER HIDING SECTION */
+/***********************/
+
+/* 
+ * ALLOW_HIDDEN_OPERS
+ * 
+ * Allow your opers to be set +I (hidden) -- required for the commands below
+ * If not defined, everything below must also be undefined
+ */
+#define ALLOW_HIDDEN_OPERS
+
+/*
+ * DEFAULT_MASKED_HIDDEN
+ * 
+ * Makes all your opers that hostmasked +I (hidden) by default
+ */
+#define DEFAULT_MASKED_HIDDEN
+
+/*
+ * ALL_OPERS_HIDDEN
+ * 
+ * Makes all your opers on a 'hidden' server by default (sets +I at /oper)
+ */
+#undef ALL_OPERS_HIDDEN
+
+/*
+ * FORCE_OPERS_HIDDEN
+ *
+ * Makes it so that all opers can't set -I (not hidden)
+ * Define ALL_OPERS_HIDDEN and DEFAULT_MASKED_HIDDEN with this as well.
+ */
+#undef FORCE_OPERS_HIDDEN
+
+/*
+ * FORCE_EVERYONE_HIDDEN
+ *
+ * Makes it so that everyone on your server is set +I
+ * Every other hidden option must be defined as well.
+ */
+#undef FORCE_EVERYONE_HIDDEN
+
+/* 
+ * Show these for hidden opers, self explanatory
+ * DO NOT CHANGE ON A SERVER TO SERVER BASIS
+ * THESE ARE NETWORK-WIDE!
+ */
+#define HIDDEN_SERVER_NAME "*.dal.net"
+#define HIDDEN_SERVER_DESC "DALnet IRC Network"
+
+/***************************/
+/* END OPER HIDING SECTION */
+/***************************/
+
+#ifdef NETWORK_PARANOIA
+# define NO_USER_SERVERNOTICES
+# define NO_USER_STATS
+# define NO_USER_TRACE
+# define NO_USER_OPERTARGETED_COMMANDS
 #endif
 
 /******************************************************************

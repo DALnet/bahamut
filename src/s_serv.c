@@ -1757,7 +1757,23 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
     time_t      		 sincetime;
 
     static time_t last_used = 0L;
-	
+
+#ifdef NO_USER_STATS
+    if (!IsAnOper(sptr))
+    {
+	sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name, parv[0]);
+	return 0;
+    }
+#else
+#ifdef NO_LOCAL_USER_STATS
+    if (!IsAnOper(sptr) && !MyConnect(sptr))
+    {
+	sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name, parv[0]);
+	return 0;
+    }
+#endif
+#endif
+
     if (hunt_server(cptr, sptr, ":%s STATS %s :%s", 2, parc, parv) !=
 	HUNTED_ISME)
 	return 0;
@@ -1918,19 +1934,19 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	break;
 		
     case 'k':
-        if(IsAnOper(cptr))
-           report_userbans_match_flags(cptr, UBAN_TEMPORARY|UBAN_LOCAL, 0);
+        if(IsAnOper(sptr))
+           report_userbans_match_flags(sptr, UBAN_TEMPORARY|UBAN_LOCAL, 0);
         break;
 
     case 'K':
 	if (IsAnOper(sptr))
-           report_userbans_match_flags(cptr, UBAN_LOCAL, UBAN_TEMPORARY);
+           report_userbans_match_flags(sptr, UBAN_LOCAL, UBAN_TEMPORARY);
 	break;
 
     case 'A':
     case 'a':
-        if(IsAnOper(cptr))
-           report_userbans_match_flags(cptr, UBAN_NETWORK, 0);
+        if(IsAnOper(sptr))
+           report_userbans_match_flags(sptr, UBAN_NETWORK, 0);
         break;
 		
     case 'M':
@@ -4256,6 +4272,14 @@ int m_trace(aClient *cptr, aClient *sptr, int parc, char *parv[])
     int          cnt = 0, wilds = 0, dow = 0;
 	
     tname = (parc > 1) ? parv[1] : me.name;
+
+#ifdef NO_USER_TRACE
+    if(!IsAnOper(sptr))
+    {
+	sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name, parv[0]);
+	return 0;
+    }
+#endif
 
 #ifdef HIDEULINEDSERVS
     if((acptr = next_client_double(client, tname)))

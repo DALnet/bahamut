@@ -1175,22 +1175,10 @@ void sendto_ops_lev(int lev, char *pattern, ...)
  */
 void sendto_ops(char *pattern, ...)
 {
-    aClient *cptr;
-    int     i;
-    char        nbuf[1024];
     va_list vl;
 	
     va_start(vl, pattern);
-    for (i = 0; i <= highest_fd; i++)
-	if ((cptr = local[i]) && !IsServer(cptr) && !IsMe(cptr) &&
-	    IsAnOper(cptr) && SendServNotice(cptr)) 
-	{
-	    (void) ircsprintf(nbuf, ":%s NOTICE %s :*** Notice -- ",
-			      me.name, cptr->name);
-	    (void) strncat(nbuf, pattern,
-			   sizeof(nbuf) - strlen(nbuf));
-	    vsendto_one(cptr, nbuf, vl);
-	}
+    vsendto_realops(pattern, vl);
     va_end(vl);
     return;
 }
@@ -1259,44 +1247,52 @@ void sendto_wallops_butone(aClient *one, aClient *from, char *pattern, ...)
 
 void send_globops(char *pattern, ...)
 {
-    aClient    *cptr;
-    int         i;
+    aClient *cptr;
+    int     i;
     char        nbuf[1024];
+    fdlist     *l;
+    int         fd;
     va_list vl;
-	
+	  
     va_start(vl, pattern);
-    for (i = 0; i <= highest_fd; i++)
-	if ((cptr = local[i]) && !IsServer(cptr) && IsAnOper(cptr) &&
-	    !IsMe(cptr) && SendGlobops(cptr)) 
+    l = &oper_fdlist;
+    for (fd = l->entry[i = 1]; i <= l->last_entry; fd = l->entry[++i])
+    {
+	if (!(cptr = local[fd]) || !SendGlobops(cptr) || !IsAnOper(cptr))
+	    continue;
+	if (IsAnOper(cptr))
 	{
-	    (void) ircsprintf(nbuf, ":%s NOTICE %s :*** Global -- ",
-			      me.name, cptr->name);
-	    (void) strncat(nbuf, pattern,
-			   sizeof(nbuf) - strlen(nbuf));
+	    ircsprintf(nbuf, ":%s NOTICE %s :*** Global -- %s",
+		       me.name, cptr->name, pattern);
 	    vsendto_one(cptr, nbuf, vl);
 	}
+    }
     va_end(vl);
     return;
 }
 
 void send_chatops(char *pattern, ...)
 {
-    aClient    *cptr;
-    int         i;
+    aClient *cptr;
+    int     i;
     char        nbuf[1024];
+    fdlist     *l;
+    int         fd;
     va_list vl;
-    
+	  
     va_start(vl, pattern);
-    for (i = 0; i <= highest_fd; i++)
-	if ((cptr = local[i]) && !IsServer(cptr) && IsAnOper(cptr) &&
-	    !IsMe(cptr) && SendChatops(cptr)) 
+    l = &oper_fdlist;
+    for (fd = l->entry[i = 1]; i <= l->last_entry; fd = l->entry[++i])
+    {
+	if (!(cptr = local[fd]) || !SendGlobops(cptr) || !IsAnOper(cptr))
+	    continue;
+	if (IsAnOper(cptr))
 	{
-	    (void) ircsprintf(nbuf, ":%s NOTICE %s :*** ChatOps -- ",
-			      me.name, cptr->name);
-	    (void) strncat(nbuf, pattern,
-			   sizeof(nbuf) - strlen(nbuf));
+	    ircsprintf(nbuf, ":%s NOTICE %s :*** ChatOps -- %s",
+		       me.name, cptr->name, pattern);
 	    vsendto_one(cptr, nbuf, vl);
 	}
+    }
     va_end(vl);
     return;
 }
@@ -1574,8 +1570,8 @@ void sendto_realops(char *pattern, ...)
 	    continue;
 	if (IsAnOper(cptr))
 	{
-	    (void) ircsprintf(nbuf, ":%s NOTICE %s :*** Notice -- %s",
-			      me.name, cptr->name, pattern);
+	    ircsprintf(nbuf, ":%s NOTICE %s :*** Notice -- %s",
+		       me.name, cptr->name, pattern);
 	    vsendto_one(cptr, nbuf, vl);
 	}
     }
@@ -1598,8 +1594,8 @@ void vsendto_realops(char *pattern, va_list vl)
 	    continue;
 	if (IsAnOper(cptr))
 	{
-	    (void) ircsprintf(nbuf, ":%s NOTICE %s :*** Notice -- %s",
-			      me.name, cptr->name, pattern);
+	    ircsprintf(nbuf, ":%s NOTICE %s :*** Notice -- %s",
+		       me.name, cptr->name, pattern);
 	    vsendto_one(cptr, nbuf, vl);
 	}
     }
