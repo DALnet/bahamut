@@ -635,7 +635,7 @@ void sendto_channel_remote_butone(aClient *one, aClient *from, aChannel *chptr,
     int didremote = 0;
     va_list vl;
     char *pfix;
-    void *share_buf;
+    void *share_buf = NULL;
    
     va_start(vl, pattern);
 
