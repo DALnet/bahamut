@@ -2897,6 +2897,7 @@ void send_list(aClient *cptr, int numsend)
     for (hashnum = lopt->starthash; hashnum < CH_MAX; hashnum++)
     {
         if (numsend > 0)
+        {
             for (chptr = (aChannel *)hash_get_chan_bucket(hashnum); 
                  chptr; chptr = chptr->hnextch)
             {
@@ -2924,12 +2925,36 @@ void send_list(aClient *cptr, int numsend)
                                           !find_str_link(lopt->yeslist, 
                                                          chptr->chname))))
                     continue;
-                sendto_one(cptr, rpl_str(RPL_LIST), me.name, cptr->name,
-                           ShowChannel(cptr, chptr) ? chptr->chname : "*",
-                           chptr->users,
-                           ShowChannel(cptr, chptr) ? chptr->topic : "");
+
+                /* Seem'd more efficent to seperate into two commands 
+                 * then adding an or to the inline. -- Doc.
+                 */
+                if (IsAdmin(cptr))
+                {
+                    char tempchname[CHANNELLEN + 2], *altchname;
+
+                    if (SecretChannel(chptr))
+                    {
+                        tempchname[0] = '%';
+                        strcpy(&tempchname[1], chptr->chname);
+                        altchname = &tempchname[0];
+                    } 
+                    else 
+                        altchname = chptr->chname;
+
+                    sendto_one(cptr, rpl_str(RPL_LIST), me.name, cptr->name,
+                               altchname, chptr->users, chptr->topic);
+                } 
+                else 
+                {
+                    sendto_one(cptr, rpl_str(RPL_LIST), me.name, cptr->name,
+                               ShowChannel(cptr, chptr) ? chptr->chname : "*",
+                               chptr->users,
+                               ShowChannel(cptr, chptr) ? chptr->topic : "");
+                }
                 numsend--;
             }
+        }
         else
             break;
     }

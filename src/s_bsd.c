@@ -135,16 +135,16 @@ void add_local_domain(char *hname, int size)
     /* try to fix up unqualified name */
     if (!strchr(hname, '.')) 
     {
-    if (!(_res.options & RES_INIT))
-    {
-        Debug((DEBUG_DNS, "res_init()"));
-        res_init();
-    }
-    if (_res.defdname[0])
-    {
-        (void) strncat(hname, ".", size - 1);
-        (void) strncat(hname, _res.defdname, size - 2);
-    }
+        if (!(_res.options & RES_INIT))
+        {
+            Debug((DEBUG_DNS, "res_init()"));
+            res_init();
+        }
+        if (_res.defdname[0])
+        {
+            strncat(hname, ".", size - 1);
+            strncat(hname, _res.defdname, size - 2);
+        }
     }
 #endif
     return;
