@@ -123,9 +123,7 @@ dopacket(aClient *cptr, char *buffer, int length)
 
 int client_dopacket(struct Client *cptr, char *buffer, size_t length)
 {
-   assert(0 != cptr);
-   assert(0 != buffer);
-   
+
    strncpy_irc(cptr->buffer, buffer, BUFSIZE);
    length = strlen(cptr->buffer);
    
@@ -152,12 +150,12 @@ int client_dopacket(struct Client *cptr, char *buffer, size_t length)
    }
    
    cptr->count = 0;    /* ...just in case parse returns with */
-   if (CLIENT_EXITED == parse(cptr, cptr->buffer, cptr->buffer + length)) {
+   if (FLUSH_BUFFER == parse(cptr, cptr->buffer, cptr->buffer + length)) {
       /*
        * CLIENT_EXITED means actually that cptr
        * structure *does* not exist anymore!!! --msa
        */
-      return CLIENT_EXITED;
+      return FLUSH_BUFFER;
    }
    else if (cptr->flags & FLAGS_DEADSOCKET) {
       /*
