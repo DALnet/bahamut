@@ -114,7 +114,7 @@ extern void     read_help(char *);          /* defined in s_serv.c */
 extern void     init_globals();
 
 char        **myargv;
-char        *configfile = NULL;             /* Server configuration file */
+char        configfile[PATH_MAX];           /* Server configuration file */
 
 int         debuglevel = -1;       /* Server debug level */
 int         bootopt = 0;           /* Server boot option flags */
@@ -525,8 +525,14 @@ void get_paths(char *argv)
     char        t_dpath[PATH_MAX], t_d2path[PATH_MAX], tmp[PATH_MAX],
                 tmp2[PATH_MAX];
     int len, fd;
+    
+    *spath = 0;
+    *t_dpath = 0;
+    *t_d2path = 0;
+    *tmp = 0;
+    *tmp2 = 0;
 
-    if(!configfile)
+    if(!*configfile)
     {
         getcwd(t_dpath, PATH_MAX);  /* directory we're called from */
         if(argv[0] == '/')       /* absolute filename used to call */
@@ -539,11 +545,12 @@ void get_paths(char *argv)
         }
         strcat(tmp, t_dpath);
         strcat(tmp, "/ircd.conf");
+        printf("TMP: %s\n", tmp);
         if((fd = open(tmp, O_RDONLY)) > 0)
         {
             /* found our ircd.conf in the directory
              * where we were called from */
-            configfile = tmp;
+            strcpy(configfile, tmp);
             close(fd);
             strcpy(dpath, t_dpath);
             return;
@@ -554,11 +561,12 @@ void get_paths(char *argv)
         strncat(t_d2path, spath, len);
         strcat(tmp2, t_d2path);
         strcat(tmp2, "/ircd.conf");
+        printf("TMP2: %s\n", tmp2);
         if((fd = open(tmp2, O_RDONLY)) > 0)
         {
             /* found the ircd.conf in the directory local
              * to our binary itself */
-            configfile = tmp;
+            strcpy(configfile, tmp);
             close(fd);
             strcpy(dpath, t_d2path);
             return;
@@ -594,7 +602,7 @@ void get_paths(char *argv)
         /* set our config file to an absolute path */
         strcat(tmp, dpath);
         strcat(tmp, "/ircd.conf");
-        configfile = tmp;
+        strcpy(configfile, tmp);
     }
 }
 
@@ -734,7 +742,7 @@ main(int argc, char *argv[])
 #ifdef CMDLINE_CONFIG
         case 'f':
             (void) setuid((uid_t) uid);
-            configfile = p;
+            strcpy(configfile, p);
             break;
 #endif
         case 's':
@@ -764,6 +772,9 @@ main(int argc, char *argv[])
         }
     }
 
+    *spath = 0;
+    *dpath = 0;
+    *configfile = 0;
     get_paths(argv[0]);
 
     if(chdir(dpath))
@@ -836,6 +847,7 @@ main(int argc, char *argv[])
     open_debugfile();
     NOW = time(NULL);
 
+    printf("CONFIGFILE: %s\n", configfile);
     if(initconf(configfile) == -1)
     {
         printf("Server not started\n");

@@ -1109,9 +1109,6 @@ int m_server_estab(aClient *cptr)
      * --msa
      */
 
-    /* doesnt duplicate cptr->serv if allocated this struct already */
-
-    (void) make_server(cptr);
     cptr->serv->up = me.name;
     cptr->serv->aconn = aconn;
 

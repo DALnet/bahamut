@@ -903,6 +903,7 @@ int check_server_init(aClient * cptr)
     /* check for Ulined access and link it if nessecary */
     if(find_aUserver(cptr->name))
         cptr->flags |= FLAGS_ULINE;
+    (void) make_server(cptr);
     cptr->serv->aconn = aconn;
     aconn->class->links++;
     aconn->acpt = cptr;
@@ -1848,10 +1849,10 @@ int connect_server(aConnect *aconn, aClient * by, struct hostent *hp)
     return -1;
     }
     
+    (void) make_server(cptr);
     cptr->serv->aconn = aconn;
     
     /* The socket has been connected or connect is in progress. */
-    (void) make_server(cptr);
     if (by && IsPerson(by))
     {
     strcpy(cptr->serv->bynick, by->name);

@@ -127,7 +127,7 @@ extern char 	 *MyRealloc(char *, size_t);
  * extern  void     MyFree (char *); 
  */
 
-extern char 	 *debugmode, *configfile, *sbrk0;
+extern char 	 *debugmode, configfile[], *sbrk0;
 extern char 	 *klinefile;
 extern char  	 *zlinefile;
 extern char 	 *getfield(char *);

@@ -217,6 +217,7 @@ if test "$check_sengine" = "yes"; then
         AC_CHECK_FUNC(kevent, [ engine="kqueue" ], )
     elif test "$solaris2" = "yes"; then
         engine="poll"
+        AC_CHECK_HEADER(sys/devpoll.h, engine="devpoll", )
     elif test "$linux" = "yes"; then
         AC_CHECK_FUNC(poll, [ engine="poll" ], )
         AC_CHECK_HEADER(sys/epoll.h, HAVE_EPOLL_H=yes, HAVE_EPOLL_H=no)
@@ -264,6 +265,14 @@ elif test "$check_sengine" = "poll"; then
         AC_MSG_ERROR()
     fi
     AC_MSG_NOTICE(setting socketengine type to poll)
+elif test "$check_sengine" = "devpoll"; then
+    AC_CHECK_HEADER(sys/devpoll.h, engine="devpoll", )
+    if test "X$engine" = "X"; then
+        AC_MSG_NOTICE()
+        AC_MSG_NOTICE(/dev/poll not supported on this system)
+        AC_MSG_ERROR()
+    fi
+    AC_MSG_NOTICE(setting socketengine to devpoll)
 elif test "$check_sengine" = "epoll"; then
     AC_CHECK_HEADER(sys/epoll.h, HAVE_EPOLL_H=yes, HAVE_EPOLL_H=no)
     AC_CHECK_LIB(epoll, epoll_create, 
