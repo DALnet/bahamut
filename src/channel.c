@@ -1,4 +1,4 @@
-
+/*
  *   IRC - Internet Relay Chat, src/channel.c
  *   Copyright (C) 1990 Jarkko Oikarinen and
  *                      University of Oulu, Co Center
