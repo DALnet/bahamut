@@ -2,7 +2,7 @@ THINGS TO FIX BEFORE RELEASE
 ----------------------------
    
     - Fix /unkline routines to operate happily with the new conf parser.
-    - Clean up config.h [Half done]
+    - Write a new example.conf
     - Fix make install
 
 TODO LIST

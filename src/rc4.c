@@ -125,5 +125,5 @@ void rc4_process_stream_to_buf(void *rc4_context,
 void rc4_destroystate(void *a)
 {
     memset(a, 0, sizeof(struct rc4_state));
-    MyFree(a);
+    free(a);
 }

@@ -951,6 +951,7 @@ initconf(int opt, int fd, aClient *rehasher)
             if(t_passwd && t_passwd[0] != '\0')
                 strncpyzt(ProxyMonURL, t_passwd, sizeof(ProxyMonURL));
             do_tline = 1;
+            continue;
         }
         if(t_status & CONF_ADMIN)
         {

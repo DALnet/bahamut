@@ -25,6 +25,15 @@
 
 #include "setup.h"
 
+/* READ THIS FIRST BEFORE EDITING!!!
+ *
+ * Most people will have no real reason to edit config.h, with the
+ * exception of perhaps turning off certain things such as throttling
+ * or flood protection options.  Most of the stuff you will have to edit
+ * can be found in the ircd.conf - see doc/example.conf for information
+ * on that.
+ */
+
 /*
  * NO_DEFAULT_INVISIBLE - clients not +i by default When defined, your
  * users will not automatically be attributed with user mode "i" (i ==
@@ -68,27 +77,26 @@ e*/
 #define LOG_FACILITY LOG_LOCAL4
 #endif /* HAVE_SYSLOG_H  */
 
-/* Defaults for things in option block of ircd.conf
- * more documentation when i dont dislike documentation as much.
- * -epi
- */
+/* Defaults for things in option block of ircd.conf */
+
+/* WGMON notices are sent to users to warn them about the proxy scans. */
 #define DEFAULT_WGMON_URL "http://kline.dal.net/proxy"
 #define DEFAULT_WGMON_HOST "some.bot.host"
+/* Hostmasking address */
 #define DEFAULT_STAFF_ADDRESS "staff.dalnet"
+/* Sent to users in 001 and 005 numerics */
 #define DEFAULT_NETWORK "DALnet"
+/* used for services aliases */
 #define DEFAULT_SERVICES_NAME "services.dal.net"
 #define DEFAULT_STATS_NAME "stats.dal.net"
+/* sent to users when they have been klined from the server */
 #define DEFAULT_NKLINE_ADDY "admin@badly.configured.server"
 #define DEFAULT_LKLINE_ADDY "admin@badly.configured.server"
+/* self explanitory */
 #define DEFAULT_MAXCHANNELSPERUSER 10
+/* Default difference in time sync between servers before we complain */
 #define DEFAULT_TSMAXDELTA 120
 #define DEFAULT_TSWARNDELTA 15
-
-/*
- * MAXSENDQLENGTH - Max amount of internal send buffering Max amount of
- * internal send buffering when socket is stuck (bytes)
- */
-#define MAXSENDQLENGTH 5050000
 
 /* 
  * HIDEULINEDSERVS 
@@ -102,7 +110,9 @@ e*/
 
 #define THROTTLE_ENABLE /* enable throttling, see below */
 
-/* File names */
+/* File names
+ * the server will look for these files
+ */
 #define	MPATH	"ircd.motd"
 #define	SMPATH	"ircd.smotd"
 #define	LPATH	"ircd.log"
@@ -612,6 +622,12 @@ e*/
 #define TIMESEC  5		/* Recommended value: 5 */
 
 /*
+ * MAXSENDQLENGTH - Max amount of internal send buffering Max amount of
+ * internal send buffering when socket is stuck (bytes)
+ */
+#define MAXSENDQLENGTH 5050000
+
+/*
  * PINGFREQUENCY - ping frequency for idle connections If daemon
  * doesn't receive anything from any of its links within PINGFREQUENCY
  * seconds, then the server will attempt to check for an active link
@@ -844,5 +860,5 @@ extern void debug(int level, char *pattern, ...);
 #define LOGFILE "/dev/null"
 #endif
 
-#define CONFIG_H_LEVEL_20
+#define CONFIG_H_LEVEL_18
 #endif				/* __config_include__ */
