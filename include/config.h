@@ -750,6 +750,10 @@
  *
  * HIDE_SPLIT_SERVERS
  * Hide the names of servers during netsplits
+ *
+ * HIDE_LINKS
+ * LINKS is a static list of servers, provided by services
+ * (controlled with server<>server LINKS CONTROL cmd)
  */
 /* #undef NO_USER_SERVERNOTICES */
 /* #undef NO_USER_STATS */
@@ -759,6 +763,7 @@
 /* #undef HIDE_NUMERIC_SOURCE */
 /* #undef HIDE_KILL_ORIGINS */
 /* #undef HIDE_SPLIT_SERVERS */
+/* #undef HIDE_LINKS */
 
 /***********************/
 /* OPER HIDING SECTION */
@@ -830,6 +835,7 @@
 # define HIDE_NUMERIC_SOURCE
 # define HIDE_KILL_ORIGINS
 # define HIDE_SPLIT_SERVERS
+# define HIDE_LINKS
 #endif
 
 /******************************************************************
