@@ -756,12 +756,12 @@ int do_server_estab(aClient *cptr)
       cptr->flags |= FLAGS_ULINE; 
    }
 
-   sendto_gnotice("from %s: Link with %s established: %s %s %s %s %s", me.name, inpath, 
-		ZipOut(cptr) ? "Out-Compressed" : "Out-Uncompressed", 
-		ZipIn(cptr) ? "In-Compressed" : "In-Uncompressed", 
-		RC4EncLink(cptr) ? "RC4-Encrypted" : "Unencrypted", 
+   sendto_gnotice("from %s: Link with %s established, states: %s %s %s %s %s", me.name, inpath, 
+		ZipOut(cptr) ? "Out-compressed" : "Out-uncompressed", 
+		ZipIn(cptr) ? "In-compressed" : "In-uncompressed", 
+		RC4EncLink(cptr) ? "RC4-encrypted" : "Unencrypted", 
                 IsULine(cptr) ? "ULined" : "Normal", 
-		DoesTS(cptr) ? "TS link" : "Non-TS link!"); 
+		DoesTS(cptr) ? "TS" : "Non-TS"); 
 
    /* Notify everyone of the fact that this has just linked: the entire network should get two
       of these, one explaining the link between me->serv and the other between serv->me */
@@ -774,7 +774,6 @@ int do_server_estab(aClient *cptr)
 
    (void) find_or_add(cptr->name);
 
-//----------
    /*
     * * Old sendto_serv_but_one() call removed because we now need to
     * send different names to different servers (domain name
@@ -968,7 +967,10 @@ m_server_estab(aClient *cptr)
       if (bconf->passwd[0])
 	 sendto_one(cptr, "PASS %s :TS", bconf->passwd);
       /* Pass my info to the new server */
-      sendto_one(cptr, "CAPAB TS3 NOQUIT SSJOIN BURST UNCONNECT DKEY ZIP");
+      if(!WantDKEY(cptr))
+         sendto_one(cptr, "CAPAB TS3 NOQUIT SSJOIN BURST UNCONNECT ZIP");
+      else
+         sendto_one(cptr, "CAPAB TS3 NOQUIT SSJOIN BURST UNCONNECT DKEY ZIP");
       sendto_one(cptr, "SERVER %s 1 :%s",
 		 my_name_for_link(me.name, aconf),
 		 (me.info[0]) ? (me.info) : "IRCers United");
@@ -1031,7 +1033,7 @@ m_server_estab(aClient *cptr)
    strcpy(cptr->hostip, "127.0.0.1");
    strcpy(cptr->sockhost, "localhost");
 
-   if(!CanDoDKEY(cptr))
+   if(!CanDoDKEY(cptr) || !WantDKEY(cptr))
       return do_server_estab(cptr);
    else
    {

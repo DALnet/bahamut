@@ -216,6 +216,7 @@ typedef struct MotdItem aMotd;
 #define CAPAB_DKEY    0x0000020 /* server supports dh-key exchange using "DKEY" */
 #define CAPAB_ZIP     0x0000040 /* server supports gz'd links */
 #define CAPAB_DOZIP   0x0000080 /* output to this link shall be gzipped */
+#define CAPAB_DODKEY  0x0000100 /* do I do dkey with this link? */
 
 #define SetTS3(x)   	((x)->capabilities |= CAPAB_TS3)
 #define IsTS3       	((x)->capabilities & CAPAB_TS3)
@@ -234,6 +235,7 @@ typedef struct MotdItem aMotd;
 
 #define SetDKEY(x)	((x)->capabilities |= CAPAB_DKEY)
 #define CanDoDKEY(x)    ((x)->capabilities & CAPAB_DKEY)
+#define WantDKEY(x)	((x)->capabilities & CAPAB_DODKEY) /* N: line, flag E */
 
 #define SetZipCapable(x) ((x)->capabilities |= CAPAB_ZIP)
 #define IsZipCapable(x)	((x)->capabilities & CAPAB_ZIP)
