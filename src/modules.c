@@ -703,7 +703,10 @@ int init_modules()
 
    for (p = NULL, s = strtoken(&p, m_autoload, ", "); s;
            s = strtoken(&p, NULL, ", "))
+   {
       load_module(NULL, s);
+      printf("Module %s Loaded Successfully.\n", s);
+   }
 
    inifile_opaque = mini;
 

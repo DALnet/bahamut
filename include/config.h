@@ -536,15 +536,6 @@
 #define E_LINES_OPER_ONLY
 #define F_LINES_OPER_ONLY
 
-/* If you want your server to save and restore the local/max client count,
- * define this here.  It's neat, non-load-producing, and makes you
- * appear more attractive to the opposite sex. --wd */
-#define SAVE_MAXCLIENT_STATS
-
-/* Define the time (in seconds) that you want to save the statistics after. 
- * Don't undef this unless you have undeffed SAVE_MAXCLIENT_STATS --sed */
-#define SAVE_MAXCLIENT_STATS_TIME	3600
-
 /*
  * UNKLINE - /quote unkline - remove klines on the fly if you choose to
  * support this, an oper can do a /quote UNKLINE of an exact matching

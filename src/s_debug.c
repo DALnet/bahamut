@@ -246,7 +246,6 @@ void count_memory(aClient *cptr, char *nick)
 {
     extern aChannel *channel;
     extern aClass *classes;
-    extern aConfItem *conf;
 
     extern BlockHeap *free_local_aClients;
     extern BlockHeap *free_Links;
@@ -272,7 +271,6 @@ void count_memory(aClient *cptr, char *nick)
     chanMember *cm;
     aBan   *bp;
     aChannel *chptr;
-    aConfItem *aconf;
     aClass *cltmp;
     aMotd *amo;
 
@@ -341,17 +339,6 @@ void count_memory(aClient *cptr, char *nick)
     count_whowas_memory(&wwu, &wwm);	/* no more away memory to count */
 
     count_watch_memory(&wlh, &wlhm);
-    for (acptr = client; acptr; acptr = acptr->next)
-    {
-	if (MyConnect(acptr)) 
-	{
-	    lc++;
-	    wle += acptr->watches;
-	    for (link = acptr->confs; link; link = link->next)
-		lcc++;
-	}
-	else
-	    rc++;
 
 #ifdef FLUD
 	for (link = acptr->fludees; link;
@@ -389,7 +376,6 @@ void count_memory(aClient *cptr, char *nick)
 		awm += (strlen(acptr->user->away) + 1);
 	    }
 	}
-    }
 
     lcm = lc * CLIENT_LOCAL_SIZE;
     rcm = rc * CLIENT_REMOTE_SIZE;
@@ -406,16 +392,7 @@ void count_memory(aClient *cptr, char *nick)
 	{
 	    chb++;
 	    chbm += (strlen(bp->who) + strlen(bp->banstr) + 2 + sizeof(aBan));
-	}
     }
-    
-    for (aconf = conf; aconf; aconf = aconf->next) 
-    {
-	co++;
-	com += aconf->host ? strlen(aconf->host) + 1 : 0;
-	com += aconf->passwd ? strlen(aconf->passwd) + 1 : 0;
-	com += aconf->name ? strlen(aconf->name) + 1 : 0;
-	com += sizeof(aConfItem);
     }
     
     for (cltmp = classes; cltmp; cltmp = cltmp->next)
@@ -489,8 +466,6 @@ void count_memory(aClient *cptr, char *nick)
 	       usdr, usdr * sizeof(Link));
     sendto_one(cptr, ":%s %d %s :   WATCH entries %d(%d)",
 	       me.name, RPL_STATSDEBUG, nick, wle, wle*sizeof(Link));
-    sendto_one(cptr, ":%s %d %s :   Attached confs %d(%d)",
-	       me.name, RPL_STATSDEBUG, nick, lcc, lcc*sizeof(Link));
     sendto_one(cptr, ":%s %d %s :   Fludees %d(%d)",
 	       me.name, RPL_STATSDEBUG, nick, fludlink, fludlink*sizeof(Link));
 

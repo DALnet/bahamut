@@ -26,7 +26,6 @@
 #include "numeric.h"
 #include "inet.h"
 #include "h.h"
-#include "dich_conf.h"
 #include "userban.h"
 #include "queue.h"
 

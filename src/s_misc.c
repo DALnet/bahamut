@@ -187,6 +187,17 @@ int check_registered(aClient *sptr)
     return 0;
 }
 
+char *get_listener_name(aListener *lptr)
+{
+   static char nbuf[HOSTLEN * 2 + USERLEN + 5];
+
+   ircsprintf(nbuf, "%s[@%s.%d][%s]", me.name, BadPtr(lptr->vhost_string) ?
+              "0.0.0.0" : lptr->vhost_string, lptr->port, 
+	       BadPtr(lptr->allow_string) ?  "*" : lptr->allow_string);
+
+   return nbuf;
+}
+
 /*
  * * get_client_name *      Return the name of the client for various
  * tracking and *      admin purposes. The main purpose of this
@@ -302,10 +313,10 @@ void get_sockhost(aClient *cptr, char *host)
  * Return wildcard name of my server name according to given config
  * entry --Jto
  */
-char *my_name_for_link(char *name, aConfItem *aconf)
+char *my_name_for_link(char *name, aConnect *aconn)
 {
     static char namebuf[HOSTLEN];
-    int count = aconf->port;
+    int count = aconn->port;
     char *start = name;
 
     if (count <= 0 || count > 5)

@@ -85,7 +85,7 @@ VOIDSIG dummy()
 int deliver_it(aClient *cptr, char *str, int len)
 {
     int         retval;
-    aClient    *acpt = cptr->acpt;	
+    aListener    *lptr = cptr->lstn;	
 #ifdef	DEBUGMODE
     writecalls++;
 #endif
@@ -142,24 +142,26 @@ int deliver_it(aClient *cptr, char *str, int len)
     if (retval > 0)
     {
 	cptr->sendB += retval;
-	me.sendB += retval;
-	if (cptr->sendB > 1023)
+	if (cptr->sendB & 0x0400)
 	{
 	    cptr->sendK += (cptr->sendB >> 10);
 	    cptr->sendB &= 0x03ff;	/* 2^10 = 1024, 3ff = 1023 */
 	}
-	if (acpt != &me)
+        me.sendB += retval;
+        if (me.sendB & 0x0400)
+        {
+            me.sendK += (me.sendB >> 10);
+            me.sendB &= 0x03ff;
+        }
+
+	if (lptr)
 	{
-	    acpt->sendB += retval;
-	    if (acpt->sendB > 1023) {
-		acpt->sendK += (acpt->sendB >> 10);
-		acpt->sendB &= 0x03ff;
+	    lptr->sendB += retval;
+	    if (lptr->sendB & 0x0400) 
+	    {
+		lptr->sendK += (lptr->sendB >> 10);
+		lptr->sendB &= 0x03ff;
 	    }
-	}
-	if (me.sendB > 1023)
-	{
-	    me.sendK += (me.sendB >> 10);
-	    me.sendB &= 0x03ff;
 	}
     }
     return (retval);

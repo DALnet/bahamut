@@ -168,7 +168,6 @@ extern int  m_os(aClient *, aClient *, int, char **);
 extern int  m_ss(aClient *, aClient *, int, char **);
 extern int  m_hs(aClient *, aClient *, int, char **);
 extern int  m_svsnick(aClient *, aClient *, int, char **);
-extern int  m_svsnoop(aClient *, aClient *, int, char **);
 extern int  m_svskill(aClient *, aClient *, int, char **);
 extern int  m_svsmode(aClient *, aClient *, int, char **);
 extern int  m_svshold(aClient *, aClient *, int, char **);
@@ -296,7 +295,6 @@ struct Message msgtab[] =
     {MSG_SERVICES, m_services, 0, 1, 1, 0, 0, 0L},
     {MSG_IDENTIFY, m_identify, 0, 1, 1, 0, 0, 0L},
     {MSG_SVSNICK,  m_svsnick,  0, MAXPARA, 1, 0, 0, 0L},
-    {MSG_SVSNOOP,  m_svsnoop,  0, MAXPARA, 1, 0, 0, 0L},
     {MSG_SVSKILL,  m_svskill,  0, MAXPARA, 1, 0, 0, 0L},	 
     {MSG_SVSMODE,  m_svsmode,  0, MAXPARA, 1, 0, 0, 0L},	 
     {MSG_SVSHOLD,  m_svshold,  0, MAXPARA, 1, 0, 0, 0L},	 

@@ -63,18 +63,26 @@ extern char REPORT_DO_DNS[256], REPORT_FIN_DNS[256], REPORT_FIN_DNSC[256],
 
 #include "hash.h"
 
-typedef struct ConfItem aConfItem;
 typedef struct Client aClient;
 typedef struct Channel aChannel;
 typedef struct User anUser;
 typedef struct Server aServer;
 typedef struct SLink Link;
 typedef struct SLinkD DLink;
+typedef struct CLink CLink;
 typedef struct ChanLink chanMember;
 typedef struct SMode Mode;
 typedef struct Watch aWatch;
 typedef struct Ban aBan;
 typedef struct ListOptions LOpts;
+typedef struct Listener aListener;
+typedef struct Conf_Connect aConnect;
+typedef struct Conf_Allow aAllow;
+typedef struct Conf_Oper aOper;
+typedef struct Conf_Admin Conf_Admin;
+typedef struct Conf_Me Conf_Me;
+typedef struct Conf_Port aPort;
+typedef struct Conf_Userv aUserv;
 typedef long ts_val;
 
 typedef struct MotdItem aMotd;
@@ -139,11 +147,10 @@ typedef struct MotdItem aMotd;
 #define	BOOT_CONSOLE     1
 #define	BOOT_QUICK	 2
 #define	BOOT_DEBUG	 4
-#define	BOOT_INETD	 8
-#define	BOOT_TTY	 16
-#define	BOOT_OPER	 32
-#define	BOOT_AUTODIE     64
-#define BOOT_STDERR	 128
+#define	BOOT_TTY	 8
+#define	BOOT_OPER	 16
+#define	BOOT_AUTODIE     32
+#define BOOT_STDERR	 64
 #define	STAT_LOG	 -6	/* logfile for -x */
 #define	STAT_MASTER	 -5	/* Local ircd master before identification */
 #define	STAT_CONNECTING	 -4
@@ -564,57 +571,150 @@ typedef struct Whowas
     struct Whowas *cprev;   /* for client struct linked list */
 } aWhowas;
 
-struct ConfItem 
-{
-    unsigned int status;   /* If CONF_ILLEGAL, delete when no clients */
-    unsigned int flags;    /* i-lines and akills use this */
-    int         clients;   /* Number of *LOCAL* clients using this */
-    struct in_addr ipnum;  /* ip number of host field */
-    char       *host;
-    char       *localhost;
-    char       *passwd;
-    char       *name;
-    int         port;
-    time_t      hold;      /* Hold action until this time (calendar time) */
-    aClass     *class;     /* Class of connection */
-    struct ConfItem *next;
-};
+/* configuration structures */
 
-#define	CONF_ILLEGAL	        0x80000000
-#define	CONF_MATCH	        0x40000000
+#define CONF_ILLEGAL            0x80000000
+#define CONF_MATCH              0x40000000
 
-#define	CONF_CLIENT	        0x0002
-#define	CONF_CONNECT_SERVER	0x0004
-#define	CONF_NOCONNECT_SERVER	0x0008
-#define	CONF_LOCOP		0x0010
-#define	CONF_OPERATOR		0x0020
-#define	CONF_ME			0x0040
-#define	CONF_KILL		0x0080
-#define	CONF_ADMIN		0x0100
-#define	CONF_CLASS		0x0200
-#define	CONF_SERVICE		0x0400
-#define	CONF_LISTEN_PORT	0x1000
-#define	CONF_HUB		0x2000
-#define CONF_ELINE		0x4000
-#define CONF_FLINE		0x8000
-#define CONF_QUARANTINE 	0x40000
-#define CONF_ULINE 		0x80000
-#define CONF_DRPASS		0x100000    /* die/restart pass, from df465 */
-#define CONF_GCOS		0x200000
-#define CONF_SQLINE     	0x400000
-#define CONF_MONINFO		0x800000    /* proxy monitor info */
-#define	CONF_OPS		(CONF_OPERATOR | CONF_LOCOP)
-#define	CONF_SERVER_MASK	(CONF_CONNECT_SERVER | CONF_NOCONNECT_SERVER)
-#define	CONF_CLIENT_MASK	(CONF_CLIENT | CONF_SERVICE | CONF_OPS | \
-				 CONF_SERVER_MASK)
-#define	IsIllegal(x)	        ((x)->status & CONF_ILLEGAL)
+#define CONF_CLIENT             0x0002
+#define CONF_CONNECT_SERVER     0x0004
+#define CONF_NOCONNECT_SERVER   0x0008
+#define CONF_LOCOP              0x0010
+#define CONF_OPERATOR           0x0020
+#define CONF_ME                 0x0040
+#define CONF_KILL               0x0080
+#define CONF_ADMIN              0x0100
+#define CONF_CLASS              0x0200
+#define CONF_SERVICE            0x0400
+#define CONF_LISTEN_PORT        0x1000
+#define CONF_HUB                0x2000
+#define CONF_ELINE              0x4000
+#define CONF_FLINE              0x8000
+#define CONF_QUARANTINE         0x40000
+#define CONF_ULINE              0x80000
+#define CONF_DRPASS             0x100000    /* die/restart pass, from df465 */
+#define CONF_GCOS               0x200000
+#define CONF_SQLINE             0x400000
+#define CONF_MONINFO            0x800000    /* proxy monitor info */
+#define CONF_OPS                (CONF_OPERATOR | CONF_LOCOP)
+#define CONF_SERVER_MASK        (CONF_CONNECT_SERVER | CONF_NOCONNECT_SERVER)
+#define CONF_CLIENT_MASK        (CONF_CLIENT | CONF_SERVICE | CONF_OPS | \
+                                 CONF_SERVER_MASK)
+#define IsIllegal(x)            ((x)->status & CONF_ILLEGAL)
 
 /* did the password field specify OPER? */
 #define CONF_FLAGS_I_OPERPORT      0x0002
-/* does NAME in I:HOST::NAME have an @? */ 
-#define CONF_FLAGS_I_NAME_HAS_AT   0x0004 
-/* does HOST in I:HOST::NAME have an @? */ 
-#define CONF_FLAGS_I_HOST_HAS_AT   0x0008 
+/* does NAME in I:HOST::NAME have an @? */
+#define CONF_FLAGS_I_NAME_HAS_AT   0x0004
+/* does HOST in I:HOST::NAME have an @? */
+#define CONF_FLAGS_I_HOST_HAS_AT   0x0008
+
+
+struct Conf_Admin
+{
+	/* This is an A:line currently */
+	char *line1;
+	char *line2;
+	char *line3;
+};
+
+#define CONN_ZIP 	0x001	/* zippable    */
+#define CONN_DKEY	0x010	/* cryptable   */
+#define CONN_HUB	0x100	/* hubbable!   */
+
+struct Conf_Connect
+{
+	/* this is currently BOTH C:lines and N:lines */
+	char *host;
+	char *apasswd;	/* nline password - to accept connection */
+	char *cpasswd;  /* cline password - to connect out with  */
+	char *name;
+	char *source;	/* when connecting, use this IP address  */
+	struct in_addr ipnum;	/* ip address host field */
+	int   port;
+	int   flags;
+	int   legal;
+	aClient *acpt;  /* whos using this! */
+	time_t   hold;	/* used for autoconnections */
+	aClass   *class;
+	aConnect *next;
+};
+
+struct Conf_Allow
+{
+	/* this is an I:line */
+	char *ipmask;
+	char *passwd;
+	char *hostmask;
+	int   port;
+	int   flags;
+	int   clients;
+	int   legal;
+	aClass *class;
+	aAllow *next;
+};
+
+struct Conf_Me
+{
+	/* combined X and M lines */
+	char *servername;
+	char *ip;
+	char *info;
+	char *diepass;
+	char *restartpass;
+};
+
+struct Conf_Oper
+{
+	/* this is an O:line */
+	char *hostmask;
+	char *passwd;
+	char *nick;
+	int   flags;
+	aClient *acpt;	/* user that is currently using this */
+	int   legal;
+	aClass *class;
+	aOper *next;
+};
+
+struct Conf_Port
+{
+	char *allow;
+	char *address;
+	int   port;
+    aListener *lstn;
+	int   legal;
+	aPort *next;
+};
+
+struct Conf_Userv
+{
+	char *name;
+	aClient *acpt;
+	int     legal;
+	aUserv *next;
+};
+
+struct Listener {
+        struct Listener *next;              /* next listener */
+        int             fd;                 /* fd of this listener */
+        u_short         port; 
+        char            allow_string[32];   /* allow from */
+        char            vhost_string[32];   /* bind to */
+        struct in_addr  allow_ip;           /* allow from */
+        struct in_addr  vhost_ip;           /* bind to */
+        time_t          lasttime;           /* last time I accepted */
+        long            sendK;              /* counters, see below */
+        u_short         sendB;           
+        long            sendM;          
+        long            receiveK;      
+        u_short         receiveB;     
+        long            receiveM;    
+        u_long          ccount;   /* total number of clients to connect here */
+        int             clients;  /* number of clients currently on this */
+        aPort           *aport;   /* link to the P: line I came from */
+};
+
 
 /* Client structures */
 struct User
@@ -651,7 +751,7 @@ struct Server
     char        bynick[NICKLEN + 1];
     char        byuser[USERLEN + 1];
     char        byhost[HOSTLEN + 1];
-    aConfItem  *nline;		  /* N-line pointer for this server */
+    aConnect   *aconn;		  /* N-line pointer for this server */
     int         dkey_flags; 	  /* dkey flags */
 #ifdef HAVE_ENCRYPTION_ON
     void       *sessioninfo_in;   /* pointer to opaque sessioninfo structure */
@@ -771,8 +871,8 @@ struct Client
     u_short     receiveB;	 /* sent and received. */
     long        lastrecvM;       /* to check for activity --Mika */
     int         priority;
-    aClient    *acpt;	         /* listening client which we accepted from */
-    Link       *confs;		 /* Configuration record associated */
+    aListener  *lstn;	         /* listener which we accepted from */
+    CLink       *confs;		 /* Configuration record associated */
     int         authfd;	         /* fd for rfc931 authentication */
     char        username[USERLEN + 1]; /* username here now for auth stuff */
     unsigned short port;	 /* and the remote port# too :-) */
@@ -929,7 +1029,7 @@ struct SLink
     {
 	aClient    *cptr;
 	aChannel   *chptr;
-	aConfItem  *aconf;
+	aConnect   *aconn;	/* here for resolver purposes */
 	aBan       *banptr;
 	aWatch *wptr;
 	char       *cp;
@@ -945,13 +1045,23 @@ struct SLinkD
     {
 	aClient    *cptr;
 	aChannel   *chptr;
-	aConfItem  *aconf;
 	aBan       *banptr;
 	aWatch *wptr;
 	char       *cp;
     } value;
     int         flags;
 };
+
+struct CLink
+{
+    /* used to link all applicable confs to a client */
+	aConnect	*aconn;
+	aAllow	    *allow;
+	aOper	    *aoper;
+	aUserv      *userv;
+    int		 flags;
+};
+
 
 /* channel structure */
 

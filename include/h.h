@@ -41,20 +41,20 @@ extern aMotd *shortmotd;
 #endif
 
 extern aMotd *helpfile;		/* oper helpfile is a link list of aMotd */
-#include "dich_conf.h"
 
 extern DLink *server_list;
 extern DLink *oper_list;
 extern DLink *listing_clients;
 extern DLink *recvq_clients;
 
-extern aConfList EList1;
-extern aConfList EList2;
-extern aConfList EList3;
+extern aConnect *connects;
+extern aAllow *allows;
+extern aPort *ports;
+extern Conf_Me *MeLine;
+extern Conf_Admin *AdminLine;
+extern aOper *opers;
+extern aUserv *uservers;
 
-extern aConfList FList1;
-extern aConfList FList2;
-extern aConfList FList3;
 
 #include "fdlist.h"
 extern int  	 lifesux;
@@ -90,23 +90,6 @@ extern char 	*pretty_mask(char *);
 
 extern aClient 	*find_chasing(aClient *, char *, int *);
 
-extern int  	  attach_conf(aClient *, aConfItem *);
-extern aConfItem *attach_confs(aClient *, char *, int);
-extern aConfItem *attach_confs_host(aClient *, char *, int);
-extern int  	  attach_Iline(aClient *, struct hostent *, char *);
-extern aConfItem *conf, *find_me(void);
-extern aConfItem *find_admin(void);
-extern aConfItem *count_cnlines(Link *);
-extern void 	  det_confs_butmask(aClient *, int);
-extern int  	  detach_conf(aClient *, aConfItem *);
-extern aConfItem *det_confs_butone(aClient *, aConfItem *);
-extern aConfItem *find_conf(Link *, char *, int);
-extern aConfItem *find_conf_exact(char *, char *, char *, int);
-extern aConfItem *find_conf_host(Link *, char *, int);
-extern aConfItem *find_conf_ip(Link *, char *, char *, int);
-extern aConfItem *find_conf_name(char *, int);
-extern aConfItem *find_uline(Link *, char *);
-
 extern int  	  find_restrict(aClient *);
 extern int  	  rehash(aClient *, aClient *, int);
 extern int  	  initconf(int, int, aClient *);
@@ -140,16 +123,15 @@ extern int  	  dbufalloc, dbufblocks, debuglevel, errno, h_errno;
 extern int  	  highest_fd, debuglevel, portnum,
     debugtty, maxusersperchannel;
 extern int  	  readcalls, udpfd, resfd;
-extern aClient 	 *add_connection(aClient *, int);
-extern int  	  add_listener(aConfItem *);
+extern aClient 	 *add_connection(aListener *, int);
+extern int  	  add_listener(aPort *);
 extern void 	  add_local_domain(char *, int);
 extern int  	  check_client(aClient *);
-extern int  	  check_server(aClient *, struct hostent *, aConfItem *,
-			       aConfItem *, int);
 extern int  	  check_server_init(aClient *);
 extern void 	  close_connection(aClient *);
 extern void 	  close_listeners();
-extern int   	  connect_server(aConfItem *, aClient *, struct hostent *);
+extern void       open_listeners();
+extern int   	  connect_server(aConnect *, aClient *, struct hostent *);
 extern void 	  get_my_name(aClient *, char *, int);
 extern int  	  get_sockerr(aClient *);
 extern int  	  inetport(aClient *, char *, int, u_long);
@@ -166,12 +148,20 @@ extern int  	  utmp_close(int);
 
 extern void 	do_dns_async(void);
 extern int 	completed_connection(aClient *);
-extern void 	accept_connection(aClient *);
+extern void 	accept_connection(aListener *);
 extern char *	irc_get_sockerr(aClient *);
 extern int 	read_packet(aClient *);
 extern int 	do_client_queue(aClient *);
 extern void 	read_error_exit(aClient *, int, int);
 extern int 	readwrite_client(aClient *, int, int);
+
+extern char      *get_listener_name(aListener *);
+extern int        attach_Iline(aClient *, struct hostent *, char *);
+extern aConnect  *find_aConnect(char *);
+extern aOper     *find_oper(char *, char *, char *, char *);
+extern aConnect  *find_aConnect_match(char *, char *, char *);
+extern aUserv    *find_aUserver(char *);
+extern void       clear_conflinks(aClient *);
 
 extern void 	  start_auth(aClient *);
 extern void 	  read_authports(aClient *);
@@ -192,7 +182,7 @@ extern int  	  check_registered(aClient *);
 extern int  	  check_registered_user(aClient *);
 extern char 	 *get_client_name(aClient *, int);
 extern char 	 *get_client_host(aClient *);
-extern char 	 *my_name_for_link(char *, aConfItem *);
+extern char 	 *my_name_for_link(char *, aConnect *);
 extern char 	 *myctime(time_t), *date(time_t);
 extern int  	  exit_client(aClient *, aClient *, aClient *, char *);
 extern void 	  initstats(void), tstats(aClient *, char *);
@@ -221,16 +211,15 @@ extern void 	  free_client(aClient *);
 extern void 	  free_link(Link *);
 extern void 	  free_dlink(DLink *);
 extern void 	  free_chanmember(chanMember *);
-extern void  	  free_conf(aConfItem *);
 extern void 	  free_class(aClass *);
 extern void 	  free_user(anUser *, aClient *);
 extern void 	  free_channel(aChannel *);
 extern aChannel  *make_channel();
 extern Link 	 *make_link(void);
+extern CLink     *make_clink(void);
 extern DLink 	 *make_dlink(void);
 extern chanMember *make_chanmember(void);
 extern anUser 	 *make_user(aClient *);
-extern aConfItem *make_conf(void);
 extern aClass 	 *make_class(void);
 extern aServer   *make_server(aClient *);
 extern aClient   *make_client(aClient *, aClient *);
@@ -244,12 +233,10 @@ extern void 	  block_garbage_collect(void);	/* list.c */
 extern void       block_destroy(void);	        /* list.c */
 
 extern void 	  add_class(int, int, int, int, long);
-extern void 	  fix_class(aConfItem *, aConfItem *);
 extern long 	  get_sendq(aClient *);
 extern int  	  get_con_freq(aClass *);
 extern int  	  get_client_ping(aClient *);
 extern int  	  get_client_class(aClient *);
-extern int 	  get_conf_class(aConfItem *);
 extern void 	  report_classes(aClient *);
 
 extern struct hostent *get_res(char *);

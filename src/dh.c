@@ -251,13 +251,9 @@ int dh_init()
 {
    ERR_load_crypto_strings();
 
-   printf("Importing prime...\n");
    create_prime();
-   printf("Prime imported.\n");
-   printf("Generating random state...\n");
    if(init_random() == -1)
       return -1;
-   printf("Random state successful.\n");
    return 0; 
 }
 

@@ -41,19 +41,10 @@
 #include "patchlevel.h"
 #include "dh.h"
 
-#include "dich_conf.h"
 #include "throttle.h"
 #include "userban.h"
 #include "hooks.h"
 #include "fds.h"
-
-aConfList   EList1 = {0, NULL};			/* ordered */
-aConfList   EList2 = {0, NULL};			/* ordered, reversed */
-aConfList   EList3 = {0, NULL};			/* what we can't sort */
-
-aConfList   FList1 = {0, NULL};			/* ordered */
-aConfList   FList2 = {0, NULL};			/* ordered, reversed */
-aConfList   FList3 = {0, NULL};			/* what we can't sort */
 
 aMotd      *motd;
 aMotd      *helpfile;		/* misnomer, aMotd could be generalized */
@@ -86,6 +77,8 @@ time_t		 last_stat_save;
 aClient     	 me;		/* That's me */
 aClient    	*client = &me;	/* Pointer to beginning of Client list */
 
+int	forked = 0;
+
 float curSendK = 0, curRecvK = 0;
 
 #ifdef  LOCKFILE
@@ -111,7 +104,6 @@ extern void 	read_shortmotd(char *);	    /* defined in s_serv.c */
 extern void 	read_help(char *);	    /* defined in s_serv.c */
 
 char      **myargv;
-int         portnum = -1;	            /* Server port number, listening this */
 char       *configfile = CONFIGFILE; 	    /* Server configuration file */
 #ifdef KPATH
 char       *klinefile = KLINEFILE;	    /* Server kline file */
@@ -187,14 +179,11 @@ VOIDSIG s_toggleprof()
 
 VOIDSIG s_die() 
 {
-#ifdef SAVE_MAXCLIENT_STATS
     FILE *fp;
-#endif
     dump_connections(me.fd);
 #ifdef	USE_SYSLOG
     (void) syslog(LOG_CRIT, "Server killed By SIGTERM");
 #endif
-#ifdef SAVE_MAXCLIENT_STATS
     fp=fopen(DPATH "/.maxclients", "w");
     if(fp!=NULL) 
     {
@@ -204,7 +193,6 @@ VOIDSIG s_die()
 		Count.year);
 	fclose(fp);
     }
-#endif
     exit(0);
 }
 
@@ -280,7 +268,7 @@ void server_reboot()
     if ((bootopt & BOOT_CONSOLE) || isatty(0))
 	(void) close(0);
 
-    if (!(bootopt & (BOOT_INETD | BOOT_OPER)))
+    if (!(bootopt & BOOT_OPER))
 	(void) execv(MYNAME, myargv);
 
 #ifdef USE_SYSLOG
@@ -304,7 +292,7 @@ void server_reboot()
  */
 static time_t try_connections(time_t currenttime)
 {
-    aConfItem *aconf, **pconf, *con_conf = (aConfItem *) NULL;
+    aConnect  *aconn, **pconn, *con_conn = (aConnect *) NULL;
     aClient   *cptr;
     aClass    *cltmp;
     int        connecting, confrq, con_class = 0;
@@ -315,12 +303,12 @@ static time_t try_connections(time_t currenttime)
     Debug((DEBUG_NOTICE, "Connection check at   : %s",
 	   myctime(currenttime)));
 
-    for (aconf = conf; aconf; aconf = aconf->next) 
+    for (aconn = connects; aconn; aconn = aconn->next) 
     {
 	/* Also when already connecting! (update holdtimes) --SRB */
-	if (!(aconf->status & CONF_CONNECT_SERVER) || aconf->port <= 0)
+	if (aconn->port <= 0)
 	    continue;
-	cltmp = Class (aconf);
+	cltmp = aconn->class;
 
 	/*
 	 * * Skip this entry if the use of it is still on hold until 
@@ -330,54 +318,54 @@ static time_t try_connections(time_t currenttime)
 	 * fuzzy... -- msa >;) ]
 	 */
 
-	if ((aconf->hold > currenttime)) 
+	if ((aconn->hold > currenttime)) 
 	{
-	    if ((next > aconf->hold) || (next == 0))
-		next = aconf->hold;
+	    if ((next > aconn->hold) || (next == 0))
+		next = aconn->hold;
 	    continue;
 	}
 
 	confrq = get_con_freq(cltmp);
-	aconf->hold = currenttime + confrq;
+	aconn->hold = currenttime + confrq;
 
 	/* Found a CONNECT config with port specified, scan clients 
 	 * and see if this server is already connected?
 	 */
 
-	cptr = find_name(aconf->name, (aClient *) NULL);
+	cptr = find_name(aconn->name, (aClient *) NULL);
 
 	if (!cptr && (Links(cltmp) < MaxLinks(cltmp)) &&
 	    (!connecting || (Class (cltmp) > con_class))) 
 	{
 	    con_class = Class (cltmp);
 
-	    con_conf = aconf;
+	    con_conn = aconn;
 	    /* We connect only one at time... */
 	    connecting = TRUE;
 	}
 
-	if ((next > aconf->hold) || (next == 0))
-	    next = aconf->hold;
+	if ((next > aconn->hold) || (next == 0))
+	    next = aconn->hold;
     }
 
     if (connecting) 
     {
-	if (con_conf->next) 	/* are we already last? */
+	if (con_conn->next) 	/* are we already last? */
 	{
-	    for (pconf = &conf; (aconf = *pconf);
-		 pconf = &(aconf->next))
+	    for (pconn = &connects; (aconn = *pconn);
+		 pconn = &(aconn->next))
 		/*
 		 * put the current one at the end and make sure we try all
 		 * connections
 		 */
-		if (aconf == con_conf)
-		    *pconf = aconf->next;
-	    (*pconf = con_conf)->next = 0;
+		if (aconn == con_conn)
+		    *pconn = aconn->next;
+	    (*pconn = con_conn)->next = 0;
 	}
-	if (connect_server(con_conf, (aClient *) NULL,
+	if (connect_server(con_conn, (aClient *) NULL,
 			   (struct hostent *) NULL) == 0)
 	    sendto_gnotice("from %s: Connection to %s activated.", me.name,
-			   con_conf->name);
+			   con_conn->name);
     }
     Debug((DEBUG_NOTICE, "Next connection check : %s", myctime(next)));
     return (next);
@@ -546,7 +534,7 @@ static time_t check_pings(time_t currenttime)
 static int bad_command()
 {
     (void) printf(
-	"Usage: ircd %s[-h servername] [-p portnumber] [-x loglevel] "
+	"Usage: ircd %s[-h servername] [-x loglevel] "
 	"[-s] [-t]\n",
 #ifdef CMDLINE_CONFIG
 	"[-f config] "
@@ -595,10 +583,10 @@ FILE *dumpfp=NULL;
 int main(int argc, char *argv[])
 {
     uid_t         uid, euid;
-    int           portarg = 0,  fd;
-#ifdef SAVE_MAXCLIENT_STATS
+    int           fd;
     FILE 	*mcsfp;
-#endif
+    u_long      vaddr;
+
 	
     if ((timeofday = time(NULL)) == -1) 
     {
@@ -607,6 +595,10 @@ int main(int argc, char *argv[])
     }
 	
     build_version();
+
+    printf("\n%s booting...\n", version);
+    printf("Security related issues should be sent to coders@dal.net\n");
+    printf("All other issues should be sent to dalnet-src@dal.net\n\n");
 
     Count.server = 1;		/* us */
     Count.oper = 0;
@@ -627,7 +619,6 @@ int main(int argc, char *argv[])
     Count.month = NOW;
     Count.year = NOW;
 
-#ifdef SAVE_MAXCLIENT_STATS
     mcsfp=fopen(DPATH "/.maxclients", "r");
     if(mcsfp!=NULL) 
     {
@@ -636,7 +627,6 @@ int main(int argc, char *argv[])
 	       &Count.start, &Count.week, &Count.month, &Count.year);
 	fclose(mcsfp);
     }
-#endif
 	
 
 	
@@ -702,33 +692,24 @@ int main(int argc, char *argv[])
 	    (void) setuid((uid_t) uid);
 	    dpath = p;
 	    break;
-	case 'o':		/* Per user local daemon... */
-	    (void) setuid((uid_t) uid);
-	    bootopt |= BOOT_OPER;
-	    break;
 #ifdef CMDLINE_CONFIG
 	case 'f':
 	    (void) setuid((uid_t) uid);
 	    configfile = p;
+	    printf("Set config file to: %s\n", configfile);
 	    break;
 			
 # ifdef KPATH
 	case 'k':
 	    (void) setuid((uid_t) uid);
 	    klinefile = p;
+	    printf("Set kline file to: %s\n", klinefile);
 	    break;
 # endif
 			
 #endif
 	case 'h':
 	    strncpyzt(me.name, p, sizeof(me.name));
-	    break;
-	case 'i':
-	    bootopt |= BOOT_INETD | BOOT_AUTODIE;
-	    break;
-	case 'p':
-	    if ((portarg = atoi(p)) > 0)
-		portnum = portarg;
 	    break;
 	case 's':
 	    bootopt |= BOOT_STDERR;
@@ -738,7 +719,7 @@ int main(int argc, char *argv[])
 	    bootopt |= BOOT_TTY;
 	    break;
 	case 'v':
-	    (void) printf("ircd %s\n", version);
+	    (void) printf("%s\n", version);
 	    exit(0);
 	case 'x':
 #ifdef	DEBUGMODE
@@ -748,9 +729,7 @@ int main(int argc, char *argv[])
 	    bootopt |= BOOT_DEBUG;
 	    break;
 #else
-	    (void) fprintf(stderr,
-			   "%s: DEBUGMODE must be defined for -x y\n",
-			   myargv[0]);
+	    printf("DEBUGMODE must be defined for -x\nAborting...\n");
 	    exit(0);
 #endif
 	default:
@@ -758,19 +737,21 @@ int main(int argc, char *argv[])
 	    break;
 	}
     }
+
+#ifdef USE_SYSLOG
+# define SYSLOG_ME     "ircd"
+    openlog(SYSLOG_ME, LOG_PID | LOG_NDELAY, LOG_FACILITY);
+#endif
 	
     if (chdir(dpath)) 
     {
-	perror("chdir");
-	fprintf(stderr, "Please ensure that your configuration directory "
-		"exists and is accessable.\n");
+	printf("Please ensure that your configuration directory "
+		"exists and is accessable.\nAborting...\n");
 	exit(-1);
     }
     if ((uid != euid) && !euid) 
     {
-	(void) fprintf(stderr,
-		       "ERROR: do not run ircd setuid root. Make it setuid "
-		       "a normal user.\n");
+	printf("Do not run ircd as root.\nAborting...\n");
 	exit(-1);
     }
 	
@@ -778,8 +759,12 @@ int main(int argc, char *argv[])
 	return bad_command();	/* This should exit out  */
 
 #ifdef HAVE_ENCRYPTION_ON
+    printf("Initializing Encryption...");
     if(dh_init() == -1)
+    {
+	printf("\n\nEncryption Init failed!\n\n");
 	return 0;
+    }
 #endif
     
     motd = (aMotd *) NULL;
@@ -818,6 +803,22 @@ int main(int argc, char *argv[])
     NOW = time(NULL);
     open_debugfile();
     NOW = time(NULL);
+
+    if ((fd = openconf(configfile)) == -1)
+    {
+        printf("Couldn't open configuration file %s.  Aborting...\n",
+                      configfile);
+        exit(-1);
+    }
+    (void) initconf(16, fd, NULL);
+    printf("Configuration Loaded.\n");
+
+#ifdef KPATH
+    if ((fd = openconf(klinefile)) == -1)
+        printf("Couldn't open kline file %s.  Ignoring...\n", klinefile);
+    else
+        (void) initconf(0, fd, NULL);
+#endif
 	
     init_fdlist(&default_fdlist);
     {
@@ -832,114 +833,20 @@ int main(int argc, char *argv[])
     /* init the modules, load default modules! */
     init_modules();
 
-    if ((timeofday = time(NULL)) == -1) 
-    {
-#ifdef USE_SYSLOG
-	syslog(LOG_WARNING, "Clock Failure (%d), TS can be corrupted", errno);
-#endif
-	sendto_ops("Clock Failure (%d), TS can be corrupted", errno);
-    }
-
 #ifdef WINGATE_NOTICE
     strcpy(ProxyMonURL, "http://");
     strncpyzt((ProxyMonURL + 7), DEFAULT_PROXY_INFO_URL, (TOPICLEN + 1) - 7);
     strncpyzt(ProxyMonHost, MONITOR_HOST, (HOSTLEN + 1));
 #endif
 	
-    if (portnum < 0)
-	portnum = PORTNUM;
-    me.port = portnum;
-
-    init_sys();
-
     me.flags = FLAGS_LISTEN;
-    if (bootopt & BOOT_INETD) 
-    {
-	me.fd = 0;
-	local[0] = &me;
-	me.flags = FLAGS_LISTEN;
-    }
+    me.fd = -1;
+	
+    if ((MeLine->ip[0] != '\0') && (MeLine->ip[0] != '*'))
+	vaddr = inet_addr(MeLine->ip);
     else
-	me.fd = -1;
-	
-#ifdef USE_SYSLOG
-# define SYSLOG_ME     "ircd"
-    openlog(SYSLOG_ME, LOG_PID | LOG_NDELAY, LOG_FACILITY);
-#endif
-    if ((fd = openconf(configfile)) == -1) 
-    {
-	Debug((DEBUG_FATAL, "Failed in reading configuration file %s",
-	       configfile));
-	(void) printf("Couldn't open configuration file %s\n",
-		      configfile);
-	exit(-1);
-    }
-    (void) initconf(bootopt, fd, NULL);
-	
-#ifdef KPATH
-    if ((fd = openconf(klinefile)) == -1) 
-    {
-	Debug((DEBUG_ERROR, "Failed reading kline file %s", klinefile));
-	(void) printf("Couldn't open kline file %s\n", klinefile);
-    }
-    else
-	(void) initconf(0, fd, NULL);
-#endif
-
-    if (!(bootopt & BOOT_INETD)) 
-    {
-	static char star[] = "*";
-	aConfItem  *aconf;
-	u_long      vaddr;
+	vaddr = (u_long) NULL;
 		
-	if ((aconf = find_me()) && portarg <= 0 && aconf->port > 0)
-	    portnum = aconf->port;
-
-	Debug((DEBUG_ERROR, "Port = %d", portnum));
-
-	if ((aconf->passwd[0] != '\0') && (aconf->passwd[0] != '*'))
-	    vaddr = inet_addr(aconf->passwd);
-	else
-	    vaddr = (u_long) NULL;
-		
-	if (inetport(&me, star, portnum, vaddr)) 
-	{
-	    if (bootopt & BOOT_STDERR)
-		fprintf(stderr, "Couldn't bind to primary port %d\n", portnum);
-#ifdef USE_SYSLOG
-	    (void) syslog(LOG_CRIT, "Couldn't bind to primary port %d\n", portnum);
-#endif
-	    exit(1);
-	}
-    }
-    else if (inetport(&me, "*", 0, 0)) 
-    {
-	if (bootopt & BOOT_STDERR)
-	    fprintf(stderr, "Couldn't bind to port passed from inetd\n");
-#ifdef USE_SYSLOG
-	(void) syslog(LOG_CRIT, "Couldn't bind to port passed from inetd\n");
-#endif
-	exit(1);
-    }
-	
-    set_non_blocking(me.fd, &me);
-    add_fd(me.fd, FDT_LISTENER, &me);
-    set_fd_flags(me.fd, FDF_WANTREAD);
-    get_my_name(&me, me.sockhost, sizeof(me.sockhost) - 1);
-    if (me.name[0] == '\0')
-	strncpyzt(me.name, me.sockhost, sizeof(me.name));
-    me.hopcount = 0;
-    me.authfd = -1;
-    me.confs = NULL;
-    me.next = NULL;
-    me.user = NULL;
-    me.from = &me;
-    SetMe(&me);
-    make_server(&me);
-    me.serv->up = me.name;
-    me.lasttime = me.since = me.firsttime = NOW;
-    (void) add_to_client_hash_table(me.name, &me);
-	
     /* We don't want to calculate these every time they are used :) */
 	
     sprintf(REPORT_DO_DNS, REPORT_DO_DNS_, me.name);
@@ -958,15 +865,7 @@ int main(int argc, char *argv[])
     R_fail_id = strlen(REPORT_FAIL_ID);
 	
     check_class();
-    if (bootopt & BOOT_OPER) 
-    {
-	aClient    *tmp = add_connection(&me, 0);
 		
-	if (!tmp)
-	    exit(1);
-	SetMaster(tmp);
-    }
-    else
 	write_pidfile();
 	
     Debug((DEBUG_NOTICE, "Server ready..."));
@@ -980,8 +879,32 @@ int main(int argc, char *argv[])
 #ifdef USE_SYSLOG
 	syslog(LOG_WARNING, "Clock Failure (%d), TS can be corrupted", errno);
 #endif
-	sendto_ops("Clock Failure (%d), TS can be corrupted", errno);
+	printf("Clock Failure (%d), TS can be corrupted", errno);
     }
+
+    init_sys();
+    forked = 1;
+
+    /* moved this to here such that we allow more verbose error
+     * checking on startup.  -epi
+     */
+    open_listeners();
+
+    get_my_name(&me, me.sockhost, sizeof(me.sockhost) - 1);
+    if (me.name[0] == '\0')
+        strncpyzt(me.name, me.sockhost, sizeof(me.name));
+    me.hopcount = 0;
+    me.authfd = -1;
+    me.confs = NULL;
+    me.next = NULL;
+    me.user = NULL;
+    me.from = &me;
+    SetMe(&me);
+    make_server(&me);
+    me.serv->up = me.name;
+    me.lasttime = me.since = me.firsttime = NOW;
+    (void) add_to_client_hash_table(me.name, &me);
+
 
 #ifdef DUMP_DEBUG
     dumpfp=fopen("dump.log", "w");

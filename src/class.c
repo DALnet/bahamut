@@ -30,90 +30,29 @@
 
 aClass     *classes;
 
-int get_conf_class(aConfItem *aconf)
-{
-    if ((aconf) && Class (aconf))
-	return (ConfClass(aconf));
-    
-    Debug((DEBUG_DEBUG, "No Class For %s",
-	   (aconf) ? aconf->name : "*No Conf*"));
-
-    return (BAD_CONF_CLASS);
-
-}
-
-static int get_conf_ping(aConfItem *aconf)
-{
-    if ((aconf) && Class (aconf))
-	return (ConfPingFreq(aconf));
-
-    Debug((DEBUG_DEBUG, "No Ping For %s",
-	   (aconf) ? aconf->name : "*No Conf*"));
-
-    return (BAD_PING);
-}
-
 int get_client_class(aClient *acptr)
 {
-    Link   *tmp;
-    aClass *cl;
-    int         retc = BAD_CLIENT_CLASS;
-
-    if (acptr && !IsMe(acptr) && (acptr->confs))
-	for (tmp = acptr->confs; tmp; tmp = tmp->next)
-	{
-	    if (!tmp->value.aconf ||
-		!(cl = tmp->value.aconf->class))
-		continue;
-	    if (Class (cl) > retc)
-		retc = Class (cl);
-	}
-
-    Debug((DEBUG_DEBUG, "Returning Class %d For %s", retc, acptr->name));
-
-    return (retc);
+	return acptr->confs->allow->class->class;
 }
 
 int get_client_ping(aClient *acptr)
 {
-    int         ping = 0, ping2;
-    aConfItem  *aconf;
-    Link       *link;
-
-    link = acptr->confs;
-
-    if (link)
+    int i;
+    if(IsServer(acptr))
     {
-	while (link)
-	{
-	    aconf = link->value.aconf;
-	    if (aconf->status & (CONF_CLIENT | CONF_CONNECT_SERVER |
-				 CONF_NOCONNECT_SERVER))
-	    {
-		ping2 = get_conf_ping(aconf);
-		if ((ping2 != BAD_PING) && ((ping > ping2) ||
-					    !ping))
-		    ping = ping2;
-	    }
-	    link = link->next;
-	}
+	    if((i = acptr->confs->aconn->class->pingFreq))
+		    return i;
+	    return PINGFREQUENCY;
     }
-    else
-    {
-	ping = PINGFREQUENCY;
-	Debug((DEBUG_DEBUG, "No Attached Confs"));
-    }
-    if (ping <= 0)
-	ping = PINGFREQUENCY;
-    Debug((DEBUG_DEBUG, "Client %s Ping %d", acptr->name, ping));
-    return (ping);
+    if((i = acptr->confs->allow->class->pingFreq))
+	    return i;
+    return PINGFREQUENCY;
 }
 
-int get_con_freq(aClass * clptr)
+int get_con_freq(aClass *clptr)
 {
     if (clptr)
-	return (ConFreq(clptr));
-    else
+	    return (ConFreq(clptr));
 	return (CONNECTFREQUENCY);
 }
 
@@ -213,21 +152,16 @@ void report_classes(aClient *sptr)
 
 long get_sendq(aClient *cptr)
 {
-    int     sendq = MAXSENDQLENGTH, retc = BAD_CLIENT_CLASS;
-    Link   *tmp;
-    aClass *cl;
+    int     i;
 
-    if (cptr && !IsMe(cptr) && (cptr->confs))
-	for (tmp = cptr->confs; tmp; tmp = tmp->next)
-	{
-	    if (!tmp->value.aconf ||
-		!(cl = tmp->value.aconf->class))
-		continue;
-	    if (Class (cl) > retc)
-	    {
-		retc = Class (cl);
-		sendq = MaxSendq(cl);
-	    }
-	}
-    return sendq;
+    if(IsServer(cptr))
+    {
+    	if((i = cptr->confs->aconn->class->maxSendq))
+		    return i;
+	    else
+		    return MAXSENDQLENGTH;
+    }
+    if((i = cptr->confs->allow->class->maxSendq))
+	    return i;
+    return MAXSENDQLENGTH;
 }

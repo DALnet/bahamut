@@ -282,14 +282,14 @@ int ac_priority(aClient *cptr)
         return cptr->priority;
 }
 
-aClient *ac_acpt(aClient *cptr)
+aListener *ac_lstn(aClient *cptr)
 {
         if(cptr->fd == -1)
                 abort();
-        return cptr->acpt;
+        return cptr->lstn;
 }
 
-Link *ac_confs(aClient *cptr)
+CLink *ac_confs(aClient *cptr)
 {
         if(cptr->fd == -1)
                 abort();

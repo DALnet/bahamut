@@ -51,7 +51,7 @@
 
 #define RPL_STATSBLINE	     222
 #define RPL_STATSELINE	     223
-#define RPL_STATSFLINE	     224
+
 #define RPL_STATSZLINE	     225
 #define RPL_STATSCOUNT	     226
 #define RPL_STATSGLINE       227
@@ -109,7 +109,7 @@
 
 #define RPL_STATSBLINE	     222
 #define RPL_STATSELINE	     223
-#define RPL_STATSFLINE	     224
+
 #define RPL_STATSZLINE	     225
 #define RPL_STATSGLINE       227
 
@@ -167,7 +167,7 @@
 
 #define RPL_STATSBLINE	     222
 #define RPL_STATSELINE	     223
-#define RPL_STATSFLINE	     224
+
 #define RPL_STATSZLINE	     225
 #define RPL_STATSGLINE       227
 

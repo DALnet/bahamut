@@ -196,8 +196,8 @@ static int send_message(aClient *to, char *msg, int len)
      */
     to->sendM += 1;
     me.sendM += 1;
-    if (to->acpt != &me)
-	to->acpt->sendM += 1;
+    if (to->lstn)
+	to->lstn->sendM += 1;
 
     if(ZipOut(to))
     {

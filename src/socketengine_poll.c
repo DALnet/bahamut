@@ -86,6 +86,7 @@ int engine_read_message(time_t delay)
    int fdtype;
    void *fdvalue;
    aClient *cptr;
+   aListener *lptr;
 
    engine_get_pollfds(&pfd, &nbr_pfds);
    memcpy(poll_fdarray, pfd, sizeof(struct pollfd) * nbr_pfds);
@@ -134,9 +135,9 @@ int engine_read_message(time_t delay)
                break;
 
             case FDT_LISTENER:
-               cptr = (aClient *) fdvalue;
+               lptr = (aListener *) fdvalue;
                if(rr)
-                  accept_connection(cptr);
+                  accept_connection(lptr);
                break;
 
             case FDT_RESOLVER:

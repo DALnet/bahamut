@@ -461,6 +461,14 @@ Link *make_link()
     return lp;
 }
 
+CLink *make_clink()
+{
+	CLink *clp;
+	clp = (struct CLink *) MyMalloc(sizeof(CLink));
+	memset((char *) clp, '\0', sizeof(CLink));
+	return clp;
+}
+
 void free_link(Link *lp)
 {
     if (BlockHeapFree(free_Links, lp)) {
@@ -526,42 +534,60 @@ void free_class(tmp)
     MyFree((char *) tmp);
 }
 
-aConfItem *make_conf()
+Conf_Admin *make_admin()
 {
-    aConfItem *aconf;
-    aconf = (struct ConfItem *) MyMalloc(sizeof(aConfItem));
-    memset((char *) aconf, '\0', sizeof(aConfItem));
-
-    aconf->status = CONF_ILLEGAL;
-    Class       (aconf) = 0;
-
-    return (aconf);
+	Conf_Admin *i;
+	i = (struct Conf_Admin *) MyMalloc(sizeof(Conf_Admin));
+	memset((char *) i, '\0', sizeof(Conf_Admin));
+	return i;
 }
 
-void delist_conf(aConfItem *aconf)
+aOper *make_oper()
 {
-    if (aconf == conf)
-	conf = conf->next;
-    else
-    {
-	aConfItem  *bconf;
-	
-	for (bconf = conf; aconf != bconf->next; bconf = bconf->next);
-	bconf->next = aconf->next;
-    }
-    aconf->next = NULL;
+	aOper *i;
+	i = (struct Conf_Oper *) MyMalloc(sizeof(aOper));
+	memset((char *) i, '\0', sizeof(aOper));
+	return i;
 }
 
-void free_conf(aConfItem *aconf)
+aConnect *make_connect()
 {
-    del_queries((char *) aconf);
-    MyFree(aconf->host);
-    if (aconf->passwd)
-	memset(aconf->passwd, '\0', strlen(aconf->passwd));
-    MyFree(aconf->passwd);
-    MyFree(aconf->name);
-    MyFree((char *) aconf);
-    return;
+	aConnect *i;
+	i = (struct Conf_Connect *) MyMalloc(sizeof(aConnect));
+	memset((char *) i, '\0', sizeof(aConnect));
+	return i;
+}
+
+aAllow *make_allow()
+{
+	aAllow *i;
+	i = (struct Conf_Allow *) MyMalloc(sizeof(aAllow));
+	memset((char *) i, '\0', sizeof(aAllow));
+	return i;
+}
+
+aPort *make_port()
+{
+	aPort *i;
+	i = (struct Conf_Port *) MyMalloc(sizeof(aPort));
+	memset((char *) i, '\0', sizeof(aPort));
+	return i;
+}
+
+Conf_Me *make_me()
+{
+	Conf_Me *i;
+	i = (struct Conf_Me *) MyMalloc(sizeof(Conf_Me));
+	memset((char *) i, '\0', sizeof(Conf_Me));
+	return i;
+}
+
+aUserv *make_userv()
+{
+	aUserv *i;
+	i = (struct Conf_Userv *) MyMalloc(sizeof(aUserv));
+	memset((char *) i, '\0', sizeof(aUserv));
+	return i;
 }
 
 /*

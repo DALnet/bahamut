@@ -105,8 +105,6 @@ int  user_modes[] =
 /* internally defined functions */
 unsigned long my_rand(void);	/* provided by orabidoo */
 /* externally defined functions */
-extern int  find_eline(aClient *);	/* defined in s_conf.c */
-extern int  find_fline(aClient *);	/* defined in s_conf.c */
 extern Link *find_channel_link(Link *, aChannel *);	/* defined in list.c */
 #ifdef FLUD
 int         flud_num = FLUD_NUM;
@@ -400,7 +398,7 @@ char *canonize(char *buffer)
 int register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
 {
     aClient *nsptr;
-    aConfItem  *pwaconf = NULL;
+    aAllow  *pwaconf = NULL;
     char       *parv[3];
     static char ubuf[12];
     char       *p;
@@ -504,7 +502,7 @@ int register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
 	    strcpy(sptr->sockhost, sptr->hostip);
 	}
 	
-	pwaconf = sptr->confs->value.aconf;
+	pwaconf = sptr->confs->allow;
 
 	if (sptr->flags & FLAGS_DOID && !(sptr->flags & FLAGS_GOTID)) 
 	{
@@ -572,9 +570,9 @@ int register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
 	 * so save room for "buffer" connections. Smaller servers may
 	 * want to decrease this, and it should probably be just a
 	 * percentage of the MAXCLIENTS... -Taner
+	 * Flines are now no different than Elines
 	 */
-	/* Except "F:" clients */
-	if ((Count.local >= (MAXCLIENTS - 10)) && !(find_fline(sptr))) 
+	if ((Count.local >= (MAXCLIENTS - 10)))
 	{ 
 	    sendto_realops_lev(SPY_LEV, "Too many clients, rejecting %s[%s].",
 			       nick, sptr->sockhost);
@@ -745,7 +743,7 @@ int register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
 	if(!(ban = check_userbanned(sptr, UBAN_IP|UBAN_CIDR4, UBAN_WILDUSER)))
             ban = check_userbanned(sptr, UBAN_HOST, 0);
 
-	if(ban && !find_eline(sptr))
+	if(ban)
 	{
 	    char *reason, *ktype;
 	    int local;
@@ -2515,17 +2513,14 @@ int m_pong(aClient *cptr, aClient *sptr, int parc, char *parv[])
 int check_oper_can_mask(aClient *sptr, char *name, char *password,
 			char **onick)
 {
-    aConfItem *aconf;
+    aOper *aoper;
     char *encr;
 
 #ifdef CRYPT_OPER_PASSWORD
     extern char *crypt();
 #endif
 
-    if (!(aconf = find_conf_exact(name, sptr->username, sptr->sockhost,
-				  CONF_OPS)) &&
-	!(aconf = find_conf_exact(name, sptr->username, sptr->hostip,
-				  CONF_OPS))) 
+    if(!(aoper = find_oper(name, sptr->username, sptr->sockhost, sptr->hostip)))
     {
 	sendto_realops("Failed OPERMASK attempt by %s (%s@%s) [No Entry for "
 		       "%s]", sptr->name, sptr->user->username,
@@ -2536,23 +2531,23 @@ int check_oper_can_mask(aClient *sptr, char *name, char *password,
 #ifdef CRYPT_OPER_PASSWORD
     /* use first two chars of the password they send in as salt */
     /* passwd may be NULL pointer. Head it off at the pass... */
-    if (password && *aconf->passwd)
-	encr = crypt(password, aconf->passwd);
+    if (password && *aoper->passwd)
+	encr = crypt(password, aoper->passwd);
     else
 	encr = "";
 #else
     encr = password;
 #endif /* CRYPT_OPER_PASSWORD */
     
-    if(StrEq(encr, aconf->passwd))
+    if(StrEq(encr, aoper->passwd))
     {
 #ifdef USE_SYSLOG
-	syslog(LOG_INFO, "OPERMASK: %s (%s!%s@%s)", aconf->name, sptr->name,
+	syslog(LOG_INFO, "OPERMASK: %s (%s!%s@%s)", aoper->nick, sptr->name,
 	       sptr->user->username, sptr->user->host);
 #endif
-	*onick = aconf->name;
+	*onick = aoper->nick;
 	sendto_realops("%s [%s] (%s@<hidden>) has masked their hostname.",
-		       sptr->name, aconf->name, sptr->user->username);
+		       sptr->name, aoper->nick, sptr->user->username);
 	return 1;
     }
 
@@ -2571,8 +2566,9 @@ int check_oper_can_mask(aClient *sptr, char *name, char *password,
  */
 int m_oper(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
-    aConfItem  *aconf;
-    char       *name, *password, *encr, *oper_ip;
+    aOper  	*aoper;
+    char       	*name, *password, *encr, *oper_ip;
+    
 
 #ifdef CRYPT_OPER_PASSWORD
     extern char *crypt();
@@ -2590,9 +2586,12 @@ int m_oper(aClient *cptr, aClient *sptr, int parc, char *parv[])
     }
 
     /* if message arrived from server, trust it, and set to oper */
+    /* an OPER message should never come from a server. complain */
 
     if ((IsServer(cptr) || IsMe(cptr)) && !IsOper(sptr))
     {
+	sendto_realops("Why is %s sending me an OPER? Contact Coders",
+			cptr->name);
 #ifdef DEFAULT_HELP_MODE
 	sptr->umode |= UMODE_o;
 	sptr->umode |= UMODE_h;
@@ -2623,10 +2622,8 @@ int m_oper(aClient *cptr, aClient *sptr, int parc, char *parv[])
     if(!(sptr->user && sptr->user->real_oper_host))
     {
 #endif
-	if (!(aconf = find_conf_exact(name, sptr->username,
-				      sptr->sockhost, CONF_OPS)) && 
-	    !(aconf = find_conf_exact(name, sptr->username, cptr->hostip,
-				      CONF_OPS))) 
+	if(!(aoper = find_oper(name, sptr->username,
+			       sptr->sockhost, sptr->hostip)))
 	{
 	    sendto_one(sptr, err_str(ERR_NOOPERHOST), me.name, parv[0]);
 	    sendto_realops("Failed OPER attempt by %s (%s@%s)", parv[0],
@@ -2638,10 +2635,9 @@ int m_oper(aClient *cptr, aClient *sptr, int parc, char *parv[])
     }
     else
     {
-	if (!(aconf = find_conf_exact(name, sptr->user->real_oper_username,
-				      sptr->user->real_oper_host, CONF_OPS)) &&
-	    !(aconf = find_conf_exact(name, sptr->user->real_oper_username,
-				      sptr->user->real_oper_ip, CONF_OPS))) 
+	if (!(aoper = find_oper(name, sptr->user->real_oper_username,
+				      sptr->user->real_oper_host,
+				      sptr->user->real_oper_ip))) 
 	{
 	    sendto_one(sptr, err_str(ERR_NOOPERHOST), me.name, parv[0]);
 	    sendto_realops("Failed OPER attempt by %s (%s@%s)", parv[0],
@@ -2654,29 +2650,36 @@ int m_oper(aClient *cptr, aClient *sptr, int parc, char *parv[])
 #ifdef CRYPT_OPER_PASSWORD
     /* use first two chars of the password they send in as salt */
     /* passwd may be NULL pointer. Head it off at the pass... */
-    if (password && *aconf->passwd)
-	encr = crypt(password, aconf->passwd);
+    if (password && *aoper->passwd)
+	encr = crypt(password, aoper->passwd);
     else
 	encr = "";
 #else
     encr = password;
 #endif /* CRYPT_OPER_PASSWORD */
     
-    if ((aconf->status & CONF_OPS) &&
-	StrEq(encr, aconf->passwd) && !attach_conf(sptr, aconf))
+    if (StrEq(encr, aoper->passwd))
     {
+	CLink	   *clp;
 	int         old = (sptr->umode & ALL_UMODES);
 	char       *s;
-	
-	s = strchr(aconf->host, '@');
+
+	s = strchr(aoper->hostmask, '@');
 	if (s == (char *) NULL)
 	{
 	    sendto_one(sptr, err_str(ERR_NOOPERHOST), me.name, parv[0]);
-	    sendto_realops("corrupt aconf->host = [%s]", aconf->host);
+	    sendto_realops("corrupt aoper->hostmask [%s]", aoper->hostmask);
 	    return 0;
 	}
 	*s++ = '\0';
-	if (!(aconf->port & OFLAG_ISGLOBAL))
+        /* attach our conf */
+        if(!(clp = cptr->confs))
+            clp = make_clink();
+        clp->aoper = aoper;
+        aoper->class->links++;
+        aoper->acpt = sptr;
+        sptr->confs = clp;
+	if (!(aoper->flags & OFLAG_ISGLOBAL))
 	    SetLocOp(sptr);
 	else
 	    SetOper(sptr);
@@ -2685,7 +2688,7 @@ int m_oper(aClient *cptr, aClient *sptr, int parc, char *parv[])
 #else			
 	sptr->umode|=(UMODE_s|UMODE_g|UMODE_w|UMODE_n);
 #endif
-	sptr->oflag = aconf->port;
+	sptr->oflag = aoper->flags;
 	Count.oper++;
 	*--s = '@';
 	add_to_list(&oper_list, sptr);
@@ -2739,7 +2742,6 @@ int m_oper(aClient *cptr, aClient *sptr, int parc, char *parv[])
     }
     else 
     {
-	(void) detach_conf(sptr, aconf);
 	sendto_one(sptr, err_str(ERR_PASSWDMISMATCH), me.name, parv[0]);
 #ifdef FAILED_OPER_NOTICE
 	sendto_realops("Failed OPER attempt by %s (%s@%s)",
@@ -3015,15 +3017,12 @@ int m_umode(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	
     if ((setflags & (UMODE_o | UMODE_O)) && !IsAnOper(sptr) && MyConnect(sptr))
     {
-	det_confs_butmask(sptr, CONF_CLIENT & ~CONF_OPS);
 	sptr->sendqlen = get_sendq(sptr);
 	sptr->oflag = 0;
     }
 
     if (!(setflags & (UMODE_o | UMODE_O)) && IsAnOper(sptr))
-    {
 	Count.oper++;
-    }
 	
     if ((setflags & (UMODE_o | UMODE_O)) && !IsAnOper(sptr))
     {
@@ -3038,6 +3037,8 @@ int m_umode(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	     */
 	    sptr->pingval = get_client_ping(sptr);
 	    sptr->sendqlen = get_sendq(sptr);
+        sptr->confs->aoper->acpt = NULL;
+        sptr->confs->aoper = NULL;
 	}
     }
     

@@ -72,7 +72,7 @@ extern u_short ac_sendB(aClient *);
 extern u_short ac_recieveB(aClient *);
 extern long ac_lastrecvM(aClient *);
 extern int ac_priority(aClient *);
-extern aClient *ac_acpt(aClient *);
+extern aListener *ac_lstn(aClient *);
 extern Link *ac_confs(aClient *);
 extern int ac_authfd(aClient *);
 extern char *ac_username(aClient *);
