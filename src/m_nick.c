@@ -397,9 +397,9 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
        char *m;
        
        /* If we get 11 and aren't NICKIP, whine */
-       if (parc==11&&(!IsNICKIP(sptr))) 
+       if (parc==11&&(!IsNICKIP(cptr))) 
 	 sendto_ops_lev(DEBUG_LEV, "Extra Param without NICKIP from %s",
-			sptr->name);
+			cptr->name);
        
        /* parse the usermodes -orabidoo */
        m = &parv[4][1];
