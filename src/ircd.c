@@ -1171,6 +1171,7 @@ void io_loop()
              */
 	    nextbanexpire = NOW + 31;
 	    expire_userbans();
+	    expire_simbans();
 	    throttle_timer(NOW);
 	}
 

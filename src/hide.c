@@ -181,14 +181,16 @@ void fakeserver_sendserver(aClient *sptr)
 {
    Link *lp;
 
+#if 0 /* Don't do this. */
    /* tell them to reset their list */
-   sendto_one(sptr, ":%s LINKS CONTROL RESET", me.name);
+   sendto_one(sptr, ":%s LINKSCONTROL RESET", me.name);
+#endif
 
    for (lp = lserver_list; lp; lp = lp->next)
    {
       struct fakelinkserver *ls = (struct fakelinkserver *) lp->value.cp;
 
-      sendto_one(sptr, ":%s LINKS CONTROL + %s :%s",
+      sendto_one(sptr, ":%s LINKSCONTROL + %s :%s",
                  me.name, ls->name, ls->description);
    }
 }

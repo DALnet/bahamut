@@ -535,6 +535,7 @@ void count_memory(aClient *cptr, char *nick)
 
     /* print userban summary, get userban total usage */
     totuban = count_userbans(cptr);
+    totuban += count_simbans(cptr);
 
     sendto_one(cptr, ":%s %d %s :Whowas users %d(%d)",
 	       me.name, RPL_STATSDEBUG, nick, wwu, wwu * sizeof(anUser));
@@ -579,7 +580,7 @@ void count_memory(aClient *cptr, char *nick)
           dlinkallocsz + fludallocsz + totuban;
 
     sendto_one(cptr, ":%s %d %s :whowas %d chan %d client/user %d misc %d "
-	       "dbuf %d hash %d res %d link %d flud %d userban %d",
+	       "dbuf %d hash %d res %d link %d flud %d simuserban %d",
 	       me.name, RPL_STATSDEBUG, nick, totww, totch, totcl, totmisc,
 	       db, tothash, rm, linkallocsz, fludallocsz, totuban);
 

@@ -955,6 +955,9 @@ int rehash(aClient *cptr, aClient *sptr, int sig)
 #endif
         remove_userbans_match_flags(UBAN_NETWORK, 0);
         remove_userbans_match_flags(UBAN_LOCAL|UBAN_TEMPORARY, 0);
+	remove_simbans_match_flags(SBAN_GCOS, 0);
+	remove_simbans_match_flags(SBAN_NICK, 0);
+	remove_simbans_match_flags(SBAN_CHAN, 0);
     }
 
     if ((fd = openconf(configfile)) == -1) 
@@ -1019,6 +1022,10 @@ int rehash(aClient *cptr, aClient *sptr, int sig)
 
     /* remove perm klines */
     remove_userbans_match_flags(UBAN_LOCAL, UBAN_TEMPORARY);
+
+    remove_simbans_match_flags(SBAN_CHAN|SBAN_LOCAL, UBAN_TEMPORARY);
+    remove_simbans_match_flags(SBAN_NICK|SBAN_LOCAL, UBAN_TEMPORARY);
+    remove_simbans_match_flags(SBAN_GCOS|SBAN_LOCAL, UBAN_TEMPORARY);
 
     clear_conf_list(&EList1);
     clear_conf_list(&EList2);
@@ -1282,7 +1289,7 @@ initconf(int opt, int fd, aClient *rehasher)
 
 	case 'Q':		/* restricted nicknames */
 	case 'q':
-	    aconf->status = CONF_QUARANTINED_NICK;
+	    aconf->status = CONF_QUARANTINE;
 	    break;
  
 	case 'T':
@@ -1386,12 +1393,6 @@ initconf(int opt, int fd, aClient *rehasher)
 	    /* NOTREACHED */
 	}
 
-	if(aconf->status & CONF_QUARANTINE)
-	{
-	    if(*aconf->name && *aconf->name == '#')
-		aconf->status = CONF_QUARANTINED_CHAN;
-	}
-	
 	/*
 	 * If conf line is a class definition, create a class entry
 	 * for it and make the conf_line illegal and delete it.
@@ -1538,7 +1539,68 @@ initconf(int opt, int fd, aClient *rehasher)
 	    continue; /* no need to keep this as a conf entry.. */
 	} 
 #endif
-	
+
+        if (aconf->status & CONF_QUARANTINE)
+	{
+	    struct simBan *ban;
+	    unsigned int flags;
+	    char *sb_m, *sb_r;
+
+	    if(BadPtr(aconf->name))
+		continue;
+
+	    flags = SBAN_LOCAL;
+	    if(aconf->name[0] == '#')
+	    {
+		flags |= SBAN_CHAN;
+		sb_r = BadPtr(aconf->passwd) ? "Reserved Channel" : aconf->passwd;
+	    }
+	    else
+	    {
+		flags |= SBAN_NICK;
+		sb_r = BadPtr(aconf->passwd) ? "Reserved Nickname" : aconf->passwd;
+	    }
+
+	    sb_m = aconf->name;
+
+	    ban = make_simpleban(flags, sb_m);
+	    if(!ban)
+		continue;
+
+	    ban->reason = (char *) MyMalloc(strlen(sb_r) + 1);
+	    strcpy(ban->reason, sb_r);
+	    ban->timeset = NOW;
+
+	    add_simban(ban);
+	    continue;
+	}
+
+        if (aconf->status & CONF_GCOS)
+	{
+	    struct simBan *ban;
+	    unsigned int flags;
+	    char *sb_m, *sb_r;
+
+	    if(BadPtr(aconf->name))
+		continue;
+
+	    flags = SBAN_LOCAL|SBAN_GCOS;
+	    sb_r = BadPtr(aconf->passwd) ? "Bad GCOS" : aconf->passwd;
+
+	    sb_m = aconf->name;
+
+	    ban = make_simpleban(flags, sb_m);
+	    if(!ban)
+		continue;
+
+	    ban->reason = (char *) MyMalloc(strlen(sb_r) + 1);
+	    strcpy(ban->reason, sb_r);
+	    ban->timeset = NOW;
+
+	    add_simban(ban);
+	    continue;
+	}
+
 	if ((aconf->status & CONF_KILL) && aconf->host) 
 	{
 	    struct userBan *ban;

@@ -39,6 +39,14 @@
 
 #define UBAN_TEMPORARY 0x800   /* userban is temporary */
 
+#define SBAN_LOCAL     0x001   
+#define SBAN_NETWORK   0x002   
+#define SBAN_NICK      0x004   /* sban on the nick field */
+#define SBAN_GCOS      0x008   /* sban on the gcos field */
+#define SBAN_CHAN      0x010   /* sban on the chname field */
+#define SBAN_WILD      0x020   /* sban mask contains wildcards */
+#define SBAN_TEMPORARY 0x040   /* sban is temporary */
+
 struct userBan {
    unsigned int flags;
    char *u;                    /* username */
@@ -50,6 +58,17 @@ struct userBan {
    char *reason;
    time_t timeset;             /* time this ban was set */
    time_t duration;            /* length of this ban, in seconds, or 0xFFFFFFFF for permanent */   
+
+   void *internal_ent;         /* internal -- pointer to banlist entry tag */
+};
+
+struct simBan {
+   unsigned int flags;
+   char *mask;
+
+   char *reason;
+   time_t timeset;
+   time_t duration;
 
    void *internal_ent;         /* internal -- pointer to banlist entry tag */
 };
@@ -74,3 +93,20 @@ int user_match_ban(aClient *, struct userBan *);
 char *get_userban_host(struct userBan *, char *, int);
 
 int count_userbans(aClient *cptr);
+
+/* Simban Calls */
+
+struct simBan *make_simpleban(unsigned int, char *);
+void add_simban(struct simBan *);
+void remove_simban(struct simBan *);
+struct simBan *find_simban_exact(struct simBan *);
+int user_match_simban(aClient *, struct simBan *);
+struct simBan *check_mask_simbanned(char *, unsigned int);
+void simban_free(struct simBan *);
+void remove_simban(struct simBan *);
+void remove_simbans_match_flags(unsigned int, unsigned int);
+void remove_simbans_match_mask(unsigned int, char *, int);
+void report_simbans_match_flags(aClient *, unsigned int, unsigned int);
+void expire_simbans();
+void send_simbans(aClient *, unsigned int);
+int count_simbans(aClient *);

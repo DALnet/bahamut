@@ -1985,7 +1985,7 @@ int m_user(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
 #define	UFLAGS	(UMODE_i|UMODE_w|UMODE_s)
     char       *username, *host, *server, *realname;
-    aConfItem *aconf;
+    struct simBan *ban;
     
     if (parc > 2 && (username = (char *) strchr(parv[1], '@')))
 	*username = '\0';
@@ -2005,9 +2005,9 @@ int m_user(aClient *cptr, aClient *sptr, int parc, char *parv[])
     host = (parc < 3 || BadPtr(parv[2])) ? "<nohost>" : parv[2];
     server = (parc < 4 || BadPtr(parv[3])) ? "<noserver>" : parv[3];
     realname = (parc < 5 || BadPtr(parv[4])) ? "<bad-realname>" : parv[4];
-    if ((aconf = find_conf_name(realname, CONF_GCOS))) {
-	return exit_client(cptr, sptr, sptr, BadPtr(aconf->passwd) ?
-			   "Bad GCOS: Reason unspecified" : aconf->passwd);
+    if ((ban = check_mask_simbanned(realname, SBAN_GCOS))) {
+	return exit_client(cptr, sptr, sptr, BadPtr(ban->reason) ?
+			   "Bad GCOS: Reason unspecified" : ban->reason);
     }
     return do_user(parv[0], cptr, sptr, username, host, server, 0,0, realname);
 }

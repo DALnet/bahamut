@@ -917,23 +917,14 @@ int do_server_estab(aClient *cptr)
 		       acptr->hopcount + 1, acptr->info);
 	}
     }
-    
-    /* send out our SQLINES and SGLINES too */
-    for(aconf=conf ; aconf ; aconf=aconf->next) 
-    {
-	if((aconf->status&CONF_QUARANTINE)
-	   && (aconf->status&CONF_SQLINE)) 
-	    sendto_one(cptr, ":%s SQLINE %s :%s", me.name, 
-		       aconf->name, aconf->passwd);
-	if((aconf->status&CONF_GCOS) && (aconf->status&CONF_SGLINE))
-	    sendto_one(cptr, ":%s SGLINE %d :%s:%s", me.name,
-		       strlen(aconf->name), aconf->name, aconf->passwd);
-    }
 
-#ifdef HUB
+    /* send out our SQLINES and SGLINES too */
+    send_simbans(cptr, SBAN_CHAN|SBAN_NETWORK);
+    send_simbans(cptr, SBAN_NICK|SBAN_NETWORK);
+    send_simbans(cptr, SBAN_GCOS|SBAN_NETWORK);
+    
     /* Send out fake server list and other 'fake' stuff */
     fakeserver_sendserver(cptr);
-#endif
 
     /* Bursts are about to start.. send a BURST */
     if (IsBurst(cptr))
@@ -1624,13 +1615,11 @@ static int  report_array[11][3] =
     {
     {CONF_CONNECT_SERVER, RPL_STATSCLINE, 'C'},
     {CONF_NOCONNECT_SERVER, RPL_STATSNLINE, 'N'},
-    {CONF_GCOS, RPL_STATSGLINE, 'G'},
     {CONF_CLIENT, RPL_STATSILINE, 'I'},
     {CONF_KILL, RPL_STATSKLINE, 'K'},
     {CONF_OPERATOR, RPL_STATSOLINE, 'O'},
     {CONF_HUB, RPL_STATSHLINE, 'H'},
     {CONF_LOCOP, RPL_STATSOLINE, 'o'},
-    {CONF_QUARANTINE, RPL_STATSQLINE, 'Q'},
     {CONF_ULINE, RPL_STATSULINE, 'U'},
     {0, 0}
 };
@@ -1668,24 +1657,14 @@ static void report_configured_links(aClient *sptr, int mask)
 	    if(tmp->status & CONF_SERVER_MASK)
 		host = "*";
 
-	    if (tmp->status & CONF_QUARANTINE)
+	    if(!IsAnOper(sptr) && !IsULine(sptr))
 		sendto_one(sptr, rpl_str(p[1]), me.name,
-			   sptr->name, c, pass, name, port,
+			   sptr->name, c, "*", name, port,
 			   get_conf_class(tmp));
-	    else if (tmp->status & CONF_GCOS)
+	    else
 		sendto_one(sptr, rpl_str(p[1]), me.name,
-			   sptr->name, c, pass, name, port,
+			   sptr->name, c, host, name, port,
 			   get_conf_class(tmp));
-	    else {
-		if(!IsAnOper(sptr) && !IsULine(sptr))
-		    sendto_one(sptr, rpl_str(p[1]), me.name,
-			       sptr->name, c, "*", name, port,
-			       get_conf_class(tmp));
-		else
-		    sendto_one(sptr, rpl_str(p[1]), me.name,
-			       sptr->name, c, host, name, port,
-			       get_conf_class(tmp));
-	    }
 	}
     return;
 }
@@ -1881,8 +1860,10 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	break;
 		
     case 'G':
+	report_simbans_match_flags(sptr, SBAN_GCOS|SBAN_LOCAL, 0);
+	break;
     case 'g':
-	report_configured_links(sptr, CONF_GCOS);
+	report_simbans_match_flags(sptr, SBAN_GCOS|SBAN_NETWORK, 0);
 	break;
 
     case 'H':
@@ -1954,8 +1935,12 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	break;
 		
     case 'Q':
+	report_simbans_match_flags(sptr, SBAN_NICK|SBAN_LOCAL, 0);
+	report_simbans_match_flags(sptr, SBAN_CHAN|SBAN_LOCAL, 0);
+	break;
     case 'q':
-	report_configured_links(sptr, CONF_QUARANTINE);
+	report_simbans_match_flags(sptr, SBAN_NICK|SBAN_NETWORK, 0);
+	report_simbans_match_flags(sptr, SBAN_CHAN|SBAN_NETWORK, 0);
 	break;
 		
     case 'R':
@@ -4156,11 +4141,35 @@ int m_rehash(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	    return 0;
 	}
 	else if(mycmp(parv[1], "THROTTLES") == 0) {
-	   sendto_one(sptr, rpl_str(RPL_REHASHING), me.name, parv[0],
-		 "throttles");
-	   throttle_rehash();
-	   sendto_ops("%s is rehashing throttles", parv[0]);
-	   return 0;
+	    sendto_one(sptr, rpl_str(RPL_REHASHING), me.name, parv[0],
+ 		 "throttles");
+	    throttle_rehash();
+	    sendto_ops("%s is rehashing throttles", parv[0]);
+	    return 0;
+	}
+	else if(mycmp(parv[1], "SQLINES") == 0) {
+	    sendto_one(sptr, rpl_str(RPL_REHASHING), me.name, parv[0],
+ 		 "sqlines");
+	    sendto_ops("%s is rehashing sqlines", parv[0]);
+	    remove_simbans_match_flags(SBAN_NICK|SBAN_NETWORK, 0);
+	    remove_simbans_match_flags(SBAN_CHAN|SBAN_NETWORK, 0);
+	    return 0;
+	}
+	else if(mycmp(parv[1], "SGLINES") == 0) {
+	    sendto_one(sptr, rpl_str(RPL_REHASHING), me.name, parv[0],
+ 		 "sglines");
+	    sendto_ops("%s is rehashing sglines", parv[0]);
+	    remove_simbans_match_flags(SBAN_GCOS|SBAN_NETWORK, 0);
+	    return 0;
+	}
+	else if(mycmp(parv[1], "TSQGLINES") == 0) {
+	    sendto_one(sptr, rpl_str(RPL_REHASHING), me.name, parv[0],
+ 		 "tsqglines");
+	    sendto_ops("%s is rehashing temporary sqlines/glines", parv[0]);
+	    remove_simbans_match_flags(SBAN_GCOS|SBAN_TEMPORARY, 0);
+	    remove_simbans_match_flags(SBAN_NICK|SBAN_TEMPORARY, 0);
+	    remove_simbans_match_flags(SBAN_CHAN|SBAN_TEMPORARY, 0);
+	    return 0;
 	}
     }
     else 
@@ -5228,7 +5237,9 @@ int   m_watch(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
 int m_sqline(aClient *cptr, aClient *sptr, int parc, char *parv[]) 
 {
-    aConfItem *aconf;
+    struct simBan *ban;
+    unsigned int flags;
+    char *reason;
 
     if(!(IsServer(sptr) || IsULine(sptr)))
 	return 0;
@@ -5245,26 +5256,34 @@ int m_sqline(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
     /* if we have any Q:lines (SQ or Q) that match
      * this Q:line, just return (no need to waste cpu */
-    
-    if (!(aconf=find_conf_name(parv[1], *parv[1]=='#' ?
-			       CONF_QUARANTINED_CHAN : CONF_QUARANTINED_NICK)))
-    {
-	/* okay, it doesn't suck, build a new conf for it */
-	aconf=make_conf();
-	
-        /* Q:line and SQline, woo */
-        if(*parv[1]=='#')
-	    aconf->status=(CONF_QUARANTINED_CHAN|CONF_SQLINE); 
-        else
-	    aconf->status=(CONF_QUARANTINED_NICK|CONF_SQLINE);
 
-	DupString(aconf->name, parv[1]);
-	DupString(aconf->passwd, (parv[2]!=NULL ? parv[2] : "Reserved"));
-	aconf->next=conf;
-	conf=aconf;
+    flags = SBAN_NETWORK;
+    if(parv[1][0] == '#')
+       flags |= SBAN_CHAN;
+    else
+       flags |= SBAN_NICK;
+    ban = make_simpleban(flags, parv[1]);
+    if(!ban)
+    {
+	sendto_realops_lev(DEBUG_LEV, "make_simpleban(%s) failed on sqline", parv[1]);
+	return 0;
     }
+
+    reason = BadPtr(parv[2]) ? "Reserved" : parv[2];
+    ban->reason = NULL;
+
+    if (find_simban_exact(ban) == NULL)
+    {
+	ban->reason = (char *) MyMalloc(strlen(reason) + 1);
+	strcpy(ban->reason, reason);
+	ban->timeset = NOW;
+        add_simban(ban);
+    }
+    else
+	simban_free(ban);
+
     sendto_serv_butone(cptr, ":%s SQLINE %s :%s", sptr->name, parv[1],
-		       aconf->passwd);
+		       reason);
     return 0;
 }
 	
@@ -5272,7 +5291,6 @@ int m_unsqline(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     int matchit = 0;
     char *mask;
-    aConfItem *aconf, *ac2, *ac3;
     
     if(!(IsServer(sptr) || IsULine(sptr)))
 	return 0;
@@ -5292,35 +5310,16 @@ int m_unsqline(aClient *cptr, aClient *sptr, int parc, char *parv[])
     else
 	mask=parv[1];
 
-    /* find the sqline and remove it */
-    /* this was way too complicated and ugly. Fixed. -lucas */
-    /* Changed this to use match.  Seems to make more sense? */
-    /* Therefore unsqline * will clear the sqline list. */
-    
-    ac2 = ac3 = aconf = conf;
-    while(aconf)
+    /* special case for "UNSQLINE 1 :*" */
+    if(mycmp(mask, "*") == 0 && matchit)
     {
-	if((aconf->status & (CONF_QUARANTINE))
-	   && (aconf->status & (CONF_SQLINE)) && 
-	   aconf->name && (matchit 
-			   ? !match(mask, aconf->name) 
-			   : !mycmp(mask, aconf->name))) 
-	{
-	    if (conf==aconf) 
-		ac2 = ac3 = conf = aconf->next;
-	    else
-		ac2 = ac3->next = aconf->next;
-	    MyFree(aconf->passwd);
-	    MyFree(aconf->name);
-	    MyFree(aconf);
-	    aconf=ac2;
-	} 
-	else
-	{
-	    ac3=aconf;
-	    aconf=aconf->next;
-	}
+       remove_simbans_match_mask(SBAN_CHAN|SBAN_NETWORK, mask, 1);
+       remove_simbans_match_mask(SBAN_NICK|SBAN_NETWORK, mask, 1);
     }
+    else if(mask[0] == '#')
+       remove_simbans_match_mask(SBAN_CHAN|SBAN_NETWORK, mask, matchit);
+    else
+       remove_simbans_match_mask(SBAN_NICK|SBAN_NETWORK, mask, matchit);
 
     if (parc == 3) 
 	sendto_serv_butone(cptr, ":%s UNSQLINE %d :%s", sptr->name, matchit,
@@ -5332,8 +5331,9 @@ int m_unsqline(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
 int m_sgline(aClient *cptr, aClient *sptr, int parc, char *parv[]) 
 {
-    aConfItem *aconf;
+    struct simBan *ban;
     int len;
+    unsigned int flags;
     char *mask, *reason;
     
     if(!(IsServer(sptr) || IsULine(sptr)))
@@ -5361,19 +5361,30 @@ int m_sgline(aClient *cptr, aClient *sptr, int parc, char *parv[])
     /* if we have any G:lines (SG or G) that match
      * this G:line, just return (no need to waste cpu */
 
-    if (!(aconf=find_conf_name(mask, CONF_GCOS)))
+    flags = SBAN_NETWORK|SBAN_GCOS;
+    ban = make_simpleban(flags, mask);
+    if(!ban)
     {
-	/* okay, it doesn't suck, build a new conf for it */
-	aconf=make_conf();
-	
-	aconf->status=(CONF_GCOS|CONF_SGLINE); /* G:line and SGline, woo */
-	DupString(aconf->name, mask);
-	DupString(aconf->passwd, reason ? reason : "Reason Unspecified");
-	aconf->next=conf;
-	conf=aconf;
+	sendto_realops_lev(DEBUG_LEV, "make_simpleban(%s) failed on sgline", parv[1]);
+	return 0;
     }
+
+    if(BadPtr(reason))
+       reason = "Reserved";
+    ban->reason = NULL;
+
+    if (find_simban_exact(ban) == NULL)
+    {
+	ban->reason = (char *) MyMalloc(strlen(reason) + 1);
+	strcpy(ban->reason, reason);
+	ban->timeset = NOW;
+        add_simban(ban);
+    }
+    else
+	simban_free(ban);
+
     sendto_serv_butone(cptr, ":%s SGLINE %d :%s:%s", sptr->name, len,
-		       aconf->name,aconf->passwd);
+		       mask, reason);
     return 0;
 }
 	
@@ -5381,7 +5392,6 @@ int m_unsgline(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     int matchit=0;
     char *mask;
-    aConfItem *aconf, *ac2, *ac3;
    
     if(!(IsServer(sptr) || IsULine(sptr)))
 	return 0;
@@ -5402,35 +5412,8 @@ int m_unsgline(aClient *cptr, aClient *sptr, int parc, char *parv[])
     else
 	mask=parv[1];
     
-    /* find the sgline and remove it */
-    /* this was way too complicated and ugly. Fixed. -lucas */
-    /* Changed this to use match.  Seems to make more sense? */
-    /* Therefore unsgline * will clear the sgline list. */
-    ac2 = ac3 = aconf = conf;
-    while(aconf)
-    {
-	if((aconf->status & (CONF_GCOS))
-	   && (aconf->status & (CONF_SGLINE)) && 
-	   aconf->name && (matchit 
-			   ? !match(mask, aconf->name) 
-			   : !mycmp(mask, aconf->name))) 
-	{
-	    if (conf==aconf) 
-		ac2 = ac3 = conf = aconf->next;
-	    else
-		ac2 = ac3->next = aconf->next;
-	    MyFree(aconf->passwd);
-	    MyFree(aconf->name);
-	    MyFree(aconf);
-	    aconf=ac2;
-	}
-	else
-	{
-	    ac3=aconf;
-	    aconf=aconf->next;
-	}
-    }   
-
+    remove_simbans_match_mask(SBAN_GCOS|SBAN_NETWORK, mask, matchit);
+    
     if (parc==3)
 	sendto_serv_butone(cptr, ":%s UNSGLINE %d :%s", sptr->name, matchit,
 			   mask);

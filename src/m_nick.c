@@ -32,6 +32,7 @@
 #include <utmp.h>
 #include <fcntl.h>
 #include "h.h"
+#include "userban.h"
 
 extern int do_user(char *, aClient *, aClient *, char *, char *, char *,
 		   unsigned long, unsigned int, char *);
@@ -94,7 +95,7 @@ static int do_nick_name(char *nick) {
  */
 int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
-    aConfItem  *aconf;
+    struct simBan *ban;
     aClient    *acptr, *uplink;
     Link       *lp;
     char        nick[NICKLEN + 2];
@@ -464,7 +465,7 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	if (MyConnect(sptr))
 	{
 #endif
-	    if ((aconf = find_conf_name(nick, CONF_QUARANTINED_NICK)))
+	    if ((ban = check_mask_simbanned(nick, SBAN_NICK)))
 	    {
 #ifndef DONT_CHECK_QLINE_REMOTE
 		if (!MyConnect(sptr))
@@ -481,9 +482,9 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		{
 		    sendto_one(sptr, err_str(ERR_ERRONEUSNICKNAME), me.name,
 			       BadPtr(parv[0]) ? "*" : parv[0], nick,
-			       BadPtr(aconf->passwd) ? "Erroneous Nickname" :
-			       aconf->passwd,
-			       BadPtr(aconf->name) ? "N/A" : aconf->name);
+			       BadPtr(ban->reason) ? "Erroneous Nickname" :
+			       ban->reason,
+			       BadPtr(ban->mask) ? "N/A" : ban->mask);
 		    sendto_realops_lev(REJ_LEV,
 				       "Forbidding Q:lined nick %s from %s.",
 				       nick, get_client_name(cptr, FALSE));
@@ -579,16 +580,16 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	/* Client setting NICK the first time */
 	if (MyConnect(sptr))
 	{
-	    if ((aconf = find_conf_name(nick, CONF_QUARANTINED_NICK)))
+	    if ((ban = check_mask_simbanned(nick, SBAN_NICK)))
 	    {
 		if (MyConnect(sptr) && (!IsServer(cptr)) && (!IsOper(cptr))
 		    && (!IsULine(sptr)))
 		{
 		    sendto_one(sptr, err_str(ERR_ERRONEUSNICKNAME), me.name,
 			       BadPtr(parv[0]) ? "*" : parv[0], nick,
-			       BadPtr(aconf->passwd) ? "Erroneous Nickname" :
-			       aconf->passwd,
-			       BadPtr(aconf->name) ? "N/A" : aconf->name);
+			       BadPtr(ban->reason) ? "Erroneous Nickname" :
+			       ban->reason,
+			       BadPtr(ban->mask) ? "N/A" : ban->mask);
 		    sendto_realops_lev(REJ_LEV,
 				       "Forbidding Q:lined nick %s from "
 				       "<unregistered>%s.", nick,

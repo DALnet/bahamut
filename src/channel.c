@@ -26,6 +26,7 @@
 #include "numeric.h"
 #include "channel.h"
 #include "h.h"
+#include "userban.h"
 
 #ifdef NO_CHANOPS_WHEN_SPLIT
 #include "fdlist.h"
@@ -1544,7 +1545,7 @@ int m_join(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     static char jbuf[BUFSIZE];
     Link   *lp;
-    aConfItem *aconf=NULL;
+    struct simBan *ban;
     aChannel *chptr;
     char   *name, *key = NULL;
     int         i, flags = 0, chanlen=0;	
@@ -1687,11 +1688,11 @@ int m_join(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	if (MyConnect(sptr))
 	{
 	    /* have we quarantined this channel? */
-	    if(!IsOper(sptr) && (aconf = find_conf_name(name, CONF_QUARANTINED_CHAN)))
+	    if(!IsOper(sptr) && (ban = check_mask_simbanned(name, SBAN_CHAN)))
             {
 		sendto_one(sptr, getreply(ERR_CHANBANREASON), me.name, parv[0], name,
-			BadPtr(aconf->passwd) ? "Reserved channel" :	
-			aconf->passwd);
+			BadPtr(ban->reason) ? "Reserved channel" :	
+			ban->reason);
                 continue;
 	    }
 
