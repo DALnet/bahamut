@@ -181,7 +181,7 @@ static int send_message(aClient *to, char *msg, int len) {
    if(IsRC4OUT(to))
    {
       /* don't destroy the data in 'msg' */
-      rc4_process_stream(to->serv->rc4_out, msg, rc4buf, len);
+      rc4_process_stream_to_buf(to->serv->rc4_out, msg, rc4buf, len);
       msg = rc4buf;
    }
 
