@@ -96,6 +96,16 @@ to the server.  Note that to be effective, all servers must share the same
 global limits.  A server can only reject new connections to itself; it
 cannot tell other servers to do so.
 
+Example:
+
+        options { global_clones 2:6; };
+
+    If there are six clients on other servers on the network, from various
+    addresses in the 10.0.0.* block, this server will not allow another
+    connection from 10.0.0.1, because the global site limit has already
+    been reached.  However, if the remote servers have a higher default,
+    they will still allow more clients to connect.
+
 Network services can set specific limits using the SVSCLONE command; these
 are referred to as "hard" global clone limits.  The command syntax is
 provided here for services authors to reference; it is not accessible to
@@ -146,7 +156,7 @@ following format:
     <from> is where the limit was set:
            "default", "soft", "hard", "class <name>"
 
-General statistics about the clones system is available on STATS d.
+General statistics about the clones system are available on STATS d.
 
 A list of specific limits is available on STATS D, returned on numeric 225:
 
