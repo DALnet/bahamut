@@ -1367,7 +1367,7 @@ m_join(aClient *cptr,
 				  sptr->oper_warn_count_down = 0;
 				
 				if (sptr->oper_warn_count_down == 0) {
-					sendto_realops("User %s (%s@%s) trying to join %s is a possible spambot",
+					sendto_ops_lev(FLOOD_LEV, "User %s (%s@%s) trying to join %s is a possible spambot",
 										sptr->name,
 										sptr->user->username,
 										sptr->user->host,
