@@ -929,14 +929,6 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
 		args++;
 		break;
             }
-#ifdef LITTLE_I_LINE
-            if(IsRestricted(sptr) && (change=='+' && *modes=='o')) 
-            {
-		errors |= SM_ERR_RESTRICTED;
-		args++;
-		break;
-            }
-#endif
             /* if we're going to overflow our mode buffer,
 	     * drop the change instead */
             if((prelen + (mbuf - morig) + pidx + NICKLEN + 1) > 
@@ -945,23 +937,6 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
 		args++;
 		break;
             }
-#ifdef LITTLE_I_LINE
-	    if(MyClient(who) && IsRestricted(who) && 
-	       (change=='+' && *modes=='o')) 
-	    {
-                /* pass back to cptr a MODE -o to avoid desynch */
-                sendto_one(cptr, ":%s MODE %s -o %s", me.name, chptr->chname,
-			   who->name);
-                sendto_one(who, ":%s NOTICE %s :*** Notice -- %s attempted to "
-			   "chanop you. You are restricted and cannot be "
-			   "chanopped", me.name, who->name, sptr->name);
-                sendto_one(sptr, ":%s NOTICE %s :*** Notice -- %s is "
-			   "restricted and cannot be chanopped",
-                           me.name, sptr->name, who->name);
-                args++;
-                break;
-	    }
-#endif
 	    
 	    /* if we have the user, set them +/-[vo] */
 	    if(change=='+')
@@ -1632,15 +1607,6 @@ int m_join(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	    }
 #endif
 	    
-#ifdef LITTLE_I_LINES
-	    if (!IsAnOper(sptr) && IsRestricted(sptr))
-	    {
-		allow_op = NO;
-		sendto_one(sptr, ":%s NOTICE %s :*** Notice -- You are "
-			   "restricted and cannot be chanopped", me.name,
-			   sptr->name);
-	    }
-#endif
 	    if ((sptr->user->joined >= MAXCHANNELSPERUSER) &&
 		(!IsAnOper(sptr) || (sptr->user->joined >= 
 				     MAXCHANNELSPERUSER * 3)))

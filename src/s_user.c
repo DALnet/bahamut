@@ -961,18 +961,6 @@ int register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
 	sendto_one(sptr, ":%s NOTICE %s :*** Notice -- For more information "
 		   "please see %s", me.name, nick, ProxyMonURL);
 #endif
-#ifdef LITTLE_I_LINES
-	if (sptr->confs && sptr->confs->value.aconf &&
-	    (sptr->confs->value.aconf->flags
-	     & CONF_FLAGS_LITTLE_I_LINE))
-	{
-	    SetRestricted(sptr);
-	    sendto_one(sptr, ":%s NOTICE %s :*** Notice -- You are in a "
-		       "restricted access mode", me.name, nick);
-	    sendto_one(sptr, ":%s NOTICE %s :*** Notice -- You can not be "
-		       "chanopped", me.name, nick);
-	}
-#endif
 		
     }
     else if (IsServer(cptr)) 

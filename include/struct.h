@@ -398,8 +398,6 @@ typedef struct MotdItem aMotd;
 
 /* flags2 macros. */
 
-#define IsRestricted(x)		((x)->flags & FLAGS_RESTRICTED)
-#define SetRestricted(x)	((x)->flags |= FLAGS_RESTRICTED)
 /* Oper flags */
 
 /* defined operator access levels */ 
@@ -621,9 +619,6 @@ struct ConfItem
 #define	CONF_CLIENT_MASK	(CONF_CLIENT | CONF_SERVICE | CONF_OPS | \
 				 CONF_SERVER_MASK)
 #define	IsIllegal(x)	        ((x)->status & CONF_ILLEGAL)
-#ifdef LITTLE_I_LINES
-#define CONF_FLAGS_LITTLE_I_LINE 0x0001
-#endif
 
 /* did the password field specify OPER? */
 #define CONF_FLAGS_I_OPERPORT      0x0002

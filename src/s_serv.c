@@ -1309,11 +1309,6 @@ int m_info(aClient *cptr, aClient *sptr, int parc, char *parv[])
 #else
 	    strcat(outstr, " KPATH=0");
 #endif
-#ifdef LITTLE_I_LINES
-	    strcat(outstr, " LITTLE_I_LINES=1");
-#else
-	    strcat(outstr, " LITTLE_I_LINES=0");
-#endif
 #ifdef LOCKFILE
 	    strcat(outstr, " LOCKFILE=1");
 #else
@@ -1604,23 +1599,12 @@ int m_links(aClient *cptr, aClient *sptr, int parc, char *parv[])
     return 0;
 }
 
-#ifdef LITTLE_I_LINES
 static int  report_array[11][3] =
-{
-#else
-    static int  report_array[11][3] =
     {
-#endif
-#if 0 /* Emacs kludge */
-    }
-#endif
     {CONF_CONNECT_SERVER, RPL_STATSCLINE, 'C'},
     {CONF_NOCONNECT_SERVER, RPL_STATSNLINE, 'N'},
     {CONF_GCOS, RPL_STATSGLINE, 'G'},
     {CONF_CLIENT, RPL_STATSILINE, 'I'},
-#ifdef LITTLE_I_LINES
-    {CONF_CLIENT, RPL_STATSILINE, 'i'},
-#endif
     {CONF_KILL, RPL_STATSKLINE, 'K'},
     {CONF_OPERATOR, RPL_STATSOLINE, 'O'},
     {CONF_HUB, RPL_STATSHLINE, 'H'},
@@ -1645,14 +1629,6 @@ static void report_configured_links(aClient *sptr, int mask)
 		    break;
 	    if (!*p)
 		continue;
-#ifdef LITTLE_I_LINES
-	    if (tmp->flags & CONF_FLAGS_LITTLE_I_LINE) 
-	    {
-		p += 3;
-		if (!*p)
-		    continue;
-	    }
-#endif
 	    c = (char) *(p + 2);
 	    host = BadPtr(tmp->host) ? null : tmp->host;
 	    pass = BadPtr(tmp->passwd) ? null : tmp->passwd;
