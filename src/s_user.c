@@ -851,7 +851,6 @@ int register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
     {
 	sptr->pingval = get_client_ping(sptr);
 	sptr->sendqlen = get_sendq(sptr);
-        sptr->yclass = get_client_class(sptr);
 #ifdef MAXBUFFERS
 	/* Let's try changing the socket options for the client here... */
 	reset_sock_opts(sptr->fd, 0);
@@ -2072,8 +2071,10 @@ int do_user(char *nick, aClient *cptr, aClient *sptr, char *username,
 	/* add non-local clients to the throttle checker.  obviously, we only
 	 * do this for REMOTE clients!@$$@!  throttle_check() is called
 	 * elsewhere for the locals! -wd */
+#ifdef THROTTLE_ENABLE
 	if (ip != 0) 
 	   throttle_check(inetntoa((char *)&sptr->ip), -1, sptr->tsinfo);
+#endif
     }
     if(MyConnect(sptr))
 	sptr->oflag=0;
@@ -2705,7 +2706,6 @@ int m_oper(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	sendto_one(sptr, rpl_str(RPL_YOUREOPER), me.name, parv[0]);
 	sptr->pingval = get_client_ping(sptr);
 	sptr->sendqlen = get_sendq(sptr);
-        sptr->yclass = get_client_class(sptr);
 #if !defined(CRYPT_OPER_PASSWORD) && (defined(FNAME_OPERLOG) ||\
     (defined(USE_SYSLOG) && defined(SYSLOG_OPER)))
 	encr = "";
@@ -3047,7 +3047,6 @@ int m_umode(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
         sptr->pingval = get_client_ping(sptr);
         sptr->sendqlen = get_sendq(sptr);
-        sptr->yclass = get_client_class(sptr);
     }
     
     if (!(setflags & UMODE_i) && IsInvisible(sptr))

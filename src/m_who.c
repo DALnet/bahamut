@@ -482,11 +482,17 @@ int chk_who(aClient *ac, int showall)
 	   (!wsopts.gcos_plus && !gchkfn(wsopts.gcos, ac->info)))
 	    return 0;
 
+    /*
+     * For the below options, a value of two means '+', 
+     * a value of 1 means '-', and a value of 0 means
+     * not speficied. 
+     */
+
     if(wsopts.class_value == 2 &&
-        ac->yclass != wsopts.class)
+        !(MyClient(ac) && get_client_class(ac) != wsopts.class))
         return 0;
     else if(wsopts.class_value == 1 &&
-        ac->yclass == wsopts.class)
+        !(MyClient(ac) && get_client_class(ac) == wsopts.class))
         return 0;
 
     if(wsopts.ts_value == 2 && /* +t */
