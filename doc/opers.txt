@@ -68,8 +68,7 @@ COMMAND         - USAGE and DESCRIPTION
                     i - Shows allow blocks
                   * K - Shows permanent K lines
                   * k - Shows temporary K lines
-                  * L - Shows IP and generic info about [nick]
-                  * l - Shows hostname and generic info about [nick]
+                    l - Shows hostname and generic info about [nick]
                   * m - Shows commands and their usage
                   ^ o - Shows oper bocks
                     p - Shows opers connected and their idle times

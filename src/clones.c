@@ -106,35 +106,43 @@ get_clones(aClient *cptr, CloneEnt **ceip, CloneEnt **ce24, int create)
 }
 
 static int
-report_clone(aClient *cptr, CloneEnt *ce, int limit, int global, int is24)
+report_lclone(aClient *cptr, CloneEnt *ce, int l, int is24, char *t, char *n)
 {
-    if (global)
-    {
-        sendto_realops_lev(REJ_LEV, "clone %s!%s@%s (%s %d/%d global)",
+    if (n)
+        sendto_realops_lev(REJ_LEV, "clone %s!%s@%s (%s %d/%d local %s %s)",
                            cptr->name, cptr->user->username, cptr->user->host,
-                           ce->ent, ce->gcount + 1, limit);
-        if (is24)
-            clones_stat.rgs++;
-        else
-            clones_stat.rgh++;
-    }
+                           ce->ent, ce->lcount, l, t, n);
     else
-    {
         sendto_realops_lev(REJ_LEV, "clone %s!%s@%s (%s %d/%d local %s)",
                            cptr->name, cptr->user->username, cptr->user->host,
-                           ce->ent, ce->lcount + 1, limit,
-                           cptr->user->allow->class->name);
-        if (is24)
-            clones_stat.rls++;
-        else
-            clones_stat.rlh++;
-    }
+                           ce->ent, ce->lcount, l, t);
+
+    if (is24)
+        clones_stat.rls++;
+    else
+        clones_stat.rlh++;
 
     throttle_force(cptr->hostip);
 
     return (is24 ? 2 : 1);
 }
 
+static int
+report_gclone(aClient *cptr, CloneEnt *ce, int l, int is24, char *t)
+{
+    sendto_realops_lev(REJ_LEV, "clone %s!%s@%s (%s %d/%d global %s)",
+                       cptr->name, cptr->user->username, cptr->user->host,
+                       ce->ent, ce->gcount, l, t);
+    
+    if (is24)
+        clones_stat.rgs++;
+    else
+        clones_stat.rgh++;
+
+    throttle_force(cptr->hostip);
+
+    return (is24 ? 2 : 1);
+}
 
 /*
  * Checks a local client against the clone limits.
@@ -152,41 +160,79 @@ clones_check(aClient *cptr)
     if (ceip)
     {
         /* local limit priority stack: soft set, class, default */
-        limit = ceip->sllimit;
-        if (!limit)
-            limit = cptr->user->allow->class->connfreq;
-        if (!limit)
+        if ((limit = ceip->sllimit))
+        {
+            if (ceip->lcount >= limit)
+                return report_lclone(cptr, ceip, limit, 0, "soft", NULL);
+        }
+        else if ((limit = cptr->user->allow->class->connfreq))
+        {
+            if (ceip->lcount >= limit)
+                return report_lclone(cptr, ceip, limit, 0, "class",
+                                     cptr->user->allow->class->name);
+        }
+        else
+        {
             limit = local_ip_limit;
-        if (ceip->lcount >= limit)
-            return report_clone(cptr, ceip, limit, 0, 0);
+            if (ceip->lcount >= limit)
+                return report_lclone(cptr, ceip, limit, 0, "default", NULL);
+        }
 
         /* global limit priority stack: soft set, services, default */
-        limit = ceip->sglimit;
-        if (!limit)
-            limit = ceip->limit;
-        if (!limit)
+        if ((limit = ceip->sglimit))
+        {
+            if (ceip->gcount >= limit)
+                return report_gclone(cptr, ceip, limit, 0, "soft");
+        }
+        else if ((limit = ceip->limit))
+        {
+            if (ceip->gcount >= limit)
+                return report_gclone(cptr, ceip, limit, 0, "hard");
+        }
+        else
+        {
             limit = global_ip_limit;
-        if (ceip->gcount >= limit)
-            return report_clone(cptr, ceip, limit, 1, 0);
+            if (ceip->gcount >= limit)
+                return report_gclone(cptr, ceip, limit, 0, "default");
+        }
     }
 
     if (ce24)
     {
-        limit = ce24->sllimit;
-        if (!limit)
-            limit = cptr->user->allow->class->ip24clones;
-        if (!limit)
+        if ((limit = ce24->sllimit))
+        {
+            if (ce24->lcount >= limit)
+                return report_lclone(cptr, ce24, limit, 1, "soft", NULL);
+        }
+        else if ((limit = cptr->user->allow->class->ip24clones))
+        {
+            if (ce24->lcount >= limit)
+                return report_lclone(cptr, ce24, limit, 1, "class",
+                                     cptr->user->allow->class->name);
+        }
+        else
+        {
             limit = local_ip24_limit;
-        if (ce24->lcount >= limit)
-            return report_clone(cptr, ce24, limit, 0, 1);
+            if (ce24->lcount >= limit)
+                return report_lclone(cptr, ce24, limit, 1, "default", NULL);
+        }
 
-        limit = ce24->sglimit;
-        if (!limit)
-            limit = ce24->limit;
-        if (!limit)
+        if ((limit = ce24->sglimit))
+        {
+            if (ce24->gcount >= limit)
+                return report_gclone(cptr, ce24, limit, 1, "soft");
+        }
+        else if ((limit = ce24->limit))
+        {
+            if (ce24->gcount >= limit)
+                return report_gclone(cptr, ce24, limit, 1, "hard");
+        }
+        else
+        {
             limit = global_ip24_limit;
-        if (ce24->gcount >= limit)
-            return report_clone(cptr, ce24, limit, 1, 1);
+            if (ce24->gcount >= limit)
+                return report_gclone(cptr, ce24, limit, 1, "default");
+        }
     }
     
     return 0;

@@ -1587,7 +1587,8 @@ m_set(aClient *cptr, aClient *sptr, int parc, char *parv[])
         else if (!strncasecmp(command, "GCLONE", 6))
         {
             int hglimit, sglimit, sllimit, limit, rval;
-            char lbuf[16];
+            char lbuf[16] = "default";
+            char lbuf2[16] = "none";
 
             if (parc > 3)
             {
@@ -1605,8 +1606,6 @@ m_set(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
                     if (limit)
                         ircsprintf(lbuf, "%d", limit);
-                    else
-                        strcpy(lbuf, "default");
 
                     if (rval < 0)
                         sendto_one(sptr, ":%s NOTICE %s :Invalid IP or limit.",
@@ -1634,9 +1633,14 @@ m_set(aClient *cptr, aClient *sptr, int parc, char *parv[])
             {
                 clones_get(parv[2], &hglimit, &sglimit, &sllimit);
 
+                if (sglimit)
+                    ircsprintf(lbuf, "%d", sglimit);
+                if (hglimit)
+                    ircsprintf(lbuf2, "%d", hglimit);
+
                 sendto_one(sptr, ":%s NOTICE %s :global clone limit for %s is"
-                           " (soft: %d hard: %d)", me.name, parv[0], parv[2],
-                           sglimit, hglimit);
+                           " (soft: %s  hard: %s)", me.name, parv[0], parv[2],
+                           lbuf, lbuf2);
             }
             else
                 sendto_one(sptr, ":%s NOTICE %s :Usage: GCLONES <ip> [<limit>]",
