@@ -1743,57 +1743,62 @@ m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		 *     /trace, this was fiercely obnoxious.  If you don't
 		 *     add an argument, you get all SERVER links.
 		 */
-		sendto_one(sptr, Sformat, me.name, RPL_STATSLINKINFO, parv[0]);
-		if ((parc > 2) && !(doall || wilds))
-		{         /* Single client lookup */
-			  if (!(acptr = find_person(name, NULL)))
-				 break;
-			       /*
-				* sincetime might be greater than timeofday,
-				* store a new value here to avoid sending 
-				* negative since-times. -Rak
-				*/
-			  sincetime = (acptr->since > timeofday) ? 0 :
-			  timeofday - acptr->since;
-			  sendto_one(sptr, Lformat, me.name,
-							 RPL_STATSLINKINFO, parv[0],
-							 get_client_name(acptr, TRUE),
-							 (int) DBufLength(&acptr->sendQ),
-							 (int) acptr->sendM, (int) acptr->sendK,
-							 (int) acptr->receiveM, (int) acptr->receiveK,
-							 timeofday - acptr->firsttime,
-							 sincetime,
-							 IsServer(acptr) ? (DoesTS(acptr) ?
-													  "TS" : "NoTS") : "-");
-		  }
-		else
-		{
-		   for (i = 0; i <= highest_fd; i++) 
-		   {
-				if (!(acptr = local[i]))
-				  continue;
-				if(!IsServer(acptr))
-				  continue; /* nothing but servers */
+	   sendto_one(sptr, Sformat, me.name, RPL_STATSLINKINFO, parv[0]);
+	   if ((parc > 2) && !(doall || wilds))
+	   {         /* Single client lookup */
+	     if (!IsAnOper(sptr))
+	     {
+	       sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name, parv[0]);
+	       break;
+	     }
+	     if (!(acptr = find_person(name, NULL)))
+	       break;
+	     /*
+	      * sincetime might be greater than timeofday,
+	      * store a new value here to avoid sending 
+	      * negative since-times. -Rak
+	      */
+	     sincetime = (acptr->since > timeofday) ? 0 :
+	       timeofday - acptr->since;
+	     sendto_one(sptr, Lformat, me.name,
+			RPL_STATSLINKINFO, parv[0],
+			get_client_name(acptr, TRUE),
+			(int) DBufLength(&acptr->sendQ),
+			(int) acptr->sendM, (int) acptr->sendK,
+			(int) acptr->receiveM, (int) acptr->receiveK,
+			timeofday - acptr->firsttime,
+			sincetime,
+			IsServer(acptr) ? (DoesTS(acptr) ?
+					   "TS" : "NoTS") : "-");
+	   }
+	   else
+	   {
+	     for (i = 0; i <= highest_fd; i++) 
+	     {
+	       if (!(acptr = local[i]))
+		 continue;
+	       if(!IsServer(acptr))
+		 continue; /* nothing but servers */
 #ifdef HIDEULINEDSERVS
-				if(IsULine(acptr) && !IsAnOper(sptr))
-				  continue;
+	       if(IsULine(acptr) && !IsAnOper(sptr))
+		 continue;
 #endif
-				sincetime = (acptr->since > timeofday) ? 0 :
-				timeofday - acptr->since;
-				sendto_one(sptr, Lformat, me.name,
-							  RPL_STATSLINKINFO, parv[0],
-							  get_client_name(acptr, HIDEME),
-							  (int) DBufLength(&acptr->sendQ),
-							  (int) acptr->sendM, (int) acptr->sendK,
-							  (int) acptr->receiveM, (int) acptr->receiveK,
-							  timeofday - acptr->firsttime,
-							  sincetime,
-							  IsServer(acptr) ? (DoesTS(acptr) ?
-														"TS" : "NoTS") : "-");
-		   }
-		}
-		break;
-	 case 'C':
+	       sincetime = (acptr->since > timeofday) ? 0 :
+		 timeofday - acptr->since;
+	       sendto_one(sptr, Lformat, me.name,
+			  RPL_STATSLINKINFO, parv[0],
+			  get_client_name(acptr, HIDEME),
+			  (int) DBufLength(&acptr->sendQ),
+			  (int) acptr->sendM, (int) acptr->sendK,
+			  (int) acptr->receiveM, (int) acptr->receiveK,
+			  timeofday - acptr->firsttime,
+			  sincetime,
+			  IsServer(acptr) ? (DoesTS(acptr) ?
+					     "TS" : "NoTS") : "-");
+	     }
+	   }
+	   break;
+   case 'C':
 	 case 'c':
 #ifdef HIDEULINEDSERVS
 		if (!IsAnOper(sptr))
