@@ -3038,15 +3038,16 @@ int m_umode(aClient *cptr, aClient *sptr, int parc, char *parv[])
     {
 	Count.oper--;
 	if (MyConnect(sptr))
+	{
 	    remove_from_list(&oper_list, sptr);
 
-        /*
-         * Now that the user is no longer opered, let's return
-         * them back to the appropriate Y:class -srd
-         */
-
-        sptr->pingval = get_client_ping(sptr);
-        sptr->sendqlen = get_sendq(sptr);
+	    /*
+	     * Now that the user is no longer opered, let's return
+	     * them back to the appropriate Y:class -srd
+	     */
+	    sptr->pingval = get_client_ping(sptr);
+	    sptr->sendqlen = get_sendq(sptr);
+	}
     }
     
     if (!(setflags & UMODE_i) && IsInvisible(sptr))
