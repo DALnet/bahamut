@@ -2667,26 +2667,27 @@ m_sjoin(aClient *cptr,
 		INSERTSIGN(-1,'-')
       *mbuf++ = 'k';
       strcat(parabuf, oldmode->key);
-      strcat(parabuf, " ");
       pargs++;
    }
 
    if (mode.limit && oldmode->limit != mode.limit) {
-		INSERTSIGN(1,'+')
+      INSERTSIGN(1,'+')
       *mbuf++ = 'l';
       (void) sprintf(numeric, "%-15d", mode.limit);
       if ((s = strchr(numeric, ' ')))
 		  *s = '\0';
+      if(*parabuf)
+         strcat(parabuf, " ");         
       strcat(parabuf, numeric);
-      strcat(parabuf, " ");
       pargs++;
    }
 
    if (mode.key[0] && strcmp(oldmode->key, mode.key)) {
-		INSERTSIGN(1,'+')
+      INSERTSIGN(1,'+')
       *mbuf++ = 'k';
+      if(*parabuf)
+         strcat(parabuf, " ");         
       strcat(parabuf, mode.key);
-      strcat(parabuf, " ");
       pargs++;
    }
 	
@@ -2697,9 +2698,10 @@ m_sjoin(aClient *cptr,
       for (l = chptr->members; l && l->value.cptr; l = l->next) {
 			if (l->flags & MODE_CHANOP) {
 				INSERTSIGN(-1,'-')
-				  *mbuf++ = 'o';
+				*mbuf++ = 'o';
+				if(*parabuf)
+				   strcat(parabuf, " ");
 				strcat(parabuf, l->value.cptr->name);
-				strcat(parabuf, " ");
 				pargs++;
 				if (pargs >= MAXMODEPARAMS) {
 					*mbuf = '\0';
@@ -2714,8 +2716,9 @@ m_sjoin(aClient *cptr,
 			if (l->flags & MODE_VOICE) {
 				INSERTSIGN(-1,'-')
 				*mbuf++ = 'v';
+				if(*parabuf)
+				   strcat(parabuf, " ");
 				strcat(parabuf, l->value.cptr->name);
-				strcat(parabuf, " ");
 				pargs++;
 				if (pargs >= MAXMODEPARAMS) {
 					*mbuf = '\0';
@@ -2787,8 +2790,9 @@ m_sjoin(aClient *cptr,
       *t++ = ' ';
       if (fl & MODE_CHANOP) {
 			*mbuf++ = 'o';
+			if(*parabuf)
+			   strcat(parabuf, " ");
 			strcat(parabuf, s);
-			strcat(parabuf, " ");
 			pargs++;
 			if (pargs >= MAXMODEPARAMS) {
 				*mbuf = '\0';
@@ -2801,8 +2805,9 @@ m_sjoin(aClient *cptr,
       }
       if (fl & MODE_VOICE) {
 			*mbuf++ = 'v';
+			if(*parabuf)
+			   strcat(parabuf, " ");
 			strcat(parabuf, s);
-			strcat(parabuf, " ");
 			pargs++;
 			if (pargs >= MAXMODEPARAMS) {
 				*mbuf = '\0';
