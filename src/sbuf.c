@@ -64,11 +64,38 @@ SBuffer             *largesbuf_pool = NULL, *smallsbuf_pool = NULL;
 SBufUser            *user_pool = NULL;
 SBufBlock           *sbuf_blocks = NULL;
 SBufUserBlock       *sbufuser_blocks = NULL;
-
+int                 sbufuser_total = 0, sbufuser_used = 0;
+int                 sbufsmall_total = 0, sbufsmall_used = 0;
+int                 sbuflarge_total = 0, sbuflarge_used = 0;
+int                 sbufblock_used = 0, sbufuserblock_used = 0;
 
 #define SBUF_BASE				sizeof(SBuffer)
 #define SBUF_LARGE_TOTAL		(SBUF_BASE + SBUF_LARGE_BUFFER)
 #define SBUF_SMALL_TOTAL        (SBUF_BASE + SBUF_SMALL_BUFFER)
+
+void sbuf_count(int* userUsed, int* userTotal, int* userSize,
+                int* smallUsed, int* smallTotal, int* smallSize,
+                int* largeUsed, int* largeTotal, int* largeSize,
+                int* blockUsed, int* blockSize, int* userblockUsed, int* userblockSize)
+{
+    *userUsed = sbufuser_used;
+    *userTotal = sbufuser_total;
+    *userSize = sizeof(SBufUser);
+    
+    *smallUsed = sbufsmall_used;
+    *smallTotal = sbufsmall_total;
+    *smallSize = SBUF_SMALL_TOTAL;
+    
+    *largeUsed = sbuflarge_used;
+    *largeTotal = sbuflarge_total;
+    *largeSize = SBUF_LARGE_TOTAL;
+    
+    *blockUsed = sbufblock_used;
+    *blockSize = sizeof(SBufBlock);
+    
+    *userblockUsed = sbufuserblock_used;
+    *userblockSize = sizeof(SBufUserBlock);
+}
 
 
 int sbuf_allocblock_general(int theMemorySize, int num, SBuffer** thePool)
@@ -88,6 +115,7 @@ int sbuf_allocblock_general(int theMemorySize, int num, SBuffer** thePool)
     block->num = num;
     block->next = sbuf_blocks;
     sbuf_blocks = block;
+    sbufblock_used++;
     
     bufs = block->bufs;
     for (i = 0; i < block->num - 1; ++i)
@@ -108,6 +136,8 @@ int sbuf_allocblock_small(int theMemorySize)
     if (theMemorySize % SBUF_SMALL_TOTAL != 0)
         theMemorySize = (theMemorySize + SBUF_SMALL_TOTAL);
         
+    sbufsmall_total += theMemorySize / SBUF_SMALL_TOTAL;
+        
     return sbuf_allocblock_general(SBUF_SMALL_TOTAL, theMemorySize / SBUF_SMALL_TOTAL, &smallsbuf_pool);
 }
 
@@ -115,6 +145,8 @@ int sbuf_allocblock_large(int theMemorySize)
 {
     if (theMemorySize % SBUF_LARGE_TOTAL != 0)
         theMemorySize = (theMemorySize + SBUF_LARGE_TOTAL);
+        
+    sbuflarge_total += theMemorySize / SBUF_LARGE_TOTAL;
     
     return sbuf_allocblock_general(SBUF_LARGE_TOTAL, theMemorySize / SBUF_LARGE_TOTAL, &largesbuf_pool);
 }
@@ -136,6 +168,9 @@ int sbuf_allocblock_users(int theCount)
     block->num = theCount;
     block->next = sbufuser_blocks;
     sbufuser_blocks = block;
+
+    sbufuserblock_used++;
+    sbufuser_total += block->num;
     
     users = block->users;
     for (i = 0; i < block->num - 1; ++i)
@@ -165,11 +200,13 @@ int sbuf_free(SBuffer* buf)
         case SBUF_LARGE_BUFFER:
             buf->next = largesbuf_pool;
             largesbuf_pool = buf;
+            sbuflarge_used--;
             break;
         
         case SBUF_SMALL_BUFFER:
             buf->next = smallsbuf_pool;
             smallsbuf_pool = buf;
+            sbufsmall_used--;
             break;
         
         default:
@@ -183,6 +220,7 @@ int sbuf_user_free(SBufUser* user)
 {
     user->next = user_pool;
     user_pool = user;
+    sbufuser_used--;
     return 0;
 }
        
@@ -200,6 +238,8 @@ SBuffer* sbuf_alloc(int theSize)
         }
         largesbuf_pool = largesbuf_pool->next;
         
+        sbuflarge_used++;
+        
         buf->bufsize = SBUF_LARGE_BUFFER;
         buf->refcount = 0;
         buf->end = ((char*)buf) + SBUF_BASE;
@@ -216,6 +256,8 @@ SBuffer* sbuf_alloc(int theSize)
             if (!buf) return sbuf_alloc(SBUF_SMALL_BUFFER+1); /* attempt to substitute a large buffer instead */
         }
         smallsbuf_pool = smallsbuf_pool->next;
+        
+        sbufsmall_used++;
         
         buf->bufsize = SBUF_SMALL_BUFFER;
         buf->refcount = 0;
@@ -238,6 +280,8 @@ SBufUser* sbuf_user_alloc()
         if (!user) return NULL;
     }
     user_pool = user_pool->next;
+    
+    sbufuser_used++;
     
     user->next = NULL;
     user->start = NULL;

@@ -37,6 +37,7 @@
 #include "throttle.h"
 #include "whowas.h"
 #include "res.h"
+#include "sbuf.h"
 
 extern float curSendK, curRecvK;
 extern aWhowas WHOWAS[];
@@ -395,7 +396,6 @@ count_memory(aClient *cptr, char *nick)
     u_long      rcm = 0;        /* memory used by remote clients */
     u_long      awm = 0;        /* memory used by aways */
     u_long      wwm = 0;        /* whowas array memory used */
-/*    size_t      db = 0, db2 = 0; */       /* memory used by dbufs */
     u_long      rm = 0;         /* res memory used */
     u_long      mem_servers_cached;     /* memory used by scache */
 
@@ -429,6 +429,12 @@ count_memory(aClient *cptr, char *nick)
     int motdlen = 0;
 
     int servn = 0;
+    
+    /* sbuf counts -- 0 = used, 1 = total, 2 = size */
+    int sbuf_user[3], sbuf_small[3], sbuf_large[3];
+    /* block counts -- 0 = total, 1 = size */
+    int sbuf_blocks[2], sbuf_userblocks[2];
+    
 
     count_whowas_memory(&wwu, &wwm);    /* no more away memory to count */
 
@@ -626,6 +632,24 @@ count_memory(aClient *cptr, char *nick)
                me.name, RPL_STATSDEBUG, nick, DBufUsedCount, db2,
                DBufCount, db);
 */
+    sbuf_count(&sbuf_user[0], &sbuf_user[1], &sbuf_user[2],
+               &sbuf_small[0], &sbuf_small[1], &sbuf_small[2],
+               &sbuf_large[0], &sbuf_large[1], &sbuf_large[2],
+               &sbuf_blocks[0], &sbuf_blocks[1], &sbuf_userblocks[0], &sbuf_userblocks[1]);
+    sendto_one(cptr, ":%s %d %s :SBUF ALLOC(%d)", me.name, RPL_STATSDEBUG, nick,
+               sbuf_user[1]*sbuf_user[2] + sbuf_small[1]*sbuf_small[2] + sbuf_large[1]*sbuf_large[2] +
+               sbuf_blocks[0]*sbuf_blocks[1] + sbuf_userblocks[0]*sbuf_userblocks[1]);
+    sendto_one(cptr, ":%s %d %s :   BLOCKS %d(%d) USERBLOCKS %d(%d)", me.name, RPL_STATSDEBUG, nick,
+               sbuf_blocks[0], sbuf_blocks[0]*sbuf_blocks[1], sbuf_userblocks[0], sbuf_userblocks[0]*sbuf_userblocks[1]);
+    sendto_one(cptr, ":%s %d %s :   USERS %d MAX(%d) ALLOC(%d)", me.name, RPL_STATSDEBUG, nick,
+               sbuf_user[0], sbuf_user[1], sbuf_user[1]*sbuf_user[2]);
+    sendto_one(cptr, ":%s %d %s :   SMALL %d MAX(%d) ALLOC(%d)", me.name, RPL_STATSDEBUG, nick,
+               sbuf_small[0], sbuf_small[1], sbuf_small[1]*sbuf_small[2]);
+    sendto_one(cptr, ":%s %d %s :   LARGE %d MAX(%d) ALLOC(%d)", me.name, RPL_STATSDEBUG, nick,
+               sbuf_large[0], sbuf_large[1], sbuf_large[1]*sbuf_large[2]);
+    
+
+
     rm = cres_mem(cptr);
 
     count_scache(&number_servers_cached, &mem_servers_cached);
