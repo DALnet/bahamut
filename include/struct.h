@@ -107,11 +107,11 @@ typedef struct MotdItem aMotd;
 #define	KEYLEN		    23
 #define	BUFSIZE		    512	/* WARNING: *DONT* CHANGE THIS!!!! */
 #define	MAXRECIPIENTS 20
-#define	MAXBANS	 	    45
+#define	MAXBANS	 	    100
 
 #define MOTDLINELEN	90
 
-#define        MAXSILES        5
+#define        MAXSILES        10
 #define        MAXSILELENGTH   128
 
 #define MAXDCCALLOW 5
@@ -1072,26 +1072,28 @@ struct ListOptions {
 };
 
 typedef struct SearchOptions {
-	int umodes;
-	char *nick;
-	char *user;
-	char *host;
-	char *gcos;
-	aChannel *channel;
-	aClient *server;
-	char umode_plus:1;
-	char nick_plus:1;
-	char user_plus:1;
-	char host_plus:1;
-	char gcos_plus:1;
-	char chan_plus:1;
-	char serv_plus:1;
-	char away_plus:1;
-	char check_away:1;
-	char check_umode:1;
-        char show_chan:1;
-        char search_chan:1;
-	char spare:4; /* spare space for more stuff(?) */
+  int umodes;
+  char *nick;
+  char *user;
+  char *host;
+  char *gcos;
+  char *ip;
+  aChannel *channel;
+  aClient *server;
+  char umode_plus:1;
+  char nick_plus:1;
+  char user_plus:1;
+  char host_plus:1;
+  char gcos_plus:1;
+  char ip_plus:1;
+  char chan_plus:1;
+  char serv_plus:1;
+  char away_plus:1;
+  char check_away:1;
+  char check_umode:1;
+  char show_chan:1;
+  char search_chan:1;
+  char spare:4; /* spare space for more stuff(?) */
 } SOpts;
 
 #define IsSendable(x)      (DBufLength(&x->sendQ) < 16384)

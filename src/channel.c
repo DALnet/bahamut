@@ -1042,6 +1042,15 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr, int level, in
                break;
             }
 
+	    /* Do not let *'s in keys in preperation for key hiding
+	     * - Raist
+	     */
+
+	    if (strchr(parv[args],'*')!=NULL) {
+	      args++;
+	      break;
+	    }
+
             /* if we're going to overflow our mode buffer,
              * drop the change instead */
             if((prelen + (mbuf - morig) + pidx + KEYLEN+2) > REALMODEBUFLEN) 

@@ -982,11 +982,11 @@ m_server_estab(aClient *cptr)
 
 #ifdef HAVE_ENCRYPTION_ON
       if(!WantDKEY(cptr))
-         sendto_one(cptr, "CAPAB TS3 NOQUIT SSJOIN BURST UNCONNECT ZIP");
+         sendto_one(cptr, "CAPAB TS3 NOQUIT SSJOIN BURST UNCONNECT ZIP NICKIP");
       else
-         sendto_one(cptr, "CAPAB TS3 NOQUIT SSJOIN BURST UNCONNECT DKEY ZIP");
+         sendto_one(cptr, "CAPAB TS3 NOQUIT SSJOIN BURST UNCONNECT DKEY ZIP NICKIP");
 #else
-      sendto_one(cptr, "CAPAB TS3 NOQUIT SSJOIN BURST UNCONNECT ZIP");
+      sendto_one(cptr, "CAPAB TS3 NOQUIT SSJOIN BURST UNCONNECT ZIP NICKIP");
 #endif
 
       sendto_one(cptr, "SERVER %s 1 :%s",

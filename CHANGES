@@ -5,6 +5,15 @@ Outstanding bugs in 1.4.23
 - Source address support on /connect may not work under some conditions
 - Temp kline/akill matching on user connections is very slow with many klines
 
+Changes for 1.4.25
+- Hide Nick Collisions (Revealing services location)
+- Make 005 show more info
+- Add who +i to search by IP
+- Hide stats L for non opers
+- Add NICKIP CAPAB for services to get nicks
+- Channel QLINES from Ryan
+- Removed * from valid key char
+
 Changes for 1.4.23
 - Some error message changes/fixes
 - Fixed a cloaking bug
