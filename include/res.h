@@ -11,8 +11,8 @@
 #define RES_INITCACH    16
 
 #define MAXPACKET	1024
-#define MAXALIASES	10
-#define MAXADDRS	10
+#define IRC_MAXALIASES	10
+#define IRC_MAXADDRS	10
 
 #define	AR_TTL		600		/* TTL in seconds for dns cache entries */
 
@@ -20,12 +20,12 @@
 
 struct hent {
    char       *h_name;			/* official name of host */
-   char       *h_aliases[MAXALIASES];	/* alias list */
+   char       *h_aliases[IRC_MAXALIASES];	/* alias list */
    int         h_addrtype;		/* host address type */
    int         h_length;		/* length of address */
 
    /* list of addresses from name server */
-   struct in_addr h_addr_list[MAXADDRS];
+   struct in_addr h_addr_list[IRC_MAXADDRS];
 
 #define	h_addr	h_addr_list[0]		/* address, for backward compatiblity */
 };
@@ -64,6 +64,6 @@ typedef struct cachetable {
 
 #define ARES_CACSIZE	307
 
-#define	MAXCACHED	281
+#define	IRC_MAXCACHED	281
 
 #endif /* __res_include__ */

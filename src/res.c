@@ -198,13 +198,13 @@ char   *s;
 
    if (r2ptr->he.h_name)
       MyFree((char *) r2ptr->he.h_name);
-   for (i = 0; i < MAXALIASES; i++)
+   for (i = 0; i < IRC_MAXALIASES; i++)
       if ((s = r2ptr->he.h_aliases[i]))
 	 MyFree(s);
 
    if (r2ptr->he_rev.h_name)
       MyFree((char *) r2ptr->he_rev.h_name);
-   for (i = 0; i < MAXALIASES; i++)
+   for (i = 0; i < IRC_MAXALIASES; i++)
       if ((s = r2ptr->he_rev.h_aliases[i]))
 	 MyFree(s);
 
@@ -612,7 +612,7 @@ proc_answer(ResRQ * rptr,
    cp = buf + sizeof(HEADER);
    hp = (struct hent *) &(rptr->he);
 
-   while ((hp->h_addr_list[adr].s_addr) && (adr < MAXADDRS))
+   while ((hp->h_addr_list[adr].s_addr) && (adr < IRC_MAXADDRS))
       adr++;
 
    alias = hp->h_aliases;
@@ -766,7 +766,7 @@ proc_answer(ResRQ * rptr,
 	       return PROCANSWER_MALICIOUS;						
 	    }
 
-            if(adr < MAXADDRS)
+            if(adr < IRC_MAXADDRS)
             {
                /* ensure we never go over the bounds of our adr array */
                memcpy((char *)&dr, cp, sizeof(dr));
@@ -861,7 +861,7 @@ proc_answer(ResRQ * rptr,
                    * interesting. - lucas
                    */
 
-	           if (alias >= &(hp->h_aliases[MAXALIASES - 1]))
+	           if (alias >= &(hp->h_aliases[IRC_MAXALIASES - 1]))
 		      break;
 	           *alias = (char *) MyMalloc(len + 1);
 	           strcpy(*alias++, hostbuf);
@@ -929,7 +929,7 @@ proc_answer(ResRQ * rptr,
 
 	    Debug((DEBUG_INFO, "got cname %s", hostbuf));
 
-	    if (alias >= &(hp->h_aliases[MAXALIASES - 1]))
+	    if (alias >= &(hp->h_aliases[IRC_MAXALIASES - 1]))
 	      break;
 	    *alias = (char *) MyMalloc(len + 1);
 	    strcpy(*alias++, hostbuf);
@@ -1118,7 +1118,7 @@ get_res(char *lp)
           *    rptr->he.h_aliases[a] = NULL;
           * }
           *
-          * for(a = 0; a < MAXADDRS; a++)
+          * for(a = 0; a < IRC_MAXADDRS; a++)
           * {
           *   last->he_rev.h_addr_list[a].s_addr = rptr->he.h_addr_list[a].s_addr;
           *    rptr->he.h_addr_list[a].s_addr = 0;
@@ -1144,7 +1144,7 @@ get_res(char *lp)
          int found_match_ip = 0;
          int nidx, tidx;
          int numaddr, numnewaddr;
-         struct in_addr new_addr_list[MAXADDRS];
+         struct in_addr new_addr_list[IRC_MAXADDRS];
 
          if(!(rptr->he.h_name && rptr->he_rev.h_name))
             invalid_parms_name++;
@@ -1169,7 +1169,7 @@ get_res(char *lp)
           * Those not in the reverse query must be zeroed out!
           */
 
-         for(numaddr = numnewaddr = nidx = 0; nidx < MAXADDRS; nidx++)
+         for(numaddr = numnewaddr = nidx = 0; nidx < IRC_MAXADDRS; nidx++)
          {
             int does_match;
 
@@ -1178,7 +1178,7 @@ get_res(char *lp)
 
             numaddr++;
 
-            for(tidx = does_match = 0; tidx < MAXADDRS; tidx++)
+            for(tidx = does_match = 0; tidx < IRC_MAXADDRS; tidx++)
             {
                if(rptr->he_rev.h_addr_list[tidx].s_addr == 0)
                   break;
@@ -1227,7 +1227,7 @@ get_res(char *lp)
 
          if(numnewaddr != numaddr)
          {
-            memcpy(rptr->he.h_addr_list, new_addr_list, sizeof(struct in_addr) * MAXADDRS);
+            memcpy(rptr->he.h_addr_list, new_addr_list, sizeof(struct in_addr) * IRC_MAXADDRS);
 #ifdef DNS_ANS_DEBUG
             sendto_ops_lev(DEBUG_LEV, "numaddr = %d, numnewaddr = %d", numaddr, numnewaddr);
 #endif
@@ -1362,7 +1362,7 @@ int     hashv;
    /*
     * LRU deletion of excessive cache entries.
     */
-   if (++incache > MAXCACHED) {
+   if (++incache > IRC_MAXCACHED) {
       for (cp = cachetop; cp->list_next; cp = cp->list_next);
       rem_cache(cp);
    }
@@ -1411,13 +1411,13 @@ int         addrcount;
     */
    for (i = 0; cp->he.h_aliases[i]; i++);
    addrcount = i;
-   for (i = 0, s = rptr->he.h_name; s && i < MAXALIASES;
+   for (i = 0, s = rptr->he.h_name; s && i < IRC_MAXALIASES;
 	s = rptr->he.h_aliases[i++]) {
-      for (j = 0, t = cp->he.h_name; t && j < MAXALIASES;
+      for (j = 0, t = cp->he.h_name; t && j < IRC_MAXALIASES;
 	   t = cp->he.h_aliases[j++])
 	 if (!mycmp(t, s))
 	    break;
-      if (!t && j < MAXALIASES - 1) {
+      if (!t && j < IRC_MAXALIASES - 1) {
 	 base = cp->he.h_aliases;
 
 	 addrcount++;
@@ -1448,7 +1448,7 @@ int         addrcount;
 	 if (!memcmp(s, t, sizeof(struct in_addr)))
 	                break;
 
-      if (i >= MAXADDRS || addrcount >= MAXADDRS)
+      if (i >= IRC_MAXADDRS || addrcount >= IRC_MAXADDRS)
 	 break;
       /*
        * Oh man this is bad...I *HATE* it. -avalon
@@ -1523,7 +1523,7 @@ find_cache_name(char *name)
 	 continue;
       if (hashv == hash_name(cp->he.h_name))
 	 continue;
-      for (i = 0, s = cp->he.h_aliases[i]; s && i < MAXALIASES; i++)
+      for (i = 0, s = cp->he.h_aliases[i]; s && i < IRC_MAXALIASES; i++)
 	 if (!mycmp(name, s)) {
 	    cainfo.ca_na_hits++;
 	    update_list(NULL, cp);
@@ -1615,7 +1615,7 @@ char   *s, **t;
     */
    if ((cp = find_cache_number(rptr, (char *) &rptr->he.h_addr.s_addr)))
       return cp;
-   for (i = 1; rptr->he.h_addr_list[i].s_addr && i < MAXADDRS; i++)
+   for (i = 1; rptr->he.h_addr_list[i].s_addr && i < IRC_MAXADDRS; i++)
       if ((cp = find_cache_number(rptr,
 			 (char *) &(rptr->he.h_addr_list[i].s_addr))))
 	 return cp;
@@ -1626,7 +1626,7 @@ char   *s, **t;
    cp = (aCache *) MyMalloc(sizeof(aCache));
    memset((char *) cp, '\0', sizeof(aCache));
    hp = &cp->he;
-   for (i = 0; i < MAXADDRS; i++)
+   for (i = 0; i < IRC_MAXADDRS; i++)
       if (!rptr->he.h_addr_list[i].s_addr)
 	 break;
    /*
@@ -1647,7 +1647,7 @@ char   *s, **t;
    /*
     * * an array of pointers to CNAMEs.
     */
-   for (i = 0; i < MAXALIASES; i++)
+   for (i = 0; i < IRC_MAXALIASES; i++)
       if (!rptr->he.h_aliases[i])
 	 break;
    i++;
