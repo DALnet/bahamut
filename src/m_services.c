@@ -67,7 +67,7 @@ int m_ns(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	sendto_one(acptr, ":%s NS :%s", parv[0], parv[1]);
 #else
 	sendto_one(acptr, ":%s PRIVMSG %s@%s :%s", 
-		NICKSERV, SERVICES_NAME, parv[0], parv[1]);
+		parv[0], NICKSERV, SERVICES_NAME, parv[1]);
 #endif
     else
 	sendto_one(sptr, err_str(ERR_SERVICESDOWN), me.name,
@@ -93,7 +93,7 @@ int m_cs(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	sendto_one(acptr, ":%s CS :%s", parv[0], parv[1]);
 #else
 	sendto_one(acptr, ":%s PRIVMSG %s@%s :%s", 
-		CHANSERV, SERVICES_NAME, parv[0], parv[1]);
+		parv[0], CHANSERV, SERVICES_NAME, parv[1]);
 #endif
     else
 	sendto_one(sptr, err_str(ERR_SERVICESDOWN), me.name,
@@ -119,7 +119,7 @@ int m_ms(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	sendto_one(acptr, ":%s MS :%s", parv[0], parv[1]);
 #else
 	sendto_one(acptr, ":%s PRIVMSG %s@%s :%s", 
-		MEMOSERV, SERVICES_NAME, parv[0], parv[1]);
+		parv[0], MEMOSERV, SERVICES_NAME, parv[1]);
 #endif
     else
 	sendto_one(sptr, err_str(ERR_SERVICESDOWN), me.name,
@@ -145,7 +145,7 @@ int m_rs(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	sendto_one(acptr, ":%s RS :%s", parv[0], parv[1]);
 #else
 	sendto_one(acptr, ":%s PRIVMSG %s@%s :%s", 
-		ROOTSERV, SERVICES_NAME, parv[0], parv[1]);
+		parv[0], ROOTSERV, SERVICES_NAME, parv[1]);
 #endif
     else
 	sendto_one(sptr, err_str(ERR_SERVICESDOWN), me.name,
@@ -171,7 +171,7 @@ int m_os(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	sendto_one(acptr, ":%s OS :%s", parv[0], parv[1]);
 #else
 	sendto_one(acptr, ":%s PRIVMSG %s@%s :%s", 
-		OPERSERV, STATS_NAME, parv[0], parv[1]);
+		parv[0], OPERSERV, STATS_NAME, parv[1]);
 #endif
     else
 	sendto_one(sptr, err_str(ERR_SERVICESDOWN), me.name,
@@ -223,7 +223,7 @@ int m_hs(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	sendto_one(acptr, ":%s HS :%s", parv[0], parv[1]);
 #else
 	sendto_one(acptr, ":%s PRIVMSG %s@%s :%s", 
-		HELPSERV, STATS_NAME, parv[0], parv[1]);
+		parv[0], HELPSERV, STATS_NAME, parv[1]);
 #endif
     else
 	sendto_one(sptr, err_str(ERR_SERVICESDOWN), me.name,
