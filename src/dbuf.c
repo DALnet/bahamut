@@ -55,7 +55,7 @@ void dbuf_init()
   int i=0;
   dbufbuf *dbp;
 
-  freelist = (dbufbuf *)valloc(sizeof(dbufbuf)*INITIAL_DBUFS);
+  freelist = (dbufbuf *)MyMalloc(sizeof(dbufbuf)*INITIAL_DBUFS);
   if (!freelist) return; /* screw this if it doesn't work */
   dbp = freelist;
   for(;i<INITIAL_DBUFS-1;i++,dbp++,dbufblocks++) dbp->next = (dbp+1);
