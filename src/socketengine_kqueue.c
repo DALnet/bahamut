@@ -20,7 +20,9 @@
 #define MAX_EVENT_QUEUE 64
 
 static int kqueue_id = -1;
-static struct kevent eventQ[MAX_EVENT_QUEUE+1];
+static struct kevent eventQs[2][MAX_EVENT_QUEUE+1];
+static struct kevent *eventQ = eventQs[0];
+static int eventQi = 0;
 static int numEvents = 0;
 
 static void 
@@ -104,30 +106,40 @@ engine_del_fd(int fd)
 ********/
 
     /* But we should remove this fd from the change queue -- if it was closed
-     * but we have a change pending, kevent() will fail later.  What's worse
+     * and we have a change pending, kevent() will fail later.  What's worse
      * is that when the queue is flushed due to being full, a kevent() failure
-     * may leave some changes unprocessed.  -Quension
+     * may leave some changes unprocessed.  Reordering the change queue is not
+     * safe, hence the gymnastics below.    -Quension
      */
-    int i, top;
+    int i, j;
 
     if (!numEvents)
         return;
 
-    top = numEvents - 1;
-    i = 0;
-    while (i < numEvents)
-    {
+    /* optimal case: fd isn't in the change queue */
+    for (i = 0; i < numEvents; i++)
         if (eventQ[i].ident == fd)
-        {
-            /* WARNING: reorders change queue */
-            if (i != top)
-                memcpy(&eventQ[i], &eventQ[top], sizeof(struct kevent));
-            top--;
-            numEvents--;
-        }
-        else
-            i++;
-    }
+            break;
+
+    /* second optimal case: fd is last, truncate the queue */
+    if (i == numEvents - 1)
+        numEvents--;
+
+    if (i == numEvents)
+        return;
+
+    /* swap array index, copy all fds before this one */
+    eventQi ^= 1;
+    memcpy(eventQs[eventQi], eventQ, sizeof(struct kevent) * i);
+
+    /* selectively copy remaining fds, skip bad one */
+    for (j = i++; i < numEvents; i++)
+        if (eventQ[i].ident != fd)
+            memcpy(&eventQs[eventQi][j++], &eventQ[i], sizeof(struct kevent));
+
+    /* swap active array */
+    numEvents = j;
+    eventQ = eventQs[eventQi];
 }
 
 void 
