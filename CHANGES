@@ -7,6 +7,11 @@ Changes for 1.8.3
 - Fixed solaris devpoll socket engine logic problems.
 - Fixed class reference counting errors.
 - Fixed a bug with +j propegation on resync
+- Added a second set of join counters to send warning notices
+  to +d opers when the default thresholds are met.  Still sends
+  a throttle notice when +j thresholds are met.
+- Fixed a ERR_BANLISTFULL to respond depending on which list
+  (+I/+e) is full.  From Unim4trix0 (Unim4trix0@gmail.com).
 
 
 Changes for 1.8.2

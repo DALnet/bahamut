@@ -204,7 +204,7 @@ int add_exempt_id(aClient* cptr, aChannel* chptr, char* exempt_id)
             if (++cnt >= MAXEXEMPTLIST)
             {
                 sendto_one(cptr, getreply(ERR_BANLISTFULL), me.name, cptr->name,
-                    chptr->chname, exempt_id);
+                    chptr->chname, exempt_id, "exempt");
                 return -1;
             }
             if (!match(exempt->banstr, exempt_id))
@@ -292,7 +292,7 @@ int add_invite_id(aClient* cptr, aChannel* chptr, char* invite_id)
             if (++cnt >= MAXINVITELIST)
             {
                 sendto_one(cptr, getreply(ERR_BANLISTFULL), me.name, cptr->name,
-                    chptr->chname, invite_id);
+                    chptr->chname, invite_id, "invite");
                 return -1;
             }
             if (!match(invite->invstr, invite_id))
@@ -389,7 +389,7 @@ static int add_banid(aClient *cptr, aChannel *chptr, char *banid)
             if (++cnt >= MAXBANS)
             {
                 sendto_one(cptr, getreply(ERR_BANLISTFULL), me.name, cptr->name,
-                        chptr->chname, banid);
+                        chptr->chname, banid, "ban");
                 return -1;
             }
             if (!match(ban->banstr, banid))

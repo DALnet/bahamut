@@ -537,7 +537,7 @@ static char *replies[] =
                                        "channel. For help with registering "
                                        "your nickname, type \"/msg %s help "
                                        "register\" or see %s",
-    /* 478 ERR_BANLISTFULL */	":%s 478 %s %s %s :Channel ban list is full",
+    /* 478 ERR_BANLISTFULL */	":%s 478 %s %s %s :Channel %s list is full",
     /* 479 ERR_BADCHANNAME */   ":%s 479 %s %s :Channel name contains illegal "
                                 "characters",
     /* 480 */	                NULL,
