@@ -1051,8 +1051,9 @@ int register_user(aClient *cptr,
    
    if(MyClient(sptr)) {
      /* if the I:line doesn't have a password and the user does, send it over to NickServ */
-     if(sptr->passwd[0] && (nsptr=find_person(NickServ,NULL))!=NULL) {
-        sendto_one(nsptr,":%s PRIVMSG %s@%s :SIDENTIFY %s", sptr->name, NickServ, SERVICES_NAME, sptr->passwd);
+     if(sptr->passwd[0] && (nsptr=find_person(NICKSERV,NULL))!=NULL) {
+        sendto_one(nsptr,":%s PRIVMSG %s@%s :SIDENTIFY %s", sptr->name,
+		   NICKSERV, SERVICES_NAME, sptr->passwd);
      }
 
      memset(sptr->passwd, '\0', PASSWDLEN);

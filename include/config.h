@@ -264,11 +264,11 @@
 
 /* Services Definitions */
 #define OPERSERV_OTHER_HOST "stats.dal.net"
-#define ChanServ "ChanServ"
-#define OperServ "OperServ"
-#define MemoServ "MemoServ"
-#define NickServ "NickServ"
-#define StatServ "StatServ"
+#define CHANSERV "ChanServ"
+#define OPERSERV "OperServ"
+#define MEMOSERV "MemoServ"
+#define NICKSERV "NickServ"
+#define STATSERV "StatServ"
 
 /*
  * FNAME_USERLOG and FNAME_OPERLOG - logs of local USERS and OPERS
