@@ -11,6 +11,7 @@ Changes for 1.4.32
   to ignore the user until something is sent to them)
 - Fixed a netsplit detection bug when a leaf server splits from its hub
   (for no_chanops_when_split)
+- Fix for .conf based K: lines (that just didn't work)
 
 Changes for 1.4.31
 - Connection Throttling Patch from Chip Norkus

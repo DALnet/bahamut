@@ -316,6 +316,20 @@ int mycmp(char *s1, char *s2)
     return (-1);
 }
 
+int mycmp_diff(char *s1, char *s2)
+{
+    int ret;
+    unsigned char *str1 = (unsigned char *) s1;
+    unsigned char *str2 = (unsigned char *) s2;
+    while ((ret = touppertab[*str1] - touppertab[*str2]) == 0)
+    {
+	if (*str1 == '\0')
+	    return 0;
+	str1++;str2++;
+    }
+    return ret;
+}
+
 int myncmp(char *str1, char *str2, int n)
 {
     unsigned char *s1 = (unsigned char *) str1;

@@ -376,7 +376,7 @@ void addto_conf_list(aConfList *my_list, aConfItem *my_conf,
     
     while (lower != upper)
     {
-	pos = strcasecmp(field, base[compare].pattern);
+	pos = mycmp_diff(field, base[compare].pattern);
 	if ((pos == 0) || !match(field, base[compare].pattern) ||
 	    !match(base[compare].pattern, field))
 	{
@@ -392,7 +392,7 @@ void addto_conf_list(aConfList *my_list, aConfItem *my_conf,
 	compare = (lower + upper) / 2;
     }
     
-    pos = strcasecmp(field, base[compare].pattern);
+    pos = mycmp_diff(field, base[compare].pattern);
     
     if (!pos)
     {
@@ -577,7 +577,7 @@ aConfItem *find_matching_conf(aConfList *my_list, char *tomatch)
 		return base[compare].conf;
 	    }
 	    
-	    pos = strcasecmp(name, base[compare].pattern);
+	    pos = mycmp_diff(name, base[compare].pattern);
 	    
 	    if (pos < 0)
 		upper = compare;
