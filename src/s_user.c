@@ -872,6 +872,7 @@ register_user(aClient *cptr,
 	
    if (MyConnect(sptr)) {
       sptr->pingval = get_client_ping(sptr);
+      sptr->sendqlen = get_sendq(sptr);
 #ifdef MAXBUFFERS
       /*
        * Let's try changing the socket options for the client here...

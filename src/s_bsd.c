@@ -2125,8 +2125,8 @@ int connect_server(aConfItem * aconf, aClient * by, struct hostent *hp)
       report_error("Connect to host %s failed: %s", cptr);
       if (by && IsPerson(by) && !MyClient(by))
 	 sendto_one(by,
-		    ":%s NOTICE %s :Connect to host %s failed.",
-		    me.name, by->name, cptr);
+		    ":%s NOTICE %s :Connect to server %s failed.",
+		    me.name, by->name, cptr->name);
       (void) close(cptr->fd);
       cptr->fd = -2;
       free_client(cptr);
@@ -2148,12 +2148,12 @@ int connect_server(aConfItem * aconf, aClient * by, struct hostent *hp)
 
    if (!find_conf_host(cptr->confs, aconf->host, CONF_NOCONNECT_SERVER) ||
        !find_conf_host(cptr->confs, aconf->host, CONF_CONNECT_SERVER)) {
-      sendto_ops("Host %s is not enabled for connecting:no C/N-line",
-		 aconf->host);
+      sendto_ops("Server %s is not enabled for connecting:no C/N-line",
+		 aconf->name);
       if (by && IsPerson(by) && !MyClient(by))
 	 sendto_one(by,
-		    ":%s NOTICE %s :Connect to host %s failed.",
-		    me.name, by->name, cptr);
+		    ":%s NOTICE %s :Connect to server %s failed.",
+		    me.name, by->name, cptr->name);
       det_confs_butmask(cptr, 0);
       (void) close(cptr->fd);
       cptr->fd = -2;

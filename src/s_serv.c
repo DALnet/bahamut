@@ -2256,7 +2256,7 @@ m_connect(aClient *cptr, aClient *sptr, int parc, char *parv[])
    if (!aconf) 
    {
       sendto_one(sptr,
-		 "NOTICE %s :Connect: Host %s not listed in irc.conf",
+		 "NOTICE %s :Connect: No C line found for %s.",
 		 parv[0], parv[1]);
       return 0;
    }
@@ -2305,21 +2305,21 @@ m_connect(aClient *cptr, aClient *sptr, int parc, char *parv[])
    {
       case 0:
 	 sendto_one(sptr,
-		    ":%s NOTICE %s :*** Connecting to %s[%s].",
-		    me.name, parv[0], aconf->host, aconf->name);
+		    ":%s NOTICE %s :*** Connecting to %s.",
+		    me.name, parv[0], aconf->name);
 	 break;
       case -1:
 	 sendto_one(sptr, ":%s NOTICE %s :*** Couldn't connect to %s.",
-		    me.name, parv[0], aconf->host);
+		    me.name, parv[0], aconf->name);
 	 break;
       case -2:
 	 sendto_one(sptr, ":%s NOTICE %s :*** Host %s is unknown.",
-		    me.name, parv[0], aconf->host);
+		    me.name, parv[0], aconf->name);
 	 break;
       default:
 	 sendto_one(sptr,
 		    ":%s NOTICE %s :*** Connection to %s failed: %s",
-		    me.name, parv[0], aconf->host, strerror(retval));
+		    me.name, parv[0], aconf->name, strerror(retval));
    }
    aconf->port = tmpport;
    return 0;
