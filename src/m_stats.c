@@ -1128,10 +1128,16 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
         break;
 
         case 'G':
-            report_simbans_match_flags(sptr, SBAN_GCOS|SBAN_LOCAL, 0);
+            if(IsAnOper(sptr))
+                report_simbans_match_flags(sptr, SBAN_GCOS|SBAN_LOCAL, 0);
+            else
+                sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name,  parv[0]);
             break;
         case 'g':
-            report_simbans_match_flags(sptr, SBAN_GCOS|SBAN_NETWORK, 0);
+            if(IsAnOper(sptr))
+                report_simbans_match_flags(sptr, SBAN_GCOS|SBAN_NETWORK, 0);
+            else
+                sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name,  parv[0]);
             break;
 
         case 'I':
@@ -1150,17 +1156,23 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
         case 'k':
             if(IsAnOper(sptr))
                 report_userbans_match_flags(sptr, UBAN_TEMPORARY|UBAN_LOCAL, 0);
+            else
+                sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name,  parv[0]);
             break;
 
         case 'K':
             if (IsAnOper(sptr))
                 report_userbans_match_flags(sptr, UBAN_LOCAL, UBAN_TEMPORARY);
+            else
+                sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name,  parv[0]);
             break;
 
         case 'A':
         case 'a':
             if(IsAnOper(sptr))
                 report_userbans_match_flags(sptr, UBAN_NETWORK, 0);
+            else
+                sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name,  parv[0]);
             break;
 
         case 'M':
@@ -1224,12 +1236,22 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
             break;
 
         case 'Q':
-            report_simbans_match_flags(sptr, SBAN_NICK|SBAN_LOCAL, 0);
-            report_simbans_match_flags(sptr, SBAN_CHAN|SBAN_LOCAL, 0);
+            if(IsAnOper(sptr))
+            {
+                report_simbans_match_flags(sptr, SBAN_NICK|SBAN_LOCAL, 0);
+                report_simbans_match_flags(sptr, SBAN_CHAN|SBAN_LOCAL, 0);
+            }
+            else
+                sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name,  parv[0]);
             break;
         case 'q':
-            report_simbans_match_flags(sptr, SBAN_NICK|SBAN_NETWORK, 0);
-            report_simbans_match_flags(sptr, SBAN_CHAN|SBAN_NETWORK, 0);
+            if(IsAnOper(sptr))
+            {
+                report_simbans_match_flags(sptr, SBAN_NICK|SBAN_NETWORK, 0);
+                report_simbans_match_flags(sptr, SBAN_CHAN|SBAN_NETWORK, 0);
+            }
+            else
+                sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name,  parv[0]);
             break;
 
         case 'R':
@@ -1243,16 +1265,22 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
         case 's':
             if (IsAnOper(sptr))
                 list_scache(cptr, sptr, parc, parv);
+            else
+                sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name,  parv[0]);
             break;
 
         case 'T':
             if (IsAnOper(sptr)) 
                 throttle_stats(sptr, parv[0]);
+            else
+                sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name,  parv[0]);
             break;
 
         case 't':
             if (IsAnOper(sptr))
                 tstats(sptr, parv[0]);
+            else
+                sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name,  parv[0]);
             break;
 
         case 'U':
@@ -1289,6 +1317,8 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
         case 'W':
             if(IsAnOper(sptr))
                 report_fds(sptr);
+            else
+                sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name,  parv[0]);
             break;
 #endif
 
