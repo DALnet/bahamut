@@ -1040,7 +1040,7 @@ void sendto_locops(char *pattern, ...)
 			vsendto_one(cptr, nbuf, vl);
       }
    }
-	va_end(vl);
+   va_end(vl);
    return;
 }
 /*
@@ -1063,10 +1063,9 @@ void sendto_gnotice(char *pattern, ...)
 			(void) strncat(nbuf, pattern,
 								sizeof(nbuf) - strlen(nbuf));
 			vsendto_one(cptr, nbuf, vl);
-			return;
       }
    }
-	va_end(vl);
+   va_end(vl);
    return;
 }
 
