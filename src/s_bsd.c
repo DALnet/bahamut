@@ -459,19 +459,20 @@ void init_sys()
     }
     local[1] = NULL;
 
-    engine_init();
-
     if (bootopt & BOOT_TTY)
     {
+        engine_init();
+
 	/* debugging is going to a tty */
 	resfd = init_resolver(0x1f);
 	add_fd(resfd, FDT_RESOLVER, NULL);
         set_fd_flags(resfd, FDF_WANTREAD);
 	return;
     }
-    (void) close(1);
+
+    close(1);
     if (!(bootopt & BOOT_DEBUG) && !(bootopt & BOOT_STDERR))
-	(void) close(2);
+	close(2);
 
     if (((bootopt & BOOT_CONSOLE) || isatty(0)) &&
 	!(bootopt & (BOOT_INETD | BOOT_OPER)) && !(bootopt & BOOT_STDERR))
@@ -488,20 +489,21 @@ void init_sys()
 #ifdef TIOCNOTTY
 	if ((fd = open("/dev/tty", O_RDWR)) >= 0)
 	{
-	    (void) ioctl(fd, TIOCNOTTY, (char *) NULL);
-	    (void) close(fd);
+	    ioctl(fd, TIOCNOTTY, (char *) NULL);
+	    close(fd);
 	}
 #endif
 #if defined(SOL20) || defined(DYNIXPTX) || \
     defined(_POSIX_SOURCE) || defined(SVR4)
-	(void) setsid();
+	setsid();
 #else
-	(void) setpgrp(0, (int) getpid());
+	setpgrp(0, (int) getpid());
 #endif
-	(void) close(0);		/* fd 0 opened by inetd */
+	close(0);		/* fd 0 opened by inetd */
 	local[0] = NULL;
     }
 
+    engine_init();
     resfd = init_resolver(0x1f);
     add_fd(resfd, FDT_RESOLVER, NULL);
     set_fd_flags(resfd, FDF_WANTREAD);
