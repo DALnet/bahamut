@@ -173,7 +173,10 @@ VOIDSIG s_die() {
 #ifdef SAVE_MAXCLIENT_STATS
 	fp=fopen(DPATH "/.maxclients", "w");
 	if(fp!=NULL) {
-		fprintf(fp, "%d %d", Count.max_loc, Count.max_tot);
+		fprintf(fp, "%d %d %li %li %li %ld %ld %ld %ld", Count.max_loc, 
+			Count.max_tot, Count.weekly, Count.monthly, 
+			Count.yearly, Count.start, Count.week, Count.month, 
+			Count.year);
 		fclose(fp);
 	}
 #endif
@@ -650,11 +653,22 @@ main(int argc, char *argv[])
    Count.unknown = 0;
    Count.max_loc = 0;
    Count.max_tot = 0;
+   Count.today = 0;
+   Count.weekly = 0;
+   Count.monthly = 0;
+   Count.yearly = 0;
+   Count.start = NOW;
+   Count.day = NOW;
+   Count.week = NOW;
+   Count.month = NOW;
+   Count.year = NOW;
 
 #ifdef SAVE_MAXCLIENT_STATS
 	mcsfp=fopen(DPATH "/.maxclients", "r");
 	if(mcsfp!=NULL) {
-		fscanf(mcsfp, "%d %d", &Count.max_loc, &Count.max_tot);
+		fscanf(mcsfp, "%d %d %li %li %li %ld %ld %ld %ld", &Count.max_loc, 
+			&Count.max_tot, &Count.weekly, &Count.monthly, &Count.yearly, 
+			&Count.start, &Count.week, &Count.month, &Count.year);
 		fclose(mcsfp);
 	}
 #endif

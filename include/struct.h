@@ -453,6 +453,15 @@ struct Counter {
 	int         unknown;	 /* unknown connections */
 	int         max_loc;	 /* MAX local clients */
 	int         max_tot;	 /* MAX global clients */
+	ts_val	    start;	/* when we started collecting info */
+        u_long      today;	/* Client Connections today */
+	ts_val	    day;	/* when today started */
+ 	u_long	    weekly;	/* connections this week */
+	ts_val	    week;	/* when this week started */
+	u_long	    monthly;	/* connections this month */
+	ts_val	    month;	/* when this month started */
+        u_long	    yearly;	/* this is gonna be big */
+	ts_val	    year;	/* when this year started (HEH!) */
 };
 
 struct MotdItem {

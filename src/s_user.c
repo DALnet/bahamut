@@ -849,6 +849,27 @@ register_user(aClient *cptr,
 			  sendto_ops("New Max Local Clients: %d",
 							 Count.max_loc);
       }
+      if ((NOW - Count.day) > 86400) {
+	Count.today = 0;
+	Count.day = NOW;
+      }
+      if ((NOW - Count.week) > 604800) {
+	Count.weekly = 0;
+	Count.week = NOW;
+      }
+      if ((NOW - Count.month) > 2592000) {
+	Count.monthly = 0;
+	Count.month = NOW;
+      }
+      if ((NOW - Count.year) > 31536000) {
+	Count.yearly = 0;
+        Count.year = NOW;
+      }
+      Count.today++;
+      Count.weekly++;
+      Count.monthly++;
+      Count.yearly++;
+      
    }
    else
 	  strncpyzt(user->username, username, USERLEN + 1);
