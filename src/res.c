@@ -51,7 +51,7 @@
 				 * don't do DNS on this ip. */
 
 #undef	DEBUG			/* because theres alot of debug code in here */
-#ifndef AIX
+#if !defined(AIX) && !defined(SOL20)
 extern void debug();
 #endif
 
