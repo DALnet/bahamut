@@ -13,7 +13,7 @@
 #include "h.h"
 #include "hooks.h"
 
-#ifndef ENABLE_HOOKMODULES
+#ifndef USE_HOOKMODULES
 int m_module(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
    return 0;

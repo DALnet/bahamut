@@ -1375,6 +1375,19 @@ int check_target_limit(aClient *sptr, aClient *acptr)
  * 
  */
 
+static inline void send_msg_error(aClient *sptr, char *parv[], char *nick, int ret) 
+{
+    if(ret == ERR_NOCOLORSONCHAN)
+	sendto_one(sptr, err_str(ERR_NOCOLORSONCHAN), me.name,
+		   parv[0], nick, parv[2]);
+    else if(ret == ERR_NEEDREGGEDNICK)
+	sendto_one(sptr, err_str(ERR_NEEDREGGEDNICK), me.name,
+		   parv[0], nick, "speak in");		
+    else
+	sendto_one(sptr, err_str(ERR_CANNOTSENDTOCHAN), me.name,
+		   parv[0], nick);
+}
+
 static inline int m_message(aClient *cptr, aClient *sptr, int parc,
 			    char *parv[], int notice)
 {
@@ -1383,11 +1396,12 @@ static inline int m_message(aClient *cptr, aClient *sptr, int parc,
 #ifdef SERVICESHUB
     char *myparv[2];
 #endif
-    int i, ret, ischan;
+    int i, ret, ischan, ismine;
     aChannel *chptr;
     char *nick, *server, *p, *cmd, *dccmsg;
 
     cmd = notice ? MSG_NOTICE : MSG_PRIVATE;
+    ismine = MyClient(sptr);
 
     if (parc < 2 || *parv[1] == '\0') 
     {
@@ -1402,7 +1416,7 @@ static inline int m_message(aClient *cptr, aClient *sptr, int parc,
 	return -1;
     }
 
-    if (MyConnect(sptr)) 
+    if (ismine) 
     {
 	/* if its a spambot, just ignore it */
 	if ((IsSquelch(sptr))
@@ -1422,7 +1436,7 @@ static inline int m_message(aClient *cptr, aClient *sptr, int parc,
 	parv[1] = canonize(parv[1]);
     }
 
-    if(call_hooks(CHOOK_MSG, sptr, notice, parv[2]) == FLUSH_BUFFER)
+    if(ismine && call_hooks(CHOOK_MSG, sptr, notice, parv[2]) == FLUSH_BUFFER)
 	return FLUSH_BUFFER;
 
     for (p = NULL, nick = strtoken(&p, parv[1], ","), i = 0; nick && i<20 ;
@@ -1433,7 +1447,7 @@ static inline int m_message(aClient *cptr, aClient *sptr, int parc,
 	 * (or even to channels) then subject them to flood control!
 	 * -Taner
 	 */
-	if (i++ > 10)
+	if (ismine && i++ > 10)
 #ifdef NO_OPER_FLOOD
 	    if (!IsAnOper(sptr) && !IsULine(sptr))	
 #endif
@@ -1441,7 +1455,7 @@ static inline int m_message(aClient *cptr, aClient *sptr, int parc,
 
 	/* channel msg? */
 	ischan = IsChannelName(nick);
-	if (ischan && (chptr=find_channel(nick,NullChn))) 
+	if (ischan && (chptr = find_channel(nick,NullChn))) 
 	{
 	    if (!notice)
 		switch(check_for_ctcp(parv[2], NULL))
@@ -1464,22 +1478,11 @@ static inline int m_message(aClient *cptr, aClient *sptr, int parc,
 		    break;
 		}
 	    ret = IsULine(sptr) ? 0 : can_send(sptr, chptr, parv[2]);
-	    if(MyClient(sptr)&&ret==ERR_NOCOLORSONCHAN) {
-		sendto_one(sptr, err_str(ERR_NOCOLORSONCHAN), me.name,
-			   parv[0], nick, parv[2]);
-		continue;
-	    }
-	    if(MyClient(sptr)&&ret==ERR_NEEDREGGEDNICK) {
-		sendto_one(sptr, err_str(ERR_NEEDREGGEDNICK), me.name,
-			   parv[0], nick, "speak in");		
-		continue;
-	    }
 
 	    if(ret)
 	    {
 		if(!notice)
-		    sendto_one(sptr, err_str(ERR_CANNOTSENDTOCHAN), me.name,
-			       parv[0], nick);
+		    send_msg_error(sptr, parv, nick, ret);
 	    }
 	    else
 		sendto_channel_butone(cptr, sptr, chptr, ":%s %s %s :%s",
@@ -1488,8 +1491,18 @@ static inline int m_message(aClient *cptr, aClient *sptr, int parc,
 	}
 	
 	/* nickname addressed? */
-	if (!ischan && (acptr = find_person(nick, NULL))) 
+	if (!ischan && (acptr = find_client(nick, NULL))) 
 	{
+	    /* A PRIVMSG or NOTICE to me.name! */
+	    if (IsServer(acptr) && IsMe(acptr) && ismine)
+	    {
+		if(call_hooks(CHOOK_MYMSG, sptr, notice, parv[2]) == FLUSH_BUFFER)
+		    return FLUSH_BUFFER;
+	    }
+
+	    if (!IsClient(acptr)) /* now back to our regularly scheduled programming */
+		acptr = NULL;
+
 	    if (IsNoNonReg(acptr) && !IsRegNick(sptr) && !IsULine(sptr) &&
 		!IsOper(sptr))
 	    {
@@ -1499,7 +1512,7 @@ static inline int m_message(aClient *cptr, aClient *sptr, int parc,
 	    }
 #ifdef MSG_TARGET_LIMIT
 	    /* Only check target limits for my clients */
-	    if (MyClient(sptr) && check_target_limit(sptr, acptr))
+	    if (ismine && check_target_limit(sptr, acptr))
 		continue;
 #endif
 
@@ -1534,22 +1547,30 @@ static inline int m_message(aClient *cptr, aClient *sptr, int parc,
 		}
 	    }
 #ifdef DENY_SERVICES_MSGS
-            if(MyClient(acptr) && !strcasecmp(NICKSERV,nick))
-              sendto_one(sptr, rpl_str(ERR_MSGSERVICES), me.name, parv[0],
-			       NICKSERV, NICKSERV, NICKSERV);
-            else if(MyClient(acptr) && !strcasecmp(CHANSERV,nick))
-              sendto_one(sptr, rpl_str(ERR_MSGSERVICES), me.name, parv[0],
-			       CHANSERV, CHANSERV, CHANSERV);
-            else if(MyClient(acptr) && !strcasecmp(MEMOSERV,nick))
-              sendto_one(sptr, rpl_str(ERR_MSGSERVICES), me.name, parv[0],
-			       MEMOSERV, MEMOSERV, MEMOSERV);
-            else if(MyClient(acptr) && !strcasecmp(ROOTSERV,nick))
-              sendto_one(sptr, rpl_str(ERR_MSGSERVICES), me.name, parv[0],
-			       ROOTSERV, ROOTSERV, ROOTSERV);
-	    else if (!is_silenced(sptr, acptr)) 
-#else
-	    if (!is_silenced(sptr, acptr)) 
+#define BSRV(x) (mycmp((x), nick) == 0)
+	    if(ismine)
+	    {
+		char *tservice = NULL;
+		if(BSRV(NICKSERV))
+		    tservice = NICKSERV;
+		else if(BSRV(CHANSERV))
+		    tservice = CHANSERV;
+		else if(BSRV(MEMOSERV))
+		    tservice = MEMOSERV;
+		else if(BSRV(ROOTSERV))
+		    tservice = ROOTSERV;
+
+		if(tservice != NULL)
+		{
+		    if(!notice)
+			sendto_one(sptr, rpl_str(ERR_MSGSERVICES), me.name, parv[0],
+				   tservice, tservice, tservice);
+		    continue;
+		}
+	    }
+#undef BSRV
 #endif
+	    if (!is_silenced(sptr, acptr)) 
 	    {				 
 		if (!notice && MyClient(acptr) && acptr->user &&
 		    acptr->user->away)
@@ -1567,21 +1588,12 @@ static inline int m_message(aClient *cptr, aClient *sptr, int parc,
 	    {
 		if ((chptr = find_channel(nick + 1, NullChn))) 
 		{
-		    ret = IsULine(sptr) ? 0 : can_send(sptr, chptr, parv[2]);
-		    
-		    if(MyClient(sptr)&&ret==ERR_NOCOLORSONCHAN) {
-			sendto_one(sptr, err_str(ERR_NOCOLORSONCHAN), me.name,
-				   parv[0], nick, parv[2]);
-			continue;
-		    }
-		    if(MyClient(sptr)&&ret==ERR_NEEDREGGEDNICK) {
-			sendto_one(sptr, err_str(ERR_NEEDREGGEDNICK), me.name,
-				   parv[0], nick, "speak in");		
-			continue;
-		    }
+		    ret = IsULine(sptr) ? 0 : can_send(sptr, chptr, parv[2]);		    
 		    if (ret)
-			sendto_one(sptr, err_str(ERR_CANNOTSENDTOCHAN),
-				   me.name, parv[0], nick + 1);
+		    {
+			if(notice)
+			    send_msg_error(sptr, parv, nick, ret);
+		    }
 		    else 
 			sendto_channelops_butone(cptr, sptr, chptr,
 						 ":%s %s %s :%s", parv[0], cmd,
@@ -1593,22 +1605,11 @@ static inline int m_message(aClient *cptr, aClient *sptr, int parc,
 		if ((chptr = find_channel(nick + 1, NullChn))) 
 		{
 		    ret = IsULine(sptr) ? 0 : can_send(sptr, chptr, parv[2]);
-
-		    if(MyClient(sptr)&&ret==ERR_NOCOLORSONCHAN)
-		    {
-			sendto_one(sptr, err_str(ERR_NOCOLORSONCHAN), me.name,
-				   parv[0], nick, parv[2]);
-			continue;
-		    }
-		    if(MyClient(sptr)&&ret==ERR_NEEDREGGEDNICK)
-		    {
-			sendto_one(sptr, err_str(ERR_NEEDREGGEDNICK), me.name,
-				   parv[0], nick, "speak in");		
-			continue;
-		    }
 		    if (ret)
-			sendto_one(sptr, err_str(ERR_CANNOTSENDTOCHAN),
-				   me.name, parv[0], nick + 1);
+		    {
+			if(notice)
+			    send_msg_error(sptr, parv, nick, ret);
+		    }
 		    else
 			sendto_channelvoice_butone(cptr, sptr, chptr, 
 						   ":%s %s %s :%s", parv[0],
@@ -1617,7 +1618,7 @@ static inline int m_message(aClient *cptr, aClient *sptr, int parc,
 	    }
 	    else
 		sendto_one_services(sptr, err_str(ERR_NOSUCHNICK), me.name, parv[0],
-			   nick + 1);
+			   nick);
 	    continue;
 	}
 	if (nick[0] == '@' && nick[1] == '+' && nick[2] == '#') 
@@ -1625,22 +1626,12 @@ static inline int m_message(aClient *cptr, aClient *sptr, int parc,
 	    if ((chptr = find_channel(nick + 2, NullChn))) 
 	    {
 		ret = IsULine(sptr) ? 0 : can_send(sptr, chptr, parv[2]);
-		
-		if(MyClient(sptr)&&ret==ERR_NOCOLORSONCHAN)
-		{
-		    sendto_one(sptr, err_str(ERR_NOCOLORSONCHAN), me.name,
-			       parv[0], nick, parv[2]);
-		    continue;
-		}
-		if(MyClient(sptr)&&ret==ERR_NEEDREGGEDNICK)
-		{
-		    sendto_one(sptr, err_str(ERR_NEEDREGGEDNICK), me.name,
-			       parv[0], nick, "speak in");		
-		    continue;
-		}
 		if (ret)
-		    sendto_one(sptr, err_str(ERR_CANNOTSENDTOCHAN),
-			       me.name, parv[0], nick + 1);
+		{
+		    if(notice)
+			send_msg_error(sptr, parv, nick, ret);
+
+		}
 		else
 		    sendto_channelvoiceops_butone(cptr, sptr, chptr,
 						  ":%s %s %s :%s", parv[0],
@@ -1649,7 +1640,7 @@ static inline int m_message(aClient *cptr, aClient *sptr, int parc,
 	    }
 	    else
 		sendto_one_services(sptr, err_str(ERR_NOSUCHNICK), me.name, parv[0],
-			   nick + 1);
+			   nick);
 	    continue;
 	}
 		
@@ -1691,41 +1682,37 @@ static inline int m_message(aClient *cptr, aClient *sptr, int parc,
 	if (!ischan && (server = (char *) strchr(nick, '@')) &&
 	    (acptr = find_server(server + 1, NULL))) 
 	{
-	    int count = 0;
-	    
 	    /* Not destined for a user on me :-( */
 	    if (!IsMe(acptr)) 
 	    {
 #ifdef SERVICESHUB
-                if(strcasecmp(server+1,SERVICES_NAME)!=0) {
-		  sendto_one(acptr, ":%s %s %s :%s", parv[0], cmd, nick,
-			   parv[2]);
-                } else {
-                  if(!strcasecmp(nick,NICKSERVATSERVICES)) {
+                if(mycmp(server+1, SERVICES_NAME)!=0) 
+		{
+                  if(!mycmp(nick,NICKSERVATSERVICES)) {
                     myparv[0]=parv[0];
                     myparv[1]=parv[2];                    
                     m_ns(cptr, sptr, parc-1, myparv);  
-                  } else if(!strcasecmp(nick,CHANSERVATSERVICES)) {
+                  } else if(!mycmp(nick,CHANSERVATSERVICES)) {
                     myparv[0]=parv[0];
                     myparv[1]=parv[2];                    
                     m_cs(cptr, sptr, parc-1, myparv);  
-                  } else if(!strcasecmp(nick,MEMOSERVATSERVICES)) {
+                  } else if(!mycmp(nick,MEMOSERVATSERVICES)) {
                     myparv[0]=parv[0];
                     myparv[1]=parv[2];                    
                     m_ms(cptr, sptr, parc-1, myparv);  
-                  } else if(!strcasecmp(nick,ROOTSERVATSERVICES)) {
+                  } else if(!mycmp(nick,ROOTSERVATSERVICES)) {
                     myparv[0]=parv[0];
                     myparv[1]=parv[2];                    
                     m_rs(cptr, sptr, parc-1, myparv);  
 		  } else {
                     sendto_one(acptr, ":%s %s %s :%s", parv[0], cmd, nick,
 			   parv[2]);
-                  }                    
+                  }
+		  continue;                    
                 }
-#else
+#endif
                 sendto_one(acptr, ":%s %s %s :%s", parv[0], cmd, nick,
                            parv[2]);
-#endif
 		continue;
 	    }
 	    *server = '\0';
@@ -1740,15 +1727,18 @@ static inline int m_message(aClient *cptr, aClient *sptr, int parc,
 		*server = '@';
 	    if (acptr) 
 	    {
-		if (count == 1)
-		    sendto_prefix_one(acptr, sptr, ":%s %s %s :%s", parv[0],
-				      cmd, nick, parv[2]);
-		else if (!notice)
+		/*
+		 * Don't allow a /msg nick@server (we weren't before, anyway)
+		 *
+		 * if (count == 1)
+		 *    sendto_prefix_one(acptr, sptr, ":%s %s %s :%s", parv[0],
+		 * 			cmd, nick, parv[2]);
+		 */
+		if (!notice)
 		    sendto_one(sptr, err_str(ERR_TOOMANYTARGETS), me.name,
 			       parv[0], nick);
-	    }
-	    if (acptr)
 		continue;
+	    }
 	}
 	sendto_one_services(sptr, err_str(ERR_NOSUCHNICK), me.name, parv[0], nick);
     }
