@@ -3029,6 +3029,7 @@ m_umode(aClient *cptr, aClient *sptr, int parc, char *parv[])
              * them back to the appropriate Y:class -srd
              */
             sptr->user->oper->opers--;
+            sptr->user->oper->class->links--;
             sptr->user->oper = NULL;
             set_effective_class(sptr);
         }

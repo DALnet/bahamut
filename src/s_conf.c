@@ -216,22 +216,21 @@ clear_conflinks(aClient *cptr)
         {
             x->class->links--;
             x->acpt = NULL;
-            if(x->legal == -1)     /* scheduled for removal? */
+            if (x->legal == -1)     /* scheduled for removal? */
             {
-                aConnect *aconn = NULL, *aconnl;
-                for(aconnl = connects; aconnl; aconnl = aconnl->next)
+                aConnect *aconn = NULL;
+
+                if (x == connects)
+                    connects = x->next;
+                else
                 {
-                    if(aconnl == x)
-                    {
-                        if(aconn)
-                            aconn->next = aconnl->next;
-                        else    
-                            connects = aconnl->next;
-                        free_connect(aconnl);
-                        break;
-                    }
-                    aconn = aconnl;
+                    for (aconn = connects; aconn != NULL && aconn->next != x; aconn = aconn->next);
+                    if (aconn != NULL)
+                        aconn->next = x->next;
+                    else
+                        sendto_realops_lev(DEBUG_LEV, "Deleting scheduled connect, but it isn't in the list?? [%s]", x->name);
                 }
+                free_connect(x);
             }
             cptr->serv->aconn = NULL;
         }
@@ -244,23 +243,21 @@ clear_conflinks(aClient *cptr)
         {
             x->class->links--;
             x->clients--;
-            if((x->clients <= 0) && (x->legal == -1))
+            if(x->clients <= 0 && x->legal == -1)
             {
                 /* remove this allow now that its empty */
-                aAllow *allow = NULL, *allowl;
-                for(allowl = allows; allowl; allowl = allowl->next)
+                aAllow *allow = NULL;
+                if (allows == x)
+                    allows = x->next;
+                else
                 {
-                    if((allowl == x))
-                    {
-                        if(allow)
-                            allow->next = allowl->next;
-                        else
-                            allows = allowl->next;
-                        free_allow(allowl);
-                        break;
-                    }
-                    allow = allowl;
+                    for (allow = allows; allow != NULL && allow->next != x; allow = allow->next);
+                    if (allow != NULL)
+                        allow->next = x->next;
+                    else
+                        sendto_realops_lev(DEBUG_LEV, "Deleting scheduled allow, but it isn't in the list?? [%s / %s]", x->ipmask, x->hostmask);
                 }
+                free_allow(x);
             }
             cptr->user->allow = NULL;
         }
@@ -268,22 +265,20 @@ clear_conflinks(aClient *cptr)
         {
             y->class->links--;
             y->opers--;
-            if((y->legal == -1) && (y->opers <= 0))
+            if(y->legal == -1 && y->opers <= 0)
             {
-                aOper *oper = NULL, *operl;
-                for(operl = opers; operl; operl = operl->next)
+                aOper *oper = NULL;
+                if (opers == y)
+                    opers = y->next;
+                else
                 {
-                    if(operl == y)
-                    {
-                        if(oper)
-                            oper->next = operl->next;
-                        else
-                            opers = operl->next;
-                        free_oper(operl);
-                        break;
-                    }
-                    oper = operl;
+                    for (oper = opers; oper != NULL && oper->next != y; oper = oper->next);
+                    if (oper != NULL)
+                        oper->next = y->next;
+                    else
+                        sendto_realops_lev(DEBUG_LEV, "Deleting scheduled oper, but it isn't in the list?? [%s]", y->nick);
                 }
+                free_oper(y);
             }
             cptr->user->oper = NULL;
         }
