@@ -72,6 +72,7 @@ extern void sendto_prefix_one(aClient *to, aClient *from, char *pattern, ...);
 
 extern void sendto_realops_lev(int lev, char *pattern, ...);
 extern void sendto_realops(char *pattern, ...);
+extern void sendto_non_noquit_servs_butone(aClient *one, char *pattern, ...);
 extern void sendto_serv_butone(aClient *one, char *pattern, ...);
 extern void sendto_serv_butone_services(aClient *one, char *pattern, ...);
 extern void sendto_wallops_butone(aClient *one, aClient *from,

@@ -499,6 +499,9 @@ exit_one_server(aClient *cptr, aClient *dead, aClient *from,
          * dead servers.
          */
 
+#ifdef NOQUIT
+        if(IsNoquit(acptr))
+#endif
         if(cptr != dead)
             continue;
 
