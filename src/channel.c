@@ -2239,21 +2239,12 @@ int m_invite(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		   me.name, parv[0], parv[1], parv[2]);
 	return 0;
     }
-    if (chptr && (chptr->mode.mode & MODE_INVITEONLY))
+
+    if (!is_chan_op(sptr, chptr) && (!IsULine(sptr)))
     {
-	if (!is_chan_op(sptr, chptr) && (!IsULine(sptr)))
-	{
-	    sendto_one(sptr, err_str(ERR_CHANOPRIVSNEEDED),
-		       me.name, parv[0], chptr->chname);
-	    return -1;
-	}
-	else if (!IsMember(sptr, chptr) && !IsULine(sptr))
-	{
-	    sendto_one(sptr, err_str(ERR_CHANOPRIVSNEEDED),
-		       me.name, parv[0],
-		       ((chptr) ? (chptr->chname) : parv[2]));
-	    return -1;
-	}
+	sendto_one(sptr, err_str(ERR_CHANOPRIVSNEEDED),
+		   me.name, parv[0], chptr->chname);
+	return -1;
     }
     
     if (MyConnect(sptr))
