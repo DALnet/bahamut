@@ -884,7 +884,8 @@ int register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
 		    sendto_one(sptr, ":%s NOTICE %s :*** Your hostname has "
 			       "been masked.",
 			       me.name, sptr->name);
-		    
+
+		    throttle_remove(sptr->hostip);		    
 		    sptr->user->real_oper_host = 
 			MyMalloc(strlen(sptr->user->host) + 1);
 		    sptr->user->real_oper_username = 
@@ -2422,7 +2423,7 @@ int check_oper_can_mask(aClient *sptr, char *name, char *password,
 int m_oper(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     aConfItem  *aconf;
-    char       *name, *password, *encr;
+    char       *name, *password, *encr, *oper_ip;
 
 #ifdef CRYPT_OPER_PASSWORD
     extern char *crypt();
@@ -2478,6 +2479,7 @@ int m_oper(aClient *cptr, aClient *sptr, int parc, char *parv[])
 			   sptr->user->username, sptr->user->host);
 	    return 0;
 	}
+        oper_ip = sptr->hostip;
 #if (RIDICULOUS_PARANOIA_LEVEL>=1)
     }
     else
@@ -2492,6 +2494,7 @@ int m_oper(aClient *cptr, aClient *sptr, int parc, char *parv[])
 			   sptr->user->username, sptr->user->host);
 	    return 0;
 	}
+        oper_ip = sptr->user->real_oper_ip;
     }
 #endif
 #ifdef CRYPT_OPER_PASSWORD
@@ -2532,6 +2535,7 @@ int m_oper(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	Count.oper++;
 	*--s = '@';
 	addto_fdlist(sptr->fd, &oper_fdlist);
+        throttle_remove(oper_ip);
 	sendto_ops("%s (%s@%s) is now operator (%c)", parv[0],
 		   sptr->user->username, sptr->sockhost,
 		   IsOper(sptr) ? 'O' : 'o');

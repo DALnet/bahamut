@@ -1097,6 +1097,8 @@ int m_server_estab(aClient *cptr)
     cptr->serv->up = me.name;
     cptr->serv->nline = aconf;
 
+    throttle_remove(inetntoa((char *)&cptr->ip));
+
     /* now fill out the servers info so nobody knows dink about it. */
     memset((char *)&cptr->ip, '\0', sizeof(struct in_addr));
     strcpy(cptr->hostip, "127.0.0.1");

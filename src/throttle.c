@@ -330,6 +330,19 @@ static int throttle_get_zline_time(int stage)
    return 0; /* dumb compiler */
 }
 
+void throttle_remove(char *host)
+{
+    throttle *tp = hash_find(throttle_hash, host);
+
+    if(tp)
+    {
+        LIST_REMOVE(tp, lp);
+        hash_delete(throttle_hash, tp);
+        throttle_free(tp);
+        numthrottles--;
+    }
+}
+
 /* fd is -1 for remote signons */
 int throttle_check(char *host, int fd, time_t sotime) {
     throttle *tp = hash_find(throttle_hash, host);
