@@ -24,7 +24,7 @@ INSTALL=@INSTALL@
 INSTALL_DATA=@INSTALL_DATA@
 INSTALL_DIR=@INSTALL_DIR@
 
-FILES=opers.txt example.conf example.modules.conf
+FILES=opers.txt example.conf
 
 all:
 
