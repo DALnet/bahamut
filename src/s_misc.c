@@ -596,10 +596,8 @@ exit_client(
 			Link *lp, *next;
 			LOpts *lopt=sptr->user->lopt;
 			/* poof goes their watchlist! 
-			 * why did we hash_del_watch_list for non-local clients? -epi
 			 */
-			if (MyConnect(sptr))
-				hash_del_watch_list(sptr);
+			hash_del_watch_list(sptr);
 			/* if they have listopts, axe those, too */
 			if(lopt!=NULL) {
 				for (lp = lopt->yeslist; lp; lp = next) {
