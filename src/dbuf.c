@@ -32,6 +32,9 @@
 #include "sys.h"
 #include "h.h"
 
+#ifdef DEBUG_DBUF
+int dbuftableused=0;
+#endif
 int	dbufalloc = 0, dbufblocks = 0, maxdbufalloc = 0, maxdbufblocks = 0;
 static	dbufbuf	*freelist = NULL;
 
@@ -122,7 +125,7 @@ static int dbuf_malloc_error(dbuf *dyn)
   return -1;
 }
 
-#ifdef DEBUF_DBUF
+#ifdef DEBUG_DBUF
 int dbuf__put(dbuf *dyn,char *buf, int length, char *file, short line, char *function) {
    int ret;
    dbuftableused++;
@@ -349,3 +352,20 @@ getmsg_init:
   
   return i;
 }
+
+#ifdef DEBUG_DBUF
+int m_dbuf(aClient *cptr, aClient *sptr, int parc, char *parv[]) {
+   int i;
+   FILE *f;
+   if (!IsOper(sptr)) return 0;
+   f=fopen("dbuf.out", "a");
+   for (i=1;i<=dbuftableused;i++) {
+      fprintf(f, "%i - %p - %s - %i - %s\n", 
+		 me.name, i, dbuftable[i].ptr, dbuftable[i].file,
+		 dbuftable[i].line, dbuftable[i].function);
+   }
+   sendto_one(sptr, "NOTICE %s :***Dbuf information dumped to dbuf.out", sptr->name);
+   fclose(f);
+   return 0;
+}
+#endif

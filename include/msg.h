@@ -106,8 +106,14 @@
 #endif
 #define MSG_SQLINE   "SQLINE" /* SQLINE */
 #define MSG_UNSQLINE "UNSQLINE" /* UNSQLINE */
+#ifdef DEBUG_DBUF    
+#define MSG_DBUF     "DBUF"      /* DBUFDEBUG */
+#endif
 #define MAXPARA      15
 
+#ifdef DEBUG_DBUF
+extern int  m_dbuf(aClient *, aClient *, int, char **);
+#endif
 extern int  m_kline(aClient *, aClient *, int, char **);
 extern int  m_unkline(aClient *, aClient *, int, char **);
 extern int  m_zline(aClient *, aClient *, int, char **);
@@ -273,6 +279,7 @@ struct Message msgtab[] = {
 #endif
 	{MSG_SQLINE, m_sqline, 0, MAXPARA, 1, 0, 0, 0L},
 	{MSG_UNSQLINE, m_unsqline, 0, MAXPARA, 1, 0, 0, 0L },
+   {MSG_DBUF,  m_dbuf, 0, MAXPARA, 1, 0, 0, 0L},
    {MSG_CAPAB, m_capab, 0, MAXPARA, 1, 1, 0, 0L},
    {(char *) 0, (int (*)()) 0, 0, 0, 0, 0, 0, 0L}
 };

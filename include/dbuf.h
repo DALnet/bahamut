@@ -19,9 +19,11 @@
 
 /* $Id$  */
 
+#ifndef __dbuf_include__
+#define __dbuf_include__
 #ifdef DEBUG_DBUF
 #define DBUFTABLE 10000
-int dbuftableused=0;
+extern int dbuftableused;
 struct {
    void *ptr;
    short line;
@@ -30,8 +32,6 @@ struct {
 } dbuftable[DBUFTABLE];
 #endif
 
-#ifndef __dbuf_include__
-#define __dbuf_include__
 /*
  * * dbuf is a collection of functions which can be used to * maintain
  * a dynamic buffering of a byte stream. * Functions allocate and
@@ -123,7 +123,7 @@ typedef struct dbufbuf {
 int         dbuf_put(dbuf *, char *, int);
 #else
 int         dbuf__put(dbuf *, char *, int, char *, short, char *);
-# define dbuf_put(x, y, z) dbuf__put(x, y, x, __FILE__, __LINE__, __FUNCTION__)
+# define dbuf_put(x, y, z) dbuf__put(x, y, z, __FILE__, __LINE__, __FUNCTION__)
 #endif
 /*
  * Dynamic buffer header 
