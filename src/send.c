@@ -790,6 +790,10 @@ void sendto_ops_lev(int lev, char *pattern, ...)
 			  if (!SendSpyNotice(cptr) || !IsAnOper(cptr))
 				 continue;
 			  break;
+			case DCCSEND_LEV:
+			  if (!SendDCCNotice(cptr) || !IsAnOper(cptr))
+				 continue;
+			  break;
 			case FLOOD_LEV:
 			  if (!SendFloodNotice(cptr) || !IsAnOper(cptr))
 				 continue;
@@ -1268,6 +1272,10 @@ void sendto_realops_lev(int lev, char *pattern, ...)
 			break;
 		 case SPY_LEV:
 			if (!SendSpyNotice(cptr))
+			  continue;
+			break;
+                 case DCCSEND_LEV:
+			if (!SendDCCNotice(cptr) || !IsAnOper(cptr))
 			  continue;
 			break;
 		 case FLOOD_LEV:

@@ -84,6 +84,7 @@ static int  user_modes[] =
  UMODE_y, 'y',
  UMODE_d, 'd',
  UMODE_D, 'D',
+ UMODE_e, 'e',
  UMODE_g, 'g',
  UMODE_b, 'b',
  UMODE_a, 'a',
@@ -1725,7 +1726,7 @@ int check_dccsend(aClient *from, aClient *to, char *msg)
    if(farray[i] == NULL)
       return 0;
 
-   if(NoDCC(to))
+   if(!GetDCC(to))
    {
       char tmpext[8];
       char tmpfn[128];
@@ -1745,14 +1746,14 @@ int check_dccsend(aClient *from, aClient *to, char *msg)
        *   server notices are not ignored by clients.
        */ 
 
-      sendto_one(from, ":%s NOTICE %s :The user %s does not accept DCC sends of filetype %s. Your file %s was not sent.",
+      sendto_one(from, ":%s NOTICE %s :The user %s does not accept DCC sends of filetype *.%s. Your file %s was not sent.",
          me.name, from->name, to->name, tmpext, tmpfn);
 
       sendto_one(to, ":%s NOTICE %s :%s (%s@%s) has attempted to send you a file named %s.",
          me.name, to->name, from->name, from->user->username, from->user->host, tmpfn);
       sendto_one(to, ":%s NOTICE %s :The majority of files sent of this type are malicious virii and trojan horses.",
          me.name, to->name);
-      sendto_one(to, ":%s NOTICE %s :If you trust %s, you may enable receiving of one file of this type by typing: /mode %s -D",
+      sendto_one(to, ":%s NOTICE %s :If you trust %s, and have asked him/her to send you this file, you may enable receiving of one file of this type by typing: /mode %s +D",
          me.name, to->name, from->name, to->name);
 
       for(tlp = to->user->channel; tlp && !chptr; tlp = tlp->next)
@@ -1765,10 +1766,10 @@ int check_dccsend(aClient *from, aClient *to, char *msg)
       }
       
       if(chptr)
-         sendto_realops_lev(SPY_LEV, "%s (%s@%s) sending forbidden filetyped file %s to %s (channel %s)", from->name, 
+         sendto_realops_lev(DCCSEND_LEV, "%s (%s@%s) sending forbidden filetyped file %s to %s (channel %s)", from->name, 
             from->user->username, from->user->host, tmpfn, to->name, chptr->chname); 
       else
-         sendto_realops_lev(SPY_LEV, "%s (%s@%s) sending forbidden filetyped file %s to %s", from->name, 
+         sendto_realops_lev(DCCSEND_LEV, "%s (%s@%s) sending forbidden filetyped file %s to %s", from->name, 
             from->user->username, from->user->host, tmpfn, to->name); 
 
       return 1;
@@ -1777,7 +1778,7 @@ int check_dccsend(aClient *from, aClient *to, char *msg)
    {
       unsigned long old = to->umode;
 
-      SetNoDCC(to);
+      UnsetGetDCC(to);
       send_umode(to, to, old, ALL_UMODES, buf);
    }
 
@@ -3060,7 +3061,6 @@ do_user(char *nick,
 						  me.name, nick);
 			return 0;
       }
-      sptr->umode |= UMODE_D; /* default nodcc to on */
 #ifndef	NO_DEFAULT_INVISIBLE
       sptr->umode |= UMODE_i;
 #endif
@@ -3920,6 +3920,12 @@ m_umode(aClient *cptr,
 		  delfrom_fdlist(sptr->fd, &oper_fdlist);
    }
 
+   if(!(setflags & UMODE_D) && GetDCC(sptr)) {
+      sendto_one(sptr, ":%s NOTICE %s :\002WARNING\002: by setting yourself +D, the server will no longer block DCC sends"
+                 " of known malicious filetypes. If you do not wish to turn this off, type /mode %s -D", 
+                 me.name, sptr->name, sptr->name);
+   }
+
   /*
     * We dont want non opers setting themselves +b - Raistlin
     */
@@ -3928,9 +3934,13 @@ m_umode(aClient *cptr,
        && !IsServer(cptr))
           sptr->umode &= ~UMODE_b;
 
-   if ((!(setflags & UMODE_R) && (!IsOper(sptr) && !IsLocOp(sptr))
-	&& !IsServer(cptr)) || !OPIsRStaff(sptr))
+   if (!(setflags & UMODE_R) && (!IsOper(sptr) && !IsLocOp(sptr))
+	&& !IsServer(cptr))
 	  sptr->umode &= ~UMODE_R;
+
+   if (!(setflags & UMODE_e) && (!IsOper(sptr) && !IsLocOp(sptr))
+	&& !IsServer(cptr))
+	  sptr->umode &= ~UMODE_e;
 
    if (!(setflags & UMODE_y) && (!IsOper(sptr) && !IsLocOp(sptr))
        && !IsServer(cptr))
@@ -3967,7 +3977,8 @@ m_umode(aClient *cptr,
 		if (IsUmodeb(sptr)) ClearUmodeb(sptr);
 		if (IsUmoden(sptr)) ClearUmoden(sptr);
 		if (IsUmodem(sptr)) ClearUmodem(sptr);
-		if (IsUmodeh(sptr)) ClearUmodeh(sptr);
+		if (IsRouting(sptr)) ClearRouting(sptr);
+		if (IsUmodee(sptr)) ClearUmodee(sptr);
 	}
 	if(MyClient(sptr)) {
 		if (IsAdmin(sptr) && !OPIsAdmin(sptr)) ClearAdmin(sptr);
@@ -3977,6 +3988,7 @@ m_umode(aClient *cptr,
 		if (IsUmodey(sptr) && !OPSetUModeY(sptr)) ClearUmodey(sptr);
 		if (IsUmoded(sptr) && !OPSetUModeD(sptr)) ClearUmoded(sptr);
 		if (IsUmodeb(sptr) && !OPSetUModeB(sptr)) ClearUmodeb(sptr);
+		if (IsRouting(sptr) && !OPIsRStaff(sptr)) ClearRouting(sptr);
 	}
    send_umode_out(cptr, sptr, setflags);
 	

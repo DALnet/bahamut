@@ -241,7 +241,8 @@ typedef struct MotdItem aMotd;
 #define UMODE_h     0x20000 /* umode +h - Helper */
 #define UMODE_m     0x40000 /* umode +m - spambot notices */
 #define UMODE_R     0x80000 /* unmode +R - Routing staff */
-#define UMODE_D     0x100000   /* pseudo-umode +D - not accepting dcc sends */
+#define UMODE_D     0x100000   /* umode +D - accepting dcc sends */
+#define UMODE_e     0x200000   /* umode +e - oper notices for the above +D */
 
 /* for sendto_ops_lev */
 
@@ -252,11 +253,12 @@ typedef struct MotdItem aMotd;
 #define DEBUG_LEV	5
 #define FLOOD_LEV 	6
 #define SPAM_LEV 	7
+#define DCCSEND_LEV	8
 
 #define	SEND_UMODES (UMODE_i|UMODE_o|UMODE_w|UMODE_r|UMODE_a|UMODE_A|UMODE_h|UMODE_R)
 #define ALL_UMODES (SEND_UMODES|UMODE_s|UMODE_c|UMODE_r|UMODE_k|UMODE_f|\
 	UMODE_y|UMODE_d|UMODE_g|UMODE_b|UMODE_n|UMODE_h|UMODE_m|\
-	UMODE_O|UMODE_R|UMODE_D)
+	UMODE_O|UMODE_R|UMODE_D|UMODE_e)
 #ifdef DEFAULT_HELP_MODE
 #define OPER_UMODES (UMODE_o|UMODE_w|UMODE_s|UMODE_y|UMODE_d|UMODE_g|UMODE_n|UMODE_h)
 #else
@@ -281,10 +283,11 @@ typedef struct MotdItem aMotd;
 #define IsUmoden(x)   ((x)->umode & UMODE_n)
 #define IsUmodem(x)   ((x)->umode & UMODE_m)
 #define IsUmodeh(x)   ((x)->umode & UMODE_h)
+#define IsUmodee(x)   ((x)->umode & UMODE_e)
 #define IsRouting(x)  ((x)->umode & UMODE_R)
-#define NoDCC(x)      ((x)->umode & UMODE_D)
-#define SetNoDCC(x)   ((x)->umode |= UMODE_D)
-#define UnsetNoDCC(x) ((x)->umode &= ~UMODE_D)
+#define GetDCC(x)      ((x)->umode & UMODE_D)
+#define SetGetDCC(x)   ((x)->umode |= UMODE_D)
+#define UnsetGetDCC(x) ((x)->umode &= ~UMODE_D)
 #define	IsPerson(x)		((x)->user && IsClient(x))
 #define	IsPrivileged(x)		(IsAnOper(x) || IsServer(x))
 #define	SendWallops(x)		((x)->umode & UMODE_w)
@@ -293,6 +296,7 @@ typedef struct MotdItem aMotd;
 #define SendRejNotice(x)	((x)->umode & UMODE_c)
 #define SendSkillNotice(x)	((x)->umode & UMODE_k)
 #define SendSpyNotice(x)	((x)->umode & UMODE_y)
+#define SendDCCNotice(x)	((x)->umode & UMODE_e)
 #define SendFloodNotice(x)  ((x)->umode & UMODE_f)
 #define SendSpamNotice(x)  ((x)->umode & UMODE_m)
 #define SendDebugNotice(x)	((x)->umode & UMODE_d)
@@ -327,6 +331,7 @@ typedef struct MotdItem aMotd;
 #define ClearUmodeb(x)  ((x)->umode &= ~UMODE_b)
 #define ClearUmoden(x)  ((x)->umode &= ~UMODE_n)
 #define ClearUmodeh(x)  ((x)->umode &= ~UMODE_h)
+#define ClearUmodee(x)  ((x)->umode &= ~UMODE_e)
 #define ClearRouting(x) ((x)->umode &= ~UMODE_R)
 #define	ClearOper(x)		((x)->umode &= ~UMODE_o)
 #define ClearLocOp(x)		((x)->umode &= ~UMODE_O)
@@ -361,11 +366,11 @@ typedef struct MotdItem aMotd;
 #define OFLAG_ADMIN	0x00010000  /* Admin */
 #define OFLAG_UMODEC	0x00020000  /* Oper can set umode +c */
 #define OFLAG_UMODEF	0x00040000  /* Oper can set umode +f */
+#define OFLAG_SADMIN    0x00080000  /* Oper can be a services admin */
+#define OFLAG_ZLINE	0x00100000  /* Oper can use /zline and /unzline */
 #define OFLAG_UMODEY    0x00200000  /* Oper can set umode +y */
 #define OFLAG_UMODED    0x00400000  /* Oper can set umode +d */
 #define OFLAG_UMODEB    0x00800000  /* Oper can set umode +b */
-#define OFLAG_SADMIN    0x00080000  /* Oper can be a services admin */
-#define OFLAG_ZLINE	0x00100000  /* Oper can use /zline and /unzline */
 #define OFLAG_RSTAFF    0x01000000  /* Oper can view server IPs (routing staff) */
 #define OFLAG_LOCAL	(OFLAG_REHASH|OFLAG_HELPOP|OFLAG_GLOBOP|OFLAG_WALLOP|OFLAG_LOCOP|OFLAG_LROUTE|OFLAG_LKILL|OFLAG_KLINE|OFLAG_UNKLINE|OFLAG_LNOTICE|OFLAG_UMODEC|OFLAG_UMODEF)
 #define OFLAG_GLOBAL	(OFLAG_LOCAL|OFLAG_GROUTE|OFLAG_GKILL|OFLAG_GNOTICE)
