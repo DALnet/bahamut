@@ -808,7 +808,7 @@ static int completed_connection(aClient * cptr)
       return -1;
    }
    nconf = find_conf(cptr->confs, cptr->name, CONF_NOCONNECT_SERVER);
-   if (!aconf) {
+   if (!nconf) {
       sendto_realops("Lost N-Line for %s", get_client_name(cptr, HIDEME));
       return -1;
    }
