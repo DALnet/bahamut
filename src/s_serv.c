@@ -4954,10 +4954,8 @@ show_watch(aClient *cptr, char *name, int rpl1, int rpl2)
 int   m_watch(aClient *cptr, aClient *sptr, int parc, char *parv[]) 
 {
 	aClient  *acptr;
-	char  *s, *user;
-	char *def = "l";
-	if (check_registered(sptr))
-	  return 0;
+	char  *s, *p, *user;
+	char def[2] = "l";
 	
 	if (parc < 2) 
 	{
@@ -4966,8 +4964,7 @@ int   m_watch(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		parv[1] = def;
 	}
 	
-	for (s = (char *)strtok(parv[1], ", "); s;
-		  s = (char *)strtok(NULL, ", ")) 
+	for (p = NULL, s = strtoken(&p, parv[1], ", "); s; s = strtoken(&p, NULL, ", ")) 
 	{
 		if ((user = (char *)strchr(s, '!')))
 		  *user++ = '\0'; /* Not used */
