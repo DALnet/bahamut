@@ -416,6 +416,10 @@ exit_one_client_in_split(aClient *cptr, aClient *dead, char *reason)
     if (cptr->ip.s_addr)
         clones_remove(cptr);
 
+#ifdef RWHO_PROBABILITY
+    probability_remove(cptr);
+#endif
+
     remove_dcc_references(cptr);
 
     del_from_client_hash_table(cptr->name, cptr); 
@@ -798,6 +802,10 @@ exit_one_client(aClient *cptr, aClient *sptr, aClient *from, char *comment)
 
             if (sptr->ip.s_addr)
                 clones_remove(sptr);
+
+#ifdef RWHO_PROBABILITY
+            probability_remove(sptr);
+#endif
             
             /* Clean up invitefield */
             while ((lp = sptr->user->invited))

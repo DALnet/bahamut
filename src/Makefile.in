@@ -19,10 +19,10 @@ RES_SRC =
 SOURCES = blalloc.c bsd.c channel.c clientlist.c clones.c confparse.c \
           fdlist.c fds.c hash.c hide.c inet_addr.c ircd.c ircsprintf.c list.c \
           m_nick.c m_rwho.c m_server.c m_services.c m_stats.c m_who.c match.c \
-          modules.c packet.c parse.c pcre.c res.c s_auth.c s_bsd.c s_conf.c \
-          s_debug.c s_err.c s_misc.c s_numeric.c s_serv.c s_user.c sbuf.c \
-          scache.c send.c struct.c support.c throttle.c userban.c whowas.c \
-          zlink.c \
+          modules.c packet.c parse.c pcre.c probability.c res.c s_auth.c \
+          s_bsd.c s_conf.c s_debug.c s_err.c s_misc.c s_numeric.c s_serv.c \
+          s_user.c sbuf.c scache.c send.c struct.c support.c throttle.c \
+          userban.c whowas.c zlink.c \
           $(ENGINE) $(CRYPTO)
 
 OBJECTS = $(SOURCES:.c=.o) version.o
@@ -196,6 +196,10 @@ parse.o: parse.c ../include/struct.h ../include/config.h \
   ../include/fdlist.h ../include/ircsprintf.h ../include/find.h
 pcre.o: pcre.c ../include/pcre_internal.h ../include/pcre_config.h \
   ../include/setup.h ../include/pcre.h pcre_chartables.c
+probability.o: probability.c ../include/struct.h ../include/config.h \
+  ../include/setup.h ../include/defs.h ../include/sys.h ../include/hash.h \
+  ../include/sbuf.h ../include/common.h ../include/h.h ../include/send.h \
+  ../include/fdlist.h ../include/ircsprintf.h ../include/find.h
 res.o: res.c ../include/struct.h ../include/config.h ../include/setup.h \
   ../include/defs.h ../include/hash.h ../include/sbuf.h \
   ../include/common.h ../include/sys.h ../include/res.h \
@@ -315,7 +319,13 @@ rc4.o: rc4.c \
  ../include/patchlevel.h
 zlink.o: zlink.c ../zlib/zlib.h ../zlib/zconf.h
 	$(CC) $(CFLAGS) $(INCLUDEDIR) -I../zlib -c $<
+
 socketengine_poll.o: ../include/config.h ../include/h.h
-socketengine_select.o: ../include/config.h ../include/h.h
+socketengine_select.o: socketengine_select.c ../include/struct.h \
+  ../include/config.h ../include/setup.h ../include/defs.h \
+  ../include/sys.h ../include/hash.h ../include/sbuf.h \
+  ../include/common.h ../include/h.h ../include/send.h \
+  ../include/fdlist.h ../include/ircsprintf.h ../include/find.h \
+  ../include/fds.h
 socketengine_kqueue.o: ../include/config.h ../include/h.h
 socketengine_epoll.o: ../include/config.h ../include/h.h

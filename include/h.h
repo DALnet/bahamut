@@ -329,4 +329,13 @@ DLink *add_to_list(DLink **, void *);
 void remove_from_list(DLink **, void *, DLink *);
 void print_list_memory(aClient *);
 
+void probability_add(aClient *);
+void probability_remove(aClient *);
+void probability_change(char *, char *);
+void probability_init(void);
+int probability_loadsets(char *);
+void probability_fini(void);
+void get_probabilities(aClient *, int *, int *, int *);
+
+
 #include "find.h"

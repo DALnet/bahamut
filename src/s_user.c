@@ -1103,6 +1103,10 @@ register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
     if (sptr->ip.s_addr)
         clones_add(sptr);
 
+#ifdef RWHO_PROBABILITY
+    probability_add(sptr);
+#endif
+
     return 0;
 }
 

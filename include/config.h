@@ -127,6 +127,12 @@
 
 #define THROTTLE_ENABLE /* enable throttling, see below */
 
+/*
+ * RWHO_PROBABILITY
+ * Define this to enable probability calculation support for RWHO.
+ */
+#define RWHO_PROBABILITY
+
 /* File names
  * the server will look for these files
  */

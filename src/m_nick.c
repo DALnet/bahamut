@@ -611,14 +611,20 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		return FLUSH_BUFFER;
 	}
     }
+
     /* Finally set new nick name. */
-   
     if (sptr->name[0])
     {
-	del_from_client_hash_table(sptr->name, sptr);
-	samenick = mycmp(sptr->name, nick) ? 0 : 1;
-	if (IsPerson(sptr) && !samenick)
-	    hash_check_watch(sptr, RPL_LOGOFF);
+        del_from_client_hash_table(sptr->name, sptr);
+        samenick = mycmp(sptr->name, nick) ? 0 : 1;
+        if (IsPerson(sptr))
+        {
+            if (!samenick)
+                hash_check_watch(sptr, RPL_LOGOFF);
+#ifdef RWHO_PROBABILITY
+            probability_change(sptr->name, nick);
+#endif
+        }
     }
     strcpy(sptr->name, nick);
     add_to_client_hash_table(nick, sptr);
