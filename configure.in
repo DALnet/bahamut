@@ -18,6 +18,7 @@ AH_TEMPLATE([HAVE_ENCRYPTION_ON],[If we support encryption])
 AH_TEMPLATE([HAVE_MINMAX],[If we have the MIN and MAX macros])
 AH_TEMPLATE([MALLOCH],[Our malloc header file])
 AH_TEMPLATE([OS_SOLARIS2],[If we're running on Solaris])
+AH_TEMPLATE([OS_SOLARIS],[Not quite sure why we have two of these])
 AH_TEMPLATE([SYS_ERRLIST_DECLARED],[If the sys_errlist array is defined])
 AH_TEMPLATE([USE_HOOKMODULES],[Do we support loadable modules])
 AH_TEMPLATE([MAXCONNECTIONS],[Maximum Connections we allow])
@@ -59,6 +60,7 @@ dnl Checks for libraries.
 dnl Replace `main' with a function in -lnsl:
 AC_CHECK_LIB(nsl, gethostbyname)
 AC_CHECK_FUNC(res_mkquery,, AC_CHECK_LIB(resolv, res_mkquery))
+AC_CHECK_FUNC(__res_mkquery,, AC_CHECK_LIB(resolv, __res_mkquery))
 AC_CHECK_LIB(socket, socket)
 AC_CHECK_FUNC(crypt,, AC_CHECK_LIB(descrypt, crypt,,AC_CHECK_LIB(crypt, crypt,,)))
 
@@ -196,6 +198,7 @@ case "$target" in
     *-solaris2*)
         solaris2="yes"
         AC_DEFINE(OS_SOLARIS2)
+        AC_DEFINE(OS_SOLARIS)
         ;;
     *-freebsd*)
         freebsd="yes"

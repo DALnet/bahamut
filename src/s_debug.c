@@ -45,9 +45,6 @@ char        serveropts[] =
 #ifndef NO_DEFAULT_INVISIBLE
     'I',
 #endif
-#ifdef CRYPT_OPER_PASSWORD
-    'p',
-#endif
 #ifdef IRCII_KLUDGE
     'u',
 #endif

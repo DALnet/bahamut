@@ -398,9 +398,7 @@ int register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
     short       oldstatus = sptr->status;
     anUser     *user = sptr->user;
     struct userBan    *ban;
-#ifdef SHORT_MOTD
     aMotd      *smotd;
-#endif
     int         i, dots;
     int         bad_dns;		/* flag a bad dns name */
 #ifdef ANTI_SPAMBOT
@@ -925,45 +923,37 @@ int register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
 	sendto_one(sptr,
 		   ":%s NOTICE %s :*** Notice -- motd was last changed at %s",
 		   me.name, nick, motd_last_changed_date);
-#ifdef SHORT_MOTD
-	sendto_one(sptr, ":%s NOTICE %s :*** Notice -- Please read the motd "
-		   "if you haven't read it", me.name, nick);
+    if(confopts & FLAGS_SMOTD)
+    {
+        sendto_one(sptr, ":%s NOTICE %s :*** Notice -- Please read the motd "
+                         "if you haven't read it", me.name, nick);
+        sendto_one(sptr, rpl_str(RPL_MOTDSTART), me.name, parv[0], me.name);
+        if((smotd = shortmotd) == NULL)
+            sendto_one(sptr, rpl_str(RPL_MOTD), me.name, parv[0],
+		                "*** This is the short motd ***");
+        else 
+            while (smotd) 
+            {
+                sendto_one(sptr, rpl_str(RPL_MOTD), me.name, parv[0], 
+                            smotd->line);
+                smotd = smotd->next;
+            }
 	
-	sendto_one(sptr, rpl_str(RPL_MOTDSTART),
-		   me.name, parv[0], me.name);
-	if((smotd = shortmotd) == NULL)
-	{
-	    sendto_one(sptr,
-		       rpl_str(RPL_MOTD),
-		       me.name, parv[0],
-		       "*** This is the short motd ***"
-		);
-	}
-	else 
-	{
-	    while (smotd) 
-	    {
-		sendto_one(sptr, rpl_str(RPL_MOTD), me.name, parv[0],
-			   smotd->line);
-		smotd = smotd->next;
-	    }
-	}
-	
-	sendto_one(sptr, rpl_str(RPL_ENDOFMOTD),
-		   me.name, parv[0]);
-#else
-	(void) send_motd(sptr, sptr, 1, parv);
-#endif
+        sendto_one(sptr, rpl_str(RPL_ENDOFMOTD), me.name, parv[0]);
+    }
+    else
+        send_motd(sptr, sptr, 1, parv);
+
     if(confopts & FLAGS_WGMON)
     {
-	    sendto_one(sptr, ":%s NOTICE %s :*** Notice -- This server runs an "
-		    "open proxy monitor to prevent abuse.", me.name, nick);
-	    sendto_one(sptr, ":%s NOTICE %s :*** Notice -- If you see connections"
+        sendto_one(sptr, ":%s NOTICE %s :*** Notice -- This server runs an "
+            "open proxy monitor to prevent abuse.", me.name, nick);
+        sendto_one(sptr, ":%s NOTICE %s :*** Notice -- If you see connections"
             " on various ports from %s", me.name, nick, ProxyMonHost);
-	    sendto_one(sptr, ":%s NOTICE %s :*** Notice -- please disregard them,"
+        sendto_one(sptr, ":%s NOTICE %s :*** Notice -- please disregard them,"
             " as they are the monitor in action.", me.name, nick);
 	    sendto_one(sptr, ":%s NOTICE %s :*** Notice -- For more information "
-		    "please visit %s", me.name, nick, ProxyMonURL);
+            "please visit %s", me.name, nick, ProxyMonURL);
     }
 		
     }
@@ -2514,10 +2504,7 @@ int check_oper_can_mask(aClient *sptr, char *name, char *password,
 {
     aOper *aoper;
     char *encr;
-
-#ifdef CRYPT_OPER_PASSWORD
     extern char *crypt();
-#endif
 
     if(!(aoper = find_oper(name, sptr->username, sptr->sockhost, sptr->hostip)))
     {
@@ -2527,16 +2514,17 @@ int check_oper_can_mask(aClient *sptr, char *name, char *password,
 	return 0;
     }
     
-#ifdef CRYPT_OPER_PASSWORD
     /* use first two chars of the password they send in as salt */
     /* passwd may be NULL pointer. Head it off at the pass... */
-    if (password && *aoper->passwd)
-	encr = crypt(password, aoper->passwd);
+    if(confopts & FLAGS_CRYPTPASS)
+    {
+        if (password && *aoper->passwd)
+	        encr = crypt(password, aoper->passwd);
+        else
+	        encr = "";
+    }
     else
-	encr = "";
-#else
-    encr = password;
-#endif /* CRYPT_OPER_PASSWORD */
+        encr = password;
     
     if(StrEq(encr, aoper->passwd))
     {
@@ -2567,12 +2555,7 @@ int m_oper(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     aOper  	*aoper;
     char       	*name, *password, *encr, *oper_ip;
-    
-
-#ifdef CRYPT_OPER_PASSWORD
     extern char *crypt();
-
-#endif /* CRYPT_OPER_PASSWORD */
 
     name = parc > 1 ? parv[1] : (char *) NULL;
     password = parc > 2 ? parv[2] : (char *) NULL;
@@ -2646,16 +2629,17 @@ int m_oper(aClient *cptr, aClient *sptr, int parc, char *parv[])
         oper_ip = sptr->user->real_oper_ip;
     }
 #endif
-#ifdef CRYPT_OPER_PASSWORD
     /* use first two chars of the password they send in as salt */
     /* passwd may be NULL pointer. Head it off at the pass... */
-    if (password && *aoper->passwd)
-	encr = crypt(password, aoper->passwd);
-    else
-	encr = "";
-#else
-    encr = password;
-#endif /* CRYPT_OPER_PASSWORD */
+    if(confopts & FLAGS_CRYPTPASS)
+    {
+        if (password && *aoper->passwd)
+	        encr = crypt(password, aoper->passwd);
+        else
+	        encr = "";
+    }
+    else 
+        encr = password;
     
     if (StrEq(encr, aoper->passwd))
     {
@@ -2683,10 +2667,6 @@ int m_oper(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	send_umode_out(cptr, sptr, old);
 	sendto_one(sptr, rpl_str(RPL_YOUREOPER), me.name, parv[0]);
     set_effective_class(sptr);
-#if !defined(CRYPT_OPER_PASSWORD) && (defined(FNAME_OPERLOG) ||\
-    (defined(USE_SYSLOG) && defined(SYSLOG_OPER)))
-	encr = "";
-#endif
 #if defined(USE_SYSLOG) && defined(SYSLOG_OPER)
 	syslog(LOG_INFO, "OPER (%s) (%s) by (%s!%s@%s)",
 	       name, encr,

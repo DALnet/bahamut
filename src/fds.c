@@ -15,8 +15,6 @@
 #include "fds.h"
 #include "numeric.h"
 
-#include <sys/poll.h>
-
 void engine_add_fd(int);
 void engine_del_fd(int);
 void engine_change_fd_state(int, unsigned int);

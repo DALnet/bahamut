@@ -342,7 +342,7 @@ int send_queued(aClient *to)
    
     while (SBufLength(&to->sendQ) > 0) 
     {
-	msg = sbuf_map(&to->sendQ, &len);
+	msg = sbuf_map(&to->sendQ, (size_t *) &len);
 	if ((rlen = deliver_it(to, msg, len)) < 0)
 	    return dead_link(to, "Write error to %s, closing link (%s)",
 			     errno);
@@ -1432,7 +1432,7 @@ void sendto_prefix_one(aClient *to, aClient *from, char *pattern, ...)
     va_list vl, vl2;
 
     va_start(vl, pattern);
-    vl2 = vl;
+    VA_COPY(vl2, vl);
 
     par = va_arg(vl, char *);
     /*
@@ -1543,7 +1543,8 @@ void vsendto_prefix_one(aClient *to, aClient *from, char *pattern, va_list vl)
     char *idx;
     char *par;
     int flag = 0, sidx = 0;
-    va_list vl2 = vl;
+    va_list vl2;
+    VA_COPY(vl2, vl);
 	
     par = va_arg(vl2, char *);
     /*

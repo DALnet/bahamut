@@ -15,9 +15,11 @@ inline int irc_printf(char *str, const char *pattern, va_list vl)
     char *s;
     char *buf=str;
     const char *format=pattern;
-    va_list ap=vl;
     unsigned long i, u;
     int len=0;
+    va_list ap;
+    VA_COPY(ap, vl);
+
 #ifdef WANT_SNPRINTF
     if(!size) 
     {

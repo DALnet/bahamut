@@ -802,14 +802,7 @@ confadd_options(cVar *vars[], int lnum)
 
     for(tmp = vars[c]; tmp; tmp = vars[++c])
     {
-        if(tmp->type && (tmp->type->flag & OPTF_MAXSENDQ))
-        {
-            aClass *t2;
-            t2 = find_class("default", 1);
-            t2->maxsendq = atoi(tmp->value);
-            tmp->type = NULL;
-        }
-        else if(tmp->type && (tmp->type->flag & OPTF_NETNAME))
+        if(tmp->type && (tmp->type->flag & OPTF_NETNAME))
         {
             tmp->type = NULL;
             strncpyzt(Network_Name, tmp->value, sizeof(Network_Name));

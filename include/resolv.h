@@ -110,7 +110,11 @@ extern char *p_cdname(), *p_rr(), *p_type(), *p_class(), *p_time();
 
 #if ((__GNU_LIBRARY__ == 6) && (__GLIBC__ >=2) && (__GLIBC_MINOR__ >= 2))
 #define res_init __res_init
+#define res_mkquery __res_mkquery
+#define dn_expand __dn_expand
 #endif
 
+extern int  res_mkquery ();
+extern int  dn_expand ();
 extern int  res_init();
 #endif

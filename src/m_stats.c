@@ -241,9 +241,7 @@ count_memory(aClient *cptr, char *nick)
 #endif
 
     extern aMotd      *motd;
-#ifdef SHORT_MOTD
     extern aMotd      *shortmotd;
-#endif
     extern aMotd      *helpfile;
 
     extern int num_msg_trees;
@@ -390,10 +388,8 @@ count_memory(aClient *cptr, char *nick)
 
     for (amo = motd; amo; amo = amo->next)
         motdlen++;
-#ifdef SHORT_MOTD
     for (amo = shortmotd; amo; amo = amo->next)
         motdlen++;
-#endif
     for (amo = helpfile; amo; amo = amo->next)
         motdlen++;
 

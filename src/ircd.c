@@ -50,10 +50,7 @@
 
 aMotd      *motd;
 aMotd      *helpfile;           /* misnomer, aMotd could be generalized */
-
-#ifdef SHORT_MOTD
 aMotd      *shortmotd;          /* short motd */
-#endif
 
 struct tm  *motd_tm;
 
@@ -62,14 +59,14 @@ char ProxyMonURL[TOPICLEN+1];
 char ProxyMonHost[HOSTLEN+1];
 char Network_Name[HOSTLEN+1];
 char Services_Name[HOSTLEN+1];
-char NS_Services_Name[HOSTLEN+strlen(NICKSERV)+1];
-char CS_Services_Name[HOSTLEN+strlen(CHANSERV)+1];
-char MS_Services_Name[HOSTLEN+strlen(MEMOSERV)+1];
-char RS_Services_Name[HOSTLEN+strlen(ROOTSERV)+1];
+char NS_Services_Name[HOSTLEN+9];
+char CS_Services_Name[HOSTLEN+9];
+char MS_Services_Name[HOSTLEN+9];
+char RS_Services_Name[HOSTLEN+9];
 char Stats_Name[HOSTLEN+1];
-char OS_Stats_Name[HOSTLEN+strlen(OPERSERV)+1];
-char SS_Stats_Name[HOSTLEN+strlen(STATSERV)+1];
-char HS_Stats_Name[HOSTLEN+strlen(HELPSERV)+1];
+char OS_Stats_Name[HOSTLEN+9];
+char SS_Stats_Name[HOSTLEN+9];
+char HS_Stats_Name[HOSTLEN+9];
 char Network_Kline_Address[HOSTLEN+1];
 char Local_Kline_Address[HOSTLEN+1];
 char Staff_Address[HOSTLEN+1];
@@ -112,9 +109,7 @@ static void     io_loop();
 
 extern void     init_fdlist(fdlist *);      /* defined in fdlist.c */
 extern void     read_motd(char *);          /* defined in s_serv.c */
-#ifdef SHORT_MOTD
 extern void     read_shortmotd(char *);     /* defined in s_serv.c */
-#endif
 extern void     read_help(char *);          /* defined in s_serv.c */
 extern void     init_globals();
 
@@ -817,15 +812,7 @@ main(int argc, char *argv[])
     motd = (aMotd *) NULL;
     helpfile = (aMotd *) NULL;
     motd_tm = NULL;
-#ifdef SHORT_MOTD
     shortmotd = NULL;
-#endif
-        
-    read_motd(MOTD);
-    read_help(HELPFILE);
-#ifdef SHORT_MOTD
-    read_shortmotd(SHORTMOTD);
-#endif
         
     clear_client_hash_table();
     clear_channel_hash_table();
@@ -860,8 +847,10 @@ main(int argc, char *argv[])
         exit(-1);
     }
     merge_confs();
-
-
+    read_motd(MOTD);
+    read_help(HELPFILE);
+    if(confopts & FLAGS_SMOTD)
+        read_shortmotd(SHORTMOTD);
     printf("Configuration Loaded.\n");
 
     init_fdlist(&default_fdlist);

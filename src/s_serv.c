@@ -77,10 +77,7 @@ static char *cluster(char *);
 
 int         send_motd(aClient *, aClient *, int, char **);
 void        read_motd(char *);
-
-#ifdef SHORT_MOTD
 void        read_shortmotd(char *);
-#endif
 
 char        motd_last_changed_date[MAX_DATE_STRING]; /* enough room for date */	
 
@@ -3275,9 +3272,8 @@ int m_rehash(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	{
 	    sendto_ops("%s is forcing re-reading of MOTD file", parv[0]);
 	    read_motd(MOTD);
-#ifdef SHORT_MOTD
-	    read_shortmotd(SHORTMOTD);
-#endif
+        if(confopts & FLAGS_SMOTD)
+	        read_shortmotd(SHORTMOTD);
 	    return (0);
 	}
 	else if(mycmp(parv[1], "AKILLS") == 0) 
@@ -3749,7 +3745,6 @@ void read_motd(char *filename)
 		       motd_tm->tm_min);
 }
 
-#ifdef SHORT_MOTD
 void read_shortmotd(char *filename)
 {
     aMotd *temp, *last;
@@ -3793,7 +3788,6 @@ void read_shortmotd(char *filename)
     }
     close(fd);
 }
-#endif
 
 /*
  * read_help() - modified from from CoMSTuD's read_motd added Aug 29,

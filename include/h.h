@@ -36,10 +36,7 @@ extern int  R_do_dns, R_fin_dns, R_fin_dnsc, R_fail_dns, R_do_id,
 extern aMotd *motd;
 extern struct tm *motd_tm;
 
-#ifdef SHORT_MOTD
 extern aMotd *shortmotd;
-#endif
-
 extern aMotd *helpfile;		/* oper helpfile is a link list of aMotd */
 
 extern DLink *server_list;
@@ -60,20 +57,23 @@ extern char ProxyMonURL[TOPICLEN+1];
 extern char ProxyMonHost[HOSTLEN+1];
 extern char Network_Name[HOSTLEN+1];
 extern char Services_Name[HOSTLEN+1];
-extern char NS_Services_Name[HOSTLEN+strlen(NICKSERV)+1];
-extern char CS_Services_Name[HOSTLEN+strlen(CHANSERV)+1];
-extern char MS_Services_Name[HOSTLEN+strlen(MEMOSERV)+1];
-extern char RS_Services_Name[HOSTLEN+strlen(ROOTSERV)+1];
+extern char NS_Services_Name[HOSTLEN+9];
+extern char CS_Services_Name[HOSTLEN+9];
+extern char MS_Services_Name[HOSTLEN+9];
+extern char RS_Services_Name[HOSTLEN+9];
 extern char Stats_Name[HOSTLEN+1];
-extern char OS_Stats_Name[HOSTLEN+strlen(OPERSERV)+1];
-extern char SS_Stats_Name[HOSTLEN+strlen(STATSERV)+1];
-extern char HS_Stats_Name[HOSTLEN+strlen(HELPSERV)+1];
+extern char OS_Stats_Name[HOSTLEN+9];
+extern char SS_Stats_Name[HOSTLEN+9];
+extern char HS_Stats_Name[HOSTLEN+9];
 extern char Staff_Address[HOSTLEN+1];
 extern char Network_Kline_Address[HOSTLEN+1];
 extern char Local_Kline_Address[HOSTLEN+1];
 extern int  maxchannelsperuser, tsmaxdelta, tswarndelta;
 extern int  confopts;
 
+#ifndef PATH_MAX
+#define PATH_MAX 4096
+#endif
 extern char dpath[PATH_MAX], spath[PATH_MAX];
 
 #include "fdlist.h"

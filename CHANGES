@@ -29,3 +29,4 @@ Changes for 1.4.37:
 - replaced dbufs with sbufs - shared buffers.
 - removed old High Traffic Mode (HTM) code
 - config option block added to outdate use of ./config script
+- fixes for solaris and OSX compatibility

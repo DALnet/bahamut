@@ -25,75 +25,6 @@
 
 #include "setup.h"
 
-/*******************************************************************
- * Ok boys and girls, you can edit this file by hand, its totally 
- * up to you.  IF you want to do that, then undefine the next line. 
- * -Epi
- *******************************************************************/
-
-#define OPTIONS_H
-
-/* 
- * If you are using OPTIONS_H, you can ignore everything from here
- * until i tell you otherwise.  If not, go nuts. 
- */
-
-#ifdef OPTIONS_H
-#include "setup.h"
-#endif
-
-#ifndef OPTIONS_H
-
-/**** MAKE SURE THIS IS CORRECT ****/
-/* ONLY EDIT "HARD_FDLIMIT_" and "INIT_MAXCLIENTS" */
-#define HARD_FDLIMIT_   2048
-#define INIT_MAXCLIENTS 2000
-
-/*
- * This is how many 'buffer connections' we allow... Remember,
- * MAX_BUFFER + MAX_CLIENTS can't exceed HARD_FDLIMIT :)
- */
-#define MAX_BUFFER	48
-
-
-/* Also define this for SunOS 4.1.4_DBE */
-#undef SUNDBE
-#ifdef SUNDBE
-#define FD_SETSIZE HARD_FDLIMIT_
-#define NOFILE HARD_FDLIMIT_
-#endif /* SUNDBE */
-
-/*
- * DPATH SPATH CPATH MPATH KPATH - directoy and files locations Full
- * pathnames and defaults of irc system's support files. Please note
- * that these are only the recommended names and paths. Change as
- * needed. You must define these to something, even if you don't really
- * want them.
- * 
- * DPATH = directory, SPATH = server executable, CPATH = conf file, MPATH
- * = MOTD KPATH = kline conf file
- * 
- * For /restart to work, SPATH needs to be a full pathname (unless "." is
- * in your exec path). -Rodder Leave KPATH undefined if you want klines
- * in main conf file. HPATH is the opers help file, seen by opers on
- * /quote help.
- * 
- * -Dianora
- */
-#define DPATH   "/usr/home/ircd/ircd/"
-#define SPATH   "/usr/home/ircd/ircd/ircd"
-
-/* STATS_NOTICE - See a notice when a user does a /stats */
-#define STATS_NOTICE
-
-/*
- * SHORT_MOTD There are client ignoring the FORCE_MOTD MOTD numeric,
- * there is no point forcing MOTD on connecting clients IMO. Give them
- * a short NOTICE telling them they should read the motd, and leave it
- * at that.
- */
-#undef SHORT_MOTD
-
 /*
  * NO_DEFAULT_INVISIBLE - clients not +i by default When defined, your
  * users will not automatically be attributed with user mode "i" (i ==
@@ -101,36 +32,6 @@
  * unless they are on the same channel as you.
  */
 #undef	NO_DEFAULT_INVISIBLE
-
-/*
- * HUB - enable server-server routing If your server is running as a a
- * HUB Server then define this. A HUB Server has many servers connect
- * to it at the same as opposed to a leaf which just has 1 server
- * (typically the uplink). Define this correctly for performance
- * reasons.
- */
-#undef HUB
-
-/*
- * SERVICESHUB - Provides some filtering of data not needed by services
- */
-#undef SERVICESHUB
-
-/* The following two are defaults only and may be overridden
- * with T: lines in the configuration file
- */
-
-/* Define this if you want a notice sent to connecting users
- * about wingate scanning bots.  A URL is included in the 
- * notice
- */
-#define WINGATE_NOTICE
-/* For this to compile, you must define the hostname of your 
- * wingate bot - which is included in the notice.
- */
-#ifdef WINGATE_NOTICE
-#define MONITOR_HOST "bots.someisp.com"
-#endif
 
 /*
  * USE_SYSLOG - log errors and such to syslog() If you wish to have the
@@ -145,8 +46,8 @@
  * IT IS STRONGLY RECOMMENDED THAT YOU *DO* USE SYSLOG.  Many fatal ircd
  * errors are only logged to syslog.
  */
+#ifdef HAVE_SYSLOG_H
 #define	USE_SYSLOG
-#ifdef	USE_SYSLOG
 /*
  * SYSLOG_KILL SYSLOG_SQUIT SYSLOG_CONNECT SYSLOG_USERS SYSLOG_OPER If
  * you use syslog above, you may want to turn some (none) of the
@@ -163,22 +64,31 @@
  * LOG_FACILITY - facility to use for syslog() Define the facility you
  * want to use for syslog().  Ask your sysadmin which one you should
  * use.
- */
+e*/
 #define LOG_FACILITY LOG_LOCAL4
-#endif /* USE_SYSLOG */
+#endif /* HAVE_SYSLOG_H  */
 
+/* Defaults for things in option block of ircd.conf
+ * more documentation when i dont dislike documentation as much.
+ * -epi
+ */
+#define DEFAULT_WGMON_URL "http://kline.dal.net/proxy"
+#define DEFAULT_WGMON_HOST "some.bot.host"
+#define DEFAULT_STAFF_ADDRESS "staff.dalnet"
+#define DEFAULT_NETWORK "DALnet"
+#define DEFAULT_SERVICES_NAME "services.dal.net"
+#define DEFAULT_STATS_NAME "stats.dal.net"
+#define DEFAULT_NKLINE_ADDY "admin@badly.configured.server"
+#define DEFAULT_LKLINE_ADDY "admin@badly.configured.server"
+#define DEFAULT_MAXCHANNELSPERUSER 10
+#define DEFAULT_TSMAXDELTA 120
+#define DEFAULT_TSWARNDELTA 15
 
 /*
  * MAXSENDQLENGTH - Max amount of internal send buffering Max amount of
  * internal send buffering when socket is stuck (bytes)
  */
-#define MAXSENDQLENGTH 5050000	/* Recommended value: 5050000 for efnet */
-
-/*
- * BUFFERPOOL - the maximum size of the total of all sendq's.
- * Recommended value is four times MAXSENDQLENGTH.
- */
-#define	BUFFERPOOL     (4 * MAXSENDQLENGTH)
+#define MAXSENDQLENGTH 5050000
 
 /* 
  * HIDEULINEDSERVS 
@@ -190,81 +100,9 @@
  */
 #define HIDEULINEDSERVS 1
 
-/*
- * comstud and I have both noted that solaris 2.5 at least, takes a
- * hissy fit if you don't read a fd that becomes ready right away.
- * Unfortunately the dog3 priority code relies upon not having to read
- * a ready fd right away. If you have HTM mode set low as it is
- * normally, the server will eventually grind to a halt. Personally, I
- * think the server is faster without some of the CPU expensive
- * manipulation some of the priority code does. Your choice. but it has
- * to be defined for SOLARIS Try it and see. compare. Don't complain if
- * Solaris lags if you don't define this. I warned you.
- * 
- * -Dianora
- */
-#ifdef OS_SOLARIS
-#define NO_PRIORITY
-#else
-#undef NO_PRIORITY
-#endif
-
-/* Services Name */
-#define SERVICES_NAME "services.dal.net"	/* DALnet services */
-
-/*
- * CRYPT_OPER_PASSWORD - use crypted oper passwords in the ircd.conf
- * define this if you want to use crypted passwords for operators in
- * your ircd.conf file.
- */
-#undef	CRYPT_OPER_PASSWORD
-
-/*
- * MAXCHANNELSPERUSER - Max number of channels a user is allowed to
- * join.
- */
-#define MAXCHANNELSPERUSER  10	/* Recommended value: 10 */
-
 #define THROTTLE_ENABLE /* enable throttling, see below */
 
-/*******************************************************/
-
-#endif /** OPTIONS_H **/
-
-
-/******  END OF AUTOMATIC CONFIG SCRIPT COVERAGE  ******/
-
-/* these should be set to your local and global kline addresses */
-
-#ifndef SERVER_KLINE_ADDRESS
-#define SERVER_KLINE_ADDRESS "bad_admin@poorly.configured.server.com"
-#endif
-
-#ifndef NETWORK_KLINE_ADDRESS
-#define NETWORK_KLINE_ADDRESS "bad_admin@poorly.configured.network.com"
-#endif
-
-/* OS Depentant ifdefs */
-
-#ifdef SUNDBE
-#define FD_SETSIZE HARD_FDLIMIT_
-#define NOFILE HARD_FDLIMIT_
-#endif /* SUNDBE */
-
-#ifdef OS_SOLARIS
-#define NO_PRIORITY
-#else
-#undef NO_PRIORITY
-#endif
-
-#ifndef SPATH
-#define SPATH DPATH/bin/ircd
-#endif
-
-#define MAXSENDQLENGTH 5050000  /* Recommended value: 5050000 for efnet */
-
 /* File names */
-#define	CPATH	"ircd.conf"
 #define	MPATH	"ircd.motd"
 #define	SMPATH	"ircd.smotd"
 #define	LPATH	"ircd.log"
@@ -273,7 +111,6 @@
 
 
 /* Services Definitions */
-#define STATS_NAME "stats.dal.net"
 #define CHANSERV "ChanServ"
 #define NICKSERV "NickServ"
 #define MEMOSERV "MemoServ"
@@ -281,13 +118,6 @@
 #define OPERSERV "OperServ"
 #define STATSERV "StatServ"
 #define HELPSERV "HelpServ"
-#define NICKSERVATSERVICES NICKSERV "@" SERVICES_NAME
-#define CHANSERVATSERVICES CHANSERV "@" SERVICES_NAME
-#define MEMOSERVATSERVICES MEMOSERV "@" SERVICES_NAME
-#define ROOTSERVATSERVICES ROOTSERV "@" SERVICES_NAME
-#define OPERSERVATSTATS    OPERSERV "@" STATS_NAME
-#define STATSERVATSTATS    STATSERV "@" STATS_NAME
-#define HELPSERVATSTATS    HELPSERV "@" STATS_NAME
 
 /*
  * FNAME_USERLOG and FNAME_OPERLOG - logs of local USERS and OPERS
@@ -308,29 +138,25 @@
 */
 
 /* Don't change this... */
-#ifdef BLAH
-#define HARD_FDLIMIT	(HARD_FDLIMIT_ - 10)
+#ifdef MAXCONNECTIONS
+# if (MAXCONNECTIONS > 16384)
+#  define MAX_BUFFER 128
+# elif (MAXCONNECTIONS > 8192)
+#  define MAX_BUFFER 64
+# elif (MAXCONNECTIONS > 4096)
+#  define MAX_BUFFER 32
+# else
+#  define MAX_BUFFER 24
+# endif
+# define INIT_MAXCLIENTS (MAXCONNECTIONS - MAX_BUFFER - 24)
+# define HARD_FDLIMIT (INIT_MAXCLIENTS - 10)
+#elif
+# error MAXCONNECTIONS UNDEFINED!
 #endif
+
 #define MASTER_MAX	(HARD_FDLIMIT - MAX_BUFFER)
 
 #include "defs.h"
-
-/*
- * TS_MAX_DELTA and TS_WARN_DELTA -  allowed delta for TS when another
- * server connects.
- * 
- * If the difference between my clock and the other server's clock is
- * greater than TS_MAX_DELTA, I send out a warning and drop the links.
- * 
- * If the difference is less than TS_MAX_DELTA, I just sends out a warning
- * but don't drop the link.
- * 
- * TS_MAX_DELTA currently set to 30 minutes to deal with older timedelta
- * implementation.  Once pre-hybrid5.2 servers are eradicated, we can
- * drop this down to 90 seconds or so. --Rodder
- */
-#define TS_MAX_DELTA 120	/* seconds */
-#define TS_WARN_DELTA 15	/* seconds */
 
 /*
  * DEFAULT_KLINE_TIME
@@ -530,17 +356,6 @@
 #endif
 
 /*
- * X_LINES_OPER_ONLY - Allow only local opers to see these stats
- * 
- * E_LINES - ComStud's E-lines (exception lines) 
- * F_LINES - Taner's F-lines (super-exception  lines) Any one with an F
- * line can almost always get on the server, as some file descriptors are
- * reserved for people with this F line especially useful for your opers
- */
-#define E_LINES_OPER_ONLY
-#define F_LINES_OPER_ONLY
-
-/*
  * UNKLINE - /quote unkline - remove klines on the fly if you choose to
  * support this, an oper can do a /quote UNKLINE of an exact matching
  * KLINE to remove the kline
@@ -554,20 +369,6 @@
  * enabled.
  */
 #define WARN_NO_NLINE
-
-/* Defaults for things in option block of ircd.conf
- */
-#define DEFAULT_WGMON_URL "http://kline.dal.net/proxy"
-#define DEFAULT_WGMON_HOST "some.bot.host"
-#define DEFAULT_STAFF_ADDRESS "staff.dalnet"
-#define DEFAULT_NETWORK "DALnet"
-#define DEFAULT_SERVICES_NAME "services.dal.net"
-#define DEFAULT_STATS_NAME "stats.dal.net"
-#define DEFAULT_NKLINE_ADDY "admin@badly.configured.server"
-#define DEFAULT_LKLINE_ADDY "admin@badly.configured.server"
-#define DEFAULT_MAXCHANNELSPERUSER 10
-#define DEFAULT_TSMAXDELTA 120
-#define DEFAULT_TSWARNDELTA 15
 
 /*
  * RIDICULOUS_PARANOIA_LEVEL
@@ -794,34 +595,6 @@
 #define PORTNUM 7000 /* 7000 for DALnet */
 
 /*
- * MAXCONNECTIONS - don't touch - change the HARD_FDLIMIT_ instead
- * Maximum number of network connections your server will allow.  This
- * should never exceed max. number of open file descrpitors and wont
- * increase this. Should remain LOW as possible. Most sites will
- * usually have under 30 or so connections. A busy hub or server may
- * need this to be as high as 50 or 60. Making it over 100 decreases
- * any performance boost gained from it being low. if you have a lot of
- * server connections, it may be worth splitting the load over 2 or
- * more servers. 1 server = 1 connection, 1 user = 1 connection. This
- * should be at *least* 3: 1 listen port, 1 dns port + 1 client
- *
- * Change the HARD_FDLIMIT_ instead 
- */
-#ifdef MAXCONNECTIONS
-#if (MAXCONNECTIONS > 16384)
-#define MAX_BUFFER 128
-#elif (MAXCONNECTIONS > 8192)
-#define MAX_BUFFER 64
-#elif (MAXCONNECTIONS > 4096)
-#define MAX_BUFFER 32
-#else
-#define MAX_BUFFER 24
-#endif
-#define INIT_MAXCLIENTS (MAXCONNECTIONS - MAX_BUFFER - 24)
-#define HARD_FDLIMIT (INIT_MAXCLIENTS - 10)
-#endif
-
-/*
  * NICKNAMEHISTORYLENGTH - size of WHOWAS array this defines the length
  * of the nickname history.  each time a user changes nickname or signs
  * off, their old nickname is added to the top of the list. NOTE: this
@@ -940,10 +713,6 @@
  */
 #undef ANTI_SPAMBOT_WARN_ONLY
 
-#ifdef HUB
-# undef FLUD
-#endif
-
 #ifdef FLUD
 # define FLUD_NUM	   4	/* Number of flud messages to trip alarm */
 # define FLUD_TIME	3	/* Seconds in which FLUD_NUM msgs must occur */
@@ -1054,8 +823,6 @@
 #define HELPFILE HPATH
 #define MOTD MPATH
 #define SHORTMOTD SMPATH
-#define MYNAME SPATH
-#define CONFIGFILE CPATH
 #define IRCD_PIDFILE PPATH
 
 #define MAX_CLIENTS INIT_MAXCLIENTS
@@ -1077,5 +844,5 @@ extern void debug(int level, char *pattern, ...);
 #define LOGFILE "/dev/null"
 #endif
 
-#define CONFIG_H_LEVEL_12
+#define CONFIG_H_LEVEL_20
 #endif				/* __config_include__ */

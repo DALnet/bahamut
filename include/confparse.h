@@ -113,8 +113,6 @@ struct ConfVar
 
 /* these are the strings for options ONLY */
 
-#define OPTT_MAXSENDQ   "MAXSENDQ"
-#define OPTF_MAXSENDQ               0x000001
 #define OPTT_NETNAME    "NETWORK_NAME"
 #define OPTF_NETNAME                0x000002
 #define OPTT_STAFFADDY  "STAFF_ADDRESS"
@@ -166,7 +164,6 @@ sConf confglobtab[] =
 
 sConf confopttab[] =
 {
-    {OPTT_MAXSENDQ, OPTF_MAXSENDQ, VARTYPE_INT},
     {OPTT_NETNAME, OPTF_NETNAME, VARTYPE_NAME},
     {OPTT_SERVNAME, OPTF_SERVNAME, VARTYPE_NAME},
     {OPTT_STATSNAME, OPTF_STATSNAME, VARTYPE_NAME},
