@@ -1442,11 +1442,14 @@ m_nick(aClient *cptr,
 #endif
          if ((aconf = find_conf_name(nick, CONF_QUARANTINED_NICK)))
          {
-            sendto_realops("Q:lined nick %s from %s on %s", nick,
+#ifndef DONT_CHECK_QLINE_REMOTE
+           if (!MyConnect(sptr))
+               sendto_realops("Q:lined nick %s from %s on %s", nick,
                           (*sptr->name != 0 && !IsServer(sptr)) ?
 			  sptr->name : "<unregistered>",
                           (sptr->user == NULL) ? ((IsServer(sptr)) ?
 			  parv[6] : me.name) : sptr->user->server);
+#endif
                                 
             if (MyConnect(sptr) && (!IsServer(cptr)) && (!IsOper(cptr))
                 && (!IsULine(sptr)))
