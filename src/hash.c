@@ -515,7 +515,6 @@ int   reply;
 	
 	/* Update the time of last change to item */
 	anptr->lasttime = NOW;
-        cptr->lasttime = NOW;
 	
 	/* Send notifies out to everybody on the list in header */
 	for (lp = anptr->watch; lp; lp = lp->next)
