@@ -59,10 +59,6 @@ extern int  HTMLOCK;
 static char buf[BUFSIZE];
 extern int  rehashed;
 
-#ifdef HIGHEST_CONNECTION
-int         max_connection_count = 1, max_client_count = 1;
-#endif
-
 /* external variables */
 
 /* external functions */
@@ -106,6 +102,12 @@ void fakeserver_list(aClient *);
 int fakelinkscontrol(int, char **);
 void fakelinkserver_update(char *, char *);
 void fakeserver_sendserver(aClient *);
+void fakeserver_clear();
+
+int is_luserslocked();
+void send_fake_users(aClient *);
+void send_fake_lusers(aClient *);
+void fakelusers_sendlock(aClient *);
 
 #ifdef LOCKFILE
 /* Shadowfax's lockfile code */
@@ -945,8 +947,11 @@ int do_server_estab(aClient *cptr)
     }
 
 #ifdef HUB
-    /* Send out fake server list */
+    /* Send out fake server list and other 'fake' stuff */
     fakeserver_sendserver(cptr);
+    fakelusers_sendlock(cptr);
+#else
+    fakeserver_clear();
 #endif
 
     /* Bursts are about to start.. send a BURST */
@@ -1342,16 +1347,12 @@ int m_info(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	    sendto_one(sptr, rpl_str(RPL_INFO),
 		       me.name, parv[0], outstr);
 
-#ifdef HIGHEST_CONNECTION
-	    strcpy(outstr, " HIGHEST_CONNECTION=1");
-#else
-	    strcpy(outstr, " HIGHEST_CONNECTION=0");
-#endif
 #ifdef HUB
-	    strcat(outstr, " HUB=1");
+	    strcpy(outstr, " HUB=1");
 #else
-	    strcat(outstr, " HUB=0");
+	    strcpy(outstr, " HUB=0");
 #endif
+
 #ifdef IDENTD_COMPLAIN
 	    strcat(outstr, " IDENTD_COMPLAIN=1");
 #else
@@ -1578,12 +1579,10 @@ int m_links(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
     if (parc > 1 && (IsServer(sptr) || IsULine(sptr)) && mycmp(parv[1], "CONTROL") == 0)
     {
-	if(parc > 4)
-	    sendto_serv_butone(cptr, ":%s LINKS CONTROL %s %s :%s", parv[0], parv[2], parv[3], parv[4]);
-	else if(parc > 3)
-	    sendto_serv_butone(cptr, ":%s LINKS CONTROL %s :%s", parv[0], parv[2], parv[3]);
-	else if(parc > 2)
-	    sendto_serv_butone(cptr, ":%s LINKS CONTROL :%s", parv[0], parv[2]);
+        char pbuf[512];
+        make_parv_copy(pbuf, parc, parv);
+	sendto_serv_butone(cptr, ":%s LINKS %s", parv[0], pbuf);
+
 	return fakelinkscontrol(parc - 2, parv + 2);
     }
 
@@ -2049,10 +2048,6 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	now = timeofday - me.since;
 	sendto_one(sptr, rpl_str(RPL_STATSUPTIME), me.name, parv[0],
 		   now / 86400, (now / 3600) % 24, (now / 60) % 60, now % 60);
-#ifdef HIGHEST_CONNECTION
-	sendto_one(sptr, rpl_str(RPL_STATSCONN), me.name, parv[0],
-		   max_connection_count, max_client_count);
-#endif
 	break;
     }
 		
@@ -2100,6 +2095,11 @@ int m_users(aClient *cptr, aClient *sptr, int parc, char *parv[])
     if (hunt_server(cptr, sptr, ":%s USERS :%s", 1, parc, parv) ==
 	HUNTED_ISME) 
     {
+	if(is_luserslocked())
+	{
+	    send_fake_users(sptr);
+	    return 0;
+	}
 	/* No one uses this any more... so lets remap it..   -Taner */
 	sendto_one(sptr, rpl_str(RPL_LOCALUSERS), me.name, parv[0],
 		   Count.local, Count.max_loc);
@@ -2217,7 +2217,14 @@ int m_lusers(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	if (hunt_server(cptr, sptr, ":%s LUSERS %s :%s", 2, parc, parv) !=
 	    HUNTED_ISME)
 	    return 0;
+    }
+
+    if(is_luserslocked())
+    {
+       send_fake_lusers(sptr);
+       return 0;
     }		
+
     return send_lusers(cptr,sptr,parc,parv);
 }
 
@@ -2425,21 +2432,6 @@ int send_lusers(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		   Count.local, Count.max_loc);
     sendto_one(sptr, rpl_str(RPL_GLOBALUSERS), me.name, parv[0],
 	       Count.total, Count.max_tot);
-#else
-#ifdef HIGHEST_CONNECTION
-    sendto_one(sptr, rpl_str(RPL_STATSCONN), me.name, parv[0],
-	       max_connection_count, max_client_count);
-    if (m_client > max_client_count)
-	max_client_count = m_client;
-    if ((m_client + m_server) > max_connection_count) 
-    {
-	max_connection_count = m_client + m_server;
-	if (max_connection_count % 10 == 0)
-	    sendto_ops(
-		"New highest connections: %d (%d clients)",
-		max_connection_count, max_client_count);
-    }
-# endif /* HIGHEST_CONNECTION */
 #endif /* CLIENT_COUNT */
     return 0;
 }

@@ -445,12 +445,6 @@
 #define REJECT_IPHONE
 
 /*
- * HIGHEST_CONNECTION - track highest connection count Define this if
- * you want to keep track of your max connections.
- */
-#define HIGHEST_CONNECTION
-
-/*
  * USERNAMES_IN_TRACE - show usernames in trace Define this if you want
  * to see usernames in /trace.
  */
@@ -471,9 +465,6 @@
  * redefine the /USERS command
  */
 #define CLIENT_COUNT
-#ifdef CLIENT_COUNT
-#undef HIGHEST_CONNECTION
-#endif
 
 /*
  * MOTD_WAIT - minimum seconds between use of MOTD, INFO, HELP, LINKS * 

@@ -198,6 +198,8 @@ extern char 	 *myctime(time_t), *date(time_t);
 extern int  	  exit_client(aClient *, aClient *, aClient *, char *);
 extern void 	  initstats(void), tstats(aClient *, char *);
 extern void 	  serv_info(aClient *, char *);
+extern char      *make_parv_copy(char *, int, char **);
+
 int               msg_has_colors(char *);
 
 extern int  	  parse(aClient *, char *, char *);

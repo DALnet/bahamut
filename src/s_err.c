@@ -279,12 +279,7 @@ static char *replies[] =
     /* 247 */	                NULL,		/* Undernet's STATSGLINE */
     /* 248 */	                NULL,		/* Undernet's STATSULINE */
     /* 249 */	                NULL,
-# ifdef HIGHEST_CONNECTION
-    /* 250 RPL_STATSCONN */	":%s 250 %s :Highest connection count: %d "
-                                "(%d clients)",
-#else
     /* 250 */	                NULL,
-#endif
     /* 251 RPL_LUSERCLIENT */	":%s 251 %s :There are %d users and %d "
                                 "invisible on %d servers",
     /* 252 RPL_LUSEROP */	":%s 252 %s %d :IRC Operators online",

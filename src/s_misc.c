@@ -1161,3 +1161,24 @@ void show_servers(aClient *cptr, char *name)
     sendto_one(cptr, ":%s %d %s :%d Server%s", me.name, RPL_STATSDEBUG,
 	       name, j, (j == 1) ? "" : "s");
 }
+
+char *make_parv_copy(char *pbuf, int parc, char *parv[])
+{
+   int pbpos = 0, i;
+
+   for(i = 1; i < parc; i++)
+   {
+      char *tmp = parv[i];
+
+      if(i != 1)
+         pbuf[pbpos++] = ' ';
+      if(i == (parc - 1))
+         pbuf[pbpos++] = ':';
+
+      while(*tmp)
+         pbuf[pbpos++] = *(tmp++);
+   }
+   pbuf[pbpos] = '\0';
+
+   return pbuf;
+}

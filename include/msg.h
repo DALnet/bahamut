@@ -120,6 +120,7 @@
 #define MSG_SS	     "SS"            	/* StatServ commands */
 #define MSG_HS	     "HS"            	/* StatServ commands */
 #define MSG_RESYNCH  "RESYNCH"		/* RESYNCH */
+#define MSG_LUSERSLOCK "LUSERSLOCK"     /* Lusers LOCK */
 
 #define MAXPARA      15
 
@@ -212,6 +213,7 @@ extern int  m_sgline(aClient *, aClient *, int, char **);
 extern int  m_unsgline(aClient *, aClient *, int, char **);
 extern int  m_dkey(aClient *, aClient *, int, char **);
 extern int  m_resynch(aClient *, aClient *, int, char **);
+extern int  m_luserslock(aClient *, aClient *, int, char **);
 
 
 #ifdef MSGTAB
@@ -312,6 +314,7 @@ struct Message msgtab[] =
     {MSG_SS, m_ss, 0, 1, 1, 1, 0, 0L},
     {MSG_HS, m_hs, 0, 1, 1, 1, 0, 0L},
     {MSG_RESYNCH, m_resynch, 0, MAXPARA, 1, 0, 0, 0L},
+    {MSG_LUSERSLOCK, m_luserslock, 0, MAXPARA, 1, 0, 0, 0L},
     {(char *) 0, (int (*)()) 0, 0, 0, 0, 0, 0, 0L}
 };
 

@@ -66,9 +66,6 @@
 #define	RPL_STATSSLINE       245
 #define RPL_STATSULINE	     246
 #define	RPL_STATSDEBUG	     249
-#ifdef HIGHEST_CONNECTION
-#define RPL_STATSCONN 	     250
-#endif
 #define	RPL_LUSERCLIENT      251
 #define RPL_LUSEROP          252
 #define	RPL_LUSERUNKNOWN     253
