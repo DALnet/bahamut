@@ -997,6 +997,41 @@ void sendto_channel_butserv(aChannel *chptr, aClient *from, char *pattern, ...)
 }
 
 /*
+ * sendto_channelops_butserv
+ * 
+ * Send a message to all operators of a channel that are connected to this
+ * server.
+ */
+void sendto_channelops_butserv(aChannel *chptr, aClient *from, char *pattern, ...)
+{
+    chanMember  *cm;
+    aClient *acptr;
+    va_list vl;
+    int didlocal = 0;
+    char *pfix;
+
+    va_start(vl, pattern);
+    
+    pfix = va_arg(vl, char *);
+
+    for (cm = chptr->members; cm; cm = cm->next)
+    {
+	if (MyConnect(acptr = cm->cptr) && (cm->flags & CHFL_CHANOP))
+	{
+	    if(!didlocal)
+		didlocal = prefix_buffer(0, from, pfix, sendbuf, pattern, vl);
+	    
+	    if(check_fake_direction(from, acptr))
+		continue;
+
+	    send_message(acptr, sendbuf, didlocal);
+	}
+    }
+    va_end(vl);
+    return;
+}
+
+/*
  * sendto_tsmode_servs
  * 
  * send to all servers with tsmode capability (or not)

@@ -2364,16 +2364,17 @@ int m_invite(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	    sendto_one(sptr, rpl_str(RPL_AWAY), me.name, parv[0],
 		       acptr->name, acptr->user->away);
     }
-    if (MyConnect(acptr))
-	if ((chptr && sptr->user && is_chan_op(sptr, chptr)) || 
-	    IsULine(sptr))
-	{
+
+    if ((chptr && sptr->user && is_chan_op(sptr, chptr)) || IsULine(sptr))
+    {
+	if (MyConnect(acptr))
 	    add_invite(acptr, chptr);
-	    sendto_channelops_butone(NULL, &me, chptr,
-				     ":%s NOTICE @%s :%s invited %s into "
-				     "channel %s.",me.name, chptr->chname,
-				     sptr->name, acptr->name, chptr->chname);
-	}
+	/* Every server locally notifies the ops of invites */
+	sendto_channelops_butserv(chptr, &me, ":%s NOTICE @%s :%s invited %s into "
+				  "channel %s.", me.name, chptr->chname,
+				  sptr->name, acptr->name, chptr->chname);
+    }
+
     sendto_prefix_one(acptr, sptr, ":%s INVITE %s :%s", parv[0],
 		      acptr->name, ((chptr) ? (chptr->chname) : parv[2]));
     return 0;
