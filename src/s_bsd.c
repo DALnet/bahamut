@@ -1277,10 +1277,10 @@ static int do_client_queue(aClient *cptr)
    int dolen = 0, done;
 
    while (DBufLength(&cptr->recvQ) && !NoNewLine(cptr) &&
-	  ((cptr->status < STAT_UNKNOWN) || (cptr->since - timeofday < 10))) 
+	  ((cptr->status < STAT_UNKNOWN) || (cptr->since - timeofday < 10) || IsNegoServer(cptr))) 
    {
       /* If it's become registered as a server, just parse the whole block */
-      if (IsServer(cptr)) 
+      if (IsServer(cptr) || IsNegoServer(cptr)) 
       {
 #if defined(MAXBUFFERS)
          dolen = dbuf_get(&cptr->recvQ, readbuf, rcvbufmax * sizeof(char));
@@ -1385,7 +1385,7 @@ static int read_packet(aClient * cptr)
     * For server connections, we process as many as we can without
     * worrying about the time of day or anything :)
     */
-   if (IsServer(cptr) || IsConnecting(cptr) || IsHandshake(cptr)) 
+   if (IsServer(cptr) || IsConnecting(cptr) || IsHandshake(cptr) || IsNegoServer(cptr)) 
    {
       if (length > 0)
 	 if ((done = dopacket(cptr, readbuf, length)))
