@@ -455,7 +455,7 @@ send_mode_list(aClient *cptr, aChannel *chptr,
       }
       else if (*parabuf)
 	 send = 1;
-      if (count == 3)
+      if (count == MAXMODEPARAMS)
 	 send = 1;
       if (send) {
 			sendto_one(cptr, ":%s MODE %s %s %s",
@@ -464,7 +464,7 @@ send_mode_list(aClient *cptr, aChannel *chptr,
 	 *parabuf = '\0';
 	 cp = modebuf;
 	 *cp++ = '+';
-	 if (count != 3) {
+	 if (count != MAXMODEPARAMS) {
 	    (void) strcpy(parabuf, name);
 	    *cp++ = flag;
 	 }
@@ -2202,7 +2202,7 @@ m_list(aClient *cptr,
  * * m_names *        parv[0] = sender prefix *       parv[1] = channel
  */
 /* maximum names para to show to opers when abuse occurs */
-#define TRUNCATED_NAMES 20
+#define TRUNCATED_NAMES 64
 int
 m_names(aClient *cptr,
 	aClient *sptr,
@@ -2425,7 +2425,7 @@ send_user_joins(aClient *cptr, aClient *user)
    return;
 }
 
-static void
+static inline void
 sjoin_sendit(aClient *cptr,
 	     aClient *sptr,
 	     aChannel *chptr,
@@ -2465,12 +2465,12 @@ m_sjoin(aClient *cptr,
    static Mode mode, *oldmode;
    Link       *l;
    int         args = 0, haveops = 0, keepourmodes = 1, keepnewmodes = 1,
-	doesop = 0, what = 0, pargs = 0, fl, people = 0,
-	isnew;
+	       doesop = 0, what = 0, pargs = 0, fl, people = 0,
+	       isnew;
    Reg char   *s, *s0;
    static char numeric[16], sjbuf[BUFSIZE];
    char       *mbuf = modebuf, *t = sjbuf, *p;
-	time_t      creation=0;
+   time_t      creation=0;
 	
    if (IsClient(sptr) || parc < 6)
 	  return 0;
@@ -2478,7 +2478,7 @@ m_sjoin(aClient *cptr,
 	  return 0;
    newts = atol(parv[1]);
    creation = atol(parv[2]);
-	 memset((char *) &mode, '\0', sizeof(mode));
+   memset((char *) &mode, '\0', sizeof(mode));
 	
    s = parv[4];
    while (*s)
@@ -2511,13 +2511,13 @@ m_sjoin(aClient *cptr,
 		  strncpyzt(mode.key, parv[5 + args], KEYLEN + 1);
 		  args++;
 		  if (parc < 6 + args)
-	       return 0;
+	             return 0;
 		  break;
 		case 'l':
 		  mode.limit = atoi(parv[5 + args]);
 		  args++;
 		  if (parc < 6 + args)
-	       return 0;
+	             return 0;
 		  break;
 	  }
 	
@@ -2545,14 +2545,15 @@ m_sjoin(aClient *cptr,
    else if (newts == oldts)
 	  tstosend = oldts;
    else if (newts < oldts) {
-      if (doesop)
+      /* if remote ts is older, and they have ops, don't keep our modes. */
+      if (doesop)   
 		  keepourmodes = 0;
       if (haveops && !doesop)
 		  tstosend = oldts;
       else
 		  chptr->channelts = tstosend = newts;
    }
-   else {
+   else { /* if our TS is older, and we have ops, don't keep their modes */
       if (haveops)
 		  keepnewmodes = 0;
       if (doesop && !haveops) {
@@ -2571,12 +2572,25 @@ m_sjoin(aClient *cptr,
       mode.mode |= oldmode->mode;
       if (oldmode->limit > mode.limit)
 		  mode.limit = oldmode->limit;
-      if (strcmp(mode.key, oldmode->key) < 0)
+      if (strcmp(mode.key, oldmode->key))
 		  strcpy(mode.key, oldmode->key);
    }
+
+   /*
+    * since the most common case is that the modes are exactly the same,
+    *  this if will skip over the most common case... :)
+    * 
+    * this would look prettier in a for loop, but it's unrolled here
+    *  so it's a bit faster.   - lucas
+    * 
+    * pass +: go through and add new modes that are in mode and not oldmode
+    * pass -: go through and delete old modes that are in oldmode and not mode
+    */
 	
-	/* plus modes */
-   if((MODE_PRIVATE & mode.mode) && !(MODE_PRIVATE & oldmode->mode)) {
+   if(mode.mode != oldmode.mode)
+   {
+        /* plus modes */
+        if((MODE_PRIVATE & mode.mode) && !(MODE_PRIVATE & oldmode->mode)) {
 		INSERTSIGN(1,'+')
 		*mbuf++ = 'p';
 	}
@@ -2610,43 +2624,45 @@ m_sjoin(aClient *cptr,
 	}
    
 	/* minus modes */
-	if((MODE_PRIVATE & mode.mode) && !(MODE_PRIVATE & oldmode->mode)) {
+	if((MODE_PRIVATE & oldmode.mode) && !(MODE_PRIVATE & mode->mode)) {
 		INSERTSIGN(-1,'-')
 		*mbuf++ = 'p';
 	}
-	if((MODE_SECRET & mode.mode) && !(MODE_SECRET & oldmode->mode)) {
+	if((MODE_SECRET & oldmode.mode) && !(MODE_SECRET & mode->mode)) {
 		INSERTSIGN(-1,'-')
 		*mbuf++ = 's';
 	}
-	if((MODE_MODERATED & mode.mode) && !(MODE_MODERATED & oldmode->mode)) {
+	if((MODE_MODERATED & oldmode.mode) && !(MODE_MODERATED & mode->mode)) {
 		INSERTSIGN(-1,'-')
 		*mbuf++ = 'm';
 	}
-	if((MODE_NOPRIVMSGS & mode.mode) && !(MODE_NOPRIVMSGS & oldmode->mode)) {
+	if((MODE_NOPRIVMSGS & oldmode.mode) && !(MODE_NOPRIVMSGS & mode->mode)) {
 		INSERTSIGN(-1,'-')
 		*mbuf++ = 'n';
 	}
-	if((MODE_TOPICLIMIT & mode.mode) && !(MODE_TOPICLIMIT & oldmode->mode)) {
+	if((MODE_TOPICLIMIT & oldmode.mode) && !(MODE_TOPICLIMIT & mode->mode)) {
 		INSERTSIGN(-1,'-')
 		*mbuf++ = 't';
 	}
-	if((MODE_INVITEONLY & mode.mode) && !(MODE_INVITEONLY & oldmode->mode)) {
+	if((MODE_INVITEONLY & oldmode.mode) && !(MODE_INVITEONLY & mode->mode)) {
 		INSERTSIGN(-1,'-')
 		*mbuf++ = 'i';
 	}
-	if((MODE_REGISTERED & mode.mode) && !(MODE_REGISTERED & oldmode->mode)) {
+	if((MODE_REGISTERED & oldmode.mode) && !(MODE_REGISTERED & mode->mode)) {
 		INSERTSIGN(-1,'-')
 		*mbuf++='r';
 	}
-	if((MODE_REGONLY & mode.mode) && !(MODE_REGONLY & oldmode->mode)) {
+	if((MODE_REGONLY & oldmode.mode) && !(MODE_REGONLY & mode->mode)) {
 		INSERTSIGN(-1,'-')
 		*mbuf++='R';
 	}
 	
 	if (oldmode->limit && !mode.limit) {
 		INSERTSIGN(-1,'-')
-      *mbuf++ = 'l';
+                *mbuf++ = 'l';
+        }
    }
+
    if (oldmode->key[0] && !mode.key[0]) {
 		INSERTSIGN(-1,'-')
       *mbuf++ = 'k';
@@ -2654,6 +2670,7 @@ m_sjoin(aClient *cptr,
       strcat(parabuf, " ");
       pargs++;
    }
+
    if (mode.limit && oldmode->limit != mode.limit) {
 		INSERTSIGN(1,'+')
       *mbuf++ = 'l';
@@ -2664,6 +2681,7 @@ m_sjoin(aClient *cptr,
       strcat(parabuf, " ");
       pargs++;
    }
+
    if (mode.key[0] && strcmp(oldmode->key, mode.key)) {
 		INSERTSIGN(1,'+')
       *mbuf++ = 'k';
@@ -2711,8 +2729,8 @@ m_sjoin(aClient *cptr,
 			}
       }
       sendto_channel_butserv(chptr, &me,
-									  ":%s NOTICE %s :*** Notice -- TS for %s changed from %ld to %ld",
-									  me.name, chptr->chname, chptr->chname, oldts, newts);
+		":%s NOTICE %s :*** Notice -- TS for %s changed from %ld to %ld",
+		me.name, chptr->chname, chptr->chname, oldts, newts);
    }
    if (mbuf != modebuf) {
       *mbuf = '\0';
