@@ -913,10 +913,6 @@ else
        echo "         however some systems do not support it. Linux 2.2 uses select to wrap poll."
        echo "kqueue - use the kqueue() system call. ONLY WORKS UNDER FREEBSD."
        echo "         However, it works with little to no system load -- highly optimal."
-       echo "epoll  - use the epoll() system call. Only works under Linux (with a kernel patch)."
-       echo "         Highly optimal for Linux machines. EXPERIMENTAL, you may have to link with"
-       echo "         the libepoll in order for this to work -- not for the faint of heart."
-       echo "         See http://www.xmailserver.org/linux-patches/nio-improve.html"
        echo -n "[$FOO] -> $c"
        if [ -z "$AUTO_CONFIG" -o -n "$runonce" ] ; then
           read cc
@@ -932,10 +928,6 @@ else
              SOCKETENGINE="poll"
              USESELECT=""
              ;;
-          [Ee][Pp][Oo][Ll][Ll])
-             SOCKETENGINE="epoll"
-             USESELECT=""
-             ;;
           [Kk][Qq][Uu][Ee][Uu][Ee])
              SOCKETENGINE="kqueue"
              USESELECT=""
@@ -946,7 +938,7 @@ else
              ;;
           *)
              echo ""
-             echo "You need to enter either poll, select, kqueue, or epoll here..."
+             echo "You need to enter either poll, select, or kqueue here..."
              echo ""
              FOO=""
              ;;
