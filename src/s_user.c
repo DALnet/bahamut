@@ -81,7 +81,10 @@ static int  user_modes[] =
  UMODE_b, 'b',
  UMODE_a, 'a',
  UMODE_A, 'A',
- UMODE_f, 'f',	 
+ UMODE_f, 'f',
+#ifdef UMODE_N
+ UMODE_n, 'n',
+#endif
  0, 0};
 
 /*
@@ -2126,6 +2129,7 @@ int build_searchopts(aClient *sptr, int parc, char *parv[]) {
 		for (; *ptr; ptr++)
 		  sendto_one(sptr, getreply(RPL_COMMANDSYNTAX), me.name,
 						 sptr->name, *ptr);
+	          sendto_one(sptr, getreply(RPL_ENDOFWHO), me.name, sptr->name, "?");
 		return 0;
 	}
 	/* backwards compatibility */
@@ -2429,7 +2433,7 @@ int m_who(aClient *cptr, aClient *sptr, int parc, char *parv[]) {
 		return 0;
 	}
 	/* if HTM, drop this too */
-	if(lifesux) {
+	if(lifesux && !IsAnOper(sptr)) {
 		sendto_one(sptr, rpl_str(RPL_LOAD2HI), me.name, sptr->name);
 		return 0;
 	}
@@ -3174,7 +3178,11 @@ m_oper(aClient *cptr,
 		  SetLocOp(sptr);
 		else
 		  SetOper(sptr);
+#ifdef UMODE_N
+		sptr->umode|=(UMODE_s|UMODE_g|UMODE_w|UMODE_n|UMODE_f);
+#else
 		sptr->umode|=(UMODE_s|UMODE_g|UMODE_w|UMODE_f);
+#endif
 		sptr->oflag = aconf->port;
       Count.oper++;
       *--s = '@';
@@ -3462,7 +3470,6 @@ m_umode(aClient *cptr,
 	        * default
 	        */
 		  case ' ':
-		  case '\n':
 		  case '\r':
 		  case '\t':
 			 break;
@@ -3521,17 +3528,17 @@ m_umode(aClient *cptr,
    if (!(setflags & UMODE_b) && (!IsOper(sptr) && !IsLocOp(sptr))
        && !IsServer(cptr))
           sptr->umode &= ~UMODE_b;
-   /*
-    * And what about +yd ?
-    * I'm sick of answering questions about why they dont work
-    * for non-opers. -Epi
-    */
 
    if (!(setflags & UMODE_y) && (!IsOper(sptr) && !IsLocOp(sptr))
        && !IsServer(cptr))
           sptr->umode &= ~UMODE_y;
-
-
+/* COMMENTED OUT FOR NOW
+#ifdef UMODE_N
+   if (!(setflags & UMODE_n) && (!IsOper(sptr) && !IsLocOp(sptr))
+       && !IsServer(cptr))
+	  sptr->umode &= ~UMODE_n;
+#endif
+*/
    if (!(setflags & UMODE_d) && (!IsOper(sptr) && !IsLocOp(sptr))
        && !IsServer(cptr))
           sptr->umode &= ~UMODE_d;
@@ -3691,17 +3698,17 @@ botwarn(char *host,
     */
 #undef CHECK_FOR_ANNOYOJNK
    if (!strcmp(host, "1"))
-      sendto_realops_lev(CCONN_LEV, "Possible Eggdrop: %s (%s@%s) [B-lined]",
+      sendto_realops_lev(CCONN_LEV, "Possible Eggdrop: %s (%s@%s)",
 			 nick, user, realhost);
    if (!strcmp(host, "null"))
-      sendto_realops_lev(CCONN_LEV, "Possible ComBot: %s (%s@%s) [B-lined]",
+      sendto_realops_lev(CCONN_LEV, "Possible ComBot: %s (%s@%s)",
 			 nick, user, realhost);
    if (!strcmp(host, "x"))
-      sendto_realops_lev(CCONN_LEV, "Possible SpamBot: %s (%s@%s) [B-lined]",
+      sendto_realops_lev(CCONN_LEV, "Possible SpamBot: %s (%s@%s)",
 			 nick, user, realhost);
 #ifdef CHECK_FOR_ANNOYOJNK
    if (!strcmp(host, "."))
-      sendto_realops_lev(CCONN_LEV, "Possible AnnoyBot: %s (%s@%s) [B-lined]",
+      sendto_realops_lev(CCONN_LEV, "Possible AnnoyBot: %s (%s@%s)",
 			 nick, user, realhost);
 #endif
    return 0;
@@ -4189,7 +4196,6 @@ int m_svsmode(aClient *cptr, aClient *sptr, int parc, char *parv[]) {
 					what = MODE_DEL;
 					break;
 				 case ' ':
-				 case '\n':
 				 case '\r':
 				 case '\t':
 					break;

@@ -1300,6 +1300,8 @@ m_join(aClient *cptr,
 			continue;
       }
 		
+      chptr = get_channel(sptr, name, CREATE);
+
       if (MyConnect(sptr)) {
 			/*
 			 * * local client is first to enter previously nonexistent *
@@ -1321,7 +1323,7 @@ m_join(aClient *cptr,
 				else {
 					allow_op = NO;
 				}
-				if (!IsRestricted(sptr) && !allow_op)
+				if (!IsRestricted(sptr) && !allow_op && can_join(sptr, chptr, key))
 				  sendto_one(sptr, ":%s NOTICE %s :*** Notice -- Due to a network split, you can not obtain channel operator status in a new channel at this time.",
 								 me.name,
 								 sptr->name);
@@ -1392,7 +1394,6 @@ m_join(aClient *cptr,
 				  ts_warn("User on %s remotely JOINing new channel", sptr->user->server);
       }
 			
-      chptr = get_channel(sptr, name, CREATE);
 		
       if (!chptr ||
 			 (MyConnect(sptr) && (i = can_join(sptr, chptr, key)))) {

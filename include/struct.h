@@ -26,7 +26,7 @@
 #define __struct_include__
 
 #include "config.h"
-#if !defined(CONFIG_H_LEVEL_DFH_1_0)
+#if !defined(CONFIG_H_LEVEL_DFH_1_1)
 #error Incorrect config.h for this revision of ircd.
 #endif
 
@@ -199,22 +199,24 @@ typedef struct MotdItem aMotd;
 #define FLAGS_ULINE 			0x2000000
 
 /* User Modes */
-#define UMODE_o     0x0001	/* umode +o - Oper */
-#define UMODE_O     0x0002	/* umode +O - Local Oper */
-#define UMODE_i     0x0004	/* umode +i - Invisible */
-#define UMODE_w     0x0008	/* umode +w - Get wallops */
-#define UMODE_s     0x0010	/* umode +s - Server notices */
-
-#define UMODE_c     0x0020	/* umode +c - Client connections/exits */
-#define UMODE_r     0x0040	/* umode +r - registered nick */
-#define UMODE_k     0x0080	/* umode +k - Server kill messages */
-#define UMODE_f     0x0100	/* umode +f - Server flood messages */
-#define UMODE_y     0x0200	/* umode +y - Stats/links */
-#define UMODE_d     0x0400	/* umode +d - Debug info */
-#define UMODE_g     0x1000	/* umode +g - Globops */
-#define UMODE_b     0x2000	/* umode +b - Chatops */
-#define UMODE_a     0x4000  /* umode +a - Services Admin */
-#define UMODE_A     0x8000  /* umode +A - Server Admin */
+#define UMODE_o     0x00001	/* umode +o - Oper */
+#define UMODE_O     0x00002	/* umode +O - Local Oper */
+#define UMODE_i     0x00004	/* umode +i - Invisible */
+#define UMODE_w     0x00008	/* umode +w - Get wallops */
+#define UMODE_s     0x00010	/* umode +s - Server notices */
+#define UMODE_c     0x00020	/* umode +c - Client connections/exits */
+#define UMODE_r     0x00040	/* umode +r - registered nick */
+#define UMODE_k     0x00080	/* umode +k - Server kill messages */
+#define UMODE_f     0x00100	/* umode +f - Server flood messages */
+#define UMODE_y     0x00200	/* umode +y - Stats/links */
+#define UMODE_d     0x00400	/* umode +d - Debug info */
+#define UMODE_g     0x01000	/* umode +g - Globops */
+#define UMODE_b     0x02000	/* umode +b - Chatops */
+#define UMODE_a     0x04000	/* umode +a - Services Admin */
+#define UMODE_A     0x08000  	/* umode +A - Server Admin */
+#ifdef UMODE_N
+#define UMODE_n     0x10000	/* umode +n - Routing Notices */
+#endif
 
 /* for sendto_ops_lev */
 
@@ -223,12 +225,18 @@ typedef struct MotdItem aMotd;
 #define SKILL_LEV	3
 #define SPY_LEV		4
 #define DEBUG_LEV	5
-#define FLOOD_LEV 6
+#define FLOOD_LEV 	6
 
 #define	SEND_UMODES	(UMODE_i|UMODE_o|UMODE_w|UMODE_r|UMODE_a|UMODE_A)
+#ifdef UMODE_N
+#define ALL_UMODES (SEND_UMODES|UMODE_s|UMODE_c|UMODE_r|UMODE_k|UMODE_f|UMODE_y|UMODE_d|UMODE_g|UMODE_b|UMODE_n)
+#define OPER_UMODES (UMODE_o|UMODE_w|UMODE_s|UMODE_y|UMODE_d|UMODE_g|UMODE_n)
+#define LOCOP_UMODES (UMODE_O|UMODE_w|UMODE_s|UMODE_y|UMODE_d|UMODE_g|UMODE_n)
+#else
 #define	ALL_UMODES (SEND_UMODES|UMODE_s|UMODE_c|UMODE_r|UMODE_k|UMODE_f|UMODE_y|UMODE_d|UMODE_g|UMODE_b)
 #define OPER_UMODES (UMODE_o|UMODE_w|UMODE_s|UMODE_y|UMODE_d|UMODE_g)
 #define LOCOP_UMODES (UMODE_O|UMODE_w|UMODE_s|UMODE_y|UMODE_d|UMODE_g)
+#endif /* UMODE_N */
 #define	FLAGS_ID (FLAGS_DOID|FLAGS_GOTID)
 
 /* Capabilities of the ircd */
@@ -255,6 +263,9 @@ typedef struct MotdItem aMotd;
 #define IsUmodey(x)   ((x)->umode & UMODE_y)
 #define IsUmoded(x)   ((x)->umode & UMODE_d)
 #define IsUmodeb(x)   ((x)->umode & UMODE_b)
+#ifdef UMODE_N
+#define IsUmoden(x)   ((x)->umode & UMODE_n)
+#endif
 #define	IsPerson(x)		((x)->user && IsClient(x))
 #define	IsPrivileged(x)		(IsAnOper(x) || IsServer(x))
 #define	SendWallops(x)		((x)->umode & UMODE_w)
@@ -267,6 +278,9 @@ typedef struct MotdItem aMotd;
 #define SendDebugNotice(x)	((x)->umode & UMODE_d)
 #define SendGlobops(x) ((x)->umode & UMODE_g)
 #define SendChatops(x) ((x)->umode & UMODE_b)
+#ifdef UMODE_N
+#define SendRnotice(x) ((x)->umode & UMODE_n)
+#endif
 #define	IsListening(x)		((x)->flags & FLAGS_LISTEN)
 #define	DoAccess(x)		((x)->flags & FLAGS_CHKACCESS)
 #define	IsLocal(x)		((x)->flags & FLAGS_LOCAL)
@@ -291,6 +305,9 @@ typedef struct MotdItem aMotd;
 #define ClearUmodey(x)  ((x)->umode &= ~UMODE_y)
 #define ClearUmoded(x)  ((x)->umode &= ~UMODE_d)
 #define ClearUmodeb(x)  ((x)->umode &= ~UMODE_b)
+#ifdef UMODE_N
+#define ClearUmoden(x)  ((x)->umode &= ~UMODE_n)
+#endif
 #define	ClearOper(x)		((x)->umode &= ~UMODE_o)
 #define ClearLocOp(x)		((x)->umode &= ~UMODE_O)
 #define	ClearInvisible(x)	((x)->umode &= ~UMODE_i)

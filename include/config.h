@@ -231,6 +231,12 @@
 #define NickServ "NickServ"
 #define StatServ "StatServ"
 
+/* UMODE_N
+ * Define this if you want to have a custom username purely for routing
+ * related information (+n)
+ * Added Sept.99 -Epiphani
+ */
+#define UMODE_N
 /*
  * FNAME_USERLOG and FNAME_OPERLOG - logs of local USERS and OPERS
  * Define this filename to maintain a list of persons who log into this
@@ -239,7 +245,6 @@
  * user connections, FNAME_OPERLOG logs every successful use of /oper.
  * These are either full paths or files within DPATH.
  * 
- * These need to be defined if you want to use SYSLOG logging, too.
  */
 #undef FNAME_USERLOG "/usr/local/ircd/users"	
 #undef FNAME_OPERLOG "/usr/local/ircd/opers"
@@ -921,5 +926,5 @@ extern void debug();
 # define LOGFILE "/dev/null"
 #endif
 
-#define CONFIG_H_LEVEL_DFH_1_0
+#define CONFIG_H_LEVEL_DFH_1_1
 #endif				/* __config_include__ */

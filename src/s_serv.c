@@ -319,11 +319,21 @@ m_squit(aClient *cptr,
     * notify everyone about any squit, local or remote - lucas
     */
    if (MyConnect(acptr)) {
+#ifdef UMODE_N
+      sendto_gnotice("from %s: Recieved SQUIT %s from %s (%s)",
+		 me.name, acptr->name, get_client_name(sptr, HIDEME), comment);
+      sendto_serv_butone(&me,
+			 ":%s GNOTICE :Recieved SQUIT %s from %s (%s)",
+		me.name, server, get_client_name(sptr, HIDEME), comment);
+#else
       send_globops("from %s: Received SQUIT %s from %s (%s)",
 		 me.name, acptr->name, get_client_name(sptr, HIDEME), comment);
+
       sendto_serv_butone(&me,
 			 ":%s GLOBOPS :Received SQUIT %s from %s (%s)",
 	      me.name, server, get_client_name(sptr, HIDEME), comment);
+#endif /* UMODE_N */
+
 #
 #if defined(USE_SYSLOG) && defined(SYSLOG_SQUIT)
       syslog(LOG_DEBUG, "SQUIT From %s : %s (%s)",
@@ -385,13 +395,20 @@ m_svinfo(aClient *cptr,
    deltat = abs(theirtime - tmptime);
 
    if (deltat > TS_MAX_DELTA) {
+#ifdef UMODE_N
+      sendto_gnotice("Link %s dropped, excessive TS delta (my TS=%d, their TS=&d, delta=%d)",
+		get_client_name(sptr, HIDEME), tmptime, theirtime, deltat);
+      sendto_serv_butone(&me, ":%s GNOTICE :Link %s dropped, excessive TS delta (delta=%d)",
+		me.name, get_client_name(sptr, HIDEME), deltat);
+#else
       sendto_ops("Link %s dropped, excessive TS delta (my TS=%d, their TS=%d, delta=%d)",
 	     get_client_name(sptr, HIDEME), tmptime, theirtime, deltat);
+#endif
       return exit_client(sptr, sptr, sptr, "Excessive TS delta");
    }
 
    if (deltat > TS_WARN_DELTA) {
-      sendto_realops("Link %s notable TS delta (my TS=%d, their TS=%d, delta=%d)",
+	sendto_realops("Link %s notable TS delta (my TS=%d, their TS=%d, delta=%d)",
 	     get_client_name(sptr, HIDEME), tmptime, theirtime, deltat);
    }
 
@@ -452,12 +469,6 @@ m_server(aClient *cptr,
        */
       sendto_one(cptr, err_str(ERR_UNKNOWNCOMMAND),
 					  me.name, parv[0], "SERVER");
-      /*
-       * Just ignore it for fripps sake... - Dianora
-       * 
-       * sendto_ops("User %s trying to become a server %s",
-						  * get_client_name(cptr, TRUE), host);
-       */
 		
       return 0;
    }
@@ -552,8 +563,15 @@ m_server(aClient *cptr,
       bcptr = (cptr->firsttime > acptr->from->firsttime) ? cptr : acptr->from;
       sendto_one(bcptr, "ERROR :Server %s already exists", host);
       if (bcptr == cptr) {
+#ifdef UMODE_N
+			sendto_gnotice("Link %s cancelled, server %s already exists",
+				get_client_name(bcptr, HIDEME), host);
+			sendto_serv_butone(&me, ":%s GNOTICE :Link %s cancelled, server %s already exists",
+				me.name, get_client_name(bcptr, HIDEME), host);
+#else
 			sendto_ops("Link %s cancelled, server %s already exists",
 						  get_client_name(bcptr, HIDEME), host);
+#endif
 			return exit_client(bcptr, bcptr, &me, "Server Exists");
       }
       /*
@@ -866,12 +884,19 @@ m_server_estab(aClient *cptr)
 
    if ((find_uline(cptr->confs, cptr->name))) 
      cptr->flags |= FLAGS_ULINE; 
- 
+
+#ifdef UMODE_N
+   sendto_gnotice("Linke with %s established: %s %s", inpath, IsULine(cptr) ? "ULined" : "Normal", 
+		DoesTS(cptr) ? "TS link" : "Non-TS link!"); 
+   sendto_serv_butone(&me, ":%s GNOTICE :Link with %s established: %s",
+		me.name, inpath, DoesTS(cptr) ? "TS link" : "Non-TS link!");
+#else
    sendto_ops("Link with %s established: %s %s", inpath, IsULine(cptr) ? "ULined" : "Normal",
 		DoesTS(cptr) ? "TS link" : "Non-TS link!");
  
    sendto_serv_butone(&me, ":%s GLOBOPS :Link with %s established: %s", 
-							 me.name, inpath, DoesTS(cptr) ? "TS link" : "Non-TS link!");
+				 me.name, inpath, DoesTS(cptr) ? "TS link" : "Non-TS link!");
+#endif
    (void) add_to_client_hash_table(cptr->name, cptr);
    /*
     * doesnt duplicate cptr->serv if allocated this struct already 
@@ -1044,30 +1069,25 @@ m_info(aClient *cptr,
       sendto_one(sptr, rpl_str(RPL_INFO), me.name, parv[0], "");
 
       /* I am -definately- going to come up with a replacement for this! -Rak */
-      if (IsAnOper(sptr) && MyConnect(sptr)) {
+      if (IsAnOper(sptr)) {
 #ifdef ANTI_NICK_FLOOD
-	 strcpy(outstr, "ANTI_NICK_FLOOD=1");
+	 strcpy(outstr, " ANTI_NICK_FLOOD=1");
 #else
-	 strcpy(outstr, "ANTI_NICK_FLOOD=0");
+	 strcpy(outstr, " ANTI_NICK_FLOOD=0");
 #endif
 #ifdef ANTI_SPAMBOT
 	 strcat(outstr, " ANTI_SPAMBOT=1");
 #else
 	 strcat(outstr, " ANTI_SPAMBOT=0");
 #endif
-#ifdef B_LINES_OPER_ONLY
-	 strcat(outstr, " B_LINES_OPER_ONLY=1");
-#else
-	 strcat(outstr, " B_LINES_OPER_ONLY=0");
-#endif
 	 sendto_one(sptr, rpl_str(RPL_INFO),
 		    me.name, parv[0], outstr);
 
 
 #ifdef CLIENT_COUNT
-	 strcpy(outstr, "CLIENT_COUNT=1");
+	 strcpy(outstr, " CLIENT_COUNT=1");
 #else
-	 strcpy(outstr, "CLIENT_COUNT=0");
+	 strcpy(outstr, " CLIENT_COUNT=0");
 #endif
 #ifdef CLIENT_FLOOD
 	 strcat(outstr, " CLIENT_FLOOD=1");
@@ -1085,9 +1105,9 @@ m_info(aClient *cptr,
 
 
 #ifdef CUSTOM_ERR
-	 strcpy(outstr, "CUSTOM_ERR=1");
+	 strcpy(outstr, " CUSTOM_ERR=1");
 #else
-	 strcpy(outstr, "CUSTOM_ERR=0");
+	 strcpy(outstr, " CUSTOM_ERR=0");
 #endif
 #ifdef ZLINES_IN_KPATH
 	 strcat(outstr, " ZLINES_IN_KPATH=1");
@@ -1105,9 +1125,9 @@ m_info(aClient *cptr,
 
 
 #ifdef DO_IDENTD
-	 strcpy(outstr, "DO_IDENTD=1");
+	 strcpy(outstr, " DO_IDENTD=1");
 #else
-	 strcpy(outstr, "DO_IDENTD=0");
+	 strcpy(outstr, " DO_IDENTD=0");
 #endif
 #ifdef E_LINES_OPER_ONLY
 	 strcat(outstr, " E_LINES_OPER_ONLY=1");
@@ -1115,9 +1135,9 @@ m_info(aClient *cptr,
 	 strcat(outstr, " E_LINES_OPER_ONLY=0");
 #endif
 #ifdef FAILED_OPER_NOTICE
-	 strcat(outstr, "FAILED_OPER_NOTICE=1");
+	 strcat(outstr, " FAILED_OPER_NOTICE=1");
 #else
-	 strcat(outstr, "FAILED_OPER_NOTICE=0");
+	 strcat(outstr, " FAILED_OPER_NOTICE=0");
 #endif
 	 sendto_one(sptr, rpl_str(RPL_INFO),
 		    me.name, parv[0], outstr);
@@ -1134,9 +1154,9 @@ m_info(aClient *cptr,
 	 strcat(outstr, " SHORT_MOTD=0");
 #endif
 #ifdef F_LINES_OPER_ONLY
-	 strcat(outstr, "F_LINES_OPER_ONLY=1");
+	 strcat(outstr, " F_LINES_OPER_ONLY=1");
 #else
-	 strcat(outstr, "F_LINES_OPER_ONLY=0");
+	 strcat(outstr, " F_LINES_OPER_ONLY=0");
 #endif
 	 sendto_one(sptr, rpl_str(RPL_INFO),
 		    me.name, parv[0], outstr);
@@ -1149,9 +1169,9 @@ m_info(aClient *cptr,
 	 strcpy(outstr, " HIGHEST_CONNECTION=0");
 #endif
 #ifdef HUB
-	 strcat(outstr, "HUB=1");
+	 strcat(outstr, " HUB=1");
 #else
-	 strcat(outstr, "HUB=0");
+	 strcat(outstr, " HUB=0");
 #endif
 #ifdef IDENTD_COMPLAIN
 	 strcat(outstr, " IDENTD_COMPLAIN=1");
@@ -1169,9 +1189,9 @@ m_info(aClient *cptr,
 	 strcpy(outstr, " IGNORE_FIRST_CHAR=0");
 #endif
 #ifdef KLINE_WITH_REASON
-	 strcat(outstr, "KLINE_WITH_REASON=1");
+	 strcat(outstr, " KLINE_WITH_REASON=1");
 #else
-	 strcat(outstr, "KLINE_WITH_REASON=0");
+	 strcat(outstr, " KLINE_WITH_REASON=0");
 #endif
 #ifdef KPATH
 	 strcat(outstr, " KPATH=1");
@@ -1189,9 +1209,9 @@ m_info(aClient *cptr,
 	 strcpy(outstr, " K_COMMENT_ONLY=0");
 #endif
 #ifdef LITTLE_I_LINES
-	 strcat(outstr, "LITTLE_I_LINES=1");
+	 strcat(outstr, " LITTLE_I_LINES=1");
 #else
-	 strcat(outstr, "LITTLE_I_LINES=0");
+	 strcat(outstr, " LITTLE_I_LINES=0");
 #endif
 #ifdef LOCKFILE
 	 strcat(outstr, " LOCKFILE=1");
@@ -1209,9 +1229,9 @@ m_info(aClient *cptr,
 	 strcpy(outstr, " MAXBUFFERS=0");
 #endif
 #ifdef NON_REDUNDANT_KLINES
-	 strcat(outstr, "NON_REDUNDANT_KLINES=1");
+	 strcat(outstr, " NON_REDUNDANT_KLINES=1");
 #else
-	 strcat(outstr, "NON_REDUNDANT_KLINES=0");
+	 strcat(outstr, " NON_REDUNDANT_KLINES=0");
 #endif
 #ifdef NO_CHANOPS_WHEN_SPLIT
 	 strcat(outstr, " NO_CHANOPS_WHEN_SPLIT=1");
@@ -1228,11 +1248,6 @@ m_info(aClient *cptr,
 #else
 	 strcpy(outstr, " NO_DEFAULT_INVISIBLE=0");
 #endif
-#ifdef NO_DEFAULT_INVISIBLE
-	 strcat(outstr, " NO_DEFAULT_INVISIBLE=1");
-#else
-	 strcat(outstr, " NO_DEFAULT_INVISIBLE=0");
-#endif
 #ifdef NO_MIXED_CASE
 	 strcat(outstr, " NO_MIXED_CASE=1");
 #else
@@ -1244,9 +1259,9 @@ m_info(aClient *cptr,
 
 
 #ifdef NO_OPER_FLOOD
-	 strcpy(outstr, "NO_OPER_FLOOD=1");
+	 strcpy(outstr, " NO_OPER_FLOOD=1");
 #else
-	 strcpy(outstr, "NO_OPER_FLOOD=0");
+	 strcpy(outstr, " NO_OPER_FLOOD=0");
 #endif
 #ifdef NO_PRIORITY
 	 strcat(outstr, " NO_PRIORITY=1");
@@ -1269,9 +1284,9 @@ m_info(aClient *cptr,
 	 strcpy(outstr, " OLD_Y_LIMIT=0");
 #endif
 #ifdef REJECT_IPHONE
-	 strcat(outstr, "REJECT_IPHONE=1");
+	 strcat(outstr, " REJECT_IPHONE=1");
 #else
-	 strcat(outstr, "REJECT_IPHONE=0");
+	 strcat(outstr, " REJECT_IPHONE=0");
 #endif
 #ifdef RFC1035_ANAL
 	 strcat(outstr, " RFC1035_ANAL=1");
@@ -1289,9 +1304,9 @@ m_info(aClient *cptr,
 	 strcpy(outstr, " RK_NOTICES=0");
 #endif
 #ifdef SEPARATE_QUOTE_KLINES_BY_DATE
-	 strcat(outstr, "SEPARATE_QUOTE_KLINES_BY_DATE=1");
+	 strcat(outstr, " SEPARATE_QUOTE_KLINES_BY_DATE=1");
 #else
-	 strcat(outstr, "SEPARATE_QUOTE_KLINES_BY_DATE=0");
+	 strcat(outstr, " SEPARATE_QUOTE_KLINES_BY_DATE=0");
 #endif
 #ifdef SHORT_MOTD
 	 strcat(outstr, " SHORT_MOTD=1");
@@ -1309,9 +1324,9 @@ m_info(aClient *cptr,
 	 strcpy(outstr, " SHOW_HEADERS=0");
 #endif
 #ifdef SHOW_INVISIBLE_LUSERS
-	 strcat(outstr, "SHOW_INVISIBLE_LUSERS=1");
+	 strcat(outstr, " SHOW_INVISIBLE_LUSERS=1");
 #else
-	 strcat(outstr, "SHOW_INVISIBLE_LUSERS=0");
+	 strcat(outstr, " SHOW_INVISIBLE_LUSERS=0");
 #endif
 #ifdef SHOW_UH
 	 strcat(outstr, " SHOW_UH=1");
@@ -1329,9 +1344,9 @@ m_info(aClient *cptr,
 	 strcpy(outstr, " STATS_NOTICE=0");
 #endif
 #ifdef SUNDBE
-	 strcat(outstr, "SUNDBE=1");
+	 strcat(outstr, " SUNDBE=1");
 #else
-	 strcat(outstr, "SUNDBE=0");
+	 strcat(outstr, " SUNDBE=0");
 #endif
 #ifdef UNKLINE
 	 strcat(outstr, " UNKLINE=1");
@@ -1349,9 +1364,9 @@ m_info(aClient *cptr,
 	 strcpy(outstr, " USERNAMES_IN_TRACE=0");
 #endif
 #ifdef USE_FAST_FD_ISSET
-	 strcat(outstr, "USE_FAST_FD_ISSET=1");
+	 strcat(outstr, " USE_FAST_FD_ISSET=1");
 #else
-	 strcat(outstr, "USE_FAST_FD_ISSET=0");
+	 strcat(outstr, " USE_FAST_FD_ISSET=0");
 #endif
 #ifdef USE_SYSLOG
 	 strcat(outstr, " USE_SYSLOG=1");
@@ -1363,9 +1378,9 @@ m_info(aClient *cptr,
 
 
 #ifdef WARN_NO_NLINE
-	 strcpy(outstr, "WARN_NO_NLINE=1");
+	 strcpy(outstr, " WARN_NO_NLINE=1");
 #else
-	 strcpy(outstr, "WARN_NO_NLINE=0");
+	 strcpy(outstr, " WARN_NO_NLINE=0");
 #endif
 	 sendto_one(sptr, rpl_str(RPL_INFO),
 		    me.name, parv[0], outstr);
@@ -1379,19 +1394,19 @@ m_info(aClient *cptr,
 #endif
 
 
-	 ircsprintf(outstr, "HARD_FDLIMIT_=%d HYBRID_SOMAXCONN=%d", HARD_FDLIMIT_, HYBRID_SOMAXCONN);
+	 ircsprintf(outstr, " HARD_FDLIMIT_=%d HYBRID_SOMAXCONN=%d", HARD_FDLIMIT_, HYBRID_SOMAXCONN);
 	 sendto_one(sptr, rpl_str(RPL_INFO),
 		    me.name, parv[0], outstr);
-	 ircsprintf(outstr, "MOTD_WAIT=%d MOTD_MAX=%d MAXIMUM_LINKS=%d", MOTD_WAIT, MOTD_MAX, MAXIMUM_LINKS);
+	 ircsprintf(outstr, " MOTD_WAIT=%d MOTD_MAX=%d MAXIMUM_LINKS=%d", MOTD_WAIT, MOTD_MAX, MAXIMUM_LINKS);
 	 sendto_one(sptr, rpl_str(RPL_INFO),
 		    me.name, parv[0], outstr);
-	 ircsprintf(outstr, "MAX_NICK_CHANGES=%d MAX_NICK_TIME=%d", MAX_NICK_CHANGES, MAX_NICK_TIME);
+	 ircsprintf(outstr, " MAX_NICK_CHANGES=%d MAX_NICK_TIME=%d", MAX_NICK_CHANGES, MAX_NICK_TIME);
 	 sendto_one(sptr, rpl_str(RPL_INFO),
 		    me.name, parv[0], outstr);
-	 ircsprintf(outstr, "NICKNAMEHISTORYLENGTH=%d NOISY_HTM=%d", NICKNAMEHISTORYLENGTH, NOISY_HTM);
+	 ircsprintf(outstr, " NICKNAMEHISTORYLENGTH=%d NOISY_HTM=%d", NICKNAMEHISTORYLENGTH, NOISY_HTM);
 	 sendto_one(sptr, rpl_str(RPL_INFO),
 		    me.name, parv[0], outstr);
-	 ircsprintf(outstr, "TS_MAX_DELTA=%d TS_WARN_DELTA=%d", TS_MAX_DELTA, TS_WARN_DELTA);
+	 ircsprintf(outstr, " TS_MAX_DELTA=%d TS_WARN_DELTA=%d", TS_MAX_DELTA, TS_WARN_DELTA);
 	 sendto_one(sptr, rpl_str(RPL_INFO),
 		    me.name, parv[0], outstr);
       }
@@ -2317,14 +2332,24 @@ m_connect(aClient *cptr,
     * Let's notify about local connects, too. - lucas
     * sendto_ops_butone -> sendto_serv_butone(), like in df. -mjs
     */
+#ifdef UMODE_N
+      sendto_gnotice("Received %s CONNECT %s -> %s from %s",
+		IsAnOper(cptr) ? "Local" : "Remote", parv[2] ? parv[2] : me.name, parv[1],
+		get_client_name(sptr, HIDEME));
+      sendto_serv_butone(&me, ":%s GNOTICE :Received %s CONNECT %s -> %s from %s", me.name,
+		IsAnOper(cptr) ? "Local" : "Remote",
+		parv[2] ? parv[2] : me.name, parv[1],
+		get_client_name(sptr, HIDEME));
+#else
    send_globops("from %s: %s CONNECT %s %s from %s",
 		me.name, IsAnOper(cptr) ? "Local" : "Remote", 
-		parv[1], parv[2] ? parv[2] : "",
+		parv[1],parv[2] ? parv[2] : "",
 		get_client_name(sptr, HIDEME));
    sendto_serv_butone(&me, ":%s GLOBOPS :%s CONNECT %s %s from %s",
 		me.name, IsAnOper(cptr) ? "Local" : "Remote", 
 		parv[1], parv[2] ? parv[2] : "",
 		get_client_name(sptr, HIDEME));
+#endif
 
 #if defined(USE_SYSLOG) && defined(SYSLOG_CONNECT)
    syslog(LOG_DEBUG, "CONNECT From %s : %s %s", parv[0], parv[1], parv[2] ? parv[2] : "");
@@ -2448,6 +2473,9 @@ char       *message;
  * m_gnotice  (Russell) sort of like wallop, but only to +g clients on *
  * this server. *      parv[0] = sender prefix *      parv[1] = message
  * text * ported from df465 to hybrid -mjs
+ *
+ * This function itself doesnt need any changes for the move to +n routing
+ * notices, to sendto takes care of it.  Now only sends to +n clients -epi
  */
 int
 m_gnotice(cptr, sptr, parc, parv)
@@ -3290,14 +3318,14 @@ m_kline(aClient *cptr,
 
 #ifndef K_COMMENT_ONLY
    if (temporary_kline_time)
-      (void) ircsprintf(buffer, "Temporary K-line %d min. for %s (%s)",
-			temporary_kline_time, reason, current_date);
+      (void) ircsprintf(buffer, "Temporary K-line %for %s (%s)",
+			reason, current_date);
    else
       (void) ircsprintf(buffer, "%s (%s)", reason, current_date);
 #else
    if (temporary_kline_time)
-      (void) ircsprintf(buffer, "Temporary K-line %d min. for %s (%s)",
-			temporary_kline_time, reason, current_date);
+      (void) ircsprintf(buffer, "Temporary K-line for %s (%s)",
+			reason, current_date);
    else
       (void) ircsprintf(buffer, "%s (%s)", reason, current_date);
 #endif

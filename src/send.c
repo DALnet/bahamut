@@ -82,10 +82,17 @@ dead_link(aClient *to, char *notice)
        * we need to tell the entire network, as well as local operators, 
        * just exactly why the server linked to us is dying. - lucas
        */
- 
       ircsprintf(fbuf, "from %s: %s", me.name, notice);
+#ifdef UMODE_N
+      sendto_gnotice(fbuf, get_client_name(to, HIDEME), strerror(errtmp));
+#else
       send_globops(fbuf, get_client_name(to, HIDEME), strerror(errtmp));
+#endif
+#ifdef UMODE_N
+      ircsprintf(fbuf, ":%s GNOTICE :%s", me.name, notice);
+#else
       ircsprintf(fbuf, ":%s GLOBOPS :%s", me.name, notice);
+#endif
       sendto_serv_butone(to, fbuf, get_client_name(to, HIDEME), strerror(errtmp));
    }
    Debug((DEBUG_ERROR, notice, get_client_name(to, FALSE)));
@@ -1612,11 +1619,11 @@ int         fd;
 #endif
    return;
 }
+
+#ifdef UMODE_N
 /*
- * sendto_gnotice used to send to all local ops, +g. the only change
- * from _locops is the outputted string. chances are, using
- * sendto_locops in s_serv.c will be just fine. however. ported from
- * df465 -mjs
+ * sendto_gnotice - Relay routing information to Local users set +n
+ * -Epiphani
  */
 #ifndef USE_VARARGS
 /*
@@ -1638,19 +1645,13 @@ va_list     vl;
 Reg aClient *cptr;
 Reg int     i;
 char        nbuf[1024];
-fdlist     *l;
-int         fd;
 
 #ifdef  USE_VARARGS
    va_start(vl);
 #endif
-   l = &oper_fdlist;
-   for (fd = l->entry[i = 1]; i <= l->last_entry; fd = l->entry[++i]) {
-      if (!(cptr = local[fd]))
-	 continue;
-      if (SendGlobops(cptr)) {
-
-	 (void) ircsprintf(nbuf, ":%s NOTICE %s :*** Global -- ",
+   for (i = 0; i <= highest_fd; i++) {
+      if ((cptr = local[i]) && !IsServer(cptr) && !IsMe(cptr) && SendRnotice(cptr)) {
+ 	 (void) ircsprintf(nbuf, ":%s NOTICE %s :*** Routing -- ",
 			   me.name, cptr->name);
 	 (void) strncat(nbuf, pattern,
 			sizeof(nbuf) - strlen(nbuf));
@@ -1667,6 +1668,8 @@ int         fd;
 #endif
    return;
 }
+
+#endif /* UMODE_N */
 
 /*
  * sendto_channelops_butone
