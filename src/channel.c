@@ -1912,7 +1912,7 @@ static int can_join(aClient *sptr, aChannel *chptr, char *key)
 #ifdef INVITE_LISTS            
     }
 #endif
-    return 0;
+    return error;
 }
 
 /*
