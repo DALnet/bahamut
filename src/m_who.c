@@ -466,7 +466,7 @@ int build_searchopts(aClient *sptr, int parc, char *parv[])
 			       wsopts.serv_plus || wsopts.nick_plus || 
 			       wsopts.user_plus || wsopts.ts_value || 
                    wsopts.client_type_plus || wsopts.ip_plus || 
-                   wsopts.chan_plus))
+                   wsopts.chan_plus || wsopts.cidr4_mask))
       {
 	  if(parv[args]==NULL)
 	  {
