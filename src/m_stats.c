@@ -1253,10 +1253,14 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
             if(!allows)
                 break;
             for(tmp = allows; tmp; tmp = tmp->next)
+            {
+                if (tmp->passwd && !(IsAnOper(sptr) || IsULine(sptr)))
+                    continue;
                 sendto_one(sptr, rpl_str(RPL_STATSILINE), me.name,
                            sptr->name, (tmp->legal == -1 ? "Ix" : "I"),
-                           tmp->ipmask, tmp->hostmask, tmp->port,
+                           tmp->ipmask, tmp->flags, tmp->hostmask, tmp->port,
                            tmp->class->name);
+            }
             break;
         }
         case 'k':

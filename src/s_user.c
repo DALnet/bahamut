@@ -498,7 +498,10 @@ register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
 
         if (sptr->user->allow->flags & CONF_FLAGS_NOTHROTTLE)
             throttle_remove(cptr->hostip);
-        
+
+        if (sptr->user->allow->flags & CONF_FLAGS_FORCEFLOOD)
+            SetNoMsgThrottle(sptr);
+
 #ifdef ANTI_SPAMBOT
         /* This appears to be broken */
         /* Check for single char in user->host -ThemBones */
@@ -1300,7 +1303,7 @@ int check_target_limit(aClient *sptr, aClient *acptr)
 
     /* don't limit opers, people talking to themselves,
      * or people talking to services */
-    if(IsOper(sptr) || sptr == acptr || IsULine(acptr))
+    if(IsOper(sptr) || sptr == acptr || IsULine(acptr) || NoMsgThrottle(sptr))
         return 0;
 
     max_targets = ((NOW - sptr->firsttime) > MSG_TARGET_MINTOMAXTIME) 
@@ -1492,7 +1495,7 @@ m_message(aClient *cptr, aClient *sptr, int parc, char *parv[], int notice)
          * (or even to channels) then subject them to flood control!
          * -Taner
          */
-        if (ismine && i++ > 10)
+        if (ismine && i++ > 10 && !NoMsgThrottle(sptr))
 #ifdef NO_OPER_FLOOD
             if (!IsAnOper(sptr))        
 #endif
@@ -3106,6 +3109,8 @@ m_umode(aClient *cptr, aClient *sptr, int parc, char *parv[])
 #else /* ALLOW_HIDDEN_OPERS */
         if (IsUmodeI(sptr)) ClearUmodeI(sptr);
 #endif
+        if (sptr->user->allow->flags & CONF_FLAGS_FORCEFLOOD)
+            SetNoMsgThrottle(sptr);
     }
     send_umode_out(cptr, sptr, setflags);
     

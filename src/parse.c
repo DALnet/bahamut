@@ -226,17 +226,17 @@ int parse(aClient *cptr, char *buffer, char *bufend)
 	 */
 	if ((mptr->flags & 1) && !(IsServer(cptr))) 
 	{
+        if (!NoMsgThrottle(cptr))
+        {
 #ifdef NO_OPER_FLOOD
-	    if (IsAnOper(cptr))
-            {
-		/* "randomly" (weighted) increase the since -- only if not +F */
-		if(!NoMsgThrottle(cptr))
-		    cptr->since += (cptr->receiveM % 10) ? 1 : 0;
-            }
-	    else
+            if (IsAnOper(cptr))
+                /* "randomly" (weighted) increase the since */
+                cptr->since += (cptr->receiveM % 10) ? 1 : 0;
+            else
 #endif
-		cptr->since += (2 + i / 120);
-	}
+                cptr->since += (2 + i / 120);
+        }
+    }
     }
     /*
      * Must the following loop really be so devious? On surface it

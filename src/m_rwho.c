@@ -132,7 +132,7 @@ static const char *rwho_help[] = {
     "There are three special output flags:",
     "  L<count>      - limit to N results (no space between L and <count>)",
     "  C             - no results, just supply match count in RPL_ENDOFWHO",
-    "  D             - returns only one match per host (summarize)",
+    "  D             - returns only one matching result per host (summarize)",
     NULL
 };
 
@@ -153,6 +153,7 @@ static struct {
     unsigned  stype;            /* services type */
     unsigned  ip_mask[2];       /* IP netmask */
     unsigned  ip_addr[2];       /* IP address */
+    char     *ip_str[2];        /* IP string if CIDR is invalid */
     ts_val    ts[2];            /* signon timestamp */
     int       joined[2];        /* min/max joined chans */
     int       clones[2];        /* min/max clones */
@@ -419,13 +420,17 @@ static int rwho_parseopts(aClient *sptr, int parc, char *parv[])
                 else
                     rwho_opts.ip_mask[neg] = ~0;
                 rwho_opts.ip_addr[neg] = inet_addr(parv[arg]);
-                if (rwho_opts.ip_addr[neg] == 0xFFFFFFFF
-                    || !rwho_opts.ip_mask[neg])
+                if (!rwho_opts.ip_mask[neg] ||
+                    (rwho_opts.ip_mask[neg] != ~0 &&
+                     rwho_opts.ip_addr[neg] == 0xFFFFFFFF))
                 {
                     rwho_synerr(sptr, "invalid CIDR IP for match flag i");
                     return 0;
                 }
-                rwho_opts.ip_addr[neg] &= rwho_opts.ip_mask[neg];
+                if (rwho_opts.ip_addr[neg] == 0xFFFFFFFF)
+                    rwho_opts.ip_str[neg] = parv[arg];
+                else
+                    rwho_opts.ip_addr[neg] &= rwho_opts.ip_mask[neg];
                 rwho_opts.check[neg] |= RWM_IP;
                 arg++;
                 break;
@@ -767,14 +772,6 @@ static int rwho_match(aClient *cptr, int *failcode, aClient **failclient)
         (cptr->user->joined > rwho_opts.joined[1]))
         return 0;
 
-    if ((rwho_opts.check[0] & RWM_IP) &&
-        ((cptr->ip.s_addr & rwho_opts.ip_mask[0]) != rwho_opts.ip_addr[0]))
-        return 0;
-
-    if ((rwho_opts.check[1] & RWM_IP) &&
-        ((cptr->ip.s_addr & rwho_opts.ip_mask[1]) != rwho_opts.ip_addr[1]))
-        return 0;
-    
     if ((rwho_opts.check[0] & RWM_MODES) &&
         ((cptr->umode & rwho_opts.umodes[0]) != rwho_opts.umodes[0]))
         return 0;
@@ -785,6 +782,30 @@ static int rwho_match(aClient *cptr, int *failcode, aClient **failclient)
 
     if ((rwho_opts.check[0] & RWM_CHANNEL) && !IsMember(cptr, rwho_opts.chptr))
         return 0;
+
+    if (rwho_opts.check[0] & RWM_IP)
+    {
+        if (rwho_opts.ip_str[0])
+        {
+            if (match(rwho_opts.ip_str[0], cptr->hostip))
+                return 0;
+        }
+        else if ((cptr->ip.s_addr & rwho_opts.ip_mask[0])
+                 != rwho_opts.ip_addr[0])
+            return 0;
+    }
+
+    if (rwho_opts.check[1] & RWM_IP)
+    {
+        if (rwho_opts.ip_str[1])
+        {
+            if (!match(rwho_opts.ip_str[1], cptr->hostip))
+                return 0;
+        }
+        else if ((cptr->ip.s_addr & rwho_opts.ip_mask[1])
+                 == rwho_opts.ip_addr[1])
+            return 0;
+    }
 
     if ((rwho_opts.check[0] & RWM_HOST) &&
         rwho_opts.host_func[0](rwho_opts.host_pat[0], cptr->user->host))

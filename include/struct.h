@@ -630,6 +630,8 @@ typedef struct Whowas
 #define CONF_FLAGS_I_MATCH_HOST    0x0020
 /* remove throttle on match? */
 #define CONF_FLAGS_NOTHROTTLE      0x0040
+/* force umode +F? */
+#define CONF_FLAGS_FORCEFLOOD      0x0080
 
 /* global configuration flags */
 

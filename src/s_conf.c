@@ -1125,10 +1125,19 @@ confadd_allow(cVar *vars[], int lnum)
             tmp->type = NULL;
             DupString(x->class_name, tmp->value);
         }
-        else if(tmp->type && (tmp->type->flag & SCONFF_NOTHROT))
+        else if(tmp->type && (tmp->type->flag & SCONFF_FLAGS))
         {
+            char *s = tmp->value;
+
+            while (*s)
+                switch (*s++)
+                {
+                    case 'm': x->flags |= CONF_FLAGS_I_OPERPORT; break;
+                    case 'T': x->flags |= CONF_FLAGS_NOTHROTTLE; break;
+                    case 'F': x->flags |= CONF_FLAGS_FORCEFLOOD; break;
+                }
+
             tmp->type = NULL;
-            x->flags |= CONF_FLAGS_NOTHROTTLE;
         }
     }
     if(!x->ipmask && !x->hostmask)
