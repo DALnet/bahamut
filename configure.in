@@ -352,7 +352,7 @@ if test "$solaris2" != "yes" && test "$set_hmodules" = "enabled"; then
     LIBS="$LIBS $MOD_LIBS"
 fi
 
-if test "$check_maxconnections" == "auto"; then
+if test "$check_maxconnections" = "auto"; then
 
     AC_MSG_CHECKING(Maximum file descriptors);
     AC_CACHE_VAL(maxconnections,

@@ -7018,7 +7018,7 @@ if test "$solaris2" != "yes" && test "$set_hmodules" = "enabled"; then
     LIBS="$LIBS $MOD_LIBS"
 fi
 
-if test "$check_maxconnections" == "auto"; then
+if test "$check_maxconnections" = "auto"; then
 
     echo "$as_me:$LINENO: checking Maximum file descriptors" >&5
 echo $ECHO_N "checking Maximum file descriptors... $ECHO_C" >&6;
