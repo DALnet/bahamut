@@ -534,14 +534,6 @@ void free_class(tmp)
     MyFree((char *) tmp);
 }
 
-Conf_Admin *make_admin()
-{
-	Conf_Admin *i;
-	i = (struct Conf_Admin *) MyMalloc(sizeof(Conf_Admin));
-	memset((char *) i, '\0', sizeof(Conf_Admin));
-	return i;
-}
-
 aOper *make_oper()
 {
 	aOper *i;

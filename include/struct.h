@@ -79,7 +79,6 @@ typedef struct Listener aListener;
 typedef struct Conf_Connect aConnect;
 typedef struct Conf_Allow aAllow;
 typedef struct Conf_Oper aOper;
-typedef struct Conf_Admin Conf_Admin;
 typedef struct Conf_Me Conf_Me;
 typedef struct Conf_Port aPort;
 typedef struct Conf_Userv aUserv;
@@ -609,14 +608,6 @@ typedef struct Whowas
 #define CONF_FLAGS_I_HOST_HAS_AT   0x0008
 
 
-struct Conf_Admin
-{
-	/* This is an A:line currently */
-	char *line1;
-	char *line2;
-	char *line3;
-};
-
 #define CONN_ZIP 	0x001	/* zippable    */
 #define CONN_DKEY	0x010	/* cryptable   */
 #define CONN_HUB	0x100	/* hubbable!   */
@@ -655,12 +646,14 @@ struct Conf_Allow
 
 struct Conf_Me
 {
-	/* combined X and M lines */
+	/* combined A, X and M lines */
 	char *servername;
-	char *ip;
 	char *info;
 	char *diepass;
 	char *restartpass;
+    char *aline1;
+    char *aline2;
+    char *aline3;
 };
 
 struct Conf_Oper

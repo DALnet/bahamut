@@ -585,8 +585,6 @@ int main(int argc, char *argv[])
     uid_t         uid, euid;
     int           fd;
     FILE 	*mcsfp;
-    u_long      vaddr;
-
 	
     if ((timeofday = time(NULL)) == -1) 
     {
@@ -841,11 +839,6 @@ int main(int argc, char *argv[])
     me.flags = FLAGS_LISTEN;
     me.fd = -1;
 	
-    if ((MeLine->ip[0] != '\0') && (MeLine->ip[0] != '*'))
-	vaddr = inet_addr(MeLine->ip);
-    else
-	vaddr = (u_long) NULL;
-		
     /* We don't want to calculate these every time they are used :) */
 	
     sprintf(REPORT_DO_DNS, REPORT_DO_DNS_, me.name);

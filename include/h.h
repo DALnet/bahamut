@@ -51,7 +51,6 @@ extern aConnect *connects;
 extern aAllow *allows;
 extern aPort *ports;
 extern Conf_Me *MeLine;
-extern Conf_Admin *AdminLine;
 extern aOper *opers;
 extern aUserv *uservers;
 

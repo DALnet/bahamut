@@ -2388,20 +2388,14 @@ int m_admin(aClient *cptr, aClient *sptr, int parc, char *parv[])
 			   sptr->name, sptr->user->username, sptr->user->host,
 			   sptr->user->server);
     
-    if (AdminLine) 
-    {
 	sendto_one(sptr, rpl_str(RPL_ADMINME),
 		   me.name, parv[0], me.name);
 	sendto_one(sptr, rpl_str(RPL_ADMINLOC1),
-		   me.name, parv[0], AdminLine->line1 ? AdminLine->line1 : "");
+		   me.name, parv[0], MeLine->aline1 ? MeLine->aline1 : "");
 	sendto_one(sptr, rpl_str(RPL_ADMINLOC2),
-		   me.name, parv[0], AdminLine->line2 ? AdminLine->line2 : "");
+		   me.name, parv[0], MeLine->aline2 ? MeLine->aline2 : "");
 	sendto_one(sptr, rpl_str(RPL_ADMINEMAIL),
-		   me.name, parv[0], AdminLine->line3 ? AdminLine->line3 : "");
-    }
-    else
-	sendto_one(sptr, err_str(ERR_NOADMININFO),
-		   me.name, parv[0], me.name);
+		   me.name, parv[0], MeLine->aline3 ? MeLine->aline3 : "");
     return 0;
 }
 

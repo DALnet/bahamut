@@ -754,7 +754,7 @@ static int check_init(aClient * cptr, char *sockn)
  * same status as the flags passed. 0 = Success -1 = Access denied -2 =
  * Bad socket.
  */
-int check_client(aClient * cptr)
+int check_client(aClient *cptr)
 {
     static char sockname[HOSTLEN + 1];
     struct hostent *hp = NULL;
@@ -764,7 +764,7 @@ int check_client(aClient * cptr)
        cptr->name, inetntoa((char *) &cptr->ip)));
 
     if (check_init(cptr, sockname))
-    return -2;
+        return -2;
 
     hp = cptr->hostp;
     /* 
@@ -773,24 +773,24 @@ int check_client(aClient * cptr)
      */
     if (hp)
     {
-    for (i = 0; hp->h_addr_list[i]; i++)
-        if (!memcmp(hp->h_addr_list[i], (char *) &cptr->ip,
-            sizeof(struct in_addr))) break;
+        for (i = 0; hp->h_addr_list[i]; i++)
+            if (!memcmp(hp->h_addr_list[i], (char *) &cptr->ip,
+                    sizeof(struct in_addr))) 
+                break;
 
-    if (!hp->h_addr_list[i])
-    {
-        sendto_one(cptr,
-               "NOTICE AUTH :*** Your forward and reverse DNS do "
-               "not match, ignoring hostname.");
-        hp = NULL;
-    }
+        if (!hp->h_addr_list[i])
+        {
+            sendto_one(cptr, "NOTICE AUTH :*** Your forward and reverse"
+                             " DNS do not match, ignoring hostname.");
+            hp = NULL;
+        }
     }
 
     if ((i = attach_Iline(cptr, hp, sockname)))
     {
-    Debug((DEBUG_DNS, "ch_cl: access denied: %s[%s]",
-           cptr->name, sockname));
-    return i;
+        Debug((DEBUG_DNS, "ch_cl: access denied: %s[%s]",
+                cptr->name, sockname));
+        return i;
     }
 
     Debug((DEBUG_DNS, "ch_cl: access ok: %s[%s]", cptr->name, sockname));
@@ -798,8 +798,8 @@ int check_client(aClient * cptr)
     if (inet_netof(cptr->ip) == IN_LOOPBACKNET ||
     inet_netof(cptr->ip) == inet_netof(mysk.sin_addr))
     {
-    ircstp->is_loc++;
-    cptr->flags |= FLAGS_LOCAL;
+        ircstp->is_loc++;
+        cptr->flags |= FLAGS_LOCAL;
     }
     return 0;
 }
