@@ -1171,13 +1171,14 @@ fi
 echo "#endif" >> $OPTIONS_H
 echo "" >> $OPTIONS_H
 echo "#endif /* This is the endif for the ifdef at the top. */" >> $OPTIONS_H
-### now insert the FDLIMIT in the makefile
-cat Makefile | sed s/'FDLIMIT=.*'/FDLIMIT=-DFD_SETSIZE=${FDLIMIT}/ > Makefile.tmp 
 ### use poll?
 if [ -n "$USEPOLL" ] ; then
-   cat Makefile.tmp | sed s/'XFLAGS=.*'/XFLAGS=-DUSE_POLL/ > Makefile
+   cat Makefile | sed s/'XFLAGS=.*'/XFLAGS=-DUSE_POLL/ > Makefile.tmp
+   cat Makefile.tmp > Makefile
 else
-   cat Makefile.tmp | sed s/'XFLAGS=.*'/XFLAGS=/ > Makefile
+   cat Makefile | sed s/'XFLAGS=.*'/XFLAGS=/ > Makefile.tmp
+   ### now insert the FDLIMIT in the makefile
+   cat Makefile.tmp | sed s/'FDLIMIT=.*'/FDLIMIT=-DFD_SETSIZE=${FDLIMIT}/ > Makefile
 fi
 echo "Done."
 echo ""
