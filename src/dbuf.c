@@ -65,6 +65,10 @@ void dbuf_init()
   dbp->next = NULL;
   dbufblocks++;
   maxdbufblocks = dbufblocks;
+#ifdef DEBUG_DBUF
+  for (i=0;i<=DBUFTABLE;i++) dbuftable[i].ptr=NULL;
+#endif
+
 }
 #endif
 /*
@@ -128,11 +132,11 @@ static int dbuf_malloc_error(dbuf *dyn)
 #ifdef DEBUG_DBUF
 int dbuf__put(dbuf *dyn,char *buf, int length, char *file, short line, char *function) {
    int ret;
-   dbuftableused++;
    dbuftable[dbuftableused].ptr=dyn;
    dbuftable[dbuftableused].line=line;
    strcpy(dbuftable[dbuftableused].file, file);
    strcpy(dbuftable[dbuftableused].function, function);
+   dbuftableused++;
    ret=r_dbuf_put(dyn, buf, length);
    return ret;
 }
