@@ -1018,6 +1018,7 @@ initconf(int opt, int fd, aClient *rehasher)
         if (t_status == CONF_ME)
         {
             confadd_me(t_host, t_name, 0, 0, 0, 0, 0);
+            confadd_port(atoi(t_flags), NULL, t_passwd);
             continue;
         }
 
