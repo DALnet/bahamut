@@ -12,16 +12,16 @@
 #include "numeric.h"
 #include "blalloc.h"
 
-Link *server_list = NULL;
-Link *oper_list = NULL;
+DLink *server_list = NULL;
+DLink *oper_list = NULL;
 
 /* Clients currently doing a /list */
-Link *listing_clients = NULL;
-Link *recvq_clients = NULL;
+DLink *listing_clients = NULL;
+DLink *recvq_clients = NULL;
 
-int get_list_memory(Link *list)
+int get_list_memory(DLink *list)
 {
-   Link *lp;
+   DLink *lp;
    int count = 0;
 
    for(lp = list; lp; lp = lp->next)
@@ -36,50 +36,65 @@ void print_list_memory(aClient *cptr)
 
    lc = get_list_memory(server_list);
    sendto_one(cptr, ":%s %d %s :   server_list %d(%d)",
-              me.name, RPL_STATSDEBUG, cptr->name, lc, lc * sizeof(Link));
+              me.name, RPL_STATSDEBUG, cptr->name, lc, lc * sizeof(DLink));
 
    lc = get_list_memory(oper_list);
    sendto_one(cptr, ":%s %d %s :   oper_list %d(%d)",
-              me.name, RPL_STATSDEBUG, cptr->name, lc, lc * sizeof(Link));
+              me.name, RPL_STATSDEBUG, cptr->name, lc, lc * sizeof(DLink));
 
    lc = get_list_memory(listing_clients);
    sendto_one(cptr, ":%s %d %s :   listing_clients %d(%d)",
-              me.name, RPL_STATSDEBUG, cptr->name, lc, lc * sizeof(Link));
+              me.name, RPL_STATSDEBUG, cptr->name, lc, lc * sizeof(DLink));
 
    lc = get_list_memory(recvq_clients);
    sendto_one(cptr, ":%s %d %s :   recvq_clients %d(%d)",
-              me.name, RPL_STATSDEBUG, cptr->name, lc, lc * sizeof(Link));
+              me.name, RPL_STATSDEBUG, cptr->name, lc, lc * sizeof(DLink));
 }
 
-void add_to_list(Link **list, aClient *cptr) 
+void add_to_list(DLink **list, aClient *cptr) 
 {
-   Link *lp = make_link();
+   DLink *lp = make_dlink();
   
    lp->value.cptr = cptr;
    lp->next = *list;
+   lp->prev = NULL;
+   if(lp->next)
+      lp->next->prev = lp;
    *list = lp;
 }
 
-void remove_from_listP(Link **list, Link *lp, Link *prev)
+static inline void remove_dlink_list(DLink **list, DLink *link)
 {
-   if(prev)
-      prev->next = lp->next;
+   if(link->next)
+     link->next->prev = link->prev;
+
+   if(link->prev)
+      link->prev->next = link->next;
    else
-      *list = lp->next;
-   free_link(lp);
-   
-   return;
+   {
+      *list = link->next;
+      if(*list)
+         (*list)->prev = NULL;
+   }
+
+   free_dlink(link);
 }
 
-void remove_from_list(Link **list, aClient *cptr)
+void remove_from_list(DLink **list, aClient *cptr, DLink *link)
 {
-   Link *lp, *prev;
+   DLink *lp;
 
-   for(lp = *list, prev = NULL; lp; prev = lp, lp = lp->next)
+   if(link)
+   {
+      remove_dlink_list(list, link);
+      return;
+   }
+
+   for(lp = *list; lp; lp = lp->next)
    {
       if(lp->value.cptr == cptr)
       {
-         remove_from_listP(list, lp, prev);
+         remove_dlink_list(list, lp);
          return;
       }
    }

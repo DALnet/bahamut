@@ -20,6 +20,11 @@ PATCH=`grep 'PATCH ' include/patchlevel.h | sed s/'.define PATCH '// | xargs ech
 BROKEN_SELECT=`grep 'BROKEN_FD_SETSIZE' include/setup.h | sed s/'.define BROKEN_FD_SETSIZE'// | xargs echo -n`
 IRCD=`printf '%s(%s)-%i.%i.%i' ${BASENAME} ${BRANCH} ${MAJOR} ${MINOR} ${PATCH}`
 OPTIONS_H="include/options.h"
+if [ -n "$BROKEN_SELECT" ] ; then
+    BROKEN_SELECT=""
+else
+    BROKEN_SELECT="1"
+fi
 ##
 ##
 # Now we look to options.h, and if it exists (has been run already)

@@ -43,10 +43,10 @@ extern aMotd *shortmotd;
 extern aMotd *helpfile;		/* oper helpfile is a link list of aMotd */
 #include "dich_conf.h"
 
-extern Link *server_list;
-extern Link *oper_list;
-extern Link *listing_clients;
-extern Link *recvq_clients;
+extern DLink *server_list;
+extern DLink *oper_list;
+extern DLink *listing_clients;
+extern DLink *recvq_clients;
 
 extern aConfList EList1;
 extern aConfList EList2;
@@ -218,6 +218,7 @@ extern int 	  del_silence(aClient *, char *);
 
 extern void 	  free_client(aClient *);
 extern void 	  free_link(Link *);
+extern void 	  free_dlink(DLink *);
 extern void 	  free_chanmember(chanMember *);
 extern void  	  free_conf(aConfItem *);
 extern void 	  free_class(aClass *);
@@ -225,6 +226,7 @@ extern void 	  free_user(anUser *, aClient *);
 extern void 	  free_channel(aChannel *);
 extern aChannel  *make_channel();
 extern Link 	 *make_link(void);
+extern DLink 	 *make_dlink(void);
 extern chanMember *make_chanmember(void);
 extern anUser 	 *make_user(aClient *);
 extern aConfItem *make_conf(void);
@@ -328,9 +330,8 @@ extern int     	  hash_del_watch_list(aClient  *);
 extern aWatch 	 *hash_get_watch(char *);
 #define MAXWATCH       128
 
-void add_to_list(Link **, aClient *);
-void remove_from_listP(Link **, Link *, Link *);
-void remove_from_list(Link **, aClient *);
+void add_to_list(DLink **, aClient *);
+void remove_from_list(DLink **, aClient *, DLink *);
 void print_list_memory(aClient *);
 
 #include "find.h"

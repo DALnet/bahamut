@@ -991,7 +991,7 @@ int main(int argc, char *argv[])
 
 void do_recvqs()
 {
-   Link *lp, *lpn, *lpprev = NULL;
+   DLink *lp, *lpn;
    aClient *cptr;
 
    for(lp = recvq_clients; lp; lp = lpn)
@@ -1004,17 +1004,15 @@ void do_recvqs()
 
       if(!(DBufLength(&cptr->recvQ) && !NoNewLine(cptr)))
       {
-         remove_from_listP(&recvq_clients, lp, lpprev);
+         remove_from_list(&recvq_clients, cptr, lp);
          cptr->flags &= ~(FLAGS_HAVERECVQ);
       }
-      else
-         lpprev = lp;
    }
 }
 
 void send_safelists()
 {
-   Link *lp, *lpn;
+   DLink *lp, *lpn;
    aClient *cptr;
 
    for(lp = listing_clients; lp; lp = lpn)

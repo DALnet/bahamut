@@ -433,7 +433,7 @@ void exit_one_server(aClient *cptr, aClient *dead, aClient *from,
 		     aClient *lcptr, char *spinfo, char *comment)
 {
     aClient *acptr, *next;
-    Link *lp;
+    DLink *lp;
 
     /* okay, this is annoying.
      * first off, we need two loops.
@@ -571,9 +571,9 @@ int exit_client(aClient *cptr, aClient *sptr, aClient *from, char *comment)
 	if (sptr->flags & FLAGS_IPHASH)
 	    remove_one_ip(sptr->ip.s_addr);
 	if (IsAnOper(sptr)) 
-	    remove_from_list(&oper_list, sptr);
+	    remove_from_list(&oper_list, sptr, NULL);
 	if (sptr->flags & FLAGS_HAVERECVQ)
-	    remove_from_list(&recvq_clients, sptr);
+	    remove_from_list(&recvq_clients, sptr, NULL);
 	if (IsClient(sptr))
 	    Count.local--;
 	if (IsNegoServer(sptr))
@@ -585,7 +585,7 @@ int exit_client(aClient *cptr, aClient *sptr, aClient *from, char *comment)
 	    Count.myserver--;
 	    if (IsULine(sptr))
 		Count.myulined--;
-	    remove_from_list(&server_list, sptr);
+	    remove_from_list(&server_list, sptr, NULL);
 #ifdef NO_CHANOPS_WHEN_SPLIT
 	    if (server_list == NULL) 
 	    {
@@ -604,7 +604,7 @@ int exit_client(aClient *cptr, aClient *sptr, aClient *from, char *comment)
 	    /* if they have listopts, axe those, too */
 	    if(lopt != NULL) 
 	    {
-		remove_from_list(&listing_clients, sptr);
+		remove_from_list(&listing_clients, sptr, NULL);
 		for (lp = lopt->yeslist; lp; lp = next) 
 		{
 		    next = lp->next;
@@ -1044,7 +1044,7 @@ void serv_info(aClient *cptr, char *name)
     static char Lformat[] = ":%s %d %s %s %u %u %u %u %u :%u %u %s";
     long        sendK, receiveK, uptime;
     aClient    *acptr;
-    Link       *lp;
+    DLink      *lp;
     int         i = 0;
 
     sendK = receiveK = 0;
@@ -1105,7 +1105,7 @@ void serv_info(aClient *cptr, char *name)
 void show_opers(aClient *cptr, char *name)
 {
     aClient *cptr2;
-    Link *lp;
+    DLink *lp;
     int j = 0;
 
     for (lp = oper_list; lp; lp = lp->next)
@@ -1139,7 +1139,7 @@ void show_opers(aClient *cptr, char *name)
 void show_servers(aClient *cptr, char *name)
 {
     aClient *cptr2;
-    Link *lp;
+    DLink *lp;
     int j = 0;
 
     for (lp = server_list; lp; lp = lp->next)

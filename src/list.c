@@ -44,6 +44,7 @@ extern int  BlockHeapGarbageCollect(BlockHeap *);
  */
 
 #define LINK_PREALLOCATE 1024
+#define DLINK_PREALLOCATE 128
 #define CHANMEMBER_PREALLOCATE 1024
 /*
  * Number of aClient structures to preallocate at a time for Efnet 1024
@@ -65,6 +66,7 @@ int         numclients = 0;
 /* for jolo's block allocator */
 BlockHeap  *free_local_aClients;
 BlockHeap  *free_Links;
+BlockHeap  *free_DLinks;
 BlockHeap  *free_chanMembers;
 BlockHeap  *free_remote_aClients;
 BlockHeap  *free_anUsers;
@@ -79,6 +81,7 @@ void initlists()
 {
     /* Might want to bump up LINK_PREALLOCATE if FLUD is defined */
     free_Links = BlockHeapCreate((size_t) sizeof(Link), LINK_PREALLOCATE);
+    free_DLinks = BlockHeapCreate((size_t) sizeof(DLink), DLINK_PREALLOCATE);
     free_chanMembers = BlockHeapCreate((size_t) sizeof(chanMember),
 				       CHANMEMBER_PREALLOCATE);
     
@@ -472,6 +475,29 @@ void free_link(Link *lp)
 {
     if (BlockHeapFree(free_Links, lp)) {
 	sendto_ops("list.c couldn't BlockHeapFree(free_Links,lp) lp = %lX", 
+		   lp);
+	sendto_ops("Please report to the bahamut team!");
+    }
+}
+
+DLink *make_dlink()
+{
+    DLink   *lp;
+    lp = BlockHeapALLOC(free_DLinks, DLink);
+    
+    if (lp == (DLink *) NULL)
+	outofmemory();
+    
+    lp->next = (DLink *) NULL;	/* just to be paranoid... */
+    lp->prev = (DLink *) NULL;	/* just to be paranoid... */
+
+    return lp;
+}
+
+void free_dlink(DLink *lp)
+{
+    if (BlockHeapFree(free_DLinks, lp)) {
+	sendto_ops("list.c couldn't BlockHeapFree(free_DLinks,lp) lp = %lX", 
 		   lp);
 	sendto_ops("Please report to the bahamut team!");
     }

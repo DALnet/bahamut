@@ -658,7 +658,7 @@ void sendto_serv_butone_services(aClient *one, char *pattern, ...)
     int k = 0;
     fdlist send_fdlist;
     va_list vl;
-    Link *lp;
+    DLink *lp;
 
     va_start(vl, pattern);
     for (lp = server_list; lp; lp = lp->next)
@@ -691,7 +691,7 @@ void sendto_serv_butone(aClient *one, char *pattern, ...)
     int k = 0;
     fdlist send_fdlist;
     va_list vl;
-    Link *lp;
+    DLink *lp;
 	
     va_start(vl, pattern);
     for(lp = server_list; lp; lp = lp->next)
@@ -721,7 +721,7 @@ void sendto_noquit_servs_butone(int noquit, aClient *one, char *pattern, ...)
     int k = 0;
     fdlist send_fdlist;
     va_list vl;
-    Link *lp;
+    DLink *lp;
 	
     va_start(vl, pattern);
     for(lp = server_list; lp; lp = lp->next)
@@ -756,7 +756,7 @@ void sendto_nickip_servs_butone(int nickip, aClient *one, char *pattern, ...)
     int k = 0;
     fdlist send_fdlist;
     va_list vl;
-    Link *lp;
+    DLink *lp;
 	
     va_start(vl, pattern);
     for(lp = server_list; lp; lp = lp->next)
@@ -1009,7 +1009,7 @@ void sendto_tsmode_servs(int tsmode, aChannel *chptr, aClient *from,
     int k = 0;
     aClient *cptr;
     va_list vl;
-    Link *lp;
+    DLink *lp;
 	
     if (chptr) 
     {
@@ -1048,7 +1048,7 @@ void sendto_match_servs(aChannel *chptr, aClient *from, char *pattern, ...)
     int k = 0;
     aClient *cptr;
     va_list vl;
-    Link *lp;
+    DLink *lp;
 
     if (chptr) 
     {
@@ -1311,7 +1311,7 @@ void send_globops(char *pattern, ...)
     aClient *cptr;
     char nbuf[1024];
     va_list vl;
-    Link *lp;
+    DLink *lp;
 	  
     va_start(vl, pattern);
     for (lp = oper_list; lp; lp = lp->next)
@@ -1336,7 +1336,7 @@ void send_chatops(char *pattern, ...)
     aClient *cptr;
     char nbuf[1024];
     va_list vl;
-    Link *lp;
+    DLink *lp;
 	  
     va_start(vl, pattern);
     for (lp = oper_list; lp; lp = lp->next)
@@ -1610,7 +1610,7 @@ void vsendto_realops(char *pattern, va_list vl)
 {
     aClient *cptr;
     char nbuf[1024];
-    Link *lp;
+    DLink *lp;
 
     for (lp = oper_list; lp; lp = lp->next)
     {
@@ -1651,7 +1651,7 @@ void sendto_realops_lev(int lev, char *pattern, ...)
     aClient *cptr;
     char nbuf[1024];
     va_list vl;
-    Link *lp;
+    DLink *lp;
 
     va_start(vl, pattern);
 
@@ -1750,7 +1750,7 @@ void sendto_locops(char *pattern, ...)
     aClient *cptr;
     char nbuf[1024];
     va_list vl;
-    Link *lp;
+    DLink *lp;
 
     va_start(vl, pattern);
 
@@ -1775,7 +1775,7 @@ void sendto_gnotice(char *pattern, ...)
     aClient *cptr;
     char nbuf[1024];
     va_list vl;
-    Link *lp;
+    DLink *lp;
 	
     va_start(vl, pattern);
 

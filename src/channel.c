@@ -2462,7 +2462,7 @@ void send_list(aClient *cptr, int numsend)
 	
 	MyFree(cptr->user->lopt);
 	cptr->user->lopt = NULL;
-	remove_from_list(&listing_clients, cptr);
+	remove_from_list(&listing_clients, cptr, NULL);
 	return;
     }
     
@@ -2536,7 +2536,7 @@ int m_list(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	}
 	MyFree(sptr->user->lopt);
 	sptr->user->lopt = NULL;
-	remove_from_list(&listing_clients, sptr);
+	remove_from_list(&listing_clients, sptr, NULL);
 	return 0;
     }
 

@@ -253,6 +253,7 @@ void count_memory(aClient *cptr, char *nick)
 
     extern BlockHeap *free_local_aClients;
     extern BlockHeap *free_Links;
+    extern BlockHeap *free_DLinks;
     extern BlockHeap *free_remote_aClients;
     extern BlockHeap *free_anUsers;
     extern BlockHeap *free_channels;
@@ -325,11 +326,12 @@ void count_memory(aClient *cptr, char *nick)
     int rcalloc = 0; 	/* remote clients allocated */
     int useralloc = 0; 	/* allocated users */
     int linkalloc = 0; 	/* allocated links */
+    int dlinkalloc = 0; /* allocated dlinks */
     int totallinks = 0; /* total links used */
     int chanalloc = 0; /* total channels alloc'd */
     int cmemballoc = 0;
     u_long lcallocsz = 0, rcallocsz = 0; /* size for stuff above */
-    u_long userallocsz = 0, linkallocsz = 0, chanallocsz = 0, cmemballocsz = 0;
+    u_long userallocsz = 0, linkallocsz = 0, dlinkallocsz = 0, chanallocsz = 0, cmemballocsz = 0;
 
     int fludalloc = 0;
     u_long fludallocsz = 0;
@@ -445,6 +447,9 @@ void count_memory(aClient *cptr, char *nick)
     linkalloc = free_Links->blocksAllocated * free_Links->elemsPerBlock;
     linkallocsz = linkalloc * free_Links->elemSize;
 
+    dlinkalloc = free_DLinks->blocksAllocated * free_DLinks->elemsPerBlock;
+    dlinkallocsz = dlinkalloc * free_DLinks->elemSize;
+
     chanalloc = free_channels->blocksAllocated * free_channels->elemsPerBlock;
     chanallocsz = chanalloc * free_channels->elemSize;
 
@@ -492,7 +497,9 @@ void count_memory(aClient *cptr, char *nick)
     sendto_one(cptr, ":%s %d %s :   Fludees %d(%d)",
 	       me.name, RPL_STATSDEBUG, nick, fludlink, fludlink*sizeof(Link));
 
-    /* Print summary of LINKs used in clientlist.c */
+    sendto_one(cptr, ":%s %d %s :DLinks ALLOC %d(%d)",
+	       me.name, RPL_STATSDEBUG, nick, dlinkalloc, dlinkallocsz);
+    /* Print summary of DLINKs used in clientlist.c */
     print_list_memory(cptr);
 	
     sendto_one(cptr, ":%s %d %s :WATCH headers %d(%d)",
@@ -568,8 +575,8 @@ void count_memory(aClient *cptr, char *nick)
     tothash = (sizeof(aHashEntry)*U_MAX)+(sizeof(aHashEntry)*CH_MAX) +
 	(sizeof(aWatch *)*WATCHHASHSIZE) + (sizeof(aWhowas *)*WW_MAX);
 
-    tot = totww + totch + totcl + totmisc + db + rm + tothash + linkallocsz +
-	fludallocsz + totuban;
+    tot = totww + totch + totcl + totmisc + db + rm + tothash + linkallocsz + 
+          dlinkallocsz + fludallocsz + totuban;
 
     sendto_one(cptr, ":%s %d %s :whowas %d chan %d client/user %d misc %d "
 	       "dbuf %d hash %d res %d link %d flud %d userban %d",

@@ -69,6 +69,7 @@ typedef struct Channel aChannel;
 typedef struct User anUser;
 typedef struct Server aServer;
 typedef struct SLink Link;
+typedef struct SLinkD DLink;
 typedef struct ChanLink chanMember;
 typedef struct SMode Mode;
 typedef struct Watch aWatch;
@@ -938,6 +939,22 @@ struct ChanLink
 struct SLink 
 {
     struct SLink *next;
+    union
+    {
+	aClient    *cptr;
+	aChannel   *chptr;
+	aConfItem  *aconf;
+	aBan       *banptr;
+	aWatch *wptr;
+	char       *cp;
+    } value;
+    int         flags;
+};
+
+struct SLinkD
+{
+    struct SLinkD *next;
+    struct SLinkD *prev;
     union
     {
 	aClient    *cptr;

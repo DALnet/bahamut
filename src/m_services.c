@@ -515,7 +515,7 @@ int m_svsmode(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		    if(MyConnect(acptr) && what == MODE_DEL && 
                        (flag == UMODE_o || flag == UMODE_O) && 
 		       !IsAnOper(acptr)) 
-			remove_from_list(&oper_list, acptr);
+			remove_from_list(&oper_list, acptr, NULL);
 
 		    break;
 		}

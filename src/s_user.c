@@ -3059,7 +3059,7 @@ int m_umode(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	Count.oper--;
 	if (MyConnect(sptr))
 	{
-	    remove_from_list(&oper_list, sptr);
+	    remove_from_list(&oper_list, sptr, NULL);
 
 	    /*
 	     * Now that the user is no longer opered, let's return
@@ -3193,7 +3193,7 @@ void send_umode(aClient *cptr, aClient *sptr, int old, int sendmask,
 void send_umode_out(aClient *cptr, aClient *sptr, int old)
 {
     aClient *acptr;
-    Link *lp;
+    DLink *lp;
 
     send_umode(NULL, sptr, old, SEND_UMODES, buf);
 
