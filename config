@@ -7,6 +7,7 @@
 #
 if [ ! -f Makefile ] ; then  
 echo "You've not run configure, please run that first."
+exit
 fi
 
 ##############   SET THESE VARIABLES CORRECTLY!@ ##############
@@ -1124,7 +1125,7 @@ echo "#endif" >> $OPTIONS_H
 echo "" >> $OPTIONS_H
 echo "#endif /* This is the endif for the ifdef at the top. */" >> $OPTIONS_H
 ### now insert the FDLIMIT in the makefile
-cat Makefile | sed s/'FDLIMIT.*'/FDLIMIT=-DFD_SETSIZE=${FDLIMIT}/ > Makefile.tmp 
+cat Makefile | sed s/'FDLIMIT=.*'/FDLIMIT=-DFD_SETSIZE=${FDLIMIT}/ > Makefile.tmp 
 ### use poll?
 if [ -n "$USEPOLL" ] ; then
    cat Makefile.tmp | sed s/'XFLAGS=.*'/XFLAGS=-DUSE_POLL/ > Makefile
