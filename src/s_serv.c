@@ -641,9 +641,9 @@ m_server(aClient *cptr, aClient *sptr, int parc, char *parv[])
    if (!DoesTS(cptr)) 
    {
       sendto_gnotice("from %s: Warning: %s linked, non-TS server",
-		me.name, get_client_name(cptr, HIDEME));
+		me.name, get_client_name(cptr, TRUE));
       sendto_serv_butone(cptr, ":%s GNOTICE :Warning: %s linked, non-TS server",
-		me.name, get_client_name(cptr, HIDEME));
+		me.name, get_client_name(cptr, TRUE));
    }
 	
    strncpyzt(cptr->name, host, sizeof(cptr->name));
