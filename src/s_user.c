@@ -1087,6 +1087,7 @@ char *exploits_3char[] =
     "lnk",
     "shs",
     "htm",
+    "zip",
     NULL
 };
 
