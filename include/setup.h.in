@@ -145,8 +145,8 @@
 /* Define if using rc4.c and dh.c */
 #undef HAVE_ENCRYPTION_ON
 
-/* Define if you are including the drone.so module */
-#undef USE_DRONEMODULE
+/* Define if you are including hook module support */
+#undef USE_HOOKMODULES
 
 /* Define if FD_SETSIZE is hardcoded on this machine (broken) */
 #undef BROKEN_FD_SETSIZE

@@ -44,6 +44,7 @@
 #include <fcntl.h>
 #include <utmp.h>
 #include <sys/resource.h>
+#include "hooks.h"
 
 #ifdef	AIX
 #include <time.h>
@@ -1308,6 +1309,9 @@ aClient *add_connection(aClient * cptr, int fd)
 
 	return NULL;
     }
+
+    if(call_hooks(CHOOK_PREACCESS, acptr) == FLUSH_BUFFER)
+       return NULL;
 
 #ifdef SHOW_HEADERS
     sendto_one(acptr, REPORT_DO_DNS);

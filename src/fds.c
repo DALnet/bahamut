@@ -30,11 +30,6 @@ struct afd_entry {
 
 struct afd_entry fd_list[MAXCONNECTIONS];
 
-#define FDT_AUTH      1
-#define FDT_RESOLVER  2
-#define FDT_CLIENT    3
-#define FDT_LISTENER  4
-
 static char *type_string(int type)
 {
    switch(type)
@@ -53,6 +48,9 @@ static char *type_string(int type)
 
       case FDT_LISTENER:
          return "listener";
+
+      case FDT_CALLBACKP:
+         return "callback";
    }
 
    return "???";

@@ -176,23 +176,8 @@ int m_version(aClient *cptr, aClient *sptr, int parc, char *parv[])
     if (hunt_server(cptr, sptr, ":%s VERSION :%s", 1, parc, parv) ==
 	HUNTED_ISME)
     {
-#ifdef USE_DRONEMODULE
-	if(IsAnOper(sptr) || IsServer(sptr) || IsULine(sptr))
-	{
-	    char tmpbuf[256], dverbuf[128];
-
-	    if(short_drone_mod_version(dverbuf, 128) == NULL)
-		ircsnprintf(tmpbuf, 256, "%s nodm", serveropts);
-	    else
-		ircsnprintf(tmpbuf, 256, "%s dm(%s)", serveropts, dverbuf);
-
-	    sendto_one(sptr, rpl_str(RPL_VERSION), me.name,
-		       parv[0], version, debugmode, me.name, tmpbuf);
-	}
-	else
-#endif
-	    sendto_one(sptr, rpl_str(RPL_VERSION), me.name,
-		       parv[0], version, debugmode, me.name, serveropts);
+	sendto_one(sptr, rpl_str(RPL_VERSION), me.name,
+		   parv[0], version, debugmode, me.name, serveropts);
     }
     return 0;
 }
@@ -1537,14 +1522,6 @@ int m_info(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		       TS_MAX_DELTA, TS_WARN_DELTA);
 	    sendto_one(sptr, rpl_str(RPL_INFO),
 		       me.name, parv[0], outstr);
-#ifdef USE_DRONEMODULE
-	    strcpy(outstr, "  ");
-	    if(drone_mod_version(outstr + 2, sizeof(outstr) - 2))
-	    {
-		sendto_one(sptr, rpl_str(RPL_INFO), me.name, parv[0], "Drone module version:");
-		sendto_one(sptr, rpl_str(RPL_INFO), me.name, parv[0], outstr);
-	    }
-#endif
 	}
 
 
@@ -4204,13 +4181,6 @@ int m_rehash(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	   sendto_ops("%s is rehashing throttles", parv[0]);
 	   return 0;
 	}
-	else if(mycmp(parv[1], "DRONES") == 0) {
-	   sendto_ops("%s is rehashing drones", parv[0]);
-	   sendto_one(sptr, rpl_str(RPL_REHASHING), me.name, parv[0],
-		 "drones");
-	   drone_rehash();
-	   return 0;
-	}
     }
     else 
     {
@@ -4375,6 +4345,7 @@ int m_trace(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		   parv[0], tname);
 	return 0;	 
     }
+
     if (dow && lifesux && !IsOper(sptr)) 
     {
 	sendto_one(sptr, rpl_str(RPL_LOAD2HI), me.name, parv[0]);

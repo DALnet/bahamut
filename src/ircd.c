@@ -807,9 +807,6 @@ int main(int argc, char *argv[])
     /* init the kline/akill system */
     init_userban();
 
-    /* init/load the drone module */
-    drone_init();
-
     initlists();
     initclass();
     initwhowas();
@@ -1033,6 +1030,9 @@ void io_loop()
     long lastrecvK = 0;
     int  lrv = 0;
 #endif
+
+    time_t	next10sec = 0; /* For events we do every 10 seconds */
+
     time_t	lastbwcalc = 0;
     long	lastbwSK = 0, lastbwRK = 0;
     time_t      lasttimeofday;
@@ -1090,7 +1090,6 @@ void io_loop()
 	/* Wrapped this in #ifndef HUB as on a hub it's silly */
 
 #ifndef HUB
-
 	if ((timeofday - lasttime) >= LCF) 
 	{
 	    lrv = LRV * LCF;
@@ -1100,24 +1099,6 @@ void io_loop()
 	    {
 		if (!lifesux) 
 		{
-		    /*
-		     * In the original +th code Taner had
-		     * 
-		     * LCF << 1;  / * add hysteresis * /
-		     * 
-		     * which does nothing... so, the hybrid team changed it to
-		     * 
-		     * LCF <<= 1;  / * add hysteresis * /
-		     * 
-		     * suddenly there were reports of clients mysteriously just
-		     * dropping off... Neither rodder or I can see why it makes
-		     * a difference, but lets try it this way...
-		     * 
-		     * The original dog3 code, does not have an LCF variable
-		     * 
-		     * -Dianora
-		     * 
-		     */
 		    lifesux = 1;
 
 		    if (noisy_htm) 
@@ -1188,6 +1169,11 @@ void io_loop()
 	    nextbanexpire = NOW + 31;
 	    expire_userbans();
 	    throttle_timer(NOW);
+	}
+
+	if (timeofday >= next10sec)
+	{
+	    next10sec = timeofday + 10;
 	}
 
 	/*

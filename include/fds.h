@@ -5,11 +5,17 @@
 #define fdfprintf(x, y...)
 #endif
 
+struct fd_callbackp {
+   void (*callback)(struct fd_callbackp *);
+   void *param;
+};
+
 #define FDT_NONE      0
 #define FDT_AUTH      1
 #define FDT_RESOLVER  2
 #define FDT_CLIENT    3
 #define FDT_LISTENER  4
+#define FDT_CALLBACKP 5
 
 #define FDF_WANTREAD  0x01
 #define FDF_WANTWRITE 0x02

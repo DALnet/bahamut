@@ -202,6 +202,14 @@ int engine_read_message(time_t delay)
                readwrite_client(cptr, rr, rw);
                break;
 
+            case FDT_CALLBACKP:
+               {
+                  struct fd_callbackp *fdcb = (struct fd_callbackp *) fdvalue;
+
+                  (*fdcb->callback)(fdcb);
+               }
+               break;
+
             default:
                abort(); /* unknown client type? bail! */
          }

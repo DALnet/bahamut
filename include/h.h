@@ -281,12 +281,6 @@ extern void 	  off_history(aClient *);
 extern int  	  dopacket(aClient *, char *, int);
 extern int  	  client_dopacket(aClient *, char *, int);
 
-extern int 	  is_a_drone(aClient *);
-extern void	  drone_init();
-extern void	  drone_rehash();
-extern char 	 *drone_mod_version(char *, int);
-extern char 	 *short_drone_mod_version(char *, int);
-
 /* VARARGS2 */
 
 extern void 	  debug(int level, char *pattern, ...);

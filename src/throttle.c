@@ -583,5 +583,8 @@ void throttle_stats(aClient *cptr, char *name) {
     }
 }
 
+#else
+/* ignore this -- required for drone modules and the like */
+void throttle_force(char *host) {}
 #endif
 /* vi:set ts=8 sts=4 sw=4 tw=79: */

@@ -16,7 +16,7 @@ ac_help="$ac_help
   --disable-encryption    disable rc4 link encryption (removes openssl dependancy)"
 ac_help="$ac_help
 \
-  --enable-dronemodule    enable support for loadable drone.so module"
+  --enable-hookmodules    enable support for loadable hook modules"
 ac_help="$ac_help
   --with-ssl-dir=PATH     Path to openssl installation "
 
@@ -544,12 +544,12 @@ else
 fi
 
 
-# Check whether --enable-dronemodule or --disable-dronemodule was given.
-if test "${enable_dronemodule+set}" = set; then
-  enableval="$enable_dronemodule"
-  enable_dronemodule=yes
+# Check whether --enable-hookmodules or --disable-hookmodules was given.
+if test "${enable_hookmodules+set}" = set; then
+  enableval="$enable_hookmodules"
+  enable_hmodules=yes
 else
-  enable_dronemodule=no
+  enable_hmodules=no
 fi
 
 
@@ -1924,7 +1924,7 @@ fi
 done
 
 
-if test $enable_dronemodule = yes; then
+if test $enable_hmodules = yes; then
 echo $ac_n "checking for dlopen in -ldl""... $ac_c" 1>&6
 echo "configure:1930: checking for dlopen in -ldl" >&5
 ac_lib_var=`echo dl'_'dlopen | sed 'y%./+-%__p_%'`
@@ -2061,21 +2061,22 @@ fi
 done
 
 cat >> confdefs.h <<\EOF
-#define USE_DRONEMODULE 1
+#define USE_HOOKMODULES 1
 EOF
 
+LIBS="$LIBS -Wl,-export-dynamic"
 fi
 
 
 nonblock=no
 
 echo $ac_n "checking for posix (O_NONBLOCK) nonblocking sockets""... $ac_c" 1>&6
-echo "configure:2074: checking for posix (O_NONBLOCK) nonblocking sockets" >&5
+echo "configure:2075: checking for posix (O_NONBLOCK) nonblocking sockets" >&5
 if test "$cross_compiling" = yes; then
   echo "$ac_t""can't tell" 1>&6
 else
   cat > conftest.$ac_ext <<EOF
-#line 2079 "configure"
+#line 2080 "configure"
 #include "confdefs.h"
 
 #include <sys/types.h>
@@ -2106,7 +2107,7 @@ int main()
 }
 
 EOF
-if { (eval echo configure:2110: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext} && (./conftest; exit) 2>/dev/null
+if { (eval echo configure:2111: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext} && (./conftest; exit) 2>/dev/null
 then
   cat >> confdefs.h <<\EOF
 #define NBLOCK_POSIX 1
@@ -2126,12 +2127,12 @@ fi
 
 if test $nonblock = no; then
 echo $ac_n "checking for bsd (O_NDELAY) nonblocking sockets""... $ac_c" 1>&6
-echo "configure:2130: checking for bsd (O_NDELAY) nonblocking sockets" >&5
+echo "configure:2131: checking for bsd (O_NDELAY) nonblocking sockets" >&5
 if test "$cross_compiling" = yes; then
   echo "$ac_t""can't tell" 1>&6
 else
   cat > conftest.$ac_ext <<EOF
-#line 2135 "configure"
+#line 2136 "configure"
 #include "confdefs.h"
 
 #include <sys/types.h>
@@ -2162,7 +2163,7 @@ int main()
 }
 
 EOF
-if { (eval echo configure:2166: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext} && (./conftest; exit) 2>/dev/null
+if { (eval echo configure:2167: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext} && (./conftest; exit) 2>/dev/null
 then
   cat >> confdefs.h <<\EOF
 #define NBLOCK_BSD 1
@@ -2183,12 +2184,12 @@ fi
 
 if test $nonblock = no; then
 echo $ac_n "checking for sysv (FIONBIO) nonblocking sockets""... $ac_c" 1>&6
-echo "configure:2187: checking for sysv (FIONBIO) nonblocking sockets" >&5
+echo "configure:2188: checking for sysv (FIONBIO) nonblocking sockets" >&5
 if test "$cross_compiling" = yes; then
   echo "$ac_t""unable to test" 1>&6
 else
   cat > conftest.$ac_ext <<EOF
-#line 2192 "configure"
+#line 2193 "configure"
 #include "confdefs.h"
 
 #include <sys/types.h>
@@ -2219,7 +2220,7 @@ int main()
 }
 
 EOF
-if { (eval echo configure:2223: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext} && (./conftest; exit) 2>/dev/null
+if { (eval echo configure:2224: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext} && (./conftest; exit) 2>/dev/null
 then
   cat >> confdefs.h <<\EOF
 #define NBLOCK_SYSV 1
@@ -2243,12 +2244,12 @@ if test $nonblock = no; then
 fi
 
 echo $ac_n "checking signal implementation""... $ac_c" 1>&6
-echo "configure:2247: checking signal implementation" >&5
+echo "configure:2248: checking signal implementation" >&5
 if test "$cross_compiling" = yes; then
   echo "$ac_t""unknown" 1>&6
 else
   cat > conftest.$ac_ext <<EOF
-#line 2252 "configure"
+#line 2253 "configure"
 #include "confdefs.h"
 
 int main()
@@ -2261,7 +2262,7 @@ int main()
 }
 
 EOF
-if { (eval echo configure:2265: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext} && (./conftest; exit) 2>/dev/null
+if { (eval echo configure:2266: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext} && (./conftest; exit) 2>/dev/null
 then
   cat >> confdefs.h <<\EOF
 #define POSIX_SIGNALS 1
@@ -2275,7 +2276,7 @@ else
   echo "$ac_t""uknown" 1>&6
 else
   cat > conftest.$ac_ext <<EOF
-#line 2279 "configure"
+#line 2280 "configure"
 #include "confdefs.h"
 
 #include <signal.h>
@@ -2295,7 +2296,7 @@ int main()
 }
 
 EOF
-if { (eval echo configure:2299: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext} && (./conftest; exit) 2>/dev/null
+if { (eval echo configure:2300: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext} && (./conftest; exit) 2>/dev/null
 then
   cat >> confdefs.h <<\EOF
 #define BSD_RELIABLE_SIGNALS 1
@@ -2318,12 +2319,12 @@ rm -fr conftest*
 fi
 
 echo $ac_n "checking for sys_errlist declaration""... $ac_c" 1>&6
-echo "configure:2322: checking for sys_errlist declaration" >&5
+echo "configure:2323: checking for sys_errlist declaration" >&5
 if test "$cross_compiling" = yes; then
   echo "$ac_t""cross compiling" 1>&6
 else
   cat > conftest.$ac_ext <<EOF
-#line 2327 "configure"
+#line 2328 "configure"
 #include "confdefs.h"
 
 #include <sys/types.h>
@@ -2336,7 +2337,7 @@ main()
 }
 
 EOF
-if { (eval echo configure:2340: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext} && (./conftest; exit) 2>/dev/null
+if { (eval echo configure:2341: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext} && (./conftest; exit) 2>/dev/null
 then
   echo "$ac_t""yes" 1>&6
   cat >> confdefs.h <<\EOF
@@ -2354,9 +2355,9 @@ fi
 
 
 echo $ac_n "checking to see if we should enable fast FD_ISSET code""... $ac_c" 1>&6
-echo "configure:2358: checking to see if we should enable fast FD_ISSET code" >&5
+echo "configure:2359: checking to see if we should enable fast FD_ISSET code" >&5
 cat > conftest.$ac_ext <<EOF
-#line 2360 "configure"
+#line 2361 "configure"
 #include "confdefs.h"
 
 int main() {
@@ -2372,7 +2373,7 @@ int main()
 
 ; return 0; }
 EOF
-if { (eval echo configure:2376: \"$ac_compile\") 1>&5; (eval $ac_compile) 2>&5; }; then
+if { (eval echo configure:2377: \"$ac_compile\") 1>&5; (eval $ac_compile) 2>&5; }; then
   rm -rf conftest*
   echo "$ac_t""yes" 1>&6
   cat >> confdefs.h <<\EOF
@@ -2391,12 +2392,12 @@ rm -f conftest*
 DFDSS='-DFD_SETSIZE=1024'
 
 echo $ac_n "checking to see if FD_SETSIZE is broken""... $ac_c" 1>&6
-echo "configure:2395: checking to see if FD_SETSIZE is broken" >&5
+echo "configure:2396: checking to see if FD_SETSIZE is broken" >&5
 if test "$cross_compiling" = yes; then
   echo "$ac_t""can't tell" 1>&6
 else
   cat > conftest.$ac_ext <<EOF
-#line 2400 "configure"
+#line 2401 "configure"
 #include "confdefs.h"
 
 #define FD_SETSIZE 666
@@ -2411,7 +2412,7 @@ int main()
 }
 
 EOF
-if { (eval echo configure:2415: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext} && (./conftest; exit) 2>/dev/null
+if { (eval echo configure:2416: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext} && (./conftest; exit) 2>/dev/null
 then
   echo "$ac_t""no" 1>&6
 else
@@ -2502,7 +2503,7 @@ found_openssl=""
       
 else
   cat > conftest.$ac_ext <<EOF
-#line 2506 "configure"
+#line 2507 "configure"
 #include "confdefs.h"
 
 #include <stdio.h>
@@ -2537,7 +2538,7 @@ int main(void)
 }
                  
 EOF
-if { (eval echo configure:2541: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext} && (./conftest; exit) 2>/dev/null
+if { (eval echo configure:2542: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext} && (./conftest; exit) 2>/dev/null
 then
   
                     found_openssl=1;
@@ -2588,7 +2589,7 @@ fi
 
 
 echo $ac_n "checking operating system""... $ac_c" 1>&6
-echo "configure:2592: checking operating system" >&5
+echo "configure:2593: checking operating system" >&5
 case "$target" in
 *-solaris2*) cat >> confdefs.h <<\EOF
 #define OS_SOLARIS2 1

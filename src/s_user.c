@@ -38,6 +38,7 @@
 #include "blalloc.h"
 #endif /* FLUD */
 #include "userban.h"
+#include "hooks.h"
 
 #if defined( HAVE_STRING_H)
 #include <string.h>
@@ -753,15 +754,6 @@ int register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
 	    return exit_client(cptr, sptr, &me, tmpstr2);
 	}
 
-	if(is_a_drone(sptr))
-        {
-            throttle_force(sptr->hostip);
-	    ircstp->is_ref++;
-	    ircstp->is_drone++;
-	    return exit_client(cptr, sptr, &me, 
-                      "You match the pattern of a known trojan, please check your system.");
-        }
-
 	if(!(ban = check_userbanned(sptr, UBAN_IP|UBAN_CIDR4, UBAN_WILDUSER)))
             ban = check_userbanned(sptr, UBAN_HOST, 0);
 
@@ -799,6 +791,9 @@ int register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
 	    return exit_client(cptr, sptr, &me, reason);
 #endif
 	}
+
+	if(call_hooks(CHOOK_POSTACCESS, sptr) == FLUSH_BUFFER)
+	    return FLUSH_BUFFER;
 
 	if ((++Count.local) > Count.max_loc) 
 	{
@@ -1427,6 +1422,8 @@ static inline int m_message(aClient *cptr, aClient *sptr, int parc,
 	parv[1] = canonize(parv[1]);
     }
 
+    if(call_hooks(CHOOK_MSG, sptr, notice, parv[2]) == FLUSH_BUFFER)
+	return FLUSH_BUFFER;
 
     for (p = NULL, nick = strtoken(&p, parv[1], ","), i = 0; nick && i<20 ;
 	 nick = strtoken(&p, NULL, ",")) 
