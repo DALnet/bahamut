@@ -603,9 +603,10 @@ m_mode(aClient *cptr,
 		 me.name, parv[0], "MODE");
       return 0;
    }
-	if(!check_channelname(sptr, (unsigned char *) parv[1]))
-	  return 0;
-   clean_channelname((unsigned char *) parv[1]);
+
+   if(!check_channelname(sptr, (unsigned char *) parv[1]))
+      return 0;
+
    if(is_chan_op(sptr, chptr) || (IsServer(sptr) && chptr->channelts!=0))
 	  chanop=1;
 	else if(IsULine(sptr) || (IsSAdmin(sptr) && !MyClient(sptr)))
@@ -1046,6 +1047,7 @@ clean_channelname(unsigned char *cn)
       }
 	return;
 }
+
 /* we also tell the client if the channel is invalid. */
 int check_channelname(aClient *cptr, unsigned char *cn) {
 	if(!MyClient(cptr))
@@ -1241,10 +1243,11 @@ m_join(aClient *cptr,
        * doesn't see the same channel * as one being joined. cute bug.
        * Oct 11 1997, Dianora/comstud
        */
-		if(!check_channelname(sptr, (unsigned char *) name))
-		  continue;
-		clean_channelname((unsigned char *)name);
-		chanlen=strlen(name);
+      if(!check_channelname(sptr, (unsigned char *) name))
+         continue;
+
+      chanlen=strlen(name);
+
       if (chanlen > CHANNELLEN)	{ /* same thing is done in get_channel() */
 			name[CHANNELLEN] = '\0';
 			chanlen=CHANNELLEN;
@@ -1905,9 +1908,9 @@ m_invite(aClient *cptr,
 		 me.name, parv[0], parv[1]);
       return 0;
    }
-	if(!check_channelname(sptr, (unsigned char *)parv[2]))
-	  return 0;
-   clean_channelname((unsigned char *) parv[2]);
+
+   if(!check_channelname(sptr, (unsigned char *)parv[2]))
+      return 0;
 
    if (!(chptr = find_channel(parv[2], NullChn))) {
       sendto_prefix_one(acptr, sptr, ":%s INVITE %s :%s",
@@ -2306,7 +2309,6 @@ m_names(aClient *cptr,
 		  *s = '\0';
 		if(!check_channelname(sptr, (unsigned char *)para))
 		  return 0;
-		clean_channelname((unsigned char *) para);
 		ch2ptr = find_channel(para, (aChannel *) NULL);
 	}
 
@@ -3072,7 +3074,6 @@ int m_samode(aClient *cptr, aClient *sptr, int parc, char *parv[]) {
 	if (chptr==NullChn) return 0;
 	if(!check_channelname(sptr, (unsigned char *)parv[1]))
 	  return 0;
-	clean_channelname((unsigned char *) parv[1]);
 	sendts = set_mode(cptr, sptr, chptr, 2, parc - 2, parv + 2, modebuf, 
 							parabuf);
 	
