@@ -1599,8 +1599,8 @@ m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
 				  continue;
 				if(!IsServer(acptr))
 				  continue; /* nothing but servers */
-#ifdef HIDEULINEDSERVERS
-				if(IsULined(acptr))
+#ifdef HIDEULINEDSERVS
+				if(IsULine(acptr) && !IsAnOper(sptr))
 				  continue;
 #endif
 				sincetime = (acptr->since > timeofday) ? 0 :

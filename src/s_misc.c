@@ -995,6 +995,10 @@ serv_info(aClient *cptr, char *name)
    for (fd = l.entry[j = 1]; j <= l.last_entry; fd = l.entry[++j]) {
       if (!(acptr = local[fd]))
 	 continue;
+#ifdef HIDEULINEDSERVS
+      if (IsULine(acptr) && !IsAnOper(cptr))
+	 continue;
+#endif
       sendK += acptr->sendK;
       receiveK += acptr->receiveK;
       sendto_one(cptr, Lformat, me.name, RPL_STATSLINKINFO,
