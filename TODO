@@ -2,9 +2,6 @@ THINGS TO FIX BEFORE RELEASE
 ----------------------------
    
     - Fix /unkline routines to operate happily with the new conf parser.
-    - Fix our broken-ass conf structure handling such that we check
-      on the existence of pointers before attempting to use them.
-      Then remove unnessecary one byte mallocs.  Disgusting kludge.
     - Clean up config.h [Half done]
     - Fix make install
 

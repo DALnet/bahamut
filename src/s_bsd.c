@@ -272,110 +272,107 @@ open_listeners()
  */
 int add_listener(aPort *aport)
 {
-   aListener *lptr;
-   aListener lstn;
-   struct sockaddr_in server;
-   int ad[4], len = sizeof(server);
-   char ipname[20];
+    aListener *lptr;
+    aListener lstn;
+    struct sockaddr_in server;
+    int ad[4], len = sizeof(server);
+    char ipname[20];
 
-   memset(&lstn, 0, sizeof(aListener));
+    memset(&lstn, 0, sizeof(aListener));
+    ad[0] = ad[1] = ad[2] = ad[3] = 0;
 
-   strncpyzt(lstn.allow_string, aport->allow, sizeof(lstn.allow_string));
-   strncpyzt(lstn.vhost_string, aport->address, sizeof(lstn.vhost_string));
+    if(!BadPtr(aport->allow))
+    {
+        strncpyzt(lstn.allow_string, aport->allow, sizeof(lstn.allow_string));
+        sscanf(lstn.allow_string, "%d.%d.%d.%d", &ad[0], &ad[1], 
+                                                 &ad[2], &ad[3]);
+        ircsprintf(ipname, "%d.%d.%d.%d", ad[0], ad[1], ad[2], ad[3]);
+        lstn.allow_ip.s_addr = inet_addr(ipname);
+    }
 
-   if ((*aport->address != '\0') && (*aport->address != '*'))
-   {
-      lstn.vhost_ip.s_addr = inet_addr(aport->address);
-      strncpyzt(lstn.vhost_string, aport->address, sizeof(lstn.vhost_string));
-   }
+    if (!BadPtr(aport->address) && (*aport->address != '*'))
+    {
+        lstn.vhost_ip.s_addr = inet_addr(aport->address);
+        strncpyzt(lstn.vhost_string, aport->address, sizeof(lstn.vhost_string));
+    }
 
-   lstn.port = aport->port;
+    lstn.port = aport->port;
 
-   if(lstn.port == 0) /* stop stupidity cold */
-      return -1;
+    if(lstn.port <= 0) /* stop stupidity cold */
+        return -1;
 
-   ad[0] = ad[1] = ad[2] = ad[3] = 0;
-   /*
-    * do it this way because building ip# from separate values for each
-    * byte requires endian knowledge or some nasty messing. Also means
-    * easy conversion of "*" 0.0.0.0 or 134.* to 134.0.0.0 :-)
-    */
-   sscanf(lstn.allow_string, "%d.%d.%d.%d", &ad[0], &ad[1], &ad[2], &ad[3]);
-   ircsprintf(ipname, "%d.%d.%d.%d", ad[0], ad[1], ad[2], ad[3]);
-   lstn.allow_ip.s_addr = inet_addr(ipname);
+    lstn.fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (lstn.fd < 0)
+    {
+        report_listener_error("opening stream socket %s:%s", &lstn);
+        return -1;
+    }
 
-   lstn.fd = socket(AF_INET, SOCK_STREAM, 0);
-   if (lstn.fd < 0)
-   {
-      report_listener_error("opening stream socket %s:%s", &lstn);
-      return -1;
-   }
+    set_listener_sock_opts(lstn.fd, &lstn);
 
-   set_listener_sock_opts(lstn.fd, &lstn);
+    memset(&server, '\0', sizeof(server));
+    server.sin_family = AF_INET;
 
-   memset(&server, '\0', sizeof(server));
-   server.sin_family = AF_INET;
+    if (lstn.vhost_ip.s_addr)
+        server.sin_addr.s_addr = lstn.vhost_ip.s_addr;
+    else
+        server.sin_addr.s_addr = INADDR_ANY;
 
-   if (lstn.vhost_ip.s_addr)
-      server.sin_addr.s_addr = lstn.vhost_ip.s_addr;
-   else
-      server.sin_addr.s_addr = INADDR_ANY;
+    server.sin_port = htons(lstn.port);
 
-   server.sin_port = htons(lstn.port);
+    if (bind(lstn.fd, (struct sockaddr *) &server, sizeof(struct sockaddr_in)))
+    {
+        report_listener_error("binding stream socket %s:%s", &lstn);
+        close(lstn.fd);
+        return -1;
+    }
 
-   if (bind(lstn.fd, (struct sockaddr *) &server, sizeof(struct sockaddr_in)))
-   {
-         report_listener_error("binding stream socket %s:%s", &lstn);
-         close(lstn.fd);
-         return -1;
-   }
+    if (getsockname(lstn.fd, (struct sockaddr *) &server, &len)) 
+    {
+        report_listener_error("getsockname failed for %s:%s", &lstn);
+        close(lstn.fd);
+        return -1;
+    }
 
-   if (getsockname(lstn.fd, (struct sockaddr *) &server, &len)) 
-   {
-      report_listener_error("getsockname failed for %s:%s", &lstn);
-      close(lstn.fd);
-      return -1;
-   }
-
-   if (lstn.fd > highest_fd)
-      highest_fd = lstn.fd;
+    if (lstn.fd > highest_fd)
+        highest_fd = lstn.fd;
 
 #ifdef SOMAXCONN
-   if(listen(lstn.fd, SOMAXCONN))
+    if(listen(lstn.fd, SOMAXCONN))
 #else
-   if(listen(lstn.fd, HYBRID_SOMAXCONN))
+    if(listen(lstn.fd, HYBRID_SOMAXCONN))
 #endif
-   {
+    {
         report_listener_error("error listening on FD %s:%s", &lstn);
         close(lstn.fd);
         return -1;
-   }
+    }
 
 
-   lptr = (aListener *) MyMalloc(sizeof(aListener));
-   memcpy(lptr, &lstn, sizeof(aListener));
+    lptr = (aListener *) MyMalloc(sizeof(aListener));
+    memcpy(lptr, &lstn, sizeof(aListener));
 
-   if(local[lptr->fd])
-   {
+    if(local[lptr->fd])
+    {
         report_listener_error("!!!! listener fd is held by client"
-                  " in local[] array %s:%s", &lstn);
-    abort();
-   }
+                              " in local[] array %s:%s", &lstn);
+        abort();
+    }
 
-   lptr->aport = aport;
-   aport->lstn = lptr;
+    lptr->aport = aport;
+    aport->lstn = lptr;
 
-   set_listener_non_blocking(lptr->fd, lptr);
-   add_fd(lptr->fd, FDT_LISTENER, lptr);
-   set_fd_flags(lptr->fd, FDF_WANTREAD);
+    set_listener_non_blocking(lptr->fd, lptr);
+    add_fd(lptr->fd, FDT_LISTENER, lptr);
+    set_fd_flags(lptr->fd, FDF_WANTREAD);
 
-   listen_count++;
-   lptr->next = listen_list;
-   listen_list = lptr;
+    listen_count++;
+    lptr->next = listen_list;
+    listen_list = lptr;
 
-   lptr->lasttime = timeofday;
+    lptr->lasttime = timeofday;
 
-   return 0;
+    return 0;
 }
 
 void close_listener(aListener *lptr)
@@ -1253,21 +1250,20 @@ aClient *add_connection(aListener *lptr, int fd)
      * connections from this IP#.
      */
     for (s = (char *) &lptr->allow_ip, t = (char *) &acptr->ip, len = 4;
-     len > 0; len--, s++, t++)
+         len > 0; len--, s++, t++)
     {
-    if (!*s)
-        continue;
-    if (*s != *t)
-        break;
+        if (!*s)
+            continue;
+        if (*s != *t)
+            break;
     }
-
     if (len)
     {
-    ircstp->is_ref++;
-    acptr->fd = -2;
-    free_client(acptr);
-    close(fd);
-    return NULL;
+        ircstp->is_ref++;
+        acptr->fd = -2;
+        free_client(acptr);
+        close(fd);
+        return NULL;
     }
 
     lptr->ccount++;

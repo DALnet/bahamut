@@ -1011,8 +1011,6 @@ confadd_allow(cVar *vars[], int lnum)
         DupString(x->ipmask, "*@*");
         x->flags |= CONF_FLAGS_I_HOST_HAS_AT;
     }
-    if(!x->passwd)
-        DupString(x->passwd, "");
     if(!x->hostmask)
     {
         DupString(x->hostmask, "*@*");
@@ -1073,10 +1071,6 @@ confadd_port(cVar *vars[], int lnum)
         free_port(x);
         return -1;
     }
-    if(!x->allow)
-        DupString(x->allow, "");
-    if(!x->address)
-        DupString(x->address, "");
     x->next = new_ports;
     new_ports = x;
     return lnum;
