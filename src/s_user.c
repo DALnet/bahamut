@@ -3167,22 +3167,25 @@ m_kill(aClient *cptr,
 			break;
 		}
 		
-		if(MyClient(sptr)) {
-			char myname[80], *s;
+		if(MyClient(sptr)) 
+                {
+			char myname[HOSTLEN+1], *s;
+                        int slen;
+
 			strncpy(myname, me.name, 80);
-			s=index(myname, '.');
-			*s=0;
-			/* okay, what the hell was all this shit in here before?
-			 * I dunno but I cleaned it all up, it was annoying.
-			 * kills are ':<thing> KILL <person> :<thinghost>!<thing> (<reason>)
-			 * --wd */
-			/* we no longer care about killpaths, there's really no point to them,
-			 * so anything that wants a path will get it here. nifty eh? */
-			if(!IsServer(sptr) && IsClient(sptr)) /* killer isn't aserver either */
-			  ircsprintf(mypath, "%s!%s!%s (%s)", myname, sptr->user->host, sptr->name, path);
-			else 
-			  ircsprintf(mypath, "%s (%s)", sptr->name, path);
-			mypath[TOPICLEN]='\0';
+			if((s = index(myname, '.')))
+			   *s=0;
+
+                        /* "<myname>!<sptr->user->host>!<sptr->name> (path)" */
+                        slen = TOPICLEN - (strlen(sptr->name) + strlen(sptr->user->host) + strlen(myname) + 8);
+                        if(slen < 0)
+                           slen = 0;
+                     
+                        if(strlen(path) > slen) 
+                           path[slen] = '\0'; 
+
+                        ircsprintf(mypath, "%s!%s!%s (%s)", myname, sptr->user->host, sptr->name, path); 
+                           mypath[TOPICLEN]='\0';  
 		}
 		else
 		  strncpy(mypath,path,TOPICLEN + 1);
