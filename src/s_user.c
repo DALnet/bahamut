@@ -2742,7 +2742,9 @@ inline char *first_visible_channel(aClient *cptr, aClient *sptr)
 
 /* allow lusers only 200 replies from /who */
 #define MAXWHOREPLIES 200
-int m_who(aClient *cptr, aClient *sptr, int parc, char *parv[]) {
+#define WHO_HOPCOUNT(s, a) ((IsULine((a)) && !IsOper((s))) ? 0 : a->hopcount) 
+int m_who(aClient *cptr, aClient *sptr, int parc, char *parv[]) 
+{
 	aClient *ac;
         chanMember *cm;
         Link *lp;
@@ -2803,7 +2805,8 @@ int m_who(aClient *cptr, aClient *sptr, int parc, char *parv[]) {
 				sendto_one(sptr, getreply(RPL_WHOREPLY), me.name, sptr->name,
 						  wsopts.channel->chname, ac->user->username, 
 						  ac->user->host,ac->user->server, ac->name, status, 
-						  ac->hopcount, ac->info);
+						  WHO_HOPCOUNT(sptr, ac),
+                                                  ac->info);
 			}
 		}
 		sendto_one(sptr, getreply(RPL_ENDOFWHO), me.name, sptr->name,
@@ -2827,7 +2830,8 @@ int m_who(aClient *cptr, aClient *sptr, int parc, char *parv[]) {
 				sendto_one(sptr, getreply(RPL_WHOREPLY), me.name, sptr->name,
 							  wsopts.show_chan ? first_visible_channel(ac, sptr) : "*", 
 							  ac->user->username, ac->user->host, 
-							  ac->user->server, ac->name, status, ac->hopcount,
+							  ac->user->server, ac->name, status, 
+							  WHO_HOPCOUNT(sptr, ac),
 							  ac->info);
 				sendto_one(sptr, getreply(RPL_ENDOFWHO), me.name, sptr->name,
 							  wsopts.host!=NULL ? wsopts.host : wsopts.nick);
@@ -2867,7 +2871,7 @@ int m_who(aClient *cptr, aClient *sptr, int parc, char *parv[]) {
                  status[++i]=0;
                  sendto_one(sptr, getreply(RPL_WHOREPLY), me.name, sptr->name,
                             lp->value.chptr->chname, ac->user->username, ac->user->host,ac->user->server, ac->name,
-                            status, ac->hopcount, ac->info);
+                            status, WHO_HOPCOUNT(sptr, ac), ac->info);
                  shown++;
               }
            }
@@ -2890,7 +2894,7 @@ int m_who(aClient *cptr, aClient *sptr, int parc, char *parv[]) {
 		sendto_one(sptr, getreply(RPL_WHOREPLY), me.name, sptr->name,
 					  wsopts.show_chan ? first_visible_channel(ac, sptr) : "*", 
 					  ac->user->username, ac->user->host, ac->user->server,
-					  ac->name, status, ac->hopcount, ac->info);
+					  ac->name, status, WHO_HOPCOUNT(sptr, ac), ac->info);
 		shown++;
 	   }
         }
