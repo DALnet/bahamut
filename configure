@@ -2698,6 +2698,11 @@ else
   rm -fr conftest*
   
 echo "$ac_t""problem!" 1>&6
+GMPHV=`cat .gmp_h_version`
+GMPLV=`cat .gmp_l_version`
+echo " - gmp header version: $GMPHV"
+echo " - gmp library version: $GMPLV"
+$RM -f .gmp_h_version .gmp_l_version
 echo "Your gmp library either has no version symbols, is not the correct 'gmp',"
 echo "or the major versions of your gmp library and gmp header differ."
 echo "You cannot have two versions of the gmp library in your dynamic (.so)"
@@ -2752,7 +2757,7 @@ fi
 fi
 
 echo $ac_n "checking operating system""... $ac_c" 1>&6
-echo "configure:2756: checking operating system" >&5
+echo "configure:2761: checking operating system" >&5
 case "$target" in
 *-solaris2*) cat >> confdefs.h <<\EOF
 #define OS_SOLARIS2 1

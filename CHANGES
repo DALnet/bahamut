@@ -1,5 +1,9 @@
-Changes for 1.4.19
-- Fixed a chashing bug with /whois
+Changes for 1.4.20
+- /whois works correctly for hostmasked opers. growl.
+- configure gives more information about gmp errors.
+
+Changes for 1.4.19 (released, but not an advised upgrade)
+- Fixed a crashing bug with /whois
 - Fixed a crashing bug with /oper (I need to remember how to handle nulls correctly :)
 - Imported res fixes from bahamut-stable
 - made configure work for solaris to find gmp
