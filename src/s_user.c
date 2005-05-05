@@ -1017,11 +1017,18 @@ register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
             sendto_one(sptr, ":%s NOTICE %s :*** Notice -- For more information"
                     " please visit %s", me.name, nick, ProxyMonURL);
         }
-                
+
+        /* do this late because of oper masking */
+        if (sptr->ip.s_addr)
+            clones_add(sptr);        
     }
     else if (IsServer(cptr)) 
     {
         aClient    *acptr;
+
+        /* do this early because exit_client() calls clones_remove() */
+        if (sptr->ip.s_addr)
+            clones_add(sptr);        
         
         if ((acptr = find_server(user->server, NULL)) &&
             acptr->from != sptr->from)
@@ -1099,9 +1106,6 @@ register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
         if(call_hooks(CHOOK_POSTMOTD, sptr) == FLUSH_BUFFER)
             return FLUSH_BUFFER;
     }
-
-    if (sptr->ip.s_addr)
-        clones_add(sptr);
 
 #ifdef RWHO_PROBABILITY
     probability_add(sptr);
