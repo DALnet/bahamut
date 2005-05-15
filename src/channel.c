@@ -1467,7 +1467,12 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
             break;
 
         case 'O':
-            if (level<1 || (MyClient(sptr) && !IsOper(sptr)))
+            if (level<1)
+            {
+                errors |= SM_ERR_NOPRIVS;
+                break;
+            }
+            else if (MyClient(sptr) && !IsOper(sptr))
             {
                 errors |= SM_ERR_NOTOPER;
                 break;
