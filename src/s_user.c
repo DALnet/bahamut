@@ -231,6 +231,8 @@ next_client_double(aClient *next, char *ch)
  * parv[server] is replaced with the pointer to the 
  * real servername from the matched client
  * I'm lazy now --msa
+ *
+ * intelligence rewrite  -Quension [May 2005]
  * 
  *      returns: (see #defines)
  */
@@ -238,85 +240,63 @@ int
 hunt_server(aClient *cptr, aClient *sptr, char *command, int server,
                 int parc, char *parv[])
 {
-    aClient    *acptr;
-    int         wilds;
+    aClient    *acptr = NULL;
 
     /* Assume it's me, if no server */
-    if (parc <= server || BadPtr(parv[server]) ||
-        match(me.name, parv[server]) == 0 ||
-        match(parv[server], me.name) == 0)
+    if (parc <= server || BadPtr(parv[server]))
         return (HUNTED_ISME);
-    /*
-     * These are to pickup matches that would cause the following
-     * message to go in the wrong direction while doing quick fast
-     * non-matching lookups.
-     */
-    if ((acptr = find_client(parv[server], NULL)))
-        if (acptr->from == sptr->from && !MyConnect(acptr))
-            acptr = NULL;
-    if (!acptr && (acptr = find_server(parv[server], NULL)))
-        if (acptr->from == sptr->from && !MyConnect(acptr))
-            acptr = NULL;
 
     collapse(parv[server]);
-    wilds = (strchr(parv[server], '?') || strchr(parv[server], '*'));
-    /*
-     * Again, if there are no wild cards involved in the server name,
-     * use the hash lookup - Dianora
-     */
 
-    if (!acptr) 
+    /* check self first, due to the weirdness of STAT_ME */
+    if (!match(parv[server], me.name))
+        return HUNTED_ISME;
+
+    if (strchr(parv[server], '?') || strchr(parv[server], '*'))
     {
-        if (!wilds) 
+        /* it's a mask, find the server manually */
+        for (acptr = client; acptr; acptr = acptr->next)
         {
-            acptr = find_name(parv[server], (aClient *) NULL);
-            if (!acptr || !IsRegistered(acptr) || !IsServer(acptr)) 
+            if (!IsServer(acptr))
+                continue;
+
+            if (!match(parv[server], acptr->name))
             {
-                sendto_one(sptr, err_str(ERR_NOSUCHSERVER), me.name,
-                           parv[0], parv[server]);
-                return (HUNTED_NOSUCH);
-            }
-        }
-        else 
-        {
-            for (acptr = client;
-                 (acptr = next_client(acptr, parv[server]));
-                 acptr = acptr->next) 
-            {
-                if (acptr->from == sptr->from && !MyConnect(acptr))
-                    continue;
-                /*
-                 * Fix to prevent looping in case the parameter for some
-                 * reason happens to match someone from the from link --jto
-                 */
-                if (IsRegistered(acptr) && (acptr != cptr))
-                    break;
+                parv[server] = acptr->name;
+                break;
             }
         }
     }
-
-    if (acptr) 
+    else
     {
+        /* no wildcards, hash lookup */
+        acptr = find_client(parv[server], NULL);
+
+        if (acptr && !IsRegistered(acptr))
+            acptr = NULL;
+    }
+
+    if (!acptr)
+    {
+        sendto_one(sptr, err_str(ERR_NOSUCHSERVER), me.name, parv[0],
+                   parv[server]);
+        return HUNTED_NOSUCH;
+    }
+
 #ifdef NO_USER_OPERTARGETED_COMMANDS
-        if (!(IsAnOper(sptr) || IsULine(sptr) || IsServer(sptr)) &&
-            !IsServer(acptr) && IsUmodeI(acptr))
-        {
-            sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name, parv[0]);
-            return (HUNTED_NOSUCH);
-        }
-#endif
-        if (IsMe(acptr) || MyClient(acptr))
-            return HUNTED_ISME;
-        if (match(acptr->name, parv[server]))
-            parv[server] = acptr->name;
-        sendto_one(acptr, command, parv[0],
-                   parv[1], parv[2], parv[3], parv[4],
-                   parv[5], parv[6], parv[7], parv[8]);
-        return (HUNTED_PASS);
+    if (MyClient(sptr) && !IsAnOper(sptr) && IsUmodeI(acptr))
+    {
+        sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name, parv[0]);
+        return HUNTED_NOSUCH;
     }
-    sendto_one(sptr, err_str(ERR_NOSUCHSERVER), me.name,
-               parv[0], parv[server]);
-    return (HUNTED_NOSUCH);
+#endif
+
+    if (MyClient(acptr))
+        return HUNTED_ISME;
+
+    sendto_one(acptr, command, parv[0], parv[1], parv[2], parv[3], parv[4],
+               parv[5], parv[6], parv[7], parv[8]);
+    return HUNTED_PASS;
 }
 
 /*
