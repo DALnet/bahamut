@@ -461,16 +461,25 @@ parse_block(tConf *block, char *cur, FILE *file, int *lnum)
                 {
                     /* recurse through the block we found */
                     tlnum = *lnum;
-                    if((cur = strchr(cur, '{')))
-                    {
-                        cur++;
-                        cur = check_quote(cur);
-                        cur = parse_block(b2, cur, file, lnum);
-                        b2 = NULL;
-                        continue;
-                    }
+                    cur = check_quote(cur);
                     if(BadPtr(cur))
                         continue;
+                    if(*cur != '{')
+                    {
+                        confparse_error("Junk after nested block name", *lnum);
+                        free_vars(vars);
+                        return NULL;
+                    }
+                    cur++;
+                    cur = check_quote(cur);
+                    cur = parse_block(b2, cur, file, lnum);
+                    if(!cur)
+                    {
+                        free_vars(vars);
+                        return NULL;
+                    }
+                    b2 = NULL;
+                    continue;
                 }
             }
             /* find our token */
@@ -725,6 +734,11 @@ jmp_including:
 
             if (!mycmp("INCLUDE", tok))
             {
+                if(clear)
+                {
+                    confparse_error("Unexpected opening bracket", lnum);
+                    return -1;
+                }
                 including++;
                 cur = check_quote(cur);
                 if (BadPtr(cur))
