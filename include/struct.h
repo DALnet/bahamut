@@ -472,7 +472,7 @@ typedef struct SAliasInfo AliasInfo;
                          OFLAG_UNKLINE|OFLAG_LNOTICE|OFLAG_UMODEc|OFLAG_UMODEf|OFLAG_UMODEd|\
                          OFLAG_UMODEb|OFLAG_UMODEy)
 #define OFLAG_GLOBAL	(OFLAG_LOCAL|OFLAG_GROUTE|OFLAG_GKILL|OFLAG_GNOTICE)
-#define OFLAG_ISGLOBAL	(OFLAG_GROUTE|OFLAG_GKILL|OFLAG_GNOTICE)
+#define OFLAG_ISGLOBAL	(OFLAG_GROUTE|OFLAG_GKILL|OFLAG_GNOTICE|OFLAG_SADMIN|OFLAG_UMODEF)
 #define OPCanZline(x)	        ((x)->oflag & OFLAG_SADMIN)
 #define OPCanRehash(x)	        ((x)->oflag & OFLAG_REHASH)
 #define OPCanDie(x)	        ((x)->oflag & OFLAG_DIE)
