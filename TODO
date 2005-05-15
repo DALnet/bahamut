@@ -10,4 +10,3 @@
 - consider adding external commands -- alias in conf, popen()/fileno()
 - add noident/nodns options to port blocks
 - update socketengine dependencies in Makefile
-- change TS on client SJOIN warning to ignore U:lined joins

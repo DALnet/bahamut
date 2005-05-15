@@ -4150,6 +4150,7 @@ int m_sjoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
                 chptr->channelts = tstosend = newts;
 #else
             chptr->channelts = tstosend = newts;
+            if (!IsULine(sptr))
             sendto_realops_lev(DEBUG_LEV, "Changing TS for %s from %d to %d on"
                                " client SJOIN", chptr->chname, oldts, newts);
 #endif
