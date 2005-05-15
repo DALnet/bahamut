@@ -564,7 +564,7 @@ attach_iline(aClient *cptr, aAllow *allow, char *uhost, int doid)
  */
 static int oper_access[] =
 {
-    ~(OFLAG_ADMIN|OFLAG_SADMIN), '*',
+    ~0,            '*',
     OFLAG_LOCAL,   'o',
     OFLAG_GLOBAL,  'O',
     OFLAG_REHASH,  'r',
