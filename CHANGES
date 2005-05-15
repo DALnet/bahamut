@@ -15,10 +15,18 @@ Changes for 1.8.4
 - Fixed duplicate link reporting for Ulined servers
 - Fixed numeric 338 colon placement
 - Fixed trailing spaces added to AWAY messages
+- Fixed channel modes not showing both +s and +p
+- Fixed a race condition that could lead to crashes under flood load
+- Fixed WHO incorrectly handling CIDR searches
+- Fixed crash during bad server introductions
+- Fixed an obscure bug with remotely targeted commands and local clients
+  (from toucan)
 - Increased channel invite list to 100 entries
 - Removed WATCH and DCCALLOW limits for opers (from wshs)
 - Removed 2-user minimum default for LIST filters
+- Removed support for wildcard nick targets in remotable commands
 - Changed join rate warnings to show IP instead of hostname
+- Added string probability calculation to RWHO
 
 - Reworked m_message().  Behavior changes:
     - corrected error responses
