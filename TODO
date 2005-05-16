@@ -3,9 +3,7 @@
 - show usernames on failed /oper to +A only
 - consider temp hold in CHANKILL, do resync
 - unified nick/user/host scrubbing, fix channel ban masks
-- scale svsheld expiry times based on change attempts
 - sort out WATCH timestamps
-- m_server, verify remote IP before doing exists checks
 - nonblocking dns hooks for modules (dnsbl)
 - consider adding external commands -- alias in conf, popen()/fileno()
 - add noident/nodns options to port blocks
