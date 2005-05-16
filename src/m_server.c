@@ -691,14 +691,11 @@ int m_server(aClient *cptr, aClient *sptr, int parc, char *parv[])
         if (!(cptr->serv->aconn->flags & CONN_HUB))
         {
             aconn = cptr->serv->aconn;
-            sendto_gnotice("from %s: Non-Hub link %s introduced %s(%s).",
-                           me.name, get_client_name(cptr, HIDEME), host,
-                           aconn ? (aconn->host ? aconn->host : "*") : "!");
+            sendto_gnotice("from %s: Non-Hub link %s introduced %s",
+                           me.name, get_client_name(cptr, HIDEME), host);
             sendto_serv_butone(cptr,":%s GNOTICE :Non-Hub link %s introduced "
-                               "%s(%s).", me.name,
-                               get_client_name(cptr, HIDEME), host,
-                               aconn ? (aconn->host ? aconn->host : "*") :
-                               "!");
+                               "%s", me.name, get_client_name(cptr, HIDEME),
+                               host);
             sendto_one(cptr, "ERROR :You're not a hub (introducing %s)",
                        host);
             return exit_client(cptr, cptr, cptr, "Too many servers");
