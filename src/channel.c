@@ -97,21 +97,38 @@ static int list_length(Link *lp)
     return count;
 }
 
-/* check to see if the message has any color chars in it. */
+/* check to see if the message has any control chars in it. */
 static int
-msg_has_colors(char *msg)
+msg_has_ctrls(char *msg)
 {
+    unsigned char *c;
 
-    char *c;
     if (msg == NULL) 
         return 0;
-    c = msg;
-    while(*c)
+
+    for (c = msg; *c; c++)
     {
-        if(*c == '\003' || *c == '\033')
-            break;
-        else
-            c++;
+        /* not a control code */
+        if (*c > 31)
+            continue;
+
+        /* ctcp */
+        if (*c == 1)
+            continue;
+
+        /* escape */
+        if (*c == 27)
+        {
+            /* ISO 2022 charset shift sequence */
+            if (c[1] == '$' || c[1] == '(')
+            {
+                c++;
+                continue;
+            }
+        }
+
+        /* control code */
+        break;
     }
     if(*c)
         return 1;
@@ -968,8 +985,8 @@ int can_send(aClient *cptr, aChannel *chptr, char *msg)
             return (MODE_NOPRIVMSGS);
         if ((chptr->mode.mode & MODE_MODREG) && !IsRegNick(cptr))
             return (ERR_NEEDREGGEDNICK);
-        if ((chptr->mode.mode & MODE_NOCOLOR) && msg_has_colors(msg))
-            return (ERR_NOCOLORSONCHAN);
+        if ((chptr->mode.mode & MODE_NOCTRL) && msg_has_ctrls(msg))
+            return (ERR_NOCTRLSONCHAN);
         if (MyClient(cptr) && is_banned(cptr, chptr, NULL))
             return (MODE_BAN); /*
                                 * channel is -n and user is not there;
@@ -978,7 +995,7 @@ int can_send(aClient *cptr, aChannel *chptr, char *msg)
     }
     else
     {
-        /* ops and voices can talk through everything except NOCOLOR */
+        /* ops and voices can talk through everything except NOCTRL */
         if (!(cm->flags & (CHFL_CHANOP | CHFL_VOICE)))
         {
             if (chptr->mode.mode & MODE_MODERATED)
@@ -988,8 +1005,8 @@ int can_send(aClient *cptr, aChannel *chptr, char *msg)
             if ((chptr->mode.mode & MODE_MODREG) && !IsRegNick(cptr))
                 return (ERR_NEEDREGGEDNICK);
         }
-        if ((chptr->mode.mode & MODE_NOCOLOR) && msg_has_colors(msg))
-            return (ERR_NOCOLORSONCHAN);
+        if ((chptr->mode.mode & MODE_NOCTRL) && msg_has_ctrls(msg))
+            return (ERR_NOCTRLSONCHAN);
     }
     
     return 0;
@@ -1020,7 +1037,7 @@ static void channel_modes(aClient *cptr, char *mbuf, char *pbuf,
         *mbuf++ = 'r';
     if (chptr->mode.mode & MODE_REGONLY)
         *mbuf++ = 'R';
-    if (chptr->mode.mode & MODE_NOCOLOR)
+    if (chptr->mode.mode & MODE_NOCTRL)
         *mbuf++ = 'c';
     if (chptr->mode.mode & MODE_OPERONLY)
         *mbuf++ = 'O';
@@ -1385,7 +1402,7 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
         MODE_PRIVATE, 'p', MODE_SECRET, 's',
         MODE_MODERATED, 'm', MODE_NOPRIVMSGS, 'n',
         MODE_TOPICLIMIT, 't', MODE_REGONLY, 'R',
-        MODE_INVITEONLY, 'i', MODE_NOCOLOR, 'c', MODE_OPERONLY, 'O',
+        MODE_INVITEONLY, 'i', MODE_NOCTRL, 'c', MODE_OPERONLY, 'O',
         MODE_MODREG, 'M', 
 #ifdef USE_CHANMODE_L
         MODE_LISTED, 'L',
@@ -4209,7 +4226,7 @@ int m_sjoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
             SJ_MODEADD('r', MODE_REGISTERED);
             SJ_MODEADD('R', MODE_REGONLY);
             SJ_MODEADD('M', MODE_MODREG);
-            SJ_MODEADD('c', MODE_NOCOLOR);
+            SJ_MODEADD('c', MODE_NOCTRL);
             SJ_MODEADD('O', MODE_OPERONLY);
 #ifdef USE_CHANMODE_L
             SJ_MODEADD('L', MODE_LISTED);
@@ -4367,7 +4384,7 @@ int m_sjoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
         SJ_MODEPLUS('r', MODE_REGISTERED);
         SJ_MODEPLUS('R', MODE_REGONLY);
         SJ_MODEPLUS('M', MODE_MODREG);
-        SJ_MODEPLUS('c', MODE_NOCOLOR);
+        SJ_MODEPLUS('c', MODE_NOCTRL);
         SJ_MODEPLUS('O', MODE_OPERONLY);
 #ifdef USE_CHANMODE_L
         SJ_MODEPLUS('L', MODE_LISTED);
@@ -4382,7 +4399,7 @@ int m_sjoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
         SJ_MODEMINUS('r', MODE_REGISTERED);
         SJ_MODEMINUS('R', MODE_REGONLY);
         SJ_MODEMINUS('M', MODE_MODREG);
-        SJ_MODEMINUS('c', MODE_NOCOLOR);
+        SJ_MODEMINUS('c', MODE_NOCTRL);
         SJ_MODEMINUS('O', MODE_OPERONLY);
 #ifdef USE_CHANMODE_L
         SJ_MODEMINUS('L', MODE_LISTED);

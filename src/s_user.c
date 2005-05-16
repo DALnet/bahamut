@@ -1431,8 +1431,8 @@ is_silenced(aClient *sptr, aClient *acptr)
 static inline void 
 send_msg_error(aClient *sptr, char *parv[], char *nick, int ret) 
 {
-    if(ret == ERR_NOCOLORSONCHAN)
-        sendto_one(sptr, err_str(ERR_NOCOLORSONCHAN), me.name,
+    if(ret == ERR_NOCTRLSONCHAN)
+        sendto_one(sptr, err_str(ERR_NOCTRLSONCHAN), me.name,
                    parv[0], nick, parv[2]);
     else if(ret == ERR_NEEDREGGEDNICK)
         sendto_one(sptr, err_str(ERR_NEEDREGGEDNICK), me.name,

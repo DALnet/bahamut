@@ -450,7 +450,7 @@ static char *replies[] =
     /* 406 ERR_WASNOSUCHNICK */	":%s 406 %s %s :There was no such nickname",
     /* 407 ERR_TOOMANYTARGETS */	":%s 407 %s %s :Too many targets. "
                                         "Remaining targets skipped.",
-    /* 408 ERR_NOCOLORSONCHAN */	":%s 408 %s %s :You cannot use colors "
+    /* 408 ERR_NOCTRLSONCHAN */	":%s 408 %s %s :You cannot use control codes "
                                         "on this channel. Not sent: %s",
     /* 409 ERR_NOORIGIN */		":%s 409 %s :No origin specified",
     /* 410 */	                NULL,
