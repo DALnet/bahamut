@@ -405,10 +405,10 @@ m_server_estab(aClient *cptr)
     if (!DoesTS(cptr))
     {
         sendto_gnotice("from %s: Warning: %s linked, non-TS server",
-                       me.name, get_client_name(cptr, TRUE));
+                       me.name, get_client_name(cptr, HIDEME));
         sendto_serv_butone(cptr,
                            ":%s GNOTICE :Warning: %s linked, non-TS server",
-                           me.name, get_client_name(cptr, TRUE));
+                           me.name, get_client_name(cptr, HIDEME));
     }
 
     sendto_one(cptr, "SVINFO %d %d 0 :%ld", TS_CURRENT, TS_MIN,
@@ -597,7 +597,7 @@ int m_server(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
 #ifdef WARN_NO_NLINE
             sendto_realops("Link %s dropped, no Connect block",
-                           get_client_name(cptr, TRUE));
+                           get_client_name(cptr, HIDEME));
 #endif
 
             return exit_client(cptr, cptr, cptr, "No Connect block");
@@ -782,7 +782,7 @@ int m_server(aClient *cptr, aClient *sptr, int parc, char *parv[])
         default:
             ircstp->is_ref++;
             sendto_ops("Received unauthorized connection from %s.",
-                       get_client_host(cptr));
+                       get_client_name(cptr, HIDEME));
             return exit_client(cptr, cptr, cptr, "No Connect block");
     }
 }

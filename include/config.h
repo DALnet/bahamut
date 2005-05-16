@@ -279,12 +279,6 @@
  */
 #define NO_OPER_FLOOD
 
-/* SHOW_UH - show the user@host everywhere */
-#define SHOW_UH
-#ifdef SHOW_UH
-#define USERNAMES_IN_TRACE
-#endif
-
 /*
  * SHOW_INVISIBLE_LUSERS - show invisible clients in LUSERS As defined
  * this will show the correct invisible count for anyone who does

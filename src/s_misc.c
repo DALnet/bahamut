@@ -222,67 +222,58 @@ get_listener_name(aListener *lptr)
 char *
 get_client_name(aClient *sptr, int showip)
 {
-    static char nbuf[HOSTLEN * 2 + USERLEN + 5];
+    static char nbuf[HOSTLEN * 2 + USERLEN + 7];
+    char *s = nbuf;
 
     if (MyConnect(sptr)) 
     {
-        switch (showip) 
+        if (sptr->name[0])
+            s += ircsprintf(s, "%s", sptr->name);
+        else
+            s += ircsprintf(s, "<unnamed>", sptr->name);
+
+        if (IsServer(sptr))
         {
-            case TRUE:
-#ifdef SHOW_UH
-                ircsprintf(nbuf, "%s[%s%s@%s]", sptr->name,
-                           (!(sptr->flags & FLAGS_GOTID)) ? "" : "(+)",
-                           sptr->user ? sptr->user->username : sptr->username,
-                           inetntoa((char *) &sptr->ip));
-#else
-                ircsprintf(nbuf, "%s[%s@%s]", sptr->name,
-                           (!(sptr->flags & FLAGS_GOTID)) ? "" : sptr->username,
-                           inetntoa((char *) &sptr->ip));
-#endif
-                break;
-            case HIDEME:
-#ifdef SHOW_UH
-                ircsprintf(nbuf, "%s[%s%s@%s]", sptr->name,
-                           (!(sptr->flags & FLAGS_GOTID)) ? "" : "(+)",
-                           sptr->user ? sptr->user->username : sptr->username,
-                           "0.0.0.0");
-#else
-                ircsprintf(nbuf, "%s[%s@%s]", sptr->name,
-                           (!(sptr->flags & FLAGS_GOTID)) ? "" : sptr->username,
-                           "0.0.0.0");
-#endif
-                break;
-            default:
-                if (mycmp(sptr->name, sptr->sockhost))
-#ifdef USERNAMES_IN_TRACE
-                    ircsprintf(nbuf, "%s[%s@%s]", sptr->name,
-                               sptr->user ? sptr->user->username :
-                               sptr->username, sptr->sockhost);
-#else
-                    ircsprintf(nbuf, "%s[%s]", sptr->name, sptr->sockhost);
-#endif
-                else
-                    return sptr->name;
+            if (showip == TRUE)
+                s += ircsprintf(s, "[%s]", inetntoa((char *)&sptr->ip));
+            else if (showip != HIDEME)
+                s += ircsprintf(s, "[%s]", sptr->sockhost);
         }
+        else if (IsClient(sptr))
+        {
+            if (showip == TRUE)
+                s += ircsprintf(s, "!%s@%s", sptr->user->username,
+                                inetntoa((char *)&sptr->ip));
+            else if (showip != HIDEME)
+                s += ircsprintf(s, "!%s@%s", sptr->user->username,
+                                sptr->user->host);
+        }
+        else
+        {
+            if (showip != HIDEME)
+            {
+                s += ircsprintf(s, "([");
+
+                if (DoingAuth(sptr))
+                    *s++ = '?';
+                else if (sptr->flags & FLAGS_GOTID)
+                    *s++ = '+';
+                else
+                    *s++ = '-';
+
+                if (showip == TRUE)
+                    s += ircsprintf(s, "]%s@%s)", sptr->username,
+                                    inetntoa((char *)&sptr->ip));
+                else
+                    s += ircsprintf(s, "]%s@%s)", sptr->username,
+                                    sptr->sockhost);
+            }
+        }
+
         return nbuf;
     }
-    return sptr->name;
-}
 
-char *
-get_client_host(aClient *cptr)
-{
-    static char nbuf[HOSTLEN * 2 + USERLEN + 5];
-    
-    if (!MyConnect(cptr))
-        return cptr->name;
-    if (!cptr->hostp)
-        return get_client_name(cptr, FALSE);
-    else
-        ircsprintf(nbuf, "%s[%-.*s@%-.*s]", cptr->name, USERLEN,
-                          (!(cptr->flags & FLAGS_GOTID)) ? "" : cptr->username,
-                          HOSTLEN, cptr->hostp->h_name);
-    return nbuf;
+    return sptr->name;
 }
 
 /*

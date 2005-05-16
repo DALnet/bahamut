@@ -803,8 +803,9 @@ serv_info(aClient *cptr, char *name)
         sendK += acptr->sendK;
         receiveK += acptr->receiveK;
         sendto_one(cptr, Lformat, me.name, RPL_STATSLINKINFO,
-                    name, ( IsAnOper(cptr) ? get_client_name(acptr, HIDEME)
-                                           : acptr->name ),
+                    name, ( (MyClient(cptr) && IsAdmin(cptr))
+                            ? get_client_name(acptr, FALSE)
+                            : get_client_name(acptr, HIDEME) ),
                     (int) SBufLength(&acptr->sendQ),
                     (int) acptr->sendM, (int) acptr->sendK,
                     (int) acptr->receiveM, (int) acptr->receiveK,
@@ -1073,9 +1074,7 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
             sincetime = (acptr->since > timeofday) ? 0 : 
                                 timeofday - acptr->since;
             sendto_one(sptr, Lformat, me.name, RPL_STATSLINKINFO, parv[0],
-                        ( (IsAnOper(sptr) || !IsAnOper(acptr))
-                          ? get_client_name(acptr, TRUE)
-                          : get_client_name(acptr, HIDEME) ),
+                        get_client_name(acptr, TRUE),
                         (int) SBufLength(&acptr->sendQ),
                         (int) acptr->sendM, (int) acptr->sendK,
                         (int) acptr->receiveM, (int) acptr->receiveK,
@@ -1098,8 +1097,9 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
                 sincetime = (acptr->since > timeofday) ? 0 : 
                              timeofday - acptr->since;
                 sendto_one(sptr, Lformat, me.name, RPL_STATSLINKINFO, parv[0],
-                        ( IsAnOper(sptr) ? get_client_name(acptr, HIDEME)
-                                         : acptr->name ),
+                        ( (MyClient(sptr) && IsAdmin(sptr))
+                          ? get_client_name(acptr, FALSE)
+                          : get_client_name(acptr, HIDEME) ),
                         (int) SBufLength(&acptr->sendQ),
                         (int) acptr->sendM, (int) acptr->sendK,
                         (int) acptr->receiveM, (int) acptr->receiveK,

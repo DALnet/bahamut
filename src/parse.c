@@ -272,7 +272,7 @@ int parse(aClient *cptr, char *buffer, char *bufend)
                 {
                    sendto_realops_lev(DEBUG_LEV, "Overflowed MAXPARA on %s from %s",
 			   mptr ? mptr->cmd : "numeric",
-			   get_client_name(cptr, (IsServer(cptr) ? HIDEME : TRUE)));
+			   get_client_name(cptr, (IsServer(cptr) ? HIDEME : FALSE)));
                 }
 		break;
             }
@@ -504,7 +504,7 @@ static int cancel_clients(aClient *cptr, aClient *sptr, char *cmd)
 	sendto_realops_lev(DEBUG_LEV, "Message for %s[%s] from %s",
 			   sptr->name, sptr->from->name,
 			   get_client_name(cptr, 
-					   (IsServer(cptr) ? HIDEME : TRUE)));
+					   (IsServer(cptr) ? HIDEME : FALSE)));
 	if (IsServer(cptr))
 	{
 	    sendto_realops_lev(DEBUG_LEV,
@@ -541,7 +541,7 @@ static int cancel_clients(aClient *cptr, aClient *sptr, char *cmd)
 				   "(TS, ignored)", sptr->name,
 				   sptr->user->username, sptr->user->host,
 				   sptr->from->name,
-				   get_client_name(cptr, TRUE));
+				   get_client_name(cptr, HIDEME));
 	    return 0;
 	}
 	else
@@ -552,8 +552,7 @@ static int cancel_clients(aClient *cptr, aClient *sptr, char *cmd)
 				   sptr->name, sptr->user->username,
 				   sptr->user->host,
 				   sptr->from->name,
-				   get_client_name(cptr, (IsServer(cptr) ? 
-							  HIDEME : TRUE)));
+				   get_client_name(cptr, HIDEME));
 	    if(IsULine(sptr))
 	    {
 		sendto_realops_lev(DEBUG_LEV,
@@ -565,8 +564,7 @@ static int cancel_clients(aClient *cptr, aClient *sptr, char *cmd)
 			       ":%s KILL %s :%s (%s[%s] != %s, Fake Prefix)",
 			       me.name, sptr->name, me.name,
 			       sptr->name, sptr->from->name,
-			       get_client_name(cptr, (IsServer(cptr) ?
-						      HIDEME : TRUE)));
+			       get_client_name(cptr, HIDEME));
 	    sptr->flags |= FLAGS_KILLED;
 	    return exit_client(cptr, sptr, &me, "Fake Prefix");
 	}

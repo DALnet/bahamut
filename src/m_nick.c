@@ -150,9 +150,9 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	if (IsServer(cptr))
 	{
 	    ircstp->is_kill++;
-	    sendto_realops_lev(DEBUG_LEV, "Bad Nick: %s From: %s %s",
+        sendto_realops_lev(DEBUG_LEV, "Bad Nick: %s From: %s Via: %s",
 			       parv[1], parv[0],
-			       get_client_name(cptr, FALSE));
+			       get_client_name(cptr, HIDEME));
 	    sendto_one(cptr, ":%s KILL %s :%s (Bad Nick)",
 		       me.name, parv[1], me.name);
 	    if (sptr != cptr) { /* bad nick change */     
@@ -467,7 +467,7 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 			       ban->reason);
 		    sendto_realops_lev(REJ_LEV,
 				       "Forbidding restricted nick %s from %s.",
-				       nick, get_client_name(cptr, FALSE));
+				       nick, get_client_name(cptr, TRUE));
 		    return 0;
 		}
 	    }
@@ -592,8 +592,7 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 			       BadPtr(ban->reason) ? "Erroneous Nickname" :
 			       ban->reason);
 		    sendto_realops_lev(REJ_LEV,
-				       "Forbidding restricted nick %s from "
-				       "<unregistered>%s.", nick,
+				       "Forbidding restricted nick %s from %s.", nick,
 				       get_client_name(cptr, FALSE));
 		    return 0;
 		}

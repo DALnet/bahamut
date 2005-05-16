@@ -986,11 +986,11 @@ m_connect(aClient *cptr, aClient *sptr, int parc, char *parv[])
     sendto_gnotice("from %s: %s CONNECT %s %s from %s",
                    me.name,  IsAnOper(cptr) ? "Local" : "Remote", 
                    parv[1], parv[2] ? parv[2] : "",
-                   get_client_name(sptr, HIDEME));
+                   sptr->name);
     sendto_serv_butone(NULL, ":%s GNOTICE :%s CONNECT %s %s from %s", 
                        me.name, IsAnOper(cptr) ? "Local" : "Remote",
                        parv[1], parv[2] ? parv[2] : "",
-                       get_client_name(sptr, HIDEME));
+                       sptr->name);
 
 #if defined(USE_SYSLOG) && defined(SYSLOG_CONNECT)
     syslog(LOG_DEBUG, "CONNECT From %s : %s %s", parv[0], parv[1], 
@@ -2453,7 +2453,7 @@ m_restart(aClient *cptr, aClient *sptr, int parc, char *parv[])
     syslog(LOG_WARNING, "Server RESTART by %s\n",
            get_client_name(sptr, FALSE));
 #endif
-    sprintf(buf, "Server RESTART by %s", get_client_name(sptr, TRUE));
+    sprintf(buf, "Server RESTART by %s", get_client_name(sptr, FALSE));
     restart(buf);
     return 0;                   /* NOT REACHED */
 }

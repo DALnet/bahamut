@@ -62,7 +62,7 @@ void start_auth(aClient *cptr)
     {
 #ifdef	USE_SYSLOG
 	syslog(LOG_ERR, "Unable to create auth socket for %s:%m",
-	       get_client_name(cptr, TRUE));
+	       get_client_name(cptr, IsServer(cptr) ? HIDEME : TRUE));
 #endif
 	ircstp->is_abad++;
 	return;
@@ -152,7 +152,7 @@ void send_authports(aClient *cptr)
     {
 #ifdef	USE_SYSLOG
 	syslog(LOG_DEBUG, "auth get{sock,peer}name error for %s:%m",
-	       get_client_name(cptr, TRUE));
+	       get_client_name(cptr, IsServer(cptr) ? HIDEME : TRUE));
 #endif
 	authsenderr(cptr);
 	return;

@@ -452,7 +452,7 @@ register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
                     ircstp->is_ref++;
                     sendto_realops_lev(REJ_LEV, "%s from %s [Unauthorized"
                                        " client connection]",
-                                       get_client_host(sptr), p);
+                                       get_client_name(sptr, FALSE), p);
                     return exit_client(cptr, sptr, &me, "You are not"
                                        " authorized to use this server");
 
@@ -463,14 +463,15 @@ register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
                     ircstp->is_ref++;
                     sendto_realops_lev(REJ_LEV, "%s for %s [Allow class is"
                                        " full (server is full)]",
-                                       get_client_host(sptr), p);
+                                       get_client_name(sptr, FALSE), p);
                     return exit_client(cptr, sptr, &me, "No more connections"
                                        " allowed in your connection class (the"
                                        " server is full)");
 
                 default:
                     sendto_realops_lev(DEBUG_LEV, "I don't know why I dropped"
-                                       " %s (%d)", get_client_host(sptr), i);
+                                       " %s (%d)", get_client_name(sptr,FALSE),
+                                       i);
                     return exit_client(cptr, sptr, &me, "Internal error");
             }
         }
