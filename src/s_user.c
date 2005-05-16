@@ -816,6 +816,8 @@ register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
         if(call_hooks(CHOOK_POSTACCESS, sptr) == FLUSH_BUFFER)
             return FLUSH_BUFFER;
 
+        Count.unknown--;
+
         if ((++Count.local) > Count.max_loc) 
         {
             Count.max_loc = Count.local;

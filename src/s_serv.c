@@ -674,6 +674,9 @@ m_help(aClient *cptr, aClient *sptr, int parc, char *parv[])
  * 
  * 199970918 JRL hacked to ignore parv[1] completely and require parc > 3
  * to cause a force
+ *
+ * Now if parv[1] is anything other than *, it forces a recount.
+ *    -Quension [May 2005]
  */
 int 
 m_lusers(aClient *cptr, aClient *sptr, int parc, char *parv[])
@@ -687,7 +690,7 @@ m_lusers(aClient *cptr, aClient *sptr, int parc, char *parv[])
             return 0;
     }
 
-    if(is_luserslocked())
+    if(!IsAnOper(sptr) && is_luserslocked())
     {
        send_fake_lusers(sptr);
        return 0;
@@ -699,43 +702,23 @@ m_lusers(aClient *cptr, aClient *sptr, int parc, char *parv[])
 /*
  * send_lusers
  *     parv[0] = sender
- *     parv[1] = host/server mask.
+ *     parv[1] = anything but "*" to force a recount
  *     parv[2] = server to query
  */
 int send_lusers(aClient *cptr, aClient *sptr, int parc, char *parv[]) 
 {
-#define LUSERS_CACHE_TIME 180
-    static long                  last_time=0;
-    static int           s_count = 0, c_count = 0, u_count = 0, i_count = 0;
-    static int           o_count = 0, m_client = 0, m_server = 0, m_ulined = 0;
-    int                          forced;
-    aClient             *acptr;
-
-    forced = (IsAnOper(sptr) && (parc > 3));
-
-    Count.unknown = 0;
-    m_server = Count.myserver;
-    m_ulined = Count.myulined;
-    m_client = Count.local;
-    i_count = Count.invisi;
-    u_count = Count.unknown;
-    c_count = Count.total - Count.invisi;
-    s_count = Count.server;
-    o_count = Count.oper;
-    if (forced || (timeofday > last_time + LUSERS_CACHE_TIME)) 
+    /* forced recount */
+    if (IsAnOper(sptr) && (parc > 1) && (*parv[1] != '*')) 
     {
-        last_time = timeofday;
-        /* only recount if more than a second has passed since last request
-         * use LUSERS_CACHE_TIME instead... 
-         */
-        s_count = 0;
-        c_count = 0;
-        u_count = 0;
-        i_count = 0;
-        o_count = 0;
-        m_client = 0;
-        m_server = 0;
-        m_ulined = 0;
+        int s_count = 0;
+        int c_count = 0;
+        int u_count = 0;
+        int i_count = 0;
+        int o_count = 0;
+        int m_client = 0;
+        int m_server = 0;
+        int m_ulined = 0;
+        aClient *acptr;
         
         for (acptr = client; acptr; acptr = acptr->next) 
         {
@@ -783,66 +766,58 @@ int send_lusers(aClient *cptr, aClient *sptr, int parc, char *parv[])
                 break;
             }
         }
-        /*
-         * We only want to reassign the global counts if the recount time
-         * has expired, and NOT when it was forced, since someone may
-         * supply a mask which will only count part of the userbase
-         * -Taner
-         */
-        if (!forced) 
+
+        /* sanity check */
+        if (m_server != Count.myserver)
         {
-            if (m_server != Count.myserver) 
-            {
-                sendto_realops_lev(DEBUG_LEV,
-                                   "Local server count off by %d",
-                                   Count.myserver - m_server);
-                Count.myserver = m_server;
-            }
-            if (m_ulined != Count.myulined) 
-            {
-                sendto_realops_lev(DEBUG_LEV,
-                                   "Local superserver count off by %d",
-                                   Count.myulined - m_ulined);
-                Count.myulined = m_ulined;
-            }
-            if (s_count != Count.server) 
-            {
-                sendto_realops_lev(DEBUG_LEV,
-                                   "Server count off by %d",
-                                   Count.server - s_count);
-                Count.server = s_count;
-            }
-            if (i_count != Count.invisi) 
-            {
-                sendto_realops_lev(DEBUG_LEV,
-                                   "Invisible client count off by %d",
-                                   Count.invisi - i_count);
-                Count.invisi = i_count;
-            }
-            if ((c_count + i_count) != Count.total) 
-            {
-                sendto_realops_lev(DEBUG_LEV, "Total client count off by %d",
-                                   Count.total - (c_count + i_count));
-                Count.total = c_count + i_count;
-            }
-            if (m_client != Count.local) 
-            {
-                sendto_realops_lev(DEBUG_LEV,
-                                   "Local client count off by %d",
-                                   Count.local - m_client);
-                Count.local = m_client;
-            }
-            if (o_count != Count.oper) 
-            {
-                sendto_realops_lev(DEBUG_LEV,
-                                   "Oper count off by %d",
-                                   Count.oper - o_count);
-                Count.oper = o_count;
-            }
+            sendto_realops_lev(DEBUG_LEV, "Local server count off by %d",
+                               Count.myserver - m_server);
+            Count.myserver = m_server;
+        }
+        if (m_ulined != Count.myulined)
+        {
+            sendto_realops_lev(DEBUG_LEV, "Local superserver count off by %d",
+                               Count.myulined - m_ulined);
+            Count.myulined = m_ulined;
+        }
+        if (s_count != Count.server)
+        {
+            sendto_realops_lev(DEBUG_LEV, "Server count off by %d",
+                               Count.server - s_count);
+            Count.server = s_count;
+        }
+        if (i_count != Count.invisi)
+        {
+            sendto_realops_lev(DEBUG_LEV, "Invisible client count off by %d",
+                               Count.invisi - i_count);
+            Count.invisi = i_count;
+        }
+        if ((c_count + i_count) != Count.total)
+        {
+            sendto_realops_lev(DEBUG_LEV, "Total client count off by %d",
+                               Count.total - (c_count + i_count));
+            Count.total = c_count + i_count;
+        }
+        if (m_client != Count.local)
+        {
+            sendto_realops_lev(DEBUG_LEV, "Local client count off by %d",
+                               Count.local - m_client);
+            Count.local = m_client;
+        }
+        if (o_count != Count.oper)
+        {
+            sendto_realops_lev(DEBUG_LEV, "Oper count off by %d",
+                               Count.oper - o_count);
+            Count.oper = o_count;
+        }
+        if (u_count != Count.unknown)
+        {
+            sendto_realops_lev(DEBUG_LEV, "Unknown connection count off by %d",
+                               Count.unknown - u_count);
             Count.unknown = u_count;
-        }                       /* Complain & reset loop */
-    }                           /* Recount loop */
-    
+        }
+    }   /* Recount loop */
+
     /* save stats */
     if ((timeofday - last_stat_save) > 3600)
     {
@@ -865,23 +840,24 @@ int send_lusers(aClient *cptr, aClient *sptr, int parc, char *parv[])
     
     
 #ifndef SHOW_INVISIBLE_LUSERS
-    if (IsAnOper(sptr) && i_count)
+    if (IsAnOper(sptr) && Count.invisi)
 #endif
         sendto_one(sptr, rpl_str(RPL_LUSERCLIENT), me.name, parv[0],
-                   c_count, i_count, s_count);
+                   Count.total - Count.invisi, Count.invisi, Count.server);
 #ifndef SHOW_INVISIBLE_LUSERS
     else
         sendto_one(sptr,
                    ":%s %d %s :There are %d users on %d servers", me.name,
-                   RPL_LUSERCLIENT, parv[0], c_count,
-                   s_count);
+                   RPL_LUSERCLIENT, parv[0], Count.total - Count.invisi,
+                   Count.server);
 #endif
-    if (o_count)
-        sendto_one(sptr, rpl_str(RPL_LUSEROP),
-                   me.name, parv[0], o_count);
-    if (u_count > 0)
-        sendto_one(sptr, rpl_str(RPL_LUSERUNKNOWN),
-                   me.name, parv[0], u_count);
+
+    if (Count.oper)
+        sendto_one(sptr, rpl_str(RPL_LUSEROP), me.name, parv[0], Count.oper);
+
+    if (IsAnOper(sptr) && Count.unknown)
+        sendto_one(sptr, rpl_str(RPL_LUSERUNKNOWN), me.name, parv[0],
+                   Count.unknown);
     
     /* This should be ok */
     if (Count.chan > 0)
@@ -889,11 +865,12 @@ int send_lusers(aClient *cptr, aClient *sptr, int parc, char *parv[])
                    me.name, parv[0], Count.chan);
     sendto_one(sptr, rpl_str(RPL_LUSERME),
 #ifdef HIDEULINEDSERVS
-               me.name, parv[0], m_client, 
-               IsOper(sptr) ? m_server : m_server - m_ulined);
+               me.name, parv[0], Count.local, 
+               IsOper(sptr) ? Count.myserver : Count.myserver - Count.myulined);
 #else
-               me.name, parv[0], m_client, m_server);
+               me.name, parv[0], Count.local, Count.myserver);
 #endif
+
     sendto_one(sptr, rpl_str(RPL_LOCALUSERS), me.name, parv[0],
                    Count.local, Count.max_loc);
     sendto_one(sptr, rpl_str(RPL_GLOBALUSERS), me.name, parv[0],

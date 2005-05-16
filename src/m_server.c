@@ -70,6 +70,7 @@ do_server_estab(aClient *cptr)
 
     SetServer(cptr);
 
+    Count.unknown--;
     Count.server++;
     Count.myserver++;
 

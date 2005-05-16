@@ -1234,6 +1234,7 @@ aClient *add_connection(aListener *lptr, int fd)
 
     lptr->ccount++;
     lptr->clients++;
+    Count.unknown++;
     add_fd(fd, FDT_CLIENT, acptr);
     local[fd] = acptr;
 

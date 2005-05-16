@@ -571,6 +571,8 @@ exit_client(aClient *cptr, aClient *sptr, aClient *from, char *comment)
     {
         call_hooks(CHOOK_SIGNOFF, sptr);
 
+        if (IsUnknown(sptr))
+            Count.unknown--;
         if (IsAnOper(sptr)) 
             remove_from_list(&oper_list, sptr, NULL);
         if (sptr->flags & FLAGS_HAVERECVQ)
