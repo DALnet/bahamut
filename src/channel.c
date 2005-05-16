@@ -821,16 +821,16 @@ int check_joinrate(aChannel *chptr, time_t ts, int local, aClient *cptr)
         chptr->default_join_start = NOW;
         chptr->default_join_count = 0;
     }
-    /* If it's local and we've filled the join count, complain
-     * to ops so they can take the appropriate measures */
-    if(local && chptr->default_join_count >= join_num)
-        sendto_realops_lev(DEBUG_LEV, "Join rate warning on %s"
-                                      " for %s!%s@%s (%d/%d in %d) (No action taken)",
-                           chptr->chname, cptr->name, cptr->user->username,
-                           cptr->hostip, chptr->default_join_count, join_num,
-                           NOW - chptr->default_join_start);
     /* update the count here for attempts, in case a lower throttle blocks */
     chptr->default_join_count++;
+    /* If it's local and we've filled the join count, complain
+     * to ops so they can take the appropriate measures */
+    if(local && chptr->default_join_count > join_num)
+        sendto_realops_lev(DEBUG_LEV, "Join rate warning on %s for %s!%s@%s"
+                                      " (%d in %d)",
+                           chptr->chname, cptr->name, cptr->user->username,
+                           cptr->hostip, chptr->default_join_count,
+                           NOW - chptr->default_join_start);
 
     /* Has the channel set their own custom settings? */
     if(chptr->mode.mode & MODE_JOINRATE)
@@ -852,11 +852,11 @@ int check_joinrate(aChannel *chptr, time_t ts, int local, aClient *cptr)
     /* If it's local and we've filled the join count, say no */
     if(local && chptr->join_count >= join_num)
     {
-        sendto_realops_lev(DEBUG_LEV, "Join rate throttling on %s"
-                                      " for %s!%s@%s (%d/%d in %d)",
+        sendto_realops_lev(DEBUG_LEV, "Join rate throttling on %s for %s!%s@%s"
+                                      " (%d/%d in %d/%d)",
                            chptr->chname, cptr->name, cptr->user->username, 
                            cptr->hostip, chptr->join_count, join_num, 
-                           NOW - chptr->join_start);
+                           NOW - chptr->join_start, join_time);
         return 0;
     }
     return 1;
