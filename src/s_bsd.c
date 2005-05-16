@@ -699,7 +699,7 @@ int check_server_init(aClient * cptr)
                     break;
             if (!hp->h_addr_list[i])
             {
-                sendto_realops_lev(DEBUG_LEV,
+                sendto_realops_lev(ADMIN_LEV,
                     "Server IP# Mismatch: %s != %s[%08x]",
                     inetntoa((char *) &cptr->ip), hp->h_name,
                     *((unsigned long *) hp->h_addr));

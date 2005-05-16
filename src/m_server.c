@@ -326,18 +326,18 @@ m_server_estab(aClient *cptr)
     if (!(aconn = cptr->serv->aconn))
     {
         ircstp->is_ref++;
-        sendto_one(cptr, "ERROR :Access denied. No Connect block for server %s",
-                   inpath);
-        sendto_ops("Access denied. No Connect block for server %s", inpath);
-        return exit_client(cptr, cptr, cptr, "No Connect block for server");
+        sendto_one(cptr, "ERROR :Lost Connect block");
+        sendto_ops_lev(ADMIN_LEV, "Lost Connect block for server %s",
+                           get_client_name(cptr, TRUE));
+        return exit_client(cptr, cptr, cptr, "Lost Connect block");
     }
 
     encr = cptr->passwd;
     if (*aconn->apasswd && !StrEq(aconn->apasswd, encr))
     {
         ircstp->is_ref++;
-        sendto_one(cptr, "ERROR :No Access (passwd mismatch) %s", inpath);
-        sendto_ops("Access denied (passwd mismatch) %s", inpath);
+        sendto_one(cptr, "ERROR :Wrong link password", inpath);
+        sendto_ops("Link %s dropped, wrong password", inpath);
         return exit_client(cptr, cptr, cptr, "Bad Password");
     }
     memset(cptr->passwd, '\0', sizeof(cptr->passwd));
@@ -438,11 +438,6 @@ m_server_estab(aClient *cptr)
     cptr->serv->aconn = aconn;
 
     throttle_remove(inetntoa((char *)&cptr->ip));
-
-    /* now fill out the servers info so nobody knows dink about it. */
-    memset((char *)&cptr->ip, '\0', sizeof(struct in_addr));
-    strcpy(cptr->hostip, "127.0.0.1");
-    strcpy(cptr->sockhost, "localhost");
 
 #ifdef HAVE_ENCRYPTION_ON
     if(!CanDoDKEY(cptr) || !WantDKEY(cptr))
@@ -579,31 +574,32 @@ int m_server(aClient *cptr, aClient *sptr, int parc, char *parv[])
         }
     }
 
-    /*
-     * check to see this host even has an N line before bothering
-     * anyone about it. Its only a quick sanity test to stop the
-     * conference room and win95 ircd dorks. Sure, it will be
-     * redundantly checked again in m_server_estab() *sigh* yes there
-     * will be wasted CPU as the conf list will be scanned twice. But
-     * how often will this happen? - Dianora
-     *
-     * This should (will be) be recoded to check the IP is valid as well,
-     * with a pointer to the valid N line conf kept for later, saving an
-     * extra lookup.. *sigh* - Dianora
-     */
-    if (!IsServer(cptr))
+    /* new connection */
+    if (IsUnknown(cptr) || IsHandshake(cptr))
     {
-        if (!find_aConnect(host))
+        strncpyzt(cptr->name, host, sizeof(cptr->name));
+        strncpyzt(cptr->info, info[0] ? info : me.name, REALLEN);
+        cptr->hopcount = hop;
+
+        switch (check_server_init(cptr))
         {
-
-#ifdef WARN_NO_NLINE
-            sendto_realops("Link %s dropped, no Connect block",
+            case 0:
+                return m_server_estab(cptr);
+            case 1:
+                sendto_ops("Access check for %s in progress",
                            get_client_name(cptr, HIDEME));
-#endif
-
-            return exit_client(cptr, cptr, cptr, "No Connect block");
+                return 1;
+            default:
+                ircstp->is_ref++;
+                sendto_ops_lev(ADMIN_LEV, "Link %s dropped, no Connect block",
+                           get_client_name(cptr, TRUE));
+                return exit_client(cptr, cptr, cptr, "No Connect block");
         }
     }
+    
+    /* already linked server */
+    if (!IsServer(cptr))
+        return 0;
 
     if ((acptr = find_name(host, NULL)))
     {
@@ -755,37 +751,7 @@ int m_server(aClient *cptr, aClient *sptr, int parc, char *parv[])
         return 0;
     }
 
-    if (!IsUnknown(cptr) && !IsHandshake(cptr))
-        return 0;
-
-    /*
-     * * A local link that is still in undefined state wants to be a
-     * SERVER. Check if this is allowed and change status
-     * accordingly...
-     */
-    /*
-     * * Reject a direct nonTS server connection if we're TS_ONLY
-     * -orabidoo
-     */
-
-    strncpyzt(cptr->name, host, sizeof(cptr->name));
-    strncpyzt(cptr->info, info[0] ? info : me.name, REALLEN);
-    cptr->hopcount = hop;
-
-    switch (check_server_init(cptr))
-    {
-        case 0:
-            return m_server_estab(cptr);
-        case 1:
-            sendto_ops("Access check for %s in progress",
-                       get_client_name(cptr, HIDEME));
-            return 1;
-        default:
-            ircstp->is_ref++;
-            sendto_ops("Received unauthorized connection from %s.",
-                       get_client_name(cptr, HIDEME));
-            return exit_client(cptr, cptr, cptr, "No Connect block");
-    }
+    return 0;
 }
 
 /* m_dkey

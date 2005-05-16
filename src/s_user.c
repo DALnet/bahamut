@@ -1021,9 +1021,9 @@ register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
                                cptr->name, nick, user->username,
                                user->host, user->server,
                                acptr->name, acptr->from->name);
-            sendto_one(cptr, ":%s KILL %s :%s (%s != %s[%s] USER from wrong "
+            sendto_one(cptr, ":%s KILL %s :%s (%s != %s USER from wrong "
                        "direction)", me.name, sptr->name, me.name,
-                       user->server, acptr->from->name, acptr->from->sockhost);
+                       user->server, acptr->from->name);
             sptr->flags |= FLAGS_KILLED;
             return exit_client(sptr, sptr, &me, "USER server wrong direction");
                         

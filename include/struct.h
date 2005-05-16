@@ -310,6 +310,7 @@ typedef struct SAliasInfo AliasInfo;
 #define SPAM_LEV 	7
 #define DCCSEND_LEV	8
 #define USKILL_LEV	9
+#define ADMIN_LEV   10
 
 /* SEND_UMODES:
  *  we send these to remote servers.

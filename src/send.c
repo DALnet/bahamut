@@ -1184,6 +1184,10 @@ void sendto_ops_lev(int lev, char *pattern, ...)
           tmsg = "DCCAllow";
           break;
 
+       case ADMIN_LEV:
+          tmsg = "Admin";
+          break;
+
        default:
           tmsg = "Notice";
     }
@@ -1231,6 +1235,10 @@ void sendto_ops_lev(int lev, char *pattern, ...)
                 break;
             case DEBUG_LEV:
                 if (!SendDebugNotice(cptr) || !IsAnOper(cptr))
+                    continue;
+                break;
+            case ADMIN_LEV:
+                if (!IsAdmin(cptr) || !SendServNotice(cptr))
                     continue;
                 break;
                           
@@ -1707,6 +1715,10 @@ void sendto_realops_lev(int lev, char *pattern, ...)
           tmsg = "DCCAllow";
           break;
 
+       case ADMIN_LEV:
+          tmsg = "Admin";
+          break;
+
        default:
           tmsg = "Notice";
     }
@@ -1753,6 +1765,10 @@ void sendto_realops_lev(int lev, char *pattern, ...)
                 break;
             case DEBUG_LEV:
                 if (!SendDebugNotice(cptr))
+                    continue;
+                break;
+            case ADMIN_LEV:
+                if (!IsAdmin(cptr))
                     continue;
                 break;
         }
