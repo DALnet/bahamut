@@ -478,6 +478,7 @@ int m_svshold(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	    strcpy(oban->reason, reason);
 	    oban->timeset = NOW;
 	    oban->duration = length;
+        oban->autocap = (*parv[2] == '+') ? length : 0;
 	}
     }
     else if(length > 0)
@@ -486,6 +487,8 @@ int m_svshold(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	strcpy(ban->reason, reason);
 	ban->timeset = NOW;
 	ban->duration = length;
+    if (*parv[2] == '+')
+        ban->autocap = length;
 	add_simban(ban);
     }
     else

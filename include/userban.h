@@ -69,6 +69,7 @@ struct simBan {
    char *reason;
    time_t timeset;
    time_t duration;
+   time_t autocap;             /* maximum adjusted duration */
 
    void *internal_ent;         /* internal -- pointer to banlist entry tag */
 };
