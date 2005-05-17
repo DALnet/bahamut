@@ -3372,7 +3372,7 @@ void send_list(aClient *cptr, int numsend)
                 if ((!lopt->showall) && ((chptr->users < lopt->usermin) ||
                                          ((lopt->usermax >= 0) && 
                                           (chptr->users > lopt->usermax)) ||
-                                         ((chptr->channelts||1) < 
+                                         ((chptr->channelts) < 
                                           lopt->chantimemin) ||
                                          (chptr->topic_time < 
                                           lopt->topictimemin) ||
