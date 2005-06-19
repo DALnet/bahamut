@@ -342,6 +342,15 @@ m_server_estab(aClient *cptr)
     }
     memset(cptr->passwd, '\0', sizeof(cptr->passwd));
 
+    if (find_client(host, NULL))
+    {
+        sendto_gnotice("from %s: Link %s dropped, server already exists",
+                       me.name, inpath);
+        sendto_serv_butone(cptr, ":%s GNOTICE :Link %s dropped, server already"
+                           " exists", me.name, inpath);
+        return exit_client(cptr, cptr, cptr, "Server Exists");
+    }
+
     if(!(confopts & FLAGS_HUB))
     {
         int i;
