@@ -255,6 +255,15 @@ void report_memory_usage(aClient *cptr, int detail)
     use_total += use_hash;
     alloc_total += use_hash;
 
+    /* oddballs */
+#ifdef HAVE_ENCRYPTION_ON
+    alloc_total += mc_s_user.e_dh_sessions * mc_dh.m_dhsession_size;
+    alloc_total += mc_s_user.e_rc4states * mc_rc4.m_rc4state_size;
+#endif
+    alloc_total += mc_s_user.e_zipin_sessions * mc_zlink.m_insession_size;
+    alloc_total += mc_s_user.e_zipout_sessions * mc_zlink.m_outsession_size;
+
+
     /*
      * At this point we have some general statistics:
      *    alloc_total    - total bytes allocated from system heap
@@ -693,7 +702,7 @@ void report_memory_usage(aClient *cptr, int detail)
     rep_total += subtotal;
 
     mcbh_throttles.knownobjs += mc_throttle.e_throttles;
-    mcbh_throttles.knownobjs += mcgh_throttles.e_hashents;
+    mcbh_hashents.knownobjs += mcgh_throttles.e_hashents;
 #endif
 
 
