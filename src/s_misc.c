@@ -611,11 +611,13 @@ exit_client(aClient *cptr, aClient *sptr, aClient *from, char *comment)
                 for (lp = lopt->yeslist; lp; lp = next) 
                 {
                     next = lp->next;
+                    MyFree(lp->value.cp);
                     free_link(lp);
                 }
                 for (lp = lopt->nolist; lp; lp = next) 
                 {
                     next = lp->next;
+                    MyFree(lp->value.cp);
                     free_link(lp);
                 }
                                 
