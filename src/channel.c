@@ -3430,11 +3430,13 @@ void send_list(aClient *cptr, int numsend)
         for (lp = lopt->yeslist; lp; lp = next)
         {
             next = lp->next;
+            MyFree(lp->value.cp);
             free_link(lp);
         }
         for (lp = lopt->nolist; lp; lp = next)
         {
             next = lp->next;
+            MyFree(lp->value.cp);
             free_link(lp);
         }
         

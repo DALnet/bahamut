@@ -50,7 +50,7 @@ static int newblock(BlockHeap *bh)
 	return 1;
     }
     /* Now allocate the memory for the elems themselves. */
-    b->elems = (void *) MyMalloc((bh->elemsPerBlock + 1) * bh->elemSize);
+    b->elems = (void *) MyMalloc(bh->elemsPerBlock * bh->elemSize);
     if (b->elems == NULL)
     {
 	MyFree(b->allocMap);
