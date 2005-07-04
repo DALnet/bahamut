@@ -75,8 +75,6 @@
 #include <sys/uio.h>
 #endif
 
-#define MyFree(x)       do { if (x) free(x); (x) = NULL; } while(0)
-
 extern void dummy();
 
 #ifdef	NO_U_TYPES

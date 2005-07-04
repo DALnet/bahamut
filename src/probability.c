@@ -27,6 +27,7 @@
 #include "common.h"
 #include "sys.h"
 #include "h.h"
+#include "memcount.h"
 
 #ifdef RWHO_PROBABILITY
 
@@ -483,6 +484,17 @@ void get_probabilities(aClient *ac, int *np, int *up, int *gp)
 
     p = gavgfunc(ac->info, PCS_GCOS);
     *gp = (p < 0 ? gavg : p) * gscale;
+}
+
+u_long
+memcount_probability(MCprobability *mc)
+{
+    mc->file = __FILE__;
+
+    mc->s_prob.c = 1;
+    mc->s_prob.m += sizeof(probabilities);
+
+    return 0;
 }
 
 #endif  /* RWHO_PROBABILITY */

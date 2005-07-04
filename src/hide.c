@@ -14,6 +14,7 @@
 #include "h.h"
 #include "fds.h"
 #include "numeric.h"
+#include "memcount.h"
 
 /* This is how we maintain a 'fake' list of servers */
 
@@ -342,3 +343,27 @@ void fakelusers_sendlock(aClient *sptr)
    else
       sendto_one(sptr, ":%s LUSERSLOCK UNTIL %d", (int) luserslock_expiretime);
 }
+
+u_long
+memcount_hide(MChide *mc)
+{
+    Link                    *lp;
+    struct fakelinkserver   *ls;
+
+    mc->file = __FILE__;
+
+    for (lp = lserver_list; lp; lp = lp->next)
+    {
+        ls = (struct fakelinkserver *)lp->value.cp;
+        mc->fakelinks.c++;
+        mc->fakelinks.m += sizeof(struct fakelinkserver);
+        mc->fakelinks.m += strlen(ls->name) + 1;
+        mc->fakelinks.m += strlen(ls->description) + 1;
+        mc->e_links++;
+    }
+    mc->total.c += mc->fakelinks.c;
+    mc->total.m += mc->fakelinks.m;
+
+    return mc->fakelinks.m;
+}
+

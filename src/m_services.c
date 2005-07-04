@@ -34,6 +34,7 @@
 #include "h.h"
 #include "userban.h"
 #include "clones.h"
+#include "memcount.h"
 
 /* Externally defined stuffs */
 extern int user_modes[];
@@ -563,3 +564,12 @@ m_chankill(aClient *cptr, aClient *sptr, int parc, char *parv[])
                        (parc == 3) ? parv[2] : "");
     return 0;
 }
+
+u_long
+memcount_m_services(MCm_services *mc)
+{
+    mc->file = __FILE__;
+
+    return 0;
+}
+

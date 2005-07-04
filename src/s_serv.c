@@ -53,6 +53,7 @@
 #include "fdlist.h"
 #include "throttle.h"
 #include "clones.h"
+#include "memcount.h"
 
 static char buf[BUFSIZE];
 extern int  rehashed;
@@ -2084,7 +2085,7 @@ int m_kline(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
     if ((k->comment = strdup(buffer)) == NULL) 
     {
-        MyFree(k);
+        free(k);
         sendto_one(sptr, ":%s NOTICE %s :Problem allocating memory",
                    me.name, parv[0]);
         return (0);
@@ -2098,8 +2099,8 @@ int m_kline(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
     if ((k->kline = strdup(buffer)) == NULL) 
     {
-        MyFree(k->comment);
-        MyFree(k);
+        free(k->comment);
+        free(k);
         sendto_one(sptr, ":%s NOTICE %s :Problem allocating memory",
                    me.name, parv[0]);
         return (0);
@@ -3058,11 +3059,11 @@ do_pending_klines()
     {
         write(fd, k->comment, strlen(k->comment));
         write(fd, k->kline, strlen(k->kline));
-        MyFree(k->comment);
-        MyFree(k->kline);
+        free(k->comment);
+        free(k->kline);
         ok = k;
         k = k->next;
-        MyFree(ok);
+        free(ok);
     }
     pending_klines = NULL;
     pending_kline_time = 0;
@@ -3636,3 +3637,38 @@ m_unsgline(aClient *cptr, aClient *sptr, int parc, char *parv[])
         sendto_serv_butone(cptr, ":%s UNSGLINE :%s",sptr->name,mask);
     return 0;
 }
+
+u_long
+memcount_s_serv(MCs_serv *mc)
+{
+    aMotd *m;
+
+    mc->file = __FILE__;
+
+    for (m = motd; m; m = m->next)
+    {
+        mc->motd.c++;
+        mc->motd.m += sizeof(*m);
+    }
+    mc->total.c += mc->motd.c;
+    mc->total.m += mc->motd.m;
+
+    for (m = shortmotd; m; m = m->next)
+    {
+        mc->shortmotd.c++;
+        mc->shortmotd.m += sizeof(*m);
+    }
+    mc->total.c += mc->shortmotd.c;
+    mc->total.m += mc->shortmotd.m;
+
+    for (m = helpfile; m; m = m->next)
+    {
+        mc->help.c++;
+        mc->help.m += sizeof(*m);
+    }
+    mc->total.c += mc->help.c;
+    mc->total.m += mc->help.m;
+
+    return mc->total.m;
+}
+

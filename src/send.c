@@ -29,6 +29,7 @@
 #include "dh.h"
 #include "zlink.h"
 #include "fds.h"
+#include "memcount.h"
 
 /*
  * STOP_SENDING_ON_SHORT_SEND:
@@ -1997,3 +1998,21 @@ void flush_fdlist_connections(fdlist *listp)
             (ZipOut(cptr) && zip_is_data_out(cptr->serv->zip_out))))
             send_queued(cptr);
 }
+
+u_long
+memcount_send(MCsend *mc)
+{
+    mc->file = __FILE__;
+
+    mc->s_bufs.c++;
+    mc->s_bufs.m += sizeof(sendbuf);
+    mc->s_bufs.c++;
+    mc->s_bufs.m += sizeof(remotebuf);
+    mc->s_bufs.c++;
+    mc->s_bufs.m += sizeof(selfbuf);
+    mc->s_bufs.c++;
+    mc->s_bufs.m += sizeof(rc4buf);
+
+    return 0;
+}
+

@@ -31,6 +31,7 @@
 /* the majority of this is just cut and paste from ircd */
 
 #define MyMalloc(x) malloc(x)
+#define MyFree(x) free(x)
 #define SBAN_LOCAL     0x001
 #define SBAN_NETWORK   0x002
 #define SBAN_NICK      0x004   /* sban on the nick field */

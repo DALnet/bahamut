@@ -28,6 +28,7 @@
 #define MSGTAB
 #include "msg.h"
 #undef MSGTAB
+#include "memcount.h"
 
 #if defined( HAVE_STRING_H )
 #include <string.h>
@@ -606,3 +607,40 @@ static void remove_unknown(aClient *cptr, char *sender, char *buffer)
 		   me.name, sender, buffer, get_client_name(cptr, HIDEME));
     }
 }
+
+static u_long
+r_msgtree_memcount(MESSAGE_TREE *mptr, int *count)
+{
+    int     i;
+    u_long  m = sizeof(*mptr);
+
+    (*count)++;
+
+    for (i = 0; i < sizeof(mptr->pointers)/sizeof(mptr->pointers[0]); i++)
+        if (mptr->pointers[i])
+            m += r_msgtree_memcount(mptr->pointers[i], count);
+
+    return m;
+}
+
+u_long
+memcount_parse(MCparse *mc)
+{
+    mc->file = __FILE__;
+
+    mc->msgnodes.m = r_msgtree_memcount(msg_tree_root, &mc->msgnodes.c);
+
+    mc->total.c += mc->msgnodes.c;
+    mc->total.m += mc->msgnodes.m;
+
+    mc->s_bufs.c++;
+    mc->s_bufs.m += sizeof(para);
+    mc->s_bufs.c++;
+    mc->s_bufs.m += sizeof(sender);
+
+    mc->s_msgtab.c = sizeof(msgtab)/sizeof(msgtab[0]);
+    mc->s_msgtab.m = sizeof(msgtab);
+
+    return mc->total.m;
+}
+

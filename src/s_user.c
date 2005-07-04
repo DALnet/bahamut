@@ -40,6 +40,7 @@
 #endif /* FLUD */
 #include "userban.h"
 #include "hooks.h"
+#include "memcount.h"
 
 #if defined( HAVE_STRING_H)
 #include <string.h>
@@ -3840,3 +3841,98 @@ m_dccallow(aClient *cptr, aClient *sptr, int parc, char *parv[])
     
     return 0;
 }
+
+u_long
+memcount_s_user(MCs_user *mc)
+{
+    aClient *acptr;
+    Link *lp;
+#ifdef FLUD
+    struct fludbot *fb;
+#endif
+
+    mc->file = __FILE__;
+
+    for (acptr = client; acptr; acptr = acptr->next)
+    {
+        if (!IsMe(acptr))   /* me is static */
+        {
+            if (acptr->from == acptr)
+                mc->e_local_clients++;
+            else
+                mc->e_remote_clients++;
+        }
+
+        if (acptr->user)
+        {
+            mc->e_users++;
+
+            if (acptr->user->away)
+            {
+                mc->aways.c++;
+                mc->aways.m += strlen(acptr->user->away) + 1;
+            }
+            for (lp = acptr->user->silence; lp; lp = lp->next)
+            {
+                mc->silences.c++;
+                mc->silences.m += strlen(lp->value.cp) + 1;
+                mc->e_silence_links++;
+            }
+            for (lp = acptr->user->channel; lp; lp = lp->next)
+                mc->e_channel_links++;
+            for (lp = acptr->user->invited; lp; lp = lp->next)
+                mc->e_invite_links++;
+            for (lp = acptr->user->dccallow; lp; lp = lp->next)
+                mc->e_dccallow_links++;
+
+#if (RIDICULOUS_PARANOIA_LEVEL>=1)
+            if (acptr->user->real_oper_host)
+            {
+                mc->opermasks.c++;
+                mc->opermasks.m += strlen(acptr->user->real_oper_host) + 1;
+                mc->opermasks.m += strlen(acptr->user->real_oper_username) + 1;
+                mc->opermasks.m += strlen(acptr->user->real_oper_ip) + 1;
+            }
+#endif
+        }
+
+        if (acptr->serv)
+        {
+            mc->servers.c++;
+            mc->servers.m += sizeof(aServer);
+
+#ifdef HAVE_ENCRYPTION_ON
+            if (acptr->serv->rc4_in)
+                mc->e_rc4states++;
+            if (acptr->serv->rc4_out)
+                mc->e_rc4states++;
+#endif
+            if (acptr->serv->zip_in)
+                mc->e_zipin_sessions++;
+            if (acptr->serv->zip_out)
+                mc->e_zipout_sessions++;
+        }
+
+        for (lp = acptr->watch; lp; lp = lp->next)
+            mc->e_watch_links++;
+
+#ifdef FLUD
+        for (lp = acptr->fludees; lp; lp = lp->next)
+            mc->e_flud_links++;
+
+        if (acptr->from == acptr)   /* local client */
+            for (fb = acptr->fluders; fb; fb = fb->next)
+                mc->e_fludbots++;
+#endif
+    }
+
+    mc->total.c = mc->aways.c + mc->silences.c + mc->servers.c;
+    mc->total.m = mc->aways.m + mc->silences.m + mc->servers.m;
+#if (RIDICULOUS_PARANOIA_LEVEL>=1)
+    mc->total.c += mc->opermasks.c;
+    mc->total.m += mc->opermasks.m;
+#endif
+
+    return mc->total.m;
+}
+

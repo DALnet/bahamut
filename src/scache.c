@@ -6,6 +6,7 @@
 #include "sys.h"
 #include "numeric.h"
 #include "h.h"
+#include "memcount.h"
 
 static int  hash(char *);	/* keep it hidden here */
 /*
@@ -88,31 +89,6 @@ char *find_or_add(char *name)
     }
 }
 
-/* Added so s_debug could check memory usage in here -Dianora */
-
-void count_scache(int *number_servers_cached, u_long *mem_servers_cached)
-{
-    SCACHE     *scache_ptr;
-    int         i;
-
-    *number_servers_cached = 0;
-    *mem_servers_cached = 0;
-
-    for (i = 0; i < SCACHE_HASH_SIZE; i++)
-    {
-	scache_ptr = scache_hash[i];
-	while (scache_ptr)
-	{
-	    *number_servers_cached = *number_servers_cached + 1;
-	    *mem_servers_cached = *mem_servers_cached +
-		(strlen(scache_ptr->name) +
-		 sizeof(SCACHE *));
-	    
-	    scache_ptr = scache_ptr->next;
-	}
-    }
-}
-
 /* list all server names in scache very verbose */
 
 void list_scache(aClient *cptr, aClient *sptr, int parc, char *parv[])
@@ -132,3 +108,30 @@ void list_scache(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	}
     }
 }
+
+u_long
+memcount_scache(MCscache *mc)
+{
+    SCACHE *ce;
+    int i;
+
+    mc->file = __FILE__;
+
+    for (i = 0; i < sizeof(scache_hash)/sizeof(scache_hash[0]); i++)
+    {
+        for (ce = scache_hash[i]; ce; ce = ce->next)
+        {
+            mc->cached.c++;
+            mc->cached.m += sizeof(*ce);
+        }
+    }
+
+    mc->s_hash.c = sizeof(scache_hash)/sizeof(scache_hash[0]);
+    mc->s_hash.m = sizeof(scache_hash);
+
+    mc->total.c += mc->cached.c;
+    mc->total.m += mc->cached.m;
+
+    return mc->total.m;
+}
+

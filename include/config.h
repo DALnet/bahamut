@@ -830,6 +830,12 @@
 #undef  DEBUGMODE		/* define DEBUGMODE to enable */
 #undef DUMP_DEBUG
 
+/*
+ * MEMTRACE enables additional memory accounting for display in STATS Z.
+ * Requires GNU C extensions for expression blocks.
+ */
+#undef MEMTRACE
+
 /* DONT_CHECK_QLINE_REMOTE
  * Don't check for Q:lines on remote clients.  We can't do anything
  * if a remote client is using a nick q:lined locally, so

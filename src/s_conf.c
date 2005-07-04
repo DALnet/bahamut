@@ -29,6 +29,7 @@
 #include "h.h"
 #include "userban.h"
 #include "confparse.h"
+#include "memcount.h"
 
 /* This entire file has basically been rewritten from scratch with the
  * exception of lookup_confhost and attach_Iline/attach_iline fucntions
@@ -2304,3 +2305,137 @@ static int lookup_confhost(aConnect *aconn)
     /* NOTREACHED */
     return 0;
 }
+
+u_long
+memcount_s_conf(MCs_conf *mc)
+{
+    aConnect    *conn;
+    aAllow      *allow;
+    aOper       *oper;
+    aPort       *port;
+    aClass      *class;
+    int          i;
+
+    mc->file = __FILE__;
+
+    for (conn = connects; conn; conn = conn->next)
+    {
+        mc->connects.c++;
+        mc->connects.m += sizeof(*conn);
+        if (conn->host)
+            mc->connects.m += strlen(conn->host) + 1;
+        if (conn->apasswd)
+            mc->connects.m += strlen(conn->apasswd) + 1;
+        if (conn->cpasswd)
+            mc->connects.m += strlen(conn->cpasswd) + 1;
+        if (conn->name)
+            mc->connects.m += strlen(conn->name) + 1;
+        if (conn->source)
+            mc->connects.m += strlen(conn->source) + 1;
+        if (conn->class_name)
+            mc->connects.m += strlen(conn->class_name) + 1;
+    }
+    mc->total.c += mc->connects.c;
+    mc->total.m += mc->connects.m;
+
+    for (allow = allows; allow; allow = allow->next)
+    {
+        mc->allows.c++;
+        mc->allows.m += sizeof(*allow);
+        if (allows->ipmask)
+            mc->allows.m += strlen(allows->ipmask) + 1;
+        if (allows->passwd)
+            mc->allows.m += strlen(allows->passwd) + 1;
+        if (allows->hostmask)
+            mc->allows.m += strlen(allows->hostmask) + 1;
+        if (allows->class_name)
+            mc->allows.m += strlen(allows->class_name) + 1;
+    }
+    mc->total.c += mc->allows.c;
+    mc->total.m += mc->allows.m;
+
+    for (oper = opers; oper; oper = oper->next)
+    {
+        mc->opers.c++;
+        mc->opers.m += sizeof(*oper);
+        if (oper->passwd)
+            mc->opers.m += strlen(oper->passwd) + 1;
+        if (oper->nick)
+            mc->opers.m += strlen(oper->nick) + 1;
+        if (oper->class_name)
+            mc->opers.m += strlen(oper->class_name) + 1;
+        for (i = 0; oper->hosts[i]; i++)
+            mc->opers.m += strlen(oper->hosts[i]) + 1;
+    }
+    mc->total.c += mc->opers.c;
+    mc->total.m += mc->opers.m;
+
+    for (port = ports; port; port = port->next)
+    {
+        mc->ports.c++;
+        mc->ports.m += sizeof(*port);
+        if (port->allow)
+            mc->ports.m += strlen(port->allow) + 1;
+        if (port->address)
+            mc->ports.m += strlen(port->address) + 1;
+    }
+    mc->total.c += mc->ports.c;
+    mc->total.m += mc->ports.m;
+
+    for (class = classes; class; class = class->next)
+    {
+        mc->classes.c++;
+        mc->classes.m += sizeof(*class);
+        if (class->name)
+            mc->classes.m += strlen(class->name) + 1;
+    }
+    mc->total.c += mc->classes.c;
+    mc->total.m += mc->classes.m;
+
+    for (i = 0; uservers[i]; i++)
+    {
+        mc->uservers.c++;
+        mc->uservers.m += strlen(uservers[i]) + 1;
+    }
+    mc->total.c += mc->uservers.c;
+    mc->total.m += mc->uservers.m;
+
+    if (modules)
+    {
+        mc->modules.c = 1;
+        mc->modules.m = sizeof(*modules);
+        if (modules->module_path)
+            mc->modules.m += strlen(modules->module_path) + 1;
+        for (i = 0; modules->autoload[i]; i++)
+            mc->modules.m += strlen(modules->autoload[i]) + 1;
+        for (i = 0; modules->optload[i]; i++)
+            mc->modules.m += strlen(modules->optload[i]) + 1;
+    }
+    mc->total.c += mc->modules.c;
+    mc->total.m += mc->modules.m;
+
+    if (MeLine)
+    {
+        mc->me.c = 1;
+        mc->me.m += sizeof(*MeLine);
+        if (MeLine->servername)
+            mc->me.m += strlen(MeLine->servername) + 1;
+        if (MeLine->info)
+            mc->me.m += strlen(MeLine->info) + 1;
+        if (MeLine->diepass)
+            mc->me.m += strlen(MeLine->diepass) + 1;
+        if (MeLine->restartpass)
+            mc->me.m += strlen(MeLine->restartpass) + 1;
+        if (MeLine->admin[0])
+            mc->me.m += strlen(MeLine->admin[0]) + 1;
+        if (MeLine->admin[1])
+            mc->me.m += strlen(MeLine->admin[1]) + 1;
+        if (MeLine->admin[2])
+            mc->me.m += strlen(MeLine->admin[2]) + 1;
+    }
+    mc->total.c += mc->me.c;
+    mc->total.m += mc->me.m;
+
+    return mc->total.m;
+}
+

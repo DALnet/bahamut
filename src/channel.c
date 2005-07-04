@@ -27,6 +27,7 @@
 #include "channel.h"
 #include "h.h"
 #include "userban.h"
+#include "memcount.h"
 
 int         server_was_split = YES;
 
@@ -4717,3 +4718,98 @@ char  *pretty_mask(char *mask)
         return make_nick_user_host(NULL, NULL, cp);
     return make_nick_user_host(cp, user, host);
 }
+
+u_long
+memcount_channel(MCchannel *mc)
+{
+    aChannel    *chptr;
+    aBan        *ban;
+#ifdef EXEMPT_LISTS
+    aBanExempt  *exempt;
+#endif
+#ifdef INVITE_LISTS
+    anInvite    *invite;
+#endif
+    DLink       *lp;
+    Link        *lp2;
+    chanMember  *cm;
+
+    mc->file = __FILE__;
+
+    for (chptr = channel; chptr; chptr = chptr->nextch)
+    {
+        mc->e_channels++;
+
+        for (ban = chptr->banlist; ban; ban = ban->next)
+        {
+            mc->bans.c++;
+            mc->bans.m += sizeof(*ban);
+            mc->bans.m += strlen(ban->banstr) + 1;
+            mc->bans.m += strlen(ban->who) + 1;
+        }
+#ifdef EXEMPT_LISTS
+        for (exempt = chptr->banexempt_list; exempt; exempt = exempt->next)
+        {
+            mc->exempts.c++;
+            mc->exempts.m += sizeof(*exempt);
+            mc->exempts.m += strlen(exempt->banstr) + 1;
+            mc->exempts.m += strlen(exempt->who) + 1;
+        }
+#endif
+#ifdef INVITE_LISTS
+        for (invite = chptr->invite_list; invite; invite = invite->next)
+        {
+            mc->invites.c++;
+            mc->invites.m += sizeof(*invite);
+            mc->invites.m += strlen(invite->invstr) + 1;
+            mc->invites.m += strlen(invite->who) + 1;
+        }
+#endif
+        for (cm = chptr->members; cm; cm = cm->next)
+            mc->e_chanmembers++;
+
+        mc->e_inv_links += mc_links(chptr->invites);
+    }
+
+    for (lp = listing_clients; lp; lp = lp->next)
+    {
+        mc->lopts.c++;
+        mc->lopts.m += sizeof(LOpts);
+        mc->e_dlinks++;
+        for (lp2 = lp->value.cptr->user->lopt->yeslist; lp2; lp2 = lp2->next)
+        {
+            mc->lopts.m += strlen(lp2->value.cp) + 1;
+            mc->e_lopt_links++;
+        }
+        for (lp2 = lp->value.cptr->user->lopt->nolist; lp2; lp2 = lp2->next)
+        {
+            mc->lopts.m += strlen(lp2->value.cp) + 1;
+            mc->e_lopt_links++;
+        }
+    }
+
+    mc->total.c = mc->bans.c;
+    mc->total.m = mc->bans.m;
+#ifdef EXEMPT_LISTS
+    mc->total.c += mc->exempts.c;
+    mc->total.m += mc->exempts.m;
+#endif
+#ifdef INVITE_LISTS
+    mc->total.c += mc->invites.c;
+    mc->total.m += mc->invites.m;
+#endif
+    mc->total.c += mc->lopts.c;
+    mc->total.m += mc->lopts.m;
+
+    mc->s_scratch.c++;
+    mc->s_scratch.m += sizeof(nickbuf);
+    mc->s_scratch.c++;
+    mc->s_scratch.m += sizeof(buf);
+    mc->s_scratch.c++;
+    mc->s_scratch.m += sizeof(modebuf);
+    mc->s_scratch.c++;
+    mc->s_scratch.m += sizeof(parabuf);
+
+    return mc->total.m;
+}
+

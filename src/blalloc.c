@@ -14,6 +14,7 @@
 #include "h.h"
 #include "numeric.h"
 #include "blalloc.h"
+#include "memcount.h"
 
 /* FUNCTION PROTOTYPES (LOCAL FUNCTIONS ONLY) */
 static int  newblock(BlockHeap *bh);
@@ -362,3 +363,37 @@ int BlockHeapDestroy(BlockHeap *bh)
     MyFree(bh);	
     return 0;
 }
+
+u_long
+memcount_BlockHeap(BlockHeap *bh, MCBlockHeap *mc)
+{
+    mc->file = __FILE__;
+
+    mc->blocks.c = bh->blocksAllocated;
+    mc->blocks.m = sizeof(Block) * mc->blocks.c;
+    mc->blocks.m += (sizeof(unsigned long) * (bh->numlongs + 1))
+                    * mc->blocks.c;
+    mc->pool.c = bh->blocksAllocated * bh->elemsPerBlock;
+    mc->pool.m = mc->pool.c * bh->elemSize;
+    mc->objects.c = mc->pool.c - bh->freeElems;
+    mc->objects.m = mc->objects.c * bh->elemSize;
+
+    mc->management.c = mc->blocks.c + 1;
+    mc->management.m = mc->blocks.m + sizeof(*bh);
+
+    mc->total.c = mc->management.c + mc->pool.c;
+    mc->total.m = mc->management.m + mc->pool.m;
+
+    mc->objsize = bh->elemSize;
+
+    return mc->total.m;
+}
+
+u_long
+memcount_blalloc(MCblalloc *mc)
+{
+    mc->file = __FILE__;
+
+    return 0;
+}
+

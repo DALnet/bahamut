@@ -93,8 +93,6 @@ void report_userbans_match_flags(aClient *cptr, unsigned int, unsigned int);
 int user_match_ban(aClient *, struct userBan *);
 char *get_userban_host(struct userBan *, char *, int);
 
-int count_userbans(aClient *cptr);
-
 /* Simban Calls */
 
 struct simBan *make_simpleban(unsigned int, char *);
@@ -110,5 +108,4 @@ void remove_simbans_match_mask(unsigned int, char *, int);
 void report_simbans_match_flags(aClient *, unsigned int, unsigned int);
 void expire_simbans();
 void send_simbans(aClient *, unsigned int);
-int count_simbans(aClient *);
 void remove_simban(struct simBan *);

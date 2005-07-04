@@ -24,6 +24,7 @@
 #include "sys.h"
 #include "numeric.h"
 #include "h.h"
+#include "memcount.h"
 
 /* externally defined functions */
 unsigned int hash_whowas_name(char *);	/* defined in hash.c */
@@ -219,3 +220,17 @@ static void del_whowas_from_list(aWhowas ** bucket, aWhowas * whowas)
     if (whowas->next)
 	whowas->next->prev = whowas->prev;
 }
+
+u_long
+memcount_whowas(MCwhowas *mc)
+{
+    mc->file = __FILE__;
+
+    mc->s_whowas.c = sizeof(WHOWAS)/sizeof(WHOWAS[0]);
+    mc->s_whowas.m = sizeof(WHOWAS);
+    mc->s_hash.c = sizeof(WHOWASHASH)/sizeof(WHOWASHASH[0]);
+    mc->s_hash.m = sizeof(WHOWASHASH);
+
+    return 0;
+}
+

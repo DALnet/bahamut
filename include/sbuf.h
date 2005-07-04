@@ -53,10 +53,6 @@ extern char*		sbuf_map(SBuf* theBuf, int* theLength);
 extern int          sbuf_flush(SBuf* theBuf);
 extern int          sbuf_getmsg(SBuf* theBuf, char* theData, int theLength);
 extern int          sbuf_get(SBuf* theBuf, char* theData, int theLength);
-extern void         sbuf_count(int* userUsed, int* userTotal, int* userSize,
-                               int* smallUsed, int* smallTotal, int* smallSize,
-                               int* largeUsed, int* largeTotal, int* largeSize,
-                               int* blockUsed, int* blockSize, int* userblockUsed, int* userblockSize);
 
 #ifdef WRITEV_IOV
 extern int          sbuf_mapiov(SBuf *, struct iovec *);

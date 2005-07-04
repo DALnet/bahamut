@@ -24,6 +24,7 @@
 #include "sys.h"
 #include "hash.h"
 #include "h.h"
+#include "memcount.h"
 
 static aHashEntry clientTable[U_MAX];
 static aHashEntry channelTable[CH_MAX];
@@ -375,24 +376,6 @@ int m_hash(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
 static   aWatch  *watchTable[WATCHHASHSIZE];
 
-void  count_watch_memory(int *count, u_long *memory)
-{
-    int   i = WATCHHASHSIZE;
-    aWatch  *anptr;
-    
-    
-    while (i--)
-    {
-	anptr = watchTable[i];
-	while (anptr)
-	{
-	    (*count)++;
-	    (*memory) += sizeof(aWatch)+strlen(anptr->nick);
-	    anptr = anptr->hnext;
-	}
-    }
-}
-
 void clear_watch_hash_table(void)
 {
     memset((char *)watchTable, '\0', sizeof(watchTable));
@@ -656,3 +639,37 @@ aChannel *hash_get_chan_bucket(int hashv)
 	return NULL;
     return (aChannel *)channelTable[hashv].list;
 }
+
+u_long
+memcount_hash(MChash *mc)
+{
+    aWatch  *wptr;
+    Link    *lp;
+    int      i;
+
+    mc->file = __FILE__;
+
+    for (i = 0; i < WATCHHASHSIZE; i++)
+    {
+        for (wptr = watchTable[i]; wptr; wptr = wptr->hnext)
+        {
+            mc->watches.c++;
+            mc->watches.m += sizeof(*wptr) + strlen(wptr->nick);
+
+            for (lp = wptr->watch; lp; lp = lp->next)
+                mc->e_links++;
+        }
+    }
+    mc->total.c += mc->watches.c;
+    mc->total.m += mc->watches.m;
+
+    mc->s_clienthash.c = sizeof(clientTable)/sizeof(clientTable[0]);
+    mc->s_clienthash.m = sizeof(clientTable);
+    mc->s_channelhash.c = sizeof(channelTable)/sizeof(channelTable[0]);
+    mc->s_channelhash.m = sizeof(channelTable);
+    mc->s_watchhash.c = sizeof(watchTable)/sizeof(watchTable[0]);
+    mc->s_watchhash.m = sizeof(watchTable);
+
+    return mc->total.m;
+}
+

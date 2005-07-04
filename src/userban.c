@@ -28,6 +28,7 @@
 #include "h.h"
 #include "userban.h"
 #include "queue.h"
+#include "memcount.h"
 
 #define HASH_SIZE (32749)    /* largest prime < 32768 */
 
@@ -1568,188 +1569,114 @@ void simban_free(struct simBan *b)
    MyFree(b);
 }
 
-int count_simlist(uBanEnt *bl, int *mem)
+static void
+mc_userlist(MemCount *mc, uBanEnt *be)
 {
-   uBanEnt *bln;
-   struct simBan *ban;
-   int umem = 0, ucnt = 0;
+    struct userBan *ub;
 
-   while(bl)
-   {
-      bln = LIST_NEXT(bl, lp);
-      ban = (struct simBan *)bl->ban;
+    while (be)
+    {
+        ub = be->ban;
 
-      ucnt++;
-      umem += sizeof(struct simBan);
-      if(ban->mask)
-         umem += (strlen(ban->mask) + 1);
+        mc->c++;
+        mc->m += sizeof(*ub);
 
-      if(ban->reason)
-         umem += (strlen(ban->reason) + 1);
+        if (ub->u)
+            mc->m += strlen(ub->u) + 1;
+        if (ub->h)
+            mc->m += strlen(ub->h) + 1;
+        if (ub->reason)
+            mc->m += strlen(ub->reason) + 1;
 
-      bl = bln;
-   }
-
-   if(mem)
-      *mem = umem;
-
-   return ucnt;
+        be = LIST_NEXT(be, lp);
+    }
 }
 
-int count_list(uBanEnt *bl, int *mem)
+static void
+mc_simlist(MemCount *mc, uBanEnt *be)
 {
-   uBanEnt *bln;
-   struct userBan *ban;
-   int umem = 0, ucnt = 0;
+    struct simBan *sb;
 
-   while(bl)
-   {
-      bln = LIST_NEXT(bl, lp);
-      ban = bl->ban;
+    while (be)
+    {
+        sb = (struct simBan *)be->ban;
 
-      ucnt++;
-      umem += sizeof(struct userBan);
-      if(ban->u)
-         umem += (strlen(ban->u) + 1);
-      if(ban->h)
-         umem += (strlen(ban->h) + 1);
-      if(ban->reason)
-         umem += (strlen(ban->reason) + 1);
+        mc->c++;
+        mc->m += sizeof(*sb);
 
-      bl = LIST_NEXT(bl, lp);
-   }
+        if (sb->mask)
+            mc->m += strlen(sb->mask) + 1;
+        if (sb->reason)
+            mc->m += strlen(sb->reason) + 1;
 
-   if(mem)
-      *mem = umem;
-
-   return ucnt;
+        be = LIST_NEXT(be, lp);
+    }
 }
 
-int count_userbans(aClient *cptr)
+u_long
+memcount_userban(MCuserban *mc)
 {
-   uBanEnt *bl;
-   int a, b;
-   int ic[16], im[16];
-   int ict = 0, imt = 0;
+    int i;
+    int j;
 
-   memset(ic, 0, sizeof(int) * 16);
-   memset(im, 0, sizeof(int) * 16);
+    mc->file = __FILE__;
 
-   bl = LIST_FIRST(&CIDR4BIG_bans);
-   ic[0] = count_list(bl, &im[0]);
+    /* host, ip, gcos, chan, nick */
+    mc->lists.c += 5 * HASH_SIZE;
+    mc->lists.m += 5 * HASH_SIZE * sizeof(ban_list);
 
-   for(a = 0; a < 256; a++)
-   {
-     for(b = 0; b < 256; b++)
-     {
-        int tmpim;
+    /* CIDR4 table */
+    mc->lists.c += 256;
+    mc->lists.m += 256 * sizeof(ban_list *);
 
-        bl = LIST_FIRST(&CIDR4_bans[a][b]);
-        ic[1] += count_list(bl, &tmpim);
-        im[1] += tmpim;
-     }
-   }
+    /* CIDR4 subtables */
+    mc->lists.c += 256 * 256;
+    mc->lists.m += 256 * 256 * sizeof(ban_list);
 
-   bl = LIST_FIRST(&host_bans.wild_list);
-   ic[2] = count_list(bl, &im[2]);
-   bl = LIST_FIRST(&ip_bans.wild_list);
-   ic[3] = count_list(bl, &im[3]);
+    mc_userlist(&mc->cidr4big_userbans, LIST_FIRST(&CIDR4BIG_bans));
 
-   for(a = 0; a < HASH_SIZE; a++)
-   {
-      int tmpim;
+    for (i = 0; i < 256; i++)
+        for (j = 0; j < 256; j++)
+            mc_userlist(&mc->cidr4_userbans, LIST_FIRST(&CIDR4_bans[i][j]));
 
-      bl = LIST_FIRST(&host_bans.hash_list[a]);
-      ic[4] += count_list(bl, &tmpim);
-      im[4] += tmpim;
+    mc_userlist(&mc->hostwild_userbans, LIST_FIRST(&host_bans.wild_list));
+    mc_userlist(&mc->ipwild_userbans, LIST_FIRST(&ip_bans.wild_list));
 
-      bl = LIST_FIRST(&ip_bans.hash_list[a]);
-      ic[5] += count_list(bl, &tmpim);
-      im[5] += tmpim;
-   }
+    mc_simlist(&mc->nickwild_simbans, LIST_FIRST(&nick_bans.wild_list));
+    mc_simlist(&mc->chanwild_simbans, LIST_FIRST(&chan_bans.wild_list));
+    mc_simlist(&mc->gcoswild_simbans, LIST_FIRST(&gcos_bans.wild_list));
 
-   for(a = 0; a < 16; a++)
-   {
-      ict += ic[a];
-      imt += im[a];
-   }
+    for (i = 0; i < HASH_SIZE; i++)
+    {
+        mc_userlist(&mc->hosthash_userbans,
+                    LIST_FIRST(&host_bans.hash_list[i]));
+        mc_userlist(&mc->iphash_userbans, LIST_FIRST(&ip_bans.hash_list[i]));
 
-   sendto_one(cptr, ":%s %d %s :UserBans %d(%d) UserBanEnts %d(%d)",
-              me.name, RPL_STATSDEBUG, cptr->name, ict, imt, ubanent_count,
-              ubanent_count * sizeof(uBanEnt));
+        mc_simlist(&mc->nickhash_simbans, LIST_FIRST(&nick_bans.hash_list[i]));
+        mc_simlist(&mc->chanhash_simbans, LIST_FIRST(&chan_bans.hash_list[i]));
+        mc_simlist(&mc->gcoshash_simbans, LIST_FIRST(&gcos_bans.hash_list[i]));
+    }
 
-   sendto_one(cptr, ":%s %d %s :  CIDR4BIG %d(%d)",
-              me.name, RPL_STATSDEBUG, cptr->name, ic[0], im[0]);
-   sendto_one(cptr, ":%s %d %s :  CIDR4 %d(%d)",
-              me.name, RPL_STATSDEBUG, cptr->name, ic[1], im[1]);
-   sendto_one(cptr, ":%s %d %s :  Host %d(%d)",
-              me.name, RPL_STATSDEBUG, cptr->name, ic[4], im[4]);
-   sendto_one(cptr, ":%s %d %s :  Host wild %d(%d)",
-              me.name, RPL_STATSDEBUG, cptr->name, ic[2], im[2]);
-   sendto_one(cptr, ":%s %d %s :  IP %d(%d)",
-              me.name, RPL_STATSDEBUG, cptr->name, ic[5], im[5]);
-   sendto_one(cptr, ":%s %d %s :  IP wild %d(%d)",
-              me.name, RPL_STATSDEBUG, cptr->name, ic[3], im[3]);
+    mc->entries.c = ubanent_count;
+    mc->entries.m = ubanent_count * sizeof(uBanEnt);
 
-   return imt + (ubanent_count * sizeof(uBanEnt));
-}
+    mc->userbans.c = mc->cidr4big_userbans.c + mc->cidr4_userbans.c;
+    mc->userbans.m = mc->cidr4big_userbans.m + mc->cidr4_userbans.m;
+    mc->userbans.c += mc->hosthash_userbans.c + mc->hostwild_userbans.c;
+    mc->userbans.m += mc->hosthash_userbans.m + mc->hostwild_userbans.m;
+    mc->userbans.c += mc->iphash_userbans.c + mc->ipwild_userbans.c;
+    mc->userbans.m += mc->iphash_userbans.m + mc->ipwild_userbans.m;
 
-int count_simbans(aClient *cptr)
-{
-   uBanEnt *bl;
-   int a;
-   int ic[16], im[16];
-   int ict = 0, imt = 0;
+    mc->simbans.c = mc->nickhash_simbans.c + mc->nickwild_simbans.c;
+    mc->simbans.m = mc->nickhash_simbans.m + mc->nickwild_simbans.m;
+    mc->simbans.c += mc->chanhash_simbans.c + mc->chanwild_simbans.c;
+    mc->simbans.m += mc->chanhash_simbans.m + mc->chanwild_simbans.m;
+    mc->simbans.c += mc->gcoshash_simbans.c + mc->gcoswild_simbans.c;
+    mc->simbans.m += mc->gcoshash_simbans.m + mc->gcoswild_simbans.m;
 
-   memset(ic, 0, sizeof(int) * 16);
-   memset(im, 0, sizeof(int) * 16);
+    mc->total.c = mc->lists.c + mc->entries.c + mc->userbans.c + mc->simbans.c;
+    mc->total.m = mc->lists.m + mc->entries.m + mc->userbans.m + mc->simbans.m;
 
-   bl = LIST_FIRST(&nick_bans.wild_list);
-   ic[1] = count_simlist(bl, &im[1]);
-   bl = LIST_FIRST(&chan_bans.wild_list);
-   ic[3] = count_simlist(bl, &im[3]);
-   bl = LIST_FIRST(&gcos_bans.wild_list);
-   ic[5] = count_simlist(bl, &im[5]);
-
-   for(a = 0; a < HASH_SIZE; a++)
-   {
-      int tmpim;
-
-      bl = LIST_FIRST(&nick_bans.hash_list[a]);
-      ic[0] += count_list(bl, &tmpim);
-      im[0] += tmpim;
-
-      bl = LIST_FIRST(&chan_bans.hash_list[a]);
-      ic[2] += count_list(bl, &tmpim);
-      im[2] += tmpim;
-
-      bl = LIST_FIRST(&gcos_bans.hash_list[a]);
-      ic[4] += count_list(bl, &tmpim);
-      im[4] += tmpim;
-   }
-
-   for(a = 0; a < 16; a++)
-   {
-      ict += ic[a];
-      imt += im[a];
-   }
-
-   sendto_one(cptr, ":%s %d %s :SimBans %d(%d)",
-              me.name, RPL_STATSDEBUG, cptr->name, ict, imt);
-
-   sendto_one(cptr, ":%s %d %s :  Nick %d(%d)",
-              me.name, RPL_STATSDEBUG, cptr->name, ic[0], im[0]);
-   sendto_one(cptr, ":%s %d %s :  Nick wild %d(%d)",
-              me.name, RPL_STATSDEBUG, cptr->name, ic[1], im[1]);
-   sendto_one(cptr, ":%s %d %s :  Chan %d(%d)",
-              me.name, RPL_STATSDEBUG, cptr->name, ic[2], im[2]);
-   sendto_one(cptr, ":%s %d %s :  Chan wild %d(%d)",
-              me.name, RPL_STATSDEBUG, cptr->name, ic[3], im[3]);
-   sendto_one(cptr, ":%s %d %s :  GCOS %d(%d)",
-              me.name, RPL_STATSDEBUG, cptr->name, ic[4], im[4]);
-   sendto_one(cptr, ":%s %d %s :  GCOS wild %d(%d)",
-              me.name, RPL_STATSDEBUG, cptr->name, ic[5], im[5]);
-
-   return imt;
+    return mc->total.m;
 }
 

@@ -48,6 +48,7 @@
 #include "clones.h"
 #include "hooks.h"
 #include "fds.h"
+#include "memcount.h"
 
 aMotd      *motd;
 aMotd      *helpfile;           /* misnomer, aMotd could be generalized */
@@ -1288,3 +1289,37 @@ void build_version(void)
     ircsprintf(version, "%s-%.1d.%.1d(%.2d)%s", BASENAME,
                MAJOR, MINOR, PATCH, (*s != 0 ? PATCHES : ""));  
 }
+
+u_long
+memcount_ircd(MCircd *mc)
+{
+    mc->file = __FILE__;
+
+    mc->s_confbuf.c++;
+    mc->s_confbuf.m += sizeof(ProxyMonURL);
+    mc->s_confbuf.c++;
+    mc->s_confbuf.m += sizeof(ProxyMonHost);
+    mc->s_confbuf.c++;
+    mc->s_confbuf.m += sizeof(Network_Name);
+    mc->s_confbuf.c++;
+    mc->s_confbuf.m += sizeof(Services_Name);
+    mc->s_confbuf.c++;
+    mc->s_confbuf.m += sizeof(Stats_Name);
+    mc->s_confbuf.c++;
+    mc->s_confbuf.m += sizeof(NS_Register_URL);
+    mc->s_confbuf.c++;
+    mc->s_confbuf.m += sizeof(Network_Kline_Address);
+    mc->s_confbuf.c++;
+    mc->s_confbuf.m += sizeof(Local_Kline_Address);
+    mc->s_confbuf.c++;
+    mc->s_confbuf.m += sizeof(Staff_Address);
+    mc->s_confbuf.c++;
+    mc->s_confbuf.m += sizeof(configfile);
+    mc->s_confbuf.c++;
+    mc->s_confbuf.m += sizeof(dpath);
+    mc->s_confbuf.c++;
+    mc->s_confbuf.m += sizeof(spath);
+
+    return 0;
+}
+

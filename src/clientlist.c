@@ -11,6 +11,7 @@
 #include "h.h"
 #include "numeric.h"
 #include "blalloc.h"
+#include "memcount.h"
 
 DLink *server_list = NULL;
 DLink *oper_list = NULL;
@@ -18,38 +19,6 @@ DLink *oper_list = NULL;
 /* Clients currently doing a /list */
 DLink *listing_clients = NULL;
 DLink *recvq_clients = NULL;
-
-int get_list_memory(DLink *list)
-{
-   DLink *lp;
-   int count = 0;
-
-   for(lp = list; lp; lp = lp->next)
-      count++;
-
-   return count;
-}
-
-void print_list_memory(aClient *cptr)
-{
-   int lc;
-
-   lc = get_list_memory(server_list);
-   sendto_one(cptr, ":%s %d %s :   server_list %d(%d)",
-              me.name, RPL_STATSDEBUG, cptr->name, lc, lc * sizeof(DLink));
-
-   lc = get_list_memory(oper_list);
-   sendto_one(cptr, ":%s %d %s :   oper_list %d(%d)",
-              me.name, RPL_STATSDEBUG, cptr->name, lc, lc * sizeof(DLink));
-
-   lc = get_list_memory(listing_clients);
-   sendto_one(cptr, ":%s %d %s :   listing_clients %d(%d)",
-              me.name, RPL_STATSDEBUG, cptr->name, lc, lc * sizeof(DLink));
-
-   lc = get_list_memory(recvq_clients);
-   sendto_one(cptr, ":%s %d %s :   recvq_clients %d(%d)",
-              me.name, RPL_STATSDEBUG, cptr->name, lc, lc * sizeof(DLink));
-}
 
 DLink *add_to_list(DLink **list, void *ptr) 
 {
@@ -103,3 +72,17 @@ void remove_from_list(DLink **list, void *ptr, DLink *link)
 
    sendto_realops("remove_from_list(%x, %x) failed!!", (int) list, (int) ptr);
 }
+
+u_long
+memcount_clientlist(MCclientlist *mc)
+{
+    mc->file = __FILE__;
+
+    mc->e_server_dlinks = mc_dlinks(server_list);
+    mc->e_oper_dlinks = mc_dlinks(oper_list);
+    mc->e_recvq_dlinks = mc_dlinks(recvq_clients);
+    /* listing_clients is handled in channel.c */
+
+    return 0;
+}
+

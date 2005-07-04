@@ -24,6 +24,8 @@
 #include "common.h"
 #include "sys.h"
 #include "h.h"
+#include "numeric.h"
+#include "memcount.h"
 
 #define FOREVER for(;;)
 
@@ -148,6 +150,168 @@ int inet_netof(struct in_addr in)
 
 #endif /* !HAVE_INET_NETOF */
 
+#ifdef MEMTRACE
+
+typedef struct {
+    MemTracer   *tracer;
+    size_t       length;
+} MemTag;
+
+static MemTracer *mtrace_list;
+
+u_long
+memtrace_count(TracedCount *mc, const char *file)
+{
+    MemTracer *mt;
+
+    if (file)
+    {
+        for (mt = mtrace_list; mt; mt = mt->next)
+        {
+            if (strcmp(mt->file, file))
+                continue;
+
+            mc->allocated.c += mt->objects;
+            mc->allocated.m += mt->allocated;
+            mc->management.c += mt->objects;
+            mc->management.m += mt->objects * sizeof(MemTag);
+
+            mt->initialized = 2;    /* mark as counted */
+        }
+
+        return mc->allocated.m;
+    }
+
+    /* no file, so count unmarked ones */
+    for (mt = mtrace_list; mt; mt = mt->next)
+    {
+        if (mt->initialized == 1)
+        {
+            mc->allocated.c += mt->objects;
+            mc->allocated.m += mt->allocated;
+            mc->management.c += mt->objects;
+            mc->management.m += mt->objects * sizeof(MemTag);
+        }
+    }
+
+    return mc->allocated.m;
+}
+
+void
+memtrace_report(aClient *cptr, const char *file)
+{
+    MemTracer   *mt;
+
+    /* display unmarked tracers */
+    if (!file)
+    {
+        for (mt = mtrace_list; mt; mt = mt->next)
+        {
+            if (mt->initialized == 1 && mt->allocated)
+                sendto_one(cptr, ":%s %d %s :    %s:%d objects: %d  bytes: %lu",
+                           me.name, RPL_STATSDEBUG, cptr->name, mt->file,
+                           mt->line, mt->objects, mt->allocated);
+        }
+
+        return;
+    }
+
+    /* display for one file */
+    for (mt = mtrace_list; mt; mt = mt->next)
+    {
+        if (strcmp(mt->file, file))
+            continue;
+        if (!mt->allocated)
+            continue;
+        sendto_one(cptr, ":%s %d %s :    %s:%d objects: %d  bytes: %lu",
+                   me.name, RPL_STATSDEBUG, cptr->name, mt->file, mt->line,
+                   mt->objects, mt->allocated);
+    }
+}
+
+void
+memtrace_reset(void)
+{
+    MemTracer *mt;
+
+    /* reset counted mark */
+    for (mt = mtrace_list; mt; mt = mt->next)
+        mt->initialized = 1;
+}
+
+
+void *MyMalloc_impl(MemTracer *mt, size_t mlen)
+{
+    MemTag *tag;
+
+    if (!mt->initialized)
+    {
+        mt->next = mtrace_list;
+        mtrace_list = mt;
+        mt->initialized = 1;
+    }
+
+    tag = malloc(mlen + sizeof(MemTag));
+
+    if (!tag)
+        outofmemory();
+
+    tag->tracer = mt;
+    tag->length = mlen;
+    mt->objects++;
+    mt->allocated += mlen;
+
+    return tag + 1;
+}
+
+void MyFree_impl(void *obj)
+{
+    MemTag *tag;
+
+    if (!obj)
+        return;
+
+    tag = (MemTag *)obj - 1;
+    tag->tracer->objects--;
+    tag->tracer->allocated -= tag->length;
+
+    free(tag);
+}
+
+void *MyRealloc_impl(MemTracer *mt, void *obj, size_t mlen)
+{
+    MemTag *tag;
+
+    if (!mt->initialized)
+    {
+        mt->next = mtrace_list;
+        mtrace_list = mt;
+        mt->initialized = 1;
+    }
+
+    if (obj)
+    {
+        tag = (MemTag *)obj - 1;
+        tag->tracer->objects--;
+        tag->tracer->allocated -= tag->length;
+        obj = tag; /* subtle */
+    }
+
+    tag = realloc(obj, mlen + sizeof(MemTag));
+
+    if (!tag)
+        outofmemory();
+
+    tag->tracer = mt;
+    tag->length = mlen;
+    mt->objects++;
+    mt->allocated += mlen;
+
+    return tag + 1;
+}
+
+#else   /* MEMTRACE */
+
 void *MyMalloc(size_t x)
 {
     void       *ret = malloc(x);
@@ -169,6 +333,8 @@ void *MyRealloc(void *x, size_t y)
     }
     return ret;
 }
+
+#endif /* MEMTRACE */
 
 /*
  * read a string terminated by \r or \n in from a fd
