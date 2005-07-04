@@ -470,6 +470,7 @@ int m_svshold(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	if(length <= 0)
 	{
 	    remove_simban(oban);
+        simban_free(oban);
 	}
 	else
 	{
