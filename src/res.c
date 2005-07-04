@@ -1985,6 +1985,9 @@ memcount_res(MCres *mc)
         mc->requests.c++;
         mc->requests.m += sizeof(*rq);
 
+        if (rq->name)
+            mc->requests.m += strlen(rq->name) + 1;
+
         if (rq->he.h_name)
             mc->requests.m += strlen(rq->he.h_name) + 1;
 
