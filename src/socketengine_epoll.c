@@ -139,8 +139,8 @@ int engine_read_message(time_t delay)
             epfd = pevent->data.ptr;
             if (epfd->fd != -1)
             {
-                int rr = (epfd->events & pevent->events) & (EPOLLIN|EPOLLHUP|EPOLLERR);
-                int rw = (epfd->events & pevent->events) & EPOLLOUT;
+                int rr = epfd->events & (EPOLLIN|EPOLLHUP|EPOLLERR);
+                int rw = epfd->events & EPOLLOUT;
                 
                 get_fd_info(epfd->fd, &fdtype, &fdflags, &fdvalue);
                 
