@@ -1066,7 +1066,7 @@ void report_memory_usage(aClient *cptr, int detail)
     if (rep_total != alloc_total)
     {
         sendto_one(cptr, "%sUNREPORTED: %ld bytes", pfxbuf,
-                   use_total - rep_total);
+                   alloc_total - rep_total);
     }
 
     /*

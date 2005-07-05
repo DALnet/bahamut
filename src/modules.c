@@ -874,16 +874,27 @@ u_long
 memcount_modules(MCmodules *mc)
 {
 #ifdef USE_HOOKMODULES
-    int    c;
+    int      c;
+    DLink   *dl;
+    aModule *m;
 #endif
 
     mc->file = __FILE__;
 
 #ifdef USE_HOOKMODULES
-    c = mc_dlinks(module_list);
-    mc->modules.c = c;
-    mc->modules.m = c * sizeof(aModule);
-    mc->e_dlinks += c;
+    for (dl = module_list; dl; dl = dl->next)
+    {
+        mc->e_dlinks++;
+        m = (aModule *)dl->value.cp;
+        mc->modules.c++;
+        mc->modules.m += sizeof(*m);
+        if (m->name)
+            mc->modules.m += strlen(m->name) + 1;
+        if (m->version)
+            mc->modules.m += strlen(m->version) + 1;
+        if (m->description)
+            mc->modules.m += strlen(m->description) + 1;
+    }
 
     c = mc_dlinks(all_hooks);
     mc->hooks.c = c;
