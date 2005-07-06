@@ -102,6 +102,9 @@ typedef struct {
     int e_inv_links;
     int e_lopt_links;
     int e_dlinks;
+#ifdef FLUD
+    int e_fludbots;
+#endif
 } MCchannel;
 
 /* clientlist.c */

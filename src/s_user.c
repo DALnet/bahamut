@@ -3878,12 +3878,9 @@ memcount_s_user(MCs_user *mc)
                 mc->silences.m += strlen(lp->value.cp) + 1;
                 mc->e_silence_links++;
             }
-            for (lp = acptr->user->channel; lp; lp = lp->next)
-                mc->e_channel_links++;
-            for (lp = acptr->user->invited; lp; lp = lp->next)
-                mc->e_invite_links++;
-            for (lp = acptr->user->dccallow; lp; lp = lp->next)
-                mc->e_dccallow_links++;
+            mc->e_channel_links += mc_links(acptr->user->channel);
+            mc->e_invite_links += mc_links(acptr->user->invited);
+            mc->e_dccallow_links += mc_links(acptr->user->dccallow);
 
 #if (RIDICULOUS_PARANOIA_LEVEL>=1)
             if (acptr->user->real_oper_host)
@@ -3913,12 +3910,10 @@ memcount_s_user(MCs_user *mc)
                 mc->e_zipout_sessions++;
         }
 
-        for (lp = acptr->watch; lp; lp = lp->next)
-            mc->e_watch_links++;
+        mc->e_watch_links += mc_links(acptr->watch);
 
 #ifdef FLUD
-        for (lp = acptr->fludees; lp; lp = lp->next)
-            mc->e_flud_links++;
+        mc->e_flud_links += mc_links(acptr->fludees);
 
         if (acptr->from == acptr)   /* local client */
             for (fb = acptr->fluders; fb; fb = fb->next)

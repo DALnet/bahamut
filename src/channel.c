@@ -4735,6 +4735,9 @@ memcount_channel(MCchannel *mc)
     DLink       *lp;
     Link        *lp2;
     chanMember  *cm;
+#ifdef FLUD
+    struct fludbot *fb;
+#endif
 
     mc->file = __FILE__;
 
@@ -4769,6 +4772,11 @@ memcount_channel(MCchannel *mc)
 #endif
         for (cm = chptr->members; cm; cm = cm->next)
             mc->e_chanmembers++;
+
+#ifdef FLUD
+        for (fb = chptr->fluders; fb; fb = fb->next)
+            mc->e_fludbots++;
+#endif
 
         mc->e_inv_links += mc_links(chptr->invites);
     }

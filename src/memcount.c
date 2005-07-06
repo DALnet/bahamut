@@ -339,11 +339,6 @@ void report_memory_usage(aClient *cptr, int detail)
                    mc_s_user.e_channel_links,
                    mc_s_user.e_channel_links * mcbh_links.objsize);
     subtotal += mc_s_user.e_channel_links * mcbh_links.objsize;
-    if (detail && mc_s_user.e_watch_links)
-        sendto_one(cptr, "%s    watch links: %d (%lu bytes)", pfxbuf,
-                   mc_s_user.e_watch_links,
-                   mc_s_user.e_watch_links * mcbh_links.objsize);
-    subtotal += mc_s_user.e_watch_links * mcbh_links.objsize;
     if (detail && mc_s_user.e_invite_links)
         sendto_one(cptr, "%s    invite links: %d (%lu bytes)", pfxbuf,
                    mc_s_user.e_invite_links,
@@ -359,6 +354,15 @@ void report_memory_usage(aClient *cptr, int detail)
                    mc_s_user.e_dccallow_links,
                    mc_s_user.e_dccallow_links * mcbh_links.objsize);
     subtotal += mc_s_user.e_dccallow_links * mcbh_links.objsize;
+    if (detail && mc_s_user.e_watch_links)
+        sendto_one(cptr, "%s    client-watch links: %d (%lu bytes)", pfxbuf,
+                   mc_s_user.e_watch_links,
+                   mc_s_user.e_watch_links * mcbh_links.objsize);
+    subtotal += mc_s_user.e_watch_links * mcbh_links.objsize;
+    if (detail && mc_hash.e_links)
+        sendto_one(cptr, "%s    watch-client links: %d (%lu bytes)", pfxbuf,
+                   mc_hash.e_links, mc_hash.e_links * mcbh_links.objsize);
+    subtotal += mc_hash.e_links * mcbh_links.objsize;
     if (detail && mc_clientlist.e_oper_dlinks)
         sendto_one(cptr, "%s    operlist dlinks: %d (%lu bytes)", pfxbuf,
                    mc_clientlist.e_oper_dlinks,
@@ -384,10 +388,11 @@ void report_memory_usage(aClient *cptr, int detail)
     mcbh_links.knownobjs += mc_s_user.e_flud_links;
 #endif
     mcbh_links.knownobjs += mc_s_user.e_channel_links;
-    mcbh_links.knownobjs += mc_s_user.e_watch_links;
     mcbh_links.knownobjs += mc_s_user.e_invite_links;
     mcbh_links.knownobjs += mc_s_user.e_silence_links;
     mcbh_links.knownobjs += mc_s_user.e_dccallow_links;
+    mcbh_links.knownobjs += mc_s_user.e_watch_links;
+    mcbh_links.knownobjs += mc_hash.e_links;
     mcbh_dlinks.knownobjs += mc_clientlist.e_oper_dlinks;
     mcbh_dlinks.knownobjs += mc_clientlist.e_recvq_dlinks;
 
@@ -475,6 +480,13 @@ void report_memory_usage(aClient *cptr, int detail)
                    mc_channel.e_chanmembers,
                    mc_channel.e_chanmembers * mcbh_chanmembers.objsize);
     subtotal += mc_channel.e_chanmembers * mcbh_chanmembers.objsize;
+#ifdef FLUD
+    if (detail && mc_channel.e_fludbots)
+        sendto_one(cptr, "%s    fludbots: %d (%lu bytes)", pfxbuf,
+                   mc_channel.e_fludbots,
+                   mc_channel.e_fludbots * mcbh_fludbots.objsize);
+    subtotal += mc_channel.e_fludbots * mcbh_fludbots.objsize;
+#endif
     if (detail && mc_channel.e_inv_links)
         sendto_one(cptr, "%s    invite links: %d (%lu bytes)", pfxbuf,
                    mc_channel.e_inv_links,
@@ -499,6 +511,9 @@ void report_memory_usage(aClient *cptr, int detail)
 
     mcbh_channels.knownobjs += mc_channel.e_channels;
     mcbh_chanmembers.knownobjs += mc_channel.e_chanmembers;
+#ifdef FLUD
+    mcbh_fludbots.knownobjs += mc_channel.e_fludbots;
+#endif
     mcbh_links.knownobjs += mc_channel.e_inv_links;
     mcbh_links.knownobjs += mc_channel.e_lopt_links;
     mcbh_dlinks.knownobjs += mc_channel.e_dlinks;
