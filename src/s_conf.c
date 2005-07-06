@@ -2342,14 +2342,14 @@ memcount_s_conf(MCs_conf *mc)
     {
         mc->allows.c++;
         mc->allows.m += sizeof(*allow);
-        if (allows->ipmask)
-            mc->allows.m += strlen(allows->ipmask) + 1;
-        if (allows->passwd)
-            mc->allows.m += strlen(allows->passwd) + 1;
-        if (allows->hostmask)
-            mc->allows.m += strlen(allows->hostmask) + 1;
-        if (allows->class_name)
-            mc->allows.m += strlen(allows->class_name) + 1;
+        if (allow->ipmask)
+            mc->allows.m += strlen(allow->ipmask) + 1;
+        if (allow->passwd)
+            mc->allows.m += strlen(allow->passwd) + 1;
+        if (allow->hostmask)
+            mc->allows.m += strlen(allow->hostmask) + 1;
+        if (allow->class_name)
+            mc->allows.m += strlen(allow->class_name) + 1;
     }
     mc->total.c += mc->allows.c;
     mc->total.m += mc->allows.m;
