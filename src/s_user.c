@@ -394,6 +394,17 @@ check_oper_can_mask(aClient *sptr, char *name, char *password, char **onick)
 }
 #endif
 
+
+/* used by m_user, m_put, m_post */
+static int
+reject_proxy(aClient *cptr, char *cmd, char *args)
+{
+    sendto_realops_lev(REJ_LEV, "proxy attempt from %s: %s %s",
+                       inetntoa((char *)&cptr->ip), cmd, args ? args : "");
+    return exit_client(cptr, cptr, &me, "relay connection");
+}
+
+
 /*
  * * register_user 
  *  This function is called when both NICK and USER messages 
@@ -2006,9 +2017,12 @@ m_whois(aClient *cptr, aClient *sptr, int parc, char *parv[])
 int 
 m_user(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
-#define UFLAGS  (UMODE_i|UMODE_w|UMODE_s)
     char       *username, *host, *server, *realname;
     struct simBan *ban;
+
+    /* FTP proxy */
+    if (!IsRegistered(cptr) && parc == 2 && cptr->receiveM == 1)
+        return reject_proxy(cptr, "USER", parv[1]);
     
     if (parc > 2 && (username = (char *) strchr(parv[1], '@')))
         *username = '\0';
@@ -3839,6 +3853,26 @@ m_dccallow(aClient *cptr, aClient *sptr, int parc, char *parv[])
         return 0;
     }
     
+    return 0;
+}
+
+int
+m_put(aClient *cptr, aClient *sptr, int parc, char *parv[])
+{
+    /* HTTP PUT proxy */
+    if (!IsRegistered(cptr) && cptr->receiveM == 1)
+        return reject_proxy(cptr, "PUT", parv[1]);
+
+    return 0;
+}
+
+int
+m_post(aClient *cptr, aClient *sptr, int parc, char *parv[])
+{
+    /* HTTP POST proxy */
+    if (!IsRegistered(cptr) && cptr->receiveM == 1)
+        return reject_proxy(cptr, "POST", parv[1]);
+
     return 0;
 }
 

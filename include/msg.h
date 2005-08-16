@@ -126,6 +126,8 @@
 #define MSG_RWHO     "RWHO"         /* RWHO */
 #define MSG_SVSCLONE "SVSCLONE"     /* SVSCLONE */
 #define MSG_CHANKILL "CHANKILL"     /* CHANKILL */
+#define MSG_PUT      "PUT"          /* PUT */
+#define MSG_POST     "POST"         /* POST */
 
 #define MAXPARA      15
 
@@ -217,6 +219,8 @@ extern int  m_module(aClient *, aClient *, int, char **);
 extern int  m_rwho(aClient *, aClient *, int, char **);
 extern int  m_svsclone(aClient *, aClient *, int, char **);
 extern int  m_chankill(aClient *, aClient *, int, char **);
+extern int  m_put(aClient *, aClient *, int, char **);
+extern int  m_post(aClient *, aClient *, int, char **);
 
 /* aliastab indexes */
 #define AII_NS  0
@@ -341,6 +345,8 @@ struct Message msgtab[] =
     {MSG_RWHO,     m_rwho,     MAXPARA, 0,        0},
     {MSG_SVSCLONE, m_svsclone, MAXPARA, 0,        0},
     {MSG_CHANKILL, m_chankill, MAXPARA, 0,        0},
+    {MSG_PUT,      m_put,      2,       MF_UNREG, 0},
+    {MSG_POST,     m_post,     2,       MF_UNREG, 0},
     {MSG_LUSERSLOCK, m_luserslock, MAXPARA, 0,       0},
     {MSG_LINKSCONTROL, m_linkscontrol, MAXPARA, 0,      0},
     { 0 }
