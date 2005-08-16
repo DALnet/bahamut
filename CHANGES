@@ -21,12 +21,38 @@ Changes for 1.8.4
 - Fixed crash during bad server introductions
 - Fixed an obscure bug with remotely targeted commands and local clients
   (from toucan)
+- Fixed misc conf parsing issues (from GeniusDex)
+- Fixed unknown connection reporting in LUSERS
+- Fixed LIST C> not working at all
+- Fixed memory leaks in SVSHOLD and LIST options
+- Fixed busy loops with the epoll socket engine
+- Fixed LIST wildcard mask detection
 - Increased channel invite list to 100 entries
 - Removed WATCH and DCCALLOW limits for opers (from wshs)
 - Removed 2-user minimum default for LIST filters
 - Removed support for wildcard nick targets in remotable commands
 - Changed join rate warnings to show IP instead of hostname
+- Changed oper access flag * to include everything
+- Changed failed link messages to provide more info to +A opers
+- Changed cmode +c to block all control codes (except CTCP and ISO-2022)
+- Added oper access flags for umodes ydb
 - Added string probability calculation to RWHO
+
+- Reworked memory accounting:
+    stats z  shows short summary
+    stats Z  shows detailed reports
+    MEMTRACE define in config.h to debug memory leaks, adds to Z report
+
+- Changed general connection reporting format to reduce ambiguity
+  (affects stats L, trace, etc):
+    servers:  name[host]
+    clients:  nick!user@host
+    unknown:  name([F]ident@host)
+      where name is a nick or "<unnamed>"
+      where F is:
+        ?  identd lookup in progress
+        +  valid identd response
+        -  no identd response (ident is "unknown")
 
 - Reworked m_message().  Behavior changes:
     - corrected error responses
