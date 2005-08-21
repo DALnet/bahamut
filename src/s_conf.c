@@ -2238,6 +2238,7 @@ int rehash(aClient *cptr, aClient *sptr, int sig)
     
     merge_confs();
     build_rplcache();
+    nextconnect = 1;    /* reset autoconnects */
 
     rehashed = 1;
 
