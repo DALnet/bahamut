@@ -79,9 +79,7 @@
 #define MSG_GOPER    "GOPER"	   	/* GOPER */
 #define MSG_GNOTICE  "GNOTICE"		/* GNOTICE */
 #define MSG_KLINE    "KLINE"	   	/* KLINE */
-#ifdef UNKLINE
 #define MSG_UNKLINE  "UNKLINE"		/* UNKLINE */
-#endif
 #define MSG_SET      "SET"	      	/* SET */
 #define MSG_SAMODE   "SAMODE"    	/* SAMODE */
 #define MSG_SAJOIN   "SAJOIN"		/* SAJOIN */
@@ -299,9 +297,7 @@ struct Message msgtab[] =
     {MSG_GNOTICE,  m_gnotice,  MAXPARA, 0,        0},
     {MSG_CLOSE,    m_close,    MAXPARA, 0,        0},
     {MSG_KLINE,    m_kline,    MAXPARA, 0,        0},
-#ifdef UNKLINE
     {MSG_UNKLINE,  m_unkline,  MAXPARA, 0,        0},
-#endif
     {MSG_HASH,     m_hash,     MAXPARA, 0,        0},
     {MSG_DNS,      m_dns,      MAXPARA, 0,        0},
     {MSG_REHASH,   m_rehash,   MAXPARA, 0,        0},

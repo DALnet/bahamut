@@ -84,6 +84,7 @@ Conf_Modules *new_modules       = NULL;
 extern void do_pending_klines(void);
 #endif
 extern void confparse_error(char *, int);
+extern int klinestore_init(int);
 
 /* initclass()
  * initialize the default class
@@ -1451,7 +1452,7 @@ confadd_kill(cVar *vars[], int lnum)
     if(!ban)
         return lnum;    /* this isnt a parser problem - dont pull out */
 
-    ban->flags |= UBAN_LOCAL;
+    ban->flags |= (UBAN_LOCAL|UBAN_CONF);
     DupString(ban->reason, ub_r);
     ban->timeset = NOW;
 
@@ -2185,11 +2186,11 @@ int rehash(aClient *cptr, aClient *sptr, int sig)
     {
         sendto_ops("Got signal SIGHUP, reloading ircd conf. file");
         remove_userbans_match_flags(UBAN_NETWORK, 0);
-        remove_userbans_match_flags(UBAN_LOCAL|UBAN_TEMPORARY, 0);
+        /* remove all but kill {} blocks from conf */
+        remove_userbans_match_flags(UBAN_LOCAL, UBAN_CONF);
         remove_simbans_match_flags(SBAN_NICK|SBAN_LOCAL|SBAN_TEMPORARY, 0);
         remove_simbans_match_flags(SBAN_CHAN|SBAN_LOCAL|SBAN_TEMPORARY, 0);
         remove_simbans_match_flags(SBAN_GCOS|SBAN_LOCAL|SBAN_TEMPORARY, 0);
-
     }
 
     /* Shadowfax's LOCKFILE code */
@@ -2211,8 +2212,8 @@ int rehash(aClient *cptr, aClient *sptr, int sig)
     if (sig != SIGINT)
         flush_cache();      /* Flush DNS cache */
 
-    /* remove perm klines */
-    remove_userbans_match_flags(UBAN_LOCAL, UBAN_TEMPORARY);
+    /* remove kill {} blocks */
+    remove_userbans_match_flags(UBAN_LOCAL|UBAN_CONF, 0);
     remove_simbans_match_flags(SBAN_NICK|SBAN_LOCAL, SBAN_TEMPORARY);
     remove_simbans_match_flags(SBAN_CHAN|SBAN_LOCAL, SBAN_TEMPORARY);
     remove_simbans_match_flags(SBAN_GCOS|SBAN_LOCAL, SBAN_TEMPORARY);
@@ -2239,6 +2240,9 @@ int rehash(aClient *cptr, aClient *sptr, int sig)
     merge_confs();
     build_rplcache();
     nextconnect = 1;    /* reset autoconnects */
+
+    /* replay journal if necessary */
+    klinestore_init( (sig == SIGHUP) ? 0 : 1 );
 
     rehashed = 1;
 

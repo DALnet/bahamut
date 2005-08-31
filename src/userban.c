@@ -1569,6 +1569,103 @@ void simban_free(struct simBan *b)
    MyFree(b);
 }
 
+/*
+ * Dump all local connections that match a userban.
+ */
+void userban_sweep(struct userBan *ban)
+{
+    char rbuf[512];
+    aClient *acptr;
+    char *reason;
+    char *btext;
+    int clientonly = 1;
+    int i;
+
+    if (ban->flags & UBAN_NETWORK)
+        btext = NETWORK_BANNED_NAME;
+    else
+        btext = LOCAL_BANNED_NAME;
+
+    if (!(reason = ban->reason))
+        reason = "<no reason>";
+
+    /* if it's purely IP based, dump unregistered and server connections too */
+    if (ban->flags & UBAN_WILDUSER)
+        if (ban->flags & (UBAN_IP|UBAN_CIDR4|UBAN_CIDR4BIG))
+            clientonly = 0;
+
+    ircsnprintf(rbuf, sizeof(rbuf), "%s: %s", btext, reason);
+
+    for (i = 0; i <= highest_fd; i++)
+    {
+        if (!(acptr = local[i]) || acptr->status < STAT_UNKNOWN)
+            continue;
+
+        if (clientonly && !IsPerson(acptr))
+            continue;
+
+        if (user_match_ban(acptr, ban))
+        {
+            sendto_ops("%s active for %s", btext,
+                       get_client_name(acptr, FALSE));
+            exit_client(acptr, acptr, &me, rbuf);
+            i--;
+        }
+    }
+}
+
+
+/*
+ * ks_dumpklines() helper
+ */
+static void
+ks_dumplist(int f, uBanEnt *be)
+{
+    struct userBan *ub;
+
+    /* klines.c */
+    extern void ks_write(int, char, struct userBan *);
+
+    for (; be; be = LIST_NEXT(be, lp))
+    {
+        ub = be->ban;
+
+        /* must be local and not from conf */
+        if ((ub->flags & (UBAN_LOCAL|UBAN_CONF)) != UBAN_LOCAL)
+            continue;
+
+        /* must be over the storage threshold duration */
+        if ((ub->flags & UBAN_TEMPORARY)
+            && ub->duration < (KLINE_MIN_STORE_TIME * 60))
+            continue;
+
+        ks_write(f, '+', ub);
+    }
+}
+
+/*
+ * Called from klines.c during a storage GC.
+ */
+void
+ks_dumpklines(int f)
+{
+    int i, j;
+
+    for (i = 0; i < 256; i++)
+        for (j = 0; j < 256; j++)
+            ks_dumplist(f, LIST_FIRST(&CIDR4_bans[i][j]));
+
+    ks_dumplist(f, LIST_FIRST(&CIDR4BIG_bans));
+    ks_dumplist(f, LIST_FIRST(&host_bans.wild_list));
+    ks_dumplist(f, LIST_FIRST(&ip_bans.wild_list));
+
+    for (i = 0; i < HASH_SIZE; i++)
+    {
+        ks_dumplist(f, LIST_FIRST(&host_bans.hash_list[i]));
+        ks_dumplist(f, LIST_FIRST(&ip_bans.hash_list[i]));
+    }
+}
+
 static void
 mc_userlist(MemCount *mc, uBanEnt *be)
 {

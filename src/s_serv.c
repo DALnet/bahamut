@@ -1813,6 +1813,7 @@ static char *cluster(char *hostname)
     return (result);
 }
 
+#if 0
 int m_kline(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     struct userBan *ban, *oban;
@@ -2157,6 +2158,7 @@ int m_kline(aClient *cptr, aClient *sptr, int parc, char *parv[])
     return 0;
 #endif /* LOCKFILE */
 }
+#endif
 
 /*
  * isnumber()
@@ -2203,7 +2205,7 @@ static int isnumber(char *p)
     return (result);
 }
 
-#ifdef UNKLINE
+#if 0
 /*
  * * m_unkline 
  * Added Aug 31, 1997 
@@ -2276,6 +2278,7 @@ int m_unkline(aClient *cptr, aClient *sptr, int parc, char *parv[])
             host = get_userban_host(oban, tmp, 512);
 
             remove_userban(oban);
+            klinestore_remove(oban);
             userban_free(oban);
             userban_free(ban);
 

@@ -107,6 +107,7 @@ extern void     read_motd(char *);          /* defined in s_serv.c */
 extern void     read_shortmotd(char *);     /* defined in s_serv.c */
 extern void     read_help(char *);          /* defined in s_serv.c */
 extern void     init_globals();
+extern int      klinestore_init(int);    /* defined in klines.c */
 
 char        **myargv;
 char        configfile[PATH_MAX] = {0};     /* Server configuration file */
@@ -897,8 +898,10 @@ main(int argc, char *argv[])
 
     /* the pid file must be written *AFTER* the fork */
     write_pidfile();
-        
 
+    /* this should be sooner, but the fork/detach stuff is so brain-dead... */
+    klinestore_init(0);
+    
     /* moved this to here such that we allow more verbose error
      * checking on startup.  -epi
      */

@@ -17,12 +17,12 @@ RES_SRC =
 #RES_SRC = res_mkquery.c res_init.c res_comp.c
 
 SOURCES = blalloc.c bsd.c channel.c clientlist.c clones.c confparse.c \
-          fdlist.c fds.c hash.c hide.c inet_addr.c ircd.c ircsprintf.c list.c \
-          m_nick.c m_rwho.c m_server.c m_services.c m_stats.c m_who.c match.c \
-          memcount.c modules.c packet.c parse.c pcre.c probability.c res.c \
-          s_auth.c s_bsd.c s_conf.c s_debug.c s_err.c s_misc.c s_numeric.c \
-          s_serv.c s_user.c sbuf.c scache.c send.c struct.c support.c \
-          throttle.c userban.c whowas.c zlink.c \
+          fdlist.c fds.c hash.c hide.c inet_addr.c ircd.c ircsprintf.c \
+          klines.c list.c m_nick.c m_rwho.c m_server.c m_services.c m_stats.c \
+          m_who.c match.c memcount.c modules.c packet.c parse.c pcre.c \
+          probability.c res.c s_auth.c s_bsd.c s_conf.c s_debug.c s_err.c \
+          s_misc.c s_numeric.c s_serv.c s_user.c sbuf.c scache.c send.c \
+          struct.c support.c throttle.c userban.c whowas.c zlink.c \
           $(ENGINE) $(CRYPTO)
 
 OBJECTS = $(SOURCES:.c=.o) version.o
