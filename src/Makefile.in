@@ -133,6 +133,11 @@ ircd.o: ircd.c ../include/struct.h ../include/config.h ../include/setup.h \
   ../include/userban.h ../include/clones.h ../include/hooks.h \
   ../include/fds.h ../include/memcount.h ../include/blalloc.h
 ircsprintf.o: ircsprintf.c ../include/ircsprintf.h ../include/setup.h
+klines.o: klines.c ../include/struct.h ../include/config.h \
+  ../include/setup.h ../include/defs.h ../include/sys.h ../include/hash.h \
+  ../include/sbuf.h ../include/common.h ../include/h.h ../include/send.h \
+  ../include/fdlist.h ../include/ircsprintf.h ../include/find.h \
+  ../include/userban.h ../include/numeric.h
 list.o: list.c ../include/struct.h ../include/config.h ../include/setup.h \
   ../include/defs.h ../include/sys.h ../include/hash.h ../include/sbuf.h \
   ../include/common.h ../include/h.h ../include/send.h \
