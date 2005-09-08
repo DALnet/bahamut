@@ -3220,19 +3220,7 @@ m_akill(aClient *cptr, aClient *sptr, int parc, char *parv[])
                        timeset, reason);
 
     /* Check local users against it */
-    for (i = 0; i <= highest_fd; i++)
-    {
-        if (!(acptr = local[i]) || IsMe(acptr) || IsLog(acptr))
-            continue;
-        if (IsPerson(acptr) && user_match_ban(acptr, ban))
-        {
-            sendto_ops(NETWORK_BAN_NAME" active for %s",
-                       get_client_name(acptr, FALSE));
-            ircsprintf(fbuf, NETWORK_BANNED_NAME": %s", reason);
-            exit_client(acptr, acptr, &me, fbuf);
-            i--;
-        }
-    }
+    userban_sweep(ban);
         
     return 0;
 }

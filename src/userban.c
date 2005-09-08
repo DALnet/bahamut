@@ -1578,13 +1578,20 @@ void userban_sweep(struct userBan *ban)
     aClient *acptr;
     char *reason;
     char *btext;
+    char *ntext;
     int clientonly = 1;
     int i;
 
     if (ban->flags & UBAN_NETWORK)
+    {
         btext = NETWORK_BANNED_NAME;
+        ntext = NETWORK_BAN_NAME;
+    }
     else
+    {
         btext = LOCAL_BANNED_NAME;
+        ntext = LOCAL_BAN_NAME;
+    }
 
     if (!(reason = ban->reason))
         reason = "<no reason>";
@@ -1606,7 +1613,7 @@ void userban_sweep(struct userBan *ban)
 
         if (user_match_ban(acptr, ban))
         {
-            sendto_ops("%s active for %s", btext,
+            sendto_ops("%s active for %s", ntext,
                        get_client_name(acptr, FALSE));
             exit_client(acptr, acptr, &me, rbuf);
             i--;

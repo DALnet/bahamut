@@ -1457,23 +1457,8 @@ confadd_kill(cVar *vars[], int lnum)
     ban->timeset = NOW;
 
     add_hostbased_userban(ban);
+    userban_sweep(ban);
 
-    /* Check local users against it */
-    for (i = 0; i <= highest_fd; i++)
-    {
-        if (!(ub_acptr = local[i]) || IsMe(ub_acptr) ||
-              IsLog(ub_acptr))
-            continue;
-
-        if (IsPerson(ub_acptr) && user_match_ban(ub_acptr, ban))
-        {
-            sendto_ops(LOCAL_BAN_NAME " active for %s",
-                       get_client_name(ub_acptr, FALSE));
-            ircsprintf(fbuf, LOCAL_BANNED_NAME ": %s", ub_r);
-            exit_client(ub_acptr, ub_acptr, &me, fbuf);
-            i--;
-        }
-    }
     return lnum;
 }
 
