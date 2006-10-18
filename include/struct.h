@@ -645,6 +645,11 @@ typedef struct Whowas
 /* skip clone checks? */
 #define CONF_FLAGS_SKIPCLONES      0x0100
 
+/* Port block flags */
+#define CONF_FLAGS_P_NODNS         0x0001
+#define CONF_FLAGS_P_NOIDENT       0x0002
+#define CONF_FLAGS_P_SERVER        0x0004
+
 /* global configuration flags */
 
 #define FLAGS_HUB       0x0001
@@ -743,6 +748,7 @@ struct Conf_Port
 	char *allow;
 	char *address;
 	int   port;
+        long  flags;  /* For noident/nodns/server flags */
     aListener *lstn;
 	int   legal;
 	aPort *next;

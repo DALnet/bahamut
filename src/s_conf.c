@@ -1178,6 +1178,24 @@ confadd_port(cVar *vars[], int lnum)
             tmp->type = NULL;
             x->port = atoi(tmp->value);
         }
+        else if(tmp->type && (tmp->type->flag & SCONFF_FLAGS))
+        {
+            char *s = tmp->value;
+
+            while (*s)
+                switch (*s++)
+                {
+                    case 'S': x->flags |= (CONF_FLAGS_P_SERVER|CONF_FLAGS_P_NODNS|CONF_FLAGS_P_NOIDENT); break;
+                    case 'D': x->flags |= CONF_FLAGS_P_NODNS; break;
+                    case 'I': x->flags |= CONF_FLAGS_P_NOIDENT; break;
+                    default:
+                        confparse_error("Unknown flag", lnum);
+                        free_port(x);
+                        return -1;
+                }
+
+            tmp->type = NULL;
+        }
     }
     if(!(x->port > 0))
     {

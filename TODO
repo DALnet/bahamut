@@ -6,6 +6,5 @@
 - sort out WATCH timestamps
 - nonblocking dns hooks for modules (dnsbl)
 - consider adding external commands -- alias in conf, popen()/fileno()
-- add noident/nodns options to port blocks
 - update socketengine dependencies in Makefile
 - Update file $Id's for subversion

@@ -41,6 +41,7 @@ Changes for 1.8.4
 - Added string probability calculation to RWHO
 - Added automatic rejection of certain proxy types
 - Added local storage system for klines, making UNKLINE work as expected
+- Added noident/nodns/server flags to port blocks
 
 - Reworked memory accounting:
     stats z  shows short summary

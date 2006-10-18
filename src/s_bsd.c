@@ -619,6 +619,10 @@ int check_client(aClient *cptr)
         }
     }
 
+    if (cptr->lstn->aport->flags & CONF_FLAGS_P_SERVER)
+    {
+        return -1; /* Server-only port */
+    }
     if ((i = attach_Iline(cptr, hp, sockname)))
     {
         Debug((DEBUG_DNS, "ch_cl: access denied: %s[%s]",
@@ -805,11 +809,6 @@ int completed_connection(aClient * cptr)
 
     sendto_one(cptr, "SERVER %s 1 :%s", my_name_for_link(me.name, aconn), 
                                         me.info);
-#ifdef DO_IDENTD
-    /* Is this the right place to do this?  dunno... -Taner */
-    if (!IsDead(cptr))
-        start_auth(cptr);
-#endif
 
     check_client_fd(cptr);
     return (IsDead(cptr)) ? -1 : 0;
@@ -1274,23 +1273,27 @@ aClient *add_connection(aListener *lptr, int fd)
     if(call_hooks(CHOOK_PREACCESS, acptr) == FLUSH_BUFFER)
         return NULL;
 
+    if(!(lptr->aport->flags & CONF_FLAGS_P_NODNS))
+    {
 #ifdef SHOW_HEADERS
-    sendto_one(acptr, REPORT_DO_DNS);
+        sendto_one(acptr, REPORT_DO_DNS);
 #endif
-    lin.flags = ASYNC_CLIENT;
-    lin.value.cptr = acptr;
-    Debug((DEBUG_DNS, "lookup %s", inetntoa((char *) &addr.sin_addr)));
-    acptr->hostp = gethost_byaddr((char *) &acptr->ip, &lin);
-    if (!acptr->hostp)
-        SetDNS(acptr);
+        lin.flags = ASYNC_CLIENT;
+        lin.value.cptr = acptr;
+        Debug((DEBUG_DNS, "lookup %s", inetntoa((char *) &addr.sin_addr)));
+        acptr->hostp = gethost_byaddr((char *) &acptr->ip, &lin);
+        if (!acptr->hostp)
+            SetDNS(acptr);
 #ifdef SHOW_HEADERS
-    else
-        sendto_one(acptr, REPORT_FIN_DNSC);
+        else
+            sendto_one(acptr, REPORT_FIN_DNSC);
 #endif
+    }
     nextdnscheck = 1;
     
 #ifdef DO_IDENTD
-    start_auth(acptr);
+    if(!(lptr->aport->flags & CONF_FLAGS_P_NOIDENT))
+        start_auth(acptr);
 #endif
     check_client_fd(acptr);
     return acptr;
