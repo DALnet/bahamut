@@ -45,6 +45,7 @@
 
 #include "throttle.h"
 #include "userban.h"
+#include "simban.h"
 #include "clones.h"
 #include "hooks.h"
 #include "fds.h"
@@ -88,11 +89,6 @@ int     forked = 0;
 
 float curSendK = 0, curRecvK = 0;
 
-#ifdef  LOCKFILE
-extern time_t    pending_kline_time;
-extern struct pkl *pending_klines;
-extern void      do_pending_klines(void);
-#endif
 extern void      engine_read_message(int);
 
 void            server_reboot();
@@ -121,6 +117,7 @@ char        dpath[PATH_MAX] = {0};  /* our configure files live in here */
 char        spath[PATH_MAX] = {0};  /* the path to our binary */
 int         rehashed = 1;
 int         zline_in_progress = 0; /* killing off matching D lines */
+int         userban_updates = 0;   /* userban changes, need enforce sweep */
 time_t      nextconnect = 1;       /* time for next try_connections call */
 time_t      nextping = 1;          /* same as above for check_pings() */
 time_t      nextdnscheck = 0;      /* next time to poll dns to force timeout */
@@ -821,8 +818,8 @@ main(int argc, char *argv[])
     /* init the file descriptor tracking system */
     init_fds();
 
-    /* init the kline/akill system */
-    init_userban();
+    /* init patricia trees */
+    patricia_init();
 
     initlists();
     initwhowas();
@@ -866,7 +863,6 @@ main(int argc, char *argv[])
     /* init the modules, load default modules! */
     init_modules();
 
-    me.flags = FLAGS_LISTEN;
     me.fd = -1;
         
     /* We don't want to calculate these every time they are used :) */
@@ -1062,12 +1058,12 @@ void io_loop()
             
             if(lastexp == 0)
             {
-                expire_userbans();
+                userban_massdel(NOW, 0, 0);
                 lastexp++;
             }
             else if(lastexp == 1)
             {
-                expire_simbans();
+                simban_massdel(NOW, 0, 0, NULL);
                 lastexp++;
             }
             else
@@ -1130,6 +1126,13 @@ void io_loop()
 
         engine_read_message(delay);     /* check everything! */
 
+        /* enforce userban changes once per second at most */
+        if (userban_updates && NOW != lasttimeofday)
+        {
+            userban_sweep();
+            userban_updates = 0;
+        }
+
         /*
          * * ...perhaps should not do these loops every time, but only if
          * there is some chance of something happening (but, note that
@@ -1179,17 +1182,6 @@ void io_loop()
         /* Only flush non-blocked sockets. */
         
         flush_connections(me.fd);
-        
-#ifdef  LOCKFILE
-        /*
-         * * If we have pending klines and CHECK_PENDING_KLINES minutes
-         * have passed, try writing them out.  -ThemBones
-         */
-        
-        if ((pending_klines) && ((timeofday - pending_kline_time)
-                                 >= (CHECK_PENDING_KLINES * 60)))
-            do_pending_klines();
-#endif
     }
 }
 

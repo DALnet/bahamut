@@ -403,8 +403,6 @@ tstats(aClient *cptr, char *name)
                me.name, RPL_STATSDEBUG, name, sp->is_num, sp->is_fake);
     sendto_one(cptr, ":%s %d %s :auth successes %u fails %u",
                me.name, RPL_STATSDEBUG, name, sp->is_asuc, sp->is_abad);
-    sendto_one(cptr, ":%s %d %s :local connections %u udp packets %u",
-               me.name, RPL_STATSDEBUG, name, sp->is_loc, sp->is_udp);
     sendto_one(cptr, ":%s %d %s :drones refused %u throttled rejections %u",
                me.name, RPL_STATSDEBUG, name, sp->is_drone, sp->is_throt);
     sendto_one(cptr, ":%s %d %s :banned users refused before ident/dns"
@@ -699,6 +697,7 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
             }
             break;
 
+#if 0
         case 'G':
             if(IsAnOper(sptr))
                 report_simbans_match_flags(sptr, SBAN_GCOS|SBAN_LOCAL, 0);
@@ -711,6 +710,7 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
             else
                 sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name,  parv[0]);
             break;
+#endif
 
         case 'I':
         case 'i':
@@ -729,6 +729,7 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
             }
             break;
         }
+#if 0
         case 'k':
             if(IsAnOper(sptr))
                 report_userbans_match_flags(sptr, UBAN_TEMPORARY|UBAN_LOCAL, 0);
@@ -750,6 +751,7 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
             else
                 sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name,  parv[0]);
             break;
+#endif
 
         case 'M':
         case 'm':
@@ -811,6 +813,7 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
             show_opers(sptr, parv[0]);
             break;
 
+#if 0
         case 'Q':
             if(IsAnOper(sptr))
             {
@@ -829,6 +832,7 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
             else
                 sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name,  parv[0]);
             break;
+#endif
 
         case 'R':
         case 'r':

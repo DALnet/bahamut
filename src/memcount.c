@@ -87,7 +87,9 @@ void report_memory_usage(aClient *cptr, int detail)
     MCscache        mc_scache = {0};
     MCsend          mc_send = {0};
     MCthrottle      mc_throttle = {0};
+#if 0
     MCuserban       mc_userban = {0};
+#endif
     MCwhowas        mc_whowas = {0};
     MCzlink         mc_zlink = {0};
 #ifdef HAVE_ENCRYPTION_ON
@@ -146,7 +148,9 @@ void report_memory_usage(aClient *cptr, int detail)
     TracedCount     tc_sbuf = {0};
     TracedCount     tc_scache = {0};
     TracedCount     tc_throttle = {0};
+#if 0
     TracedCount     tc_userban = {0};
+#endif
     TracedCount     tc_zlink = {0};
 #ifdef HAVE_ENCRYPTION_ON
     TracedCount     tc_dh = {0};
@@ -188,7 +192,9 @@ void report_memory_usage(aClient *cptr, int detail)
     alloc_total += memcount_scache(&mc_scache);
     alloc_total += memcount_send(&mc_send);
     alloc_total += memcount_throttle(&mc_throttle);
+#if 0
     alloc_total += memcount_userban(&mc_userban);
+#endif
     alloc_total += memcount_whowas(&mc_whowas);
     alloc_total += memcount_zlink(&mc_zlink);
 #ifdef HAVE_ENCRYPTION_ON
@@ -519,6 +525,7 @@ void report_memory_usage(aClient *cptr, int detail)
     mcbh_dlinks.knownobjs += mc_channel.e_dlinks;
 
 
+#if 0
     /*
      * Detail ban-related memory.
      */
@@ -589,6 +596,7 @@ void report_memory_usage(aClient *cptr, int detail)
     else
         sendto_one(cptr, "%sBans: %lu bytes", pfxbuf, subtotal);
     rep_total += subtotal;
+#endif
 
 
     /*
@@ -1362,8 +1370,11 @@ void report_memory_usage(aClient *cptr, int detail)
     traced_total += memtrace_count(&tc_m_services, mc_m_services.file);
     traced_total += memtrace_count(&tc_s_conf, mc_s_conf.file);
     traced_total += memtrace_count(&tc_s_serv, mc_s_serv.file);
+#if 0
     traced_total += memtrace_count(&tc_userban, mc_userban.file);
-    subtotal = mc_s_conf.total.m + mc_s_serv.total.m + mc_userban.total.m;
+#endif
+    //subtotal = mc_s_conf.total.m + mc_s_serv.total.m + mc_userban.total.m;
+    subtotal = mc_s_conf.total.m + mc_s_serv.total.m;
     subtotal -= mc_s_conf.connects.c * sizeof(aConnect);
     subtotal -= mc_s_conf.allows.c * sizeof(aAllow);
     subtotal -= mc_s_conf.me.c * sizeof(Conf_Me);
@@ -1373,7 +1384,9 @@ void report_memory_usage(aClient *cptr, int detail)
     traced_subtotal = tc_m_services.allocated.m;
     traced_subtotal += tc_s_conf.allocated.m;
     traced_subtotal += tc_s_serv.allocated.m;
+#if 0
     traced_subtotal += tc_userban.allocated.m;
+#endif
     if (subtotal != traced_subtotal)
     {
         sendto_one(cptr, "%sLEAK: %ld bytes from conf/motd/bans", pfxbuf,
@@ -1383,7 +1396,9 @@ void report_memory_usage(aClient *cptr, int detail)
             memtrace_report(cptr, mc_m_services.file);
             memtrace_report(cptr, mc_s_conf.file);
             memtrace_report(cptr, mc_s_serv.file);
+#if 0
             memtrace_report(cptr, mc_userban.file);
+#endif
         }
     }
 
@@ -1421,7 +1436,9 @@ void report_memory_usage(aClient *cptr, int detail)
     subtotal += tc_sbuf.management.m;
     subtotal += tc_scache.management.m;
     subtotal += tc_throttle.management.m;
+#if 0
     subtotal += tc_userban.management.m;
+#endif
     subtotal += tc_zlink.management.m;
 #ifdef HAVE_ENCRYPTION_ON
     subtotal += tc_dh.management.m;

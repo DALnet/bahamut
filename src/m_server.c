@@ -25,6 +25,8 @@
 #include "h.h"
 #include "dh.h"
 #include "userban.h"
+#include "simban.h"
+#include "gcosban.h"
 #include "zlink.h"
 #include "throttle.h"
 #include "clones.h"
@@ -223,10 +225,10 @@ do_server_estab(aClient *cptr)
         }
     }
 
-    /* send out our SQLINES and SGLINES too */
-    send_simbans(cptr, SBAN_CHAN|SBAN_NETWORK);
-    send_simbans(cptr, SBAN_NICK|SBAN_NETWORK);
-    send_simbans(cptr, SBAN_GCOS|SBAN_NETWORK);
+    /* send network bans */
+    userban_sendburst(cptr);
+    simban_sendburst(cptr);
+    gcosban_sendburst(cptr);
 
     /* Send out fake server list and other 'fake' stuff */
     fakeserver_sendserver(cptr);
@@ -586,6 +588,16 @@ int m_server(aClient *cptr, aClient *sptr, int parc, char *parv[])
     /* new connection */
     if (IsUnknown(cptr) || IsHandshake(cptr))
     {
+        UserBanInfo *ubi;
+
+        if ((ubi = userban_checkserver(cptr)))
+        {
+            sendto_one(cptr, "ERROR :%s: %s", (ubi->flags & UBAN_LOCAL)
+                       ? LOCAL_BANNED_NAME : NETWORK_BANNED_NAME,
+                       ubi->reason);
+            return exit_client(cptr, cptr, cptr, ubi->reason);
+        }
+            
         strncpyzt(cptr->name, host, sizeof(cptr->name));
         strncpyzt(cptr->info, info[0] ? info : me.name, REALLEN);
         cptr->hopcount = hop;

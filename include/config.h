@@ -232,6 +232,8 @@
 #define NETWORK_BAN_NAME "autokill"
 #define LOCAL_BANNED_NAME "k-lined"
 #define NETWORK_BANNED_NAME "autokilled"
+#define LOCAL_EXEMPT_NAME "k-exempt"
+#define LOCAL_EXEMPTED_NAME "k-exempted"
 
 /*
  * RFC1035_ANAL Defining this causes ircd to reject hostnames with
@@ -889,5 +891,5 @@ extern void debug(int level, char *pattern, ...);
 #undef PASS_SERVICES_MSGS
 #endif
 
-#define CONFIG_H_LEVEL_183
+#define CONFIG_H_LEVEL_190
 #endif				/* __config_include__ */

@@ -32,7 +32,7 @@
 #include <utmp.h>
 #include <fcntl.h>
 #include "h.h"
-#include "userban.h"
+#include "simban.h"
 #include "clones.h"
 #include "memcount.h"
 
@@ -442,7 +442,6 @@ int m_svsmode(aClient *cptr, aClient *sptr, int parc, char *parv[])
  */
 int m_svshold(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
-    struct simBan *ban, *oban;
     char *reason, *mask;
     int length;
 
@@ -453,48 +452,22 @@ int m_svshold(aClient *cptr, aClient *sptr, int parc, char *parv[])
     length = strtol(parv[2], NULL, 0);
     reason = (parc < 4) ? "Nickname is reserved, try again later" : parv[3];
 
-    /* marked local so netbursts don't propagate it */
-    ban = make_simpleban(SBAN_LOCAL|SBAN_NICK|SBAN_TEMPORARY, parv[1]);
-    if(!ban)
+    if (length <= 0)
     {
-	sendto_realops_lev(DEBUG_LEV, "make_simpleban(%s) failed on svshold", mask);
-	return 0;
+        simban_del(mask, 0);
+        return 0;
     }
-    ban->reason = NULL;
-    
-    if((oban = find_simban_exact(ban)) != NULL)
-    {
-	simban_free(ban);
-	ban = NULL;
 
-	if(length <= 0)
-	{
-	    remove_simban(oban);
-        simban_free(oban);
-	}
-	else
-	{
-	    if(oban->reason)
-		MyFree(oban->reason);
-	    oban->reason = (char *) MyMalloc(strlen(reason) + 1);
-	    strcpy(oban->reason, reason);
-	    oban->timeset = NOW;
-	    oban->duration = length;
-        oban->autocap = (*parv[2] == '+') ? length : 0;
-	}
-    }
-    else if(length > 0)
+    /* greater than a year is permanent */
+    if (length > 365*24*60*60)
+        length = 0;
+
+    if (simban_add(mask, reason, NOW + length, 0, 0) == SBAN_ADD_INVALID)
     {
-	ban->reason = (char *) MyMalloc(strlen(reason) + 1);
-	strcpy(ban->reason, reason);
-	ban->timeset = NOW;
-	ban->duration = length;
-    if (*parv[2] == '+')
-        ban->autocap = length;
-	add_simban(ban);
+        sendto_realops("SVSHOLD: invalid hold %s from %s ignored", mask,
+                       parv[0]);
+        return 0;
     }
-    else
-	simban_free(ban);
 
     if(parc < 4)
 	sendto_serv_butone(cptr, ":%s SVSHOLD %s %s", sptr->name, parv[1], parv[2]);

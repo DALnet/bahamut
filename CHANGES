@@ -27,6 +27,8 @@ Changes for 1.8.4
 - Fixed memory leaks in SVSHOLD and LIST options
 - Fixed busy loops with the epoll socket engine
 - Fixed LIST wildcard mask detection
+- Fixed autoconnects being mysteriously disabled during conf changes
+  (from Mark Rutherford)
 - Increased channel invite list to 100 entries
 - Removed WATCH and DCCALLOW limits for opers (from wshs)
 - Removed 2-user minimum default for LIST filters
@@ -37,6 +39,8 @@ Changes for 1.8.4
 - Changed cmode +c to block all control codes (except CTCP and ISO-2022)
 - Added oper access flags for umodes ydb
 - Added string probability calculation to RWHO
+- Added automatic rejection of certain proxy types
+- Added local storage system for klines, making UNKLINE work as expected
 
 - Reworked memory accounting:
     stats z  shows short summary

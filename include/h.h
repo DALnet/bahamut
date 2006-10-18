@@ -73,6 +73,7 @@ extern int  local_ip_limit, local_ip24_limit, global_ip_limit,
 #define PATH_MAX 4096
 #endif
 extern char dpath[PATH_MAX], spath[PATH_MAX];
+extern int  userban_updates;
 
 #include "fdlist.h"
 extern fdlist 	 serv_fdlist;

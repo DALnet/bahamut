@@ -23,1764 +23,889 @@
 #include "struct.h"
 #include "common.h"
 #include "sys.h"
-#include "numeric.h"
-#include "inet.h"
 #include "h.h"
+#include "numeric.h"
 #include "userban.h"
-#include "queue.h"
+#include "patricia.h"
+#include "ircstrings.h"
 #include "memcount.h"
 
-#define HASH_SIZE (32749)    /* largest prime < 32768 */
-
-LIST_HEAD(banlist_t, userBanEntry);
-typedef struct banlist_t ban_list;
-
-typedef struct userBanEntry {
-   struct userBan *ban;
-   LIST_ENTRY(userBanEntry) lp;
-} uBanEnt;
-
-typedef struct _abanlist {
-   ban_list wild_list;
-
-   int numbuckets;
-   ban_list *hash_list;
-} aBanList;
-
-typedef struct userBan auserBan;
-
-ban_list CIDR4BIG_bans = LIST_HEAD_INITIALIZER(CIDR4BIG_bans);
-ban_list **CIDR4_bans; 
-
-aBanList host_bans;
-aBanList ip_bans;
-
-aBanList gcos_bans;
-aBanList nick_bans;
-aBanList chan_bans;
-
-struct userBan *userban_alloc();
-struct simBan *simban_alloc();
-uBanEnt *ubanent_alloc();
-void ubanent_free(uBanEnt *);
-void userban_free(struct userBan *);
-void simban_free(struct simBan *);
-unsigned int host_hash(char *n);
-unsigned int ip_hash(char *n);
-
-unsigned int cidr_to_netmask(unsigned int cidr)
-{
-   if (cidr == 0)
-      return 0;
-
-   return (0xFFFFFFFF - (1 << (32 - cidr)) + 1);
-}
-
-unsigned int netmask_to_cidr(unsigned int mask) 
-{
-   int tmp = 0;
-
-   while (!(mask & (1 << tmp)) && tmp < 32) 
-      tmp++;
-
-   return (32 - tmp); 
-}
-
-/* userban (akill/kline) functions */
-
-void add_hostbased_userban(struct userBan *b)
-{
-   uBanEnt *bl;
-
-   bl = ubanent_alloc();
-   bl->ban = b;
-   b->internal_ent = (void *) bl;
-
-   if(b->flags & UBAN_CIDR4BIG)
-   {
-      LIST_INSERT_HEAD(&CIDR4BIG_bans, bl, lp);
-      return;
-   }
-
-   if(b->flags & UBAN_CIDR4)
-   {
-      unsigned char *s = (unsigned char *) &bl->ban->cidr4ip;
-      int a, b;
-
-      a = (int) *s++;
-      b = (int) *s;
-
-      LIST_INSERT_HEAD(&CIDR4_bans[a][b], bl, lp);
-      return;
-   }
-
-   if(b->flags & UBAN_IP)
-   {
-      if(b->flags & UBAN_WILD)
-      {
-         LIST_INSERT_HEAD(&ip_bans.wild_list, bl, lp);
-      }
-      else
-      {
-         unsigned int hv = ip_hash(b->h) % HASH_SIZE;
-
-         LIST_INSERT_HEAD(&ip_bans.hash_list[hv], bl, lp);
-      }
-
-      return;
-   }
-
-   if(b->flags & UBAN_HOST)
-   {
-      if(b->flags & UBAN_WILD)
-      {
-         LIST_INSERT_HEAD(&host_bans.wild_list, bl, lp);
-      }
-      else
-      {
-         unsigned int hv = host_hash(b->h) % HASH_SIZE;
-
-         LIST_INSERT_HEAD(&host_bans.hash_list[hv], bl, lp);
-      }
-
-      return;
-   }
-
-   /* unreachable code */
-   abort();
-}
-
-void remove_userban(struct userBan *b)
-{
-   uBanEnt *bl = (uBanEnt *) b->internal_ent;
-
-   LIST_REMOVE(bl, lp);
-
-   ubanent_free(bl);
-
-   return;
-}
 
 /*
- * user_match_ban -- be sure to call only for fully-initialized users
- * returns 0 on no match, 1 otherwise 
+ * Took the original implementation by Lucas and diced it up a bit.
+ *
+ * Userbans are stored in 4 containers: a hashtable for full hostnames, a list
+ * for wildcard hostname masks, a list for no hostmasks at all (username masks
+ * only), and a PATRICIA tree for IPs (CIDR and full).  Wildcard IP masks are
+ * no longer supported.
+ *
+ * Nodes are used directly; there is no longer a separate uBanEnt.
+ *
+ *     -Quension [Aug 2006]
  */
-int user_match_ban(aClient *cptr, struct userBan *ban)
+
+typedef struct UserBan UserBan;
+
+struct UserBan {
+    u_short  flags;     /* general flags */
+    u_short  priority;  /* ban priority level (0..1066) */
+    time_t   expirets;  /* expiration timestamp */
+    char    *mask;      /* user, host, or user@host mask */
+    char    *reason;    /* ban reason */
+    UserBan *next;      /* linked list entry */
+};
+
+
+/* flags to look at during duplicate checks */
+#define UB_DUPFLAGS   (UBAN_LOCAL|UBAN_EXEMPT)
+
+#define USERBAN_HASH_SIZE   3217    /* prime */
+
+static UserBan *ubl_hostnames[USERBAN_HASH_SIZE];
+static UserBan *ubl_hostmasks;
+static UserBan *ubl_wildhosts;
+
+static Patricia *ub_iptree;
+
+static char ub_maskbuf[USERLEN + HOSTLEN + 40];
+static char ub_userbuf[USERLEN + 10];
+
+
+/* used during mass deletions */
+typedef struct {
+    time_t  ts;
+    u_short flags;
+    u_short flagset;
+} UBMassDel;
+
+/* used during matching */
+typedef struct {
+    char    *what;
+    UserBan *network;
+    UserBan *local;
+} UBMatch;
+
+
+static UserBan *
+ub_alloc(u_short flags, u_short priority, time_t expirets, char *reason)
 {
-   /* first match the 'user' portion */
+    UserBan *b = MyMalloc(sizeof(*b));
 
-   if((!(ban->flags & UBAN_WILDUSER)) && match(ban->u, cptr->user->username)) 
-      return 0;
+    memset(b, 0, sizeof(*b));
 
-   if(ban->flags & UBAN_IP)
-   {
-      char iptmp[HOSTIPLEN + 1];
+    b->flags = flags;
+    b->priority = priority;
+    b->expirets = expirets;
+    DupString(b->reason, reason);
 
-      strncpyzt(iptmp, inetntoa((char *)&cptr->ip), HOSTIPLEN + 1);
-      if(ban->flags & UBAN_WILD)
-      {
-         if(match(ban->h, iptmp) == 0)
-            return 1;
-      }
-      else
-      {
-         if(mycmp(ban->h, iptmp) == 0)
-            return 1;
-      }
-      return 0;
-   }
-
-   if(ban->flags & UBAN_HOST)
-   {
-      if(ban->flags & UBAN_WILD)
-      {
-         if((ban->flags & UBAN_WILDHOST) || match(ban->h, cptr->user->host) == 0)
-            return 1;
-      }
-      else
-      {
-         if(mycmp(ban->h, cptr->user->host) == 0)
-            return 1;
-      }
-      return 0;
-   }
-
-   if(ban->flags & (UBAN_CIDR4|UBAN_CIDR4BIG))
-   {
-      if((cptr->ip.s_addr & ban->cidr4mask) == ban->cidr4ip)
-         return 1;
-      return 0;
-   }
-
-   return 0;
+    return b;
 }
 
-struct userBan *check_userbanned(aClient *cptr, unsigned int yflags, unsigned int nflags)
+static void
+ub_free(UserBan *b)
 {
-   char iptmp[HOSTIPLEN + 1];
-   uBanEnt *bl;
-
-   strncpyzt(iptmp, inetntoa((char *)&cptr->ip), HOSTIPLEN + 1);
-
-   if(yflags & UBAN_IP)
-   {
-      unsigned int hv = ip_hash(iptmp) % HASH_SIZE;
-
-      LIST_FOREACH(bl, &ip_bans.hash_list[hv], lp) 
-      {
-         if((bl->ban->flags & UBAN_TEMPORARY) && bl->ban->timeset + bl->ban->duration <= NOW)
-            continue;
-
-         if( ((yflags & UBAN_WILDUSER) && !(bl->ban->flags & UBAN_WILDUSER)) ||
-             ((nflags & UBAN_WILDUSER) && (bl->ban->flags & UBAN_WILDUSER)))
-            continue;
-
-         if((!(bl->ban->flags & UBAN_WILDUSER)) && match(bl->ban->u, cptr->user->username)) 
-            continue;
-
-         if(mycmp(bl->ban->h, iptmp) == 0)
-            return bl->ban;
-      }
-
-      LIST_FOREACH(bl, &ip_bans.wild_list, lp) 
-      {
-         if((bl->ban->flags & UBAN_TEMPORARY) && bl->ban->timeset + bl->ban->duration <= NOW)
-            continue;
-
-         if( ((yflags & UBAN_WILDUSER) && !(bl->ban->flags & UBAN_WILDUSER)) ||
-             ((nflags & UBAN_WILDUSER) && (bl->ban->flags & UBAN_WILDUSER)))
-            continue;
-
-         if((!(bl->ban->flags & UBAN_WILDUSER)) && match(bl->ban->u, cptr->user->username)) 
-            continue;
-
-         if(match(bl->ban->h, iptmp) == 0)
-            return bl->ban;
-      }
-   }
-
-   if(yflags & UBAN_CIDR4)
-   {
-      unsigned char *s = (unsigned char *) &cptr->ip.s_addr;
-      int a, b;
-
-      a = (int) *s++;
-      b = (int) *s;
-
-      LIST_FOREACH(bl, &CIDR4_bans[a][b], lp) 
-      {
-         if((bl->ban->flags & UBAN_TEMPORARY) && bl->ban->timeset + bl->ban->duration <= NOW)
-            continue;
-
-         if( ((yflags & UBAN_WILDUSER) && !(bl->ban->flags & UBAN_WILDUSER)) ||
-             ((nflags & UBAN_WILDUSER) && (bl->ban->flags & UBAN_WILDUSER)))
-            continue;
-
-         if((!(bl->ban->flags & UBAN_WILDUSER)) && match(bl->ban->u, cptr->user->username)) 
-            continue;
-
-         if((cptr->ip.s_addr & bl->ban->cidr4mask) == bl->ban->cidr4ip)
-            return bl->ban;
-      }
-
-      LIST_FOREACH(bl, &CIDR4BIG_bans, lp) 
-      {
-         if((bl->ban->flags & UBAN_TEMPORARY) && bl->ban->timeset + bl->ban->duration <= NOW)
-            continue;
-
-         if( ((yflags & UBAN_WILDUSER) && !(bl->ban->flags & UBAN_WILDUSER)) ||
-             ((nflags & UBAN_WILDUSER) && (bl->ban->flags & UBAN_WILDUSER)))
-            continue;
-
-         if((!(bl->ban->flags & UBAN_WILDUSER)) && match(bl->ban->u, cptr->user->username)) 
-            continue;
-
-         if((cptr->ip.s_addr & bl->ban->cidr4mask) == bl->ban->cidr4ip)
-            return bl->ban;
-      }
-   }
-
-   if(yflags & UBAN_HOST)
-   {
-      unsigned int hv = host_hash(cptr->user->host) % HASH_SIZE;
-
-      LIST_FOREACH(bl, &host_bans.hash_list[hv], lp) 
-      {
-         if((bl->ban->flags & UBAN_TEMPORARY) && bl->ban->timeset + bl->ban->duration <= NOW)
-            continue;
-
-         if( ((yflags & UBAN_WILDUSER) && !(bl->ban->flags & UBAN_WILDUSER)) ||
-             ((nflags & UBAN_WILDUSER) && (bl->ban->flags & UBAN_WILDUSER)))
-            continue;
-
-         if((!(bl->ban->flags & UBAN_WILDUSER)) && match(bl->ban->u, cptr->user->username)) 
-            continue;
-
-         if(mycmp(bl->ban->h, cptr->user->host) == 0)
-            return bl->ban;
-      }
-
-      LIST_FOREACH(bl, &host_bans.wild_list, lp) 
-      {
-         if((bl->ban->flags & UBAN_TEMPORARY) && bl->ban->timeset + bl->ban->duration <= NOW)
-            continue;
-
-         if( ((yflags & UBAN_WILDUSER) && !(bl->ban->flags & UBAN_WILDUSER)) ||
-             ((nflags & UBAN_WILDUSER) && (bl->ban->flags & UBAN_WILDUSER)))
-            continue;
-
-         if((!(bl->ban->flags & UBAN_WILDUSER)) && match(bl->ban->u, cptr->user->username)) 
-            continue;
-
-         if((bl->ban->flags & UBAN_WILDHOST) || match(bl->ban->h, cptr->user->host) == 0)
-            return bl->ban;
-      }
-   }
-   return NULL;
+    MyFree(b->mask);
+    MyFree(b->reason);
+    MyFree(b);
 }
 
-struct userBan *find_userban_exact(struct userBan *borig, unsigned int careflags)
+static unsigned int
+ub_hash(char *n)
 {
-   uBanEnt *bl;
+    unsigned int hv = 0;
 
-   if(borig->flags & UBAN_CIDR4BIG)
-   {
-      LIST_FOREACH(bl, &CIDR4BIG_bans, lp) {
-         /* must have same wilduser, etc setting */
-         if((bl->ban->flags ^ borig->flags) & (UBAN_WILDUSER|careflags))
-            continue;
+    while(*n)
+    {
+        hv <<= 5;
+        hv |= (ToUpper(*n) - 65) & 0xFF;
+        n++;
+    }
 
-         /* user fields do not match? */
-         if(!(borig->flags & UBAN_WILDUSER) && mycmp(borig->u, bl->ban->u))
-            continue;
-
-         if(!((borig->cidr4ip == bl->ban->cidr4ip) && (borig->cidr4mask == bl->ban->cidr4mask)))
-            continue;
-
-         return bl->ban;
-      }
-
-      return NULL;
-   }
-
-   if(borig->flags & UBAN_CIDR4)
-   {
-      unsigned char *s = (unsigned char *) &borig->cidr4ip;
-      int a, b;
-
-      a = (int) *s++;
-      b = (int) *s;
-
-      LIST_FOREACH(bl, &CIDR4_bans[a][b], lp) {
-         if((bl->ban->flags ^ borig->flags) & (UBAN_WILDUSER|careflags))
-            continue;
-
-         if(!(borig->flags & UBAN_WILDUSER) && mycmp(borig->u, bl->ban->u))
-            continue;
-
-         if(!((borig->cidr4ip == bl->ban->cidr4ip) && (borig->cidr4mask == bl->ban->cidr4mask)))
-            continue;
-
-         return bl->ban;
-      }
-
-      return NULL;
-   }
-
-   if(borig->flags & UBAN_IP)
-   {
-      if(borig->flags & UBAN_WILD)
-      {
-         LIST_FOREACH(bl, &ip_bans.wild_list, lp) {
-            if((bl->ban->flags ^ borig->flags) & (UBAN_WILDUSER|careflags))
-               continue;
-
-            if(!(borig->flags & UBAN_WILDUSER) && mycmp(borig->u, bl->ban->u))
-               continue;
-
-            if(mycmp(borig->h, bl->ban->h))
-               continue;
-
-            return bl->ban;
-         }
-      }
-      else
-      {
-         unsigned int hv = ip_hash(borig->h) % HASH_SIZE;
-
-         LIST_FOREACH(bl, &ip_bans.hash_list[hv], lp) {
-            if((bl->ban->flags ^ borig->flags) & (UBAN_WILDUSER|careflags))
-               continue;
-
-            if(!(borig->flags & UBAN_WILDUSER) && mycmp(borig->u, bl->ban->u))
-               continue;
-
-            if(mycmp(borig->h, bl->ban->h))
-               continue;
-
-            return bl->ban;
-         }
-      }
-
-      return NULL;
-   }
-
-   if(borig->flags & UBAN_HOST)
-   {
-      if(borig->flags & UBAN_WILD)
-      {
-         LIST_FOREACH(bl, &host_bans.wild_list, lp) {
-            if((bl->ban->flags ^ borig->flags) & (UBAN_WILDUSER|careflags))
-               continue;
-
-            if(!(borig->flags & UBAN_WILDUSER) && mycmp(borig->u, bl->ban->u))
-               continue;
-
-            if(mycmp(borig->h, bl->ban->h))
-               continue;
-
-            return bl->ban;
-         }
-      }
-      else
-      {
-         unsigned int hv = host_hash(borig->h) % HASH_SIZE;
-
-         LIST_FOREACH(bl, &host_bans.hash_list[hv], lp) {
-            if((bl->ban->flags ^ borig->flags) & (UBAN_WILDUSER|careflags))
-               continue;
-
-            if(!(borig->flags & UBAN_WILDUSER) && mycmp(borig->u, bl->ban->u))
-               continue;
-
-            if(mycmp(borig->h, bl->ban->h))
-               continue;
-
-            return bl->ban;
-         }
-      }
-
-      return NULL;
-   }
-
-   /* unreachable code */
-   abort();
+    return hv;
 }
 
-static inline void expire_list(uBanEnt *bl)
+/* isolate user and host masks, fills in ub_maskbuf and ub_userbuf */
+static int
+ub_isolate(char *mask, char **user, char **host)
 {
-   uBanEnt *bln;
-   struct userBan *ban;
+    size_t len;
+    char *s;
 
-   while(bl)
-   {
-      bln = LIST_NEXT(bl, lp);
-      ban = bl->ban;
+    /* scrubbed user@host mask goes in ub_maskbuf */
+    if ((len = strlen(mask)) >= sizeof(ub_maskbuf))
+        return 0;
 
-      if((ban->flags & UBAN_TEMPORARY) && ban->timeset + ban->duration <= NOW)
-      {
-         remove_userban(ban);
-         userban_free(ban);
-      }
-      bl = bln;
-   }
+    memcpy(ub_maskbuf, mask, len+1);    /* XXX replace with collapser */
+
+    /* scrubbed user mask goes in ub_userbuf */
+    if (!(s = strchr(mask, '@')))
+        return 0;
+
+    if ((len = s - mask) >= sizeof(ub_userbuf))
+        return 0;
+
+    memcpy(ub_userbuf, mask, len);
+    ub_userbuf[len] = 0;
+
+    *user = ub_userbuf;
+    *host = ub_maskbuf + len + 1;
+
+    return 1;
 }
 
-static inline void remove_list_match_flags(uBanEnt *bl, unsigned int flags, unsigned int nflags)
+
+/* callback for adding a userban to a list */
+static int
+ubcb_add(void *carg, void **slot)
 {
-   uBanEnt *bln;
-   struct userBan *ban;
+    UserBan *data;
+    UserBan *b;
+    u_short dflags;
 
-   while(bl)
-   {
-      bln = LIST_NEXT(bl, lp);
-      ban = bl->ban;
+    data = carg;
+    dflags = data->flags & UB_DUPFLAGS;
 
-      if((flags == 0 && nflags == 0) || (((ban->flags & flags) == flags) && ((ban->flags & nflags) == 0)))
-      {
-         remove_userban(ban);
-         userban_free(ban);
-      }
-      bl = bln;
-   }
-}
+    for (b = *slot; b; b = b->next)
+    {
+        if ((b->flags & UB_DUPFLAGS) != dflags)
+            continue;
 
-static inline void report_list_match_flags(aClient *cptr, uBanEnt *bl, unsigned int flags, unsigned int nflags, char rchar)
-{
-   struct userBan *ban;
-   char kset[8];
-   char host[128];
-
-   while(bl)
-   {
-      ban = bl->ban;
-
-      if((flags == 0 && nflags == 0) || (((ban->flags & flags) == flags) && ((ban->flags & nflags) == 0)))
-      {
-         if(ban->flags & UBAN_LOCAL)
-         {
-            if(ban->flags & UBAN_TEMPORARY)
-               kset[0] = 'k';
+        if ((!b->mask && !data->mask)
+            || (b->mask && data->mask && !mycmp(b->mask, data->mask)))
+        {
+            if (data->flags & UBAN_UPDATE)
+            {
+                /* update the existing userban */
+                b->flags = (data->flags & ~UBAN_UPDATE);
+                b->expirets = data->expirets;
+                MyFree(b->reason);
+                DupString(b->reason, data->reason);
+            }
             else
-               kset[0] = 'K';
-         }
-         else
-         {
-            kset[0] = 'a';
-         }
-         kset[1] = rchar;
-         kset[2] = '\0';
-
-         if(ban->flags & (UBAN_CIDR4|UBAN_CIDR4BIG))
-            snprintf(host, 128, "%s/%d", inetntoa((char *)&ban->cidr4ip), netmask_to_cidr(ntohl(ban->cidr4mask)));
-         else
-            strcpy(host, ban->h);
-
-         sendto_one(cptr, rpl_str(RPL_STATSKLINE), me.name,
-                    cptr->name, kset, host,
-                    (ban->flags & UBAN_WILDUSER) ? "*" : ban->u, 
-                    (ban->flags & UBAN_TEMPORARY) ? (((ban->timeset + ban->duration) - NOW) / 60) : -1, 
-                    (ban->reason) ? ban->reason : "No reason");
-      }
-
-      bl = LIST_NEXT(bl, lp);
-   }
-}
-
-void expire_userbans()
-{
-   uBanEnt *bl;
-   int a, b;
-
-   bl = LIST_FIRST(&CIDR4BIG_bans);
-   expire_list(bl);
-
-   for(a = 0; a < 256; a++)
-   {
-     for(b = 0; b < 256; b++)
-     {
-        bl = LIST_FIRST(&CIDR4_bans[a][b]);
-        expire_list(bl);
-     }
-   }
-
-   bl = LIST_FIRST(&host_bans.wild_list);
-   expire_list(bl);
-   bl = LIST_FIRST(&ip_bans.wild_list);
-   expire_list(bl);
-
-   for(a = 0; a < HASH_SIZE; a++)
-   {
-      bl = LIST_FIRST(&host_bans.hash_list[a]);
-      expire_list(bl);
-      bl = LIST_FIRST(&ip_bans.hash_list[a]);
-      expire_list(bl);
-   }
-}
-
-void remove_userbans_match_flags(unsigned int flags, unsigned int nflags)
-{
-   uBanEnt *bl;
-   int a, b;
-
-   bl = LIST_FIRST(&CIDR4BIG_bans);
-   remove_list_match_flags(bl, flags, nflags);
-
-   for(a = 0; a < 256; a++)
-   {
-     for(b = 0; b < 256; b++)
-     {
-        bl = LIST_FIRST(&CIDR4_bans[a][b]);
-        remove_list_match_flags(bl, flags, nflags);
-     }
-   }
-
-   bl = LIST_FIRST(&host_bans.wild_list);
-   remove_list_match_flags(bl, flags, nflags);
-   bl = LIST_FIRST(&ip_bans.wild_list);
-   remove_list_match_flags(bl, flags, nflags);
-
-   for(a = 0; a < HASH_SIZE; a++)
-   {
-      bl = LIST_FIRST(&host_bans.hash_list[a]);
-      remove_list_match_flags(bl, flags, nflags);
-      bl = LIST_FIRST(&ip_bans.hash_list[a]);
-      remove_list_match_flags(bl, flags, nflags);
-   }
-}
-
-void report_userbans_match_flags(aClient *cptr, unsigned int flags, unsigned int nflags)
-{
-   uBanEnt *bl;
-   int a, b;
-
-   bl = LIST_FIRST(&CIDR4BIG_bans);
-   report_list_match_flags(cptr, bl, flags, nflags, 'C');
-
-   for(a = 0; a < 256; a++)
-   {
-     for(b = 0; b < 256; b++)
-     {
-        bl = LIST_FIRST(&CIDR4_bans[a][b]);
-        report_list_match_flags(cptr, bl, flags, nflags, 'c');
-     }
-   }
-
-   bl = LIST_FIRST(&host_bans.wild_list);
-   report_list_match_flags(cptr, bl, flags, nflags, 'h');
-   bl = LIST_FIRST(&ip_bans.wild_list);
-   report_list_match_flags(cptr, bl, flags, nflags, 'i');
-
-   for(a = 0; a < HASH_SIZE; a++)
-   {
-      bl = LIST_FIRST(&host_bans.hash_list[a]);
-      report_list_match_flags(cptr, bl, flags, nflags, 'H');
-      bl = LIST_FIRST(&ip_bans.hash_list[a]);
-      report_list_match_flags(cptr, bl, flags, nflags, 'I');
-   }
-}
-
-char *get_userban_host(struct userBan *ban, char *buf, int buflen)
-{
-   *buf = '\0';
-
-   if(ban->flags & (UBAN_CIDR4|UBAN_CIDR4BIG))
-      snprintf(buf, buflen, "%s/%d", inetntoa((char *)&ban->cidr4ip), netmask_to_cidr(ntohl(ban->cidr4mask)));
-   else
-      snprintf(buf, buflen, "%s", ban->h);
-
-   return buf;
-}
-
-/*
- * Fills in the following fields
- * of a userban structure, or returns NULL if invalid stuff is passed.
- *  - flags, u, h, cidr4ip, cidr4mask
- */
-struct userBan *make_hostbased_ban(char *user, char *phost)
-{
-   char host[512];
-   unsigned int flags = 0, c4h = 0, c4m = 0;
-   int numcount, othercount, wildcount, dotcount, slashcount;
-   char *tmp;
-   struct userBan *b;
-
-   strncpy(host, phost, 512);
-
-   numcount = othercount = wildcount = dotcount = slashcount = 0;
-
-   for(tmp = host; *tmp; tmp++)
-   {
-      switch(*tmp)
-      {
-         case '0':
-         case '1':
-         case '2':
-         case '3':
-         case '4':
-         case '5':
-         case '6':
-         case '7':
-         case '8':
-         case '9':
-            numcount++;
-            break;
-
-         case '*':
-         case '?':
-            wildcount++;
-            break;
-
-         case '.':
-            dotcount++;
-            break;
-
-         case '/':
-            slashcount++;
-            break;
-
-         default:
-            othercount++;
-            break;
-      }      
-   }
-
-   if(wildcount && !numcount && !othercount)
-   {
-      if(!user || !*user || mycmp(user, "*") == 0)
-         return NULL; /* all wildcards? aagh! */
-
-      flags = (UBAN_HOST|UBAN_WILD);
-
-      if(mycmp(host, "*.*") == 0 || mycmp(host, "*") == 0)
-         flags |= UBAN_WILDHOST;
-
-      goto success;
-   }
-
-   /* everything must have a dot. never more than one slash. */
-   if(dotcount == 0 || slashcount > 1)
-      return NULL;
-
-   /* wildcarded IP address? -- can we convert it to a CIDR? */
-   if(wildcount && numcount && !othercount)
-   {
-      char octet[4][8];
-      int i1, i2;
-      int gotwild;
-
-      if(slashcount)
-         return NULL; /* slashes and wildcards? */
-
-      /* I see... more than 3 dots? */
-      if(dotcount > 3)
-         return NULL;
-
-      i1 = i2 = 0;
-
-      /* separate this thing into dotcount octets. */
-      for(tmp = host; *tmp; tmp++)
-      {
-         if(*tmp == '.')
-         {
-            octet[i1][i2] = '\0';
-            i2 = 0;
-            i1++;
-            continue;
-         }
-         if(i2 < 6)
-         {
-            octet[i1][i2++] = *tmp;
-         }
-      }
-      octet[i1][i2] = '\0';
-
-      /* verify that each octet is all numbers or just a '*' */
-      /* bans that match 123.123.123.1?? are still valid, just not convertable to a CIDR */
-
-      for(gotwild = i1 = 0; i1 <= dotcount; i1++)
-      {
-         if(strcmp(octet[i1], "*") == 0)
-         {
-            gotwild++;
-            continue;
-         }
-
-         /* ban in the format of 1.2.*.4 */
-         if(gotwild)
-         {
-            flags = (UBAN_IP|UBAN_WILD);
-            goto success;
-         }
-
-         for(i2 = 0; octet[i1][i2]; i2++)
-         {
-             switch(octet[i1][i2])
-             {
-                case '0':
-                case '1':
-                case '2':
-                case '3':
-                case '4':
-                case '5':
-                case '6':
-                case '7':
-                case '8':
-                case '9':
-                   break;
-
-                default:
-                   flags = (UBAN_IP|UBAN_WILD);
-                   goto success;
-             }
-         }
-      }
-
-      if(octet[0][0] == '*')
-         return NULL; /* the first octet is a wildcard? what the hell? */
-
-      if(octet[1][0] == '*')
-      {
-         sprintf(host, "%s.0.0.0/8", octet[0]);
-         goto cidrforce;
-      }
-      else if(dotcount >= 2 && octet[2][0] == '*')
-      {
-         sprintf(host, "%s.%s.0.0/16", octet[0], octet[1]);
-         goto cidrforce;
-      }
-      else if(dotcount >= 3 && octet[3][0] == '*')
-      {
-         sprintf(host, "%s.%s.%s.0/24", octet[0], octet[1], octet[2]);
-         goto cidrforce;
-      }
-
-      return NULL; /* we should never get here. If we do, something is wrong. */
-   }
-
-   /* CIDR IP4 address? */
-   if(!wildcount && numcount && !othercount && slashcount)
-   {
-      int sval;
-      char *sep, *err;
-      struct in_addr ia, na;
-
-cidrforce:
-      sep = strchr(host, '/'); /* guaranteed to be here because slashcount */
-      *sep = '\0';
-      sep++;
- 
-      if((ia.s_addr = inet_addr(host)) == 0xFFFFFFFF) /* invalid ip4 address! */
-         return NULL;
-
-      /* is there a problem with the / mask? */
-      sval = strtol(sep, &err, 10);
-      if(*err != '\0')
-         return NULL;
-
-      if(sval < 0 || sval > 32)
-         return NULL;
-
-      na.s_addr = htonl(cidr_to_netmask(sval));
-      ia.s_addr &= na.s_addr;
-
-      c4h = ia.s_addr;
-      c4m = na.s_addr;
-      
-      flags = (sval < 16) ? UBAN_CIDR4BIG : UBAN_CIDR4;
-      goto success;
-   }
-
-   if(slashcount)
-      return NULL;
- 
-   if(!othercount)
-   {
-      flags = (UBAN_IP | (wildcount ? UBAN_WILD : 0));
-      goto success;
-   }
-
-   flags = (UBAN_HOST | (wildcount ? UBAN_WILD : 0));
-
-success:
-   b = userban_alloc();
-   if(!b)
-      return NULL;
-
-   b->reason = NULL;
-
-   if(flags & (UBAN_CIDR4BIG|UBAN_CIDR4))
-   {
-      b->cidr4ip = c4h;
-      b->cidr4mask = c4m;
-      b->h = NULL;
-   }
-   else
-   {
-      b->cidr4ip = b->cidr4mask = 0;
-      b->h = (char *)MyMalloc(strlen(host) + 1);
-      strcpy(b->h, host);
-   }
-
-   if(!user || !*user || mycmp(user, "*") == 0)
-   {
-      flags |= UBAN_WILDUSER;
-      b->u = NULL;
-   }
-   else
-   {
-      b->u = (char *)MyMalloc(strlen(user) + 1);
-      strcpy(b->u, user);
-   }
-
-   b->flags = flags;
-
-   return b;   
-}
-
-/* simban (simple ban) functions */
-
-/*
- * make_simpleban does only simple sanity checking.
- * You must pass it one of each of the following flags in 'flags', or'd together:
- * SBAN_GCOS (gline) or SBAN_NICK (qline) or SBAN_CHAN (channel qline)
- * SBAN_LOCAL or SBAN_NETWORK (self-explanatory)
- */
-struct simBan *make_simpleban(unsigned int flags, char *mask) 
-{
-   char *tmp;
-   struct simBan *b;
-   int wildcount = 0, othercount = 0;
-
-   for(tmp = mask; *tmp; tmp++)
-   {
-      switch(*tmp)
-      {
-         case '*':
-         case '?':
-            wildcount++;
-            break;
-
-         default:
-            othercount++;
-            break;
-      }
-   }
-
-   if((flags & (SBAN_NETWORK|SBAN_LOCAL)) == 0)
-      return NULL;
-
-   if((flags & (SBAN_NICK|SBAN_GCOS|SBAN_CHAN)) == 0)
-      return NULL;
-
-   if(othercount == 0)
-      return NULL; /* No bans consisting only of wildcards */
-
-   if(wildcount)
-      flags |= SBAN_WILD;
-
-   b = simban_alloc();
-   if(!b) 
-      return NULL;
-
-   b->reason = NULL;
-   b->mask = (char *) MyMalloc(strlen(mask) + 1);
-   strcpy(b->mask, mask);
-   b->flags = flags;
-
-   return b;
-}
-
-void add_simban(struct simBan *b)
-{
-   uBanEnt *bl;
-   aBanList *banlist;
-   ban_list *thelist;
-
-   bl = ubanent_alloc();
-   bl->ban = (struct userBan *) b;
-   b->internal_ent = (void *) bl;
-
-   if(b->flags & SBAN_NICK)
-      banlist = &nick_bans;
-   else if(b->flags & SBAN_CHAN)
-      banlist = &chan_bans;
-   else if(b->flags & SBAN_GCOS)
-      banlist = &gcos_bans;
-   else
-      abort(); /* ack! */
-
-   if(b->flags & SBAN_WILD)
-   {
-      thelist = &banlist->wild_list;
-   }
-   else
-   {
-      unsigned int hv = host_hash(b->mask) % HASH_SIZE;
-
-      thelist = &banlist->hash_list[hv];
-   }
-
-   LIST_INSERT_HEAD(thelist, bl, lp);
-}
-
-void remove_simban(struct simBan *b)
-{
-   uBanEnt *bl = (uBanEnt *) b->internal_ent;
-
-   LIST_REMOVE(bl, lp);
-
-   ubanent_free(bl);
-
-   return;
-}
-
-struct simBan *find_simban_exact(struct simBan *borig)
-{
-   uBanEnt *bl;
-   struct simBan *ban;
-   aBanList *banlist;
-   ban_list *thelist;
-
-   if(borig->flags & SBAN_NICK)
-      banlist = &nick_bans;
-   else if(borig->flags & SBAN_CHAN)
-      banlist = &chan_bans;
-   else if(borig->flags & SBAN_GCOS)
-      banlist = &gcos_bans;
-   else
-      return NULL;
-
-   if(borig->flags & SBAN_WILD)
-   {
-      thelist = &banlist->wild_list;
-   }
-   else
-   {
-      unsigned int hv = host_hash(borig->mask) % HASH_SIZE;
-
-      thelist = &banlist->hash_list[hv];
-   }
- 
-   LIST_FOREACH(bl, thelist, lp) 
-   {
-      ban = (struct simBan *) bl->ban;
-
-      if(ban->flags != borig->flags)
-         continue;
-
-      if(mycmp(ban->mask, borig->mask))
-         continue;
-
-      return ban;
-   }
-
-   return NULL;
-}
-
-/* does cptr match the ban specified in b? 
- * return: 0 = no
- */
-int user_match_simban(aClient *cptr, struct simBan *b)
-{
-   char *userinfo;
-   int (*chkfnc)(char *, char *);
-
-   if(b->flags & SBAN_NICK)
-      userinfo = cptr->name;
-   else if(b->flags & SBAN_CHAN)
-      return 0; /* not applicable */
-   else if(b->flags & SBAN_GCOS)
-      userinfo = cptr->info;
-   else
-      abort(); /* aagh! */
-
-   if(b->flags & SBAN_WILD)
-      chkfnc = match;
-   else
-      chkfnc = mycmp;
- 
-   if(chkfnc(b->mask, userinfo) == 0)
-      return 1;
-
-   return 0;
-}
-
-struct simBan *check_mask_simbanned(char *mask, unsigned int flags)
-{
-   uBanEnt *bl;
-   struct simBan *ban;
-   aBanList *banlist;
-   ban_list *thelist;
-   int (*chkfnc)(char *, char *);
-   unsigned int hv;
-
-   if(flags & SBAN_NICK)
-      banlist = &nick_bans;
-   else if(flags & SBAN_CHAN)
-      banlist = &chan_bans;
-   else if(flags & SBAN_GCOS)
-      banlist = &gcos_bans;
-   else
-      abort(); /* aagh! */
-
-   hv = host_hash(mask) % HASH_SIZE;
-   thelist = &banlist->hash_list[hv];
-   chkfnc = mycmp;
-   LIST_FOREACH(bl, thelist, lp) 
-   {
-      ban = (struct simBan *) bl->ban;
-
-      if((ban->flags & SBAN_TEMPORARY) && ban->timeset + ban->duration <= NOW)
-         continue;
-
-      if(chkfnc(ban->mask, mask))
-         continue;
-
-      return ban;
-   }
-
-   thelist = &banlist->wild_list;
-   chkfnc = match;
-   LIST_FOREACH(bl, thelist, lp) 
-   {
-      ban = (struct simBan *) bl->ban;
-
-      if((ban->flags & SBAN_TEMPORARY) && ban->timeset + ban->duration <= NOW)
-         continue;
-
-      if(chkfnc(ban->mask, mask))
-         continue;
-
-      return ban;
-   }
-
-   return NULL;
-}
-
-void report_simbans_match_flags(aClient *cptr, unsigned int flags, unsigned int nflags)
-{
-   uBanEnt *bl;
-   struct simBan *ban;
-   aBanList *banlist;
-   ban_list *thelist;
-   unsigned int hv;
-   char sbuf[16];
-   int slen;
-
-   if(flags & SBAN_NICK)
-      banlist = &nick_bans;
-   else if(flags & SBAN_CHAN)
-      banlist = &chan_bans;
-   else if(flags & SBAN_GCOS)
-      banlist = &gcos_bans;
-   else
-      abort(); /* aagh! */
-
-   for(hv = 0; hv < HASH_SIZE; hv++)
-   {
-      thelist = &banlist->hash_list[hv];
-      LIST_FOREACH(bl, thelist, lp)
-      {
-         ban = (struct simBan *) bl->ban;
-
-         if((ban->flags & SBAN_TEMPORARY) && ban->timeset + ban->duration <= NOW)
-            continue;
-
-         if(((ban->flags & flags) == flags) && ((ban->flags & nflags) == 0))
-         {
-            int rpl = RPL_STATSQLINE;
-            slen = 0;
-            if(flags & SBAN_NICK)
             {
-               sbuf[slen++] = (flags & SBAN_LOCAL) ? 'Q' : 'q';
-               sbuf[slen++] = 'n';
+                /* return the duplicate ban's information */
+                data->flags = b->flags;
+                data->expirets = b->expirets;
+                data->mask = b->mask;
+                data->reason = b->reason;
             }
-            else if(flags & SBAN_CHAN)
-            {
-               sbuf[slen++] = (flags & SBAN_LOCAL) ? 'Q' : 'q';
-               sbuf[slen++] = 'c';
-            }
-            else if(flags & SBAN_GCOS)
-            {
-               rpl = RPL_STATSGLINE;
-               sbuf[slen++] = (flags & SBAN_LOCAL) ? 'G' : 'g';
-            }
-            sbuf[slen] = '\0';
 
-            sendto_one(cptr, rpl_str(rpl), me.name, cptr->name,
-                       sbuf, 
-                       ban->mask, 
-                       (ban->flags & SBAN_TEMPORARY) ? (((ban->timeset + ban->duration) - NOW) / 60) : -1,
-                       ban->reason ? ban->reason : "No Reason");
-         }
-      }
-   }
+            return UBAN_ADD_DUPLICATE;
+        }
+    }
 
-   thelist = &banlist->wild_list;
-   LIST_FOREACH(bl, thelist, lp)
-   {
-      ban = (struct simBan *) bl->ban;
+    data->flags &= ~UBAN_UPDATE;
+    b = ub_alloc(data->flags, data->priority, data->expirets, data->reason);
+    if (data->mask)
+        DupString(b->mask, data->mask);
 
-      if((ban->flags & SBAN_TEMPORARY) && ban->timeset + ban->duration <= NOW)
-         continue;
+    if (!(b->flags & UBAN_EXEMPT))
+        userban_updates++;
 
-      if(((ban->flags & flags) == flags) && ((ban->flags & nflags) == 0))
-      {
-         int rpl = RPL_STATSQLINE;
-         slen = 0;
-         if(flags & SBAN_NICK)
-         {
-            sbuf[slen++] = (flags & SBAN_LOCAL) ? 'Q' : 'q';
-            sbuf[slen++] = 'n';
-         }
-         else if(flags & SBAN_CHAN)
-         {
-            sbuf[slen++] = (flags & SBAN_LOCAL) ? 'Q' : 'q';
-            sbuf[slen++] = 'c';
-         }
-         else if(flags & SBAN_GCOS)
-         {
-            rpl = RPL_STATSGLINE;
-            sbuf[slen++] = (flags & SBAN_LOCAL) ? 'G' : 'g';
-         }
-         sbuf[slen++] = 'w';
-         sbuf[slen] = '\0';
+    b->next = *slot;
+    *slot = b;
 
-         sendto_one(cptr, rpl_str(rpl), me.name, cptr->name,
-                    sbuf, 
-                    ban->mask, 
-                    (ban->flags & SBAN_TEMPORARY) ? (((ban->timeset + ban->duration) - NOW) / 60) : -1,
-                    ban->reason ? ban->reason : "No Reason");
-      }
-   }   
+    return 0;
 }
 
-
-void remove_simbans_match_flags(unsigned int flags, unsigned int nflags)
+/* callback for deleting a specific ban from a list */
+static int
+ubcb_del(void *carg, void **slot)
 {
-   uBanEnt *bl;
-   struct simBan *ban;
-   aBanList *banlist;
-   ban_list *thelist;
-   unsigned int hv;
+    UserBan *data;
+    UserBan *b;
+    UserBan **pbs;
 
-   if(flags & SBAN_NICK)
-      banlist = &nick_bans;
-   else if(flags & SBAN_CHAN)
-      banlist = &chan_bans;
-   else if(flags & SBAN_GCOS)
-      banlist = &gcos_bans;
-   else
-      abort(); /* aagh! */
+    data = carg;
+    pbs = (UserBan **)slot;
 
-   for(hv = 0; hv < HASH_SIZE; hv++)
-   {
-      thelist = &banlist->hash_list[hv];
-      LIST_FOREACH(bl, thelist, lp)
-      {
-         ban = (struct simBan *) bl->ban;
+    for (b = *pbs; b; b = b->next)
+    {
+        if ((b->flags & UB_DUPFLAGS) == data->flags)
+        {
+            if (!b->mask && !data->mask)
+                break;
 
-         if((ban->flags & SBAN_TEMPORARY) && ban->timeset + ban->duration <= NOW)
-            continue;
+            if (b->mask && data->mask && !mycmp(b->mask, data->mask))
+                break;
+        }
 
-         if(((ban->flags & flags) == flags) && ((ban->flags & nflags) == 0))
-         {
-            /* Kludge it out! */
-            ban->flags |= SBAN_TEMPORARY;
-            ban->timeset = NOW - 5;
-            ban->duration = 1;
-         }
-      }
-   }
+        pbs = &b->next;
+    }
 
-   thelist = &banlist->wild_list;
-   LIST_FOREACH(bl, thelist, lp)
-   {
-      ban = (struct simBan *) bl->ban;
+    if (!b)
+        return UBAN_DEL_NOTFOUND;
 
-      if((ban->flags & SBAN_TEMPORARY) && ban->timeset + ban->duration <= NOW)
-         continue;
+    data->flags = b->flags;
+    data->expirets = b->expirets;
 
-      if(((ban->flags & flags) == flags) && ((ban->flags & nflags) == 0))
-      {
-         /* Kludge it out! */
-         ban->flags |= SBAN_TEMPORARY;
-         ban->timeset = NOW - 5;
-         ban->duration = 1;
-      }
-   }   
+    if (b->flags & UBAN_CONF)
+    {
+        data->mask = b->mask;
+        data->reason = b->reason;
+
+        return UBAN_DEL_INCONF;
+    }
+
+    if (b->flags & UBAN_EXEMPT)
+        userban_updates++;
+
+    *pbs = b->next;
+    ub_free(b);
+
+    return 0;
 }
 
-void send_simbans(aClient *cptr, unsigned int flags)
+/* callback for mass deletions from a list */
+static void
+ubcb_massdel(void *carg, u_int unused1, int unused2, void **slot)
 {
-   uBanEnt *bl;
-   struct simBan *ban;
-   aBanList *banlist;
-   ban_list *thelist;
-   unsigned int hv;
+    UBMassDel *ubmd;
+    UserBan *b;
+    UserBan *next;
+    UserBan **pbs;
 
-   if(flags & SBAN_NICK)
-      banlist = &nick_bans;
-   else if(flags & SBAN_CHAN)
-      banlist = &chan_bans;
-   else if(flags & SBAN_GCOS)
-      banlist = &gcos_bans;
-   else
-      abort(); /* aagh! */
+    ubmd = carg;
+    pbs = (UserBan **)slot;
 
-   for(hv = 0; hv < HASH_SIZE; hv++)
-   {
-      thelist = &banlist->hash_list[hv];
-      LIST_FOREACH(bl, thelist, lp)
-      {
-         ban = (struct simBan *) bl->ban;
+    for (b = *pbs; b; b = next)
+    {
+        next = b->next;
 
-         if(ban->flags & SBAN_TEMPORARY)
+        if (b->expirets < ubmd->ts ||
+            (ubmd->flagset && (b->flags & ubmd->flagset) == ubmd->flags))
+        {
+            if (b->flags & UBAN_EXEMPT)
+                userban_updates++;
+
+            *pbs = b->next;
+            ub_free(b);
             continue;
+        }
 
-         if((ban->flags & flags) == flags)
-         {
-            if(ban->flags & SBAN_GCOS)
-               sendto_one(cptr, ":%s SGLINE %d :%s:%s", me.name, strlen(ban->mask),
-                          ban->mask, ban->reason);
+        pbs = &b->next;
+    }
+}
+
+/* callback for matching a mask against a list of userbans */
+static void
+ubcb_match(void *carg, void *list)
+{
+    UserBan *b;
+    UserBan *lb;
+    UserBan *nb;
+    UBMatch *ubm = carg;
+    char *what;
+
+    what = ubm->what;
+    lb = ubm->local;
+    nb = ubm->network;
+
+    for (b = list; b; b = b->next)
+    {
+        if (!b->mask || !match(b->mask, what))
+        {
+            if (b->flags & UBAN_LOCAL)
+            {
+                if (!lb || b->priority > lb->priority)
+                    lb = b;
+            }
             else
-               sendto_one(cptr, ":%s SQLINE %s :%s", me.name,
-                          ban->mask, ban->reason);
-         }
-      }
-   }
+            {
+                if (!nb || b->priority > nb->priority)
+                    nb = b;
+            }
+        }
+    }
 
-   thelist = &banlist->wild_list;
-   LIST_FOREACH(bl, thelist, lp)
-   {
-      ban = (struct simBan *) bl->ban;
-
-      if(ban->flags & SBAN_TEMPORARY)
-         continue;
-
-      if((ban->flags & flags) == flags)
-      {
-         if(ban->flags & SBAN_GCOS)
-            sendto_one(cptr, ":%s SGLINE %d :%s:%s", me.name, strlen(ban->mask),
-                       ban->mask, ban->reason);
-         else
-            sendto_one(cptr, ":%s SQLINE %s :%s", me.name,
-                       ban->mask, ban->reason);
-      }
-   }   
+    ubm->local = lb;
+    ubm->network = nb;
 }
 
-void remove_simbans_match_mask(unsigned int flags, char *mask, int wild)
+
+/*
+ * Add a new userban.  Requires user@host mask, a reason, an expiration time,
+ * and optional flags.  An expiration time of 0 creates a permanent ban.
+ * Returns UBAN_ADD_INVALID for an invalid mask, or UBAN_ADD_DUPLICATE if this
+ * ban already exists; 0 otherwise.
+ * For duplicate and successfully added bans, UserBanInfo is filled in.
+ */
+int
+userban_add(char *mask, char *reason, time_t expirets, u_short flags, UserBanInfo *ubi)
 {
-   uBanEnt *bl;
-   struct simBan *ban;
-   aBanList *banlist;
-   ban_list *thelist;
-   unsigned int hv;
-   int (*chkfnc)(char *, char *);
+    int hrv;
+    int upri = 0;
+    int hpri = 0;
+    int prefix;
+    u_int rawip;
+    int result = UBAN_ADD_INVALID;
+    UserBan pcb = {0};
+    char *user;
+    char *host;
+    char *s;
 
-   chkfnc = wild ? match : mycmp;
+    pcb.flags = flags;
+    pcb.expirets = expirets ? expirets : INT_MAX;   /* INT_MAX is permanent */
+    pcb.reason = reason;
 
-   if(flags & SBAN_NICK)
-      banlist = &nick_bans;
-   else if(flags & SBAN_CHAN)
-      banlist = &chan_bans;
-   else if(flags & SBAN_GCOS)
-      banlist = &gcos_bans;
-   else
-      abort(); /* aagh! */
+    if (!ub_isolate(mask, &user, &host))
+        return UBAN_ADD_INVALID;
 
-   for(hv = 0; hv < HASH_SIZE; hv++)
-   {
-      thelist = &banlist->hash_list[hv];
-      LIST_FOREACH(bl, thelist, lp)
-      {
-         ban = (struct simBan *) bl->ban;
+    if (!validate_user(user, VALIDATE_MASK))
+        return UBAN_ADD_INVALID;
 
-         if((ban->flags & SBAN_TEMPORARY) && ban->timeset + ban->duration <= NOW)
-            continue;
+    /* set user mask priority */
+    for (s = user; *s; s++)
+        if (*s != '*')
+            upri++;
 
-         if((ban->flags & flags) != flags)
-            continue;
+    hrv = categorize_host(host, &rawip, &prefix, VALIDATE_DOT);
 
-         if(chkfnc(mask, ban->mask) == 0)
-         {
-            /* Kludge it out! */
-            ban->flags |= SBAN_TEMPORARY;
-            ban->timeset = NOW - 5;
-            ban->duration = 1;
-         }
-      }
-   }
+    switch (hrv)
+    {
+        case HMT_IP:
+        case HMT_IPCIDR:
+            if (rawip == 0) /* bans that match hostmasking are not allowed */
+                return UBAN_ADD_INVALID;
 
-   thelist = &banlist->wild_list;
-   LIST_FOREACH(bl, thelist, lp)
-   {
-      ban = (struct simBan *) bl->ban;
+            pcb.mask = upri ? user : NULL;
+            hpri = prefix * (USERLEN + 1);
+            pcb.priority = hpri + upri;
 
-      if((ban->flags & SBAN_TEMPORARY) && ban->timeset + ban->duration <= NOW)
-         continue;
+            result = patricia_add(&ub_iptree, rawip, prefix, ubcb_add, &pcb);
 
-      if((ban->flags & flags) != flags)
-         continue;
+            if (ubi)
+                ircsprintf(ub_maskbuf, "%s@%s", user,
+                           cidr2string(rawip, prefix, 0));
+            break;
+            
+        case HMT_WILD:
+            if (!upri)  /* bans that match anything are not allowed */
+                return UBAN_ADD_INVALID;
 
-      if(chkfnc(mask, ban->mask) == 0)
-      {
-         /* Kludge it out! */
-         ban->flags |= SBAN_TEMPORARY;
-         ban->timeset = NOW - 5;
-         ban->duration = 1;
-      }
-   }   
-}
+            pcb.mask = user;
+            pcb.priority = upri;
 
-static inline void expire_simlist(uBanEnt *bl)
-{
-   uBanEnt *bln;
-   struct simBan *ban;
+            result = ubcb_add(&pcb, (void **)&ubl_wildhosts);
 
-   while(bl)
-   {
-      bln = LIST_NEXT(bl, lp);
-      ban = (struct simBan *)bl->ban;
+            if (ubi)
+                ircsprintf(ub_maskbuf, "%s@*", pcb.mask);
+            break;
 
-      if((ban->flags & SBAN_TEMPORARY) && ban->timeset + ban->duration <= NOW)
-      {
-         remove_simban(ban);
-         simban_free(ban);
-      }
-      bl = bln;
-   }
-}
+        case HMT_NAME:
+            hrv = ub_hash(host) % USERBAN_HASH_SIZE;
+            pcb.mask = ub_maskbuf;
 
-void expire_simbans()
-{
-   uBanEnt *bl;
-   int a;
+            /* host priority levels are above CIDR levels */
+            hpri = (33 + HOSTLEN) * (USERLEN + 1);
+            pcb.priority = hpri + upri;
 
-   bl = LIST_FIRST(&nick_bans.wild_list);
-   expire_simlist(bl);
-   bl = LIST_FIRST(&chan_bans.wild_list);
-   expire_simlist(bl);
-   bl = LIST_FIRST(&gcos_bans.wild_list);
-   expire_simlist(bl);
+            result = ubcb_add(&pcb, (void **)&ubl_hostnames[hrv]);
+            break;
 
-   for(a = 0; a < HASH_SIZE; a++)
-   {
-      bl = LIST_FIRST(&nick_bans.hash_list[a]);
-      expire_simlist(bl);
-      bl = LIST_FIRST(&chan_bans.hash_list[a]);
-      expire_simlist(bl);
-      bl = LIST_FIRST(&gcos_bans.hash_list[a]);
-      expire_simlist(bl);
-   }
-}
+        case HMT_NAMEMASK:
+            pcb.mask = ub_maskbuf;
 
-/* Hash and init functions */
+            /* host priority levels are above CIDR levels */
+            hpri = 33;
+            for (s = host; *s; s++)
+                if (*s != '*')
+                    hpri++;
+            hpri *= (USERLEN + 1);
+            pcb.priority = hpri + upri;
 
-unsigned int ip_hash(char *n)
-{
-   unsigned int hv = 0;
+            result = ubcb_add(&pcb, (void **)&ubl_hostmasks);
+            break;
+    }
 
-   while(*n)
-   {
-      hv = hv * 33 + tolowertab[(unsigned char) *n++];
-   }
+    if (ubi && result != UBAN_ADD_INVALID)
+    {
+        ubi->flags = pcb.flags;
+        ubi->mask = ub_maskbuf;
+        ubi->reason = pcb.reason;
+        ubi->expirets = (pcb.expirets != INT_MAX ? pcb.expirets : 0);
+    }
 
-   return hv;
-}
-
-unsigned int host_hash(char *n)
-{
-   unsigned int hv = 0;
-
-   while(*n)
-   {
-      if(*n != '.') 
-      {
-         hv <<= 5;
-         hv |= ((touppertab[(unsigned char) *n]) - 65) & 0xFF;
-      }
-      n++;
-   }
-
-   return hv;
-}
-
-void init_banlist(aBanList *a, int numbuckets)
-{
-   memset(a, 0, sizeof(aBanList));
-   a->numbuckets = numbuckets;
-   a->hash_list = (ban_list *) MyMalloc(numbuckets * sizeof(ban_list));
-   memset(a->hash_list, 0, numbuckets * sizeof(ban_list));
-}
-
-void init_userban()
-{
-   int i;
-
-   CIDR4_bans = (ban_list **) MyMalloc(256 * sizeof(ban_list *));
-   for(i = 0; i < 256; i++)
-   {
-      CIDR4_bans[i] = (ban_list *) MyMalloc(256 * sizeof(ban_list));
-      memset(CIDR4_bans[i], 0, 256 * sizeof(ban_list));
-   }
-
-   init_banlist(&host_bans, HASH_SIZE);
-   init_banlist(&ip_bans, HASH_SIZE);
-
-   init_banlist(&gcos_bans, HASH_SIZE);
-   init_banlist(&nick_bans, HASH_SIZE);
-   init_banlist(&chan_bans, HASH_SIZE);
-}
-
-unsigned int userban_count = 0, ubanent_count = 0, simban_count = 0;
-
-struct userBan *userban_alloc()
-{
-   struct userBan *b;
-
-   b = (struct userBan *) MyMalloc(sizeof(struct userBan));
-   if(b)
-   {
-      memset(b, 0, sizeof(struct userBan));
-      userban_count++;
-   }
-   return b;
-}
-
-void userban_free(struct userBan *b)
-{
-   if(b->u)
-      MyFree(b->u);
-
-   if(b->h)
-      MyFree(b->h);
-
-   if(b->reason)
-      MyFree(b->reason);
-
-   userban_count--;
-   MyFree(b);
-}
-
-uBanEnt *ubanent_alloc()
-{
-   uBanEnt *b;
-
-   b = (uBanEnt *) MyMalloc(sizeof(uBanEnt));
-   if(b)
-   {
-      memset(b, 0, sizeof(uBanEnt));
-      ubanent_count++;
-   }
-   return b;
-}
-
-void ubanent_free(uBanEnt *b)
-{
-   ubanent_count--;
-   MyFree(b);
-}
-
-struct simBan *simban_alloc()
-{
-   struct simBan *b;
-
-   b = (struct simBan *) MyMalloc(sizeof(struct simBan));
-   if(b)
-   {
-      memset(b, 0, sizeof(struct simBan));
-      simban_count++;
-   }
-   return b;
-}
-
-void simban_free(struct simBan *b)
-{
-   if(b->mask)
-      MyFree(b->mask);
-
-   if(b->reason)
-      MyFree(b->reason);
-
-   simban_count--;
-   MyFree(b);
+    return result;
 }
 
 /*
- * Dump all local connections that match a userban.
+ * Delete a userban.  Requires user@host mask and flags indicating the type
+ * (local/exemption).  Returns UBAN_DEL_NOTFOUND if the ban does not exist,
+ * or UBAN_DEL_INCONF if it is specified in ircd.conf; 0 otherwise.
+ * If a ban is found, UserBanInfo is filled in.
+ * NOTE: Filled UserBanInfo does not contain a valid reason.
  */
-void userban_sweep(struct userBan *ban)
+int
+userban_del(char *mask, u_short flags, UserBanInfo *ubi)
+{
+    u_int rawip;
+    int prefix;
+    int rv;
+    int result = UBAN_DEL_NOTFOUND;
+    int userwild = 0;
+    UserBan pcb = {0};
+    char *user;
+    char *host;
+
+    flags &= UB_DUPFLAGS;
+    pcb.flags = flags;
+
+    if (!ub_isolate(mask, &user, &host))
+        return UBAN_DEL_NOTFOUND;
+
+    if (!validate_user(user, VALIDATE_MASK))
+        return UBAN_DEL_NOTFOUND;
+
+    if (!strcmp(user, "*"))
+        userwild = 1;
+
+    rv = categorize_host(host, &rawip, &prefix, VALIDATE_DOT);
+
+    switch (rv)
+    {
+        case HMT_IP:
+        case HMT_IPCIDR:
+            if (!userwild)
+                pcb.mask = user;
+
+            result = patricia_del(&ub_iptree, rawip, prefix, ubcb_del, &pcb);
+
+            if (ubi)
+                ircsprintf(ub_maskbuf, "%s@%s", user,
+                           cidr2string(rawip, prefix, 0));
+            break;
+
+        case HMT_WILD:
+            if (userwild)
+                return UBAN_DEL_NOTFOUND;
+            pcb.mask = user;
+
+            result = ubcb_del(&pcb, (void **)&ubl_wildhosts);
+
+            if (ubi)
+                ircsprintf(ub_maskbuf, "%s@*", user);
+            break;
+
+        case HMT_NAME:
+            rv = ub_hash(host) % USERBAN_HASH_SIZE;
+            pcb.mask = ub_maskbuf;
+
+            result = ubcb_del(&pcb, (void **)&ubl_hostnames[rv]);
+            break;
+
+        case HMT_NAMEMASK:
+            pcb.mask = ub_maskbuf;
+
+            result = ubcb_del(&pcb, (void **)&ubl_hostmasks);
+            break;
+    }
+
+    /* we return NOTFOUND for invalid masks too, so can't fill ubi */
+    if (ubi && result != UBAN_DEL_NOTFOUND)
+    {
+        ubi->flags = pcb.flags;
+        ubi->mask = ub_maskbuf;
+        ubi->expirets = (pcb.expirets != INT_MAX ? pcb.expirets : 0);
+        ubi->reason = NULL;
+    }
+
+    return result;
+}
+
+/*
+ * Mass delete userbans based on expiration time and/or specific flags.
+ * A zero timestamp ignores expiration time; zero flagset ignores flags.
+ */
+void
+userban_massdel(time_t ts, u_short flags, u_short flagset)
+{
+    int i;
+    UBMassDel ubmd;
+
+    if (!ts)
+        ts = INT_MAX;   /* not expiring anything */
+    flags &= flagset;
+
+    ubmd.ts = ts;
+    ubmd.flags = flags;
+    ubmd.flagset = flagset;
+
+    ubcb_massdel(&ubmd, 0, 0, (void **)&ubl_wildhosts);
+    ubcb_massdel(&ubmd, 0, 0, (void **)&ubl_hostmasks);
+
+    for (i = 0; i < USERBAN_HASH_SIZE; i++)
+        if (ubl_hostnames[i])
+            ubcb_massdel(&ubmd, 0, 0, (void **)&ubl_hostnames[i]);
+
+    patricia_walk(&ub_iptree, ubcb_massdel, &ubmd);
+}
+
+
+/* common workhorse for checkclient() and checkserver() */
+static UserBanInfo *
+ub_check(char *user, char *host, u_int ip)
+{
+    static UserBanInfo ubi;
+    UserBan *ban = NULL;
+    UBMatch ubm = {0};
+
+    if (ubl_wildhosts)
+    {
+        ubm.what = user;
+        ubcb_match(&ubm, ubl_wildhosts);
+    }
+
+    if (host)
+    {
+        int hv = ub_hash(host) % USERBAN_HASH_SIZE;
+        ircsprintf(ub_maskbuf, "%s@%s", user, host);
+        ubm.what = ub_maskbuf;
+
+        if (ubl_hostmasks)
+            ubcb_match(&ubm, ubl_hostmasks);
+
+        if (ubl_hostnames[hv])
+            ubcb_match(&ubm, ubl_hostnames[hv]);
+    }
+
+    if (ub_iptree)
+    {
+        ubm.what = user;
+        patricia_search(ub_iptree, ip, ubcb_match, &ubm);
+    }
+
+    if (ubm.network && !(ubm.network->flags & UBAN_EXEMPT))
+        ban = ubm.network;
+    else if (ubm.local && !(ubm.local->flags & UBAN_EXEMPT))
+        ban = ubm.local;
+
+    if (ban)
+    {
+        ubi.flags = ban->flags;
+        ubi.reason = ban->reason;
+        ubi.expirets = (ban->expirets != INT_MAX) ? ban->expirets : 0;
+        return &ubi;
+    }
+
+    return NULL;
+}
+
+/*
+ * Checks whether a client matches any userbans.  Returns a pointer to a
+ * static UserBanInfo if there is a match; NULL otherwise.
+ * NOTE: Returned UserBanInfo does not contain a valid mask.
+ */
+UserBanInfo *
+userban_checkclient(aClient *cptr)
+{
+    return ub_check(cptr->user->username,
+                    (cptr->flags & FLAGS_HOSTNAME) ? cptr->user->host : NULL,
+                    cptr->ip.s_addr);
+}
+
+/*
+ * Checks whether a server matches any userbans.  Returns a pointer to a
+ * static UserBanInfo if there is a match; NULL otherwise.
+ * NOTE: Returned UserBanInfo does not contain a valid mask.
+ */
+UserBanInfo *
+userban_checkserver(aClient *cptr)
+{
+    return ub_check(cptr->username, NULL, cptr->ip.s_addr);
+}
+
+
+/*
+ * Runs a userban sweep against all connections, to enforce ban
+ * additions or exemption removals.
+ */
+void
+userban_sweep(void)
 {
     char rbuf[512];
+    UserBanInfo *ubi;
     aClient *acptr;
-    char *reason;
     char *btext;
     char *ntext;
-    int clientonly = 1;
     int i;
 
-    if (ban->flags & UBAN_NETWORK)
+    for (i = highest_fd; i >= 0; i--)
     {
-        btext = NETWORK_BANNED_NAME;
-        ntext = NETWORK_BAN_NAME;
-    }
-    else
-    {
-        btext = LOCAL_BANNED_NAME;
-        ntext = LOCAL_BAN_NAME;
-    }
-
-    if (!(reason = ban->reason))
-        reason = "<no reason>";
-
-    /* if it's purely IP based, dump unregistered and server connections too */
-    if (ban->flags & UBAN_WILDUSER)
-        if (ban->flags & (UBAN_IP|UBAN_CIDR4|UBAN_CIDR4BIG))
-            clientonly = 0;
-
-    ircsnprintf(rbuf, sizeof(rbuf), "%s: %s", btext, reason);
-
-    for (i = 0; i <= highest_fd; i++)
-    {
-        if (!(acptr = local[i]) || acptr->status < STAT_UNKNOWN)
+        if (!(acptr = local[i]) || !IsRegistered(acptr))
             continue;
 
-        if (clientonly && !IsPerson(acptr))
+        ubi = IsClient(acptr)
+            ? userban_checkclient(acptr)
+            : userban_checkserver(acptr);
+
+        if (!ubi)
             continue;
 
-        if (user_match_ban(acptr, ban))
+        if (ubi->flags & UBAN_LOCAL)
         {
-            sendto_ops("%s active for %s", ntext,
-                       get_client_name(acptr, FALSE));
-            exit_client(acptr, acptr, &me, rbuf);
-            i--;
+            btext = LOCAL_BANNED_NAME;
+            ntext = LOCAL_BAN_NAME;
+        }
+        else
+        {
+            btext = NETWORK_BANNED_NAME;
+            ntext = NETWORK_BAN_NAME;
+        }
+
+        ircsprintf(rbuf, "%s: %s", btext, ubi->reason);
+        sendto_ops("%s active for %s", ntext, get_client_name(acptr, FALSE));
+        exit_client(acptr, acptr, &me, rbuf);
+    }
+}
+
+
+
+/* XXX stats */
+/* XXX memcount */
+/* XXX clean up register_user, fix remote FLAGS_HOSTNAME */
+
+
+
+/* struct for iteration data */
+typedef struct {
+    int type;
+    u_short flags;
+    u_short flagset;
+    void (*callback)(void *);
+    void *carg;
+    UserBanInfo *ubi;
+} UBIter;
+
+/* callback used by ub_iterate */
+static void
+ubcb_iterator(void *carg, u_int rawip, int prefix, void **slot)
+{
+    UBIter *iter;
+    UserBan *b;
+    UserBanInfo *ubi;
+
+    iter = carg;
+    ubi = iter->ubi;
+
+    for (b = *slot; b; b = b->next)
+    {
+        if ((b->flags & iter->flagset) == iter->flags)
+        {
+            ubi->flags = b->flags;
+            ubi->mask = b->mask;
+            ubi->reason = b->reason;
+            ubi->expirets = (b->expirets == INT_MAX) ? 0 : b->expirets;
+
+            if (iter->type == HMT_WILD)
+            {
+                ircsprintf(ub_maskbuf, "%s@*", b->mask);
+                ubi->mask = ub_maskbuf;
+            }
+            else if (iter->type == HMT_IPCIDR)
+            {
+                ircsprintf(ub_maskbuf, "%s@%s", b->mask ? b->mask : "*",
+                           cidr2string(rawip, prefix, 0));
+                ubi->mask = ub_maskbuf;
+            }
+
+            iter->callback(iter->carg);
         }
     }
 }
 
-
-/*
- * ks_dumpklines() helper
- */
+/* iterates over bans that match the specified flags */
 static void
-ks_dumplist(int f, uBanEnt *be)
+ub_iterate(u_short flags, u_short flagset, UserBanInfo *ubi, void (*callback)(void *), void *carg)
 {
-    struct userBan *ub;
+    UBIter iter;
+    int i;
+
+    iter.flags = flags & flagset;
+    iter.flagset = flagset;
+    iter.ubi = ubi;
+    iter.callback = callback;
+    iter.carg = carg;
+
+    iter.type = HMT_WILD;
+    ubcb_iterator(&iter, 0, 0, (void **)&ubl_wildhosts);
+
+    iter.type = HMT_NAMEMASK;
+    ubcb_iterator(&iter, 0, 0, (void **)&ubl_hostmasks);
+
+    iter.type = HMT_NAME;
+    for (i = 0; i < USERBAN_HASH_SIZE; i++)
+        if (ubl_hostnames[i])
+            ubcb_iterator(&iter, 0, 0, (void **)&ubl_hostnames[i]);
+
+    iter.type = HMT_IPCIDR;
+    patricia_walk(&ub_iptree, ubcb_iterator, &iter);
+}
+
+
+/* used with ks_dumpklines */
+typedef struct {
+    int fd;
+    UserBanInfo *ubi;
+} KSDump;
+
+/* callback for ks_dumpklines */
+static void
+kscb_dumpkline(void *carg)
+{
+    KSDump *dump = carg;
 
     /* klines.c */
-    extern void ks_write(int, char, struct userBan *);
+    extern void ks_write(int, char, UserBanInfo *);
 
-    for (; be; be = LIST_NEXT(be, lp))
-    {
-        ub = be->ban;
-
-        /* must be local and not from conf */
-        if ((ub->flags & (UBAN_LOCAL|UBAN_CONF)) != UBAN_LOCAL)
-            continue;
-
-        /* must be over the storage threshold duration */
-        if ((ub->flags & UBAN_TEMPORARY)
-            && ub->duration < (KLINE_MIN_STORE_TIME * 60))
-            continue;
-
-        ks_write(f, '+', ub);
-    }
+    ks_write(dump->fd, '+', dump->ubi);
 }
 
 /*
- * Called from klines.c during a storage GC.
+ * Called from klines.c during a journal compaction.
  */
 void
-ks_dumpklines(int f)
+ks_dumpklines(int fd)
 {
-    int i, j;
+    KSDump ksd;
+    UserBanInfo ubi;
 
-    for (i = 0; i < 256; i++)
-        for (j = 0; j < 256; j++)
-            ks_dumplist(f, LIST_FIRST(&CIDR4_bans[i][j]));
+    ksd.fd = fd;
+    ksd.ubi = &ubi;
 
-    ks_dumplist(f, LIST_FIRST(&CIDR4BIG_bans));
-    ks_dumplist(f, LIST_FIRST(&host_bans.wild_list));
-    ks_dumplist(f, LIST_FIRST(&ip_bans.wild_list));
+    /* find all bans that are local and persistent, but not in conf */
+    ub_iterate(UBAN_LOCAL|UBAN_CONF|UBAN_PERSIST, UBAN_LOCAL|UBAN_PERSIST,
+               &ubi, kscb_dumpkline, &ksd);
+}    
 
-    for (i = 0; i < HASH_SIZE; i++)
-    {
-        ks_dumplist(f, LIST_FIRST(&host_bans.hash_list[i]));
-        ks_dumplist(f, LIST_FIRST(&ip_bans.hash_list[i]));
-    }
-}
 
+/* used with userban_sendburst */
+typedef struct {
+    aClient *cptr;
+    UserBanInfo *ubi;
+} UBSend;
+
+/* callback for userban_sendburst */
 static void
-mc_userlist(MemCount *mc, uBanEnt *be)
+ubcb_sendone(void *carg)
 {
-    struct userBan *ub;
+    UBSend *ubs;
+    UserBanInfo *ubi;
+    char flags[5] = {'+','N','P', 0, 0};
 
-    while (be)
-    {
-        ub = be->ban;
+    ubs = carg;
+    ubi = ubs->ubi;
 
-        mc->c++;
-        mc->m += sizeof(*ub);
+    if (ubi->flags & UBAN_EXEMPT)
+        flags[3] = 'E';
 
-        if (ub->u)
-            mc->m += strlen(ub->u) + 1;
-        if (ub->h)
-            mc->m += strlen(ub->h) + 1;
-        if (ub->reason)
-            mc->m += strlen(ub->reason) + 1;
-
-        be = LIST_NEXT(be, lp);
-    }
+    sendto_one(ubs->cptr, ":%s USERBAN %s %s %d :%s", me.name, flags,
+               ubi->mask, ubi->expirets, ubi->reason);
 }
 
-static void
-mc_simlist(MemCount *mc, uBanEnt *be)
+/*
+ * Send all persistent network bans and ban exemptions to a server.
+ * Called from m_server.c during netbursts.
+ */
+void
+userban_sendburst(aClient *cptr)
 {
-    struct simBan *sb;
+    UBSend ubs;
+    UserBanInfo ubi;
 
-    while (be)
-    {
-        sb = (struct simBan *)be->ban;
+    ubs.cptr = cptr;
+    ubs.ubi = &ubi;
 
-        mc->c++;
-        mc->m += sizeof(*sb);
-
-        if (sb->mask)
-            mc->m += strlen(sb->mask) + 1;
-        if (sb->reason)
-            mc->m += strlen(sb->reason) + 1;
-
-        be = LIST_NEXT(be, lp);
-    }
+    /* find all non-local persistent bans */
+    ub_iterate(UBAN_PERSIST, UBAN_LOCAL|UBAN_PERSIST, &ubi, ubcb_sendone,
+               &ubs);
 }
 
-u_long
-memcount_userban(MCuserban *mc)
+
+/*
+ * m_userban
+ * Add or remove a network ban or ban exemption.
+ *
+ * parv[1]  - flags
+ * parv[2]  - user@host mask
+ *
+ * Adds only:
+ * parv[3]  - expiration timestamp
+ * parv[4]  - reason (optional)
+ */
+int
+m_userban(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
-    int i;
-    int j;
+    UserBanInfo ubi;
+    int flags = UBAN_UPDATE;
+    int adding;
+    int rv = 0;
+    char *reason = "<no reason>";
+    char *mask;
+    char *s;
+    time_t expirets;
 
-    mc->file = __FILE__;
+    if (!IsServer(cptr) || parc < 3)
+        return 0;
 
-    /* host, ip, gcos, chan, nick */
-    mc->lists.c += 5 * HASH_SIZE;
-    mc->lists.m += 5 * HASH_SIZE * sizeof(ban_list);
+    s = parv[1];
 
-    /* CIDR4 table */
-    mc->lists.c += 256;
-    mc->lists.m += 256 * sizeof(ban_list *);
-
-    /* CIDR4 subtables */
-    mc->lists.c += 256 * 256;
-    mc->lists.m += 256 * 256 * sizeof(ban_list);
-
-    mc_userlist(&mc->cidr4big_userbans, LIST_FIRST(&CIDR4BIG_bans));
-
-    for (i = 0; i < 256; i++)
-        for (j = 0; j < 256; j++)
-            mc_userlist(&mc->cidr4_userbans, LIST_FIRST(&CIDR4_bans[i][j]));
-
-    mc_userlist(&mc->hostwild_userbans, LIST_FIRST(&host_bans.wild_list));
-    mc_userlist(&mc->ipwild_userbans, LIST_FIRST(&ip_bans.wild_list));
-
-    mc_simlist(&mc->nickwild_simbans, LIST_FIRST(&nick_bans.wild_list));
-    mc_simlist(&mc->chanwild_simbans, LIST_FIRST(&chan_bans.wild_list));
-    mc_simlist(&mc->gcoswild_simbans, LIST_FIRST(&gcos_bans.wild_list));
-
-    for (i = 0; i < HASH_SIZE; i++)
+    switch (*s)
     {
-        mc_userlist(&mc->hosthash_userbans,
-                    LIST_FIRST(&host_bans.hash_list[i]));
-        mc_userlist(&mc->iphash_userbans, LIST_FIRST(&ip_bans.hash_list[i]));
-
-        mc_simlist(&mc->nickhash_simbans, LIST_FIRST(&nick_bans.hash_list[i]));
-        mc_simlist(&mc->chanhash_simbans, LIST_FIRST(&chan_bans.hash_list[i]));
-        mc_simlist(&mc->gcoshash_simbans, LIST_FIRST(&gcos_bans.hash_list[i]));
+        case '+': adding = 1; break;
+        case '-': adding = 0; break;
+        default: return 0;
     }
 
-    mc->entries.c = ubanent_count;
-    mc->entries.m = ubanent_count * sizeof(uBanEnt);
+    while (*++s)
+    {
+        switch (*s)
+        {
+            case 'P': flags |= UBAN_PERSIST; break;
+            case 'E': flags |= UBAN_EXEMPT; break;
+            case 'N': flags &= ~UBAN_UPDATE; break;
+        }
+    }
 
-    mc->userbans.c = mc->cidr4big_userbans.c + mc->cidr4_userbans.c;
-    mc->userbans.m = mc->cidr4big_userbans.m + mc->cidr4_userbans.m;
-    mc->userbans.c += mc->hosthash_userbans.c + mc->hostwild_userbans.c;
-    mc->userbans.m += mc->hosthash_userbans.m + mc->hostwild_userbans.m;
-    mc->userbans.c += mc->iphash_userbans.c + mc->ipwild_userbans.c;
-    mc->userbans.m += mc->iphash_userbans.m + mc->ipwild_userbans.m;
+    mask = parv[2];
 
-    mc->simbans.c = mc->nickhash_simbans.c + mc->nickwild_simbans.c;
-    mc->simbans.m = mc->nickhash_simbans.m + mc->nickwild_simbans.m;
-    mc->simbans.c += mc->chanhash_simbans.c + mc->chanwild_simbans.c;
-    mc->simbans.m += mc->chanhash_simbans.m + mc->chanwild_simbans.m;
-    mc->simbans.c += mc->gcoshash_simbans.c + mc->gcoswild_simbans.c;
-    mc->simbans.m += mc->gcoshash_simbans.m + mc->gcoswild_simbans.m;
+    if (!adding)
+    {
+        /* pass along sanitized mask if possible */
+        if (userban_del(mask, flags, &ubi) != UBAN_DEL_NOTFOUND)
+            mask = ubi.mask;
 
-    mc->total.c = mc->lists.c + mc->entries.c + mc->userbans.c + mc->simbans.c;
-    mc->total.m = mc->lists.m + mc->entries.m + mc->userbans.m + mc->simbans.m;
+        sendto_serv_butone(cptr, ":%s USERBAN %s %s", parv[0], parv[1], mask);
+        return 0;
+    }
 
-    return mc->total.m;
+    if (parc < 4)
+        return 0;
+
+    expirets = strtol(parv[3], NULL, 0);
+
+    if (parc > 4 && !BadPtr(parv[4]))
+        reason = parv[4];
+
+    if (expirets < 0)
+        expirets = 0;
+
+    rv = userban_add(mask, reason, expirets, flags, &ubi);
+
+    /* don't propagate duplicates from netbursts */
+    if (rv == UBAN_ADD_DUPLICATE && !(flags & UBAN_UPDATE))
+        return 0;
+
+    /* complain but pass along invalid bans, all servers will yell */
+    if (rv == UBAN_ADD_INVALID)
+        sendto_realops("USERBAN: invalid ban %s %s from %s ignored", parv[1],
+                       mask, parv[0]);
+    else
+        mask = ubi.mask;
+
+    sendto_serv_butone(cptr, ":%s USERBAN %s %s %d :%s", parv[0], parv[1],
+                       mask, expirets, reason);
+
+    return 0;
 }
 

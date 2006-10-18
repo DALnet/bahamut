@@ -201,23 +201,28 @@ get_listener_name(aListener *lptr)
 }
 
 /*
- * * get_client_name *      Return the name of the client for various
- * tracking and *      admin purposes. The main purpose of this
- * function is to *      return the "socket host" name of the client,
- * if that *    differs from the advertised name (other than case). *
- * But, this can be used to any client structure. *
+ * get_client_name
+ *
+ * Return the name of the client for various tracking and admin purposes.
+ * The main purpose of this function is to  return the "socket host" name of
+ * the client, if that differs from the advertised name (other than case).
+ * But, this can be used on any client structure.
+ *
+ * Returns:
+ *     "name" for remote clients
+ *     "name" for local connections when showip is HIDEME
+ *     "nick!user@host" for local clients when showip is TRUE or FALSE
+ *     "name[host]" for local servers when showip is TRUE or FALSE
+ *     "<unnamed>([F]ident@ip)" for unregistered connections
+ *     "nick([F]ident@ip)" for incomplete client when showip is TRUE or FALSE
+ *         where "F" is ident status:
+ *             '?' lookup in progress, ident is "unknown"
+ *             '+' identd response, ident is valid
+ *             '-' no identd response, ident is "unknown"
  * 
- *      Returns: *        "name[user@ip#.port]" if 'showip' is true; *
- * "name[sockethost]", if name and sockhost are different and *
- * showip is false; else *        "name". *
- * 
- * NOTE 1: *    Watch out the allocation of "nbuf", if either
- * sptr->name * or sptr->sockhost gets changed into pointers instead of *
- * directly allocated within the structure... *
- * 
- * NOTE 2: *    Function return either a pointer to the structure
- * (sptr) or *  to internal buffer (nbuf). *NEVER* use the returned
- * pointer *    to modify what it points!!!
+ * NOTE: Function return either a pointer to the structure (sptr) or to
+ * internal buffer (nbuf). *NEVER* use the returned pointer to modify what
+ * it points!!!
  */
 char *
 get_client_name(aClient *sptr, int showip)

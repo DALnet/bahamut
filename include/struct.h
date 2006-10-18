@@ -26,7 +26,7 @@
 #define __struct_include__
 
 #include "config.h"
-#if !defined(CONFIG_H_LEVEL_183)
+#if !defined(CONFIG_H_LEVEL_190)
 #error Incorrect config.h for this revision of ircd.
 #endif
 
@@ -96,6 +96,7 @@ typedef long ts_val;
 
 typedef struct MotdItem aMotd;
 typedef struct SAliasInfo AliasInfo;
+typedef struct UserTag UserTag;
 
 
 
@@ -199,8 +200,7 @@ typedef struct SAliasInfo AliasInfo;
 				       * this */
 #define	FLAGS_BLOCKED      0x000008   /* socket is in a blocked condition */
 #define	FLAGS_CLOSING      0x000010   /* set when closing to suppress errors */
-#define	FLAGS_LISTEN       0x000020   /* used to mark clients which we listen()
-				       * on */
+/* 0x000020 unused */
 #define FLAGS_HAVERECVQ	   0x000040   /* Client has full commands in their recvq */
 #define	FLAGS_DOINGDNS	   0x000080   /* client is waiting for a DNS 
 				       * response */
@@ -208,12 +208,13 @@ typedef struct SAliasInfo AliasInfo;
 				       * response */
 #define	FLAGS_WRAUTH	   0x000200   /* set if we havent writen to ident 
 				       * server */
-#define	FLAGS_LOCAL	   0x000400   /* set for local clients */
+#define FLAGS_HOSTNAME     0x000400   /* user->host is a dns name */
 #define	FLAGS_GOTID	   0x000800   /* successful ident lookup achieved */
 #define	FLAGS_DOID	   0x001000   /* I-lines say must use ident return */
 #define	FLAGS_NONL	   0x002000   /* No \n in buffer */
 #define FLAGS_NORMALEX     0x004000   /* Client exited normally */
 #define FLAGS_SENDQEX      0x008000   /* Sendq exceeded */
+/* 0x010000 unused */
 #define FLAGS_ULINE 	   0x020000   /* client is U-lined */
 #define FLAGS_USERBURST	   0x040000   /* server in nick/channel netburst */
 #define FLAGS_TOPICBURST   0x080000   /* server in topic netburst */
@@ -221,7 +222,7 @@ typedef struct SAliasInfo AliasInfo;
 #define FLAGS_SOBSENT      0x100000   /* we've sent an SOB, just have to 
 				       * send an EOB */
 #define FLAGS_EOBRECV      0x200000   /* we're waiting on an EOB */
-#define FLAGS_BAD_DNS	   0x400000   /* spoofer-guy */
+/* 0x400000 unused */
 #define FLAGS_SERV_NEGO	   0x800000  /* This is a server that has passed
 				       * connection tests, but is a stat < 0
 				       * for handshake purposes */
@@ -229,6 +230,10 @@ typedef struct SAliasInfo AliasInfo;
 #define FLAGS_RC4OUT       0x2000000  /* This link is rc4 encrypted. */
 #define FLAGS_ZIPPED_IN	   0x4000000  /* This link is gzipped. */
 #define FLAGS_ZIPPED_OUT   0x8000000 /* This link is gzipped. */
+/* 0x10000000 unused */
+/* 0x20000000 unused */
+/* 0x40000000 unused */
+/* 0x80000000 unused */
 
 /* Capabilities of the ircd or clients */
 
@@ -282,6 +287,7 @@ typedef struct SAliasInfo AliasInfo;
 #define UMODE_f     0x00100	/* umode +f - Server flood messages */
 #define UMODE_y     0x00200	/* umode +y - Stats/links */
 #define UMODE_d     0x00400	/* umode +d - Debug info */
+/* 0x00800 unused */
 #define UMODE_g     0x01000	/* umode +g - Globops */
 #define UMODE_b     0x02000	/* umode +b - Chatops */
 #define UMODE_a     0x04000	/* umode +a - Services Admin */
@@ -298,6 +304,10 @@ typedef struct SAliasInfo AliasInfo;
 #define UMODE_j	    0x2000000   /* umode +j - client rejection notices */
 #define UMODE_K     0x4000000   /* umode +K - U: lined server kill messages */
 #define UMODE_I     0x8000000   /* umode +I - invisible oper (masked) */
+/* 0x10000000 unused */
+/* 0x20000000 unused */
+/* 0x40000000 unused */
+/* 0x80000000 unused */
 
 /* for sendto_ops_lev */
 
@@ -379,8 +389,6 @@ typedef struct SAliasInfo AliasInfo;
 #define SendChatops(x)          ((x)->umode & UMODE_b)
 #define SendRnotice(x)          ((x)->umode & UMODE_n)
 #define NoMsgThrottle(x)	((x)->umode & UMODE_F)
-#define	IsListening(x)		((x)->flags & FLAGS_LISTEN)
-#define	IsLocal(x)		((x)->flags & FLAGS_LOCAL)
 #define	IsDead(x)		((x)->flags & FLAGS_DEADSOCKET)
 #define	SetOper(x)		((x)->umode |= UMODE_o)
 #define SetRegNick(x)           ((x)->umode |= UMODE_r)
@@ -774,6 +782,22 @@ struct Listener {
 };
 
 
+/* user tags */
+struct UserTag
+{
+    char     tag;
+    char     visible;
+    char    *reason;
+    UserTag *next;
+};
+
+#define UTAG_NONICK
+#define UTAG_NOCHAN
+#define UTAG_SQUELCH
+#define UTAG_REGREQ
+#define UTAG_SPOOFED
+
+
 /* Client structures */
 struct User
 {
@@ -784,16 +808,19 @@ struct User
     int         joined;        /* number of channels joined */
     char        username[USERLEN + 1];
     char        host[HOSTLEN + 1];
-    char       *server;        /* pointer to scached server name */
-    unsigned int servicetype;  /* set by SVSMODE +T */
-    unsigned int servicestamp; /* set by SVSMODE +d */
-    AliasInfo  *alias;         /* shortform alias data for U:lined clients */
     /*
      * In a perfect world the 'server' name should not be needed, a
      * pointer to the client describing the server is enough. 
      * Unfortunately, in reality, server may not yet be in links while
      * USER is introduced... --msa
+     * XXX this is no longer true; remove me
      */
+    char       *server;        /* pointer to scached server name */
+    unsigned int servicetype;  /* set by SVSMODE +T */
+    unsigned int servicestamp; /* set by SVSMODE +d */
+    unsigned int tagmask;      /* bitmask of tags set */
+    UserTag    *tags;          /* list of tags set */
+    AliasInfo  *alias;         /* shortform alias data for U:lined clients */
     Link       *silence;      /* chain of silenced users */
     LOpts 	   *lopt;     /* Saved /list options */
     Link       *dccallow;     /* chain of dcc send allowed users */
@@ -1007,8 +1034,6 @@ struct stats
     unsigned int is_fake;   /* MODE 'fakes' */
     unsigned int is_asuc;   /* successful auth requests */
     unsigned int is_abad;   /* bad auth requests */
-    unsigned int is_udp;    /* packets recv'd on udp port */
-    unsigned int is_loc;    /* local connections made */
     unsigned int is_ref_1;  /* refused at kline stage 1 */
     unsigned int is_ref_2;  /* refused at kline stage 2 */
 #ifdef FLUD

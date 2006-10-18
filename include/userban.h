@@ -1,3 +1,5 @@
+#ifndef IRC_USERBAN_H
+#define IRC_USERBAN_H
 /************************************************************************
  *   IRC - Internet Relay Chat, include/userban.h
  *   Copyright (C) 2002 Lucas Madar
@@ -20,93 +22,37 @@
 
 /* $Id$ */
 
-#define UBAN_LOCAL     0x001   /* formerly known as a K: or Z: line */
-#define UBAN_NETWORK   0x002   /* formerly known as an autokill or an SZline */
+#include "patricia.h"
 
-#define UBAN_CONF      0x004   /* this ban came from ircd.conf */
 
-#define UBAN_HOST      0x010   /* this ban matches against the user's resolved host */
-#define UBAN_IP        0x020   /* this ban matches against the user's IP address */
+#define UBAN_LOCAL      0x01    /* local ban (K-Line) */
+#define UBAN_CONF       0x02    /* came from ircd.conf */
+#define UBAN_EXEMPT     0x04    /* ban exemption */
+#define UBAN_PERSIST    0x08    /* sent in netbursts or stored in journal */
 
-#define UBAN_WILD      0x040   /* this ban has wildcards */
+#define UBAN_UPDATE     0x80    /* update any existing ban when adding */
 
-#define UBAN_CIDR4     0x080   /* this ban is an IPv4 CIDR ban */
-#define UBAN_CIDR4BIG  0x100   /* this ban is an IPv4 CIDR ban for something greater than a /16 */
+#define UBAN_ADD_INVALID    1
+#define UBAN_ADD_DUPLICATE  2
 
-#define UBAN_WILDUSER  0x200   /* Username is just '*' */
-#define UBAN_WILDHOST  0x400   /* Hostname is just '*.*' or '*' -- this ban is a user@* ban */
+#define UBAN_DEL_NOTFOUND   PATDEL_NOTFOUND
+#define UBAN_DEL_INCONF     1
 
-#define UBAN_TEMPORARY 0x800   /* userban is temporary */
+typedef struct UserBanInfo UserBanInfo;
 
-#define SBAN_LOCAL     0x001   
-#define SBAN_NETWORK   0x002   
-#define SBAN_NICK      0x004   /* sban on the nick field */
-#define SBAN_GCOS      0x008   /* sban on the gcos field */
-#define SBAN_CHAN      0x010   /* sban on the chname field */
-#define SBAN_WILD      0x020   /* sban mask contains wildcards */
-#define SBAN_TEMPORARY 0x040   /* sban is temporary */
-
-struct userBan {
-   unsigned int flags;
-   char *u;                    /* username */
-   char *h;                    /* host or IP or GECOS or NICK */
-
-   unsigned int cidr4ip;       /* cidr4 IP */   
-   unsigned int cidr4mask;     /* cidr4 mask */   
-
-   char *reason;
-   time_t timeset;             /* time this ban was set */
-   time_t duration;            /* length of this ban, in seconds, or 0xFFFFFFFF for permanent */   
-
-   void *internal_ent;         /* internal -- pointer to banlist entry tag */
+struct UserBanInfo {
+    u_short  flags;     /* ban flags */
+    char    *mask;      /* ban mask */
+    char    *reason;    /* ban reason */
+    time_t   expirets;	/* expiration timestamp */
 };
 
-struct simBan {
-   unsigned int flags;
-   char *mask;
+int userban_add(char *, char *, time_t, u_short, UserBanInfo *);
+int userban_del(char *, u_short, UserBanInfo *);
+void userban_massdel(time_t, u_short, u_short);
+UserBanInfo *userban_checkclient(aClient *);
+UserBanInfo *userban_checkserver(aClient *);
+void userban_sweep(void);
+void userban_sendburst(aClient *);
 
-   char *reason;
-   time_t timeset;
-   time_t duration;
-   time_t autocap;             /* maximum adjusted duration */
-
-   void *internal_ent;         /* internal -- pointer to banlist entry tag */
-};
-
-
-void init_userban();
-
-struct userBan *make_hostbased_ban(char *, char *);
-
-void add_hostbased_userban(struct userBan *);
-void remove_userban(struct userBan *);
-void userban_free(struct userBan *);
-
-struct userBan *check_userbanned(aClient *, unsigned int, unsigned int);
-struct userBan *find_userban_exact(struct userBan *, unsigned int);
-
-void expire_userbans();
-void remove_userbans_match_flags(unsigned int, unsigned int);
-void report_userbans_match_flags(aClient *cptr, unsigned int, unsigned int);
-
-int user_match_ban(aClient *, struct userBan *);
-char *get_userban_host(struct userBan *, char *, int);
-
-void userban_sweep(struct userBan *);
-
-/* Simban Calls */
-
-struct simBan *make_simpleban(unsigned int, char *);
-void add_simban(struct simBan *);
-void remove_simban(struct simBan *);
-struct simBan *find_simban_exact(struct simBan *);
-int user_match_simban(aClient *, struct simBan *);
-struct simBan *check_mask_simbanned(char *, unsigned int);
-void simban_free(struct simBan *);
-void remove_simban(struct simBan *);
-void remove_simbans_match_flags(unsigned int, unsigned int);
-void remove_simbans_match_mask(unsigned int, char *, int);
-void report_simbans_match_flags(aClient *, unsigned int, unsigned int);
-void expire_simbans();
-void send_simbans(aClient *, unsigned int);
-void remove_simban(struct simBan *);
+#endif  /* IRC_USERBAN_H */

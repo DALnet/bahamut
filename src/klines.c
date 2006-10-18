@@ -22,12 +22,12 @@
 
 /*
  * This is a simple K-Line journal implementation.  When a K-Line with a
- * duration greater than KLINE_MIN_STORE_TIME is added, it is written to the
+ * duration of KLINE_MIN_STORE_TIME or more is added, it is written to the
  * journal file (.klines):
- *   + expireTS usermask hostmask reason
+ *   + expireTS user@hostmask reason
  * 
  * When a K-Line is manually removed, it also results in a journal entry:
- *   - usermask hostmask
+ *   - user@hostmask
  * 
  * This allows K-Lines to be saved across restarts and rehashes.
  *
@@ -47,13 +47,14 @@
 
 #include "userban.h"
 #include "numeric.h"
+#include "ircstrings.h"
 
 static int journal = -1;
 static char journalfilename[512];
 static int journalcount;
 
-void klinestore_add(struct userBan *);
-void klinestore_remove(struct userBan *);
+void klinestore_add(UserBanInfo *);
+void klinestore_remove(UserBanInfo *);
 
 /* ircd.c */
 extern int forked;
@@ -61,29 +62,33 @@ extern int forked;
 /* s_misc.c */
 extern char *smalldate(time_t);
 
+typedef struct {
+    int iflags;
+    int defmins;
+    char *cmd;
+    char *ban;
+    char *banned;
+} KLData;
 
-/*
- * m_kline
- * Add a local user@host ban.
- *
- *    parv[0] = sender
- *    parv[1] = duration (optional)
- *    parv[2] = nick or user@host mask
- *    parv[3] = reason (optional)
- */
-int
-m_kline(aClient *cptr, aClient *sptr, int parc, char *parv[])
+
+/* worker for adding local userbans */
+static int
+kl_add(KLData *kldata, aClient *sptr, int parc, char *parv[])
 {
-    char rbuf[512];
-    char *target;
-    char *user;
-    char *host;
-    char *reason = "<no reason>";
-    int tkminutes = DEFAULT_KLINE_TIME;
-    int tkseconds;
+    char rbuf[BUFSIZE];
+    char mbuf[BUFSIZE];
+    char *mask;
+    char *reason;
+    int tkminutes;
+    time_t expirets;
+    u_short flags;
     long lval;
-    struct userBan *ban;
-    struct userBan *existing;
+    int rv;
+    UserBanInfo ubi;
+
+    reason = "<no reason>";
+    tkminutes = kldata->defmins;
+    flags = UBAN_LOCAL | kldata->iflags;
 
     if (!OPCanKline(sptr))
     {
@@ -94,15 +99,16 @@ m_kline(aClient *cptr, aClient *sptr, int parc, char *parv[])
     if (parc < 2)
     {
         sendto_one(sptr, err_str(ERR_NEEDMOREPARAMS), me.name, parv[0],
-                   "KLINE");
+                   kldata->cmd);
         return 0;
     }
 
-    lval = strtol(parv[1], &target, 10);
-    if (*target != 0)
+    lval = strtol(parv[1], &mask, 10);
+    if (*mask != 0)
     {
-        target = parv[1];
-        if (parc > 2)
+        mask = parv[1];
+
+        if (parc > 2 && !BadPtr(parv[2]))
             reason = parv[2];
     }
     else
@@ -113,100 +119,201 @@ m_kline(aClient *cptr, aClient *sptr, int parc, char *parv[])
         if (parc < 3)
         {
             sendto_one(sptr, err_str(ERR_NEEDMOREPARAMS), me.name, parv[0],
-                       "KLINE");
+                       kldata->cmd);
             return 0;
         }
 
-        target = parv[2];
+        mask = parv[2];
 
-        if (parc > 3)
+        if (parc > 3 && !BadPtr(parv[3]))
             reason = parv[3];
     }
 
     /* negative times, or times greater than a year, are permanent */
     if (tkminutes < 0 || tkminutes > (365 * 24 * 60))
         tkminutes = 0;
-    tkseconds = tkminutes * 60;
-
-    if ((host = strchr(target, '@')))
-    {
-        *host++ = 0;
-        user = target;
-    }
-    else
-    {
-        user = "*";
-        host = target;
-    }
-
-    if (!match(user, "akjhfkahfasfjd") &&
-        !match(host, "ldksjfl.kss...kdjfd.jfklsjf"))
-    {
-        sendto_one(sptr, ":%s NOTICE %s :KLINE: %s@%s mask is too wide",
-                   me.name, parv[0], user, host);
-        return 0;
-    }
-
-    /*
-     * XXX: nick target support to be re-added
-     */
-
-    if (!(ban = make_hostbased_ban(user, host)))
-    {
-        sendto_one(sptr, ":%s NOTICE %s :KLINE: invalid ban mask %s@%s",
-                   me.name, parv[0], user, host);
-        return 0;
-    }
-
-    ban->flags |= UBAN_LOCAL;
-
-    /* only looks for duplicate klines, not akills */
-    if ((existing = find_userban_exact(ban, UBAN_LOCAL)))
-    {
-        sendto_one(sptr, ":%s NOTICE %s :KLINE: %s@%s is already %s: %s",
-                   me.name, parv[0], user, host, LOCAL_BANNED_NAME,
-                   existing->reason ? existing->reason : "<no reason>");
-        userban_free(ban);
-        return 0;
-    }
-
-    if (user_match_ban(sptr, ban))
-    {
-        sendto_one(sptr, ":%s NOTICE %s :KLINE: %s@%s matches you, rejected",
-                   me.name, parv[0], user, host);
-        userban_free(ban);
-        return 0;
-    }
-
-    ircsnprintf(rbuf, sizeof(rbuf), "%s (%s)", reason, smalldate(0));
-    ban->reason = MyMalloc(strlen(rbuf) + 1);
-    strcpy(ban->reason, rbuf);
-
-    if (tkseconds)
-    {
-        ban->flags |= UBAN_TEMPORARY;
-        ban->timeset = NOW;
-        ban->duration = tkseconds;
-    }
-
-    add_hostbased_userban(ban);
-
-    if (!tkminutes || tkminutes >= KLINE_MIN_STORE_TIME)
-        klinestore_add(ban);
-
-    userban_sweep(ban);
-
-    host = get_userban_host(ban, rbuf, sizeof(rbuf));
 
     if (tkminutes)
-        sendto_realops("%s added temporary %d min. "LOCAL_BAN_NAME" for"
-                       " [%s@%s] [%s]", parv[0], tkminutes, user, host,
-                       reason);
+    {
+        expirets = NOW + (tkminutes * 60);
+        if (tkminutes >= KLINE_MIN_STORE_TIME)
+            flags |= UBAN_PERSIST;
+    }
     else
-        sendto_realops("%s added "LOCAL_BAN_NAME" for [%s@%s] [%s]", parv[0],
-                       user, host, reason);
+    {
+        expirets = 0;
+        flags |= UBAN_PERSIST;
+    }
+
+    /* if it looks like a nickname, make a user@host from the online client */
+    if (validate_nick(mask, 0))
+    {
+        aClient *acptr;
+        char *user;
+
+        if (!(acptr = find_client(mask, NULL)))
+        {
+            sendto_one(sptr, ":%s NOTICE %s :%s: no such nick %s",
+                       me.name, parv[0], kldata->cmd, mask);
+            return 0;
+        }
+
+        user = acptr->user->username;
+        if (*user == '~')
+            user++;
+
+        ircsprintf(mbuf, "*%s@%s/24", user, acptr->hostip);
+        mask = mbuf;
+
+        /* if the username is USERLEN, slice it with another star */
+        if (strlen(user) == USERLEN)
+            mbuf[USERLEN] = '*';
+    }
+    else
+    {
+        /* convert hostmask to *@hostmask */
+        if (!strchr(mask, '@'))
+        {
+            ircsprintf(mbuf, "*@%s", mask);
+            mask = mbuf;
+        }
+    }
+
+    ircsprintf(rbuf, "%s (%s)", reason, smalldate(0));
+    reason = rbuf;
+
+    rv = userban_add(mask, reason, expirets, flags, &ubi);
+
+    if (rv == UBAN_ADD_INVALID)
+    {
+        sendto_one(sptr, ":%s NOTICE %s :%s: invalid mask %s",
+                   me.name, parv[0], kldata->cmd, mask);
+        return 0;
+    }
+
+    if (rv == UBAN_ADD_DUPLICATE)
+    {
+        sendto_one(sptr, ":%s NOTICE %s :%s: %s is already %s: %s",
+                   me.name, parv[0], kldata->cmd, ubi.mask, kldata->banned,
+                   ubi.reason);
+        return 0;
+    }
+
+    if (tkminutes)
+        sendto_realops("%s added %d minute %s for %s: %s", parv[0], tkminutes,
+                       kldata->ban, ubi.mask, reason);
+    else
+        sendto_realops("%s added permanent %s for %s: %s", parv[0],
+                       kldata->ban, ubi.mask, reason);
+
+    if (flags & UBAN_PERSIST)
+        klinestore_add(&ubi);
 
     return 0;
+}
+
+
+/* worker for removing local userbans */
+int
+kl_del(KLData *kldata, aClient *sptr, int parc, char *parv[])
+{
+    char mbuf[BUFSIZE];
+    char *mask;
+    int rv;
+    UserBanInfo ubi;
+
+    if (!OPCanUnKline(sptr))
+    {
+        sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name, parv[0]);
+        return 0;
+    }
+
+    if (parc < 2)
+    {
+        sendto_one(sptr, err_str(ERR_NEEDMOREPARAMS), me.name, parv[0],
+                   kldata->cmd);
+        return 0;
+    }
+
+    mask = parv[1];
+
+    /* convert hostmask into *@hostmask */
+    if (!strchr(mask, '@'))
+    {
+        ircsprintf(mbuf, "*@%s", mask);
+        mask = mbuf;
+    }
+
+    rv = userban_del(mask, UBAN_LOCAL|kldata->iflags, &ubi);
+
+    if (rv == UBAN_DEL_NOTFOUND)
+    {
+        sendto_one(sptr, ":%s NOTICE %s :%s: %s is not %s",
+                   me.name, parv[0], kldata->cmd, mask, kldata->banned);
+        return 0;
+    }
+
+    if (rv == UBAN_DEL_INCONF)
+    {
+        sendto_one(sptr, ":%s NOTICE %s :%s: %s is specified in the"
+                   " configuration file and cannot be removed online", me.name,
+                   parv[0], kldata->cmd, ubi.mask);
+        return 0;
+    }
+
+    sendto_ops("%s removed %s for %s", parv[0], kldata->ban, ubi.mask);
+
+    if (ubi.flags & UBAN_PERSIST)
+        klinestore_remove(&ubi);
+
+    return 0;
+}
+
+
+/*
+ * m_kline
+ * Add a local user@host ban.
+ *
+ *    parv[0] = sender
+ *    parv[1] = duration in minutes (optional)
+ *    parv[2] = nick or user@host mask
+ *    parv[3] = reason (optional)
+ */
+int
+m_kline(aClient *cptr, aClient *sptr, int parc, char *parv[])
+{
+    KLData kldata = {
+        0,
+        DEFAULT_KLINE_TIME,
+        "KLINE",
+        LOCAL_BAN_NAME,
+        LOCAL_BANNED_NAME
+    };
+
+    return kl_add(&kldata, sptr, parc, parv);
+}
+
+/*
+ * m_kexempt
+ * Add a local user@host ban exemption.
+ *
+ *    parv[0] = sender
+ *    parv[1] = duration in minutes (optional)
+ *    parv[2] = nick or user@host mask
+ *    parv[3] = reason (optional)
+ */
+int
+m_kexempt(aClient *cptr, aClient *sptr, int parc, char *parv[])
+{
+    KLData kldata = {
+        UBAN_EXEMPT,
+        0,
+        "KEXEMPT",
+        LOCAL_EXEMPT_NAME,
+        LOCAL_EXEMPTED_NAME
+    };
+
+    return kl_add(&kldata, sptr, parc, parv);
 }
 
 /*
@@ -218,70 +325,35 @@ m_kline(aClient *cptr, aClient *sptr, int parc, char *parv[])
  */
 int m_unkline(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
-    char hbuf[512];
-    char *user;
-    char *host;
-    struct userBan *ban;
-    struct userBan *existing;
+    KLData kldata = {
+        0,
+        0,
+        "UNKLINE",
+        LOCAL_BAN_NAME,
+        LOCAL_BANNED_NAME
+    };
 
-    if (!OPCanUnKline(sptr))
-    {
-        sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name, parv[0]);
-        return 0;
-    }
+    return kl_del(&kldata, sptr, parc, parv);
+}
 
-    if (parc < 2)
-    {
-        sendto_one(sptr, err_str(ERR_NEEDMOREPARAMS), me.name, parv[0],
-                   "UNKLINE");
-        return 0;
-    }
+/*
+ * m_unkexempt
+ * Remove a local user@host ban exemption.
+ *
+ *     parv[0] = sender
+ *     parv[1] = user@host mask
+ */
+int m_unkexempt(aClient *cptr, aClient *sptr, int parc, char *parv[])
+{
+    KLData kldata = {
+        UBAN_EXEMPT,
+        0,
+        "UNKEXEMPT",
+        LOCAL_EXEMPT_NAME,
+        LOCAL_EXEMPTED_NAME
+    };
 
-    if ((host = strchr(parv[1], '@')))
-    {
-        *host++ = 0;
-        user = parv[1];
-    }
-    else
-    {
-        user = "*";
-        host = parv[1];
-    }
-
-    if (!(ban = make_hostbased_ban(user, host)))
-    {
-        sendto_one(sptr, ":%s NOTICE %s :UNKLINE: No such ban %s@%s", me.name,
-                   parv[0], user, host);
-        return 0;
-    }
-
-    ban->flags |= UBAN_LOCAL;
-    existing = find_userban_exact(ban, UBAN_LOCAL);
-    host = get_userban_host(ban, hbuf, sizeof(hbuf));
-    userban_free(ban);
-
-    if (!existing)
-    {
-        sendto_one(sptr, ":%s NOTICE %s :UNKINE: No such ban %s@%s", me.name,
-                   parv[0], user, host);
-        return 0;
-    }
-
-    if (existing->flags & UBAN_CONF)
-    {
-        sendto_one(sptr, ":%s NOTICE %s :UNKLINE: %s@%s is specified in the"
-                   " configuration file and cannot be removed online", me.name,
-                   parv[0], user, host);
-        return 0;
-    }
-
-    remove_userban(existing);
-    klinestore_remove(existing);
-    userban_free(existing);
-
-    sendto_ops("%s has removed the K-Line for: [%s@%s]", parv[0], user, host);
-
-    return 0;
+    return kl_del(&kldata, sptr, parc, parv);
 }
 
 
@@ -298,39 +370,19 @@ ks_error(char *msg)
  * Writes a K-Line to the appropriate file.
  */
 void
-ks_write(int f, char type, struct userBan *ub)
+ks_write(int f, char type, UserBanInfo *ubi)
 {
     char outbuf[1024];
-    char cidr[4] = "";
-    time_t expiretime = 0;
-    char *user = "*";
-    char *reason = "";
-    char *host = ub->h;
     int len;
 
-    /* userban.c */
-    unsigned int netmask_to_cidr(unsigned int);
-
-    if (ub->flags & UBAN_TEMPORARY)
-        expiretime = ub->timeset + ub->duration;
-
-    if (ub->u)
-        user = ub->u;
-
-    if (ub->reason)
-        reason = ub->reason;
-
-    if (ub->flags & (UBAN_CIDR4|UBAN_CIDR4BIG))
-    {
-        host = inetntoa((char *)&ub->cidr4ip);
-        ircsprintf(cidr, "/%d", netmask_to_cidr(ntohl(ub->cidr4mask)));
-    }
-
     if (type == '+')
-        len = ircsprintf(outbuf, "%c %d %s %s%s %s\n", type, (int)expiretime,
-                         user, host, cidr, reason);
+        len = ircsprintf(outbuf, "+%s %d %s %s\n",
+                         (ubi->flags & UBAN_EXEMPT) ? "E" : "",
+                         ubi->expirets, ubi->mask, ubi->reason);
     else
-        len = ircsprintf(outbuf, "%c %s %s%s\n", type, user, host, cidr);
+        len = ircsprintf(outbuf, "-%s %s\n",
+                         (ubi->flags & UBAN_EXEMPT) ? "E" : "",
+                         ubi->mask);
 
     write(f, outbuf, len);
 }
@@ -343,12 +395,10 @@ static int
 ks_read(char *s)
 {
     char type;
-    time_t duration = 0;
-    char *user;
-    char *host;
-    char *reason = "";
-    struct userBan *ban;
-    struct userBan *existing;
+    char *mask;
+    time_t expirets = 0;
+    u_short flags = UBAN_LOCAL|UBAN_PERSIST;
+    char *reason = "<no reason>";
 
     type = *s++;
 
@@ -356,89 +406,53 @@ ks_read(char *s)
     if (type != '+' && type != '-')
         return 0;
 
+    if (*s == 'E')
+    {
+        flags |= UBAN_EXEMPT;
+        s++;
+    }
+
     /* malformed */
     if (*s++ != ' ')
         return 0;
 
     if (type == '+')
     {
-        duration = strtol(s, &s, 0);
-        if (duration)
-        {
-            /* already expired */
-            if (NOW >= duration)
-                return 1;
+        expirets = strtol(s, &s, 0);
 
-            duration -= NOW;
-        }
+        /* already expired */
+        if (expirets && NOW >= expirets)
+            return 1;
 
         /* malformed */
         if (*s++ != ' ')
             return 0;
     }
 
-    /* usermask */
-    user = s;
+    /* user mask */
+    mask = s;
     while (*s && *s != ' ')
         s++;
 
-    /* malformed */
-    if (*s != ' ')
-        return 0;
-
-    /* mark end of user mask */
-    *s++ = 0;
-
-    /* hostmask */
-    host = s;
-    while (*s && *s != ' ')
-        s++;
-
-    if (type == '+')
+    if (*s)
     {
         /* malformed */
         if (*s != ' ')
             return 0;
 
-        /* mark end of host mask */
         *s++ = 0;
+    }
 
+    if (type == '+')
+    {
         /* reason is the only thing left */
         reason = s;
     }
 
-    ban = make_hostbased_ban(user, host);
-    if (!ban)
-        return 0;
-
-    ban->flags |= UBAN_LOCAL;
-
     if (type == '+')
-    {
-        if (duration)
-        {
-            ban->flags |= UBAN_TEMPORARY;
-            ban->timeset = NOW;
-            ban->duration = duration;
-        }
-
-        if (*reason)
-            DupString(ban->reason, reason);
-
-        add_hostbased_userban(ban);
-    }
+        userban_add(mask, reason, expirets, flags, NULL);
     else
-    {
-        existing = find_userban_exact(ban, UBAN_LOCAL|UBAN_CONF);
-        userban_free(ban);
-
-        /* add may have been skipped due to being expired, so not an error */
-        if (!existing)
-            return 1;
-
-        remove_userban(existing);
-        userban_free(existing);
-    }
+        userban_del(mask, flags, NULL);
 
     return 1;
 }
@@ -507,10 +521,10 @@ klinestore_compact(void)
  * Add a K-Line to the active store.
  */
 void
-klinestore_add(struct userBan *ban)
+klinestore_add(UserBanInfo *ubi)
 {
     if (journal >= 0)
-        ks_write(journal, '+', ban);
+        ks_write(journal, '+', ubi);
 
     if (++journalcount > KLINE_STORE_COMPACT_THRESH)
         klinestore_compact();
@@ -520,10 +534,10 @@ klinestore_add(struct userBan *ban)
  * Remove a K-Line from the active store.
  */
 void
-klinestore_remove(struct userBan *ban)
+klinestore_remove(UserBanInfo *ubi)
 {
     if (journal >= 0)
-        ks_write(journal, '-', ban);
+        ks_write(journal, '-', ubi);
 
     if (++journalcount > KLINE_STORE_COMPACT_THRESH)
         klinestore_compact();
@@ -534,7 +548,7 @@ klinestore_remove(struct userBan *ban)
  * Returns 0 on failure, 1 otherwise.
  */
 int
-klinestore_init(int noreload)
+klinestore_init(int alreadyloaded)
 {
     char buf1[1024];
     FILE *jf;
@@ -543,7 +557,7 @@ klinestore_init(int noreload)
 
     if (journal >= 0)
     {
-        if (noreload)
+        if (alreadyloaded)
             return 1;
 
         close(journal);

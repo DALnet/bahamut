@@ -33,6 +33,7 @@
 #include <utmp.h>
 #include <fcntl.h>
 #include "h.h"
+#include "ircstrings.h"
 
 /* Internally defined stuffs */
 SOpts wsopts;
@@ -43,7 +44,6 @@ int chk_who(aClient *, int);
 extern int user_modes[];
 
 extern Link *find_channel_link(Link *, aChannel *);
-extern unsigned int cidr_to_netmask(unsigned int);
 
 int build_searchopts(aClient *sptr, int parc, char *parv[])
 {
@@ -338,7 +338,7 @@ int build_searchopts(aClient *sptr, int parc, char *parv[])
                       return 0;
                   }
               
-                  maskval = htonl(cidr_to_netmask(maskval));
+                  maskval = cidr2mask(maskval);
                   ipval &= maskval;
            
                   wsopts.cidr4_plus = change;

@@ -17,12 +17,13 @@ RES_SRC =
 #RES_SRC = res_mkquery.c res_init.c res_comp.c
 
 SOURCES = blalloc.c bsd.c channel.c clientlist.c clones.c confparse.c \
-          fdlist.c fds.c hash.c hide.c inet_addr.c ircd.c ircsprintf.c \
-          klines.c list.c m_nick.c m_rwho.c m_server.c m_services.c m_stats.c \
-          m_who.c match.c memcount.c modules.c packet.c parse.c pcre.c \
-          probability.c res.c s_auth.c s_bsd.c s_conf.c s_debug.c s_err.c \
-          s_misc.c s_numeric.c s_serv.c s_user.c sbuf.c scache.c send.c \
-          struct.c support.c throttle.c userban.c whowas.c zlink.c \
+          fdlist.c fds.c gcosban.c hash.c hide.c inet_addr.c ircd.c \
+          ircsprintf.c ircstrings.c klines.c list.c m_nick.c m_rwho.c \
+          m_server.c m_services.c m_stats.c m_who.c match.c memcount.c \
+          modules.c packet.c parse.c patricia.c pcre.c probability.c res.c \
+          s_auth.c s_bsd.c s_conf.c s_debug.c s_err.c s_misc.c s_numeric.c \
+          s_serv.c s_user.c sbuf.c scache.c send.c simban.c struct.c \
+          support.c throttle.c userban.c whowas.c zlink.c \
           $(ENGINE) $(CRYPTO)
 
 OBJECTS = $(SOURCES:.c=.o) version.o
@@ -78,7 +79,7 @@ channel.o: channel.c ../include/struct.h ../include/config.h \
   ../include/sbuf.h ../include/common.h ../include/numeric.h \
   ../include/channel.h ../include/msg.h ../include/h.h ../include/send.h \
   ../include/fdlist.h ../include/ircsprintf.h ../include/find.h \
-  ../include/userban.h ../include/memcount.h ../include/blalloc.h \
+  ../include/simban.h ../include/memcount.h ../include/blalloc.h \
   ../include/throttle.h ../include/queue.h
 clientlist.o: clientlist.c ../include/struct.h ../include/config.h \
   ../include/setup.h ../include/defs.h ../include/sys.h ../include/hash.h \
@@ -97,7 +98,7 @@ confparse.o: confparse.c ../include/struct.h ../include/config.h \
   ../include/setup.h ../include/defs.h ../include/sys.h ../include/hash.h \
   ../include/sbuf.h ../include/common.h ../include/h.h ../include/send.h \
   ../include/fdlist.h ../include/ircsprintf.h ../include/find.h \
-  ../include/userban.h ../include/confparse.h
+  ../include/userban.h ../include/patricia.h ../include/confparse.h
 fdlist.o: fdlist.c ../include/struct.h ../include/config.h \
   ../include/setup.h ../include/defs.h ../include/sys.h ../include/hash.h \
   ../include/sbuf.h ../include/common.h ../include/h.h ../include/send.h \
@@ -108,12 +109,17 @@ fds.o: fds.c ../include/struct.h ../include/config.h ../include/setup.h \
   ../include/fdlist.h ../include/ircsprintf.h ../include/find.h \
   ../include/fds.h ../include/numeric.h ../include/memcount.h \
   ../include/blalloc.h ../include/throttle.h ../include/queue.h
+gcosban.o: gcosban.c ../include/struct.h ../include/config.h \
+  ../include/setup.h ../include/defs.h ../include/sys.h ../include/hash.h \
+  ../include/sbuf.h ../include/common.h ../include/h.h ../include/send.h \
+  ../include/fdlist.h ../include/ircsprintf.h ../include/find.h \
+  ../include/gcosban.h
 hash.o: hash.c ../include/struct.h ../include/config.h ../include/setup.h \
   ../include/defs.h ../include/sys.h ../include/hash.h ../include/sbuf.h \
   ../include/common.h ../include/h.h ../include/send.h \
   ../include/fdlist.h ../include/ircsprintf.h ../include/find.h \
-  ../include/numeric.h ../include/memcount.h ../include/blalloc.h \
-  ../include/throttle.h ../include/queue.h
+  ../include/memcount.h ../include/blalloc.h ../include/throttle.h \
+  ../include/queue.h
 hide.o: hide.c ../include/struct.h ../include/config.h ../include/setup.h \
   ../include/defs.h ../include/sys.h ../include/hash.h ../include/sbuf.h \
   ../include/common.h ../include/h.h ../include/send.h \
@@ -130,14 +136,21 @@ ircd.o: ircd.c ../include/struct.h ../include/config.h ../include/setup.h \
   ../include/inet.h ../include/h.h ../include/send.h ../include/fdlist.h \
   ../include/ircsprintf.h ../include/find.h ../include/patchlevel.h \
   ../include/dh.h ../include/throttle.h ../include/queue.h \
-  ../include/userban.h ../include/clones.h ../include/hooks.h \
-  ../include/fds.h ../include/memcount.h ../include/blalloc.h
+  ../include/userban.h ../include/patricia.h ../include/simban.h \
+  ../include/clones.h ../include/hooks.h ../include/fds.h \
+  ../include/memcount.h ../include/blalloc.h
 ircsprintf.o: ircsprintf.c ../include/ircsprintf.h ../include/setup.h
+ircstrings.o: ircstrings.c ../include/ircstrings.h ../include/struct.h \
+  ../include/config.h ../include/setup.h ../include/defs.h \
+  ../include/sys.h ../include/hash.h ../include/sbuf.h ../include/h.h \
+  ../include/send.h ../include/fdlist.h ../include/ircsprintf.h \
+  ../include/find.h
 klines.o: klines.c ../include/struct.h ../include/config.h \
   ../include/setup.h ../include/defs.h ../include/sys.h ../include/hash.h \
   ../include/sbuf.h ../include/common.h ../include/h.h ../include/send.h \
   ../include/fdlist.h ../include/ircsprintf.h ../include/find.h \
-  ../include/userban.h ../include/numeric.h
+  ../include/userban.h ../include/patricia.h ../include/numeric.h \
+  ../include/ircstrings.h
 list.o: list.c ../include/struct.h ../include/config.h ../include/setup.h \
   ../include/defs.h ../include/sys.h ../include/hash.h ../include/sbuf.h \
   ../include/common.h ../include/h.h ../include/send.h \
@@ -150,41 +163,44 @@ m_nick.o: m_nick.c ../include/struct.h ../include/config.h \
   ../include/sbuf.h ../include/common.h ../include/numeric.h \
   ../include/msg.h ../include/channel.h ../include/h.h ../include/send.h \
   ../include/fdlist.h ../include/ircsprintf.h ../include/find.h \
-  ../include/userban.h
+  ../include/simban.h
 m_rwho.o: m_rwho.c ../include/struct.h ../include/config.h \
   ../include/setup.h ../include/defs.h ../include/sys.h ../include/hash.h \
   ../include/sbuf.h ../include/common.h ../include/h.h ../include/send.h \
   ../include/fdlist.h ../include/ircsprintf.h ../include/find.h \
   ../include/numeric.h ../include/channel.h ../include/msg.h \
-  ../include/inet.h ../include/clones.h ../include/pcre.h
+  ../include/inet.h ../include/clones.h ../include/ircstrings.h \
+  ../include/pcre.h
 m_server.o: m_server.c ../include/struct.h ../include/config.h \
   ../include/setup.h ../include/defs.h ../include/sys.h ../include/hash.h \
   ../include/sbuf.h ../include/common.h ../include/numeric.h \
   ../include/h.h ../include/send.h ../include/fdlist.h \
   ../include/ircsprintf.h ../include/find.h ../include/dh.h \
-  ../include/userban.h ../include/zlink.h ../include/throttle.h \
+  ../include/userban.h ../include/patricia.h ../include/simban.h \
+  ../include/gcosban.h ../include/zlink.h ../include/throttle.h \
   ../include/queue.h ../include/clones.h
 m_services.o: m_services.c ../include/struct.h ../include/config.h \
   ../include/setup.h ../include/defs.h ../include/sys.h ../include/hash.h \
   ../include/sbuf.h ../include/common.h ../include/numeric.h \
   ../include/msg.h ../include/channel.h ../include/h.h ../include/send.h \
   ../include/fdlist.h ../include/ircsprintf.h ../include/find.h \
-  ../include/userban.h ../include/clones.h ../include/memcount.h \
+  ../include/simban.h ../include/clones.h ../include/memcount.h \
   ../include/blalloc.h ../include/throttle.h ../include/queue.h
 m_stats.o: m_stats.c ../include/struct.h ../include/config.h \
   ../include/setup.h ../include/defs.h ../include/sys.h ../include/hash.h \
   ../include/sbuf.h ../include/common.h ../include/numeric.h \
   ../include/msg.h ../include/channel.h ../include/h.h ../include/send.h \
   ../include/fdlist.h ../include/ircsprintf.h ../include/find.h \
-  ../include/zlink.h ../include/userban.h ../include/blalloc.h \
-  ../include/throttle.h ../include/queue.h ../include/whowas.h \
-  ../include/res.h ../include/clones.h ../include/memcount.h
+  ../include/zlink.h ../include/userban.h ../include/patricia.h \
+  ../include/blalloc.h ../include/throttle.h ../include/queue.h \
+  ../include/whowas.h ../include/res.h ../include/clones.h \
+  ../include/memcount.h
 m_who.o: m_who.c ../include/struct.h ../include/config.h \
   ../include/setup.h ../include/defs.h ../include/sys.h ../include/hash.h \
   ../include/sbuf.h ../include/common.h ../include/numeric.h \
   ../include/inet.h ../include/msg.h ../include/channel.h ../include/h.h \
   ../include/send.h ../include/fdlist.h ../include/ircsprintf.h \
-  ../include/find.h
+  ../include/find.h ../include/ircstrings.h
 match.o: match.c ../include/struct.h ../include/config.h \
   ../include/setup.h ../include/defs.h ../include/sys.h ../include/hash.h \
   ../include/sbuf.h ../include/common.h
@@ -213,6 +229,11 @@ parse.o: parse.c ../include/struct.h ../include/config.h \
   ../include/ircsprintf.h ../include/find.h ../include/msg.h \
   ../include/memcount.h ../include/blalloc.h ../include/throttle.h \
   ../include/queue.h
+patricia.o: patricia.c ../include/struct.h ../include/config.h \
+  ../include/setup.h ../include/defs.h ../include/sys.h ../include/hash.h \
+  ../include/sbuf.h ../include/common.h ../include/h.h ../include/send.h \
+  ../include/fdlist.h ../include/ircsprintf.h ../include/find.h \
+  ../include/inet.h ../include/patricia.h
 pcre.o: pcre.c ../include/pcre_internal.h ../include/pcre_config.h \
   ../include/setup.h ../include/pcre.h pcre_chartables.c
 probability.o: probability.c ../include/struct.h ../include/config.h \
@@ -240,15 +261,17 @@ s_bsd.o: s_bsd.c ../include/struct.h ../include/config.h \
   ../include/sbuf.h ../include/common.h ../include/res.h \
   ../include/numeric.h ../include/patchlevel.h ../include/zlink.h \
   ../include/throttle.h ../include/queue.h ../include/userban.h \
-  ../include/inet.h ../include/hooks.h ../include/nameser.h \
-  ../include/resolv.h ../include/memcount.h ../include/h.h \
-  ../include/send.h ../include/fdlist.h ../include/ircsprintf.h \
-  ../include/find.h ../include/blalloc.h ../include/fds.h
+  ../include/patricia.h ../include/inet.h ../include/hooks.h \
+  ../include/nameser.h ../include/resolv.h ../include/memcount.h \
+  ../include/h.h ../include/send.h ../include/fdlist.h \
+  ../include/ircsprintf.h ../include/find.h ../include/blalloc.h \
+  ../include/fds.h
 s_conf.o: s_conf.c ../include/struct.h ../include/config.h \
   ../include/setup.h ../include/defs.h ../include/sys.h ../include/hash.h \
   ../include/sbuf.h ../include/common.h ../include/numeric.h \
   ../include/inet.h ../include/h.h ../include/send.h ../include/fdlist.h \
   ../include/ircsprintf.h ../include/find.h ../include/userban.h \
+  ../include/patricia.h ../include/simban.h ../include/gcosban.h \
   ../include/confparse.h ../include/memcount.h ../include/blalloc.h \
   ../include/throttle.h ../include/queue.h
 s_debug.o: s_debug.c ../include/struct.h ../include/config.h \
@@ -277,7 +300,8 @@ s_serv.o: s_serv.c ../include/struct.h ../include/config.h \
   ../include/sbuf.h ../include/common.h ../include/numeric.h \
   ../include/msg.h ../include/channel.h ../include/nameser.h \
   ../include/resolv.h ../include/dh.h ../include/zlink.h \
-  ../include/userban.h ../include/h.h ../include/send.h \
+  ../include/userban.h ../include/patricia.h ../include/simban.h \
+  ../include/gcosban.h ../include/h.h ../include/send.h \
   ../include/fdlist.h ../include/ircsprintf.h ../include/find.h \
   ../include/throttle.h ../include/queue.h ../include/clones.h \
   ../include/memcount.h ../include/blalloc.h
@@ -287,7 +311,8 @@ s_user.o: s_user.c ../include/struct.h ../include/config.h \
   ../include/msg.h ../include/channel.h ../include/throttle.h \
   ../include/queue.h ../include/clones.h ../include/h.h ../include/send.h \
   ../include/fdlist.h ../include/ircsprintf.h ../include/find.h \
-  ../include/blalloc.h ../include/userban.h ../include/hooks.h \
+  ../include/blalloc.h ../include/userban.h ../include/patricia.h \
+  ../include/gcosban.h ../include/ircstrings.h ../include/hooks.h \
   ../include/memcount.h
 sbuf.o: sbuf.c ../include/sbuf.h ../include/struct.h ../include/config.h \
   ../include/setup.h ../include/defs.h ../include/sys.h ../include/hash.h \
@@ -308,6 +333,11 @@ send.o: send.c ../include/struct.h ../include/config.h ../include/setup.h \
   ../include/numeric.h ../include/dh.h ../include/zlink.h \
   ../include/fds.h ../include/memcount.h ../include/blalloc.h \
   ../include/throttle.h ../include/queue.h
+simban.o: simban.c ../include/struct.h ../include/config.h \
+  ../include/setup.h ../include/defs.h ../include/sys.h ../include/hash.h \
+  ../include/sbuf.h ../include/common.h ../include/h.h ../include/send.h \
+  ../include/fdlist.h ../include/ircsprintf.h ../include/find.h \
+  ../include/simban.h ../include/ircstrings.h
 struct.o: struct.c ../include/struct.h ../include/config.h \
   ../include/setup.h ../include/defs.h ../include/sys.h ../include/hash.h \
   ../include/sbuf.h ../include/common.h ../include/numeric.h \
@@ -327,11 +357,11 @@ throttle.o: throttle.c ../include/struct.h ../include/config.h \
   ../include/memcount.h ../include/throttle.h ../include/queue.h
 userban.o: userban.c ../include/struct.h ../include/config.h \
   ../include/setup.h ../include/defs.h ../include/sys.h ../include/hash.h \
-  ../include/sbuf.h ../include/common.h ../include/numeric.h \
-  ../include/inet.h ../include/h.h ../include/send.h ../include/fdlist.h \
-  ../include/ircsprintf.h ../include/find.h ../include/userban.h \
-  ../include/queue.h ../include/memcount.h ../include/blalloc.h \
-  ../include/throttle.h
+  ../include/sbuf.h ../include/common.h ../include/h.h ../include/send.h \
+  ../include/fdlist.h ../include/ircsprintf.h ../include/find.h \
+  ../include/numeric.h ../include/userban.h ../include/patricia.h \
+  ../include/ircstrings.h ../include/memcount.h ../include/blalloc.h \
+  ../include/throttle.h ../include/queue.h
 version.o: version.c ../include/struct.h ../include/config.h \
   ../include/setup.h ../include/defs.h ../include/sys.h ../include/hash.h \
   ../include/sbuf.h ../include/patchlevel.h
@@ -380,4 +410,9 @@ socketengine_kqueue.o: socketengine_kqueue.c ../include/struct.h \
  ../include/common.h ../include/h.h ../include/send.h \
  ../include/fdlist.h ../include/ircsprintf.h ../include/find.h \
  ../include/fds.h
-socketengine_epoll.o: ../include/config.h ../include/h.h
+socketengine_epoll.o: socketengine_epoll.c ../include/struct.h \
+  ../include/config.h ../include/setup.h ../include/defs.h \
+  ../include/sys.h ../include/hash.h ../include/sbuf.h \
+  ../include/common.h ../include/h.h ../include/send.h \
+  ../include/fdlist.h ../include/ircsprintf.h ../include/find.h \
+  ../include/fds.h

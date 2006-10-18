@@ -31,11 +31,11 @@
 #include "channel.h"
 #include "inet.h"
 #include "clones.h"
+#include "ircstrings.h"
 
 #include "pcre.h"
 
 extern int user_modes[];
-extern unsigned int cidr_to_netmask(unsigned int);
 extern Link *find_channel_link(Link *, aChannel *);
 
 /* max capturing submatches to allow in all fields combined */
@@ -445,7 +445,7 @@ static int rwho_parseopts(aClient *sptr, int parc, char *parv[])
                     *s++ = 0;
                     i = strtol(s, &s, 10);
                     if (*s == 0 && 1 < i && i < 32)
-                        rwho_opts.ip_mask[neg] = htonl(cidr_to_netmask(i));
+                        rwho_opts.ip_mask[neg] = cidr2mask(i);
                 }
                 else
                     rwho_opts.ip_mask[neg] = ~0;

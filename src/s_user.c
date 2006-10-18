@@ -39,6 +39,8 @@
 #include "blalloc.h"
 #endif /* FLUD */
 #include "userban.h"
+#include "gcosban.h"
+#include "ircstrings.h"
 #include "hooks.h"
 #include "memcount.h"
 
@@ -436,17 +438,13 @@ register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
     char       *parv[3];
     static char ubuf[12];
     char       *p;
-    short       oldstatus = sptr->status;
     anUser     *user = sptr->user;
-    struct userBan    *ban;
+    UserBanInfo *ubi;
     aMotd      *smotd;
-    int         i, dots;
-    int         bad_dns;                /* flag a bad dns name */
-#ifdef ANTI_SPAMBOT
-    char        spamchar = '\0';
-
-#endif
-    char        tmpstr2[512];
+    int         i;
+    u_int       rawip;
+    int         prefix;
+    char        rbuf[BUFSIZE];
 
     user->last = timeofday;
     parv[0] = sptr->name;
@@ -488,87 +486,74 @@ register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
             }
         }
 
-        if (sptr->user->allow->flags & CONF_FLAGS_NOTHROTTLE)
-            throttle_remove(cptr->hostip);
-
-        if (sptr->user->allow->flags & CONF_FLAGS_FORCEFLOOD)
-            SetNoMsgThrottle(sptr);
-
-#ifdef ANTI_SPAMBOT
-        /* This appears to be broken */
-        /* Check for single char in user->host -ThemBones */
-        if (*(user->host + 1) == '\0')
-            spamchar = *user->host;
-#endif
-                
-        strncpyzt(user->host, sptr->sockhost, HOSTLEN);
-                
-        dots = 0;
-        p = user->host;
-        bad_dns = NO;
-        while (*p) 
-        {
-            if (!IsAlnum(*p)) 
-            {
-#ifdef RFC1035_ANAL
-                if ((*p != '-') && (*p != '.'))
-#else
-                    if ((*p != '-') && (*p != '.') && (*p != '_') &&
-                        (*p != '/'))
-#endif /* RFC1035_ANAL */
-                        bad_dns = YES;
-            }
-            if (*p == '.')
-                dots++;
-            p++;
-        }
+        
         /*
-         * Check that the hostname has AT LEAST ONE dot (.) in it. If
-         * not, drop the client (spoofed host) -ThemBones
+         * hostname checks
          */
-        if (!dots) 
+        i = categorize_host(sptr->sockhost, &rawip, &prefix, VALIDATE_DOT);
+
+        if (!(i == HMT_NAME || i == HMT_IP))
         {
-            sendto_realops("Invalid hostname for %s, dumping user %s",
-                           sptr->hostip, sptr->name);
+            sendto_realops_lev(REJ_LEV, "Invalid hostname for %s",
+                               get_client_name(sptr, TRUE));
             return exit_client(cptr, sptr, &me, "Invalid hostname");
         }
-        
-        if (bad_dns) 
+
+        if (i == HMT_NAME)
+            sptr->flags |= FLAGS_HOSTNAME;
+
+        strncpyzt(user->host, sptr->sockhost, HOSTLEN);
+
+
+        /*
+         * username checks
+         */
+        if (sptr->flags & FLAGS_GOTID)
         {
-            sendto_one(sptr, ":%s NOTICE %s :*** Notice -- You have a bad "
-                       "character in your hostname", me.name, cptr->name);
-            strcpy(user->host, sptr->hostip);
-            strcpy(sptr->sockhost, sptr->hostip);
+            if (!validate_user(sptr->username, VALIDATE_PREREG))
+            {
+                sendto_ops_lev(REJ_LEV, "Invalid ident reply: %s",
+                               get_client_name(sptr, TRUE));
+                ircsprintf(rbuf, "Invalid identd reply: %s", sptr->username);
+                return exit_client(cptr, sptr, &me, rbuf);
+            }
+
+            memcpy(user->username, sptr->username, sizeof(user->username));
         }
+        else
+        {
+            char tmpun[USERLEN+1];
+
+            strncpyzt(tmpun, username, sizeof(tmpun));
+
+            if (!validate_user(tmpun, VALIDATE_PREREG))
+            {
+                sendto_ops_lev(REJ_LEV, "Invalid username '%s': %s",
+                               tmpun, get_client_name(sptr, TRUE));
+                ircsprintf(rbuf, "Invalid username: %s", tmpun);
+                return exit_client(cptr, sptr, &me, rbuf);
+            }
+
+            if (sptr->flags & FLAGS_DOID)
+            {
+                user->username[0] = '~';
+                strncpyzt((user->username+1), tmpun, USERLEN);
+            }
+            else if (username != user->username)
+                memcpy(user->username, tmpun, sizeof(user->username));
+        }
+
         
+        /*
+         * password checks
+         */
         pwaconf = sptr->user->allow;
 
-        if (sptr->flags & FLAGS_DOID && !(sptr->flags & FLAGS_GOTID)) 
-        {
-            /* because username may point to user->username */
-            char        temp[USERLEN + 1];
-            
-            strncpyzt(temp, username, USERLEN + 1);
-            *user->username = '~';
-            (void) strncpy(&user->username[1], temp, USERLEN);
-            user->username[USERLEN] = '\0';
-#ifdef IDENTD_COMPLAIN
-            /* tell them to install identd -Taner */
-            sendto_one(sptr, ":%s NOTICE %s :*** Notice -- It seems that you "
-                       "don't have identd installed on your host.",
-                       me.name, cptr->name);
-            sendto_one(sptr, ":%s NOTICE %s :*** Notice -- If you wish to "
-                       "have your username show up without the ~ (tilde),",
-                       me.name, cptr->name);
-            sendto_one(sptr, ":%s NOTICE %s :*** Notice -- then install "
-                       "identd.", me.name, cptr->name);
-            /* end identd hack */
-#endif
-        }
-        else if (sptr->flags & FLAGS_GOTID && *sptr->username != '-')
-            strncpyzt(user->username, sptr->username, USERLEN + 1);
-        else if(username != user->username) /* don't overlap */
-            strncpyzt(user->username, username, USERLEN + 1);
+        if (pwaconf->flags & CONF_FLAGS_NOTHROTTLE)
+            throttle_remove(cptr->hostip);
+
+        if (pwaconf->flags & CONF_FLAGS_FORCEFLOOD)
+            SetNoMsgThrottle(sptr);
 
         if (!BadPtr(pwaconf->passwd))
         {
@@ -602,7 +587,7 @@ register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
                 sptr->passwd[0] = '\0';
         }
 
-                
+        
         /* Limit clients */
         /*
          * We want to be able to have servers and F-line clients connect,
@@ -622,165 +607,7 @@ register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
                                "Sorry, server is full - try later");
         }
         
-#ifdef ANTI_SPAMBOT
-        /* It appears, this is catching normal clients */
-        /* Reject single char user-given user->host's */
-        if (spamchar == 'x') 
-        {
-            sendto_realops_lev(REJ_LEV, "Rejecting possible Spambot: %s "
-                               "(Single char user-given userhost: %c)",
-                               get_client_name(sptr, FALSE), spamchar);
-            ircstp->is_ref++;
-            return exit_client(cptr, sptr, sptr, "Spambot detected, "
-                               "rejected.");
-        }
-#endif
-                
-
-        /* i really dont like the fact that we're calling m_oper from here.
-         * perhaps there is a better method...?  Will investigate later
-         * -epi */
-        if (oldstatus == STAT_MASTER && MyConnect(sptr))
-            m_oper(&me, sptr, 1, parv);
-
-        /* hostile username checks begin here */
-        
-        {
-            char *tmpstr;
-            u_char      c, cc;
-            int lower, upper, special;
-            
-            lower = upper = special = cc = 0;
-                          
-            /* check for "@" in identd reply -Taner */
-            if ((strchr(user->username, '@') != NULL) ||
-                (strchr(username, '@') != NULL)) 
-            {
-                sendto_realops_lev(REJ_LEV,
-                                   "Illegal \"@\" in username: %s (%s)",
-                                   get_client_name(sptr, FALSE), username);
-                ircstp->is_ref++;
-                (void) ircsprintf(tmpstr2,
-                                  "Invalid username [%s] - '@' is not allowed",
-                                  username);
-                return exit_client(cptr, sptr, sptr, tmpstr2);
-            }
-            /* First check user->username... */
-#ifdef IGNORE_FIRST_CHAR
-            tmpstr = (user->username[0] == '~' ? &user->username[2] :
-                      &user->username[1]);
-            /*
-             * Ok, we don't want to TOTALLY ignore the first character. We
-             * should at least check it for control characters, etc -
-             * ThemBones
-             */
-            cc = (user->username[0] == '~' ? user->username[1] :
-                  user->username[0]);
-            if ((!IsAlnum(cc) && !strchr(" -_.", cc)) || (cc > 127))
-                special++;
-#else
-            tmpstr = (user->username[0] == '~' ? &user->username[1] :
-                      user->username);
-#endif /* IGNORE_FIRST_CHAR */
-            
-            while (*tmpstr) 
-            {
-                c = *(tmpstr++);
-                if (IsLower(c)) 
-                {
-                    lower++;
-                    continue;
-                }
-                if (IsUpper(c)) 
-                {
-                    upper++;
-                    continue;
-                }
-                if ((!IsAlnum(c) && !strchr(" -_.", c)) || (c > 127) || (c<32))
-                    special++;
-            }
-            if (special) 
-            {
-                sendto_realops_lev(REJ_LEV, "Invalid username: %s (%s@%s)",
-                                   nick, user->username, user->host);
-                ircstp->is_ref++;
-                ircsprintf(tmpstr2, "Invalid username [%s]", user->username);
-                return exit_client(cptr, sptr, &me, tmpstr2);
-            }
-            /* Ok, now check the username they provided, if different */
-            lower = upper = special = cc = 0;
-                          
-            if (strcmp(user->username, username)) 
-            {
-                                  
-#ifdef IGNORE_FIRST_CHAR
-                tmpstr = (username[0] == '~' ? &username[2] : &username[1]);
-                /*
-                 * Ok, we don't want to TOTALLY ignore the first character.
-                 * We should at least check it for control charcters, etc
-                 * -ThemBones
-                 */
-                cc = (username[0] == '~' ? username[1] : username[0]);
-                                  
-                if ((!IsAlnum(cc) && !strchr(" -_.", cc)) || (cc > 127))
-                    special++;
-#else
-                tmpstr = (username[0] == '~' ? &username[1] : username);
-#endif /* IGNORE_FIRST_CHAR */
-                while (*tmpstr) 
-                {
-                    c = *(tmpstr++);
-                    if (IsLower(c)) 
-                    {
-                        lower++;
-                        continue;
-                    }
-                    if (IsUpper(c)) 
-                    {
-                        upper++;
-                        continue;
-                    }
-                    if ((!IsAlnum(c) && !strchr(" -_.", c)) || (c > 127))
-                        special++;
-                }
-#ifdef NO_MIXED_CASE
-                if (lower && upper) 
-                {
-                    sendto_realops_lev(REJ_LEV, "Invalid username: %s (%s@%s)",
-                                       nick, username, user->host);
-                    ircstp->is_ref++;
-                    ircsprintf(tmpstr2, "Invalid username [%s]", username);
-                    return exit_client(cptr, sptr, &me, tmpstr2);
-                }
-#endif /* NO_MIXED_CASE */
-                if (special) 
-                {
-                    sendto_realops_lev(REJ_LEV, "Invalid username: %s (%s@%s)",
-                                       nick, username, user->host);
-                    ircstp->is_ref++;
-                    ircsprintf(tmpstr2, "Invalid username [%s]", username);
-                    return exit_client(cptr, sptr, &me, tmpstr2);
-                }
-            }                   /* usernames different  */
-        }
-
-        /*
-         * reject single character usernames which aren't alphabetic i.e.
-         * reject jokers who have '?@somehost' or '.@somehost'
-         * 
-         * -Dianora
-         */
-                
-        if ((user->username[1] == '\0') && !IsAlpha(user->username[0])) 
-        {
-            sendto_realops_lev(REJ_LEV, "Invalid username: %s (%s@%s)",
-                               nick, user->username, user->host);
-            ircstp->is_ref++;
-            ircsprintf(tmpstr2, "Invalid username [%s]", user->username);
-            return exit_client(cptr, sptr, &me, tmpstr2);
-        }
-
-        if (!(user->allow->flags & CONF_FLAGS_SKIPCLONES) &&
+        if (!(pwaconf->flags & CONF_FLAGS_SKIPCLONES) &&
             (i = clones_check(cptr)))
         {
             ircstp->is_ref++;
@@ -789,30 +616,28 @@ register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
                                : "Too many connections from your site");
         }
 
-        if(!(ban = check_userbanned(sptr, UBAN_IP|UBAN_CIDR4, UBAN_WILDUSER)))
-            ban = check_userbanned(sptr, UBAN_HOST, 0);
-
-        if(ban)
+        if ((ubi = userban_checkclient(sptr)))
         {
-            char *reason, *ktype;
+            char *ktype;
             int local;
 
-            local = (ban->flags & UBAN_LOCAL) ? 1 : 0;
+            local = (ubi->flags & UBAN_LOCAL);
             ktype = local ? LOCAL_BANNED_NAME : NETWORK_BANNED_NAME;
-            reason = ban->reason ? ban->reason : ktype;
 
+            /* XXX: drastic reformat */
             sendto_one(sptr, err_str(ERR_YOUREBANNEDCREEP), me.name, 
                        sptr->name, ktype);
             sendto_one(sptr, ":%s NOTICE %s :*** You are not welcome on"
                              " this %s.", me.name, sptr->name, 
                              local ? "server" : "network");
             sendto_one(sptr, ":%s NOTICE %s :*** %s for %s",
-                       me.name, sptr->name, ktype, reason);
+                       me.name, sptr->name, ktype, ubi->reason);
             sendto_one(sptr, ":%s NOTICE %s :*** Your hostmask is %s!%s@%s",
                        me.name, sptr->name, sptr->name, sptr->user->username,
-                       sptr->sockhost);
-            sendto_one(sptr, ":%s NOTICE %s :*** Your IP is %s",
-                       me.name, sptr->name, inetntoa((char *)&sptr->ip.s_addr));
+                       sptr->user->host);
+            if (/* XXX: resolved */1)
+                sendto_one(sptr, ":%s NOTICE %s :*** Your IP is %s", me.name,
+                           sptr->name, sptr->hostip);
             sendto_one(sptr, ":%s NOTICE %s :*** For assistance, please"
                              " email %s and include everything shown here.", 
                        me.name, sptr->name,
@@ -822,7 +647,7 @@ register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
             ircstp->is_ref_2++;
 
             throttle_force(sptr->hostip);
-            return exit_client(cptr, sptr, &me, reason);
+            return exit_client(cptr, sptr, &me, ubi->reason);
         }
 
         if(call_hooks(CHOOK_POSTACCESS, sptr) == FLUSH_BUFFER)
@@ -860,10 +685,6 @@ register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
         Count.weekly++;
         Count.monthly++;
         Count.yearly++;
-        if(sptr->flags & FLAGS_BAD_DNS) 
-            sendto_realops_lev(SPY_LEV, "DNS lookup: %s (%s@%s) is a possible "
-                               "cache polluter", sptr->name, 
-                               sptr->user->username, sptr->user->host); 
     }
     else
         strncpyzt(user->username, username, USERLEN + 1);
@@ -2017,34 +1838,23 @@ m_whois(aClient *cptr, aClient *sptr, int parc, char *parv[])
 int 
 m_user(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
-    char       *username, *host, *server, *realname;
-    struct simBan *ban;
+    char *banreason;
 
     /* FTP proxy */
     if (!IsRegistered(cptr) && parc == 2 && cptr->receiveM == 1)
         return reject_proxy(cptr, "USER", parv[1]);
-    
-    if (parc > 2 && (username = (char *) strchr(parv[1], '@')))
-        *username = '\0';
-    if (parc < 5 || *parv[1] == '\0' || *parv[2] == '\0' ||
-        *parv[3] == '\0' || *parv[4] == '\0')
+
+    if (parc < 5 || BadPtr(parv[4]))
     {
         sendto_one(sptr, err_str(ERR_NEEDMOREPARAMS), me.name, parv[0], "USER");
-        if (IsServer(cptr))
-            sendto_realops("bad USER param count for %s from %s",
-                           parv[0], get_client_name(cptr, FALSE));
-        else
-            return 0;
+        return 0;
     }
-    /* Copy parameters into better documenting variables */   
-    username = (parc < 2 || BadPtr(parv[1])) ? "<bad-boy>" : parv[1];
-    host = (parc < 3 || BadPtr(parv[2])) ? "<nohost>" : parv[2];
-    server = (parc < 4 || BadPtr(parv[3])) ? "<noserver>" : parv[3];
-    realname = (parc < 5 || BadPtr(parv[4])) ? "<bad-realname>" : parv[4];
-    if ((ban = check_mask_simbanned(realname, SBAN_GCOS))) 
-        return exit_client(cptr, sptr, sptr, BadPtr(ban->reason) ?
-                           "Bad GCOS: Reason unspecified" : ban->reason);
-    return do_user(parv[0], cptr, sptr, username, host, server, 0,0, realname);
+
+    if ((banreason = gcosban_check(parv[4]))) 
+        return exit_client(cptr, sptr, sptr, banreason);
+
+    return do_user(parv[0], cptr, sptr, parv[1], parv[2], parv[3], 0, 0,
+                   parv[4]);
 }
 
 /* do_user */
@@ -2054,10 +1864,7 @@ do_user(char *nick, aClient *cptr, aClient *sptr, char *username, char *host,
 {
     anUser     *user;
     
-    long        oflags;
-    
     user = make_user(sptr);
-    oflags = sptr->umode;
     
     /*
      * changed the goto into if-else...   -Taner 

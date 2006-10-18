@@ -628,17 +628,8 @@ int check_client(aClient *cptr)
 
     Debug((DEBUG_DNS, "ch_cl: access ok: %s[%s]", cptr->name, sockname));
 
-    if (inet_netof(cptr->ip) == IN_LOOPBACKNET ||
-    inet_netof(cptr->ip) == inet_netof(mysk.sin_addr))
-    {
-        ircstp->is_loc++;
-        cptr->flags |= FLAGS_LOCAL;
-    }
     return 0;
 }
-
-#define CFLAG   CONF_CONNECT_SERVER
-#define NFLAG   CONF_NOCONNECT_SERVER
 
 /*
  * check_server_init(), check_server() check access for a server given
@@ -1192,7 +1183,6 @@ aClient *add_connection(aListener *lptr, int fd)
     char *s, *t;
     struct sockaddr_in addr;
     int len = sizeof(struct sockaddr_in);
-    struct userBan *ban;
     
     if (getpeername(fd, (struct sockaddr *) &addr, &len) == -1)
     { 
@@ -1250,6 +1240,7 @@ aClient *add_connection(aListener *lptr, int fd)
     acptr->lstn = lptr;
     add_client_to_list(acptr);
 
+#if 0
     ban = check_userbanned(acptr, UBAN_IP|UBAN_CIDR4|UBAN_WILDUSER, 0);
     if(ban)
     {
@@ -1278,6 +1269,7 @@ aClient *add_connection(aListener *lptr, int fd)
 
         return NULL;
     }
+#endif
 
     if(call_hooks(CHOOK_PREACCESS, acptr) == FLUSH_BUFFER)
         return NULL;

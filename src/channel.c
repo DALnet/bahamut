@@ -26,7 +26,7 @@
 #include "numeric.h"
 #include "channel.h"
 #include "h.h"
-#include "userban.h"
+#include "simban.h"
 #include "memcount.h"
 
 int         server_was_split = YES;
@@ -2492,7 +2492,7 @@ int m_join(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     static char jbuf[BUFSIZE];
     Link   *lp;
-    struct simBan *ban;
+    SimBanInfo *sbi;
     aChannel *chptr;
     char   *name, *key = NULL;
     int         i, flags = 0, chanlen=0;        
@@ -2638,14 +2638,21 @@ int m_join(aClient *cptr, aClient *sptr, int parc, char *parv[])
         if (MyConnect(sptr))
         {
             /* have we quarantined this channel? */
-            if(!IsOper(sptr) && (ban = check_mask_simbanned(name, SBAN_CHAN)))
+            if(!IsOper(sptr) && (sbi = simban_checkchannel(name)))
             {
-                sendto_one(sptr, getreply(ERR_CHANBANREASON), me.name, parv[0], name,
-                        BadPtr(ban->reason) ? "Reserved channel" :      
-                        ban->reason);
+                sendto_one(sptr, getreply(ERR_CHANBANREASON), me.name, parv[0],
+                           name, sbi->reason);
                 sendto_realops_lev(REJ_LEV,
                                    "Forbidding restricted channel %s from %s.",
                                    name, get_client_name(cptr, TRUE));
+
+                if (sbi->plimit)
+                {
+                    sendto_realops_lev(REJ_LEV, "Resetting expiration time for"
+                                       " restricted channel %s on try from %s",
+                                       name, get_client_name(cptr, TRUE));
+                }
+                /* XXX punish */
                 continue;
             }
 

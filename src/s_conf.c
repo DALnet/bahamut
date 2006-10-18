@@ -28,6 +28,8 @@
 #include <signal.h>
 #include "h.h"
 #include "userban.h"
+#include "simban.h"
+#include "gcosban.h"
 #include "confparse.h"
 #include "memcount.h"
 
@@ -80,9 +82,6 @@ aClass      *new_classes    = NULL;
 char        *new_uservers[MAXUSERVS+1];    /* null terminated array */
 Conf_Modules *new_modules       = NULL;
 
-#ifdef LOCKFILE
-extern void do_pending_klines(void);
-#endif
 extern void confparse_error(char *, int);
 extern int klinestore_init(int);
 
@@ -1403,30 +1402,27 @@ int
 confadd_kill(cVar *vars[], int lnum)
 {
     cVar *tmp;
-    struct userBan *ban;
-    int i, c = 0;
-    char *ub_u = NULL, *ub_r = NULL, *host = NULL;
-    char fbuf[512];
-    aClient *ub_acptr;
+    int ret, c = 0;
+    char mbuf[BUFSIZE];
+    char *ub_m = NULL, *ub_r = NULL;
 
     for(tmp = vars[c]; tmp; tmp = vars[++c])
     {
         if(tmp->type && (tmp->type->flag & SCONFF_MASK))
         {
-            if(host)
+            if(ub_m)
             {
                 confparse_error("Multiple mask definitions", lnum);
                 return -1;
             }
             tmp->type = NULL;
-            if((host = strchr(tmp->value, '@')))
+
+            ub_m = tmp->value;
+            if (!strchr(ub_m, '@'))
             {
-                *host = '\0';
-                host++;
-                ub_u = tmp->value;
+                ircsprintf(mbuf, "*@%s", ub_m);
+                ub_m = mbuf;
             }
-            else
-                host = tmp->value;
         }
         if(tmp->type && (tmp->type->flag & SCONFF_REASON))
         {
@@ -1440,24 +1436,20 @@ confadd_kill(cVar *vars[], int lnum)
             break;
         }
     }
-    if(!host)
+    if(!ub_m)
     {
         confparse_error("Lacking mask definition", lnum);
         return -1;
     }
-    ub_u = BadPtr(ub_u) ? "*" : ub_u;
-    ub_r = BadPtr(ub_r) ? "<No Reason>" : ub_r;
+    ub_r = BadPtr(ub_r) ? "<no reason>" : ub_r;
 
-    ban = make_hostbased_ban(ub_u, host);
-    if(!ban)
-        return lnum;    /* this isnt a parser problem - dont pull out */
+    ret = userban_add(ub_m, ub_r, 0, UBAN_LOCAL|UBAN_CONF, NULL);
 
-    ban->flags |= (UBAN_LOCAL|UBAN_CONF);
-    DupString(ban->reason, ub_r);
-    ban->timeset = NOW;
-
-    add_hostbased_userban(ban);
-    userban_sweep(ban);
+    if (ret == UBAN_ADD_INVALID)
+    {
+        confparse_error("Invalid kill mask", lnum);
+        return -1;
+    }
 
     return lnum;
 }
@@ -1493,7 +1485,6 @@ confadd_restrict(cVar *vars[], int lnum)
     cVar *tmp;
     int c = 0, type = 0;
     char *mask = NULL, *reason = NULL;
-    struct simBan *ban;
 
     for(tmp = vars[c]; tmp; tmp = vars[++c])
     {
@@ -1506,23 +1497,22 @@ confadd_restrict(cVar *vars[], int lnum)
             }
             tmp->type = NULL;
             if(!mycmp("CHAN", tmp->value))
-                type = SBAN_CHAN;
+                type = 1;
             else if(!mycmp("NICK", tmp->value))
-                type = SBAN_NICK;
+                type = 2;
             else if(!mycmp("GCOS", tmp->value))
-                type = SBAN_GCOS;
+                type = 3;
             else
             {
                 confparse_error("Unknown type in restrict block", lnum);
                 return -1;
             }
-            type |= SBAN_LOCAL;
         }
         else if(tmp->type && (tmp->type->flag & SCONFF_MASK))
         {
             if(mask)
             {
-                confparse_error("Mutliple mask definitions", lnum);
+                confparse_error("Multiple mask definitions", lnum);
                 return -1;
             }
             tmp->type = NULL;
@@ -1549,27 +1539,38 @@ confadd_restrict(cVar *vars[], int lnum)
         confparse_error("Missing type in restrict block", lnum);
         return -1;
     }
-    ban = make_simpleban(type, mask);
-    if(!ban)
-        return lnum;
-    if(find_simban_exact(ban) != NULL)  /* dont add duplicates */
-    {
-        simban_free(ban);
-        return lnum;
-    }
     if(!reason)
     {
-        if(type & SBAN_CHAN)
+        if(type == 1)
             reason = "Reserved Channel";
-        else if(type & SBAN_NICK)
+        else if(type == 2)
             reason = "Reserved Nick";
-        else if(type & SBAN_GCOS)
+        else
             reason = "Bad GCOS";
     }
-    DupString(ban->reason, reason);
-    ban->timeset = NOW;
 
-    add_simban(ban);
+    if (type == 3)
+    {
+        if (gcosban_add(GCBAN_CONF, mask, reason) == GCBAN_ADD_INVALID)
+        {
+            confparse_error("Invalid restrict mask", lnum);
+            return -1;
+        }
+    }
+    else
+    {
+        int flags = SBAN_CONF|SBAN_UPDATE;
+
+        if (type == 1)
+            flags |= SBAN_CHAN;
+
+        if (simban_add(mask, reason, 0, 0, flags) == SBAN_ADD_INVALID)
+        {
+            confparse_error("Invalid restrict mask", lnum);
+            return -1;
+        }
+    }
+
     return lnum;
 }
 
@@ -2168,20 +2169,7 @@ int rehash(aClient *cptr, aClient *sptr, int sig)
     char       *conferr;
 
     if (sig == SIGHUP) 
-    {
         sendto_ops("Got signal SIGHUP, reloading ircd conf. file");
-        remove_userbans_match_flags(UBAN_NETWORK, 0);
-        /* remove all but kill {} blocks from conf */
-        remove_userbans_match_flags(UBAN_LOCAL, UBAN_CONF);
-        remove_simbans_match_flags(SBAN_NICK|SBAN_LOCAL|SBAN_TEMPORARY, 0);
-        remove_simbans_match_flags(SBAN_CHAN|SBAN_LOCAL|SBAN_TEMPORARY, 0);
-        remove_simbans_match_flags(SBAN_GCOS|SBAN_LOCAL|SBAN_TEMPORARY, 0);
-    }
-
-    /* Shadowfax's LOCKFILE code */
-#ifdef LOCKFILE
-    do_pending_klines();
-#endif
 
     for (i = 0; i <= highest_fd; i++)
         if ((acptr = local[i]) && !IsMe(acptr)) 
@@ -2197,12 +2185,10 @@ int rehash(aClient *cptr, aClient *sptr, int sig)
     if (sig != SIGINT)
         flush_cache();      /* Flush DNS cache */
 
-    /* remove kill {} blocks */
-    remove_userbans_match_flags(UBAN_LOCAL|UBAN_CONF, 0);
-    remove_simbans_match_flags(SBAN_NICK|SBAN_LOCAL, SBAN_TEMPORARY);
-    remove_simbans_match_flags(SBAN_CHAN|SBAN_LOCAL, SBAN_TEMPORARY);
-    remove_simbans_match_flags(SBAN_GCOS|SBAN_LOCAL, SBAN_TEMPORARY);
-
+    /* remove kill and restrict blocks */
+    userban_massdel(0, UBAN_CONF, UBAN_CONF);
+    simban_massdel(0, SBAN_CONF, SBAN_CONF, NULL);
+    gcosban_massdel(GCBAN_CONF, NULL);
 
     initclass();
     new_confopts = 0;
@@ -2226,8 +2212,8 @@ int rehash(aClient *cptr, aClient *sptr, int sig)
     build_rplcache();
     nextconnect = 1;    /* reset autoconnects */
 
-    /* replay journal if necessary */
-    klinestore_init( (sig == SIGHUP) ? 0 : 1 );
+    /* check journal */
+    klinestore_init(1);
 
     rehashed = 1;
 

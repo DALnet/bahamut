@@ -32,7 +32,7 @@
 #include <utmp.h>
 #include <fcntl.h>
 #include "h.h"
-#include "userban.h"
+#include "simban.h"
 
 extern int do_user(char *, aClient *, aClient *, char *, char *, char *,
 		   unsigned long, unsigned int, char *);
@@ -92,7 +92,7 @@ static int do_nick_name(char *nick) {
  */
 int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
-    struct simBan *ban;
+    SimBanInfo *sbi;
     aClient    *acptr, *uplink;
     Link       *lp;
     char        nick[NICKLEN + 2];
@@ -446,7 +446,7 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	if (MyConnect(sptr))
 	{
 #endif
-	    if (!IsOper(sptr) && (ban = check_mask_simbanned(nick, SBAN_NICK)))
+	    if (!IsOper(sptr) && (sbi = simban_checknick(nick)))
 	    {
 #ifndef DONT_CHECK_QLINE_REMOTE
 		if (!MyConnect(sptr))
@@ -461,25 +461,18 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		if (MyConnect(sptr))
 		{
 		    sendto_one(sptr, err_str(ERR_ERRONEUSNICKNAME), me.name,
-			       BadPtr(parv[0]) ? "*" : parv[0], nick,
-			       BadPtr(ban->reason) ? "Erroneous Nickname" :
-			       ban->reason);
+			       BadPtr(parv[0]) ? "*" : parv[0], nick, sbi->reason);
 		    sendto_realops_lev(REJ_LEV,
 				       "Forbidding restricted nick %s from %s.",
 				       nick, get_client_name(cptr, TRUE));
 
-            if (ban->autocap)
+            if (sbi->plimit)
             {
-                time_t maxexp = NOW + ban->autocap;
-                ban->duration += 5;
-                if ((ban->timeset + ban->duration) > maxexp)
-                {
-                    ban->duration = maxexp - ban->timeset;
-                    sendto_realops_lev(REJ_LEV, "Resetting expire time for"
-                                       " restricted nick %s on try from %s",
-                                       nick, get_client_name(cptr, TRUE));
-                }
+                sendto_realops_lev(REJ_LEV, "Resetting expire time for"
+                                   " restricted nick %s on try from %s",
+                                   nick, get_client_name(cptr, TRUE));
             }
+            /* XXX punish */
 		    return 0;
 		}
 	    }
@@ -594,28 +587,21 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	/* Client setting NICK the first time */
 	if (MyConnect(sptr))
 	{
-        if ((ban = check_mask_simbanned(nick, SBAN_NICK)))
+        if ((sbi = simban_checknick(nick)))
         {
             sendto_one(sptr, err_str(ERR_ERRONEUSNICKNAME), me.name,
-                       BadPtr(parv[0]) ? "*" : parv[0], nick,
-                       BadPtr(ban->reason) ? "Erroneous Nickname" :
-                       ban->reason);
+                       BadPtr(parv[0]) ? "*" : parv[0], nick, sbi->reason);
             sendto_realops_lev(REJ_LEV,
                                "Forbidding restricted nick %s from %s.", nick,
                                get_client_name(cptr, TRUE));
 
-            if (ban->autocap)
+            if (sbi->plimit)
             {
-                time_t maxexp = NOW + ban->autocap;
-                ban->duration += 5;
-                if ((ban->timeset + ban->duration) > maxexp)
-                {
-                    ban->duration = maxexp - ban->timeset;
-                    sendto_realops_lev(REJ_LEV, "Resetting expire time for"
-                                       " restricted nick %s on try from %s",
-                                       nick, get_client_name(cptr, TRUE));
-                }
+                sendto_realops_lev(REJ_LEV, "Resetting expire time for"
+                                   " restricted nick %s on try from %s",
+                                   nick, get_client_name(cptr, TRUE));
             }
+            /* XXX punish */
             return 0;
         }
     }
