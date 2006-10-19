@@ -566,8 +566,8 @@ attach_iline(aClient *cptr, aAllow *allow, char *uhost, int doid)
 static int oper_access[] =
 {
     ~0,            '*',
-    OFLAG_LOCAL,   'o',
     OFLAG_GLOBAL,  'O',
+    OFLAG_LOCAL,   'o',
     OFLAG_REHASH,  'r',
     OFLAG_DIE,     'D',
     OFLAG_RESTART, 'R',
@@ -590,6 +590,7 @@ static int oper_access[] =
     OFLAG_UMODEb,  'W',
     OFLAG_UMODEd,  'd',
     OFLAG_UMODEy,  'y',
+    OFLAG_PRIMARY, 'P',
     0, 0 };
 
 int
@@ -2298,6 +2299,27 @@ static int lookup_confhost(aConnect *aconn)
     }
     /* NOTREACHED */
     return 0;
+}
+
+/* oflagtotext()
+ * Return the oflags in human readable format.
+ * Oct06 -Kobi_S
+ */
+char *oflagtotext(int oflags)
+{
+    static char res[50];
+    int *i, flag, len = 0;
+
+    for (i=oper_access; (flag = *i); i+=2)
+        if ((oflags & flag) == flag)
+        {
+            res[len++] = (char)(*(i+1));
+            oflags &= ~flag;
+        }
+
+    res[len++] = 0;
+
+    return res;
 }
 
 u_long

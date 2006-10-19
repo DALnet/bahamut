@@ -476,6 +476,7 @@ typedef struct UserTag UserTag;
 #define OFLAG_UMODEd    0x00400000  /* Oper can set umode +d : debug */
 #define OFLAG_UMODEb    0x00800000  /* Oper can set umode +b : chatops */
 #define OFLAG_UMODEF	0x01000000  /* Oper can set umode +F : no flood throttling */
+#define OFLAG_PRIMARY	0x02000000  /* Primary oper block */
 #define OFLAG_LOCAL	(OFLAG_REHASH|OFLAG_HELPOP|OFLAG_GLOBOP|OFLAG_WALLOP|\
                          OFLAG_LOCOP|OFLAG_LROUTE|OFLAG_LKILL|OFLAG_KLINE|\
                          OFLAG_UNKLINE|OFLAG_LNOTICE|OFLAG_UMODEc|OFLAG_UMODEf|OFLAG_UMODEd|\

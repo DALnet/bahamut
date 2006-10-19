@@ -52,6 +52,7 @@ extern aCache *cachetop;
 #ifdef DEBUGMODE
 extern void report_fds(aClient *);
 #endif
+extern char *oflagtotext(int oflags); /* For stats o */
 
 /* internal function defines */
 
@@ -791,7 +792,7 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
                     for(i = 0; tmp->hosts[i]; i++)
                         sendto_one(sptr, rpl_str(RPL_STATSOLINE), me.name,
                                 sptr->name, (tmp->legal == -1 ? "Ox" : "O"),
-                                tmp->hosts[i], tmp->nick, tmp->flags,
+                                tmp->hosts[i], tmp->nick, oflagtotext(tmp->flags),
                                 tmp->class->name);
             }
             else
@@ -801,7 +802,7 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
                     if (tmp->legal == -1)
                         continue;
                     sendto_one(sptr, rpl_str(RPL_STATSOLINE), me.name,
-                            sptr->name, "O", "*", tmp->nick, tmp->flags,
+                            sptr->name, "O", "*", tmp->nick, oflagtotext(tmp->flags),
                             tmp->class->name);
                 }
             }
