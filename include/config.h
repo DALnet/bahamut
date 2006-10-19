@@ -622,7 +622,7 @@
  * will be preallocated for the entire whowas array when ircd is
  * started.
  */
-#define NICKNAMEHISTORYLENGTH 2048
+#define NICKNAMEHISTORYLENGTH 8192
 
 /*
  * TIMESEC - Time interval to wait and if no messages have been
