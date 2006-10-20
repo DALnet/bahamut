@@ -29,6 +29,8 @@ Changes for 1.8.4
 - Fixed LIST wildcard mask detection
 - Fixed autoconnects being mysteriously disabled during conf changes
   (from Mark Rutherford)
+- Fixed conf file not being found when ircd run from relative paths
+  (from Azoff)
 - Increased channel ban list to 200 entries
 - Increased channel invite list to 100 entries
 - Increased channel exception list to 100 entries
@@ -40,6 +42,7 @@ Changes for 1.8.4
 - Changed oper access flag * to include everything
 - Changed failed link messages to provide more info to +A opers
 - Changed cmode +c to block all control codes (except CTCP and ISO-2022)
+- Changed RPL_TIME to include raw timestamp
 - Added oper access flags for umodes ydb
 - Added string probability calculation to RWHO
 - Added automatic rejection of certain proxy types
