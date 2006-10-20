@@ -27,7 +27,10 @@ Changes for 1.8.4
 - Fixed memory leaks in SVSHOLD and LIST options
 - Fixed busy loops with the epoll socket engine
 - Fixed LIST wildcard mask detection
+- Increased channel ban list to 200 entries
 - Increased channel invite list to 100 entries
+- Increased channel exception list to 100 entries
+- Increased WHOWAS cache to 8192 entries
 - Removed WATCH and DCCALLOW limits for opers (from wshs)
 - Removed 2-user minimum default for LIST filters
 - Removed support for wildcard nick targets in remotable commands

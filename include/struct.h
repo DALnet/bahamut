@@ -123,9 +123,9 @@ typedef struct SAliasInfo AliasInfo;
 #define	KEYLEN		    23
 #define	BUFSIZE		    512	/* WARNING: *DONT* CHANGE THIS!!!! */
 #define	MAXRECIPIENTS       20
-#define	MAXBANS	 	    100
+#define	MAXBANS	 	    200
 #define MAXINVITELIST       100
-#define MAXEXEMPTLIST       45
+#define MAXEXEMPTLIST       100
 
 #define MOTDLINELEN	    90
 
