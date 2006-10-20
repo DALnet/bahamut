@@ -28,6 +28,7 @@ Changes for 1.8.4
 - Fixed busy loops with the epoll socket engine
 - Fixed LIST wildcard mask detection
 - Increased channel ban list to 200 entries
+- Increased channel ban list to 200 entries
 - Increased channel invite list to 100 entries
 - Increased channel exception list to 100 entries
 - Increased WHOWAS cache to 8192 entries
