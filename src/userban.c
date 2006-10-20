@@ -1621,58 +1621,6 @@ void userban_sweep(struct userBan *ban)
     }
 }
 
-
-/*
- * ks_dumpklines() helper
- */
-static void
-ks_dumplist(int f, uBanEnt *be)
-{
-    struct userBan *ub;
-
-    /* klines.c */
-    extern void ks_write(int, char, struct userBan *);
-
-    for (; be; be = LIST_NEXT(be, lp))
-    {
-        ub = be->ban;
-
-        /* must be local and not from conf */
-        if ((ub->flags & (UBAN_LOCAL|UBAN_CONF)) != UBAN_LOCAL)
-            continue;
-
-        /* must be over the storage threshold duration */
-        if ((ub->flags & UBAN_TEMPORARY)
-            && ub->duration < (KLINE_MIN_STORE_TIME * 60))
-            continue;
-
-        ks_write(f, '+', ub);
-    }
-}
-
-/*
- * Called from klines.c during a storage GC.
- */
-void
-ks_dumpklines(int f)
-{
-    int i, j;
-
-    for (i = 0; i < 256; i++)
-        for (j = 0; j < 256; j++)
-            ks_dumplist(f, LIST_FIRST(&CIDR4_bans[i][j]));
-
-    ks_dumplist(f, LIST_FIRST(&CIDR4BIG_bans));
-    ks_dumplist(f, LIST_FIRST(&host_bans.wild_list));
-    ks_dumplist(f, LIST_FIRST(&ip_bans.wild_list));
-
-    for (i = 0; i < HASH_SIZE; i++)
-    {
-        ks_dumplist(f, LIST_FIRST(&host_bans.hash_list[i]));
-        ks_dumplist(f, LIST_FIRST(&ip_bans.hash_list[i]));
-    }
-}
-
 static void
 mc_userlist(MemCount *mc, uBanEnt *be)
 {

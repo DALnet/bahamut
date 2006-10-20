@@ -1813,7 +1813,6 @@ static char *cluster(char *hostname)
     return (result);
 }
 
-#if 0
 int m_kline(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     struct userBan *ban, *oban;
@@ -2158,7 +2157,6 @@ int m_kline(aClient *cptr, aClient *sptr, int parc, char *parv[])
     return 0;
 #endif /* LOCKFILE */
 }
-#endif
 
 /*
  * isnumber()
@@ -2205,7 +2203,7 @@ static int isnumber(char *p)
     return (result);
 }
 
-#if 0
+#ifdef UNKLINE
 /*
  * * m_unkline 
  * Added Aug 31, 1997 
@@ -2278,7 +2276,6 @@ int m_unkline(aClient *cptr, aClient *sptr, int parc, char *parv[])
             host = get_userban_host(oban, tmp, 512);
 
             remove_userban(oban);
-            klinestore_remove(oban);
             userban_free(oban);
             userban_free(ban);
 
@@ -3146,11 +3143,8 @@ m_svskill(aClient *cptr, aClient *sptr, int parc, char *parv[])
 int 
 m_akill(aClient *cptr, aClient *sptr, int parc, char *parv[]) 
 {
-    aClient *acptr;
-    char *user, *host, *reason, *akiller, buffer[1024], *current_date, 
-        fbuf[512];
+    char *user, *host, *reason, *akiller, buffer[1024], *current_date;
     time_t length=0, timeset=0;
-    int i;
     struct userBan *ban, *oban;
 
     if(!IsServer(sptr) || (parc < 6))

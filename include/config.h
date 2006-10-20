@@ -203,26 +203,10 @@
  * DEFAULT_KLINE_TIME
  *
  * Define this to the default time for a kline (in minutes) for klines with
- * unspecified times.  A time of 0 will create a permanent kline.
+ * unspecified times. undefine this for all klines with unspecified times
+ * to be perm. (if defined, a kline with zero time will be perm). -- lucas
  */
 #define DEFAULT_KLINE_TIME 30
-
-/*
- * KLINE_MIN_STORE_TIME
- *
- * The minimum duration (in minutes) a kline must be before it will be stored
- * in the on-disk journal.
- */
-#define KLINE_MIN_STORE_TIME 180
-
-/*
- * KLINE_STORE_COMPACT_THRESH
- *
- * The maximum number of entries to write to the active kline storage journal
- * before compacting it.  This threshold prevents the journal from growing
- * indefinitely while klines are added and removed on a running server.
- */
-#define KLINE_STORE_COMPACT_THRESH 1000
 
 /*
  * Pretty self explanatory: These are shown in server notices and to the 
@@ -232,6 +216,21 @@
 #define NETWORK_BAN_NAME "autokill"
 #define LOCAL_BANNED_NAME "k-lined"
 #define NETWORK_BANNED_NAME "autokilled"
+
+/*
+ * LOCKFILE - Exclusive use of ircd.conf and kline.conf during writes
+ * 
+ * This creates a lockfile prior to writes to ircd.conf or kline.conf, and
+ * can be used in conjunction with viconf (included in the tools
+ * directory). This prevents loss of data when klines are added while
+ * someone is manually editting the file.  File writes will be retried
+ * at the next KLINE, ZLINE, REHASH, or after CHECK_PENDING_KLINES
+ * minutes have elapsed.
+ * 
+ * If you do not wish to use this feature, leave LOCKFILE #undef
+ */
+#define LOCKFILE "/tmp/ircd.conf.lock"
+#define	CHECK_PENDING_KLINES	10	/* in minutes */
 
 /*
  * RFC1035_ANAL Defining this causes ircd to reject hostnames with
@@ -383,6 +382,13 @@
 # define MAX_AWAY_TIME 180  /* time in seconds */
 # define MAX_AWAY_COUNT 5
 #endif
+
+/*
+ * UNKLINE - /quote unkline - remove klines on the fly if you choose to
+ * support this, an oper can do a /quote UNKLINE of an exact matching
+ * KLINE to remove the kline
+ */
+#define UNKLINE
 
 /*
  * WARN_NO_NLINE Define this if you want ops to get noticed about
