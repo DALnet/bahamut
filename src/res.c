@@ -735,7 +735,7 @@ static int proc_answer(ResRQ * rptr, HEADER *hptr, char *buf, char *eob)
 	int strangeness = 0;
 	char tmphost[HOSTLEN];
 
-	hostbuf[HOSTLEN] = '\0';
+	hostbuf[HOSTLEN+1] = '\0';
 	cp += n;
 	type = (int) _getshort(cp);
 	cp += sizeof(short);
@@ -795,7 +795,7 @@ static int proc_answer(ResRQ * rptr, HEADER *hptr, char *buf, char *eob)
     while (hptr->ancount-- > 0 && cp && cp < eob) 
     {
 	n = dn_expand(buf, eob, cp, hostbuf, sizeof(hostbuf));
-	hostbuf[HOSTLEN] = '\0';
+	hostbuf[HOSTLEN+1] = '\0';
 	
 	if (n <= 0)
 	    break;
@@ -823,7 +823,7 @@ static int proc_answer(ResRQ * rptr, HEADER *hptr, char *buf, char *eob)
 	    {
 		strncpy(hostbuf, _res.defdname,
 			sizeof(hostbuf) - 1 - len);
-		hostbuf[HOSTLEN] = '\0';
+		hostbuf[HOSTLEN+1] = '\0';
 		len = MIN(len + strlen(_res.defdname),
 			  sizeof(hostbuf)) - 1;
 	    }
@@ -951,7 +951,7 @@ static int proc_answer(ResRQ * rptr, HEADER *hptr, char *buf, char *eob)
 	     * dn_expand also guarantee buffer is terminated with
 	     * null byte? Lets not take chances. -Dianora
 	     */
-	    hostbuf[HOSTLEN] = '\0';
+	    hostbuf[HOSTLEN+1] = '\0';
 	    cp += n;
 	    len = strlen(hostbuf);
 	    
@@ -1067,7 +1067,7 @@ static int proc_answer(ResRQ * rptr, HEADER *hptr, char *buf, char *eob)
 		break;
 	    }
 	    
-	    hostbuf[HOSTLEN] = '\0';
+	    hostbuf[HOSTLEN+1] = '\0';
 	    cp += n;
 	    
 	    add_acceptable_answer(hostbuf);
