@@ -344,7 +344,7 @@ tstats(aClient *cptr, char *name)
 
     sp = &tmp;
     memcpy((char *) sp, (char *) ircstp, sizeof(*sp));
-    for (i = 0; i < highest_fd; i++)
+    for (i = 0; i <= highest_fd; i++)
     {
         if (!(acptr = local[i]))
             continue;

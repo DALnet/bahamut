@@ -555,7 +555,7 @@ void get_paths(char *argv)
         {
             /* found the ircd.conf in the directory local
              * to our binary itself */
-            strcpy(configfile, tmp);
+            strcpy(configfile, tmp2);
             close(fd);
             strcpy(dpath, t_d2path);
             return;

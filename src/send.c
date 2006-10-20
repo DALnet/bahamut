@@ -1131,7 +1131,7 @@ void sendto_all_servmask(aClient *from, char *mask, char *pattern, ...)
         pfix = va_arg(vl, char *);
         k = prefix_buffer(0, from, pfix, sendbuf, pattern, vl);
         sbuf_begin_share(sendbuf, k, &share_buf);
-        for (i = 0; i < highest_fd; i++)
+        for (i = 0; i <= highest_fd; i++)
         {
             if (!(cptr = local[i]))
                 continue;
@@ -2010,8 +2010,10 @@ memcount_send(MCsend *mc)
     mc->s_bufs.m += sizeof(remotebuf);
     mc->s_bufs.c++;
     mc->s_bufs.m += sizeof(selfbuf);
+#ifdef HAVE_ENCRYPTION_ON
     mc->s_bufs.c++;
     mc->s_bufs.m += sizeof(rc4buf);
+#endif
 
     return 0;
 }

@@ -1083,7 +1083,7 @@ confadd_allow(cVar *vars[], int lnum)
         {
             if(x->port > 0)
             {
-                confparse_error("Multiple host definitions", lnum);
+                confparse_error("Multiple port definitions", lnum);
                 free_allow(x);
                 return -1;
             }
