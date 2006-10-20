@@ -67,6 +67,7 @@ test: all
 	  echo '		*** zlib test FAILED ***'; \
 	fi
 
+build: libz.a
 libz.a: $(OBJS) $(OBJA)
 	$(AR) $@ $(OBJS) $(OBJA)
 	-@ ($(RANLIB) $@ || true) >/dev/null 2>&1
@@ -126,8 +127,8 @@ clean:
 
 maintainer-clean: distclean
 distclean: clean
-	cp -p Makefile.in Makefile
-	cp -p zconf.in.h zconf.h
+	rm -f Makefile
+	rm -f zconf.h
 	rm -f .DS_Store
 
 tags:
