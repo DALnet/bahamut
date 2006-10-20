@@ -28,7 +28,6 @@ Changes for 1.8.4
 - Fixed busy loops with the epoll socket engine
 - Fixed LIST wildcard mask detection
 - Increased channel ban list to 200 entries
-- Increased channel ban list to 200 entries
 - Increased channel invite list to 100 entries
 - Increased channel exception list to 100 entries
 - Increased WHOWAS cache to 8192 entries
@@ -41,6 +40,7 @@ Changes for 1.8.4
 - Changed cmode +c to block all control codes (except CTCP and ISO-2022)
 - Added oper access flags for umodes ydb
 - Added string probability calculation to RWHO
+- Upgraded zlib to 1.2.3
 
 - Reworked memory accounting:
     stats z  shows short summary
