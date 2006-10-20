@@ -47,6 +47,7 @@ Changes for 1.8.4
 - Added noident/nodns/server flags to port blocks
 - Added "P" (primary o-line) flag to oper blocks
 - Changed stats o output to be in human-readable format
+- Upgraded zlib to 1.2.3
 
 - Reworked memory accounting:
     stats z  shows short summary
