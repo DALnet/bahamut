@@ -48,9 +48,9 @@ static int probabilities[BASESIZE][BASESIZE];
 static char pcharset[256];
 
 /* nick/user/gcos count->percent scale factors */
-static double nscale;
-static double uscale;
-static double gscale;
+static double nscale_lo, nscale_hi;
+static double uscale_lo, uscale_hi;
+static double gscale_lo, gscale_hi;
 
 /* nick/user/gcos unscaled averages */
 static int navg;
@@ -315,19 +315,22 @@ static void set_probabilities(void)
     if (ntotal)
     {
         navg = ntotal / ncount;
-        nscale = 100.0 / nmax;
+        nscale_lo = 50.0 / navg;
+        nscale_hi = 50.0 / (nmax - navg);
     }
 
     if (utotal)
     {
         uavg = utotal / ucount;
-        uscale = 100.0 / umax;
+        uscale_lo = 50.0 / uavg;
+        uscale_hi = 50.0 / (umax - uavg);
     }
 
     if (gtotal)
     {
         gavg = gtotal / gcount;
-        gscale = 100.0 / gmax;
+        gscale_lo = 50.0 / gavg;
+        gscale_hi = 50.0 / (gmax - gavg);
     }
 }
 
@@ -362,9 +365,9 @@ void probability_init(void)
     navg = 50;
     uavg = 50;
     gavg = 50;
-    nscale = 1.0;
-    uscale = 1.0;
-    gscale = 1.0;
+    nscale_hi = nscale_lo = 0.5;
+    uscale_hi = uscale_lo = 0.5;
+    gscale_hi = gscale_lo = 0.5;
     navgfunc = pavg_skip;
     uavgfunc = pavg_skip;
     gavgfunc = pavg_skip;
@@ -477,13 +480,19 @@ void get_probabilities(aClient *ac, int *np, int *up, int *gp)
     int p;
 
     p = navgfunc(ac->name, PCS_NICK);
-    *np = (p < 0 ? navg : p) * nscale;
+    if (p < 0)
+        p = navg;
+    *np = (p > navg) ? ((p - navg) * nscale_hi + 50) : (p * nscale_lo);
 
     p = uavgfunc(ac->user->username, PCS_USER);
-    *up = (p < 0 ? uavg : p) * uscale;
+    if (p < 0)
+        p = uavg;
+    *up = (p > uavg) ? ((p - uavg) * uscale_hi + 50) : (p * uscale_lo);
 
     p = gavgfunc(ac->info, PCS_GCOS);
-    *gp = (p < 0 ? gavg : p) * gscale;
+    if (p < 0)
+        p = gavg;
+    *gp = (p > gavg) ? ((p - gavg) * gscale_hi + 50) : (p * gscale_lo);
 }
 
 u_long
