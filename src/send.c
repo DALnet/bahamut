@@ -437,9 +437,8 @@ void sendto_alias(AliasInfo *ai, aClient *from, char *pattern, ...)
     va_start(vl, pattern);
     to = ai->client->from;
 
-    /* use shortforms only for non-super or capable super servers */
-    if (!IsULine(to) || ((confopts & FLAGS_SERVHUB)
-                         && (to->serv->uflags & ULF_SFDIRECT)))
+    /* use shortforms only for non-super servers */
+    if (!IsULine(to))
         len = ircsprintf(sendbuf, ":%s %s :", from->name, ai->shortform);
     else
 #ifdef PASS_SERVICES_MSGS
@@ -587,9 +586,6 @@ void sendto_channel_butone(aClient *one, aClient *from, aChannel *chptr,
         if (acptr->from == one)
             continue; /* ...was the one I should skip */
 
-        if((confopts & FLAGS_SERVHUB) && IsULine(acptr))
-            continue;
-
         i = acptr->from->fd;
         if (MyClient(acptr)) 
         {
@@ -660,9 +656,6 @@ void sendto_channel_remote_butone(aClient *one, aClient *from, aChannel *chptr,
         if (acptr->from == one)
             continue; /* ...was the one I should skip */
 
-        if((confopts & FLAGS_SERVHUB) && IsULine(acptr))
-            continue;
-
         i = acptr->from->fd;
         if (!MyClient(acptr)) 
         {
@@ -690,41 +683,6 @@ void sendto_channel_remote_butone(aClient *one, aClient *from, aChannel *chptr,
     
     sbuf_end_share(&share_buf, 1);
     
-    va_end(vl);
-    return;
-}
-
-/*
- * sendto_server_butone_services
- * 
- * Send a message to all connected servers except the client 'one' and super
- * servers with the specified flag (if in SERVHUB mode).
- */
-void sendto_serv_butone_super(aClient *one, int flag, char *pattern, ...) 
-{
-    aClient *cptr;
-    int k = 0;
-    fdlist send_fdlist;
-    va_list vl;
-    DLink *lp;
-    
-
-    va_start(vl, pattern);
-    for (lp = server_list; lp; lp = lp->next)
-    {
-        cptr = lp->value.cptr;
-
-        if ((confopts & FLAGS_SERVHUB) && IsULine(cptr)
-            && (!flag || (cptr->serv->uflags & flag)))
-            continue;
-
-        if (one && cptr == one->from)
-            continue;
-        send_fdlist.entry[++k] = cptr->fd;
-    }
-    send_fdlist.last_entry = k;
-    if (k)
-        vsendto_fdlist(&send_fdlist, pattern, vl);
     va_end(vl);
     return;
 }
@@ -1896,9 +1854,6 @@ void sendto_channelflags_butone(aClient *one, aClient *from, aChannel *chptr,
         acptr = cm->cptr;
 
         if (acptr->from == one || !(cm->flags & flags))
-            continue;
-
-        if ((confopts & FLAGS_SERVHUB) && IsULine(acptr))
             continue;
 
         if (MyConnect(acptr))

@@ -655,13 +655,6 @@ typedef struct Whowas
 #define CONN_DKEY	0x010	/* cryptable   */
 #define CONN_HUB	0x100	/* hubbable!   */
 
-/* U:lined flags in Server struct */
-
-#define ULF_SFDIRECT    0x00000001  /* send shortform commands */
-#define ULF_REQTARGET   0x00000002  /* require @server target on PRIVMSGs */
-#define ULF_NOBTOPIC    0x00000010  /* don't send TOPICs on burst */
-#define ULF_NOAWAY      0x00000020  /* don't send AWAYs at all */
-
 
 struct Conf_Connect
 {
@@ -822,7 +815,6 @@ struct Server
 #endif
     void       *zip_out;
     void       *zip_in;
-    long        uflags;             /* U:lined flags */
 };
 
 struct Client 

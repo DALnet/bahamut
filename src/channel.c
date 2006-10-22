@@ -3115,7 +3115,6 @@ void send_topic_burst(aClient *cptr)
     aChannel *chptr;
     aClient *acptr;
 
-    if (!(confopts & FLAGS_SERVHUB) || !(cptr->serv->uflags & ULF_NOBTOPIC))
     for (chptr = channel; chptr; chptr = chptr->nextch)
     {
         if(chptr->topic[0] != '\0')
@@ -3123,7 +3122,6 @@ void send_topic_burst(aClient *cptr)
                        chptr->topic_nick, chptr->topic_time, chptr->topic);
     }
 
-    if (!(confopts & FLAGS_SERVHUB) || !(cptr->serv->uflags & ULF_NOAWAY))
     for (acptr = client; acptr; acptr = acptr->next)
     {
         if(!IsPerson(acptr) || acptr->from == cptr)
