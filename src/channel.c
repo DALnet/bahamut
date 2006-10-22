@@ -3515,13 +3515,13 @@ int m_list(aClient *cptr, aClient *sptr, int parc, char *parv[])
         for (lp = lopt->yeslist; lp; lp = next)
         {
             next = lp->next;
-			MyFree(lp->value.cp);
+            MyFree(lp->value.cp);
             free_link(lp);
         }
         for (lp = lopt->nolist; lp; lp = next)
         {
             next = lp->next;
-			MyFree(lp->value.cp);
+            MyFree(lp->value.cp);
             free_link(lp);
         }
         MyFree(sptr->user->lopt);
