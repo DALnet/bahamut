@@ -430,7 +430,7 @@ static char *replies[] =
     /* 388 */	                NULL,
     /* 389 */	                NULL,
     /* 390 */	                NULL,
-    /* 391 RPL_TIME */		":%s 391 %s %s :%s",
+    /* 391 RPL_TIME */		":%s 391 %s %s %d :%s",
     /* 392 */	                NULL,
     /* 393 */	                NULL,
     /* 394 */	                NULL,

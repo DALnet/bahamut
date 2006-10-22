@@ -27,6 +27,8 @@ Changes for 1.8.4
 - Fixed memory leaks in SVSHOLD and LIST options
 - Fixed busy loops with the epoll socket engine
 - Fixed LIST wildcard mask detection
+- Fixed conf file not being found when ircd run from relative paths
+  (from Azoff)
 - Increased channel ban list to 200 entries
 - Increased channel invite list to 100 entries
 - Increased channel exception list to 100 entries
@@ -38,6 +40,7 @@ Changes for 1.8.4
 - Changed oper access flag * to include everything
 - Changed failed link messages to provide more info to +A opers
 - Changed cmode +c to block all control codes (except CTCP and ISO-2022)
+- Changed RPL_TIME to include raw timestamp
 - Added oper access flags for umodes ydb
 - Added string probability calculation to RWHO
 - Upgraded zlib to 1.2.3
