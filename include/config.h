@@ -157,7 +157,7 @@
  * Define this to cause PRIVMSG <service> to be passed to services as-is,
  * instead of being converted to the shortform ("PRIVMSG NickServ" -> "NS").
  * Useful if services behaves differently when it gets a target of <service>
- * instead of <service>@<server>.  DENY_SERVICES_MSGS overrides this.
+ * instead of <service>@<server>.
  */
 #define PASS_SERVICES_MSGS
 
