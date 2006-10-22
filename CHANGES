@@ -67,21 +67,9 @@ Changes for 1.8.4
     - U:lined clients talk through SILENCE
     - RPL_AWAY response sent by sender's server, not recipient's
     - services-related behavior controlled by config.h
-      (DENY_SERVICES_MSGS, PASS_SERVICES_MSGS, SUPER_TARGETS_ONLY)
-
-- Reworked services special-casing:
-    - shortform commands (NS/CS/etc) always sent between normal servers,
-      translated to long forms for super servers
-    - in SERVICESHUB mode:
-        - shortforms sent to Services_Name
-        - AWAY never sent to Services_Name
-        - TOPIC in initial netburst not sent to Services_Name or Stats_Name
-        - GOPER/GNOTICE/GLOBOPS/CHATOPS never sent to super servers
-        - channel PRIVMSG/NOTICE never sent to super servers
+      (PASS_SERVICES_MSGS, SUPER_TARGETS_ONLY)
 
 - Server protocol changes:
-    Added CHANKILL <channel> [reason]
-      completely destroys a channel and related state
     Shortform commands are used for non-ULined links
       NS CS MS RS OS HS SS
 
