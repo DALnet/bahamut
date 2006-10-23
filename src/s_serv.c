@@ -1953,6 +1953,13 @@ int m_kline(aClient *cptr, aClient *sptr, int parc, char *parv[])
     }
 #endif
 
+    if (temporary_kline_time == 0)
+    {
+        sendto_one(sptr, ":%s NOTICE %s :Permanent k-lines are disabled.",
+                   me.name, parv[0]);
+        return 0;
+    }
+
     if (parc > 2) 
     {
         if (*argv)
