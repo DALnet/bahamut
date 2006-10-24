@@ -1960,7 +1960,7 @@ m_whois(aClient *cptr, aClient *sptr, int parc, char *parv[])
         }
         
         if(IsAnOper(sptr) && IsSquelch(acptr))
-            sendto_one(sptr, rpl_str(RPL_WHOISTEXT), me.name, parv[0], 
+            sendto_one(sptr, rpl_str(RPL_WHOISTEXT), me.name, parv[0], name, 
                        IsWSquelch(acptr) ?  "User is squelched (warned)" :
                        "User is squelched (silent)");
         
