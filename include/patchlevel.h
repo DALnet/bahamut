@@ -21,13 +21,6 @@
 #ifndef __patchlevel_header__
 #define __patchlevel_header__
 
-/* these don't go in the version itself, but they're importany anyways */
-#define RELEASE 1
-#define BETA    2
-#define CURRENT 3
-
-#define BRANCHSTATUS CURRENT
-
 #define BASENAME "bahamut"
 #define MAJOR 1
 #define MINOR 8
@@ -38,4 +31,3 @@
 void build_version(void);
 
 #endif
-
