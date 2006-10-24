@@ -366,7 +366,7 @@ static char *replies[] =
     /* 334 RPL_COMMANDSYNTAX */	":%s 334 %s :%s",
     /* 335 */	                NULL,
     /* 336 */	                NULL,
-    /* 337 RPL_WHOISTEXT*/	":%s 337 %s :%s",
+    /* 337 RPL_WHOISTEXT*/	":%s 337 %s %s :%s",
     /* 338 RPL_WHOISACTUALLY */	":%s 338 %s %s :is actually %s@%s [%s]",
     /* 339 */	                NULL,
     /* 340 */	                NULL,
