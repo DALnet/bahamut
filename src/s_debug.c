@@ -196,21 +196,6 @@ void build_rplcache(void)
         *s++ = 'w';
     
     s += ircsprintf(s, " TS%iow", TS_CURRENT);
-#ifdef BRANCHSTATUS
-    s += ircsprintf(s, "-r[%s]",
-# if BRANCHSTATUS == CURRENT
-                    "CURRENT"
-# elif BRANCHSTATUS == RELEASE
-                    "RELEASE"
-# elif BRANCHSTATUS == STABLE
-                    "STABLE"
-# elif BRANCHSTATUS == BETA
-                    "BETA"
-# else
-                    "UNKNOWN"
-# endif
-                    );
-#endif
 
 #ifdef RIDICULOUS_PARANOIA_LEVEL
     s += ircsprintf(s, " RPL%i", RIDICULOUS_PARANOIA_LEVEL);
