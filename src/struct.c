@@ -484,13 +484,3 @@ char *ch_chname(aChannel *chptr)
 {
     return chptr->chname;
 }
-
-int ch_join_start(aChannel *chptr)
-{
-    return chptr->join_start;
-}
-
-int ch_join_count(aChannel *chptr)
-{
-    return chptr->join_count;
-}

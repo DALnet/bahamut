@@ -120,5 +120,3 @@ extern time_t ch_fludblock(aChannel *);
 extern struct fludbot *ch_fluders(aChannel *);
 #endif
 extern char *ch_chname(aChannel *);
-extern int ch_join_start(aChannel *);
-extern int ch_join_count(aChannel *);

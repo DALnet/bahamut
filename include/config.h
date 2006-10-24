@@ -852,6 +852,9 @@
 #define SHORTMOTD SMPATH
 #define IRCD_PIDFILE PPATH
 
+/* token bucket size for join rate stuffs */
+#define DEFAULT_JOIN_SIZE (DEFAULT_JOIN_NUM * DEFAULT_JOIN_TIME)
+
 /* enforce a minimum, even though it'll probably break at runtime */
 #if (MAXCONNECTIONS < 20)
 # undef MAXCONNECTIONS

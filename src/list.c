@@ -251,6 +251,10 @@ aChannel *make_channel()
     
     memset((char *)chan, '\0', sizeof(aChannel));
     
+    chan->mode.jr_num = DEFAULT_JOIN_NUM;
+    chan->mode.jr_time = DEFAULT_JOIN_TIME;
+    chan->mode.jrl_size = DEFAULT_JOIN_SIZE;
+    
     return chan;
 }
 

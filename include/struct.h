@@ -1015,8 +1015,9 @@ struct SMode
     unsigned int mode;
     int         limit;
     char        key[KEYLEN + 1];
-    int		join_num;
-    int		join_time;
+    char        jr_num;     /* join rate limit: joins */
+    char        jr_time;    /* join rate limit: time */
+    short       jrl_size;   /* join rate limit: calculated token bucket size */
 };
 
 
@@ -1146,6 +1147,7 @@ struct Channel
     struct Channel *nextch, *prevch, *hnextch;
     int         hashv;		/* raw hash value */
     Mode        mode;
+    char        chname[CHANNELLEN+1];
     char        topic[TOPICLEN + 1];
     char        topic_nick[NICKLEN + 1];
     time_t      topic_time;
@@ -1164,11 +1166,12 @@ struct Channel
     time_t      fludblock;
     struct fludbot *fluders;
 #endif
-    char        chname[CHANNELLEN+1];
-    int		join_start;         /* these two are for +j watching */
-    int		join_count;
-    int     default_join_start; /* these two handle the default joinrate handling */
-    int     default_join_count;
+    short       jrl_bucket;     /* join rate limit: token bucket */
+    short       jrw_bucket;     /* join rate warning: token bucket */
+    time_t      jrl_last;       /* join rate limit: last use timestamp */
+    time_t      jrw_last;       /* join rate warning: last use timestamp */
+    int         jrw_debt_ctr;   /* join rate warning: in-debt counter */
+    int         jrw_debt_ts;    /* join rate warning: debt begin timestamp */
     unsigned int banserial;     /* used for bquiet cache */
 };
 

@@ -41,6 +41,7 @@ Changes for 1.8.4
 - Changed failed link messages to provide more info to +A opers
 - Changed cmode +c to block all control codes (except CTCP and ISO-2022)
 - Changed RPL_TIME to include raw timestamp
+- Changed cmode +j implementation to a token bucket with distributed debt
 - Added oper access flags for umodes ydb
 - Added string probability calculation to RWHO
 - Upgraded zlib to 1.2.3

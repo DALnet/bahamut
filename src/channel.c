@@ -823,62 +823,281 @@ void remove_matching_invites(aChannel *chptr, aClient *cptr, aClient *from)
 }
 #endif
 
-int check_joinrate(aChannel *chptr, time_t ts, int local, aClient *cptr)
+
+/* refill join rate warning token bucket, and count a join attempt */
+static void
+jrw_update(aChannel *chptr)
 {
-    int join_num = DEFAULT_JOIN_NUM;
-    int join_time = DEFAULT_JOIN_TIME;
+    int adj_delta;
+    int bkt_delta;
 
-    if(!local && (NOW - ts) > 60)
-        return 1; /* attempt to compensate for lag */
-
-    /* This first section checks the defaults, the second
-     * checks the channels +j settings */
-    /* Has the join_time period elapsed? */
-    if((NOW - chptr->default_join_start) > join_time)
+    if (chptr->jrw_bucket < DEFAULT_JOIN_SIZE && NOW > chptr->jrw_last)
     {
-        chptr->default_join_start = NOW;
-        chptr->default_join_count = 0;
+        adj_delta = NOW - chptr->jrw_last;
+        bkt_delta = DEFAULT_JOIN_SIZE - chptr->jrw_bucket;
+        
+        /* avoid overflow for long timespans */
+        if (adj_delta < bkt_delta)
+            adj_delta *= DEFAULT_JOIN_NUM;
+        
+        if (adj_delta > bkt_delta)
+            adj_delta = bkt_delta;
+        
+        chptr->jrw_bucket += adj_delta;
+        
+        /* bucket has a free fill (not join) slot, reset debt counter */
+        if (chptr->jrw_bucket >= DEFAULT_JOIN_NUM)
+            chptr->jrw_debt_ctr = 0;
     }
-    /* update the count here for attempts, in case a lower throttle blocks */
-    chptr->default_join_count++;
-    /* If it's local and we've filled the join count, complain
-     * to ops so they can take the appropriate measures */
-    if(local && chptr->default_join_count > join_num)
-        sendto_realops_lev(DEBUG_LEV, "Join rate warning on %s for %s!%s@%s"
-                                      " (%d in %d)",
-                           chptr->chname, cptr->name, cptr->user->username,
-                           cptr->hostip, chptr->default_join_count,
-                           NOW - chptr->default_join_start);
+    
+    /* warning bucket has a small debt... */
+    if (chptr->jrw_bucket >= 0)
+        chptr->jrw_bucket -= DEFAULT_JOIN_TIME;
+    
+    /* ...and is always current, which pins it at the rate limit */
+    chptr->jrw_last = NOW;
+    
+    /* for statistical purposes, keep count of join attempts */
+    if (chptr->jrw_debt_ctr++ == 0)
+        chptr->jrw_debt_ts = NOW;
+}
 
-    /* Has the channel set their own custom settings? */
-    if(chptr->mode.mode & MODE_JOINRATE)
+/* refill join rate throttling token bucket */
+static void
+jrl_update(aChannel *chptr)
+{
+    int adj_delta;
+    int bkt_delta;
+    int jnum, jsize;
+
+    jnum = chptr->mode.jr_num;
+    jsize = chptr->mode.jrl_size;
+    
+    /* throttling disabled */
+    if (!jsize)
+        return;
+    
+    if (chptr->jrl_bucket < jsize && NOW > chptr->jrl_last)
     {
-        if(chptr->mode.join_num == 0 || chptr->mode.join_time == 0)
-            return 1; /* channel has turned this off */
+        adj_delta = NOW - chptr->jrl_last;
+        bkt_delta = jsize - chptr->jrl_bucket;
 
-        join_time = chptr->mode.join_time;
-        join_num = chptr->mode.join_num;
+        /* avoid overflow for long timespans */
+        if (adj_delta < bkt_delta)
+            adj_delta *= jnum;
+
+        if (adj_delta > bkt_delta)
+            adj_delta = bkt_delta;
+
+        chptr->jrl_bucket += adj_delta;
     }
-    /* Has the join_time period elapsed? */
-    if((NOW - chptr->join_start) > join_time)
-    {
-        chptr->join_start = NOW;
-        chptr->join_count = 0;
+}
+
+/*
+ * Do pre-JOIN updates.  Called for local joins only.
+ */
+static void
+joinrate_prejoin(aChannel *chptr)
+{
+    jrl_update(chptr);
+    jrw_update(chptr);
+}
+
+/*
+ * Check if a join would be allowed, warning if appropriate.
+ * Called for local joins only.
+ */
+static int
+joinrate_check(aChannel *chptr, aClient *cptr, int warn)
+{
+    int jnum, jtime, jsize;
+    
+    jnum = chptr->mode.jr_num;
+    jtime = chptr->mode.jr_time;
+    jsize = chptr->mode.jrl_size;
+    
+    /* join throttling disabled */
+    if (!jsize)
         return 1;
+    
+    /* free slot in bucket */
+    if (chptr->jrl_bucket >= jtime)
+        return 1;
+    
+    /* throttled */
+    if (warn)
+    {
+        sendto_realops_lev(DEBUG_LEV, "Join rate throttling on %s for"
+                           " %s!%s@%s (%d/%d in %d)", chptr->chname,
+                           cptr->name, cptr->user->username, cptr->hostip,
+                           (jsize + jtime - 1 - chptr->jrl_bucket) / jtime,
+                           jnum, jtime);
+    }
+    return 0;
+}
+
+/*
+ * Do post-JOIN updates.  Called for both local and remote joins.
+ */
+static void
+joinrate_dojoin(aChannel *chptr, aClient *cptr)
+{
+    int jtime, jsize;
+    int local;
+    
+    local = MyConnect(cptr);
+    jtime = chptr->mode.jr_time;
+    jsize = chptr->mode.jrl_size;
+    
+    if (!local)
+    {
+        jrw_update(chptr);
+        jrl_update(chptr);
+    }
+    else if (chptr->jrw_bucket < DEFAULT_JOIN_TIME)
+    {
+        sendto_realops_lev(DEBUG_LEV, "Join rate warning on %s for %s!%s@%s"
+                           " (%d in %d) [joined]", chptr->chname, cptr->name,
+                           cptr->user->username, cptr->hostip,
+                           chptr->jrw_debt_ctr, NOW - chptr->jrw_debt_ts);
     }
 
-    /* If it's local and we've filled the join count, say no */
-    if(local && chptr->join_count >= join_num)
+    /* remote joins cause negative penalty here (distributed throttling) */
+    /* WARNING: joinrate_check must have allowed a local join */
+    if (jsize)
     {
-        sendto_realops_lev(DEBUG_LEV, "Join rate throttling on %s for %s!%s@%s"
-                                      " (%d/%d in %d/%d)",
-                           chptr->chname, cptr->name, cptr->user->username, 
-                           cptr->hostip, chptr->join_count, join_num, 
-                           NOW - chptr->join_start, join_time);
-        return 0;
+        if (local || chptr->jrl_bucket >= -(jsize - jtime))
+        {
+            chptr->jrl_bucket -= jtime;
+            chptr->jrl_last = NOW;
+        }
     }
+}
+
+/*
+ * Send a warning notice if appropriate.  Called for local failed joins.
+ */
+static void
+joinrate_warn(aChannel *chptr, aClient *cptr)
+{
+    /* no slots free */
+    if (chptr->jrw_bucket < DEFAULT_JOIN_TIME)
+    {
+        sendto_realops_lev(DEBUG_LEV, "Join rate warning on %s for %s!%s@%s"
+                           " (%d in %d) [failed]", chptr->chname, cptr->name,
+                           cptr->user->username, cptr->hostip,
+                           chptr->jrw_debt_ctr, NOW - chptr->jrw_debt_ts);
+    }
+}
+
+#if 0
+int check_joinrate(aChannel *chptr, aClient *cptr, int local)
+{
+    int jnum, jtime, jsize;
+    int adj_delta;
+    int bkt_delta;
+    int t_limit;
+
+    /*
+     * warning counters
+     */
+    if (chptr->jrw_bucket < DEFAULT_JOIN_SIZE && NOW > chptr->jrw_last)
+    {
+        adj_delta = NOW - chptr->jrw_last;
+        bkt_delta = DEFAULT_JOIN_SIZE - chptr->jrw_bucket;
+
+        /* avoid overflow for long timespans */
+        if (adj_delta < bkt_delta)
+            adj_delta *= DEFAULT_JOIN_NUM;
+
+        if (adj_delta > bkt_delta)
+            adj_delta = bkt_delta;
+
+        chptr->jrw_bucket += adj_delta;
+    }
+
+    /* warning bucket is automatically pinned at limit, so never negative */
+    if (chptr->jrw_bucket >= DEFAULT_JOIN_TIME)
+        chptr->jrw_bucket -= DEFAULT_JOIN_TIME;
+
+    chptr->jrw_last = NOW;
+
+    /* for statistical purposes, keep count of join attempts beyond limit */
+    if (chptr->jrw_bucket < DEFAULT_JOIN_TIME)
+    {
+        if (chptr->jrw_oflow_ctr == 0)
+            chptr->jrw_oflow_ts = NOW;
+        chptr->jrw_oflow_ctr++;
+    }
+    else
+        chptr->jrw_oflow_ctr = 0;
+
+    /*
+     * throttling counters
+     */
+    if (chptr->mode.mode & MODE_JOINRATE)
+    {
+        jnum = chptr->mode.jr_num;
+        jtime = chptr->mode.jr_time;
+        jsize = chptr->mode.jrl_size;
+    }
+    else
+    {
+        jnum = DEFAULT_JOIN_NUM;
+        jtime = DEFAULT_JOIN_TIME;
+        jsize = DEFAULT_JOIN_SIZE;
+    }
+
+    if (jsize)
+    {
+        if (chptr->jrl_bucket < jsize && NOW > chptr->jrl_last)
+        {
+            adj_delta = NOW - chptr->jrl_last;
+            bkt_delta = jsize - chptr->jrl_bucket;
+
+            /* avoid overflow for long timespans */
+            if (adj_delta < bkt_delta)
+                adj_delta *= jnum;
+
+            if (adj_delta > bkt_delta)
+                adj_delta = bkt_delta;
+
+            chptr->jrl_bucket += adj_delta;
+        }
+
+        /* remote joins cause negative penalty here (distributed throttling) */
+        t_limit = local ? jtime : -(jsize - jtime);
+
+        if (chptr->jrl_bucket >= t_limit)
+        {
+            chptr->jrl_bucket -= jtime;
+            chptr->jrl_last = NOW;
+        }
+        else if (local)
+        {
+            /* limit reached, reject this join */
+            sendto_realops_lev(DEBUG_LEV, "Join rate throttling on %s for"
+                               " %s!%s@%s (%d/%d in %d)", chptr->chname,
+                               cptr->name, cptr->user->username, cptr->hostip,
+                               (jsize + jtime - 1 - chptr->jrl_bucket) / jtime,
+                               jnum, jtime);
+            return 0;
+        }
+    }
+
+    /* join was not rate limited, so warn if appropriate */
+    if (local && chptr->jrw_oflow_ctr)
+    {
+        sendto_realops_lev(DEBUG_LEV, "Join rate warning on %s for %s!%s@%s"
+                           " (%d in %d)", chptr->chname, cptr->name,
+                           cptr->user->username, cptr->hostip,
+                           chptr->jrw_oflow_ctr, NOW - chptr->jrw_oflow_ts);
+    }
+
+    /* join is ok */
     return 1;
 }
+#endif
 
 /*
  * adds a user to a channel by adding another link to the channels
@@ -1070,15 +1289,15 @@ static void channel_modes(aClient *cptr, char *mbuf, char *pbuf,
 
         if (IsMember(cptr, chptr) || IsServer(cptr) || IsULine(cptr))
         {
-            char tmp[128];
+            char tmp[16];
             if(pbuf[0] != '\0')
                 strcat(pbuf, " ");
 
-            if(chptr->mode.join_num == 0 || chptr->mode.join_time == 0)
+            if(chptr->mode.jr_num == 0 || chptr->mode.jr_time == 0)
                 ircsprintf(tmp, "0");
             else
-                ircsprintf(tmp, "%d:%d", chptr->mode.join_num, 
-                            chptr->mode.join_time);
+                ircsprintf(tmp, "%d:%d", chptr->mode.jr_num, 
+                            chptr->mode.jr_time);
 
             strcat(pbuf, tmp);
         }
@@ -1779,10 +1998,11 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
                     break;
                 *mbuf++ = 'j';
                 chptr->mode.mode &= ~MODE_JOINRATE;
-                chptr->mode.join_num = 0;
-                chptr->mode.join_time = 0;
-                chptr->join_start = 0;
-                chptr->join_count = 0;
+                chptr->mode.jr_num = DEFAULT_JOIN_NUM;
+                chptr->mode.jr_time = DEFAULT_JOIN_TIME;
+                chptr->mode.jrl_size = DEFAULT_JOIN_SIZE;
+                chptr->jrl_bucket = 0;
+                chptr->jrl_last = NOW;  /* slow start */
                 nmodes++;
                 break;
             }
@@ -1832,17 +2052,23 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
                     args++;
                     break;
                 }
+                
+                /* safety cap */
+                if (j_num > 127)
+                    j_num = 127;
+                if (j_time > 127)
+                    j_time = 127;
 
                 /* range limit for local non-samodes */
                 if (MyClient(sptr) && level < 2)
                 {
-                    /* static limits: time <= 60, 4 <= num <= 60 */
+                    /* static limits: time <= 60, 2 <= num <= 20 */
                     if (j_time > 60)
                         j_time = 60;
-                    if (j_num > 60)
-                        j_num = 60;
-                    if (j_num < 4)
-                        j_num = 4;
+                    if (j_num > 20)
+                        j_num = 20;
+                    if (j_num < 2)
+                        j_num = 2;
 
                     /* adjust number to time using min rate 1/8 */
                     tval = (j_time-1)/8+1;
@@ -1872,10 +2098,11 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
                 }
 
                 chptr->mode.mode |= MODE_JOINRATE;
-                chptr->mode.join_num = j_num;
-                chptr->mode.join_time = j_time;
-                chptr->join_start = 0;
-                chptr->join_count = 0;
+                chptr->mode.jr_num = j_num;
+                chptr->mode.jr_time = j_time;
+                chptr->mode.jrl_size = j_num * j_time;
+                chptr->jrl_bucket = 0;
+                chptr->jrl_last = NOW;  /* slow start */
                 *mbuf++ = 'j';
                 ADD_PARA(tmp);
                 args++;
@@ -2162,6 +2389,7 @@ static int can_join(aClient *sptr, aChannel *chptr, char *key)
     Link   *lp;
     int invited = 0;
     int error = 0;
+    int jrl = 0;
     char *r = NULL;
 
     for(lp = sptr->user->invited; lp; lp = lp->next)
@@ -2173,15 +2401,12 @@ static int can_join(aClient *sptr, aChannel *chptr, char *key)
         }
     }
 
-    if (invited || IsULine(sptr))
+    if (invited)
         return 1;
+    
+    joinrate_prejoin(chptr);
 
-    if (check_joinrate(chptr, NOW, 1, sptr) == 0)
-    {
-        r = "+j";
-        error = ERR_CHANNELISFULL;
-    }
-    else if (chptr->mode.mode & MODE_INVITEONLY)
+    if (chptr->mode.mode & MODE_INVITEONLY)
     {
         r = "+i";
         error = ERR_INVITEONLYCHAN;
@@ -2200,9 +2425,15 @@ static int can_join(aClient *sptr, aChannel *chptr, char *key)
         error = ERR_NEEDREGGEDNICK;
     else if (*chptr->mode.key && (BadPtr(key) || mycmp(chptr->mode.key, key)))
         error = ERR_BADCHANNELKEY;
+    else if (!joinrate_check(chptr, sptr, 1))
+    {
+        r = "+j";
+        error = ERR_CHANNELISFULL;
+        jrl = 1;
+    }
 
 #ifdef INVITE_LISTS
-    if (error && is_invited(sptr, chptr))
+    if (error && !jrl && is_invited(sptr, chptr))
         error = 0;
 #endif
 
@@ -2211,6 +2442,9 @@ static int can_join(aClient *sptr, aChannel *chptr, char *key)
 
     if (error)
     {
+        if (!jrl)
+            joinrate_warn(chptr, sptr);
+
         if (error==ERR_NEEDREGGEDNICK)
             sendto_one(sptr, getreply(ERR_NEEDREGGEDNICK), me.name, sptr->name,
                        chptr->chname, "join", aliastab[AII_NS].nick,
@@ -2245,8 +2479,10 @@ can_join_whynot(aClient *sptr, aChannel *chptr, char *key, char *reasonbuf)
         }
     }
 
-    if (invited || IsULine(sptr))
+    if (invited)
         return 0;
+    
+    joinrate_prejoin(chptr);
 
     if (chptr->mode.mode & MODE_INVITEONLY)
         reasonbuf[rbufpos++] = 'i';
@@ -2258,7 +2494,7 @@ can_join_whynot(aClient *sptr, aChannel *chptr, char *key, char *reasonbuf)
         reasonbuf[rbufpos++] = 'k';
     if (chptr->mode.limit && chptr->users >= chptr->mode.limit) 
         reasonbuf[rbufpos++] = 'l';
-    if (check_joinrate(chptr, NOW, 1, sptr) == 0)
+    if (!joinrate_check(chptr, sptr, 0))
         reasonbuf[rbufpos++] = 'j';
 
 #ifdef INVITE_LISTS
@@ -2742,7 +2978,7 @@ int m_join(aClient *cptr, aClient *sptr, int parc, char *parv[])
             add_user_to_channel(chptr, sptr, flags);
         else
             add_user_to_channel(chptr, sptr, 0);
-        chptr->join_count++;
+        joinrate_dojoin(chptr, sptr);
         /* Set timestamp if appropriate, and propagate */
         if (MyClient(sptr) && flags == CHFL_CHANOP) 
         {
@@ -4191,8 +4427,7 @@ int m_sjoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
         if (!IsMember(sptr, chptr)) 
         {
             add_user_to_channel(chptr, sptr, 0);
-            chptr->join_count++;
-            chptr->default_join_count++;
+            joinrate_dojoin(chptr, sptr);
             sendto_channel_butserv(chptr, sptr, ":%s JOIN :%s", parv[0],
                                    parv[2]);
         }
@@ -4253,12 +4488,13 @@ int m_sjoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
                     {
                         *tmpb = '\0';
                         tmpb++;
-                        mode.join_time = atoi(tmpb);
+                        mode.jr_time = atoi(tmpb);
                     }
                     else
-                        mode.join_time = 0;
+                        mode.jr_time = 0;
 
-                    mode.join_num = atoi(tmpa);
+                    mode.jr_num = atoi(tmpa);
+                    mode.jrl_size = mode.jr_num * mode.jr_time;
 
                     args++;
                     if (parc < 5 + args)
@@ -4344,18 +4580,19 @@ int m_sjoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
             strcpy(mode.key, oldmode->key);
         if (oldmode->mode & MODE_JOINRATE)
         {
-            if ((mode.mode & MODE_JOINRATE) && !mode.join_num)
+            if ((mode.mode & MODE_JOINRATE) && !mode.jr_num)
                 /* 0 wins */ ;
-            else if (oldmode->join_num && mode.join_num > oldmode->join_num)
+            else if (oldmode->jr_num && mode.jr_num > oldmode->jr_num)
                 /* more joins wins */ ;
-            else if (mode.join_num == oldmode->join_num &&
-                     mode.join_time < oldmode->join_time)
+            else if (mode.jr_num == oldmode->jr_num &&
+                     mode.jr_time < oldmode->jr_time)
                 /* same joins in less time wins */ ;
             else
             {
                 /* our settings win */
-                mode.join_num = oldmode->join_num;
-                mode.join_time = oldmode->join_time;
+                mode.jr_num = oldmode->jr_num;
+                mode.jr_time = oldmode->jr_time;
+                mode.jrl_size = oldmode->jrl_size;
             }
         }
 
@@ -4417,18 +4654,18 @@ int m_sjoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
     }
 
     if ((mode.mode & MODE_JOINRATE) && (!(oldmode->mode & MODE_JOINRATE) ||
-            (oldmode->join_num != mode.join_num || 
-            oldmode->join_time != mode.join_time)))
+            (oldmode->jr_num != mode.jr_num || 
+            oldmode->jr_time != mode.jr_time)))
     {
         char tmp[128];
 
         INSERTSIGN(1,'+')
         *mbuf++ = 'j';
         
-        if(mode.join_num == 0 || mode.join_time == 0)
+        if(mode.jr_num == 0 || mode.jr_time == 0)
             ircsprintf(tmp, "0");
         else
-            ircsprintf(tmp, "%d:%d", mode.join_num, mode.join_time);
+            ircsprintf(tmp, "%d:%d", mode.jr_num, mode.jr_time);
         ADD_PARA(tmp)
         pargs++;
     }
@@ -4467,6 +4704,8 @@ int m_sjoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
     }
         
     chptr->mode = mode;
+    chptr->jrl_bucket = 0;
+    chptr->jrl_last = NOW;  /* slow start */
         
     if (!keepourmodes) /* deop and devoice everyone! */
     {
