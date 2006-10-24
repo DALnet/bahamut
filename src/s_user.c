@@ -1732,6 +1732,13 @@ m_message(aClient *cptr, aClient *sptr, int parc, char *parv[], int notice)
                            target);
                 continue;
             }
+            if (IsNoNonReg(sptr) && !IsRegNick(acptr))
+            {
+                if (ismine && !notice)
+                    sendto_one(sptr, err_str(ERR_OWNMODE), me.name, parv[0],
+                           "+R");
+                continue;
+            }
 
 #ifdef FLUD
             if (!notice && MyFludConnect(acptr))

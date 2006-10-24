@@ -46,6 +46,7 @@ Changes for 1.8.4
 - Added oper access flags for umodes ydb
 - Added string probability calculation to RWHO
 - Upgraded zlib to 1.2.3
+- Return an error on +R send to -r clients
 
 - Reworked memory accounting:
     stats z  shows short summary
