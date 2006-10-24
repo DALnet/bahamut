@@ -51,6 +51,7 @@ Changes for 1.8.4
 - Added "P" (primary o-line) flag to oper blocks
 - Changed stats o output to be in human-readable format
 - Upgraded zlib to 1.2.3
+- Return an error on +R send to -r clients
 
 - Reworked memory accounting:
     stats z  shows short summary

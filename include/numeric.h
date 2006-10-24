@@ -237,6 +237,8 @@
 
 #define ERR_NOOPERHOST       491
 
+#define ERR_OWNMODE          494
+
 #define ERR_UMODEUNKNOWNFLAG 501
 #define ERR_USERSDONTMATCH   502
 

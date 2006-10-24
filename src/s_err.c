@@ -558,7 +558,7 @@ static char *replies[] =
     /* 491 ERR_NOOPERHOST */	":%s 491 %s :No Oper block for your host",
     /* 492 */	                NULL,
     /* 493 */	                NULL,
-    /* 494 */	                NULL,
+    /* 494 ERR_OWNMODE */	":%s 494 %s :Your own modes prohibit you from sending that type of message (%s).",
     /* 495 */	                NULL,
     /* 496 */	                NULL,
     /* 497 */	                NULL,
