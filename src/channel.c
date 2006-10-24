@@ -928,10 +928,9 @@ joinrate_check(aChannel *chptr, aClient *cptr, int warn)
     if (warn)
     {
         sendto_realops_lev(DEBUG_LEV, "Join rate throttling on %s for"
-                           " %s!%s@%s (%d/%d in %d)", chptr->chname,
+                           " %s!%s@%s (%d%s in %d)", chptr->chname,
                            cptr->name, cptr->user->username, cptr->hostip,
-                           (jsize + jtime - 1 - chptr->jrl_bucket) / jtime,
-                           jnum, jtime);
+                           jnum, (chptr->jrl_bucket < 0) ? "+" : "", jtime);
     }
     return 0;
 }
