@@ -637,7 +637,7 @@ setup_corefile()
 
 char REPORT_DO_DNS[256], REPORT_FIN_DNS[256], REPORT_FIN_DNSC[256], 
     REPORT_FAIL_DNS[256], REPORT_DO_ID[256], REPORT_FIN_ID[256], 
-    REPORT_FAIL_ID[256];
+    REPORT_FAIL_ID[256], REPORT_REJECT_ID[256];
 
 FILE *dumpfp=NULL;
 
@@ -877,6 +877,7 @@ main(int argc, char *argv[])
     sprintf(REPORT_DO_ID, REPORT_DO_ID_, me.name);
     sprintf(REPORT_FIN_ID, REPORT_FIN_ID_, me.name);
     sprintf(REPORT_FAIL_ID, REPORT_FAIL_ID_, me.name);
+    sprintf(REPORT_REJECT_ID, REPORT_REJECT_ID_, me.name);
     R_do_dns = strlen(REPORT_DO_DNS);
     R_fin_dns = strlen(REPORT_FIN_DNS);
     R_fin_dnsc = strlen(REPORT_FIN_DNSC);

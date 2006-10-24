@@ -218,6 +218,7 @@ void read_authports(aClient *cptr)
    char buf[AUTHBUFLEN], usern[USERLEN + 1];
    int len, userncnt;
    char *userid = "", *s, *reply, *os, *tmp;
+   int rejected = 0;
 
    len = recv(cptr->authfd, buf, AUTHBUFLEN, 0);
 
@@ -268,6 +269,13 @@ void read_authports(aClient *cptr)
 
          while(IsSpace(*s))
             s++;
+         
+         /* hack to reject pidentd encryption */
+         if (strlen(s) == 34)
+         {
+             rejected = 1;
+             break;
+         }
 
          userid = tmp = usern;
          /* s is the pointer to the beginning of the userid field */
@@ -295,12 +303,12 @@ void read_authports(aClient *cptr)
    cptr->authfd = -1;
    ClearAuth(cptr);
 
-   if (!*userid)
+   if (rejected || !*userid)
    {
       ircstp->is_abad++;
       strcpy(cptr->username, "unknown");
 #ifdef SHOW_HEADERS
-      sendto_one(cptr, REPORT_FAIL_ID);
+      sendto_one(cptr, rejected ? REPORT_REJECT_ID : REPORT_FAIL_ID);
 #endif
       return;
    }

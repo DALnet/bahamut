@@ -58,10 +58,12 @@
 #define REPORT_DO_ID_	   ":%s NOTICE AUTH :*** Checking Ident"
 #define REPORT_FIN_ID_	   ":%s NOTICE AUTH :*** Got Ident response"
 #define REPORT_FAIL_ID_	   ":%s NOTICE AUTH :*** No Ident response"
+#define REPORT_REJECT_ID_  ":%s NOTICE AUTH :*** Ignoring encrypted/unusable "\
+                           "Ident response"
 
 extern char REPORT_DO_DNS[256], REPORT_FIN_DNS[256], REPORT_FIN_DNSC[256], 
     REPORT_FAIL_DNS[256], REPORT_DO_ID[256], REPORT_FIN_ID[256], 
-    REPORT_FAIL_ID[256];
+    REPORT_FAIL_ID[256], REPORT_REJECT_ID[256];
 
 #include "hash.h"
 
