@@ -29,7 +29,6 @@
 #include "h.h"
 #include "userban.h"
 #include "confparse.h"
-#include "memcount.h"
 
 /* This entire file has basically been rewritten from scratch with the
  * exception of lookup_confhost and attach_Iline/attach_iline fucntions
@@ -84,7 +83,6 @@ Conf_Modules *new_modules       = NULL;
 extern void do_pending_klines(void);
 #endif
 extern void confparse_error(char *, int);
-extern int klinestore_init(int);
 
 /* initclass()
  * initialize the default class
@@ -113,6 +111,20 @@ void init_globals()
     strncpyzt(Network_Name, DEFAULT_NETWORK, sizeof(Network_Name));
     strncpyzt(Services_Name, DEFAULT_SERVICES_NAME, sizeof(Services_Name));
     strncpyzt(Stats_Name, DEFAULT_STATS_NAME, sizeof(Stats_Name));
+    snprintf(NS_Services_Name, sizeof(NS_Services_Name), "%s@%s", 
+                NICKSERV, Services_Name);
+    snprintf(CS_Services_Name, sizeof(CS_Services_Name), "%s@%s", 
+                CHANSERV, Services_Name);
+    snprintf(MS_Services_Name, sizeof(MS_Services_Name), "%s@%s", 
+                MEMOSERV, Services_Name);
+    snprintf(RS_Services_Name, sizeof(RS_Services_Name), "%s@%s", 
+                ROOTSERV, Services_Name);
+    snprintf(OS_Stats_Name, sizeof(OS_Stats_Name), "%s@%s", 
+                OPERSERV, Stats_Name);
+    snprintf(SS_Stats_Name, sizeof(SS_Stats_Name), "%s@%s", 
+                STATSERV, Stats_Name);
+    snprintf(HS_Stats_Name, sizeof(HS_Stats_Name), "%s@%s", 
+                HELPSERV, Stats_Name);
     strncpyzt(NS_Register_URL, DEFAULT_NS_REGISTER_URL,
               sizeof(NS_Register_URL));
     strncpyzt(Network_Kline_Address, DEFAULT_NKLINE_ADDY,
@@ -566,7 +578,7 @@ attach_iline(aClient *cptr, aAllow *allow, char *uhost, int doid)
  */
 static int oper_access[] =
 {
-    ~0,            '*',
+    ~(OFLAG_ADMIN|OFLAG_SADMIN), '*',
     OFLAG_LOCAL,   'o',
     OFLAG_GLOBAL,  'O',
     OFLAG_REHASH,  'r',
@@ -588,9 +600,6 @@ static int oper_access[] =
     OFLAG_UMODEc,  'u',
     OFLAG_UMODEf,  'f',
     OFLAG_UMODEF,  'F',
-    OFLAG_UMODEb,  'W',
-    OFLAG_UMODEd,  'd',
-    OFLAG_UMODEy,  'y',
     0, 0 };
 
 int
@@ -866,6 +875,7 @@ confadd_options(cVar *vars[], int lnum)
 {
     cVar *tmp;
     int c = 0;
+    char ctmp[512];
     char *s;
 
     /* here, because none of the option peice are interdependent
@@ -884,11 +894,25 @@ confadd_options(cVar *vars[], int lnum)
         {
             tmp->type = NULL;
             strncpyzt(Services_Name, tmp->value, sizeof(Services_Name));
+            sprintf(ctmp, "%s@%s", NICKSERV, Services_Name);
+            strncpyzt(NS_Services_Name, ctmp, sizeof(NS_Services_Name));
+            sprintf(ctmp, "%s@%s", CHANSERV, Services_Name);
+            strncpyzt(CS_Services_Name, ctmp, sizeof(CS_Services_Name));
+            sprintf(ctmp, "%s@%s", MEMOSERV, Services_Name);
+            strncpyzt(MS_Services_Name, ctmp, sizeof(MS_Services_Name));
+            sprintf(ctmp, "%s@%s", ROOTSERV, Services_Name);
+            strncpyzt(RS_Services_Name, ctmp, sizeof(RS_Services_Name));
         }
         else if(tmp->type && (tmp->type->flag & OPTF_STATSNAME))
         {
             tmp->type = NULL;
             strncpyzt(Stats_Name, tmp->value, sizeof(Stats_Name));
+            sprintf(ctmp, "%s@%s", OPERSERV, Stats_Name);
+            strncpyzt(OS_Stats_Name, ctmp, sizeof(OS_Stats_Name));
+            sprintf(ctmp, "%s@%s", STATSERV, Stats_Name);
+            strncpyzt(SS_Stats_Name, ctmp, sizeof(SS_Stats_Name));
+            sprintf(ctmp, "%s@%s", HELPSERV, Stats_Name);
+            strncpyzt(HS_Stats_Name, ctmp, sizeof(HS_Stats_Name));
         }
         else if(tmp->type && (tmp->type->flag & OPTF_WGMONHOST))
         {
@@ -1452,13 +1476,28 @@ confadd_kill(cVar *vars[], int lnum)
     if(!ban)
         return lnum;    /* this isnt a parser problem - dont pull out */
 
-    ban->flags |= (UBAN_LOCAL|UBAN_CONF);
+    ban->flags |= UBAN_LOCAL;
     DupString(ban->reason, ub_r);
     ban->timeset = NOW;
 
     add_hostbased_userban(ban);
-    userban_sweep(ban);
 
+    /* Check local users against it */
+    for (i = 0; i <= highest_fd; i++)
+    {
+        if (!(ub_acptr = local[i]) || IsMe(ub_acptr) ||
+              IsLog(ub_acptr))
+            continue;
+
+        if (IsPerson(ub_acptr) && user_match_ban(ub_acptr, ban))
+        {
+            sendto_ops(LOCAL_BAN_NAME " active for %s",
+                       get_client_name(ub_acptr, FALSE));
+            ircsprintf(fbuf, LOCAL_BANNED_NAME ": %s", ub_r);
+            exit_client(ub_acptr, ub_acptr, &me, fbuf);
+            i--;
+        }
+    }
     return lnum;
 }
 
@@ -2171,11 +2210,11 @@ int rehash(aClient *cptr, aClient *sptr, int sig)
     {
         sendto_ops("Got signal SIGHUP, reloading ircd conf. file");
         remove_userbans_match_flags(UBAN_NETWORK, 0);
-        /* remove all but kill {} blocks from conf */
-        remove_userbans_match_flags(UBAN_LOCAL, UBAN_CONF);
+        remove_userbans_match_flags(UBAN_LOCAL|UBAN_TEMPORARY, 0);
         remove_simbans_match_flags(SBAN_NICK|SBAN_LOCAL|SBAN_TEMPORARY, 0);
         remove_simbans_match_flags(SBAN_CHAN|SBAN_LOCAL|SBAN_TEMPORARY, 0);
         remove_simbans_match_flags(SBAN_GCOS|SBAN_LOCAL|SBAN_TEMPORARY, 0);
+
     }
 
     /* Shadowfax's LOCKFILE code */
@@ -2197,8 +2236,8 @@ int rehash(aClient *cptr, aClient *sptr, int sig)
     if (sig != SIGINT)
         flush_cache();      /* Flush DNS cache */
 
-    /* remove kill {} blocks */
-    remove_userbans_match_flags(UBAN_LOCAL|UBAN_CONF, 0);
+    /* remove perm klines */
+    remove_userbans_match_flags(UBAN_LOCAL, UBAN_TEMPORARY);
     remove_simbans_match_flags(SBAN_NICK|SBAN_LOCAL, SBAN_TEMPORARY);
     remove_simbans_match_flags(SBAN_CHAN|SBAN_LOCAL, SBAN_TEMPORARY);
     remove_simbans_match_flags(SBAN_GCOS|SBAN_LOCAL, SBAN_TEMPORARY);
@@ -2224,10 +2263,6 @@ int rehash(aClient *cptr, aClient *sptr, int sig)
     
     merge_confs();
     build_rplcache();
-    nextconnect = 1;    /* reset autoconnects */
-
-    /* replay journal if necessary */
-    klinestore_init( (sig == SIGHUP) ? 0 : 1 );
 
     rehashed = 1;
 
@@ -2295,137 +2330,3 @@ static int lookup_confhost(aConnect *aconn)
     /* NOTREACHED */
     return 0;
 }
-
-u_long
-memcount_s_conf(MCs_conf *mc)
-{
-    aConnect    *conn;
-    aAllow      *allow;
-    aOper       *oper;
-    aPort       *port;
-    aClass      *class;
-    int          i;
-
-    mc->file = __FILE__;
-
-    for (conn = connects; conn; conn = conn->next)
-    {
-        mc->connects.c++;
-        mc->connects.m += sizeof(*conn);
-        if (conn->host)
-            mc->connects.m += strlen(conn->host) + 1;
-        if (conn->apasswd)
-            mc->connects.m += strlen(conn->apasswd) + 1;
-        if (conn->cpasswd)
-            mc->connects.m += strlen(conn->cpasswd) + 1;
-        if (conn->name)
-            mc->connects.m += strlen(conn->name) + 1;
-        if (conn->source)
-            mc->connects.m += strlen(conn->source) + 1;
-        if (conn->class_name)
-            mc->connects.m += strlen(conn->class_name) + 1;
-    }
-    mc->total.c += mc->connects.c;
-    mc->total.m += mc->connects.m;
-
-    for (allow = allows; allow; allow = allow->next)
-    {
-        mc->allows.c++;
-        mc->allows.m += sizeof(*allow);
-        if (allow->ipmask)
-            mc->allows.m += strlen(allow->ipmask) + 1;
-        if (allow->passwd)
-            mc->allows.m += strlen(allow->passwd) + 1;
-        if (allow->hostmask)
-            mc->allows.m += strlen(allow->hostmask) + 1;
-        if (allow->class_name)
-            mc->allows.m += strlen(allow->class_name) + 1;
-    }
-    mc->total.c += mc->allows.c;
-    mc->total.m += mc->allows.m;
-
-    for (oper = opers; oper; oper = oper->next)
-    {
-        mc->opers.c++;
-        mc->opers.m += sizeof(*oper);
-        if (oper->passwd)
-            mc->opers.m += strlen(oper->passwd) + 1;
-        if (oper->nick)
-            mc->opers.m += strlen(oper->nick) + 1;
-        if (oper->class_name)
-            mc->opers.m += strlen(oper->class_name) + 1;
-        for (i = 0; oper->hosts[i]; i++)
-            mc->opers.m += strlen(oper->hosts[i]) + 1;
-    }
-    mc->total.c += mc->opers.c;
-    mc->total.m += mc->opers.m;
-
-    for (port = ports; port; port = port->next)
-    {
-        mc->ports.c++;
-        mc->ports.m += sizeof(*port);
-        if (port->allow)
-            mc->ports.m += strlen(port->allow) + 1;
-        if (port->address)
-            mc->ports.m += strlen(port->address) + 1;
-    }
-    mc->total.c += mc->ports.c;
-    mc->total.m += mc->ports.m;
-
-    for (class = classes; class; class = class->next)
-    {
-        mc->classes.c++;
-        mc->classes.m += sizeof(*class);
-        if (class->name)
-            mc->classes.m += strlen(class->name) + 1;
-    }
-    mc->total.c += mc->classes.c;
-    mc->total.m += mc->classes.m;
-
-    for (i = 0; uservers[i]; i++)
-    {
-        mc->uservers.c++;
-        mc->uservers.m += strlen(uservers[i]) + 1;
-    }
-    mc->total.c += mc->uservers.c;
-    mc->total.m += mc->uservers.m;
-
-    if (modules)
-    {
-        mc->modules.c = 1;
-        mc->modules.m = sizeof(*modules);
-        if (modules->module_path)
-            mc->modules.m += strlen(modules->module_path) + 1;
-        for (i = 0; modules->autoload[i]; i++)
-            mc->modules.m += strlen(modules->autoload[i]) + 1;
-        for (i = 0; modules->optload[i]; i++)
-            mc->modules.m += strlen(modules->optload[i]) + 1;
-    }
-    mc->total.c += mc->modules.c;
-    mc->total.m += mc->modules.m;
-
-    if (MeLine)
-    {
-        mc->me.c = 1;
-        mc->me.m += sizeof(*MeLine);
-        if (MeLine->servername)
-            mc->me.m += strlen(MeLine->servername) + 1;
-        if (MeLine->info)
-            mc->me.m += strlen(MeLine->info) + 1;
-        if (MeLine->diepass)
-            mc->me.m += strlen(MeLine->diepass) + 1;
-        if (MeLine->restartpass)
-            mc->me.m += strlen(MeLine->restartpass) + 1;
-        if (MeLine->admin[0])
-            mc->me.m += strlen(MeLine->admin[0]) + 1;
-        if (MeLine->admin[1])
-            mc->me.m += strlen(MeLine->admin[1]) + 1;
-        if (MeLine->admin[2])
-            mc->me.m += strlen(MeLine->admin[2]) + 1;
-    }
-    mc->total.c += mc->me.c;
-    mc->total.m += mc->me.m;
-
-    return mc->total.m;
-}
-

@@ -222,58 +222,67 @@ get_listener_name(aListener *lptr)
 char *
 get_client_name(aClient *sptr, int showip)
 {
-    static char nbuf[HOSTLEN * 2 + USERLEN + 7];
-    char *s = nbuf;
+    static char nbuf[HOSTLEN * 2 + USERLEN + 5];
 
     if (MyConnect(sptr)) 
     {
-        if (sptr->name[0])
-            s += ircsprintf(s, "%s", sptr->name);
-        else
-            s += ircsprintf(s, "<unnamed>", sptr->name);
-
-        if (IsServer(sptr))
+        switch (showip) 
         {
-            if (showip == TRUE)
-                s += ircsprintf(s, "[%s]", inetntoa((char *)&sptr->ip));
-            else if (showip != HIDEME)
-                s += ircsprintf(s, "[%s]", sptr->sockhost);
-        }
-        else if (IsClient(sptr))
-        {
-            if (showip == TRUE)
-                s += ircsprintf(s, "!%s@%s", sptr->user->username,
-                                inetntoa((char *)&sptr->ip));
-            else if (showip != HIDEME)
-                s += ircsprintf(s, "!%s@%s", sptr->user->username,
-                                sptr->user->host);
-        }
-        else
-        {
-            if (showip != HIDEME)
-            {
-                s += ircsprintf(s, "([");
-
-                if (DoingAuth(sptr))
-                    *s++ = '?';
-                else if (sptr->flags & FLAGS_GOTID)
-                    *s++ = '+';
+            case TRUE:
+#ifdef SHOW_UH
+                ircsprintf(nbuf, "%s[%s%s@%s]", sptr->name,
+                           (!(sptr->flags & FLAGS_GOTID)) ? "" : "(+)",
+                           sptr->user ? sptr->user->username : sptr->username,
+                           inetntoa((char *) &sptr->ip));
+#else
+                ircsprintf(nbuf, "%s[%s@%s]", sptr->name,
+                           (!(sptr->flags & FLAGS_GOTID)) ? "" : sptr->username,
+                           inetntoa((char *) &sptr->ip));
+#endif
+                break;
+            case HIDEME:
+#ifdef SHOW_UH
+                ircsprintf(nbuf, "%s[%s%s@%s]", sptr->name,
+                           (!(sptr->flags & FLAGS_GOTID)) ? "" : "(+)",
+                           sptr->user ? sptr->user->username : sptr->username,
+                           "0.0.0.0");
+#else
+                ircsprintf(nbuf, "%s[%s@%s]", sptr->name,
+                           (!(sptr->flags & FLAGS_GOTID)) ? "" : sptr->username,
+                           "0.0.0.0");
+#endif
+                break;
+            default:
+                if (mycmp(sptr->name, sptr->sockhost))
+#ifdef USERNAMES_IN_TRACE
+                    ircsprintf(nbuf, "%s[%s@%s]", sptr->name,
+                               sptr->user ? sptr->user->username :
+                               sptr->username, sptr->sockhost);
+#else
+                    ircsprintf(nbuf, "%s[%s]", sptr->name, sptr->sockhost);
+#endif
                 else
-                    *s++ = '-';
-
-                if (showip == TRUE)
-                    s += ircsprintf(s, "]%s@%s)", sptr->username,
-                                    inetntoa((char *)&sptr->ip));
-                else
-                    s += ircsprintf(s, "]%s@%s)", sptr->username,
-                                    sptr->sockhost);
-            }
+                    return sptr->name;
         }
-
         return nbuf;
     }
-
     return sptr->name;
+}
+
+char *
+get_client_host(aClient *cptr)
+{
+    static char nbuf[HOSTLEN * 2 + USERLEN + 5];
+    
+    if (!MyConnect(cptr))
+        return cptr->name;
+    if (!cptr->hostp)
+        return get_client_name(cptr, FALSE);
+    else
+        ircsprintf(nbuf, "%s[%-.*s@%-.*s]", cptr->name, USERLEN,
+                          (!(cptr->flags & FLAGS_GOTID)) ? "" : cptr->username,
+                          HOSTLEN, cptr->hostp->h_name);
+    return nbuf;
 }
 
 /*
@@ -401,15 +410,9 @@ exit_one_client_in_split(aClient *cptr, aClient *dead, char *reason)
         del_invite(cptr, lp->value.chptr);
     while ((lp = cptr->user->silence))
         del_silence(cptr, lp->value.cp);
-    if (cptr->user->alias)
-        cptr->user->alias->client = NULL;
 
     if (cptr->ip.s_addr)
         clones_remove(cptr);
-
-#ifdef RWHO_PROBABILITY
-    probability_remove(cptr);
-#endif
 
     remove_dcc_references(cptr);
 
@@ -496,9 +499,6 @@ exit_one_server(aClient *cptr, aClient *dead, aClient *from,
          * dead servers.
          */
 
-#ifdef NOQUIT
-        if(IsNoquit(acptr))
-#endif
         if(cptr != dead)
             continue;
 
@@ -571,17 +571,10 @@ exit_client(aClient *cptr, aClient *sptr, aClient *from, char *comment)
     {
         call_hooks(CHOOK_SIGNOFF, sptr);
 
-        if (IsUnknown(sptr))
-            Count.unknown--;
         if (IsAnOper(sptr)) 
             remove_from_list(&oper_list, sptr, NULL);
         if (sptr->flags & FLAGS_HAVERECVQ)
-        {
-            /* mark invalid, will be deleted in do_recvqs() */
-            DLink *lp = find_dlink(recvq_clients, sptr);
-            if (lp)
-                lp->flags = -1;
-        }
+            remove_from_list(&recvq_clients, sptr, NULL);
         if (IsClient(sptr))
             Count.local--;
         if (IsNegoServer(sptr))
@@ -611,13 +604,11 @@ exit_client(aClient *cptr, aClient *sptr, aClient *from, char *comment)
                 for (lp = lopt->yeslist; lp; lp = next) 
                 {
                     next = lp->next;
-                    MyFree(lp->value.cp);
                     free_link(lp);
                 }
                 for (lp = lopt->nolist; lp; lp = next) 
                 {
                     next = lp->next;
-                    MyFree(lp->value.cp);
                     free_link(lp);
                 }
                                 
@@ -802,10 +793,6 @@ exit_one_client(aClient *cptr, aClient *sptr, aClient *from, char *comment)
 
             if (sptr->ip.s_addr)
                 clones_remove(sptr);
-
-#ifdef RWHO_PROBABILITY
-            probability_remove(sptr);
-#endif
             
             /* Clean up invitefield */
             while ((lp = sptr->user->invited))

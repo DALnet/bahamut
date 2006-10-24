@@ -34,7 +34,6 @@
 #include "blalloc.h"
 #include "numeric.h"
 #include "channel.h"
-#include "memcount.h"
 
 #include "throttle.h"
 #include "clones.h"
@@ -407,21 +406,5 @@ clones_init(void)
     clones_hashtable = create_hash_table(THROTTLE_HASHSIZE,
                                          offsetof(CloneEnt, ent), HOSTIPLEN,
                                          2, (void *)strcmp);
-}
-
-u_long
-memcount_clones(MCclones *mc)
-{
-    CloneEnt *ce;
-
-    mc->file = __FILE__;
-
-    for (ce = clones_list; ce; ce = ce->next)
-        mc->e_cloneents++;
-
-    mc->e_heap = free_cloneents;
-    mc->e_hash = clones_hashtable;
-
-    return 0;
 }
 

@@ -37,8 +37,6 @@
 #include <openssl/bn.h>
 #include <openssl/dh.h>
 
-#include "memcount.h"
-
 #define DH_HEADER
 #include "dh.h"
 
@@ -274,7 +272,7 @@ void *dh_start_session()
 {
     struct session_info *si;
 
-    si = (struct session_info *) MyMalloc(sizeof(struct session_info));
+    si = (struct session_info *) malloc(sizeof(struct session_info));
     if(!si) 
         abort();
 
@@ -287,7 +285,7 @@ void *dh_start_session()
     if(!DH_generate_key(si->dh))
     {
         DH_free(si->dh);
-        MyFree(si);
+        free(si);
         return NULL;
     }
 
@@ -311,7 +309,7 @@ void dh_end_session(void *session)
         si->session_shared = NULL;
     }
 
-    MyFree(si);
+    free(si);
 }
 
 char *dh_get_s_public(char *buf, int maxlen, void *session)
@@ -349,14 +347,3 @@ int dh_get_s_shared(char *buf, int *maxlen, void *session)
 
     return 1;
 }
-
-u_long
-memcount_dh(MCdh *mc)
-{
-    mc->file = __FILE__;
-
-    mc->m_dhsession_size = sizeof(struct session_info);
-
-    return 0;
-}
-

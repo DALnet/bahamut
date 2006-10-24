@@ -70,7 +70,6 @@ do_server_estab(aClient *cptr)
 
     SetServer(cptr);
 
-    Count.unknown--;
     Count.server++;
     Count.myserver++;
 
@@ -139,13 +138,6 @@ do_server_estab(aClient *cptr)
     {
         Count.myulined++;
         cptr->flags |= FLAGS_ULINE;
-
-        /* special flags (should really be in conf) */
-        if (!mycmp(cptr->name, Services_Name))
-            cptr->serv->uflags |=
-                (ULF_SFDIRECT|ULF_REQTARGET|ULF_NOBTOPIC|ULF_NOAWAY);
-        else if (!mycmp(cptr->name, Stats_Name))
-            cptr->serv->uflags |= ULF_NOBTOPIC;
     }
 
     fakelinkserver_update(cptr->name, cptr->info);
@@ -326,30 +318,21 @@ m_server_estab(aClient *cptr)
     if (!(aconn = cptr->serv->aconn))
     {
         ircstp->is_ref++;
-        sendto_one(cptr, "ERROR :Lost Connect block");
-        sendto_ops_lev(ADMIN_LEV, "Lost Connect block for server %s",
-                           get_client_name(cptr, TRUE));
-        return exit_client(cptr, cptr, cptr, "Lost Connect block");
+        sendto_one(cptr, "ERROR :Access denied. No Connect block for server %s",
+                   inpath);
+        sendto_ops("Access denied. No Connect block for server %s", inpath);
+        return exit_client(cptr, cptr, cptr, "No Connect block for server");
     }
 
     encr = cptr->passwd;
     if (*aconn->apasswd && !StrEq(aconn->apasswd, encr))
     {
         ircstp->is_ref++;
-        sendto_one(cptr, "ERROR :Wrong link password", inpath);
-        sendto_ops("Link %s dropped, wrong password", inpath);
+        sendto_one(cptr, "ERROR :No Access (passwd mismatch) %s", inpath);
+        sendto_ops("Access denied (passwd mismatch) %s", inpath);
         return exit_client(cptr, cptr, cptr, "Bad Password");
     }
     memset(cptr->passwd, '\0', sizeof(cptr->passwd));
-
-    if (find_client(host, NULL))
-    {
-        sendto_gnotice("from %s: Link %s dropped, server already exists",
-                       me.name, inpath);
-        sendto_serv_butone(cptr, ":%s GNOTICE :Link %s dropped, server already"
-                           " exists", me.name, inpath);
-        return exit_client(cptr, cptr, cptr, "Server Exists");
-    }
 
     if(!(confopts & FLAGS_HUB))
     {
@@ -415,10 +398,10 @@ m_server_estab(aClient *cptr)
     if (!DoesTS(cptr))
     {
         sendto_gnotice("from %s: Warning: %s linked, non-TS server",
-                       me.name, get_client_name(cptr, HIDEME));
+                       me.name, get_client_name(cptr, TRUE));
         sendto_serv_butone(cptr,
                            ":%s GNOTICE :Warning: %s linked, non-TS server",
-                           me.name, get_client_name(cptr, HIDEME));
+                           me.name, get_client_name(cptr, TRUE));
     }
 
     sendto_one(cptr, "SVINFO %d %d 0 :%ld", TS_CURRENT, TS_MIN,
@@ -447,6 +430,11 @@ m_server_estab(aClient *cptr)
     cptr->serv->aconn = aconn;
 
     throttle_remove(inetntoa((char *)&cptr->ip));
+
+    /* now fill out the servers info so nobody knows dink about it. */
+    memset((char *)&cptr->ip, '\0', sizeof(struct in_addr));
+    strcpy(cptr->hostip, "127.0.0.1");
+    strcpy(cptr->sockhost, "localhost");
 
 #ifdef HAVE_ENCRYPTION_ON
     if(!CanDoDKEY(cptr) || !WantDKEY(cptr))
@@ -583,32 +571,31 @@ int m_server(aClient *cptr, aClient *sptr, int parc, char *parv[])
         }
     }
 
-    /* new connection */
-    if (IsUnknown(cptr) || IsHandshake(cptr))
+    /*
+     * check to see this host even has an N line before bothering
+     * anyone about it. Its only a quick sanity test to stop the
+     * conference room and win95 ircd dorks. Sure, it will be
+     * redundantly checked again in m_server_estab() *sigh* yes there
+     * will be wasted CPU as the conf list will be scanned twice. But
+     * how often will this happen? - Dianora
+     *
+     * This should (will be) be recoded to check the IP is valid as well,
+     * with a pointer to the valid N line conf kept for later, saving an
+     * extra lookup.. *sigh* - Dianora
+     */
+    if (!IsServer(cptr))
     {
-        strncpyzt(cptr->name, host, sizeof(cptr->name));
-        strncpyzt(cptr->info, info[0] ? info : me.name, REALLEN);
-        cptr->hopcount = hop;
-
-        switch (check_server_init(cptr))
+        if (!find_aConnect(host))
         {
-            case 0:
-                return m_server_estab(cptr);
-            case 1:
-                sendto_ops("Access check for %s in progress",
-                           get_client_name(cptr, HIDEME));
-                return 1;
-            default:
-                ircstp->is_ref++;
-                sendto_ops_lev(ADMIN_LEV, "Link %s dropped, no Connect block",
+
+#ifdef WARN_NO_NLINE
+            sendto_realops("Link %s dropped, no Connect block",
                            get_client_name(cptr, TRUE));
-                return exit_client(cptr, cptr, cptr, "No Connect block");
+#endif
+
+            return exit_client(cptr, cptr, cptr, "No Connect block");
         }
     }
-    
-    /* already linked server */
-    if (!IsServer(cptr))
-        return 0;
 
     if ((acptr = find_name(host, NULL)))
     {
@@ -629,7 +616,7 @@ int m_server(aClient *cptr, aClient *sptr, int parc, char *parv[])
             /* Don't complain for servers that are juped */
             /* (don't complain if the server that already exists is U: lined,
                 unless I actually have a .conf U: line for it */
-            if(!IsULine(acptr) || find_aUserver(acptr->name))
+            if(!IsULine(acptr) || !find_aUserver(acptr->name))
             {
                 sendto_gnotice("from %s: Link %s cancelled, server %s already "
                                "exists", me.name, get_client_name(bcptr, HIDEME),
@@ -697,11 +684,14 @@ int m_server(aClient *cptr, aClient *sptr, int parc, char *parv[])
         if (!(cptr->serv->aconn->flags & CONN_HUB))
         {
             aconn = cptr->serv->aconn;
-            sendto_gnotice("from %s: Non-Hub link %s introduced %s",
-                           me.name, get_client_name(cptr, HIDEME), host);
+            sendto_gnotice("from %s: Non-Hub link %s introduced %s(%s).",
+                           me.name, get_client_name(cptr, HIDEME), host,
+                           aconn ? (aconn->host ? aconn->host : "*") : "!");
             sendto_serv_butone(cptr,":%s GNOTICE :Non-Hub link %s introduced "
-                               "%s", me.name, get_client_name(cptr, HIDEME),
-                               host);
+                               "%s(%s).", me.name,
+                               get_client_name(cptr, HIDEME), host,
+                               aconn ? (aconn->host ? aconn->host : "*") :
+                               "!");
             sendto_one(cptr, "ERROR :You're not a hub (introducing %s)",
                        host);
             return exit_client(cptr, cptr, cptr, "Too many servers");
@@ -760,7 +750,37 @@ int m_server(aClient *cptr, aClient *sptr, int parc, char *parv[])
         return 0;
     }
 
-    return 0;
+    if (!IsUnknown(cptr) && !IsHandshake(cptr))
+        return 0;
+
+    /*
+     * * A local link that is still in undefined state wants to be a
+     * SERVER. Check if this is allowed and change status
+     * accordingly...
+     */
+    /*
+     * * Reject a direct nonTS server connection if we're TS_ONLY
+     * -orabidoo
+     */
+
+    strncpyzt(cptr->name, host, sizeof(cptr->name));
+    strncpyzt(cptr->info, info[0] ? info : me.name, REALLEN);
+    cptr->hopcount = hop;
+
+    switch (check_server_init(cptr))
+    {
+        case 0:
+            return m_server_estab(cptr);
+        case 1:
+            sendto_ops("Access check for %s in progress",
+                       get_client_name(cptr, HIDEME));
+            return 1;
+        default:
+            ircstp->is_ref++;
+            sendto_ops("Received unauthorized connection from %s.",
+                       get_client_host(cptr));
+            return exit_client(cptr, cptr, cptr, "No Connect block");
+    }
 }
 
 /* m_dkey

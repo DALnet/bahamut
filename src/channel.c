@@ -27,7 +27,6 @@
 #include "channel.h"
 #include "h.h"
 #include "userban.h"
-#include "memcount.h"
 
 int         server_was_split = YES;
 
@@ -98,38 +97,21 @@ static int list_length(Link *lp)
     return count;
 }
 
-/* check to see if the message has any control chars in it. */
+/* check to see if the message has any color chars in it. */
 static int
-msg_has_ctrls(char *msg)
+msg_has_colors(char *msg)
 {
-    unsigned char *c;
 
+    char *c;
     if (msg == NULL) 
         return 0;
-
-    for (c = msg; *c; c++)
+    c = msg;
+    while(*c)
     {
-        /* not a control code */
-        if (*c > 31)
-            continue;
-
-        /* ctcp */
-        if (*c == 1)
-            continue;
-
-        /* escape */
-        if (*c == 27)
-        {
-            /* ISO 2022 charset shift sequence */
-            if (c[1] == '$' || c[1] == '(')
-            {
-                c++;
-                continue;
-            }
-        }
-
-        /* control code */
-        break;
+        if(*c == '\003' || *c == '\033')
+            break;
+        else
+            c++;
     }
     if(*c)
         return 1;
@@ -839,16 +821,16 @@ int check_joinrate(aChannel *chptr, time_t ts, int local, aClient *cptr)
         chptr->default_join_start = NOW;
         chptr->default_join_count = 0;
     }
-    /* update the count here for attempts, in case a lower throttle blocks */
-    chptr->default_join_count++;
     /* If it's local and we've filled the join count, complain
      * to ops so they can take the appropriate measures */
-    if(local && chptr->default_join_count > join_num)
-        sendto_realops_lev(DEBUG_LEV, "Join rate warning on %s for %s!%s@%s"
-                                      " (%d in %d)",
+    if(local && chptr->default_join_count >= join_num)
+        sendto_realops_lev(DEBUG_LEV, "Join rate warning on %s"
+                                      " for %s!%s@%s (%d/%d in %d) (No action taken)",
                            chptr->chname, cptr->name, cptr->user->username,
-                           cptr->hostip, chptr->default_join_count,
+                           cptr->user->host, chptr->default_join_count, join_num,
                            NOW - chptr->default_join_start);
+    /* update the count here for attempts, in case a lower throttle blocks */
+    chptr->default_join_count++;
 
     /* Has the channel set their own custom settings? */
     if(chptr->mode.mode & MODE_JOINRATE)
@@ -870,11 +852,11 @@ int check_joinrate(aChannel *chptr, time_t ts, int local, aClient *cptr)
     /* If it's local and we've filled the join count, say no */
     if(local && chptr->join_count >= join_num)
     {
-        sendto_realops_lev(DEBUG_LEV, "Join rate throttling on %s for %s!%s@%s"
-                                      " (%d/%d in %d/%d)",
+        sendto_realops_lev(DEBUG_LEV, "Join rate throttling on %s"
+                                      " for %s!%s@%s (%d/%d in %d)",
                            chptr->chname, cptr->name, cptr->user->username, 
-                           cptr->hostip, chptr->join_count, join_num, 
-                           NOW - chptr->join_start, join_time);
+                           cptr->user->host, chptr->join_count, join_num, 
+                           NOW - chptr->join_start);
         return 0;
     }
     return 1;
@@ -986,8 +968,8 @@ int can_send(aClient *cptr, aChannel *chptr, char *msg)
             return (MODE_NOPRIVMSGS);
         if ((chptr->mode.mode & MODE_MODREG) && !IsRegNick(cptr))
             return (ERR_NEEDREGGEDNICK);
-        if ((chptr->mode.mode & MODE_NOCTRL) && msg_has_ctrls(msg))
-            return (ERR_NOCTRLSONCHAN);
+        if ((chptr->mode.mode & MODE_NOCOLOR) && msg_has_colors(msg))
+            return (ERR_NOCOLORSONCHAN);
         if (MyClient(cptr) && is_banned(cptr, chptr, NULL))
             return (MODE_BAN); /*
                                 * channel is -n and user is not there;
@@ -996,7 +978,7 @@ int can_send(aClient *cptr, aChannel *chptr, char *msg)
     }
     else
     {
-        /* ops and voices can talk through everything except NOCTRL */
+        /* ops and voices can talk through everything except NOCOLOR */
         if (!(cm->flags & (CHFL_CHANOP | CHFL_VOICE)))
         {
             if (chptr->mode.mode & MODE_MODERATED)
@@ -1006,8 +988,8 @@ int can_send(aClient *cptr, aChannel *chptr, char *msg)
             if ((chptr->mode.mode & MODE_MODREG) && !IsRegNick(cptr))
                 return (ERR_NEEDREGGEDNICK);
         }
-        if ((chptr->mode.mode & MODE_NOCTRL) && msg_has_ctrls(msg))
-            return (ERR_NOCTRLSONCHAN);
+        if ((chptr->mode.mode & MODE_NOCOLOR) && msg_has_colors(msg))
+            return (ERR_NOCOLORSONCHAN);
     }
     
     return 0;
@@ -1024,7 +1006,7 @@ static void channel_modes(aClient *cptr, char *mbuf, char *pbuf,
     *mbuf++ = '+';
     if (chptr->mode.mode & MODE_SECRET)
         *mbuf++ = 's';
-    if (chptr->mode.mode & MODE_PRIVATE)
+    else if (chptr->mode.mode & MODE_PRIVATE)
         *mbuf++ = 'p';
     if (chptr->mode.mode & MODE_MODERATED)
         *mbuf++ = 'm';
@@ -1038,7 +1020,7 @@ static void channel_modes(aClient *cptr, char *mbuf, char *pbuf,
         *mbuf++ = 'r';
     if (chptr->mode.mode & MODE_REGONLY)
         *mbuf++ = 'R';
-    if (chptr->mode.mode & MODE_NOCTRL)
+    if (chptr->mode.mode & MODE_NOCOLOR)
         *mbuf++ = 'c';
     if (chptr->mode.mode & MODE_OPERONLY)
         *mbuf++ = 'O';
@@ -1403,7 +1385,7 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
         MODE_PRIVATE, 'p', MODE_SECRET, 's',
         MODE_MODERATED, 'm', MODE_NOPRIVMSGS, 'n',
         MODE_TOPICLIMIT, 't', MODE_REGONLY, 'R',
-        MODE_INVITEONLY, 'i', MODE_NOCTRL, 'c', MODE_OPERONLY, 'O',
+        MODE_INVITEONLY, 'i', MODE_NOCOLOR, 'c', MODE_OPERONLY, 'O',
         MODE_MODREG, 'M', 
 #ifdef USE_CHANMODE_L
         MODE_LISTED, 'L',
@@ -1485,12 +1467,7 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
             break;
 
         case 'O':
-            if (level<1)
-            {
-                errors |= SM_ERR_NOPRIVS;
-                break;
-            }
-            else if (MyClient(sptr) && !IsOper(sptr))
+            if (level<1 || (MyClient(sptr) && !IsOper(sptr)))
             {
                 errors |= SM_ERR_NOTOPER;
                 break;
@@ -2213,8 +2190,8 @@ static int can_join(aClient *sptr, aChannel *chptr, char *key)
     {
         if (error==ERR_NEEDREGGEDNICK)
             sendto_one(sptr, getreply(ERR_NEEDREGGEDNICK), me.name, sptr->name,
-                       chptr->chname, "join", aliastab[AII_NS].nick,
-                       aliastab[AII_NS].server, NS_Register_URL);
+                       chptr->chname, "join", NS_Services_Name,
+                       NS_Register_URL);
         else
             sendto_one(sptr, getreply(error), me.name, sptr->name,
                        chptr->chname, r);
@@ -2643,9 +2620,6 @@ int m_join(aClient *cptr, aClient *sptr, int parc, char *parv[])
                 sendto_one(sptr, getreply(ERR_CHANBANREASON), me.name, parv[0], name,
                         BadPtr(ban->reason) ? "Reserved channel" :      
                         ban->reason);
-                sendto_realops_lev(REJ_LEV,
-                                   "Forbidding restricted channel %s from %s.",
-                                   name, get_client_name(cptr, TRUE));
                 continue;
             }
 
@@ -3114,16 +3088,12 @@ void send_topic_burst(aClient *cptr)
 {
     aChannel *chptr;
     aClient *acptr;
-
-    if (!(confopts & FLAGS_SERVHUB) || !(cptr->serv->uflags & ULF_NOBTOPIC))
     for (chptr = channel; chptr; chptr = chptr->nextch)
     {
         if(chptr->topic[0] != '\0')
             sendto_one(cptr, ":%s TOPIC %s %s %ld :%s", me.name, chptr->chname,
                        chptr->topic_nick, chptr->topic_time, chptr->topic);
     }
-
-    if (!(confopts & FLAGS_SERVHUB) || !(cptr->serv->uflags & ULF_NOAWAY))
     for (acptr = client; acptr; acptr = acptr->next)
     {
         if(!IsPerson(acptr) || acptr->from == cptr)
@@ -3322,10 +3292,9 @@ int m_invite(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
         sendto_prefix_one(acptr, sptr, ":%s INVITE %s :%s", parv[0],
                           acptr->name, chptr->chname);
-        sendto_channelflags_butone(NULL, &me, chptr, CHFL_CHANOP,
-                                   ":%s NOTICE @%s :%s invited %s into "
-                                   "channel %s", me.name, chptr->chname,
-                                   parv[0], acptr->name, chptr->chname);
+        sendto_channelops_butone(NULL, &me, chptr, ":%s NOTICE @%s :%s invited"
+                                 " %s into channel %s", me.name, chptr->chname,
+                                 parv[0], acptr->name, chptr->chname);
 
         return 0;
     }
@@ -3373,7 +3342,7 @@ void send_list(aClient *cptr, int numsend)
                 if ((!lopt->showall) && ((chptr->users < lopt->usermin) ||
                                          ((lopt->usermax >= 0) && 
                                           (chptr->users > lopt->usermax)) ||
-                                         ((chptr->channelts) < 
+                                         ((chptr->channelts||1) < 
                                           lopt->chantimemin) ||
                                          (chptr->topic_time < 
                                           lopt->topictimemin) ||
@@ -3430,13 +3399,11 @@ void send_list(aClient *cptr, int numsend)
         for (lp = lopt->yeslist; lp; lp = next)
         {
             next = lp->next;
-            MyFree(lp->value.cp);
             free_link(lp);
         }
         for (lp = lopt->nolist; lp; lp = next)
         {
             next = lp->next;
-            MyFree(lp->value.cp);
             free_link(lp);
         }
         
@@ -3554,7 +3521,7 @@ int m_list(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
     chantimemax = topictimemax = currenttime + 86400;
     chantimemin = topictimemin = 0;
-    usermin = 0;
+    usermin = 2;  /* By default, set the minimum to 2 users */
     usermax = -1; /* No maximum */
 
     for (name = strtoken(&p, parv[1], ","); name && !error;
@@ -3637,7 +3604,7 @@ int m_list(aClient *cptr, aClient *sptr, int parc, char *parv[])
                     nolist = lp;
                     DupString(lp->value.cp, name+1);
                 }
-                else if (strchr(name, '*') || strchr(name, '?'))
+                else if (strchr(name, '*') || strchr(name, '*'))
                 {
                     doall = 1;
                     lp = make_link();
@@ -4178,7 +4145,6 @@ int m_sjoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
                 chptr->channelts = tstosend = newts;
 #else
             chptr->channelts = tstosend = newts;
-            if (!IsULine(sptr))
             sendto_realops_lev(DEBUG_LEV, "Changing TS for %s from %d to %d on"
                                " client SJOIN", chptr->chname, oldts, newts);
 #endif
@@ -4229,7 +4195,7 @@ int m_sjoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
             SJ_MODEADD('r', MODE_REGISTERED);
             SJ_MODEADD('R', MODE_REGONLY);
             SJ_MODEADD('M', MODE_MODREG);
-            SJ_MODEADD('c', MODE_NOCTRL);
+            SJ_MODEADD('c', MODE_NOCOLOR);
             SJ_MODEADD('O', MODE_OPERONLY);
 #ifdef USE_CHANMODE_L
             SJ_MODEADD('L', MODE_LISTED);
@@ -4335,32 +4301,30 @@ int m_sjoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
         mode = *oldmode;
     else if (keepourmodes)
     {
-        /* check overriding modes first */
+        mode.mode |= oldmode->mode;
         if (oldmode->limit > mode.limit)
             mode.limit = oldmode->limit;
         if(*oldmode->key && *mode.key && strcmp(mode.key, oldmode->key) > 0)
             strcpy(mode.key, oldmode->key);
         else if(*oldmode->key && *mode.key == '\0')
             strcpy(mode.key, oldmode->key);
-        if (oldmode->mode & MODE_JOINRATE)
+        if ((oldmode->mode & MODE_JOINRATE) && mode.join_num)
         {
-            if ((mode.mode & MODE_JOINRATE) && !mode.join_num)
-                /* 0 wins */ ;
-            else if (oldmode->join_num && mode.join_num > oldmode->join_num)
-                /* more joins wins */ ;
-            else if (mode.join_num == oldmode->join_num &&
-                     mode.join_time < oldmode->join_time)
-                /* same joins in less time wins */ ;
-            else
+            /* 0 wins */
+            if (!oldmode->join_num)
             {
-                /* our settings win */
+                mode.join_num = oldmode->join_num;
+                mode.join_time = oldmode->join_time;
+            }
+            /* more joins or same joins in less time wins */
+            else if (oldmode->join_num > mode.join_num ||
+                     (oldmode->join_num == mode.join_num &&
+                      oldmode->join_time < mode.join_time))
+            {
                 mode.join_num = oldmode->join_num;
                 mode.join_time = oldmode->join_time;
             }
         }
-
-        /* now merge */
-        mode.mode |= oldmode->mode;
     }
     
     pbpos = 0;
@@ -4387,7 +4351,7 @@ int m_sjoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
         SJ_MODEPLUS('r', MODE_REGISTERED);
         SJ_MODEPLUS('R', MODE_REGONLY);
         SJ_MODEPLUS('M', MODE_MODREG);
-        SJ_MODEPLUS('c', MODE_NOCTRL);
+        SJ_MODEPLUS('c', MODE_NOCOLOR);
         SJ_MODEPLUS('O', MODE_OPERONLY);
 #ifdef USE_CHANMODE_L
         SJ_MODEPLUS('L', MODE_LISTED);
@@ -4402,7 +4366,7 @@ int m_sjoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
         SJ_MODEMINUS('r', MODE_REGISTERED);
         SJ_MODEMINUS('R', MODE_REGONLY);
         SJ_MODEMINUS('M', MODE_MODREG);
-        SJ_MODEMINUS('c', MODE_NOCTRL);
+        SJ_MODEMINUS('c', MODE_NOCOLOR);
         SJ_MODEMINUS('O', MODE_OPERONLY);
 #ifdef USE_CHANMODE_L
         SJ_MODEMINUS('L', MODE_LISTED);
@@ -4720,106 +4684,3 @@ char  *pretty_mask(char *mask)
         return make_nick_user_host(NULL, NULL, cp);
     return make_nick_user_host(cp, user, host);
 }
-
-u_long
-memcount_channel(MCchannel *mc)
-{
-    aChannel    *chptr;
-    aBan        *ban;
-#ifdef EXEMPT_LISTS
-    aBanExempt  *exempt;
-#endif
-#ifdef INVITE_LISTS
-    anInvite    *invite;
-#endif
-    DLink       *lp;
-    Link        *lp2;
-    chanMember  *cm;
-#ifdef FLUD
-    struct fludbot *fb;
-#endif
-
-    mc->file = __FILE__;
-
-    for (chptr = channel; chptr; chptr = chptr->nextch)
-    {
-        mc->e_channels++;
-
-        for (ban = chptr->banlist; ban; ban = ban->next)
-        {
-            mc->bans.c++;
-            mc->bans.m += sizeof(*ban);
-            mc->bans.m += strlen(ban->banstr) + 1;
-            mc->bans.m += strlen(ban->who) + 1;
-        }
-#ifdef EXEMPT_LISTS
-        for (exempt = chptr->banexempt_list; exempt; exempt = exempt->next)
-        {
-            mc->exempts.c++;
-            mc->exempts.m += sizeof(*exempt);
-            mc->exempts.m += strlen(exempt->banstr) + 1;
-            mc->exempts.m += strlen(exempt->who) + 1;
-        }
-#endif
-#ifdef INVITE_LISTS
-        for (invite = chptr->invite_list; invite; invite = invite->next)
-        {
-            mc->invites.c++;
-            mc->invites.m += sizeof(*invite);
-            mc->invites.m += strlen(invite->invstr) + 1;
-            mc->invites.m += strlen(invite->who) + 1;
-        }
-#endif
-        for (cm = chptr->members; cm; cm = cm->next)
-            mc->e_chanmembers++;
-
-#ifdef FLUD
-        for (fb = chptr->fluders; fb; fb = fb->next)
-            mc->e_fludbots++;
-#endif
-
-        mc->e_inv_links += mc_links(chptr->invites);
-    }
-
-    for (lp = listing_clients; lp; lp = lp->next)
-    {
-        mc->lopts.c++;
-        mc->lopts.m += sizeof(LOpts);
-        mc->e_dlinks++;
-        for (lp2 = lp->value.cptr->user->lopt->yeslist; lp2; lp2 = lp2->next)
-        {
-            mc->lopts.m += strlen(lp2->value.cp) + 1;
-            mc->e_lopt_links++;
-        }
-        for (lp2 = lp->value.cptr->user->lopt->nolist; lp2; lp2 = lp2->next)
-        {
-            mc->lopts.m += strlen(lp2->value.cp) + 1;
-            mc->e_lopt_links++;
-        }
-    }
-
-    mc->total.c = mc->bans.c;
-    mc->total.m = mc->bans.m;
-#ifdef EXEMPT_LISTS
-    mc->total.c += mc->exempts.c;
-    mc->total.m += mc->exempts.m;
-#endif
-#ifdef INVITE_LISTS
-    mc->total.c += mc->invites.c;
-    mc->total.m += mc->invites.m;
-#endif
-    mc->total.c += mc->lopts.c;
-    mc->total.m += mc->lopts.m;
-
-    mc->s_scratch.c++;
-    mc->s_scratch.m += sizeof(nickbuf);
-    mc->s_scratch.c++;
-    mc->s_scratch.m += sizeof(buf);
-    mc->s_scratch.c++;
-    mc->s_scratch.m += sizeof(modebuf);
-    mc->s_scratch.c++;
-    mc->s_scratch.m += sizeof(parabuf);
-
-    return mc->total.m;
-}
-

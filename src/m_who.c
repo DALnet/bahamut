@@ -67,8 +67,8 @@ int build_searchopts(aClient *sptr, int parc, char *parv[])
       "               wildcards accepted",
       "Flag s <server>: user is on server <server>,",
       "                 wildcards not accepted",
-      "Flag t <seconds>: (+t) show nicks in use for more than or equal to <seconds> seconds",
-      "                  (-t) show nicks in use for less than <seconds> seconds",
+      "Flag t <seconds>: (+t) show users on for more than or equal to <seconds> seconds",
+      "                  (-t) show users on for less than <seconds> seconds",
       "Flag u <user>: user has string <user> in their username,",
       "               wildcards accepted",
       "Flag T <type>: user is of type <type>, where type is assigned",
@@ -466,7 +466,7 @@ int build_searchopts(aClient *sptr, int parc, char *parv[])
 			       wsopts.serv_plus || wsopts.nick_plus || 
 			       wsopts.user_plus || wsopts.ts_value || 
                    wsopts.client_type_plus || wsopts.ip_plus || 
-                   wsopts.chan_plus || wsopts.cidr4_mask))
+                   wsopts.chan_plus))
       {
 	  if(parv[args]==NULL)
 	  {

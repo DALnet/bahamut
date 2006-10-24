@@ -14,7 +14,6 @@
 #include "h.h"
 #include "fds.h"
 #include "numeric.h"
-#include "memcount.h"
 
 void engine_add_fd(int);
 void engine_del_fd(int);
@@ -252,15 +251,3 @@ void check_client_fd(aClient *cptr)
 
    set_fd_flags(cptr->fd, FDF_WANTREAD);
 }
-
-u_long
-memcount_fds(MCfds *mc)
-{
-    mc->file = __FILE__;
-
-    mc->s_fdlist.c = sizeof(fd_list)/sizeof(fd_list[0]);
-    mc->s_fdlist.m = sizeof(fd_list);
-
-    return 0;
-}
-

@@ -367,7 +367,7 @@ static char *replies[] =
     /* 335 */	                NULL,
     /* 336 */	                NULL,
     /* 337 RPL_WHOISTEXT*/	":%s 337 %s :%s",
-    /* 338 RPL_WHOISACTUALLY */	":%s 338 %s %s :is actually %s@%s [%s]",
+    /* 338 RPL_WHOISACTUALLY */	":%s 338 %s :%s is actually %s@%s [%s]",
     /* 339 */	                NULL,
     /* 340 */	                NULL,
     /* 341 RPL_INVITING */	":%s 341 %s %s %s",
@@ -448,9 +448,9 @@ static char *replies[] =
     /* 405 ERR_TOOMANYCHANNELS */	":%s 405 %s %s :You have joined too "
                                         "many channels",
     /* 406 ERR_WASNOSUCHNICK */	":%s 406 %s %s :There was no such nickname",
-    /* 407 ERR_TOOMANYTARGETS */	":%s 407 %s %s :Too many targets. "
-                                        "Remaining targets skipped.",
-    /* 408 ERR_NOCTRLSONCHAN */	":%s 408 %s %s :You cannot use control codes "
+    /* 407 ERR_TOOMANYTARGETS */	":%s 407 %s %s :Duplicate recipients. "
+                                        "No message delivered",
+    /* 408 ERR_NOCOLORSONCHAN */	":%s 408 %s %s :You cannot use colors "
                                         "on this channel. Not sent: %s",
     /* 409 ERR_NOORIGIN */		":%s 409 %s :No origin specified",
     /* 410 */	                NULL,
@@ -535,7 +535,7 @@ static char *replies[] =
     /* 477 ERR_NEEDREGGEDNICK */       ":%s 477 %s %s :You need to identify "
                                        "to a registered nick to %s that "
                                        "channel. For help with registering "
-                                       "your nickname, type \"/msg %s@%s help "
+                                       "your nickname, type \"/msg %s help "
                                        "register\" or see %s",
     /* 478 ERR_BANLISTFULL */	":%s 478 %s %s %s :Channel %s list is full",
     /* 479 ERR_BADCHANNAME */   ":%s 479 %s %s :Channel name contains illegal "

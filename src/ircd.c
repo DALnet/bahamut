@@ -48,18 +48,26 @@
 #include "clones.h"
 #include "hooks.h"
 #include "fds.h"
-#include "memcount.h"
 
 aMotd      *motd;
 aMotd      *helpfile;           /* misnomer, aMotd could be generalized */
 aMotd      *shortmotd;          /* short motd */
+
+struct tm  *motd_tm;
 
 /* global conf options (from option block) */
 char ProxyMonURL[TOPICLEN+1];
 char ProxyMonHost[HOSTLEN+1];
 char Network_Name[HOSTLEN+1];
 char Services_Name[HOSTLEN+1];
+char NS_Services_Name[HOSTLEN+9];
+char CS_Services_Name[HOSTLEN+9];
+char MS_Services_Name[HOSTLEN+9];
+char RS_Services_Name[HOSTLEN+9];
 char Stats_Name[HOSTLEN+1];
+char OS_Stats_Name[HOSTLEN+9];
+char SS_Stats_Name[HOSTLEN+9];
+char HS_Stats_Name[HOSTLEN+9];
 char NS_Register_URL[TOPICLEN+1];
 char Network_Kline_Address[HOSTLEN+1];
 char Local_Kline_Address[HOSTLEN+1];
@@ -107,7 +115,6 @@ extern void     read_motd(char *);          /* defined in s_serv.c */
 extern void     read_shortmotd(char *);     /* defined in s_serv.c */
 extern void     read_help(char *);          /* defined in s_serv.c */
 extern void     init_globals();
-extern int      klinestore_init(int);    /* defined in klines.c */
 
 char        **myargv;
 char        configfile[PATH_MAX] = {0};     /* Server configuration file */
@@ -332,7 +339,7 @@ static time_t try_connections(time_t currenttime)
             next = aconn->hold;
     }
 
-    if (connecting && (!server_list || confopts & FLAGS_HUB)) 
+    if (connecting) 
     {
         if (con_conn->next)     /* are we already last? */
         {
@@ -806,6 +813,7 @@ main(int argc, char *argv[])
     
     motd = (aMotd *) NULL;
     helpfile = (aMotd *) NULL;
+    motd_tm = NULL;
     shortmotd = NULL;
         
     clear_client_hash_table();
@@ -898,10 +906,8 @@ main(int argc, char *argv[])
 
     /* the pid file must be written *AFTER* the fork */
     write_pidfile();
+        
 
-    /* this should be sooner, but the fork/detach stuff is so brain-dead... */
-    klinestore_init(0);
-    
     /* moved this to here such that we allow more verbose error
      * checking on startup.  -epi
      */
@@ -943,20 +949,10 @@ void do_recvqs()
       lpn = lp->next;
       cptr = lp->value.cptr;
 
-      /* dlink is tagged for deletion, cptr is already gone */
-      if (lp->flags == -1)
-      {
-          remove_from_list(&recvq_clients, NULL, lp);
-          continue;
-      }
-
       if(SBufLength(&cptr->recvQ) && !NoNewLine(cptr))
       {
          if(do_client_queue(cptr) == FLUSH_BUFFER)
-         {
-             remove_from_list(&recvq_clients, NULL, lp);
-             continue;
-         }
+            continue;
       }
 
       if(!(SBufLength(&cptr->recvQ) && !NoNewLine(cptr)))
@@ -1292,37 +1288,3 @@ void build_version(void)
     ircsprintf(version, "%s-%.1d.%.1d(%.2d)%s", BASENAME,
                MAJOR, MINOR, PATCH, (*s != 0 ? PATCHES : ""));  
 }
-
-u_long
-memcount_ircd(MCircd *mc)
-{
-    mc->file = __FILE__;
-
-    mc->s_confbuf.c++;
-    mc->s_confbuf.m += sizeof(ProxyMonURL);
-    mc->s_confbuf.c++;
-    mc->s_confbuf.m += sizeof(ProxyMonHost);
-    mc->s_confbuf.c++;
-    mc->s_confbuf.m += sizeof(Network_Name);
-    mc->s_confbuf.c++;
-    mc->s_confbuf.m += sizeof(Services_Name);
-    mc->s_confbuf.c++;
-    mc->s_confbuf.m += sizeof(Stats_Name);
-    mc->s_confbuf.c++;
-    mc->s_confbuf.m += sizeof(NS_Register_URL);
-    mc->s_confbuf.c++;
-    mc->s_confbuf.m += sizeof(Network_Kline_Address);
-    mc->s_confbuf.c++;
-    mc->s_confbuf.m += sizeof(Local_Kline_Address);
-    mc->s_confbuf.c++;
-    mc->s_confbuf.m += sizeof(Staff_Address);
-    mc->s_confbuf.c++;
-    mc->s_confbuf.m += sizeof(configfile);
-    mc->s_confbuf.c++;
-    mc->s_confbuf.m += sizeof(dpath);
-    mc->s_confbuf.c++;
-    mc->s_confbuf.m += sizeof(spath);
-
-    return 0;
-}
-

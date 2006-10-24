@@ -27,9 +27,6 @@
 
 /* $Id$ */
 
-#ifndef H_H
-#define H_H
-
 #include "send.h"
 #include "ircsprintf.h"
 
@@ -59,7 +56,14 @@ extern char ProxyMonURL[TOPICLEN+1];
 extern char ProxyMonHost[HOSTLEN+1];
 extern char Network_Name[HOSTLEN+1];
 extern char Services_Name[HOSTLEN+1];
+extern char NS_Services_Name[HOSTLEN+9];
+extern char CS_Services_Name[HOSTLEN+9];
+extern char MS_Services_Name[HOSTLEN+9];
+extern char RS_Services_Name[HOSTLEN+9];
 extern char Stats_Name[HOSTLEN+1];
+extern char OS_Stats_Name[HOSTLEN+9];
+extern char SS_Stats_Name[HOSTLEN+9];
+extern char HS_Stats_Name[HOSTLEN+9];
 extern char Staff_Address[HOSTLEN+1];
 extern char NS_Register_URL[TOPICLEN+1];
 extern char Network_Kline_Address[HOSTLEN+1];
@@ -122,52 +126,15 @@ extern int  	  lock_kline_file();
 
 extern void 	  clear_scache_hash_table(void);
 extern char 	 *find_or_add(char *);
+extern void 	  count_scache(int *, u_long *);
 extern void 	  list_scache(aClient *, aClient *, int, char **);
-
-
-#ifdef MEMTRACE
-
-typedef struct MemTracer MemTracer;
-struct MemTracer {
-    const char  *file;
-    const int    line;
-    int          initialized;
-    int          objects;
-    size_t       allocated;
-    MemTracer   *next;
-};
-
-extern void 	 *MyMalloc_impl(MemTracer *, size_t);
-extern void 	 *MyRealloc_impl(MemTracer *, void *, size_t);
-extern void 	 MyFree_impl(void *);
-
-/* uses GNU C extension for statements in expressions */
-#define MyMalloc(s) ({ \
-    static MemTracer mt = { __FILE__, __LINE__ }; \
-    MyMalloc_impl(&mt, s); \
-})
-
-#define MyRealloc(x, s) ({ \
-    static MemTracer mt = { __FILE__, __LINE__ }; \
-    MyRealloc_impl(&mt, x, s); \
-})
-
-#define MyFree(x)       do { MyFree_impl(x); (x) = NULL; } while(0)
-
-#else
 
 extern void 	 *MyMalloc(size_t);
 extern void 	 *MyRealloc(void *, size_t);
 
-#define MyFree(x)       do { if (x) free(x); (x) = NULL; } while(0)
-
-#endif  /* MEMTRACE */
-
-extern u_long 	 channel_memreport(aClient *);
-extern u_long 	 hash_memreport(aClient *);
-extern u_long 	 hide_memreport(aClient *);
-extern u_long 	 parse_memreport(aClient *);
-extern u_long 	 s_bsd_memreport(aClient *);
+/* MyFree is defined as a macro in sys.h 
+ * extern  void     MyFree (void *); 
+ */
 
 extern char 	 *debugmode, configfile[], *sbrk0;
 extern char 	 *klinefile;
@@ -246,6 +213,7 @@ extern int  	  deliver_it(aClient *, char *, int);
 extern inline int check_registered(aClient *);
 extern inline int check_registered_user(aClient *);
 extern char 	 *get_client_name(aClient *, int);
+extern char 	 *get_client_host(aClient *);
 extern char 	 *my_name_for_link(char *, aConnect *);
 extern char 	 *myctime(time_t), *date(time_t);
 extern int  	  exit_client(aClient *, aClient *, aClient *, char *);
@@ -283,7 +251,6 @@ extern aServer   *make_server(aClient *);
 extern aClient   *make_client(aClient *, aClient *);
 extern chanMember *find_user_member(chanMember *, aClient *);
 extern Link 	 *find_str_link(Link *, char *);
-extern DLink     *find_dlink(DLink *, void *);
 extern void 	  add_client_to_list(aClient *);
 extern void 	  checklist(void);
 extern void 	  remove_client_from_list(aClient *);
@@ -326,7 +293,6 @@ extern int  	  client_dopacket(aClient *, char *, int);
 
 extern void       send_rplversion(aClient *);
 extern void       send_rplisupport(aClient *);
-extern void       send_rplisupportoper(aClient *);
 extern void       build_rplcache(void);
 
 extern void 	  debug(int level, char *pattern, ...);
@@ -356,6 +322,7 @@ void        	  free_fludees();
 #endif
 
 #define MAXKILLS 20
+extern void 	  count_watch_memory(int *, u_long *);
 extern void    	  clear_watch_hash_table(void);
 extern int     	  add_to_watch_hash_table(char *, aClient *);
 extern int     	  del_from_watch_hash_table(char *, aClient *);
@@ -366,16 +333,6 @@ extern aWatch 	 *hash_get_watch(char *);
 
 DLink *add_to_list(DLink **, void *);
 void remove_from_list(DLink **, void *, DLink *);
-
-void probability_add(aClient *);
-void probability_remove(aClient *);
-void probability_change(char *, char *);
-void probability_init(void);
-int probability_loadsets(char *);
-void probability_fini(void);
-void get_probabilities(aClient *, int *, int *, int *);
-
+void print_list_memory(aClient *);
 
 #include "find.h"
-
-#endif  /* H_H */

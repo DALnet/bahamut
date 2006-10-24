@@ -38,7 +38,6 @@
 #include "h.h"
 #include "numeric.h"
 #include "blalloc.h"
-#include "memcount.h"
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -69,7 +68,7 @@ hash_table *
 create_hash_table(int elems, size_t offset, size_t len, int flags, 
                   int (*cmpfunc)(void *, void *)) 
 {
-    hash_table *htp = MyMalloc(sizeof(hash_table));
+    hash_table *htp = malloc(sizeof(hash_table));
 
     htp->size = elems;
     htp->keyoffset = offset;
@@ -77,7 +76,7 @@ create_hash_table(int elems, size_t offset, size_t len, int flags,
     htp->flags = flags;
     htp->cmpfunc = cmpfunc;
 
-    htp->table = MyMalloc(sizeof(hashent_list) * htp->size);
+    htp->table = malloc(sizeof(hashent_list) * htp->size);
     memset(htp->table, 0, sizeof(hashent_list) * htp->size);
 
     return htp;
@@ -118,7 +117,7 @@ resize_hash_table(hash_table *table, int elems)
     oldtable = table->table;
     oldsize = table->size;
     table->size = elems;
-    table->table = MyMalloc(sizeof(hashent_list) * table->size);
+    table->table = malloc(sizeof(hashent_list) * table->size);
     memset(table->table, 0, sizeof(hashent_list) * table->size);
 
     /* now walk each bucket in the old table, pulling off individual entries
@@ -578,57 +577,4 @@ void throttle_stats(aClient *cptr, char *name)
 /* ignore this -- required for drone modules and the like */
 void throttle_force(char *host) {}
 #endif
-
-u_long
-memcount_GenericHash(hash_table *ht, MCGenericHash *mc)
-{
-    hashent *hep;
-    int      i;
-
-    mc->file = __FILE__;
-
-    mc->hashtable.c = 1;
-    mc->hashtable.m = sizeof(*ht);
-
-    mc->buckets.c = ht->size;
-    mc->buckets.m = sizeof(hashent_list) * ht->size;
-
-    for (i = 0; i < ht->size; i++)
-    {
-        SLIST_FOREACH(hep, &ht->table[i], lp)
-        {
-            mc->e_hashents++;
-        }
-    }
-
-    mc->total.c += mc->hashtable.c + mc->buckets.c;
-    mc->total.m += mc->hashtable.m + mc->buckets.m;
-
-    return mc->total.m;
-}
-
-u_long
-memcount_throttle(MCthrottle *mc)
-{
-#ifdef THROTTLE_ENABLE
-    throttle *tp;
-#endif
-
-    mc->file = __FILE__;
-
-#ifdef THROTTLE_ENABLE
-    LIST_FOREACH(tp, &throttles, lp)
-    {
-        mc->e_throttles++;
-    }
-
-    mc->e_throttle_heap = throttle_freelist;
-    mc->e_throttle_hash = throttle_hash;
-#endif
-
-    mc->e_hashent_heap = hashent_freelist;
-
-    return 0;
-}
-
 /* vi:set ts=8 sts=4 sw=4 tw=79: */

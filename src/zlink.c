@@ -29,7 +29,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include "zlib.h"
-#include "memcount.h"
 
 #define COMPRESSION_LEVEL 	3 	/* 0 to 9, 0 = none */
 #define ZIP_MIN_BLOCK		1024	/* smallest block to compress */
@@ -77,7 +76,7 @@ void *zip_create_input_session()
 {
     struct zipped_link_in *zip;
 
-    zip = (struct zipped_link_in *) MyMalloc(sizeof(struct zipped_link_in));
+    zip = (struct zipped_link_in *) malloc(sizeof(struct zipped_link_in));
 
     memset(zip, 0, sizeof(struct zipped_link_in));
 
@@ -96,7 +95,7 @@ void *zip_create_output_session()
 {
     struct zipped_link_out *zip;
 
-    zip = (struct zipped_link_out *) MyMalloc(sizeof(struct zipped_link_out));
+    zip = (struct zipped_link_out *) malloc(sizeof(struct zipped_link_out));
 
     memset(zip, 0, sizeof(struct zipped_link_out));
 
@@ -266,7 +265,7 @@ void zip_destroy_output_session(void *session)
     struct zipped_link_out *z = (struct zipped_link_out *) session;
 
     deflateEnd(&z->stream);
-    MyFree(session);
+    free(session);
 }
 
 void zip_destroy_input_session(void *session)
@@ -274,22 +273,6 @@ void zip_destroy_input_session(void *session)
     struct zipped_link_in *z = (struct zipped_link_in *) session;
 
     inflateEnd(&z->stream);
-    MyFree(session);
-}
-
-u_long
-memcount_zlink(MCzlink *mc)
-{
-    mc->file = __FILE__;
-
-    mc->m_insession_size = sizeof(struct zipped_link_in);
-    mc->m_outsession_size = sizeof(struct zipped_link_out);
-
-    mc->s_bufs.c++;
-    mc->s_bufs.m += sizeof(zipOutBuf);
-    mc->s_bufs.c++;
-    mc->s_bufs.m += sizeof(zipInBuf);
-
-    return 0;
+    free(session);
 }
 

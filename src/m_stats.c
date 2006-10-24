@@ -39,7 +39,6 @@
 #include "res.h"
 #include "sbuf.h"
 #include "clones.h"
-#include "memcount.h"
 
 #if defined(DEBUGMODE) && defined(HAVE_GETRUSAGE)
 #include <sys/time.h>
@@ -57,16 +56,201 @@ extern void report_fds(aClient *);
 
 static void show_opers(aClient *, char *);
 static void show_servers(aClient *, char *);
+static void count_memory(aClient *, char *);
 #ifdef DEBUGMODE
 static void send_usage(aClient *, char *);
 #endif
+static void count_whowas_memory(int *, u_long *);
 static void serv_info(aClient *, char *);
 static void tstats(aClient *, char *);
+static u_long cres_mem(aClient *);
+static u_long count_conf_memory(aClient *);
 
 /* support functions */
 /* show_opers
  * replies to stats p requests
  */
+
+static u_long 
+cres_mem(aClient *sptr)
+{
+    aCache *c = cachetop;
+    struct hostent *h;
+    int i;
+    u_long      nm = 0, im = 0, sm = 0, ts = 0;
+
+    for (; c; c = c->list_next)
+    {
+    sm += sizeof(*c);
+    h = &c->he;
+    for (i = 0; h->h_addr_list[i]; i++)
+    {
+        im += sizeof(char *);
+        im += sizeof(struct in_addr);
+    }
+    im += sizeof(char *);
+
+    for (i = 0; h->h_aliases[i]; i++)
+    {
+        nm += sizeof(char *);
+
+        nm += strlen(h->h_aliases[i]);
+    }
+    nm += i - 1;
+    nm += sizeof(char *);
+
+    if (h->h_name)
+        nm += strlen(h->h_name);
+    }
+    ts = ARES_CACSIZE * sizeof(CacheTable);
+    sendto_one(sptr, ":%s %d %s :RES table sz %d",
+           me.name, RPL_STATSDEBUG, sptr->name, ts);
+    sendto_one(sptr, ":%s %d %s :RES Structs sz %d IP storage sz %d "
+           "Name storage sz %d", me.name, RPL_STATSDEBUG, sptr->name, sm,
+           im, nm);
+    return ts + sm + im + nm;
+}
+
+static void
+count_whowas_memory(int *wwu, u_long *wwum)
+{
+    aWhowas *tmp;
+    int i;
+    int         u = 0;
+    u_long      um = 0;
+
+    /* count the number of used whowas structs in 'u' */
+    /* count up the memory used of whowas structs in um */
+
+    for (i = 0, tmp = &WHOWAS[0]; i < NICKNAMEHISTORYLENGTH; i++, tmp++)
+    if (tmp->hashv != -1)
+    {
+        u++;
+        um += sizeof(aWhowas);
+    }
+    *wwu = u;
+    *wwum = um;
+    return;
+}
+
+#define MAXUSERVS 24
+
+/*
+ * Send conf memory usage to a client, and return the total bytes in use.
+ */
+static u_long 
+count_conf_memory(aClient *cptr)
+{
+    int cnc = 0; u_long cnm = 0;    /* aConnects */
+    int alc = 0; u_long alm = 0;    /* aAllows */
+    int opc = 0; u_long opm = 0;    /* aOpers */
+    int ptc = 0; u_long ptm = 0;    /* aPorts */
+    int clc = 0; u_long clm = 0;    /* aClasses */
+    int usc = 0; u_long usm = 0;    /* U:lined */
+    int tc  = 0; u_long tm  = 0;    /* totals */
+
+    int          i;
+    aConnect    *cnptr;
+    aAllow      *alptr;
+    aOper       *opptr;
+    aPort       *ptptr;
+    aClass      *clptr;
+
+    for (cnptr = connects; cnptr; cnptr = cnptr->next)
+    {
+        cnc++;
+        cnm += sizeof(*cnptr);
+        if (!BadPtr(cnptr->host))
+            cnm += strlen(cnptr->host) + 1;
+        if (!BadPtr(cnptr->apasswd))
+            cnm += strlen(cnptr->apasswd) + 1;
+        if (!BadPtr(cnptr->cpasswd))
+            cnm += strlen(cnptr->cpasswd) + 1;
+        if (!BadPtr(cnptr->name))
+            cnm += strlen(cnptr->name) + 1;
+        if (!BadPtr(cnptr->source))
+            cnm += strlen(cnptr->source) + 1;
+        if (!BadPtr(cnptr->class_name))
+            cnm += strlen(cnptr->class_name) + 1;
+    }
+
+    for (alptr = allows; alptr; alptr = alptr->next)
+    {
+        alc++;
+        alm += sizeof(*alptr);
+        if (!BadPtr(alptr->ipmask))
+            alm += strlen(alptr->ipmask) + 1;
+        if (!BadPtr(alptr->passwd))
+            alm += strlen(alptr->passwd) + 1;
+        if (!BadPtr(alptr->hostmask))
+            alm += strlen(alptr->hostmask) + 1;
+        if (!BadPtr(alptr->class_name))
+            alm += strlen(alptr->class_name) + 1;
+    }
+
+    for (opptr = opers; opptr; opptr = opptr->next)
+    {
+        opc++;
+        opm += sizeof(*opptr);
+        if (!BadPtr(opptr->passwd))
+            opm += strlen(opptr->passwd) + 1;
+        if (!BadPtr(opptr->nick))
+            opm += strlen(opptr->nick) + 1;
+        if (!BadPtr(opptr->class_name))
+            opm += strlen(opptr->class_name) + 1;
+        for (i = 0; i < sizeof(opptr->hosts)/sizeof(opptr->hosts[0]); i++)
+            if (!BadPtr(opptr->hosts[i]))
+                opm += strlen(opptr->hosts[i]) + 1;
+    }
+
+    for (ptptr = ports; ptptr; ptptr = ptptr->next)
+    {
+        ptc++;
+        ptm += sizeof(*ptptr);
+        if (!BadPtr(ptptr->allow))
+            ptm += strlen(ptptr->allow) + 1;
+        if (!BadPtr(ptptr->address))
+            ptm += strlen(ptptr->address) + 1;
+    }
+
+    for (clptr = classes; clptr; clptr = clptr->next)
+    {
+        clc++;
+        clm += sizeof(*clptr);
+        if (!BadPtr(clptr->name))
+            clm += strlen(clptr->name) + 1;
+    }
+
+    for (i = 0; i < MAXUSERVS; i++)
+    {
+        if (!BadPtr(uservers[i]))
+        {
+            usc++;
+            usm += strlen(uservers[i]) + 1;
+        }
+    }
+
+    tc = cnc + alc + opc + ptc + clc + usc;
+    tm = cnm + alm + opm + ptm + clm + usm;
+
+    sendto_one(cptr, ":%s %d %s :Conf entries %d(%lu):",
+               me.name, RPL_STATSDEBUG, cptr->name, tc, tm);
+    sendto_one(cptr, ":%s %d %s :    aConnect %d(%lu)",
+               me.name, RPL_STATSDEBUG, cptr->name, cnc, cnm);
+    sendto_one(cptr, ":%s %d %s :    aAllow %d(%lu)",
+               me.name, RPL_STATSDEBUG, cptr->name, alc, alm);
+    sendto_one(cptr, ":%s %d %s :    aOper %d(%lu)",
+               me.name, RPL_STATSDEBUG, cptr->name, opc, opm);
+    sendto_one(cptr, ":%s %d %s :    aPort %d(%lu)",
+               me.name, RPL_STATSDEBUG, cptr->name, ptc, ptm);
+    sendto_one(cptr, ":%s %d %s :    aClass %d(%lu)",
+               me.name, RPL_STATSDEBUG, cptr->name, clc, clm);
+    sendto_one(cptr, ":%s %d %s :    U-servers %d(%lu)",
+               me.name, RPL_STATSDEBUG, cptr->name, usc, usm);
+
+    return tm;
+}
+
 
 
 #ifdef DEBUGMODE
@@ -164,6 +348,358 @@ send_usage(aClient *cptr, char *nick)
     return;
 }
 #endif  /* DEBUGMODE */
+
+
+static void 
+count_memory(aClient *cptr, char *nick)
+{
+    extern aChannel *channel;
+
+    extern BlockHeap *free_local_aClients;
+    extern BlockHeap *free_Links;
+    extern BlockHeap *free_DLinks;
+    extern BlockHeap *free_remote_aClients;
+    extern BlockHeap *free_anUsers;
+    extern BlockHeap *free_channels;
+    extern BlockHeap *free_chanMembers;
+#ifdef FLUD
+    extern BlockHeap *free_fludbots;
+#endif
+    extern BlockHeap *free_cloneents;
+
+    extern aMotd      *motd;
+    extern aMotd      *shortmotd;
+    extern aMotd      *helpfile;
+
+    extern int num_msg_trees;
+
+    aClient *acptr;
+    Link   *link;
+    chanMember *cm;
+    aBan   *bp;
+    aChannel *chptr;
+    aMotd *amo;
+    CloneEnt *ce;
+
+    int         lc = 0;         /* local clients */
+    int         lcc = 0;        /* local client conf links */
+    int         rc = 0;         /* remote clients */
+    int         us = 0;         /* user structs */
+    int         chu = 0;        /* channel users */
+    int         chi = 0;        /* channel invites */
+    int         chb = 0;        /* channel bans */
+    int         wwu = 0;        /* whowas users */
+    int         ch = 0;
+    int         usi = 0;        /* users invited */
+    int         usc = 0;        /* users in channels */
+    int         usdm = 0;       /* dccallow local */
+    int         usdr = 0;       /* dccallow remote */
+    int         uss = 0;        /* silenced users */
+    int         aw = 0;         /* aways set */
+    int         number_servers_cached;  /* number of servers cached by
+                                         * scache
+                                         */
+    u_long      chbm = 0;       /* memory used by channel bans */
+    u_long      lcm = 0;        /* memory used by local clients */
+    u_long      rcm = 0;        /* memory used by remote clients */
+    u_long      awm = 0;        /* memory used by aways */
+    u_long      wwm = 0;        /* whowas array memory used */
+    u_long      rm = 0;         /* res memory used */
+    u_long      mem_servers_cached;     /* memory used by scache */
+
+    u_long      totco = 0;
+    u_long      totcl = 0;
+    u_long      totch = 0;
+    u_long      totww = 0;
+    u_long      totmisc = 0;
+    u_long      tothash = 0;
+    u_long      totuban = 0;
+    u_long      tot = 0;
+
+    int wlh=0, wle=0; /* watch headers/entries */
+    u_long wlhm=0; /* memory used by watch */
+
+    int lcalloc = 0;    /* local clients allocated */
+    int rcalloc = 0;    /* remote clients allocated */
+    int useralloc = 0;  /* allocated users */
+    int linkalloc = 0;  /* allocated links */
+    int dlinkalloc = 0; /* allocated dlinks */
+    int totallinks = 0; /* total links used */
+    int chanalloc = 0; /* total channels alloc'd */
+    int cmemballoc = 0;
+    int clonealloc = 0;
+    u_long lcallocsz = 0, rcallocsz = 0; /* size for stuff above */
+    u_long userallocsz = 0, linkallocsz = 0, dlinkallocsz = 0, chanallocsz = 0;
+    u_long cmemballocsz = 0, cloneallocsz = 0;
+
+    int fludalloc = 0;
+    u_long fludallocsz = 0;
+    int fludlink = 0;
+
+    int cloneent = 0;
+    u_long cloneentsz = 0;
+
+    int motdlen = 0;
+
+    int servn = 0;
+    
+    /* sbuf counts -- 0 = used, 1 = total, 2 = size */
+    int sbuf_user[3], sbuf_small[3], sbuf_large[3];
+    /* block counts -- 0 = total, 1 = size */
+    int sbuf_blocks[2], sbuf_userblocks[2];
+    
+
+    count_whowas_memory(&wwu, &wwm);    /* no more away memory to count */
+
+    count_watch_memory(&wlh, &wlhm);
+
+    for(acptr = client; acptr; acptr = acptr->next)
+    {
+        if(MyConnect(acptr))
+        {
+            lc++;
+            wle += acptr->watches;
+        }
+        else
+            rc++;
+
+
+#ifdef FLUD
+        for (link = acptr->fludees; link;
+             link = link->next)
+            fludlink++;
+#endif
+        if (acptr->serv)
+            servn++;
+
+        if (acptr->user)
+        {
+            us++;
+            for (link = acptr->user->invited; link;
+                 link = link->next)
+                usi++;
+            for (link = acptr->user->channel; link;
+                 link = link->next)
+                usc++;
+            for (link = acptr->user->dccallow; link;
+                 link = link->next)
+            {
+                if(link->flags == DCC_LINK_ME)
+                    usdm++;
+                else
+                    usdr++;
+            }
+            for (link = acptr->user->silence; link;
+                 link = link->next)
+                uss++;
+            if (acptr->user->away)
+            {
+                aw++;
+                awm += (strlen(acptr->user->away) + 1);
+            }
+        }
+    }
+
+    lcm = lc * CLIENT_LOCAL_SIZE;
+    rcm = rc * CLIENT_REMOTE_SIZE;
+
+    for (chptr = channel; chptr; chptr = chptr->nextch)
+    {
+        ch++;
+
+        for (cm = chptr->members; cm; cm = cm->next)
+            chu++;
+        for (link = chptr->invites; link; link = link->next)
+            chi++;
+        for (bp = chptr->banlist; bp; bp = bp->next)
+        {
+            chb++;
+            chbm += (strlen(bp->who) + strlen(bp->banstr) + 2 + sizeof(aBan));
+    }
+    }
+
+    for (amo = motd; amo; amo = amo->next)
+        motdlen++;
+    for (amo = shortmotd; amo; amo = amo->next)
+        motdlen++;
+    for (amo = helpfile; amo; amo = amo->next)
+        motdlen++;
+
+    for (ce = clones_list; ce; ce = ce->next)
+        cloneent++;
+    cloneentsz = cloneent * sizeof(*ce);
+
+    lcalloc = free_local_aClients->blocksAllocated *
+        free_local_aClients->elemsPerBlock;
+    lcallocsz = lcalloc * free_local_aClients->elemSize;
+
+    rcalloc = free_remote_aClients->blocksAllocated *
+        free_remote_aClients->elemsPerBlock;
+    rcallocsz = rcalloc * free_remote_aClients->elemSize;
+
+    useralloc = free_anUsers->blocksAllocated * free_anUsers->elemsPerBlock;
+    userallocsz = useralloc * free_anUsers->elemSize;
+
+    linkalloc = free_Links->blocksAllocated * free_Links->elemsPerBlock;
+    linkallocsz = linkalloc * free_Links->elemSize;
+
+    dlinkalloc = free_DLinks->blocksAllocated * free_DLinks->elemsPerBlock;
+    dlinkallocsz = dlinkalloc * free_DLinks->elemSize;
+
+    chanalloc = free_channels->blocksAllocated * free_channels->elemsPerBlock;
+    chanallocsz = chanalloc * free_channels->elemSize;
+
+    cmemballoc = free_chanMembers->blocksAllocated *
+        free_chanMembers->elemsPerBlock;
+    cmemballocsz = cmemballoc * free_chanMembers->elemSize;
+
+#ifdef FLUD
+    fludalloc = free_fludbots->blocksAllocated * free_fludbots->elemsPerBlock;
+    fludallocsz = fludalloc * free_fludbots->elemSize;
+#endif
+
+    clonealloc = free_cloneents->blocksAllocated
+               * free_cloneents->elemsPerBlock;
+    cloneallocsz = clonealloc * free_cloneents->elemSize;
+
+    totallinks = lcc + usi +  uss + usc + chi + wle + fludlink + usdm + usdr;
+
+    sendto_one(cptr, ":%s %d %s :Memory Use Summary",
+               me.name, RPL_STATSDEBUG, nick);
+    sendto_one(cptr, ":%s %d %s :Client usage %d(%d) ALLOC %d(%d)",
+               me.name, RPL_STATSDEBUG, nick, lc + rc, lcm + rcm,
+               lcalloc + rcalloc, lcallocsz + rcallocsz);
+    sendto_one(cptr, ":%s %d %s :   Local %d(%d) ALLOC %d(%d)",
+               me.name, RPL_STATSDEBUG, nick, lc, lcm, lcalloc, lcallocsz);
+    sendto_one(cptr, ":%s %d %s :   Remote %d(%d) ALLOC %d(%d)",
+               me.name, RPL_STATSDEBUG, nick, rc, rcm, rcalloc, rcallocsz);
+    sendto_one(cptr, ":%s %d %s :Users %d(%d) ALLOC %d(%d)",
+               me.name, RPL_STATSDEBUG, nick, us, us * sizeof(anUser),
+               useralloc, userallocsz);
+
+    totcl = lcallocsz + rcallocsz + userallocsz;
+
+    sendto_one(cptr, ":%s %d %s :Links %d(%d) ALLOC %d(%d)",
+               me.name, RPL_STATSDEBUG, nick, totallinks,
+               totallinks * sizeof(Link), linkalloc, linkallocsz);
+    sendto_one(cptr, ":%s %d %s :   UserInvites %d(%d) ChanInvites %d(%d)",
+               me.name, RPL_STATSDEBUG, nick, usi, usi * sizeof(Link), chi,
+               chi * sizeof(Link));
+    sendto_one(cptr, ":%s %d %s :   UserChannels %d(%d)",
+               me.name, RPL_STATSDEBUG, nick, usc, usc * sizeof(Link));
+    sendto_one(cptr, ":%s %d %s :   DCCAllow Local %d(%d) Remote %d(%d)",
+               me.name, RPL_STATSDEBUG, nick, usdm, usdm * sizeof(Link),
+               usdr, usdr * sizeof(Link));
+    sendto_one(cptr, ":%s %d %s :   WATCH entries %d(%d)",
+               me.name, RPL_STATSDEBUG, nick, wle, wle*sizeof(Link));
+    sendto_one(cptr, ":%s %d %s :   Fludees %d(%d)",
+               me.name, RPL_STATSDEBUG, nick, fludlink, fludlink*sizeof(Link));
+
+    sendto_one(cptr, ":%s %d %s :DLinks ALLOC %d(%d)",
+               me.name, RPL_STATSDEBUG, nick, dlinkalloc, dlinkallocsz);
+    /* Print summary of DLINKs used in clientlist.c */
+    print_list_memory(cptr);
+
+    /* Count (and print) conf memory used in s_conf.c */
+    totco = count_conf_memory(cptr);
+
+    sendto_one(cptr, ":%s %d %s :WATCH headers %d(%d)",
+               me.name, RPL_STATSDEBUG, nick, wlh, wlhm);
+    sendto_one(cptr, ":%s %d %s :Away Messages %d(%d)",
+               me.name, RPL_STATSDEBUG, nick, aw, awm);
+    sendto_one(cptr, ":%s %d %s :MOTD structs %d(%d)",
+               me.name, RPL_STATSDEBUG, nick, motdlen,
+               motdlen * sizeof(aMotd));
+    sendto_one(cptr, ":%s %d %s :Servers %d(%d)",
+               me.name, RPL_STATSDEBUG, nick, servn, servn * sizeof(aServer));
+    sendto_one(cptr, ":%s %d %s :Message Trees %d(%d)",
+               me.name, RPL_STATSDEBUG, nick, num_msg_trees,
+               num_msg_trees * sizeof(MESSAGE_TREE));
+
+    totmisc = wlhm + awm + (motdlen * sizeof(aMotd)) + totco +
+        (servn * sizeof(aServer)) +
+        (num_msg_trees * sizeof(MESSAGE_TREE));
+
+    sendto_one(cptr, ":%s %d %s :Fludbots ALLOC %d(%d)",
+               me.name, RPL_STATSDEBUG, nick, fludalloc, fludallocsz);
+
+    sendto_one(cptr, ":%s %d %s :Clones %d(%d) ALLOC %d(%d)", me.name,
+               RPL_STATSDEBUG, nick, cloneent, cloneentsz, clonealloc,
+               cloneallocsz);
+
+    sendto_one(cptr, ":%s %d %s :Channels %d(%d) ALLOC %d(%d) Bans %d(%d) "
+               "Members %d(%d) ALLOC %d(%d)", me.name, RPL_STATSDEBUG, nick,
+               ch, ch * sizeof(aChannel), chanalloc, chanallocsz, chb, chbm,
+               chu, chu * sizeof(chanMember), cmemballoc, cmemballocsz);
+
+    totch = chanallocsz + cmemballocsz + chbm;
+
+    /* print userban summary, get userban total usage */
+    totuban = count_userbans(cptr);
+    totuban += count_simbans(cptr);
+
+    sendto_one(cptr, ":%s %d %s :Whowas users %d(%d)",
+               me.name, RPL_STATSDEBUG, nick, wwu, wwu * sizeof(anUser));
+    sendto_one(cptr, ":%s %d %s :Whowas array %d(%d)",
+               me.name, RPL_STATSDEBUG, nick, NICKNAMEHISTORYLENGTH, wwm);
+
+    totww = wwu * sizeof(anUser) + wwm;
+
+    sendto_one(cptr, ":%s %d %s :Hash: client %d(%d) chan %d(%d) whowas "
+               "%d(%d) watch %d(%d)", me.name, RPL_STATSDEBUG, nick,
+               U_MAX, sizeof(aHashEntry) * U_MAX,
+               CH_MAX, sizeof(aHashEntry) * CH_MAX,
+               WW_MAX, sizeof(aWhowas *) * WW_MAX,
+               WATCHHASHSIZE, sizeof(aWatch *) * WATCHHASHSIZE);
+
+/*    count_dbuf_memory(&db, &db2);
+    sendto_one(cptr, ":%s %d %s :Dbuf blocks %d(%d) MAX %d(%d)",
+               me.name, RPL_STATSDEBUG, nick, DBufUsedCount, db2,
+               DBufCount, db);
+*/
+    sbuf_count(&sbuf_user[0], &sbuf_user[1], &sbuf_user[2],
+               &sbuf_small[0], &sbuf_small[1], &sbuf_small[2],
+               &sbuf_large[0], &sbuf_large[1], &sbuf_large[2],
+               &sbuf_blocks[0], &sbuf_blocks[1], &sbuf_userblocks[0], &sbuf_userblocks[1]);
+    sendto_one(cptr, ":%s %d %s :SBUF ALLOC(%d)", me.name, RPL_STATSDEBUG, nick,
+               sbuf_user[1]*sbuf_user[2] + sbuf_small[1]*sbuf_small[2] + sbuf_large[1]*sbuf_large[2] +
+               sbuf_blocks[0]*sbuf_blocks[1] + sbuf_userblocks[0]*sbuf_userblocks[1]);
+    sendto_one(cptr, ":%s %d %s :   BLOCKS %d(%d) USERBLOCKS %d(%d)", me.name, RPL_STATSDEBUG, nick,
+               sbuf_blocks[0], sbuf_blocks[0]*sbuf_blocks[1], sbuf_userblocks[0], sbuf_userblocks[0]*sbuf_userblocks[1]);
+    sendto_one(cptr, ":%s %d %s :   USERS %d MAX(%d) ALLOC(%d)", me.name, RPL_STATSDEBUG, nick,
+               sbuf_user[0], sbuf_user[1], sbuf_user[1]*sbuf_user[2]);
+    sendto_one(cptr, ":%s %d %s :   SMALL %d MAX(%d) ALLOC(%d)", me.name, RPL_STATSDEBUG, nick,
+               sbuf_small[0], sbuf_small[1], sbuf_small[1]*sbuf_small[2]);
+    sendto_one(cptr, ":%s %d %s :   LARGE %d MAX(%d) ALLOC(%d)", me.name, RPL_STATSDEBUG, nick,
+               sbuf_large[0], sbuf_large[1], sbuf_large[1]*sbuf_large[2]);
+    
+
+
+    rm = cres_mem(cptr);
+
+    count_scache(&number_servers_cached, &mem_servers_cached);
+
+    sendto_one(cptr, ":%s %d %s :scache %d(%d)",
+               me.name, RPL_STATSDEBUG, nick,
+               number_servers_cached,
+               mem_servers_cached);
+
+    tothash = (sizeof(aHashEntry)*U_MAX)+(sizeof(aHashEntry)*CH_MAX) +
+        (sizeof(aWatch *)*WATCHHASHSIZE) + (sizeof(aWhowas *)*WW_MAX);
+
+    tot = totww + totch + totcl + totmisc + /*db +*/ rm + tothash + linkallocsz +
+          dlinkallocsz + fludallocsz + totuban;
+
+    sendto_one(cptr, ":%s %d %s :whowas %d chan %d client/user %d misc %d "
+               /*dbuf %d*/ "hash %d res %d link %d flud %d simuserban %d",
+               me.name, RPL_STATSDEBUG, nick, totww, totch, totcl, totmisc,
+               /*db,*/ tothash, rm, linkallocsz, fludallocsz, totuban);
+
+    sendto_one(cptr, ":%s %d %s :TOTAL: %d sbrk(0)-etext: %u",
+               me.name, RPL_STATSDEBUG, nick, tot,
+               (u_int) sbrk((size_t) 0) - (u_int) sbrk0);
+    return;
+}
 
 
 static void 
@@ -267,9 +803,8 @@ serv_info(aClient *cptr, char *name)
         sendK += acptr->sendK;
         receiveK += acptr->receiveK;
         sendto_one(cptr, Lformat, me.name, RPL_STATSLINKINFO,
-                    name, ( (MyClient(cptr) && IsAdmin(cptr))
-                            ? get_client_name(acptr, FALSE)
-                            : get_client_name(acptr, HIDEME) ),
+                    name, ( IsAnOper(cptr) ? get_client_name(acptr, HIDEME)
+                                           : acptr->name ),
                     (int) SBufLength(&acptr->sendQ),
                     (int) acptr->sendM, (int) acptr->sendK,
                     (int) acptr->receiveM, (int) acptr->receiveK,
@@ -538,7 +1073,9 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
             sincetime = (acptr->since > timeofday) ? 0 : 
                                 timeofday - acptr->since;
             sendto_one(sptr, Lformat, me.name, RPL_STATSLINKINFO, parv[0],
-                        get_client_name(acptr, TRUE),
+                        ( (IsAnOper(sptr) || !IsAnOper(acptr))
+                          ? get_client_name(acptr, TRUE)
+                          : get_client_name(acptr, HIDEME) ),
                         (int) SBufLength(&acptr->sendQ),
                         (int) acptr->sendM, (int) acptr->sendK,
                         (int) acptr->receiveM, (int) acptr->receiveK,
@@ -561,9 +1098,8 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
                 sincetime = (acptr->since > timeofday) ? 0 : 
                              timeofday - acptr->since;
                 sendto_one(sptr, Lformat, me.name, RPL_STATSLINKINFO, parv[0],
-                        ( (MyClient(sptr) && IsAdmin(sptr))
-                          ? get_client_name(acptr, FALSE)
-                          : get_client_name(acptr, HIDEME) ),
+                        ( IsAnOper(sptr) ? get_client_name(acptr, HIDEME)
+                                         : acptr->name ),
                         (int) SBufLength(&acptr->sendQ),
                         (int) acptr->sendM, (int) acptr->sendK,
                         (int) acptr->receiveM, (int) acptr->receiveK,
@@ -913,15 +1449,9 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
         }
 
         case 'Z':
-            if (IsAnOper(sptr))
-                report_memory_usage(sptr, 1);
-            else
-                sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name, parv[0]);
-            break;
-
         case 'z':
             if (IsAnOper(sptr))
-                report_memory_usage(sptr, 0);
+                count_memory(sptr, parv[0]);
             else
                 sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name, parv[0]);
             break;

@@ -40,7 +40,6 @@ extern void send_globops(char *pattern, ...);
 extern void send_operwall(aClient *, char *, char *);
 
 extern void sendto_all_butone(aClient *one, aClient *from, char *pattern, ...);
-extern void sendto_all_servmask(aClient *from, char *mask, char *pattern, ...);
 extern void sendto_channel_butone(aClient *one, aClient *from, 
 				  aChannel *chptr, char *pattern, ...);
 extern void sendto_channel_remote_butone(aClient *one, aClient *from, 
@@ -49,15 +48,23 @@ extern void sendto_channel_butserv(aChannel *chptr, aClient *from,
 				   char *pattern, ...);
 extern void sendto_channel_butserv_me(aChannel *chptr, aClient *from,
 				      char *pattern, ...);
-extern void sendto_channelflags_butone(aClient *, aClient *, aChannel *,
-                                       int, char *, ...);
+extern void sendto_channelops_butserv(aChannel *chptr, aClient *from,
+				      char *pattern, ...);
+extern void sendto_channelops_butone(aClient *one, aClient *from,
+				     aChannel *chptr,char *pattern, ...);
+extern void sendto_channelvoice_butone(aClient *one, aClient *from,
+				       aChannel *chptr, char *pattern, ...);
+extern void sendto_channelvoiceops_butone(aClient *one, aClient *from,
+					  aChannel *chptr, char *patern, ...);
 extern void sendto_common_channels(aClient *user, char *pattern, ...);
 extern void send_quit_to_common_channels(aClient *from, char *reason);
 extern void send_part_to_common_channels(aClient *from, char *reason);
 extern void sendto_fdlist(fdlist *listp, char *pattern, ...);
 extern void sendto_locops(char *pattern, ...);
+extern void sendto_match_butone(aClient *one, aClient *from, char *mask,
+				int what, char *pattern, ...);
 extern void sendto_one(aClient *to, char *pattern, ...);
-extern void sendto_alias(AliasInfo *ai, aClient *from, char *pattern, ...);
+extern void sendto_one_services(aClient *to, char *pattern, ...);
 extern void sendto_ops(char *pattern, ...);
 extern void sendto_ops_butone(aClient *one, aClient *from, char *pattern, ...);
 extern void sendto_ops_lev(int lev, char *pattern, ...);
@@ -65,9 +72,8 @@ extern void sendto_prefix_one(aClient *to, aClient *from, char *pattern, ...);
 
 extern void sendto_realops_lev(int lev, char *pattern, ...);
 extern void sendto_realops(char *pattern, ...);
-extern void sendto_non_noquit_servs_butone(aClient *one, char *pattern, ...);
 extern void sendto_serv_butone(aClient *one, char *pattern, ...);
-extern void sendto_serv_butone_super(aClient *one, int flag, char *pattern, ...);
+extern void sendto_serv_butone_services(aClient *one, char *pattern, ...);
 extern void sendto_wallops_butone(aClient *one, aClient *from,
 				  char *pattern, ...);
 extern void sendto_gnotice(char *pattern, ...);

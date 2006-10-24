@@ -28,7 +28,6 @@
 #include "h.h"
 #include "userban.h"
 #include "queue.h"
-#include "memcount.h"
 
 #define HASH_SIZE (32749)    /* largest prime < 32768 */
 
@@ -1569,218 +1568,188 @@ void simban_free(struct simBan *b)
    MyFree(b);
 }
 
-/*
- * Dump all local connections that match a userban.
- */
-void userban_sweep(struct userBan *ban)
+int count_simlist(uBanEnt *bl, int *mem)
 {
-    char rbuf[512];
-    aClient *acptr;
-    char *reason;
-    char *btext;
-    char *ntext;
-    int clientonly = 1;
-    int i;
+   uBanEnt *bln;
+   struct simBan *ban;
+   int umem = 0, ucnt = 0;
 
-    if (ban->flags & UBAN_NETWORK)
-    {
-        btext = NETWORK_BANNED_NAME;
-        ntext = NETWORK_BAN_NAME;
-    }
-    else
-    {
-        btext = LOCAL_BANNED_NAME;
-        ntext = LOCAL_BAN_NAME;
-    }
+   while(bl)
+   {
+      bln = LIST_NEXT(bl, lp);
+      ban = (struct simBan *)bl->ban;
 
-    if (!(reason = ban->reason))
-        reason = "<no reason>";
+      ucnt++;
+      umem += sizeof(struct simBan);
+      if(ban->mask)
+         umem += (strlen(ban->mask) + 1);
 
-    /* if it's purely IP based, dump unregistered and server connections too */
-    if (ban->flags & UBAN_WILDUSER)
-        if (ban->flags & (UBAN_IP|UBAN_CIDR4|UBAN_CIDR4BIG))
-            clientonly = 0;
+      if(ban->reason)
+         umem += (strlen(ban->reason) + 1);
 
-    ircsnprintf(rbuf, sizeof(rbuf), "%s: %s", btext, reason);
+      bl = bln;
+   }
 
-    for (i = 0; i <= highest_fd; i++)
-    {
-        if (!(acptr = local[i]) || acptr->status < STAT_UNKNOWN)
-            continue;
+   if(mem)
+      *mem = umem;
 
-        if (clientonly && !IsPerson(acptr))
-            continue;
-
-        if (user_match_ban(acptr, ban))
-        {
-            sendto_ops("%s active for %s", ntext,
-                       get_client_name(acptr, FALSE));
-            exit_client(acptr, acptr, &me, rbuf);
-            i--;
-        }
-    }
+   return ucnt;
 }
 
-
-/*
- * ks_dumpklines() helper
- */
-static void
-ks_dumplist(int f, uBanEnt *be)
+int count_list(uBanEnt *bl, int *mem)
 {
-    struct userBan *ub;
+   uBanEnt *bln;
+   struct userBan *ban;
+   int umem = 0, ucnt = 0;
 
-    /* klines.c */
-    extern void ks_write(int, char, struct userBan *);
+   while(bl)
+   {
+      bln = LIST_NEXT(bl, lp);
+      ban = bl->ban;
 
-    for (; be; be = LIST_NEXT(be, lp))
-    {
-        ub = be->ban;
+      ucnt++;
+      umem += sizeof(struct userBan);
+      if(ban->u)
+         umem += (strlen(ban->u) + 1);
+      if(ban->h)
+         umem += (strlen(ban->h) + 1);
+      if(ban->reason)
+         umem += (strlen(ban->reason) + 1);
 
-        /* must be local and not from conf */
-        if ((ub->flags & (UBAN_LOCAL|UBAN_CONF)) != UBAN_LOCAL)
-            continue;
+      bl = LIST_NEXT(bl, lp);
+   }
 
-        /* must be over the storage threshold duration */
-        if ((ub->flags & UBAN_TEMPORARY)
-            && ub->duration < (KLINE_MIN_STORE_TIME * 60))
-            continue;
+   if(mem)
+      *mem = umem;
 
-        ks_write(f, '+', ub);
-    }
+   return ucnt;
 }
 
-/*
- * Called from klines.c during a storage GC.
- */
-void
-ks_dumpklines(int f)
+int count_userbans(aClient *cptr)
 {
-    int i, j;
+   uBanEnt *bl;
+   int a, b;
+   int ic[16], im[16];
+   int ict = 0, imt = 0;
 
-    for (i = 0; i < 256; i++)
-        for (j = 0; j < 256; j++)
-            ks_dumplist(f, LIST_FIRST(&CIDR4_bans[i][j]));
+   memset(ic, 0, sizeof(int) * 16);
+   memset(im, 0, sizeof(int) * 16);
 
-    ks_dumplist(f, LIST_FIRST(&CIDR4BIG_bans));
-    ks_dumplist(f, LIST_FIRST(&host_bans.wild_list));
-    ks_dumplist(f, LIST_FIRST(&ip_bans.wild_list));
+   bl = LIST_FIRST(&CIDR4BIG_bans);
+   ic[0] = count_list(bl, &im[0]);
 
-    for (i = 0; i < HASH_SIZE; i++)
-    {
-        ks_dumplist(f, LIST_FIRST(&host_bans.hash_list[i]));
-        ks_dumplist(f, LIST_FIRST(&ip_bans.hash_list[i]));
-    }
+   for(a = 0; a < 256; a++)
+   {
+     for(b = 0; b < 256; b++)
+     {
+        int tmpim;
+
+        bl = LIST_FIRST(&CIDR4_bans[a][b]);
+        ic[1] += count_list(bl, &tmpim);
+        im[1] += tmpim;
+     }
+   }
+
+   bl = LIST_FIRST(&host_bans.wild_list);
+   ic[2] = count_list(bl, &im[2]);
+   bl = LIST_FIRST(&ip_bans.wild_list);
+   ic[3] = count_list(bl, &im[3]);
+
+   for(a = 0; a < HASH_SIZE; a++)
+   {
+      int tmpim;
+
+      bl = LIST_FIRST(&host_bans.hash_list[a]);
+      ic[4] += count_list(bl, &tmpim);
+      im[4] += tmpim;
+
+      bl = LIST_FIRST(&ip_bans.hash_list[a]);
+      ic[5] += count_list(bl, &tmpim);
+      im[5] += tmpim;
+   }
+
+   for(a = 0; a < 16; a++)
+   {
+      ict += ic[a];
+      imt += im[a];
+   }
+
+   sendto_one(cptr, ":%s %d %s :UserBans %d(%d) UserBanEnts %d(%d)",
+              me.name, RPL_STATSDEBUG, cptr->name, ict, imt, ubanent_count,
+              ubanent_count * sizeof(uBanEnt));
+
+   sendto_one(cptr, ":%s %d %s :  CIDR4BIG %d(%d)",
+              me.name, RPL_STATSDEBUG, cptr->name, ic[0], im[0]);
+   sendto_one(cptr, ":%s %d %s :  CIDR4 %d(%d)",
+              me.name, RPL_STATSDEBUG, cptr->name, ic[1], im[1]);
+   sendto_one(cptr, ":%s %d %s :  Host %d(%d)",
+              me.name, RPL_STATSDEBUG, cptr->name, ic[4], im[4]);
+   sendto_one(cptr, ":%s %d %s :  Host wild %d(%d)",
+              me.name, RPL_STATSDEBUG, cptr->name, ic[2], im[2]);
+   sendto_one(cptr, ":%s %d %s :  IP %d(%d)",
+              me.name, RPL_STATSDEBUG, cptr->name, ic[5], im[5]);
+   sendto_one(cptr, ":%s %d %s :  IP wild %d(%d)",
+              me.name, RPL_STATSDEBUG, cptr->name, ic[3], im[3]);
+
+   return imt + (ubanent_count * sizeof(uBanEnt));
 }
 
-static void
-mc_userlist(MemCount *mc, uBanEnt *be)
+int count_simbans(aClient *cptr)
 {
-    struct userBan *ub;
+   uBanEnt *bl;
+   int a;
+   int ic[16], im[16];
+   int ict = 0, imt = 0;
 
-    while (be)
-    {
-        ub = be->ban;
+   memset(ic, 0, sizeof(int) * 16);
+   memset(im, 0, sizeof(int) * 16);
 
-        mc->c++;
-        mc->m += sizeof(*ub);
+   bl = LIST_FIRST(&nick_bans.wild_list);
+   ic[1] = count_simlist(bl, &im[1]);
+   bl = LIST_FIRST(&chan_bans.wild_list);
+   ic[3] = count_simlist(bl, &im[3]);
+   bl = LIST_FIRST(&gcos_bans.wild_list);
+   ic[5] = count_simlist(bl, &im[5]);
 
-        if (ub->u)
-            mc->m += strlen(ub->u) + 1;
-        if (ub->h)
-            mc->m += strlen(ub->h) + 1;
-        if (ub->reason)
-            mc->m += strlen(ub->reason) + 1;
+   for(a = 0; a < HASH_SIZE; a++)
+   {
+      int tmpim;
 
-        be = LIST_NEXT(be, lp);
-    }
-}
+      bl = LIST_FIRST(&nick_bans.hash_list[a]);
+      ic[0] += count_list(bl, &tmpim);
+      im[0] += tmpim;
 
-static void
-mc_simlist(MemCount *mc, uBanEnt *be)
-{
-    struct simBan *sb;
+      bl = LIST_FIRST(&chan_bans.hash_list[a]);
+      ic[2] += count_list(bl, &tmpim);
+      im[2] += tmpim;
 
-    while (be)
-    {
-        sb = (struct simBan *)be->ban;
+      bl = LIST_FIRST(&gcos_bans.hash_list[a]);
+      ic[4] += count_list(bl, &tmpim);
+      im[4] += tmpim;
+   }
 
-        mc->c++;
-        mc->m += sizeof(*sb);
+   for(a = 0; a < 16; a++)
+   {
+      ict += ic[a];
+      imt += im[a];
+   }
 
-        if (sb->mask)
-            mc->m += strlen(sb->mask) + 1;
-        if (sb->reason)
-            mc->m += strlen(sb->reason) + 1;
+   sendto_one(cptr, ":%s %d %s :SimBans %d(%d)",
+              me.name, RPL_STATSDEBUG, cptr->name, ict, imt);
 
-        be = LIST_NEXT(be, lp);
-    }
-}
+   sendto_one(cptr, ":%s %d %s :  Nick %d(%d)",
+              me.name, RPL_STATSDEBUG, cptr->name, ic[0], im[0]);
+   sendto_one(cptr, ":%s %d %s :  Nick wild %d(%d)",
+              me.name, RPL_STATSDEBUG, cptr->name, ic[1], im[1]);
+   sendto_one(cptr, ":%s %d %s :  Chan %d(%d)",
+              me.name, RPL_STATSDEBUG, cptr->name, ic[2], im[2]);
+   sendto_one(cptr, ":%s %d %s :  Chan wild %d(%d)",
+              me.name, RPL_STATSDEBUG, cptr->name, ic[3], im[3]);
+   sendto_one(cptr, ":%s %d %s :  GCOS %d(%d)",
+              me.name, RPL_STATSDEBUG, cptr->name, ic[4], im[4]);
+   sendto_one(cptr, ":%s %d %s :  GCOS wild %d(%d)",
+              me.name, RPL_STATSDEBUG, cptr->name, ic[5], im[5]);
 
-u_long
-memcount_userban(MCuserban *mc)
-{
-    int i;
-    int j;
-
-    mc->file = __FILE__;
-
-    /* host, ip, gcos, chan, nick */
-    mc->lists.c += 5 * HASH_SIZE;
-    mc->lists.m += 5 * HASH_SIZE * sizeof(ban_list);
-
-    /* CIDR4 table */
-    mc->lists.c += 256;
-    mc->lists.m += 256 * sizeof(ban_list *);
-
-    /* CIDR4 subtables */
-    mc->lists.c += 256 * 256;
-    mc->lists.m += 256 * 256 * sizeof(ban_list);
-
-    mc_userlist(&mc->cidr4big_userbans, LIST_FIRST(&CIDR4BIG_bans));
-
-    for (i = 0; i < 256; i++)
-        for (j = 0; j < 256; j++)
-            mc_userlist(&mc->cidr4_userbans, LIST_FIRST(&CIDR4_bans[i][j]));
-
-    mc_userlist(&mc->hostwild_userbans, LIST_FIRST(&host_bans.wild_list));
-    mc_userlist(&mc->ipwild_userbans, LIST_FIRST(&ip_bans.wild_list));
-
-    mc_simlist(&mc->nickwild_simbans, LIST_FIRST(&nick_bans.wild_list));
-    mc_simlist(&mc->chanwild_simbans, LIST_FIRST(&chan_bans.wild_list));
-    mc_simlist(&mc->gcoswild_simbans, LIST_FIRST(&gcos_bans.wild_list));
-
-    for (i = 0; i < HASH_SIZE; i++)
-    {
-        mc_userlist(&mc->hosthash_userbans,
-                    LIST_FIRST(&host_bans.hash_list[i]));
-        mc_userlist(&mc->iphash_userbans, LIST_FIRST(&ip_bans.hash_list[i]));
-
-        mc_simlist(&mc->nickhash_simbans, LIST_FIRST(&nick_bans.hash_list[i]));
-        mc_simlist(&mc->chanhash_simbans, LIST_FIRST(&chan_bans.hash_list[i]));
-        mc_simlist(&mc->gcoshash_simbans, LIST_FIRST(&gcos_bans.hash_list[i]));
-    }
-
-    mc->entries.c = ubanent_count;
-    mc->entries.m = ubanent_count * sizeof(uBanEnt);
-
-    mc->userbans.c = mc->cidr4big_userbans.c + mc->cidr4_userbans.c;
-    mc->userbans.m = mc->cidr4big_userbans.m + mc->cidr4_userbans.m;
-    mc->userbans.c += mc->hosthash_userbans.c + mc->hostwild_userbans.c;
-    mc->userbans.m += mc->hosthash_userbans.m + mc->hostwild_userbans.m;
-    mc->userbans.c += mc->iphash_userbans.c + mc->ipwild_userbans.c;
-    mc->userbans.m += mc->iphash_userbans.m + mc->ipwild_userbans.m;
-
-    mc->simbans.c = mc->nickhash_simbans.c + mc->nickwild_simbans.c;
-    mc->simbans.m = mc->nickhash_simbans.m + mc->nickwild_simbans.m;
-    mc->simbans.c += mc->chanhash_simbans.c + mc->chanwild_simbans.c;
-    mc->simbans.m += mc->chanhash_simbans.m + mc->chanwild_simbans.m;
-    mc->simbans.c += mc->gcoshash_simbans.c + mc->gcoswild_simbans.c;
-    mc->simbans.m += mc->gcoshash_simbans.m + mc->gcoswild_simbans.m;
-
-    mc->total.c = mc->lists.c + mc->entries.c + mc->userbans.c + mc->simbans.c;
-    mc->total.m = mc->lists.m + mc->entries.m + mc->userbans.m + mc->simbans.m;
-
-    return mc->total.m;
+   return imt;
 }
 

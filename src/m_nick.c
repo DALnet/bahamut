@@ -150,9 +150,9 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	if (IsServer(cptr))
 	{
 	    ircstp->is_kill++;
-        sendto_realops_lev(DEBUG_LEV, "Bad Nick: %s From: %s Via: %s",
+	    sendto_realops_lev(DEBUG_LEV, "Bad Nick: %s From: %s %s",
 			       parv[1], parv[0],
-			       get_client_name(cptr, HIDEME));
+			       get_client_name(cptr, FALSE));
 	    sendto_one(cptr, ":%s KILL %s :%s (Bad Nick)",
 		       me.name, parv[1], me.name);
 	    if (sptr != cptr) { /* bad nick change */     
@@ -354,7 +354,7 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 				   "Nick change collision from %s to %s",
 				   sptr->name, acptr->name);
 		ircstp->is_kill++;
-		sendto_serv_butone(cptr, ":%s KILL %s :%s (Nick Collision)", me.name,
+		sendto_serv_butone(cptr, ":%s KILL %s : %s (Nick Collision)",me.name,
 				   sptr->name, me.name);
 		sptr->flags |= FLAGS_KILLED;
 		if (sameuser)
@@ -384,7 +384,7 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	{
 	    /* if we can't find the server this nick is on, 
 	     * complain loudly and ignore it. - lucas */
-	    sendto_realops("Remote nick %s on UNKNOWN server %s",
+	    sendto_realops("Remote nick %s on UNKNOWN server %s\n",
 			   nick, parv[7]);
 	    return 0;
 	}
@@ -442,11 +442,21 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
     }
     else if (sptr->name[0])
     {
+	/*
+	 * Client just changing his/her nick. If he/she is on a
+	 * channel, send note of change to all clients on that channel.
+	 * Propagate notice to other servers.
+	 */
+	/* if the nickname is different, set the TS */
+	if (mycmp(parv[0], nick))
+	{
+	    sptr->tsinfo = newts ? newts : (ts_val) timeofday;
+	}
 #ifdef DONT_CHECK_QLINE_REMOTE
 	if (MyConnect(sptr))
 	{
 #endif
-	    if (!IsOper(sptr) && (ban = check_mask_simbanned(nick, SBAN_NICK)))
+	    if ((ban = check_mask_simbanned(nick, SBAN_NICK)))
 	    {
 #ifndef DONT_CHECK_QLINE_REMOTE
 		if (!MyConnect(sptr))
@@ -458,7 +468,8 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 				   sptr->user->server);
 #endif
 		
-		if (MyConnect(sptr))
+		if (MyConnect(sptr) && (!IsServer(cptr)) && (!IsOper(cptr))
+		    && (!IsULine(sptr)))
 		{
 		    sendto_one(sptr, err_str(ERR_ERRONEUSNICKNAME), me.name,
 			       BadPtr(parv[0]) ? "*" : parv[0], nick,
@@ -466,20 +477,7 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 			       ban->reason);
 		    sendto_realops_lev(REJ_LEV,
 				       "Forbidding restricted nick %s from %s.",
-				       nick, get_client_name(cptr, TRUE));
-
-            if (ban->autocap)
-            {
-                time_t maxexp = NOW + ban->autocap;
-                ban->duration += 5;
-                if ((ban->timeset + ban->duration) > maxexp)
-                {
-                    ban->duration = maxexp - ban->timeset;
-                    sendto_realops_lev(REJ_LEV, "Resetting expire time for"
-                                       " restricted nick %s on try from %s",
-                                       nick, get_client_name(cptr, TRUE));
-                }
-            }
+				       nick, get_client_name(cptr, FALSE));
 		    return 0;
 		}
 	    }
@@ -538,18 +536,6 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		    send_umode(sptr, sptr, oldumode, ALL_UMODES, mbuf);
 		}
 
-                /* LOCAL NICKHANGE */
-                /*
-                 * Client just changing his/her nick. If he/she is on a
-                 * channel, send note of change to all clients on that channel.
-                 * Propagate notice to other servers.
-                 */
-                /* if the nickname is different, set the TS */
-                if (mycmp(parv[0], nick))
-                {
-                  sptr->tsinfo = newts ? newts : (ts_val) timeofday;
-                }
-
 		sendto_common_channels(sptr, ":%s NICK :%s", parv[0], 
 				       nick);
 		if (sptr->user)
@@ -563,18 +549,6 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	}
 	else
 	{
-            /* REMOTE NICKCHANGE */
-            /*
-             * Client just changing his/her nick. If he/she is on a
-             * channel, send note of change to all clients on that channel.
-             * Propagate notice to other servers.
-             */
-            /* if the nickname is different, set the TS */
-            if (mycmp(parv[0], nick))
-            {
-              sptr->tsinfo = newts ? newts : (ts_val) timeofday;
-            }
-
 	    sendto_common_channels(sptr, ":%s NICK :%s", parv[0], nick);
 	    if (sptr->user)
 	    {
@@ -594,31 +568,23 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	/* Client setting NICK the first time */
 	if (MyConnect(sptr))
 	{
-        if ((ban = check_mask_simbanned(nick, SBAN_NICK)))
-        {
-            sendto_one(sptr, err_str(ERR_ERRONEUSNICKNAME), me.name,
-                       BadPtr(parv[0]) ? "*" : parv[0], nick,
-                       BadPtr(ban->reason) ? "Erroneous Nickname" :
-                       ban->reason);
-            sendto_realops_lev(REJ_LEV,
-                               "Forbidding restricted nick %s from %s.", nick,
-                               get_client_name(cptr, TRUE));
-
-            if (ban->autocap)
-            {
-                time_t maxexp = NOW + ban->autocap;
-                ban->duration += 5;
-                if ((ban->timeset + ban->duration) > maxexp)
-                {
-                    ban->duration = maxexp - ban->timeset;
-                    sendto_realops_lev(REJ_LEV, "Resetting expire time for"
-                                       " restricted nick %s on try from %s",
-                                       nick, get_client_name(cptr, TRUE));
-                }
-            }
-            return 0;
-        }
-    }
+	    if ((ban = check_mask_simbanned(nick, SBAN_NICK)))
+	    {
+		if (MyConnect(sptr) && (!IsServer(cptr)) && (!IsOper(cptr))
+		    && (!IsULine(sptr)))
+		{
+		    sendto_one(sptr, err_str(ERR_ERRONEUSNICKNAME), me.name,
+			       BadPtr(parv[0]) ? "*" : parv[0], nick,
+			       BadPtr(ban->reason) ? "Erroneous Nickname" :
+			       ban->reason);
+		    sendto_realops_lev(REJ_LEV,
+				       "Forbidding restricted nick %s from "
+				       "<unregistered>%s.", nick,
+				       get_client_name(cptr, FALSE));
+		    return 0;
+		}
+	    }
+	}
 	
 	strcpy(sptr->name, nick);
 	sptr->tsinfo = timeofday;
@@ -631,20 +597,14 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		return FLUSH_BUFFER;
 	}
     }
-
     /* Finally set new nick name. */
+   
     if (sptr->name[0])
     {
-        del_from_client_hash_table(sptr->name, sptr);
-        samenick = mycmp(sptr->name, nick) ? 0 : 1;
-        if (IsPerson(sptr))
-        {
-            if (!samenick)
-                hash_check_watch(sptr, RPL_LOGOFF);
-#ifdef RWHO_PROBABILITY
-            probability_change(sptr->name, nick);
-#endif
-        }
+	del_from_client_hash_table(sptr->name, sptr);
+	samenick = mycmp(sptr->name, nick) ? 0 : 1;
+	if (IsPerson(sptr) && !samenick)
+	    hash_check_watch(sptr, RPL_LOGOFF);
     }
     strcpy(sptr->name, nick);
     add_to_client_hash_table(nick, sptr);

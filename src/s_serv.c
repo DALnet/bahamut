@@ -53,7 +53,6 @@
 #include "fdlist.h"
 #include "throttle.h"
 #include "clones.h"
-#include "memcount.h"
 
 static char buf[BUFSIZE];
 extern int  rehashed;
@@ -634,7 +633,7 @@ m_help(aClient *cptr, aClient *sptr, int parc, char *parv[])
                      "/%s %s", me.name, sptr->name, HELPSERV, DEF_HELP_CMD);
           return -1;
        }
-        return m_aliased(cptr, sptr, parc, parv, &aliastab[AII_HS]);
+       return m_hs(cptr, sptr, parc, parv);
  
        return 0;
     }
@@ -675,9 +674,6 @@ m_help(aClient *cptr, aClient *sptr, int parc, char *parv[])
  * 
  * 199970918 JRL hacked to ignore parv[1] completely and require parc > 3
  * to cause a force
- *
- * Now if parv[1] is anything other than *, it forces a recount.
- *    -Quension [May 2005]
  */
 int 
 m_lusers(aClient *cptr, aClient *sptr, int parc, char *parv[])
@@ -691,7 +687,7 @@ m_lusers(aClient *cptr, aClient *sptr, int parc, char *parv[])
             return 0;
     }
 
-    if(!IsAnOper(sptr) && is_luserslocked())
+    if(is_luserslocked())
     {
        send_fake_lusers(sptr);
        return 0;
@@ -703,23 +699,43 @@ m_lusers(aClient *cptr, aClient *sptr, int parc, char *parv[])
 /*
  * send_lusers
  *     parv[0] = sender
- *     parv[1] = anything but "*" to force a recount
+ *     parv[1] = host/server mask.
  *     parv[2] = server to query
  */
 int send_lusers(aClient *cptr, aClient *sptr, int parc, char *parv[]) 
 {
-    /* forced recount */
-    if (IsAnOper(sptr) && (parc > 1) && (*parv[1] != '*')) 
+#define LUSERS_CACHE_TIME 180
+    static long                  last_time=0;
+    static int           s_count = 0, c_count = 0, u_count = 0, i_count = 0;
+    static int           o_count = 0, m_client = 0, m_server = 0, m_ulined = 0;
+    int                          forced;
+    aClient             *acptr;
+
+    forced = (IsAnOper(sptr) && (parc > 3));
+
+    Count.unknown = 0;
+    m_server = Count.myserver;
+    m_ulined = Count.myulined;
+    m_client = Count.local;
+    i_count = Count.invisi;
+    u_count = Count.unknown;
+    c_count = Count.total - Count.invisi;
+    s_count = Count.server;
+    o_count = Count.oper;
+    if (forced || (timeofday > last_time + LUSERS_CACHE_TIME)) 
     {
-        int s_count = 0;
-        int c_count = 0;
-        int u_count = 0;
-        int i_count = 0;
-        int o_count = 0;
-        int m_client = 0;
-        int m_server = 0;
-        int m_ulined = 0;
-        aClient *acptr;
+        last_time = timeofday;
+        /* only recount if more than a second has passed since last request
+         * use LUSERS_CACHE_TIME instead... 
+         */
+        s_count = 0;
+        c_count = 0;
+        u_count = 0;
+        i_count = 0;
+        o_count = 0;
+        m_client = 0;
+        m_server = 0;
+        m_ulined = 0;
         
         for (acptr = client; acptr; acptr = acptr->next) 
         {
@@ -767,58 +783,66 @@ int send_lusers(aClient *cptr, aClient *sptr, int parc, char *parv[])
                 break;
             }
         }
-
-        /* sanity check */
-        if (m_server != Count.myserver)
+        /*
+         * We only want to reassign the global counts if the recount time
+         * has expired, and NOT when it was forced, since someone may
+         * supply a mask which will only count part of the userbase
+         * -Taner
+         */
+        if (!forced) 
         {
-            sendto_realops_lev(DEBUG_LEV, "Local server count off by %d",
-                               Count.myserver - m_server);
-            Count.myserver = m_server;
-        }
-        if (m_ulined != Count.myulined)
-        {
-            sendto_realops_lev(DEBUG_LEV, "Local superserver count off by %d",
-                               Count.myulined - m_ulined);
-            Count.myulined = m_ulined;
-        }
-        if (s_count != Count.server)
-        {
-            sendto_realops_lev(DEBUG_LEV, "Server count off by %d",
-                               Count.server - s_count);
-            Count.server = s_count;
-        }
-        if (i_count != Count.invisi)
-        {
-            sendto_realops_lev(DEBUG_LEV, "Invisible client count off by %d",
-                               Count.invisi - i_count);
-            Count.invisi = i_count;
-        }
-        if ((c_count + i_count) != Count.total)
-        {
-            sendto_realops_lev(DEBUG_LEV, "Total client count off by %d",
-                               Count.total - (c_count + i_count));
-            Count.total = c_count + i_count;
-        }
-        if (m_client != Count.local)
-        {
-            sendto_realops_lev(DEBUG_LEV, "Local client count off by %d",
-                               Count.local - m_client);
-            Count.local = m_client;
-        }
-        if (o_count != Count.oper)
-        {
-            sendto_realops_lev(DEBUG_LEV, "Oper count off by %d",
-                               Count.oper - o_count);
-            Count.oper = o_count;
-        }
-        if (u_count != Count.unknown)
-        {
-            sendto_realops_lev(DEBUG_LEV, "Unknown connection count off by %d",
-                               Count.unknown - u_count);
+            if (m_server != Count.myserver) 
+            {
+                sendto_realops_lev(DEBUG_LEV,
+                                   "Local server count off by %d",
+                                   Count.myserver - m_server);
+                Count.myserver = m_server;
+            }
+            if (m_ulined != Count.myulined) 
+            {
+                sendto_realops_lev(DEBUG_LEV,
+                                   "Local superserver count off by %d",
+                                   Count.myulined - m_ulined);
+                Count.myulined = m_ulined;
+            }
+            if (s_count != Count.server) 
+            {
+                sendto_realops_lev(DEBUG_LEV,
+                                   "Server count off by %d",
+                                   Count.server - s_count);
+                Count.server = s_count;
+            }
+            if (i_count != Count.invisi) 
+            {
+                sendto_realops_lev(DEBUG_LEV,
+                                   "Invisible client count off by %d",
+                                   Count.invisi - i_count);
+                Count.invisi = i_count;
+            }
+            if ((c_count + i_count) != Count.total) 
+            {
+                sendto_realops_lev(DEBUG_LEV, "Total client count off by %d",
+                                   Count.total - (c_count + i_count));
+                Count.total = c_count + i_count;
+            }
+            if (m_client != Count.local) 
+            {
+                sendto_realops_lev(DEBUG_LEV,
+                                   "Local client count off by %d",
+                                   Count.local - m_client);
+                Count.local = m_client;
+            }
+            if (o_count != Count.oper) 
+            {
+                sendto_realops_lev(DEBUG_LEV,
+                                   "Oper count off by %d",
+                                   Count.oper - o_count);
+                Count.oper = o_count;
+            }
             Count.unknown = u_count;
-        }
-    }   /* Recount loop */
-
+        }                       /* Complain & reset loop */
+    }                           /* Recount loop */
+    
     /* save stats */
     if ((timeofday - last_stat_save) > 3600)
     {
@@ -841,24 +865,23 @@ int send_lusers(aClient *cptr, aClient *sptr, int parc, char *parv[])
     
     
 #ifndef SHOW_INVISIBLE_LUSERS
-    if (IsAnOper(sptr) && Count.invisi)
+    if (IsAnOper(sptr) && i_count)
 #endif
         sendto_one(sptr, rpl_str(RPL_LUSERCLIENT), me.name, parv[0],
-                   Count.total - Count.invisi, Count.invisi, Count.server);
+                   c_count, i_count, s_count);
 #ifndef SHOW_INVISIBLE_LUSERS
     else
         sendto_one(sptr,
                    ":%s %d %s :There are %d users on %d servers", me.name,
-                   RPL_LUSERCLIENT, parv[0], Count.total - Count.invisi,
-                   Count.server);
+                   RPL_LUSERCLIENT, parv[0], c_count,
+                   s_count);
 #endif
-
-    if (Count.oper)
-        sendto_one(sptr, rpl_str(RPL_LUSEROP), me.name, parv[0], Count.oper);
-
-    if (IsAnOper(sptr) && Count.unknown)
-        sendto_one(sptr, rpl_str(RPL_LUSERUNKNOWN), me.name, parv[0],
-                   Count.unknown);
+    if (o_count)
+        sendto_one(sptr, rpl_str(RPL_LUSEROP),
+                   me.name, parv[0], o_count);
+    if (u_count > 0)
+        sendto_one(sptr, rpl_str(RPL_LUSERUNKNOWN),
+                   me.name, parv[0], u_count);
     
     /* This should be ok */
     if (Count.chan > 0)
@@ -866,12 +889,11 @@ int send_lusers(aClient *cptr, aClient *sptr, int parc, char *parv[])
                    me.name, parv[0], Count.chan);
     sendto_one(sptr, rpl_str(RPL_LUSERME),
 #ifdef HIDEULINEDSERVS
-               me.name, parv[0], Count.local, 
-               IsOper(sptr) ? Count.myserver : Count.myserver - Count.myulined);
+               me.name, parv[0], m_client, 
+               IsOper(sptr) ? m_server : m_server - m_ulined);
 #else
-               me.name, parv[0], Count.local, Count.myserver);
+               me.name, parv[0], m_client, m_server);
 #endif
-
     sendto_one(sptr, rpl_str(RPL_LOCALUSERS), me.name, parv[0],
                    Count.local, Count.max_loc);
     sendto_one(sptr, rpl_str(RPL_GLOBALUSERS), me.name, parv[0],
@@ -964,11 +986,11 @@ m_connect(aClient *cptr, aClient *sptr, int parc, char *parv[])
     sendto_gnotice("from %s: %s CONNECT %s %s from %s",
                    me.name,  IsAnOper(cptr) ? "Local" : "Remote", 
                    parv[1], parv[2] ? parv[2] : "",
-                   sptr->name);
+                   get_client_name(sptr, HIDEME));
     sendto_serv_butone(NULL, ":%s GNOTICE :%s CONNECT %s %s from %s", 
                        me.name, IsAnOper(cptr) ? "Local" : "Remote",
                        parv[1], parv[2] ? parv[2] : "",
-                       sptr->name);
+                       get_client_name(sptr, HIDEME));
 
 #if defined(USE_SYSLOG) && defined(SYSLOG_CONNECT)
     syslog(LOG_DEBUG, "CONNECT From %s : %s %s", parv[0], parv[1], 
@@ -1064,6 +1086,9 @@ m_goper(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     char       *message = parc > 1 ? parv[1] : NULL;
 
+    if (check_registered(sptr))
+        return 0;
+
     if (BadPtr(message)) 
     {
         sendto_one(sptr, err_str(ERR_NEEDMOREPARAMS),
@@ -1076,7 +1101,8 @@ m_goper(aClient *cptr, aClient *sptr, int parc, char *parv[])
         return 0;
     }
 
-    sendto_serv_butone_super(cptr, 0, ":%s GOPER :%s", parv[0], message);
+    sendto_serv_butone(IsServer(cptr) ? cptr : NULL, ":%s GOPER :%s",
+                       parv[0], message);
     sendto_ops("from %s: %s", parv[0], message);
     return 0;
 }
@@ -1097,6 +1123,9 @@ m_gnotice(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
     char       *message = parc > 1 ? parv[1] : NULL;
     
+    if (check_registered(sptr))
+        return 0;
+
     if (BadPtr(message)) 
     {
         sendto_one(sptr, err_str(ERR_NEEDMOREPARAMS),
@@ -1109,7 +1138,8 @@ m_gnotice(aClient *cptr, aClient *sptr, int parc, char *parv[])
         return 0;
     }
 
-    sendto_serv_butone_super(cptr, 0, ":%s GNOTICE :%s", parv[0], message);
+    sendto_serv_butone_services(IsServer(cptr) ? cptr : NULL, ":%s GNOTICE :%s",
+                       parv[0], message);
     sendto_gnotice("from %s: %s", parv[0], message);
     return 0;
 }
@@ -1121,6 +1151,9 @@ m_globops(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
     /* a few changes, servers weren't able to globop -mjs */
 
+    if (check_registered(sptr))
+        return 0;
+
     if (BadPtr(message)) 
     {
         if (MyClient(sptr))
@@ -1129,14 +1162,17 @@ m_globops(aClient *cptr, aClient *sptr, int parc, char *parv[])
         return 0;
     }
 
-    if (MyClient(sptr) && !OPCanGlobOps(sptr)) 
+    /* must be a client, must be an oper or a Ulined server -mjs */
+
+    if (MyClient(sptr) && !OPCanGlobOps(sptr) && !IsULine(sptr)) 
     {
         sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name, parv[0]);
         return 0;
     }
     if (strlen(message) > TOPICLEN)
         message[TOPICLEN] = '\0';
-    sendto_serv_butone_super(cptr, 0, ":%s GLOBOPS :%s", parv[0], message);
+    sendto_serv_butone_services(IsServer(cptr) ? cptr : NULL, ":%s GLOBOPS :%s",
+                       parv[0], message);
     send_globops("from %s: %s", parv[0], message);
     return 0;
 }
@@ -1146,6 +1182,8 @@ m_chatops(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     char       *message = parc > 1 ? parv[1] : NULL;
 
+    if (check_registered(sptr))
+        return 0;
     if (BadPtr(message)) 
     {
         if (MyClient(sptr))
@@ -1154,7 +1192,8 @@ m_chatops(aClient *cptr, aClient *sptr, int parc, char *parv[])
         return 0;
     }
 
-    if (MyClient(sptr) && (!IsAnOper(sptr) || !SendChatops(sptr))) 
+    if (MyClient(sptr) && (!IsAnOper(sptr) || !SendChatops(sptr)) &&
+        !IsULine(sptr)) 
     {
         sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name, parv[0]);
         return 0;
@@ -1162,7 +1201,8 @@ m_chatops(aClient *cptr, aClient *sptr, int parc, char *parv[])
     
     if (strlen(message) > TOPICLEN)
         message[TOPICLEN] = '\0';
-    sendto_serv_butone_super(cptr, 0, ":%s CHATOPS :%s", parv[0], message);
+    sendto_serv_butone_services(IsServer(cptr) ? cptr : NULL, ":%s CHATOPS :%s",
+                       parv[0], message);
     send_chatops("from %s: %s", parv[0], message);
     return 0;
 }
@@ -1521,7 +1561,7 @@ m_set(aClient *cptr, aClient *sptr, int parc, char *parv[])
                 }
                 else if (limit == 0)
                 {
-                    sendto_one(sptr, ":%s NOTICE %s :no soft local clone limit"
+                    sendto_one(sptr, "%s NOTICE %s :no soft local clone limit"
                                " for %s", me.name, parv[0], parv[2]);
                 }
                 else
@@ -1813,7 +1853,6 @@ static char *cluster(char *hostname)
     return (result);
 }
 
-#if 0
 int m_kline(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     struct userBan *ban, *oban;
@@ -2086,7 +2125,7 @@ int m_kline(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
     if ((k->comment = strdup(buffer)) == NULL) 
     {
-        free(k);
+        MyFree(k);
         sendto_one(sptr, ":%s NOTICE %s :Problem allocating memory",
                    me.name, parv[0]);
         return (0);
@@ -2100,8 +2139,8 @@ int m_kline(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
     if ((k->kline = strdup(buffer)) == NULL) 
     {
-        free(k->comment);
-        free(k);
+        MyFree(k->comment);
+        MyFree(k);
         sendto_one(sptr, ":%s NOTICE %s :Problem allocating memory",
                    me.name, parv[0]);
         return (0);
@@ -2158,7 +2197,6 @@ int m_kline(aClient *cptr, aClient *sptr, int parc, char *parv[])
     return 0;
 #endif /* LOCKFILE */
 }
-#endif
 
 /*
  * isnumber()
@@ -2205,7 +2243,7 @@ static int isnumber(char *p)
     return (result);
 }
 
-#if 0
+#ifdef UNKLINE
 /*
  * * m_unkline 
  * Added Aug 31, 1997 
@@ -2278,7 +2316,6 @@ int m_unkline(aClient *cptr, aClient *sptr, int parc, char *parv[])
             host = get_userban_host(oban, tmp, 512);
 
             remove_userban(oban);
-            klinestore_remove(oban);
             userban_free(oban);
             userban_free(ban);
 
@@ -2434,7 +2471,7 @@ m_restart(aClient *cptr, aClient *sptr, int parc, char *parv[])
     syslog(LOG_WARNING, "Server RESTART by %s\n",
            get_client_name(sptr, FALSE));
 #endif
-    sprintf(buf, "Server RESTART by %s", get_client_name(sptr, FALSE));
+    sprintf(buf, "Server RESTART by %s", get_client_name(sptr, TRUE));
     restart(buf);
     return 0;                   /* NOT REACHED */
 }
@@ -2715,7 +2752,9 @@ int
 send_motd(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     aMotd *temp;
+    struct tm  *tm;
     
+    tm = motd_tm;
     if (motd == (aMotd *) NULL) 
     {
         sendto_one(sptr, err_str(ERR_NOMOTD), me.name, parv[0]);
@@ -2723,8 +2762,10 @@ send_motd(aClient *cptr, aClient *sptr, int parc, char *parv[])
     }
     sendto_one(sptr, rpl_str(RPL_MOTDSTART), me.name, parv[0], me.name);
 
-    sendto_one(sptr, ":%s %d %s :-%s", me.name, RPL_MOTD, parv[0], 
-               motd_last_changed_date);
+    if (tm)
+        sendto_one(sptr, ":%s %d %s :- %d/%d/%d %d:%02d", me.name, RPL_MOTD,
+                   parv[0], tm->tm_mday, tm->tm_mon + 1, 1900 + tm->tm_year,
+                   tm->tm_hour, tm->tm_min);
 
     temp = motd;
     while (temp) 
@@ -2743,7 +2784,6 @@ void
 read_motd(char *filename)
 {
     aMotd *temp, *last;
-    struct tm *motd_tm;
     struct stat sb;
     char        buffer[MOTDLINELEN], *tmp;
     int         fd;
@@ -2786,9 +2826,10 @@ read_motd(char *filename)
     }
     close(fd);
 
-    sprintf(motd_last_changed_date, "%d/%d/%d %d:%02d", motd_tm->tm_mday,
-            motd_tm->tm_mon + 1, 1900 + motd_tm->tm_year, motd_tm->tm_hour,
-            motd_tm->tm_min);
+    if (motd_tm)
+        sprintf(motd_last_changed_date, "%d/%d/%d %d:%02d", motd_tm->tm_mday,
+                motd_tm->tm_mon + 1, 1900 + motd_tm->tm_year, motd_tm->tm_hour,
+                motd_tm->tm_min);
 }
 
 void 
@@ -3062,11 +3103,11 @@ do_pending_klines()
     {
         write(fd, k->comment, strlen(k->comment));
         write(fd, k->kline, strlen(k->kline));
-        free(k->comment);
-        free(k->kline);
+        MyFree(k->comment);
+        MyFree(k->kline);
         ok = k;
         k = k->next;
-        free(ok);
+        MyFree(ok);
     }
     pending_klines = NULL;
     pending_kline_time = 0;
@@ -3220,7 +3261,19 @@ m_akill(aClient *cptr, aClient *sptr, int parc, char *parv[])
                        timeset, reason);
 
     /* Check local users against it */
-    userban_sweep(ban);
+    for (i = 0; i <= highest_fd; i++)
+    {
+        if (!(acptr = local[i]) || IsMe(acptr) || IsLog(acptr))
+            continue;
+        if (IsPerson(acptr) && user_match_ban(acptr, ban))
+        {
+            sendto_ops(NETWORK_BAN_NAME" active for %s",
+                       get_client_name(acptr, FALSE));
+            ircsprintf(fbuf, NETWORK_BANNED_NAME": %s", reason);
+            exit_client(acptr, acptr, &me, fbuf);
+            i--;
+        }
+    }
         
     return 0;
 }
@@ -3319,7 +3372,7 @@ m_watch(aClient *cptr, aClient *sptr, int parc, char *parv[])
         {
             if (*(s+1)) 
             {
-                if ((sptr->watches >= MAXWATCH) && !IsAnOper(sptr))
+                if (sptr->watches >= MAXWATCH) 
                 {
                     sendto_one(sptr, err_str(ERR_TOOMANYWATCH),
                                me.name, cptr->name, s+1);                                       
@@ -3628,38 +3681,3 @@ m_unsgline(aClient *cptr, aClient *sptr, int parc, char *parv[])
         sendto_serv_butone(cptr, ":%s UNSGLINE :%s",sptr->name,mask);
     return 0;
 }
-
-u_long
-memcount_s_serv(MCs_serv *mc)
-{
-    aMotd *m;
-
-    mc->file = __FILE__;
-
-    for (m = motd; m; m = m->next)
-    {
-        mc->motd.c++;
-        mc->motd.m += sizeof(*m);
-    }
-    mc->total.c += mc->motd.c;
-    mc->total.m += mc->motd.m;
-
-    for (m = shortmotd; m; m = m->next)
-    {
-        mc->shortmotd.c++;
-        mc->shortmotd.m += sizeof(*m);
-    }
-    mc->total.c += mc->shortmotd.c;
-    mc->total.m += mc->shortmotd.m;
-
-    for (m = helpfile; m; m = m->next)
-    {
-        mc->help.c++;
-        mc->help.m += sizeof(*m);
-    }
-    mc->total.c += mc->help.c;
-    mc->total.m += mc->help.m;
-
-    return mc->total.m;
-}
-

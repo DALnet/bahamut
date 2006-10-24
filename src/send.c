@@ -29,7 +29,6 @@
 #include "dh.h"
 #include "zlink.h"
 #include "fds.h"
-#include "memcount.h"
 
 /*
  * STOP_SENDING_ON_SHORT_SEND:
@@ -427,30 +426,29 @@ void sendto_one(aClient *to, char *pattern, ...)
     va_end(vl);
 }
 
-/* send to an aliased super target */
-void sendto_alias(AliasInfo *ai, aClient *from, char *pattern, ...)
+/* send message to single client */
+void sendto_one_services(aClient *to, char *pattern, ...) 
 {
-    aClient *to;
-    va_list  vl;
-    int      len;
+    va_list vl;
+    int len;            /* used for the length of the current message */
+    
+    if(confopts & FLAGS_SERVHUB)
+        if(to && to->user && to->user->server && 
+                (!mycmp(to->user->server,Services_Name) || 
+                 !mycmp(to->user->server,Stats_Name)))
+            return;
 
     va_start(vl, pattern);
-    to = ai->client->from;
-
-    /* use shortforms only for non-super or capable super servers */
-    if (!IsULine(to) || ((confopts & FLAGS_SERVHUB)
-                         && (to->serv->uflags & ULF_SFDIRECT)))
-        len = ircsprintf(sendbuf, ":%s %s :", from->name, ai->shortform);
-    else
-#ifdef PASS_SERVICES_MSGS
-        /* target distinguishes between nick@server and nick */
-        len = ircsprintf(sendbuf, ":%s PRIVMSG %s@%s :", from->name, ai->nick,
-                         ai->server);
-#else
-        len = ircsprintf(sendbuf, ":%s PRIVMSG %s :", from->name, ai->nick);
-#endif
-
-    len += ircvsprintf(sendbuf+len, pattern, vl);
+    len = ircvsprintf(sendbuf, pattern, vl);
+   
+    if (to->from)
+        to = to->from;
+    if (IsMe(to)) 
+    {
+        strncpyzt(selfbuf, sendbuf, sizeof(selfbuf));
+        sendto_ops("Trying to send [%s] to myself!", selfbuf);
+        return;
+    }
     send_message(to, sendbuf, len, NULL);
     va_end(vl);
 }
@@ -587,8 +585,11 @@ void sendto_channel_butone(aClient *one, aClient *from, aChannel *chptr,
         if (acptr->from == one)
             continue; /* ...was the one I should skip */
 
-        if((confopts & FLAGS_SERVHUB) && IsULine(acptr))
-            continue;
+        if(confopts & FLAGS_SERVHUB)
+            if(acptr && acptr->user && acptr->user->server && 
+                    (!mycmp(acptr->user->server,Services_Name) || 
+                    !mycmp(acptr->user->server,Stats_Name)))
+                continue;
 
         i = acptr->from->fd;
         if (MyClient(acptr)) 
@@ -660,8 +661,11 @@ void sendto_channel_remote_butone(aClient *one, aClient *from, aChannel *chptr,
         if (acptr->from == one)
             continue; /* ...was the one I should skip */
 
-        if((confopts & FLAGS_SERVHUB) && IsULine(acptr))
-            continue;
+        if(confopts & FLAGS_SERVHUB)
+            if(acptr && acptr->user && acptr->user->server && 
+                    (!mycmp(acptr->user->server,Services_Name) || 
+                     !mycmp(acptr->user->server,Stats_Name)))
+                continue;
 
         i = acptr->from->fd;
         if (!MyClient(acptr)) 
@@ -697,10 +701,9 @@ void sendto_channel_remote_butone(aClient *one, aClient *from, aChannel *chptr,
 /*
  * sendto_server_butone_services
  * 
- * Send a message to all connected servers except the client 'one' and super
- * servers with the specified flag (if in SERVHUB mode).
+ * Send a message to all connected servers except the client 'one', and do not send to services.dal.net.
  */
-void sendto_serv_butone_super(aClient *one, int flag, char *pattern, ...) 
+void sendto_serv_butone_services(aClient *one, char *pattern, ...) 
 {
     aClient *cptr;
     int k = 0;
@@ -713,9 +716,8 @@ void sendto_serv_butone_super(aClient *one, int flag, char *pattern, ...)
     for (lp = server_list; lp; lp = lp->next)
     {
         cptr = lp->value.cptr;
-
-        if ((confopts & FLAGS_SERVHUB) && IsULine(cptr)
-            && (!flag || (cptr->serv->uflags & flag)))
+        if((confopts & FLAGS_SERVHUB) && (!mycmp(cptr->name,Services_Name) 
+                || !mycmp(cptr->name,Stats_Name)))
             continue;
 
         if (one && cptr == one->from)
@@ -1070,6 +1072,113 @@ void sendto_channel_butserv_me(aChannel *chptr, aClient *from, char *pattern, ..
 }
 
 /*
+ * sendto_channelops_butserv
+ * 
+ * Send a message to all operators of a channel that are connected to this
+ * server.
+ */
+void sendto_channelops_butserv(aChannel *chptr, aClient *from, char *pattern, ...)
+{
+    chanMember  *cm;
+    aClient *acptr;
+    va_list vl;
+    int didlocal = 0;
+    char *pfix;
+    void *share_buf = NULL;
+
+    va_start(vl, pattern);
+    
+    pfix = va_arg(vl, char *);
+
+    for (cm = chptr->members; cm; cm = cm->next)
+    {
+        if (MyConnect(acptr = cm->cptr) && (cm->flags & CHFL_CHANOP))
+        {
+            if (!didlocal)
+            {
+                didlocal = prefix_buffer(0, from, pfix, sendbuf, pattern, vl);
+                sbuf_begin_share(sendbuf, didlocal, &share_buf);
+            }
+            
+            if (check_fake_direction(from, acptr))
+                continue;
+
+            send_message(acptr, sendbuf, didlocal, share_buf);
+        }
+    }
+    sbuf_end_share(&share_buf, 1);
+    va_end(vl);
+}
+
+/*
+ * * send a msg to all ppl on servers/hosts that match a specified mask *
+ * (used for enhanced PRIVMSGs) *
+ * 
+ * addition -- Armin, 8jun90 (gruner@informatik.tu-muenchen.de)
+ */
+static int match_it(aClient *one, char *mask, int what)
+{
+    if (what == MATCH_HOST)
+        return (match(mask, one->user->host) == 0);
+    else
+        return (match(mask, one->user->server) == 0);
+}
+
+/*
+ * sendto_match_butone
+ * 
+ * Send to all clients which match the mask in a way defined on 'what';
+ * either by user hostname or user servername.
+ */
+void sendto_match_butone(aClient *one, aClient *from, char *mask, int what, 
+                         char *pattern, ...)
+{
+    int     i;
+    aClient *cptr, *acptr;
+    char cansendlocal, cansendglobal;
+    va_list vl;
+        
+    va_start(vl, pattern);
+    if (MyConnect(from)) 
+    {
+        cansendlocal = (OPCanLNotice(from)) ? 1 : 0;
+        cansendglobal = (OPCanGNotice(from)) ? 1 : 0;
+    } 
+    else 
+        cansendlocal = cansendglobal = 1;
+    for (i = 0; i <= highest_fd; i++) 
+    {
+        if (!(cptr = local[i]))
+            continue;           /* that clients are not mine */
+        if (cptr == one)                /* must skip the origin !! */
+            continue;
+        if (IsServer(cptr)) 
+        {
+            if (!cansendglobal) continue;
+            for (acptr = client; acptr; acptr = acptr->next)
+                if (IsRegisteredUser(acptr)
+                    && match_it(acptr, mask, what)
+                    && acptr->from == cptr)
+                    break;
+            /*
+             * a person on that server matches the mask, so we * send *one*
+             * msg to that server ...
+             */
+            if (acptr == NULL)
+                continue;
+            /* ... but only if there *IS* a matching person */
+        }
+        /* my client, does he match ? */
+        else if (!cansendlocal || !(IsRegisteredUser(cptr) &&
+                                    match_it(cptr, mask, what)))
+            continue;
+        vsendto_prefix_one(cptr, from, pattern, vl);
+    }
+    va_end(vl);
+    return;
+}
+
+/*
  * sendto_all_butone.
  * 
  * Send a message to all connections except 'one'. The basic wall type
@@ -1087,60 +1196,6 @@ void sendto_all_butone(aClient *one, aClient *from, char *pattern, ...)
             vsendto_prefix_one(cptr, from, pattern, vl);
     va_end(vl);
     return;
-}
-
-/*
- * sendto_all_servmask
- *
- * Send to all servers that match the specified mask, and to all local
- * clients if I match the mask.  Replaces sendto_match_butone().
- *   -Quension [Jul 2004]
- */
-void sendto_all_servmask(aClient *from, char *mask, char *pattern, ...)
-{
-    fdlist   send_fdlist;
-    void    *share_buf;
-    char    *pfix;
-    aClient *cptr;
-    DLink   *lp;
-    int      i;
-    int      k;
-    va_list  vl;
-
-    va_start(vl, pattern);
-
-    /* send to matching servers */
-    k = 0;
-    for (lp = server_list; lp; lp = lp->next)
-    {
-        cptr = lp->value.cptr;
-        if (cptr == from->from)
-            continue;
-        if (!match(mask, cptr->name))
-            send_fdlist.entry[++k] = cptr->fd;
-    }
-    if (k)
-    {
-        send_fdlist.last_entry = k;
-        vsendto_fdlist(&send_fdlist, pattern, vl);
-    }
-
-    /* send to my clients if I match */
-    if (!match(mask, me.name))
-    {
-        pfix = va_arg(vl, char *);
-        k = prefix_buffer(0, from, pfix, sendbuf, pattern, vl);
-        sbuf_begin_share(sendbuf, k, &share_buf);
-        for (i = 0; i < highest_fd; i++)
-        {
-            if (!(cptr = local[i]))
-                continue;
-            if (!IsClient(cptr))
-                continue;
-            send_message(cptr, sendbuf, k, share_buf);
-        }
-        sbuf_end_share(&share_buf, 1);
-    }
 }
 
 /*
@@ -1183,10 +1238,6 @@ void sendto_ops_lev(int lev, char *pattern, ...)
 
        case DCCSEND_LEV:
           tmsg = "DCCAllow";
-          break;
-
-       case ADMIN_LEV:
-          tmsg = "Admin";
           break;
 
        default:
@@ -1236,10 +1287,6 @@ void sendto_ops_lev(int lev, char *pattern, ...)
                 break;
             case DEBUG_LEV:
                 if (!SendDebugNotice(cptr) || !IsAnOper(cptr))
-                    continue;
-                break;
-            case ADMIN_LEV:
-                if (!IsAdmin(cptr) || !SendServNotice(cptr))
                     continue;
                 break;
                           
@@ -1716,10 +1763,6 @@ void sendto_realops_lev(int lev, char *pattern, ...)
           tmsg = "DCCAllow";
           break;
 
-       case ADMIN_LEV:
-          tmsg = "Admin";
-          break;
-
        default:
           tmsg = "Notice";
     }
@@ -1766,10 +1809,6 @@ void sendto_realops_lev(int lev, char *pattern, ...)
                 break;
             case DEBUG_LEV:
                 if (!SendDebugNotice(cptr))
-                    continue;
-                break;
-            case ADMIN_LEV:
-                if (!IsAdmin(cptr))
                     continue;
                 break;
         }
@@ -1870,22 +1909,142 @@ void sendto_gnotice(char *pattern, ...)
 }
 
 /*
- * sendto_channelflags_butone
- *  Send a message to all channel members with the specified flags, both
- *  local and remote.
+ * sendto_channelops_butone
+ *   Send a message to all OPs in channel chptr that
+ *   are directly on this server and sends the message
+ *   on to the next server if it has any OPs.
  */
-void sendto_channelflags_butone(aClient *one, aClient *from, aChannel *chptr,
-                                int flags, char *pattern, ...)
+void sendto_channelops_butone(aClient *one, aClient *from, aChannel *chptr, 
+                              char *pattern, ...)
 {
-    chanMember *cm;
+    chanMember   *cm;
     aClient *acptr;
-    int fd;
+    int     i;
+    va_list vl;
+        
+    va_start(vl, pattern);
+
+    INC_SERIAL
+    for (cm = chptr->members; cm; cm = cm->next)
+    {
+        acptr = cm->cptr;
+        if (acptr->from == one ||
+            !(cm->flags & CHFL_CHANOP))
+            continue;
+
+        if(confopts & FLAGS_SERVHUB)
+            if(acptr && acptr->user && acptr->user->server && 
+                (!mycmp(acptr->user->server,Services_Name) || 
+                !mycmp(acptr->user->server,Stats_Name)))
+            continue;
+
+        i = acptr->from->fd;
+        if (MyConnect(acptr) && IsRegisteredUser(acptr)) 
+        {
+            vsendto_prefix_one(acptr, from, pattern, vl);
+            sentalong[i] = sent_serial;
+        }
+        else
+        {
+            /*
+             * Now check whether a message has been sent to this
+             * remote link already 
+             */
+            if (sentalong[i] != sent_serial)
+            {
+                vsendto_prefix_one(acptr, from, pattern, vl);
+                
+                sentalong[i] = sent_serial;
+            }
+        }
+    }
+    va_end(vl);
+    return;
+}
+
+/*
+ * sendto_channelvoice_butone
+ *   Send a message to all voiced users in channel chptr that
+ *   are directly on this server and sends the message
+ *   on to the next server if it has any voiced users.
+ */
+void sendto_channelvoice_butone(aClient *one, aClient *from, aChannel *chptr, 
+                                char *pattern, ...)
+{
+    chanMember   *cm;
+    aClient *acptr;
+    int     i, didlocal = 0, didremote = 0;
+    va_list vl;
+    char *pfix;
+    void *share_buf[2] = { 0, 0 };
+        
+    va_start(vl, pattern);
+    pfix = va_arg(vl, char *);
+
+    INC_SERIAL
+    
+    for (cm = chptr->members; cm; cm = cm->next)
+    {
+        acptr = cm->cptr;
+        if (acptr->from == one || !(cm->flags & CHFL_VOICE))
+            continue;
+        if(confopts & FLAGS_SERVHUB)
+            if(acptr && acptr->user && acptr->user->server && 
+                (!mycmp(acptr->user->server,Services_Name) || 
+                 !mycmp(acptr->user->server,Stats_Name)))
+                continue;
+        i = acptr->from->fd;
+        if (MyConnect(acptr) && IsRegisteredUser(acptr))
+        {
+            if (!didlocal)
+            {
+                didlocal = prefix_buffer(0, from, pfix, sendbuf, pattern, vl);
+                sbuf_begin_share(sendbuf, didlocal, &share_buf[0]);
+            }
+            send_message(acptr, sendbuf, didlocal, share_buf[0]);
+            /* vsendto_prefix_one(acptr, from, pattern, vl); */
+            sentalong[i] = sent_serial;
+        }
+        else
+        {
+            /*
+             * Now check whether a message has been sent to this
+             * remote link already 
+             */
+            if (sentalong[i] != sent_serial)
+            {
+                if (!didremote)
+                {
+                    didremote = prefix_buffer(1, from, pfix, remotebuf, 
+                                              pattern, vl);
+                    sbuf_begin_share(remotebuf, didremote, &share_buf[1]);
+                }
+                send_message(acptr, remotebuf, didremote, share_buf[1]);
+                /* vsendto_prefix_one(acptr, from, pattern, vl); */
+                sentalong[i] = sent_serial;
+            }
+        }
+    }
+    sbuf_end_share(share_buf, 2);
+    va_end(vl);
+}
+
+/*
+ * sendto_channelvoiceops_butone
+ *   Send a message to all OPs or voiced users in channel chptr that
+ *   are directly on this server and sends the message
+ *   on to the next server if it has any OPs or voiced users.
+ */
+void sendto_channelvoiceops_butone(aClient *one, aClient *from, aChannel 
+                                   *chptr, char *pattern, ...)
+{
+    chanMember   *cm;
+    aClient *acptr;
+    int     i, didlocal = 0, didremote = 0;
     char *pfix;
     va_list vl;
-    int didlocal = 0;
-    int didremote = 0;
-    void *share_buf[2] = {0};
-
+    void *share_buf[2] = { 0, 0 };
+        
     va_start(vl, pattern);
     pfix = va_arg(vl, char *);
 
@@ -1894,14 +2053,18 @@ void sendto_channelflags_butone(aClient *one, aClient *from, aChannel *chptr,
     for (cm = chptr->members; cm; cm = cm->next)
     {
         acptr = cm->cptr;
-
-        if (acptr->from == one || !(cm->flags & flags))
+        if (acptr->from == one || !((cm->flags & CHFL_VOICE) ||
+                                    (cm->flags & CHFL_CHANOP)))
             continue;
 
-        if ((confopts & FLAGS_SERVHUB) && IsULine(acptr))
-            continue;
+        if(confopts & FLAGS_SERVHUB)
+            if(acptr && acptr->user && acptr->user->server && 
+                (!mycmp(acptr->user->server,Services_Name) || 
+                 !mycmp(acptr->user->server,Stats_Name)))
+                continue;
 
-        if (MyConnect(acptr))
+        i = acptr->from->fd;
+        if (MyConnect(acptr) && IsRegisteredUser(acptr)) 
         {
             if (!didlocal)
             {
@@ -1909,28 +2072,27 @@ void sendto_channelflags_butone(aClient *one, aClient *from, aChannel *chptr,
                 sbuf_begin_share(sendbuf, didlocal, &share_buf[0]);
             }
             send_message(acptr, sendbuf, didlocal, share_buf[0]);
+            /* vsendto_prefix_one(acptr, from, pattern, vl); */
+            sentalong[i] = sent_serial;
         }
-        else
+        else /* remote link */
         {
-            fd = acptr->from->fd;
-
-            if (sentalong[fd] == sent_serial)
-                continue;
-
-            if (!didremote)
+            if (sentalong[i] != sent_serial) 
             {
-                didremote = prefix_buffer(1, from, pfix, remotebuf, pattern,
-                                          vl);
-                sbuf_begin_share(remotebuf, didremote, &share_buf[1]);
+                if (!didremote)
+                {
+                    didremote = prefix_buffer(1, from, pfix, remotebuf, 
+                                              pattern, vl);
+                    sbuf_begin_share(remotebuf, didremote, &share_buf[1]);
+                }
+                send_message(acptr, remotebuf, didremote, share_buf[1]);
+                /* vsendto_prefix_one(acptr, from, pattern, vl); */
+                sentalong[i] = sent_serial;
             }
-            send_message(acptr, remotebuf, didremote, share_buf[1]);
-            sentalong[fd] = sent_serial;
         }
     }
-
     sbuf_end_share(share_buf, 2);
 }
-
 
 /*******************************************
  * Flushing functions (empty queues)
@@ -1998,21 +2160,3 @@ void flush_fdlist_connections(fdlist *listp)
             (ZipOut(cptr) && zip_is_data_out(cptr->serv->zip_out))))
             send_queued(cptr);
 }
-
-u_long
-memcount_send(MCsend *mc)
-{
-    mc->file = __FILE__;
-
-    mc->s_bufs.c++;
-    mc->s_bufs.m += sizeof(sendbuf);
-    mc->s_bufs.c++;
-    mc->s_bufs.m += sizeof(remotebuf);
-    mc->s_bufs.c++;
-    mc->s_bufs.m += sizeof(selfbuf);
-    mc->s_bufs.c++;
-    mc->s_bufs.m += sizeof(rc4buf);
-
-    return 0;
-}
-

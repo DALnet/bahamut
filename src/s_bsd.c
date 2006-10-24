@@ -53,7 +53,6 @@
 #include "nameser.h"
 #endif
 #include "resolv.h"
-#include "memcount.h"
 
 /* If FD_ZERO isn't define up to this point,
  * define it (BSD4.2 needs this) */
@@ -700,7 +699,7 @@ int check_server_init(aClient * cptr)
                     break;
             if (!hp->h_addr_list[i])
             {
-                sendto_realops_lev(ADMIN_LEV,
+                sendto_realops_lev(DEBUG_LEV,
                     "Server IP# Mismatch: %s != %s[%08x]",
                     inetntoa((char *) &cptr->ip), hp->h_name,
                     *((unsigned long *) hp->h_addr));
@@ -982,7 +981,7 @@ static void set_sock_opts(int fd, aClient * cptr)
                (char *) (char *) &rcvbufmax,optlen) >= 0))
             rcvbufmax += 1024;
         getsockopt(fd, SOL_SOCKET, SO_RCVBUF, (char *) &rcvbufmax, &optlen);
-        readbuf = (char *) MyMalloc(rcvbufmax * sizeof(char));
+        readbuf = (char *) malloc(rcvbufmax * sizeof(char));
     }
     if (IsServer(cptr))
         opt = rcvbufmax;
@@ -1081,7 +1080,7 @@ static void set_listener_sock_opts(int fd, aListener *lptr)
                (char *) (char *) &rcvbufmax, optlen) >= 0)) 
             rcvbufmax += 1024;
         getsockopt(fd, SOL_SOCKET, SO_RCVBUF, (char *) &rcvbufmax, &optlen);
-        readbuf = (char *) MyMalloc(rcvbufmax * sizeof(char));
+        readbuf = (char *) malloc(rcvbufmax * sizeof(char));
     }
     opt = 4096;
 # else
@@ -1235,7 +1234,6 @@ aClient *add_connection(aListener *lptr, int fd)
 
     lptr->ccount++;
     lptr->clients++;
-    Count.unknown++;
     add_fd(fd, FDT_CLIENT, acptr);
     local[fd] = acptr;
 
@@ -1960,34 +1958,3 @@ void do_dns_async()
         packets++;
     } while ((bytes > 0) && (packets < 512));
 }
-
-u_long
-memcount_s_bsd(MCs_bsd *mc)
-{
-    aListener   *lptr;
-
-    mc->file = __FILE__;
-
-    for (lptr = listen_list; lptr; lptr = lptr->next)
-    {
-        mc->listeners.c++;
-        mc->listeners.m += sizeof(*lptr);
-    }
-    mc->total.c += mc->listeners.c;
-    mc->total.m += mc->listeners.m;
-
-    mc->s_local.c = sizeof(local)/sizeof(local[0]);
-    mc->s_local.m = sizeof(local);
-
-    mc->s_readbuf.c = 1;
-#ifndef MAXBUFFERS
-    mc->s_readbuf.m = sizeof(readbuf);
-#else
-    mc->s_readbuf.m = rcvbufmax;
-    mc->total.c += mc->s_readbuf.c;
-    mc->total.m += mc->s_readbuf.m;
-#endif
-
-    return mc->total.m;
-}
-

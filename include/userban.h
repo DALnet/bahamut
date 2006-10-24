@@ -23,7 +23,8 @@
 #define UBAN_LOCAL     0x001   /* formerly known as a K: or Z: line */
 #define UBAN_NETWORK   0x002   /* formerly known as an autokill or an SZline */
 
-#define UBAN_CONF      0x004   /* this ban came from ircd.conf */
+#define UBAN_GECOS     0x004   /* formerly known as an SGLINE */
+#define UBAN_NICK      0x008   /* formerly known as an SQLINE */
 
 #define UBAN_HOST      0x010   /* this ban matches against the user's resolved host */
 #define UBAN_IP        0x020   /* this ban matches against the user's IP address */
@@ -68,7 +69,6 @@ struct simBan {
    char *reason;
    time_t timeset;
    time_t duration;
-   time_t autocap;             /* maximum adjusted duration */
 
    void *internal_ent;         /* internal -- pointer to banlist entry tag */
 };
@@ -92,7 +92,7 @@ void report_userbans_match_flags(aClient *cptr, unsigned int, unsigned int);
 int user_match_ban(aClient *, struct userBan *);
 char *get_userban_host(struct userBan *, char *, int);
 
-void userban_sweep(struct userBan *);
+int count_userbans(aClient *cptr);
 
 /* Simban Calls */
 
@@ -109,4 +109,5 @@ void remove_simbans_match_mask(unsigned int, char *, int);
 void report_simbans_match_flags(aClient *, unsigned int, unsigned int);
 void expire_simbans();
 void send_simbans(aClient *, unsigned int);
+int count_simbans(aClient *);
 void remove_simban(struct simBan *);

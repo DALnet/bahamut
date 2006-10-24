@@ -24,7 +24,6 @@
 #include "common.h"
 #include "sys.h"
 #include "h.h"
-#include "memcount.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -74,17 +73,42 @@ int                 sbufblock_used = 0, sbufuserblock_used = 0;
 #define SBUF_LARGE_TOTAL		(SBUF_BASE + SBUF_LARGE_BUFFER)
 #define SBUF_SMALL_TOTAL        (SBUF_BASE + SBUF_SMALL_BUFFER)
 
+void sbuf_count(int* userUsed, int* userTotal, int* userSize,
+                int* smallUsed, int* smallTotal, int* smallSize,
+                int* largeUsed, int* largeTotal, int* largeSize,
+                int* blockUsed, int* blockSize, int* userblockUsed, int* userblockSize)
+{
+    *userUsed = sbufuser_used;
+    *userTotal = sbufuser_total;
+    *userSize = sizeof(SBufUser);
+    
+    *smallUsed = sbufsmall_used;
+    *smallTotal = sbufsmall_total;
+    *smallSize = SBUF_SMALL_TOTAL;
+    
+    *largeUsed = sbuflarge_used;
+    *largeTotal = sbuflarge_total;
+    *largeSize = SBUF_LARGE_TOTAL;
+    
+    *blockUsed = sbufblock_used;
+    *blockSize = sizeof(SBufBlock);
+    
+    *userblockUsed = sbufuserblock_used;
+    *userblockSize = sizeof(SBufUserBlock);
+}
+
+
 int sbuf_allocblock_general(int theMemorySize, int num, SBuffer** thePool)
 {
     SBufBlock*    block;
     SBuffer*      bufs;
     int           i;
     
-    block = (SBufBlock*)MyMalloc(sizeof(SBufBlock));
+    block = (SBufBlock*)malloc(sizeof(SBufBlock));
     if (!block)
         outofmemory();
         
-    block->bufs = (SBuffer*)MyMalloc(theMemorySize * num);
+    block->bufs = (SBuffer*)malloc(theMemorySize * num);
     if (!block->bufs)
         outofmemory();
         
@@ -133,11 +157,11 @@ int sbuf_allocblock_users(int theCount)
     SBufUser*      users;
     int            i;
     
-    block = (SBufUserBlock*)MyMalloc(sizeof(SBufUserBlock));
+    block = (SBufUserBlock*)malloc(sizeof(SBufUserBlock));
     if (!block)
         outofmemory();
         
-    block->users = (SBufUser*)MyMalloc(sizeof(SBufUser) * theCount);
+    block->users = (SBufUser*)malloc(sizeof(SBufUser) * theCount);
     if (!block->users)
         outofmemory();
         
@@ -523,43 +547,5 @@ int sbuf_get(SBuf* theBuf, char* theData, int theLength)
     }
     return copied;
 }
-
-u_long
-memcount_sbuf(MCsbuf *mc)
-{
-    mc->file = __FILE__;
-
-    mc->smallbufpool.c = sbufsmall_total;
-    mc->smallbufpool.m = sbufsmall_total * SBUF_SMALL_BUFFER;
-    mc->smallbufs.c = sbufsmall_used;
-    mc->smallbufs.m = sbufsmall_used * SBUF_SMALL_BUFFER;
-
-    mc->largebufpool.c = sbuflarge_total;
-    mc->largebufpool.m = sbuflarge_total * SBUF_LARGE_BUFFER;
-    mc->largebufs.c = sbuflarge_used;
-    mc->largebufs.m = sbuflarge_used * SBUF_LARGE_BUFFER;
-
-    mc->userpool.c = sbufuser_total;
-    mc->userpool.m = sbufuser_total * sizeof(SBufUser);
-    mc->users.c = sbufuser_used;
-    mc->users.m = sbufuser_used * sizeof(SBufUser);
-
-    mc->bufblocks.c = sbufblock_used;
-    mc->bufblocks.m = sbufblock_used * sizeof(SBufBlock);
-    mc->userblocks.c = sbufuserblock_used;
-    mc->userblocks.m = sbufuserblock_used * sizeof(SBufUserBlock);
-
-    mc->bufheaders.c = mc->smallbufpool.c + mc->largebufpool.c;
-    mc->bufheaders.m = mc->bufheaders.c * SBUF_BASE;
-
-    mc->management.c = mc->bufheaders.c + mc->bufblocks.c;
-    mc->management.m = mc->bufheaders.m + mc->bufblocks.m;
-    mc->management.c += mc->userpool.c + mc->userblocks.c;
-    mc->management.m += mc->userpool.m + mc->userblocks.m;
-
-    mc->total.c = mc->smallbufpool.c + mc->largebufpool.c + mc->management.c;
-    mc->total.m = mc->smallbufpool.m + mc->largebufpool.m + mc->management.m;
-
-    return mc->total.m;
-}
-
+        
+        

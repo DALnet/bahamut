@@ -28,7 +28,6 @@
 #include "blalloc.h"
 #include "dh.h"
 #include "zlink.h"
-#include "memcount.h"
 
 extern int  BlockHeapGarbageCollect(BlockHeap *);
 
@@ -483,22 +482,11 @@ DLink *make_dlink()
     
     if (lp == (DLink *) NULL)
 	outofmemory();
-
-    memset(lp, 0, sizeof(*lp));
+    
+    lp->next = (DLink *) NULL;	/* just to be paranoid... */
+    lp->prev = (DLink *) NULL;	/* just to be paranoid... */
 
     return lp;
-}
-
-DLink *find_dlink(DLink *lp, void *what)
-{
-    while (lp)
-    {
-        if (lp->value.cp == what)
-            return lp;
-        lp = lp->next;
-    }
-
-    return NULL;
 }
 
 void free_dlink(DLink *lp)
@@ -599,23 +587,3 @@ void block_garbage_collect()
     BlockHeapGarbageCollect(free_fludbots);
 #endif
 }
-
-u_long
-memcount_list(MClist *mc)
-{
-    mc->file = __FILE__;
-
-    mc->e_localclients_heap = free_local_aClients;
-    mc->e_remoteclients_heap = free_remote_aClients;
-    mc->e_links_heap = free_Links;
-    mc->e_dlinks_heap = free_DLinks;
-    mc->e_chanmembers_heap = free_chanMembers;
-    mc->e_users_heap = free_anUsers;
-    mc->e_channels_heap = free_channels;
-#ifdef FLUD
-    mc->e_fludbots_heap = free_fludbots;
-#endif
-
-    return 0;
-}
-

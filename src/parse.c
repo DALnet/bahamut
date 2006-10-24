@@ -22,13 +22,12 @@
 
 #include "struct.h"
 #include "common.h"
-#include "sys.h"
-#include "numeric.h"
-#include "h.h"
 #define MSGTAB
 #include "msg.h"
 #undef MSGTAB
-#include "memcount.h"
+#include "sys.h"
+#include "numeric.h"
+#include "h.h"
 
 #if defined( HAVE_STRING_H )
 #include <string.h>
@@ -225,7 +224,7 @@ int parse(aClient *cptr, char *buffer, char *bufend)
 	 * are allowed -SRB Opers can send 1 msg per second, burst of ~20
 	 * -Taner
 	 */
-	if (!IsServer(cptr)) 
+	if ((mptr->flags & 1) && !(IsServer(cptr))) 
 	{
         if (!NoMsgThrottle(cptr))
         {
@@ -273,7 +272,7 @@ int parse(aClient *cptr, char *buffer, char *bufend)
                 {
                    sendto_realops_lev(DEBUG_LEV, "Overflowed MAXPARA on %s from %s",
 			   mptr ? mptr->cmd : "numeric",
-			   get_client_name(cptr, (IsServer(cptr) ? HIDEME : FALSE)));
+			   get_client_name(cptr, (IsServer(cptr) ? HIDEME : TRUE)));
                 }
 		break;
             }
@@ -290,19 +289,20 @@ int parse(aClient *cptr, char *buffer, char *bufend)
     mptr->count++;
     
     /* patch to avoid server flooding from unregistered connects */
+    /*
+     * check allow_unregistered_use flag I've set up instead of function
+     * comparing *yech* - Dianora
+     */
     
-    if (!IsRegistered(cptr) && !(mptr->flags & MF_UNREG)) {
+    if (!IsRegistered(cptr) && !mptr->allow_unregistered_use) {
 	sendto_one(from, ":%s %d %s %s :Register first.",
 		   me.name, ERR_NOTREGISTERED, from->name, ch);
 	return -1;
     }
     
-    if (IsRegisteredUser(cptr) && (mptr->flags & MF_RIDLE))
+    if (IsRegisteredUser(cptr) && mptr->reset_idle)
 	from->user->last = timeofday;
-
-    if (mptr->flags & MF_ALIAS)
-         return mptr->func(cptr, from, i, para, &aliastab[mptr->aliasidx]);
-
+    
     return (*mptr->func) (cptr, from, i, para);
 }
 
@@ -505,7 +505,7 @@ static int cancel_clients(aClient *cptr, aClient *sptr, char *cmd)
 	sendto_realops_lev(DEBUG_LEV, "Message for %s[%s] from %s",
 			   sptr->name, sptr->from->name,
 			   get_client_name(cptr, 
-					   (IsServer(cptr) ? HIDEME : FALSE)));
+					   (IsServer(cptr) ? HIDEME : TRUE)));
 	if (IsServer(cptr))
 	{
 	    sendto_realops_lev(DEBUG_LEV,
@@ -542,7 +542,7 @@ static int cancel_clients(aClient *cptr, aClient *sptr, char *cmd)
 				   "(TS, ignored)", sptr->name,
 				   sptr->user->username, sptr->user->host,
 				   sptr->from->name,
-				   get_client_name(cptr, HIDEME));
+				   get_client_name(cptr, TRUE));
 	    return 0;
 	}
 	else
@@ -553,7 +553,8 @@ static int cancel_clients(aClient *cptr, aClient *sptr, char *cmd)
 				   sptr->name, sptr->user->username,
 				   sptr->user->host,
 				   sptr->from->name,
-				   get_client_name(cptr, HIDEME));
+				   get_client_name(cptr, (IsServer(cptr) ? 
+							  HIDEME : TRUE)));
 	    if(IsULine(sptr))
 	    {
 		sendto_realops_lev(DEBUG_LEV,
@@ -565,7 +566,8 @@ static int cancel_clients(aClient *cptr, aClient *sptr, char *cmd)
 			       ":%s KILL %s :%s (%s[%s] != %s, Fake Prefix)",
 			       me.name, sptr->name, me.name,
 			       sptr->name, sptr->from->name,
-			       get_client_name(cptr, HIDEME));
+			       get_client_name(cptr, (IsServer(cptr) ?
+						      HIDEME : TRUE)));
 	    sptr->flags |= FLAGS_KILLED;
 	    return exit_client(cptr, sptr, &me, "Fake Prefix");
 	}
@@ -607,40 +609,3 @@ static void remove_unknown(aClient *cptr, char *sender, char *buffer)
 		   me.name, sender, buffer, get_client_name(cptr, HIDEME));
     }
 }
-
-static u_long
-r_msgtree_memcount(MESSAGE_TREE *mptr, int *count)
-{
-    int     i;
-    u_long  m = sizeof(*mptr);
-
-    (*count)++;
-
-    for (i = 0; i < sizeof(mptr->pointers)/sizeof(mptr->pointers[0]); i++)
-        if (mptr->pointers[i])
-            m += r_msgtree_memcount(mptr->pointers[i], count);
-
-    return m;
-}
-
-u_long
-memcount_parse(MCparse *mc)
-{
-    mc->file = __FILE__;
-
-    mc->msgnodes.m = r_msgtree_memcount(msg_tree_root, &mc->msgnodes.c);
-
-    mc->total.c += mc->msgnodes.c;
-    mc->total.m += mc->msgnodes.m;
-
-    mc->s_bufs.c++;
-    mc->s_bufs.m += sizeof(para);
-    mc->s_bufs.c++;
-    mc->s_bufs.m += sizeof(sender);
-
-    mc->s_msgtab.c = sizeof(msgtab)/sizeof(msgtab[0]);
-    mc->s_msgtab.m = sizeof(msgtab);
-
-    return mc->total.m;
-}
-

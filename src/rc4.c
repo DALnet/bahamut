@@ -23,8 +23,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "memcount.h"
-
 /*
  * Transparent rc4 implementation
  * Based upon sample in crypto++ library,
@@ -54,7 +52,7 @@ void *rc4_initstate(unsigned char *key, int keylen)
    if(sizeof(RC4BYTE) != 1)  abort(); /* MUST BE 1 BYTE! */
    if(sizeof(RC4DWORD) != 4) abort(); /* MUST BE 4 BYTES! */
    
-   rc4 = (struct rc4_state *) MyMalloc(sizeof(struct rc4_state));
+   rc4 = (struct rc4_state *) malloc(sizeof(struct rc4_state));
    memset(rc4, 0, sizeof(struct rc4_state));
    
    for(i = 0; i < 256; i++) /* initialize our state array */
@@ -127,16 +125,5 @@ void rc4_process_stream_to_buf(void *rc4_context,
 void rc4_destroystate(void *a)
 {
     memset(a, 0, sizeof(struct rc4_state));
-    MyFree(a);
+    free(a);
 }
-
-u_long
-memcount_rc4(MCrc4 *mc)
-{
-    mc->file = __FILE__;
-
-    mc->m_rc4state_size = sizeof(struct rc4_state);
-
-    return 0;
-}
-

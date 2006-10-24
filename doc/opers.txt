@@ -55,10 +55,10 @@ COMMAND         - USAGE and DESCRIPTION
 
   STATS         - STATS <letter> [server|nick]
                   Queries server [server] (or your own server if no
-                  server parameter is given) for info corresponding to
+                  server parameter is given) for info corresponing to
                   <letter>.
                   LETTER (* = Oper only.)
-                  ------
+                  ------ (^ = Can be configured to be oper only.)
                   * a - Shows akills
                   * c - Shows connect blocks
                   * D - Shows special clone limits
@@ -70,7 +70,7 @@ COMMAND         - USAGE and DESCRIPTION
                   * k - Shows temporary K lines
                     l - Shows hostname and generic info about [nick]
                   * m - Shows commands and their usage
-                    o - Shows oper blocks
+                  ^ o - Shows oper bocks
                     p - Shows opers connected and their idle times
                   * Q - Shows local nick/chan restrictions
                   * q - Shows network nick/chan restrictions (sqlines)
@@ -84,7 +84,7 @@ COMMAND         - USAGE and DESCRIPTION
                   * w - Shows fd list (only in DEBUGMODE)
                     y - Shows class blocks
                   * z - Shows memory stats
-                    ? - Shows network traffic statistics
+                    ? - Shows network traffic statistics bdefgjnx
 
   CONNECT       - CONNECT <server_A> [port [server_B]]
                   When [server_B] is used, CONNECT asks [server_B] to

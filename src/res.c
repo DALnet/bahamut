@@ -14,7 +14,6 @@
 #include "numeric.h"
 #include "h.h"
 #include "fds.h"
-#include "memcount.h"
 
 #include <signal.h>
 #include <sys/time.h>
@@ -48,7 +47,7 @@
 #undef SEARCH_CACHE_ADDRESSES
 
 #define PROCANSWER_STRANGE   -2 /* invalid answer or query, try again */
-#define PROCANSWER_MALICIOUS -3 /* obviously malicious reply, \
+#define PROCANSWER_MALICIOUS -3 /* obviously malicious reply, 
 				                 * don't do DNS on this ip. */
 
 #undef	DEBUG			/* because theres alot of debug code in here */
@@ -1970,74 +1969,3 @@ int m_dns(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	       reinfo.re_resends, reinfo.re_timeouts);
     return 0;
 }
-
-u_long
-memcount_res(MCres *mc)
-{
-    ResRQ *rq;
-    aCache *ce;
-    int i;
-
-    mc->file = __FILE__;
-
-    for (rq = first; rq; rq = rq->next)
-    {
-        mc->requests.c++;
-        mc->requests.m += sizeof(*rq);
-
-        if (rq->name)
-            mc->requests.m += strlen(rq->name) + 1;
-
-        if (rq->he.h_name)
-            mc->requests.m += strlen(rq->he.h_name) + 1;
-
-        for (i = 0; rq->he.h_aliases[i]; i++)
-            mc->requests.m += strlen(rq->he.h_aliases[i]) + 1;
-
-        if (rq->he_rev.h_name)
-            mc->requests.m += strlen(rq->he_rev.h_name) + 1;
-
-        for (i = 0; rq->he_rev.h_aliases[i]; i++)
-            mc->requests.m += strlen(rq->he_rev.h_aliases[i]) + 1;
-    }
-
-    for (ce = cachetop; ce; ce = ce->list_next)
-    {
-        mc->cached.c++;
-        mc->cached.m += sizeof(*ce);
-
-        if (ce->he.h_name)
-            mc->cached.m += strlen(ce->he.h_name) + 1;
-
-        if (ce->he.h_aliases)
-        {
-            for (i = 0; ce->he.h_aliases[i]; i++)
-            {
-                mc->cached.m += sizeof(char *);
-                mc->cached.m += strlen(ce->he.h_aliases[i]) + 1;
-            }
-            mc->cached.m += sizeof(char *);
-        }
-
-        if (ce->he.h_addr_list)
-        {
-            for (i = 0; ce->he.h_addr_list[i]; i++)
-            {
-                mc->cached.m += sizeof(char *);
-                mc->cached.m += ce->he.h_length;
-            }
-            mc->cached.m += sizeof(char *);
-        }
-    }
-
-    mc->s_cachehash.c = sizeof(hashtable) / sizeof(hashtable[0]);
-    mc->s_cachehash.m = sizeof(hashtable);
-    mc->s_requesthash.c = sizeof(idcphashtable) / sizeof(idcphashtable[0]);
-    mc->s_requesthash.m = sizeof(idcphashtable);
-
-    mc->total.c = mc->requests.c + mc->cached.c;
-    mc->total.m = mc->requests.m + mc->cached.m;
-
-    return mc->total.m;
-}
-

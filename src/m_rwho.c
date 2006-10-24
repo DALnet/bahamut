@@ -63,9 +63,6 @@ extern Link *find_channel_link(Link *, aChannel *);
 #define RWM_CLONES  0x0100
 #define RWM_MATCHES 0x0200
 #define RWM_CHANNEL 0x0400
-#define RWM_NPROB   0x0800
-#define RWM_UPROB   0x1000
-#define RWM_GPROB   0x2000
 
 /* whois compatibility */
 #define RWC_SHOWIP  0x0001
@@ -87,7 +84,6 @@ extern Link *find_channel_link(Link *, aChannel *);
 #define RWO_CLONES  0x1000
 #define RWO_MATCHES 0x2000
 #define RWO_CHANNEL 0x4000
-#define RWO_PROB    0x8000
 
 
 static const char *rwho_help[] = {
@@ -96,20 +92,14 @@ static const char *rwho_help[] = {
     "'+' being a positive match and '-' being a negative one:",
     "  a             - user is (not) away",
     "  c <channel>   - user is on channel <channel> (+ only)",
-#ifdef THROTTLE_ENABLE
-    "  d <clones>    - there are N or more (less) users per host",
-    "  D <matches>   - there are N or more (less) matching users per host",
-#endif
+    "  d <clones>    - there are N or more (less) matching users per host",
+    "  D <matches>   - there are N or more (less) users per host",
     "  h <host>      - user's host does (not) match wildcard mask",
     "  i <ip>        - user's IP does (not) match CIDR <ip>",
     "  j <channels>  - user is in N or more (less) channels",
     "  m <usermodes> - user is (not) using modes <usermodes>",
-#ifdef RWHO_PROBABILITY
-    "  p {N|U|G}<p>  - Nick/User/Gcos is <p> or more (less) probable",
-    "  P <charsets>  - use custom charsets for probability search (+ only)",
-#endif
     "  s <server>    - user is (not) on server <server>",
-    "  t <seconds>   - nick has been in use for N or more (less) seconds",
+    "  t <seconds>   - user has been online N or more (less) seconds",
     "  T <type>      - user is (not) type <type> as set by services",
     "  C             - for compatibility with WHO, use discouraged",
     "  I             - for compatibility with WHO, use discouraged",
@@ -132,24 +122,17 @@ static const char *rwho_help[] = {
     "  f             - standard WHO flags (GH*%@+)",
     "  c             - user's most recently joined channel",
     "  j             - number of joined channels",
-#ifdef THROTTLE_ENABLE
     "  d             - number of clones on user's IP",
     "  D             - number of matches on user's IP (see below)",
-#endif
-    "  t             - nick's start-of-use timestamp",
+    "  t             - user's signon timestamp",
     "  T             - user's type (set by services)",
     "  m             - user's modes",
-#ifdef RWHO_PROBABILITY
-    "  p             - user's probability set",
-#endif
     "  g             - user's gcos/real name (mutually exclusive with 'a')",
     "  a             - user's away reason (mutually exclusive with 'g')",
-    "Theses output flags are special:",
+    "There are three special output flags:",
     "  L<count>      - limit to N results (no space between L and <count>)",
     "  C             - no results, just supply match count in RPL_ENDOFWHO",
-#ifdef THROTTLE_ENABLE
     "  D             - returns only one matching result per host (summarize)",
-#endif
     NULL
 };
 
@@ -173,17 +156,10 @@ static struct {
     char     *ip_str[2];        /* IP string if CIDR is invalid */
     ts_val    ts[2];            /* signon timestamp */
     int       joined[2];        /* min/max joined chans */
-#ifdef THROTTLE_ENABLE
     int       clones[2];        /* min/max clones */
     int       matches[2];       /* min/max clone matches */
     int       thisclones;       /* number of clones on this host */
     int       thismatches;      /* number of matches on this host */
-#endif
-#ifdef RWHO_PROBABILITY
-    int       nickprob[2];      /* min/max nick probability */
-    int       userprob[2];      /* min/max username probability */
-    int       gcosprob[2];      /* min/max real name probability */
-#endif
 } rwho_opts;
 
 static char rwhobuf[1024];
@@ -322,10 +298,6 @@ static int rwho_parseopts(aClient *sptr, int parc, char *parv[])
         return 0;
     }
 
-#ifdef RWHO_PROBABILITY
-    probability_init();
-#endif
-
     /* parse match options */
     for (sfl = parv[1]; *sfl; sfl++)
     {
@@ -381,7 +353,6 @@ static int rwho_parseopts(aClient *sptr, int parc, char *parv[])
                 rwho_opts.compat |= RWC_CHANNEL;
                 break;
 
-#ifdef THROTTLE_ENABLE
             case 'd':
                 if (!parv[arg])
                 {
@@ -417,7 +388,6 @@ static int rwho_parseopts(aClient *sptr, int parc, char *parv[])
                 rwho_opts.check[neg] |= RWM_MATCHES;
                 arg++;
                 break;
-#endif  /* THROTTLE_ENABLE */
 
             case 'h':
                 if (!parv[arg])
@@ -472,7 +442,7 @@ static int rwho_parseopts(aClient *sptr, int parc, char *parv[])
             case 'j':
                 if (!parv[arg])
                 {
-                    rwho_synerr(sptr, "missing argument for match flag j");
+                    rwho_synerr(sptr, "missing argument for match flag s");
                     return 0;
                 }
                 i = strtol(parv[arg], &s, 0);
@@ -503,71 +473,6 @@ static int rwho_parseopts(aClient *sptr, int parc, char *parv[])
                 rwho_opts.check[neg] |= RWM_MODES;
                 arg++;
                 break;
-
-#ifdef RWHO_PROBABILITY
-            case 'p':
-                if (!parv[arg])
-                {
-                    rwho_synerr(sptr, "missing argument for match flag p");
-                    return 0;
-                }
-                s = parv[arg];
-                while (*s)
-                {
-                    int *prob = NULL;
-                    int bflag = 0;
-
-                    switch (*s++)
-                    {
-                        case 'N':
-                        case 'n':
-                            prob = rwho_opts.nickprob;
-                            bflag = RWM_NPROB;
-                            break;
-                        case 'U':
-                        case 'u':
-                            prob = rwho_opts.userprob;
-                            bflag = RWM_UPROB;
-                            break;
-                        case 'G':
-                        case 'g':
-                            prob = rwho_opts.gcosprob;
-                            bflag = RWM_GPROB;
-                            break;
-                    }
-
-                    if (!prob || !IsDigit(*s))
-                    {
-                        rwho_synerr(sptr, "Invalid argument for match flag p");
-                        return 0;
-                    }
-
-                    prob[neg] = strtol(s, &s, 10);
-                    rwho_opts.check[neg] |= bflag;
-                }
-                arg++;
-                break;
-
-            case 'P':
-                if (!parv[arg])
-                {
-                    rwho_synerr(sptr, "missing argument for match flag P");
-                    return 0;
-                }
-                if (neg)
-                {
-                    rwho_synerr(sptr, "negative match not supported for match"
-                                " flag P");
-                    return 0;
-                }
-                if (!probability_loadsets(parv[arg]))
-                {
-                    rwho_synerr(sptr, "invalid argument for match flag P");
-                    return 0;
-                }
-                arg++;
-                break;
-#endif  /* RWHO_PROBABILITY */
 
             case 's':
                 if (!parv[arg])
@@ -756,16 +661,11 @@ static int rwho_parseopts(aClient *sptr, int parc, char *parv[])
             case 'f': rwho_opts.rplfields |= RWO_FLAGS; sfl++; break;
             case 'c': rwho_opts.rplfields |= RWO_CHANNEL; sfl++; break;
             case 'j': rwho_opts.rplfields |= RWO_JOINS; sfl++; break;
-#ifdef THROTTLE_ENABLE
             case 'd': rwho_opts.rplfields |= RWO_CLONES; sfl++; break;
             case 'D': rwho_opts.rplfields |= RWO_MATCHES; sfl++; break;
-#endif
             case 't': rwho_opts.rplfields |= RWO_TS; sfl++; break;
             case 'T': rwho_opts.rplfields |= RWO_STYPE; sfl++; break;
             case 'm': rwho_opts.rplfields |= RWO_MODES; sfl++; break;
-#ifdef RWHO_PROBABILITY
-            case 'p': rwho_opts.rplfields |= RWO_PROB; sfl++; break;
-#endif
             case 'g': rwho_opts.rplfields |= RWO_GCOS; sfl++; break;
             case 'a': rwho_opts.rplfields |= RWO_AWAY; sfl++; break;
 
@@ -793,7 +693,6 @@ static int rwho_parseopts(aClient *sptr, int parc, char *parv[])
         return 0;
     }
 
-#ifdef THROTTLE_ENABLE
     if ((rwho_opts.check[0] & rwho_opts.check[1] & RWM_CLONES)
         && (rwho_opts.clones[0] > rwho_opts.clones[1]))
     {
@@ -807,7 +706,6 @@ static int rwho_parseopts(aClient *sptr, int parc, char *parv[])
         rwho_synerr(sptr, "values for match flags +D and -D will never match");
         return 0;
     }
-#endif
 
     if ((rwho_opts.check[0] & rwho_opts.check[1] & RWM_JOINS)
         && (rwho_opts.joined[0] > rwho_opts.joined[1]))
@@ -822,35 +720,6 @@ static int rwho_parseopts(aClient *sptr, int parc, char *parv[])
         rwho_synerr(sptr, "values for match flags +t and -t will never match");
         return 0;
     }
-
-#ifdef RWHO_PROBABILITY
-    if ((rwho_opts.check[0] & rwho_opts.check[1] & RWM_NPROB)
-        && (rwho_opts.nickprob[0] > rwho_opts.nickprob[1]))
-    {
-        rwho_synerr(sptr, "values for match flags +p and -p will never match");
-        return 0;
-    }
-
-    if ((rwho_opts.check[0] & rwho_opts.check[1] & RWM_UPROB)
-        && (rwho_opts.userprob[0] > rwho_opts.userprob[1]))
-    {
-        rwho_synerr(sptr, "values for match flags +p and -p will never match");
-        return 0;
-    }
-
-    if ((rwho_opts.check[0] & rwho_opts.check[1] & RWM_GPROB)
-        && (rwho_opts.gcosprob[0] > rwho_opts.gcosprob[1]))
-    {
-        rwho_synerr(sptr, "values for match flags +p and -p will never match");
-        return 0;
-    }
-
-    /* ugly, but this is an expensive calculation, do it only if necessary */
-    if ( ((rwho_opts.check[0] | rwho_opts.check[1])
-          & (RWM_NPROB|RWM_UPROB|RWM_GPROB))
-         || (rwho_opts.rplfields & RWO_PROB) )
-        probability_fini();
-#endif  /* RWHO_PROBABILITY */
 
     if (spatidx && !rwho_compile(sptr, remap))
         return 0;
@@ -945,28 +814,7 @@ static int rwho_match(aClient *cptr, int *failcode, aClient **failclient)
     if ((rwho_opts.check[1] & RWM_HOST) &&
         !rwho_opts.host_func[1](rwho_opts.host_pat[1], cptr->user->host))
         return 0;
-
-#ifdef RWHO_PROBABILITY
-    if ((rwho_opts.check[0] | rwho_opts.check[1]) &
-        (RWM_NPROB|RWM_UPROB|RWM_GPROB))
-    {
-        int np, up, gp;
-        get_probabilities(cptr, &np, &up, &gp);
-        if ((rwho_opts.check[0] & RWM_NPROB) && np < rwho_opts.nickprob[0])
-            return 0;
-        if ((rwho_opts.check[1] & RWM_NPROB) && np > rwho_opts.nickprob[1])
-            return 0;
-        if ((rwho_opts.check[0] & RWM_UPROB) && up < rwho_opts.userprob[0])
-            return 0;
-        if ((rwho_opts.check[1] & RWM_UPROB) && up > rwho_opts.userprob[1])
-            return 0;
-        if ((rwho_opts.check[0] & RWM_GPROB) && gp < rwho_opts.gcosprob[0])
-            return 0;
-        if ((rwho_opts.check[1] & RWM_GPROB) && gp > rwho_opts.gcosprob[1])
-            return 0;
-    }
-#endif
-
+    
     if (rwho_opts.re)
     {
         s = scratch;
@@ -1155,7 +1003,7 @@ static void rwho_reply(aClient *cptr, aClient *ac, char *buf, chanMember *cm)
         if (!cm && (rwho_opts.rplfields & RWO_CHANNEL) && chptr)
         {
             for (cm = chptr->members; cm; cm = cm->next)
-                if (cm->cptr == ac)
+                if (cm->cptr == cptr)
                     break;
         }
 
@@ -1190,13 +1038,11 @@ static void rwho_reply(aClient *cptr, aClient *ac, char *buf, chanMember *cm)
     if (rwho_opts.rplfields & RWO_JOINS)
         dst += ircsprintf(dst, " %d", ac->user->joined);
 
-#ifdef THROTTLE_ENABLE
     if (rwho_opts.rplfields & RWO_CLONES)
         dst += ircsprintf(dst, " %d", rwho_opts.thisclones);
 
     if (rwho_opts.rplfields & RWO_MATCHES)
         dst += ircsprintf(dst, " %d", rwho_opts.thismatches);
-#endif
 
     if (rwho_opts.rplfields & RWO_TS)
         dst += ircsprintf(dst, " %d", ac->tsinfo);
@@ -1216,15 +1062,6 @@ static void rwho_reply(aClient *cptr, aClient *ac, char *buf, chanMember *cm)
                 *dst++ = user_modes[i+1];
         }
     }
-
-#ifdef RWHO_PROBABILITY
-    if (rwho_opts.rplfields & RWO_PROB)
-    {
-        int np, up, gp;
-        get_probabilities(ac, &np, &up, &gp);
-        dst += ircsprintf(dst, " N%dU%dG%d", np, up, gp);
-    }
-#endif
 
     if (rwho_opts.rplfields & RWO_GCOS)
     {
@@ -1262,16 +1099,12 @@ int m_rwho(aClient *cptr, aClient *sptr, int parc, char *parv[])
     int         results = 0;
     int         left;
     char       *fill;
-    clock_t     cbegin;
-    clock_t     cend;
 
     if (!IsAnOper(sptr))
     {
         sendto_one(sptr, getreply(ERR_NOPRIVILEGES), me.name, parv[0]);
         return 0;
     }
-
-    cbegin = clock();
 
     if (!rwho_parseopts(sptr, parc, parv))
         return 0;
@@ -1283,7 +1116,6 @@ int m_rwho(aClient *cptr, aClient *sptr, int parc, char *parv[])
     if (rwho_opts.chptr && !IsAdmin(sptr) && !ShowChannel(sptr, rwho_opts.chptr))
         rwho_opts.countonly = 1;
 
-#ifdef THROTTLE_ENABLE
     if (((rwho_opts.check[0] | rwho_opts.check[1]) & (RWM_CLONES|RWM_MATCHES))
         || (rwho_opts.rplfields & (RWO_CLONES|RWO_MATCHES)))
     {
@@ -1363,7 +1195,11 @@ int m_rwho(aClient *cptr, aClient *sptr, int parc, char *parv[])
                     continue;
 
                 if (!left)
+                {
+                    sendto_one(sptr, getreply(ERR_WHOLIMEXCEED), me.name,
+                               parv[0], rwho_opts.limit, "RWHO");
                     break;
+                }
 
                 if (!rwho_opts.countonly)
                 {
@@ -1374,22 +1210,9 @@ int m_rwho(aClient *cptr, aClient *sptr, int parc, char *parv[])
                 results++;
                 left--;
             }
-
-            /* This may be inaccurate.  If the loop above finished without
-               hitting the limit, this reply is too early -- it suggests there
-               are more matches when there may not be.  But it's the easiest
-               way to handle this case at present. */
-            if (!left)
-            {
-                sendto_one(sptr, getreply(ERR_WHOLIMEXCEED), me.name, parv[0],
-                           rwho_opts.limit, "RWHO");
-                break;
-            }
         }
     }
-    else
-#endif  /* THROTTLE_ENABLE */
-    if (rwho_opts.chptr)
+    else if (rwho_opts.chptr)
     {
         rwho_opts.check[0] &= ~RWM_CHANNEL;
 
@@ -1448,11 +1271,6 @@ int m_rwho(aClient *cptr, aClient *sptr, int parc, char *parv[])
     if (rwho_opts.compat)
         sendto_one(sptr, getreply(RPL_COMMANDSYNTAX), me.name, sptr->name,
                    "NOTE: match flags C and I are deprecated");
-
-    cend = clock();
-    ircsprintf(rwhobuf, "Search completed in %.03fs.",
-               ((double)(cend - cbegin)) / CLOCKS_PER_SEC);
-    sendto_one(sptr, getreply(RPL_COMMANDSYNTAX), me.name, sptr->name,rwhobuf);
 
     ircsprintf(rwhobuf, "%d", results);
     sendto_one(sptr, getreply(RPL_ENDOFWHO), me.name, parv[0], rwhobuf,"RWHO");

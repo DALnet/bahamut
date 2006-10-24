@@ -14,7 +14,6 @@
 #include "throttle.h"
 #include "h.h"
 #include "hooks.h"
-#include "memcount.h"
 
 extern Conf_Modules *modules;
 
@@ -869,56 +868,3 @@ int init_modules()
     return 0;
 }
 #endif
-
-u_long
-memcount_modules(MCmodules *mc)
-{
-#ifdef USE_HOOKMODULES
-    int      c;
-    DLink   *dl;
-    aModule *m;
-#endif
-
-    mc->file = __FILE__;
-
-#ifdef USE_HOOKMODULES
-    for (dl = module_list; dl; dl = dl->next)
-    {
-        mc->e_dlinks++;
-        m = (aModule *)dl->value.cp;
-        mc->modules.c++;
-        mc->modules.m += sizeof(*m);
-        if (m->name)
-            mc->modules.m += strlen(m->name) + 1;
-        if (m->version)
-            mc->modules.m += strlen(m->version) + 1;
-        if (m->description)
-            mc->modules.m += strlen(m->description) + 1;
-    }
-
-    c = mc_dlinks(all_hooks);
-    mc->hooks.c = c;
-    mc->hooks.m = c * sizeof(aHook);
-    mc->e_dlinks += c;
-
-    mc->e_dlinks += mc_dlinks(preaccess_hooks);
-    mc->e_dlinks += mc_dlinks(postaccess_hooks);
-    mc->e_dlinks += mc_dlinks(postmotd_hooks);
-    mc->e_dlinks += mc_dlinks(msg_hooks);
-    mc->e_dlinks += mc_dlinks(chanmsg_hooks);
-    mc->e_dlinks += mc_dlinks(usermsg_hooks);
-    mc->e_dlinks += mc_dlinks(mymsg_hooks);
-    mc->e_dlinks += mc_dlinks(every10_hooks);
-    mc->e_dlinks += mc_dlinks(signoff_hooks);
-    mc->e_dlinks += mc_dlinks(mload_hooks);
-    mc->e_dlinks += mc_dlinks(munload_hooks);
-
-    mc->total.c += mc->modules.c + mc->hooks.c;
-    mc->total.m += mc->modules.m + mc->hooks.m;
-
-    return mc->total.m;
-#else
-    return 0;
-#endif
-}
-

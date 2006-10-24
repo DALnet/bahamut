@@ -127,12 +127,6 @@
 
 #define THROTTLE_ENABLE /* enable throttling, see below */
 
-/*
- * RWHO_PROBABILITY
- * Define this to enable probability calculation support for RWHO.
- */
-#define RWHO_PROBABILITY
-
 /* File names
  * the server will look for these files
  */
@@ -161,22 +155,6 @@
 #undef DENY_SERVICES_MSGS
 
 /*
- * PASS_SERVICES_MSGS
- * Define this to cause PRIVMSG <service> to be passed to services as-is,
- * instead of being converted to the shortform ("PRIVMSG NickServ" -> "NS").
- * Useful if services behaves differently when it gets a target of <service>
- * instead of <service>@<server>.  DENY_SERVICES_MSGS overrides this.
- */
-#define PASS_SERVICES_MSGS
-
-/*
- * SUPER_TARGETS_ONLY
- * Define this to allow the nick@server form of PRIVMSG/NOTICE to target super
- * servers only.  If not defined, the target may be on any server.
- */
-#define SUPER_TARGETS_ONLY
-
-/*
  * FNAME_USERLOG and FNAME_OPERLOG - logs of local USERS and OPERS
  * Define this filename to maintain a list of persons who log into this
  * server. Logging will stop when the file does not exist. Logging will
@@ -203,26 +181,10 @@
  * DEFAULT_KLINE_TIME
  *
  * Define this to the default time for a kline (in minutes) for klines with
- * unspecified times.  A time of 0 will create a permanent kline.
+ * unspecified times. undefine this for all klines with unspecified times
+ * to be perm. (if defined, a kline with zero time will be perm). -- lucas
  */
 #define DEFAULT_KLINE_TIME 30
-
-/*
- * KLINE_MIN_STORE_TIME
- *
- * The minimum duration (in minutes) a kline must be before it will be stored
- * in the on-disk journal.
- */
-#define KLINE_MIN_STORE_TIME 180
-
-/*
- * KLINE_STORE_COMPACT_THRESH
- *
- * The maximum number of entries to write to the active kline storage journal
- * before compacting it.  This threshold prevents the journal from growing
- * indefinitely while klines are added and removed on a running server.
- */
-#define KLINE_STORE_COMPACT_THRESH 1000
 
 /*
  * Pretty self explanatory: These are shown in server notices and to the 
@@ -232,6 +194,21 @@
 #define NETWORK_BAN_NAME "autokill"
 #define LOCAL_BANNED_NAME "k-lined"
 #define NETWORK_BANNED_NAME "autokilled"
+
+/*
+ * LOCKFILE - Exclusive use of ircd.conf and kline.conf during writes
+ * 
+ * This creates a lockfile prior to writes to ircd.conf or kline.conf, and
+ * can be used in conjunction with viconf (included in the tools
+ * directory). This prevents loss of data when klines are added while
+ * someone is manually editting the file.  File writes will be retried
+ * at the next KLINE, ZLINE, REHASH, or after CHECK_PENDING_KLINES
+ * minutes have elapsed.
+ * 
+ * If you do not wish to use this feature, leave LOCKFILE #undef
+ */
+#define LOCKFILE "/tmp/ircd.conf.lock"
+#define	CHECK_PENDING_KLINES	10	/* in minutes */
 
 /*
  * RFC1035_ANAL Defining this causes ircd to reject hostnames with
@@ -279,6 +256,12 @@
  * remove flood control for opers
  */
 #define NO_OPER_FLOOD
+
+/* SHOW_UH - show the user@host everywhere */
+#define SHOW_UH
+#ifdef SHOW_UH
+#define USERNAMES_IN_TRACE
+#endif
 
 /*
  * SHOW_INVISIBLE_LUSERS - show invisible clients in LUSERS As defined
@@ -383,6 +366,13 @@
 # define MAX_AWAY_TIME 180  /* time in seconds */
 # define MAX_AWAY_COUNT 5
 #endif
+
+/*
+ * UNKLINE - /quote unkline - remove klines on the fly if you choose to
+ * support this, an oper can do a /quote UNKLINE of an exact matching
+ * KLINE to remove the kline
+ */
+#define UNKLINE
 
 /*
  * WARN_NO_NLINE Define this if you want ops to get noticed about
@@ -824,12 +814,6 @@
 #undef  DEBUGMODE		/* define DEBUGMODE to enable */
 #undef DUMP_DEBUG
 
-/*
- * MEMTRACE enables additional memory accounting for display in STATS Z.
- * Requires GNU C extensions for expression blocks.
- */
-#undef MEMTRACE
-
 /* DONT_CHECK_QLINE_REMOTE
  * Don't check for Q:lines on remote clients.  We can't do anything
  * if a remote client is using a nick q:lined locally, so
@@ -883,10 +867,6 @@ extern void debug(int level, char *pattern, ...);
 #else
 #define Debug(x) ;
 #define LOGFILE "/dev/null"
-#endif
-
-#ifdef DENY_SERVICES_MSGS
-#undef PASS_SERVICES_MSGS
 #endif
 
 #define CONFIG_H_LEVEL_183

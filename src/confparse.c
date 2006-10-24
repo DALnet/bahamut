@@ -461,25 +461,16 @@ parse_block(tConf *block, char *cur, FILE *file, int *lnum)
                 {
                     /* recurse through the block we found */
                     tlnum = *lnum;
-                    cur = check_quote(cur);
+                    if((cur = strchr(cur, '{')))
+                    {
+                        cur++;
+                        cur = check_quote(cur);
+                        cur = parse_block(b2, cur, file, lnum);
+                        b2 = NULL;
+                        continue;
+                    }
                     if(BadPtr(cur))
                         continue;
-                    if(*cur != '{')
-                    {
-                        confparse_error("Junk after nested block name", *lnum);
-                        free_vars(vars);
-                        return NULL;
-                    }
-                    cur++;
-                    cur = check_quote(cur);
-                    cur = parse_block(b2, cur, file, lnum);
-                    if(!cur)
-                    {
-                        free_vars(vars);
-                        return NULL;
-                    }
-                    b2 = NULL;
-                    continue;
                 }
             }
             /* find our token */
@@ -648,14 +639,13 @@ initconf(char *filename)
     char *tok;
     tConf *block = NULL;
     FILE *file;
-    int including = 0;
 
     current_file = filename;
 
     if(!(file = fopen(filename, "r")))
     {
         if(forked)
-            sendto_realops("Unable to open config file %s", filename);
+            sendto_realops("Unable to open config file %s%s", file, "\n");
         else
             printf("Unable to open config file %s\n", filename);
         return -1;
@@ -667,60 +657,6 @@ initconf(char *filename)
         cur = check_quote(cur);
         if(BadPtr(cur))
             continue;
-
-        if (including)
-        {
-            if (including == 1)
-            {
-jmp_including:
-                if (*cur == '"' || *cur == '<')
-                    cur++;
-                tok = cur;
-                while (*cur && *cur != ' ' && *cur != '\t' && *cur != '"'
-                       && *cur != '>' && *cur != ';' && *cur != '\n')
-                    cur++;
-                if (*cur == ';')
-                    including = 0;
-                else
-                    including++;
-                *cur++ = 0;
-
-                if (!*tok)
-                {
-                    confparse_error("Bad include filename", lnum);
-                    return -1;
-                }
-
-                /* parse new file */
-                if(initconf(tok) == -1)
-                {
-                    current_file = filename;
-                    confparse_error("while processing include directive",lnum);
-                    return -1;
-                }
-
-                /* reset */
-                current_file = filename;
-
-                cur = check_quote(cur);
-                if (BadPtr(cur))
-                    continue;
-            }
-            if (including == 2)
-            {
-                if (*cur != ';')
-                {
-                    confparse_error("Missing semicolon", lnum);
-                    return -1;
-                }
-                including = 0;
-                cur++;
-                cur = check_quote(cur);
-                if (BadPtr(cur))
-                    continue;
-            }
-        }
-
         /* now, we should be ok to get that token.. */
         if(!block)
         {
@@ -731,21 +667,31 @@ jmp_including:
                 clear = 1;
             *cur = '\0';
             cur++;
-
-            if (!mycmp("INCLUDE", tok))
+            if(!mycmp("INCLUDE", tok))
             {
-                if(clear)
+                /* this is an include - find pull out the file name
+                 * and parse this file now
+                 */
+                char *var;
+                cur = check_quote(cur);
+                if((*cur == '"') || *cur == '<')
+                    cur++;
+                var = cur;
+                while((*cur != ' ') && (*cur != '"') && (*cur != '>') &&
+                        (*cur != '\n') && (*cur != '\t'))
+                    cur++;
+                if(BadPtr(cur))
                 {
-                    confparse_error("Unexpected opening bracket", lnum);
+                    confparse_error("Bad include line", lnum);
                     return -1;
                 }
-                including++;
-                cur = check_quote(cur);
-                if (BadPtr(cur))
-                    continue;
-                goto jmp_including; /* XXX */
-            }
-
+                *cur = '\0';
+                cur++;
+                if(initconf(var) == -1)
+                    return -1;
+                current_file = filename;    /* reset */
+                continue;
+            }    
             for(block = tconftab; block->tok; block++)
                 if(!mycmp(block->tok, tok))
                     break;

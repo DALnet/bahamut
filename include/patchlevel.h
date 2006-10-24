@@ -26,12 +26,12 @@
 #define BETA    2
 #define CURRENT 3
 
-#define BRANCHSTATUS CURRENT
+#define BRANCHSTATUS RELEASE
 
 #define BASENAME "bahamut"
 #define MAJOR 1
 #define MINOR 8
-#define PATCH 4
+#define PATCH 3
 
 #define PATCHES ""
 
