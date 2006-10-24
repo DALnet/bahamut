@@ -1736,7 +1736,7 @@ m_message(aClient *cptr, aClient *sptr, int parc, char *parv[], int notice)
             {
                 if (ismine && !notice)
                     sendto_one(sptr, err_str(ERR_OWNMODE), me.name, parv[0],
-                           "+R");
+                           acptr->name, "+R");
                 continue;
             }
 
