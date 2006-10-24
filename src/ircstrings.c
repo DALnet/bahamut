@@ -63,8 +63,8 @@ union mappedip {
 
 
 /* "prototypes" for tables at the bottom */
-extern unsigned char validcharmap[256];
-extern union mappedip cidr2maskmap[33];
+static unsigned char validcharmap[256];
+static union mappedip cidr2maskmap[33];
 
 
 /* process an IP octet */
