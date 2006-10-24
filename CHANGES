@@ -42,6 +42,7 @@ Changes for 1.8.4
 - Changed cmode +c to block all control codes (except CTCP and ISO-2022)
 - Changed RPL_TIME to include raw timestamp
 - Changed cmode +j implementation to a token bucket with distributed debt
+- Changed ident handling to ignore encrypted pidentd responses
 - Added oper access flags for umodes ydb
 - Added string probability calculation to RWHO
 - Upgraded zlib to 1.2.3
