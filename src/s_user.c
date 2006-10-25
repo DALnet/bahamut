@@ -2229,7 +2229,7 @@ m_kill(aClient *cptr, aClient *sptr, int parc, char *parv[])
                 *s = 0;
             
             ircsnprintf(mypath, KILLLEN + 1, "%s!%s!%s", myname, 
-                        sptr->user->host, sptr->name); 
+                        sptr->user->host, sptr->user->username); 
         }
         else
         {
