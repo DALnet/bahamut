@@ -548,8 +548,8 @@ static char *replies[] =
     /* 483 ERR_CANTKILLSERVER */	":%s 483 %s :You cant kill a server!",
     /* 484 */	                NULL,	/* In use by Undernet */
     /* 485 ERR_CHANBANREASON */	":%s 485 %s %s :Cannot join channel (%s)",
-    /* 486 ERR_NONONREG */	":%s 486 %s :You must identify to a "
-                                "registered nick to private message %s",
+    /* 486 ERR_NONONREG */	":%s 486 %s %s :You must identify to a registered "
+                                "nick to private message that person",
     /* 487 ERR_MSGSERVICES */	":%s 487 %s :Error! \"/msg %s\" is no longer supported. "
                                 "Use \"/msg %s@%s\" or \"/%s\" instead.",
     /* 488 */	                NULL,
