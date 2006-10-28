@@ -48,6 +48,7 @@ Changes for 1.8.4
 - Changed ident handling to ignore encrypted pidentd responses
 - Added oper access flags for umodes ydb
 - Added string probability calculation to RWHO
+- Added automatic rejection of certain proxy types
 - Upgraded zlib to 1.2.3
 - Return an error on +R send to -r clients
 
