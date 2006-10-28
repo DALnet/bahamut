@@ -27,6 +27,9 @@ Changes for 1.8.4
 - Fixed memory leaks in SVSHOLD and LIST options
 - Fixed busy loops with the epoll socket engine
 - Fixed LIST wildcard mask detection
+- Fixed autoconnects being mysteriously disabled during conf changes
+  (from Mark Rutherford)
+- Fixed autoconnects being used after deletion in some cases
 - Fixed conf file not being found when ircd run from relative paths
   (from Azoff)
 - Increased channel ban list to 200 entries
