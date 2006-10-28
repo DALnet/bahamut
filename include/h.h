@@ -251,6 +251,7 @@ extern char 	 *myctime(time_t), *date(time_t);
 extern int  	  exit_client(aClient *, aClient *, aClient *, char *);
 extern void 	  initstats(void);
 extern char      *make_parv_copy(char *, int, char **);
+extern int        exit_banned_client(aClient *, int, char, char *, int);
 
 extern int  	  parse(aClient *, char *, char *);
 extern void 	  init_tree_parse(struct Message *);

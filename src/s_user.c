@@ -794,35 +794,11 @@ register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
 
         if(ban)
         {
-            char *reason, *ktype;
-            int local;
-
-            local = (ban->flags & UBAN_LOCAL) ? 1 : 0;
-            ktype = local ? LOCAL_BANNED_NAME : NETWORK_BANNED_NAME;
-            reason = ban->reason ? ban->reason : ktype;
-
-            sendto_one(sptr, err_str(ERR_YOUREBANNEDCREEP), me.name, 
-                       sptr->name, ktype);
-            sendto_one(sptr, ":%s NOTICE %s :*** You are not welcome on"
-                             " this %s.", me.name, sptr->name, 
-                             local ? "server" : "network");
-            sendto_one(sptr, ":%s NOTICE %s :*** %s for %s",
-                       me.name, sptr->name, ktype, reason);
-            sendto_one(sptr, ":%s NOTICE %s :*** Your hostmask is %s!%s@%s",
-                       me.name, sptr->name, sptr->name, sptr->user->username,
-                       sptr->sockhost);
-            sendto_one(sptr, ":%s NOTICE %s :*** Your IP is %s",
-                       me.name, sptr->name, inetntoa((char *)&sptr->ip.s_addr));
-            sendto_one(sptr, ":%s NOTICE %s :*** For assistance, please"
-                             " email %s and include everything shown here.", 
-                       me.name, sptr->name,
-                       local ? Local_Kline_Address : Network_Kline_Address);
-
+            int loc = (ban->flags & UBAN_LOCAL) ? 1 : 0;
+            
             ircstp->is_ref++;
             ircstp->is_ref_2++;
-
-            throttle_force(sptr->hostip);
-            return exit_client(cptr, sptr, &me, reason);
+            return exit_banned_client(cptr, loc, loc?'K':'A', ban->reason, 0);
         }
 
         if(call_hooks(CHOOK_POSTACCESS, sptr) == FLUSH_BUFFER)
@@ -2036,8 +2012,10 @@ m_user(aClient *cptr, aClient *sptr, int parc, char *parv[])
     server = (parc < 4 || BadPtr(parv[3])) ? "<noserver>" : parv[3];
     realname = (parc < 5 || BadPtr(parv[4])) ? "<bad-realname>" : parv[4];
     if ((ban = check_mask_simbanned(realname, SBAN_GCOS))) 
-        return exit_client(cptr, sptr, sptr, BadPtr(ban->reason) ?
-                           "Bad GCOS: Reason unspecified" : ban->reason);
+    {
+        int loc = (ban->flags & SBAN_LOCAL) ? 1 : 0;
+        return exit_banned_client(cptr, loc, 'G', ban->reason, 0);
+    }
     return do_user(parv[0], cptr, sptr, username, host, server, 0,0, realname);
 }
 

@@ -1574,34 +1574,21 @@ void simban_free(struct simBan *b)
  */
 void userban_sweep(struct userBan *ban)
 {
-    char rbuf[512];
-    aClient *acptr;
-    char *reason;
-    char *btext;
-    char *ntext;
+    int loc = (ban->flags & UBAN_LOCAL) ? 1 : 0;
     int clientonly = 1;
+    aClient *acptr;
+    char *ntext;
     int i;
 
-    if (ban->flags & UBAN_NETWORK)
-    {
-        btext = NETWORK_BANNED_NAME;
-        ntext = NETWORK_BAN_NAME;
-    }
-    else
-    {
-        btext = LOCAL_BANNED_NAME;
+    if (loc)
         ntext = LOCAL_BAN_NAME;
-    }
-
-    if (!(reason = ban->reason))
-        reason = "<no reason>";
+    else
+        ntext = NETWORK_BAN_NAME;
 
     /* if it's purely IP based, dump unregistered and server connections too */
     if (ban->flags & UBAN_WILDUSER)
         if (ban->flags & (UBAN_IP|UBAN_CIDR4|UBAN_CIDR4BIG))
             clientonly = 0;
-
-    ircsnprintf(rbuf, sizeof(rbuf), "%s: %s", btext, reason);
 
     for (i = 0; i <= highest_fd; i++)
     {
@@ -1615,7 +1602,7 @@ void userban_sweep(struct userBan *ban)
         {
             sendto_ops("%s active for %s", ntext,
                        get_client_name(acptr, FALSE));
-            exit_client(acptr, acptr, &me, rbuf);
+            exit_banned_client(acptr, loc, loc ? 'K' : 'A', ban->reason, 1);
             i--;
         }
     }

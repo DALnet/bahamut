@@ -1253,28 +1253,11 @@ aClient *add_connection(aListener *lptr, int fd)
     ban = check_userbanned(acptr, UBAN_IP|UBAN_CIDR4|UBAN_WILDUSER, 0);
     if(ban)
     {
-        char *reason, *ktype;
-        int local;
-
-        local = (ban->flags & UBAN_LOCAL) ? 1 : 0;
-        ktype = local ? LOCAL_BANNED_NAME : NETWORK_BANNED_NAME;
-        reason = ban->reason ? ban->reason : ktype;
-
-        sendto_one(acptr, err_str(ERR_YOUREBANNEDCREEP), me.name, "*", ktype);
-        sendto_one(acptr, ":%s NOTICE * :*** You are not welcome on this %s.",
-                   me.name, local ? "server" : "network");
-        sendto_one(acptr, ":%s NOTICE * :*** %s for %s", 
-                   me.name, ktype, reason);
-        sendto_one(acptr, ":%s NOTICE * :*** Your IP is %s",
-                   me.name, inetntoa((char *)&acptr->ip.s_addr));
-        sendto_one(acptr, ":%s NOTICE * :*** For assistance, please email %s"
-                          " and include everything shown here.", me.name, 
-                   local ? Local_Kline_Address : Network_Kline_Address);
-
+        int loc = (ban->flags & UBAN_LOCAL) ? 1 : 0;
+        
         ircstp->is_ref++;
         ircstp->is_ref_1++;
-        throttle_force(inetntoa((char *)&acptr->ip.s_addr));
-        exit_client(acptr, acptr, &me, reason);
+        exit_banned_client(acptr, loc, loc ? 'K' : 'A', ban->reason, 0);
 
         return NULL;
     }

@@ -517,7 +517,7 @@ static char *replies[] =
     /* 463 ERR_NOPERMFORHOST */	":%s 463 %s :Your host isn't among the "
                                 "privileged",
     /* 464 ERR_PASSWDMISMATCH */	":%s 464 %s :Password Incorrect",
-    /* 465 ERR_YOUREBANNEDCREEP */	":%s 465 %s :You have been %s.",
+    /* 465 ERR_YOUREBANNEDCREEP */	":%s 465 %s :%s",
     /* 466 */	                NULL,
     /* 467 ERR_KEYSET */	":%s 467 %s %s :Channel key already set",
     /* 468 ERR_ONLYSERVERSCANCHANGE */	":%s 468 %s %s :Only servers can "

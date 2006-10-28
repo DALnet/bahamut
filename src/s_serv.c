@@ -1835,7 +1835,6 @@ int m_kline(aClient *cptr, aClient *sptr, int parc, char *parv[])
     time_t      temporary_kline_time_seconds = 0;
     int         time_specified = 0;
     char       *argv;
-    int         i;
     char       fbuf[512];
 
     if (!MyClient(sptr) || !IsAnOper(sptr) || !OPCanKline(sptr)) 
@@ -2040,22 +2039,7 @@ int m_kline(aClient *cptr, aClient *sptr, int parc, char *parv[])
     }
 
     add_hostbased_userban(ban);
-
-    /* Check local users against it */
-    for (i = 0; i <= highest_fd; i++)
-    {
-        if (!(acptr = local[i]) || IsMe(acptr) || IsLog(acptr))
-            continue;
-
-        if (IsPerson(acptr) && user_match_ban(acptr, ban))
-        {
-            sendto_ops(LOCAL_BAN_NAME" active for %s",
-                       get_client_name(acptr, FALSE));
-            ircsprintf(fbuf, LOCAL_BANNED_NAME": %s", reason);
-            exit_client(acptr, acptr, &me, fbuf);
-            i--;
-        }
-    }
+    userban_sweep(ban);
 
     host = get_userban_host(ban, fbuf, 512);
 

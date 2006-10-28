@@ -43,6 +43,7 @@
 #endif
 #include "h.h"
 #include "fdlist.h"
+#include "throttle.h"
 
 extern float curSendK, curRecvK;
 
@@ -860,4 +861,44 @@ make_parv_copy(char *pbuf, int parc, char *parv[])
    pbuf[pbpos] = '\0';
 
    return pbuf;
+}
+
+/*
+ * exit_banned_client()
+ *
+ * Sends an appropriate ban message and disconnects a client.
+ */
+int
+exit_banned_client(aClient *cptr, int loc, char type, char *banmsg, int fast)
+{
+    char rbuf[512];
+    char *target = "*";
+    char *reason = "<no reason specified>";
+    
+    if (cptr->name[0])
+        target = cptr->name;
+    
+    if (!BadPtr(banmsg))
+        reason = banmsg;
+    
+    ircsnprintf(rbuf, sizeof(rbuf), "%c-banned: %s", type, reason);
+    
+    if (!fast)
+    {
+        sendto_one(cptr, "NOTICE %s :*** You are banned from %s", target,
+                   loc ? me.name : Network_Name);
+        sendto_one(cptr, "NOTICE %s :*** Reason: %s", target, reason);
+        sendto_one(cptr, "NOTICE %s :*** Connection info: %s [%s]", target,
+                   get_client_name(cptr, FALSE),
+                   inetntoa((char *)&cptr->ip.s_addr));
+        sendto_one(cptr, "NOTICE %s :*** Ban contact: %s", target,
+                   loc ? Local_Kline_Address : Network_Kline_Address);
+        sendto_one(cptr, "NOTICE %s :*** When contacting %s, please include "
+                   "all of the information shown above", target, Network_Name);
+        sendto_one(cptr, err_str(ERR_YOUREBANNEDCREEP), me.name, target, rbuf);
+        
+        throttle_force(inetntoa((char *)&cptr->ip.s_addr));
+    }
+    
+    return exit_client(cptr, cptr, &me, rbuf);
 }

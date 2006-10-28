@@ -261,7 +261,7 @@ s_misc.o: s_misc.c ../include/struct.h ../include/config.h \
   ../include/sbuf.h ../include/common.h ../include/numeric.h \
   ../include/zlink.h ../include/hooks.h ../include/clones.h \
   ../include/h.h ../include/send.h ../include/fdlist.h \
-  ../include/ircsprintf.h ../include/find.h
+  ../include/ircsprintf.h ../include/find.h ../include/throttle.h
 s_numeric.o: s_numeric.c ../include/struct.h ../include/config.h \
   ../include/setup.h ../include/defs.h ../include/sys.h ../include/hash.h \
   ../include/sbuf.h ../include/common.h ../include/numeric.h \
