@@ -292,6 +292,8 @@ static time_t try_connections(time_t currenttime)
         /* Also when already connecting! (update holdtimes) --SRB */
         if (aconn->port <= 0 || aconn->class->connfreq == 0)
             continue;
+        if (aconn->legal == -1)
+            continue;
         cltmp = aconn->class;
 
         /*
