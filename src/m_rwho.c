@@ -67,10 +67,6 @@ extern Link *find_channel_link(Link *, aChannel *);
 #define RWM_UPROB   0x1000
 #define RWM_GPROB   0x2000
 
-/* whois compatibility */
-#define RWC_SHOWIP  0x0001
-#define RWC_CHANNEL 0x0002
-
 /* output options */
 #define RWO_NICK    0x0001
 #define RWO_USER    0x0002
@@ -89,6 +85,10 @@ extern Link *find_channel_link(Link *, aChannel *);
 #define RWO_CHANNEL 0x4000
 #define RWO_PROB    0x8000
 
+/* miscellaneous flags */
+#define RWC_SHOWIP  0x0001  /* WHO compatibility */
+#define RWC_CHANNEL 0x0002  /* WHO compatibility */
+#define RWC_TIME    0x0004  /* show timing stats */
 
 static const char *rwho_help[] = {
     "RWHO <[+|-]matchflags>[/<outputflags>[:<cookie>]] <args>",
@@ -111,8 +111,8 @@ static const char *rwho_help[] = {
     "  s <server>    - user is (not) on server <server>",
     "  t <seconds>   - nick has been in use for N or more (less) seconds",
     "  T <type>      - user is (not) type <type> as set by services",
-    "  C             - for compatibility with WHO, use discouraged",
-    "  I             - for compatibility with WHO, use discouraged",
+    "  C             - for compatibility with WHO",
+    "  I             - for compatibility with WHO",
     "The following match flags are compiled into a single regular expression",
     "in the order you specify, so later flags can use backreferences to",
     "submatches in the flags prior:",
@@ -150,13 +150,14 @@ static const char *rwho_help[] = {
 #ifdef THROTTLE_ENABLE
     "  D             - returns only one matching result per host (summarize)",
 #endif
+    "  $             - show time taken for search",
     NULL
 };
 
 static struct {
     unsigned  check[2];         /* things to try match */
     unsigned  rplfields;        /* fields to include in the response */
-    unsigned  compat;           /* WHO compatibility flags */
+    unsigned  misc;             /* miscellaneous flags */
     char     *rplcookie;        /* response cookie */
     int       countonly;        /* counting only, no results */
     int       limit;            /* max number of results */
@@ -378,7 +379,7 @@ static int rwho_parseopts(aClient *sptr, int parc, char *parv[])
                 break;
 
             case 'C':
-                rwho_opts.compat |= RWC_CHANNEL;
+                rwho_opts.misc |= RWC_CHANNEL;
                 break;
 
 #ifdef THROTTLE_ENABLE
@@ -466,7 +467,7 @@ static int rwho_parseopts(aClient *sptr, int parc, char *parv[])
                 break;
 
             case 'I':
-                rwho_opts.compat |= RWC_SHOWIP;
+                rwho_opts.misc |= RWC_SHOWIP;
                 break;
 
             case 'j':
@@ -770,6 +771,7 @@ static int rwho_parseopts(aClient *sptr, int parc, char *parv[])
             case 'a': rwho_opts.rplfields |= RWO_AWAY; sfl++; break;
 
             case 'C': rwho_opts.countonly = 1; sfl++; break;
+            case '$': rwho_opts.misc |= RWC_TIME; sfl++; break;
 
             case 'L':
                 rwho_opts.limit = strtol(sfl+1, &sfl, 10);
@@ -1054,7 +1056,7 @@ static void rwho_reply(aClient *cptr, aClient *ac, char *buf, chanMember *cm)
         char status[5];
         char chname[CHANNELLEN+2] = "*";
 
-        if (!cm && (rwho_opts.compat & RWC_CHANNEL) && chptr)
+        if (!cm && (rwho_opts.misc & RWC_CHANNEL) && chptr)
         {
             for (cm = chptr->members; cm; cm = cm->next)
                 if (cm->cptr == ac)
@@ -1079,7 +1081,7 @@ static void rwho_reply(aClient *cptr, aClient *ac, char *buf, chanMember *cm)
         }
         *dst = 0;
 
-        if (!rwho_opts.chptr && (rwho_opts.compat & RWC_CHANNEL) && chptr)
+        if (!rwho_opts.chptr && (rwho_opts.misc & RWC_CHANNEL) && chptr)
         {
             dst = chname;
             if (!PubChannel(chptr))
@@ -1088,7 +1090,7 @@ static void rwho_reply(aClient *cptr, aClient *ac, char *buf, chanMember *cm)
                 strcpy(dst, chptr->chname);
         }
 
-        if (rwho_opts.compat & RWC_SHOWIP)
+        if (rwho_opts.misc & RWC_SHOWIP)
             src = ac->hostip;
         else
             src = ac->user->host;
@@ -1445,26 +1447,38 @@ int m_rwho(aClient *cptr, aClient *sptr, int parc, char *parv[])
         }
     }
 
-    if (rwho_opts.compat)
-        sendto_one(sptr, getreply(RPL_COMMANDSYNTAX), me.name, sptr->name,
-                   "NOTE: match flags C and I are deprecated");
-
     cend = clock();
-    ircsprintf(rwhobuf, "Search completed in %.03fs.",
-               ((double)(cend - cbegin)) / CLOCKS_PER_SEC);
-    sendto_one(sptr, getreply(RPL_COMMANDSYNTAX), me.name, sptr->name,rwhobuf);
-
-    ircsprintf(rwhobuf, "%d", results);
+    if (rwho_opts.misc & RWC_TIME)
+    {
+        ircsprintf(rwhobuf, "Search completed in %.03fs.",
+                   ((double)(cend - cbegin)) / CLOCKS_PER_SEC);
+        sendto_one(sptr, getreply(RPL_COMMANDSYNTAX), me.name, sptr->name,
+                   rwhobuf);
+    }
+    
+    if (rwho_opts.rplcookie)
+        ircsprintf(rwhobuf, "%d:%s", results, rwho_opts.rplcookie);
+    else
+        ircsprintf(rwhobuf, "%d", results);
     sendto_one(sptr, getreply(RPL_ENDOFWHO), me.name, parv[0], rwhobuf,"RWHO");
 
     if (failcode)
     {
-        sendto_one(sptr, ":%s NOTICE %s :RWHO: Internal error %d during "
-                   "match, notify coders!", me.name, parv[0], failcode);
-        sendto_one(sptr, ":%s NOTICE %s :RWHO: Match target was: %s %s "
-                   "[%s] [%s]", me.name, parv[0], failclient->name,
-                   failclient->user->username, failclient->info,
-                   failclient->user->away ? failclient->user->away : "");
+        if (failcode == PCRE_ERROR_MATCHLIMIT)
+        {
+            sendto_one(sptr, ":%s NOTICE %s :RWHO: Regex match pattern is too "
+                       "recursive, so some matches failed prematurely.  Use a "
+                       "more specific pattern.", me.name, parv[0]);
+        }
+        else
+        {
+            sendto_one(sptr, ":%s NOTICE %s :RWHO: Internal error %d during "
+                       "match, notify coders!", me.name, parv[0], failcode);
+            sendto_one(sptr, ":%s NOTICE %s :RWHO: Match target was: %s %s "
+                       "[%s] [%s]", me.name, parv[0], failclient->name,
+                       failclient->user->username, failclient->info,
+                       failclient->user->away ? failclient->user->away : "");
+        }
     }
 
     free(rwho_opts.re);
