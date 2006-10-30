@@ -1261,7 +1261,7 @@ is_silenced(aClient *sptr, aClient *acptr)
     return 0;
 }
 
-static inline void 
+inline void 
 send_msg_error(aClient *sptr, char *parv[], char *nick, int ret) 
 {
     if(ret == ERR_NOCTRLSONCHAN)

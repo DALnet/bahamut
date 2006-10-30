@@ -1191,7 +1191,7 @@ struct Channel
     int         hashv;		/* raw hash value */
     Mode        mode;
     char        topic[TOPICLEN + 1];
-    char        topic_nick[NICKLEN + 1];
+    char        topic_nick[NICKLEN + USERLEN + HOSTLEN + 3];
     time_t      topic_time;
     int         users;
     chanMember* members;
