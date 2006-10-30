@@ -2771,7 +2771,7 @@ int m_join(aClient *cptr, aClient *sptr, int parc, char *parv[])
                         BadPtr(ban->reason) ? "Reserved channel" :      
                         ban->reason);
                 sendto_realops_lev(REJ_LEV,
-                                   "Forbidding restricted channel %s from %s.",
+                                   "Forbidding restricted channel %s from %s",
                                    name, get_client_name(cptr, TRUE));
                 continue;
             }

@@ -466,7 +466,7 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 			       BadPtr(ban->reason) ? "Erroneous Nickname" :
 			       ban->reason);
 		    sendto_realops_lev(REJ_LEV,
-				       "Forbidding restricted nick %s from %s.",
+				       "Forbidding restricted nick %s from %s",
 				       nick, get_client_name(cptr, TRUE));
 		    return 0;
 		}
@@ -592,7 +592,7 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 			       BadPtr(ban->reason) ? "Erroneous Nickname" :
 			       ban->reason);
 		    sendto_realops_lev(REJ_LEV,
-				       "Forbidding restricted nick %s from %s.", nick,
+				       "Forbidding restricted nick %s from %s", nick,
 				       get_client_name(cptr, FALSE));
 		    return 0;
 		}
