@@ -953,7 +953,7 @@ joinrate_dojoin(aChannel *chptr, aClient *cptr)
         jrw_update(chptr);
         jrl_update(chptr);
     }
-    else if (chptr->jrw_bucket < DEFAULT_JOIN_TIME)
+    else if (chptr->jrw_bucket < DEFAULT_JOIN_TIME && chptr->jrw_debt_ctr)
     {
         sendto_realops_lev(DEBUG_LEV, "Join rate warning on %s for %s!%s@%s"
                            " (%d in %d) [joined]", chptr->chname, cptr->name,
@@ -980,7 +980,7 @@ static void
 joinrate_warn(aChannel *chptr, aClient *cptr)
 {
     /* no slots free */
-    if (chptr->jrw_bucket < DEFAULT_JOIN_TIME)
+    if (chptr->jrw_bucket < DEFAULT_JOIN_TIME && chptr->jrw_debt_ctr)
     {
         sendto_realops_lev(DEBUG_LEV, "Join rate warning on %s for %s!%s@%s"
                            " (%d in %d) [failed]", chptr->chname, cptr->name,
