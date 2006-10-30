@@ -2643,7 +2643,7 @@ int m_join(aClient *cptr, aClient *sptr, int parc, char *parv[])
                 sendto_one(sptr, getreply(ERR_CHANBANREASON), me.name, parv[0],
                            name, sbi->reason);
                 sendto_realops_lev(REJ_LEV,
-                                   "Forbidding restricted channel %s from %s.",
+                                   "Forbidding restricted channel %s from %s",
                                    name, get_client_name(cptr, TRUE));
 
                 if (sbi->plimit)

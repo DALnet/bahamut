@@ -463,7 +463,7 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		    sendto_one(sptr, err_str(ERR_ERRONEUSNICKNAME), me.name,
 			       BadPtr(parv[0]) ? "*" : parv[0], nick, sbi->reason);
 		    sendto_realops_lev(REJ_LEV,
-				       "Forbidding restricted nick %s from %s.",
+				       "Forbidding restricted nick %s from %s",
 				       nick, get_client_name(cptr, TRUE));
 
             if (sbi->plimit)
@@ -592,7 +592,7 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
             sendto_one(sptr, err_str(ERR_ERRONEUSNICKNAME), me.name,
                        BadPtr(parv[0]) ? "*" : parv[0], nick, sbi->reason);
             sendto_realops_lev(REJ_LEV,
-                               "Forbidding restricted nick %s from %s.", nick,
+                               "Forbidding restricted nick %s from %s", nick,
                                get_client_name(cptr, TRUE));
 
             if (sbi->plimit)
