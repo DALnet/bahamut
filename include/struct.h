@@ -246,6 +246,7 @@ typedef struct UserTag UserTag;
 #ifdef NOQUIT
 #define CAPAB_NOQUIT  0x0040 /* noquit support */
 #endif
+#define CAPAB_BH19    0x0080 /* Bahamut 1.9+ support */
 
 
 #define SetDKEY(x)	((x)->capabilities |= CAPAB_DKEY)
@@ -269,6 +270,9 @@ typedef struct UserTag UserTag;
 #define SetNoquit(x)    ((x)->capabilities |= CAPAB_NOQUIT)
 #define IsNoquit(x)     ((x)->capabilities & CAPAB_NOQUIT)
 #endif
+
+#define SetBH19(x)      ((x)->capabilities |= CAPAB_BH19)
+#define IsBH19(x)       ((x)->capabilities & CAPAB_BH19)
 
 
 /* flag macros. */

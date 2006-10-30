@@ -2809,11 +2809,7 @@ int m_sajoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
         int              i;
         char            errmodebuf[128];
 
-        /* Remote sajoin? nope. */
-        if(!MyClient(sptr))
-                return 0;
-
-        if(!IsSAdmin(sptr))
+        if(MyClient(sptr) && !IsSAdmin(sptr))
         {
                 sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name, parv[0]);
                 return 0;
@@ -2840,19 +2836,22 @@ int m_sajoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
         if(IsMember(sptr, chptr))
                 return 0;
 
-        if((i = can_join_whynot(sptr, chptr, NULL, errmodebuf)))
-        {
-            send_globops("from %s: %s used SAJOIN (%s +%s)",
-                         me.name, sptr->name, chptr->chname, errmodebuf);
-            sendto_serv_butone(NULL, ":%s GLOBOPS :%s used SAJOIN (%s +%s)",
-                               me.name, sptr->name, chptr->chname, errmodebuf);
+        if(MyClient(sptr)) {
+            if((i = can_join_whynot(sptr, chptr, NULL, errmodebuf)))
+            {
+                send_globops("from %s: %s used SAJOIN (%s +%s)",
+                             me.name, sptr->name, chptr->chname, errmodebuf);
+                sendto_serv_butone(NULL, ":%s GLOBOPS :%s used SAJOIN (%s +%s)",
+                                   me.name, sptr->name, chptr->chname, errmodebuf);
+            }
+            else
+                sendto_one(sptr, ":%s NOTICE %s :You didn't need to use"
+                           " /SAJOIN for %s", me.name, parv[0], chptr->chname);
         }
-        else
-            sendto_one(sptr, ":%s NOTICE %s :You didn't need to use"
-                       " /SAJOIN for %s", me.name, parv[0], chptr->chname);
 
         add_user_to_channel(chptr, sptr, 0);
-        sendto_serv_butone(cptr, CliSJOINFmt, parv[0], chptr->channelts, name);
+        sendto_capab_serv_butone(cptr, 0, CAPAB_BH19, CliSJOINFmt, parv[0], chptr->channelts, name);
+        sendto_capab_serv_butone(cptr, CAPAB_BH19, 0, ":%s SAJOIN %s", parv[0], name);
         sendto_channel_butserv(chptr, sptr, ":%s JOIN :%s", parv[0], name);
         if(MyClient(sptr))
         {
@@ -4670,10 +4669,7 @@ int m_samode(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     aChannel *chptr;
 
-    if (!MyClient(sptr))
-        return 0;
-
-    if (!IsAnOper(sptr) || !IsSAdmin(sptr)) 
+    if (MyClient(sptr) && (!IsAnOper(sptr) || !IsSAdmin(sptr))) 
     {
         sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name, parv[0]);
         return 0;
@@ -4698,8 +4694,10 @@ int m_samode(aClient *cptr, aClient *sptr, int parc, char *parv[])
     {
         sendto_channel_butserv(chptr, sptr, ":%s MODE %s %s %s",
                                parv[0], chptr->chname, modebuf, parabuf);
-        sendto_serv_butone(cptr, ":%s MODE %s 0 %s %s", parv[0], chptr->chname,
-                           modebuf, parabuf);
+        sendto_capab_serv_butone(cptr, CAPAB_BH19, 0, ":%s SAMODE %s %s %s", parv[0], chptr->chname,
+                                 modebuf, parabuf);
+        sendto_capab_serv_butone(cptr, 0, CAPAB_BH19, ":%s MODE %s 0 %s %s", parv[0], chptr->chname,
+                                 modebuf, parabuf);
         if(MyClient(sptr))
         {
             sendto_serv_butone(NULL, ":%s GLOBOPS :%s used SAMODE (%s %s%s%s)",

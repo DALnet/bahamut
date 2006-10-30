@@ -71,6 +71,7 @@ extern void sendto_serv_butone_super(aClient *one, int flag, char *pattern, ...)
 extern void sendto_wallops_butone(aClient *one, aClient *from,
 				  char *pattern, ...);
 extern void sendto_gnotice(char *pattern, ...);
+extern void sendto_capab_serv_butone(aClient *one, int include, int exclude, char *pattern, ...);
 
 extern void ts_warn(char *pattern, ...);
 

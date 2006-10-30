@@ -793,15 +793,15 @@ int completed_connection(aClient * cptr)
 #ifdef HAVE_ENCRYPTION_ON
     if(!(aconn->flags & CONN_DKEY))
         sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURST UNCONNECT ZIP"
-                         " NICKIP TSMODE");
+                         " NICKIP TSMODE BH19");
     else
     {
         sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURST UNCONNECT DKEY"
-                         " ZIP NICKIP TSMODE");
+                         " ZIP NICKIP TSMODE BH19");
         SetWantDKEY(cptr);
     }
 #else
-    sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURST UNCONNECT ZIP NICKIP TSMODE");
+    sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURST UNCONNECT ZIP NICKIP TSMODE BH19");
 #endif
 
     if(aconn->flags & CONN_ZIP)

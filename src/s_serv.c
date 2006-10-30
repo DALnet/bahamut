@@ -2397,6 +2397,8 @@ m_capab(aClient *cptr, aClient *sptr, int parc, char *parv[])
         else if (strcmp(parv[i], "NOQUIT") == 0)
             SetNoquit(cptr);
 #endif
+        else if (strcmp(parv[i], "BH19") == 0)
+            SetBH19(cptr);
     }
 
     return 0;
