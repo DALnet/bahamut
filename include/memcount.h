@@ -182,6 +182,13 @@ typedef struct {
     MemCount s_confbuf;
 } MCircd;
 
+/* klines.c */
+typedef struct {
+    const char *file;
+    
+    /* MEMTRACE: allocates userban reasons */
+} MCklines;
+
 /* list.c */
 typedef struct {
     const char *file;
@@ -477,6 +484,7 @@ u_long memcount_fds(MCfds *);
 u_long memcount_hash(MChash *);
 u_long memcount_hide(MChide *);
 u_long memcount_ircd(MCircd *);
+u_long memcount_klines(MCklines *);
 u_long memcount_list(MClist *);
 u_long memcount_m_services(MCm_services *);
 u_long memcount_modules(MCmodules *);

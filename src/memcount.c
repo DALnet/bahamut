@@ -71,6 +71,7 @@ void report_memory_usage(aClient *cptr, int detail)
     MChash          mc_hash = {0};
     MChide          mc_hide = {0};
     MCircd          mc_ircd = {0};
+    MCklines        mc_klines = {0};
     MClist          mc_list = {0};
     MCm_services    mc_m_services = {0};
     MCmodules       mc_modules = {0};
@@ -135,6 +136,7 @@ void report_memory_usage(aClient *cptr, int detail)
     TracedCount     tc_channel = {0};
     TracedCount     tc_hash = {0};
     TracedCount     tc_hide = {0};
+    TracedCount     tc_klines = {0};
     TracedCount     tc_list = {0};
     TracedCount     tc_m_services = {0};
     TracedCount     tc_parse = {0};
@@ -172,6 +174,7 @@ void report_memory_usage(aClient *cptr, int detail)
     alloc_total += memcount_hash(&mc_hash);
     alloc_total += memcount_hide(&mc_hide);
     alloc_total += memcount_ircd(&mc_ircd);
+    alloc_total += memcount_klines(&mc_klines);
     alloc_total += memcount_list(&mc_list);
     alloc_total += memcount_m_services(&mc_m_services);
     alloc_total += memcount_modules(&mc_modules);
@@ -1357,8 +1360,9 @@ void report_memory_usage(aClient *cptr, int detail)
     }
 #endif
 
-    /* grouped: m_services.c s_conf.c s_serv.c userban.c */
+    /* grouped: klines.c m_services.c s_conf.c s_serv.c userban.c */
     /* yeah, this is screwy... */
+    traced_total += memtrace_count(&tc_klines, mc_klines.file);
     traced_total += memtrace_count(&tc_m_services, mc_m_services.file);
     traced_total += memtrace_count(&tc_s_conf, mc_s_conf.file);
     traced_total += memtrace_count(&tc_s_serv, mc_s_serv.file);
@@ -1370,7 +1374,8 @@ void report_memory_usage(aClient *cptr, int detail)
     subtotal -= mc_s_conf.opers.c * sizeof(aOper);
     subtotal -= mc_s_conf.ports.c * sizeof(aPort);
     subtotal -= mc_s_conf.classes.c * sizeof(aClass);
-    traced_subtotal = tc_m_services.allocated.m;
+    traced_subtotal = tc_klines.allocated.m;
+    traced_subtotal += tc_m_services.allocated.m;
     traced_subtotal += tc_s_conf.allocated.m;
     traced_subtotal += tc_s_serv.allocated.m;
     traced_subtotal += tc_userban.allocated.m;
@@ -1380,6 +1385,7 @@ void report_memory_usage(aClient *cptr, int detail)
                    traced_subtotal - subtotal);
         if (detail)
         {
+            memtrace_report(cptr, mc_klines.file);
             memtrace_report(cptr, mc_m_services.file);
             memtrace_report(cptr, mc_s_conf.file);
             memtrace_report(cptr, mc_s_serv.file);
@@ -1410,6 +1416,7 @@ void report_memory_usage(aClient *cptr, int detail)
     subtotal += tc_channel.management.m;
     subtotal += tc_hash.management.m;
     subtotal += tc_hide.management.m;
+    subtotal += tc_klines.management.m;
     subtotal += tc_list.management.m;
     subtotal += tc_m_services.management.m;
     subtotal += tc_parse.management.m;

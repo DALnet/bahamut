@@ -47,6 +47,7 @@
 
 #include "userban.h"
 #include "numeric.h"
+#include "memcount.h"
 
 static int journal = -1;
 static char journalfilename[512];
@@ -590,5 +591,13 @@ klinestore_init(int noreload)
 
     /* this will reopen the journal for appending */
     return klinestore_compact();
+}
+
+u_long
+memcount_klines(MCklines *mc)
+{
+    mc->file = __FILE__;
+    
+    return 0;
 }
 
