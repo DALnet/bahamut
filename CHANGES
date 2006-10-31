@@ -49,6 +49,7 @@ Changes for 1.8.4
 - Added oper access flags for umodes ydb
 - Added string probability calculation to RWHO
 - Added automatic rejection of certain proxy types
+- Added local storage system for klines, making UNKLINE work as expected
 - Upgraded zlib to 1.2.3
 - Return an error on +R send to -r clients
 
