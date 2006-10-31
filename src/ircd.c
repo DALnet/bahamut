@@ -88,11 +88,6 @@ int     forked = 0;
 
 float curSendK = 0, curRecvK = 0;
 
-#ifdef  LOCKFILE
-extern time_t    pending_kline_time;
-extern struct pkl *pending_klines;
-extern void      do_pending_klines(void);
-#endif
 extern void      engine_read_message(int);
 
 void            server_reboot();
@@ -107,6 +102,7 @@ extern void     read_motd(char *);          /* defined in s_serv.c */
 extern void     read_shortmotd(char *);     /* defined in s_serv.c */
 extern void     read_help(char *);          /* defined in s_serv.c */
 extern void     init_globals();
+extern int      klinestore_init(int);    /* defined in klines.c */
 
 char        **myargv;
 char        configfile[PATH_MAX] = {0};     /* Server configuration file */
@@ -900,8 +896,10 @@ main(int argc, char *argv[])
 
     /* the pid file must be written *AFTER* the fork */
     write_pidfile();
-        
 
+    /* this should be sooner, but the fork/detach stuff is so brain-dead... */
+    klinestore_init(0);
+    
     /* moved this to here such that we allow more verbose error
      * checking on startup.  -epi
      */
@@ -1179,17 +1177,6 @@ void io_loop()
         /* Only flush non-blocked sockets. */
         
         flush_connections(me.fd);
-        
-#ifdef  LOCKFILE
-        /*
-         * * If we have pending klines and CHECK_PENDING_KLINES minutes
-         * have passed, try writing them out.  -ThemBones
-         */
-        
-        if ((pending_klines) && ((timeofday - pending_kline_time)
-                                 >= (CHECK_PENDING_KLINES * 60)))
-            do_pending_klines();
-#endif
     }
 }
 

@@ -23,8 +23,7 @@
 #define UBAN_LOCAL     0x001   /* formerly known as a K: or Z: line */
 #define UBAN_NETWORK   0x002   /* formerly known as an autokill or an SZline */
 
-#define UBAN_GECOS     0x004   /* formerly known as an SGLINE */
-#define UBAN_NICK      0x008   /* formerly known as an SQLINE */
+#define UBAN_CONF      0x004   /* this ban came from ircd.conf */
 
 #define UBAN_HOST      0x010   /* this ban matches against the user's resolved host */
 #define UBAN_IP        0x020   /* this ban matches against the user's IP address */
