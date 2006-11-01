@@ -225,9 +225,13 @@ int m_svsnick(aClient *cptr, aClient *sptr, int parc, char *parv[])
     sendto_serv_butone(NULL, ":%s NICK %s :%d", parv[1], newnick,
 		       acptr->tsinfo);
     if(acptr->name[0]) 
-	del_from_client_hash_table(acptr->name, acptr);
+    {
+        del_from_client_hash_table(acptr->name, acptr);
+        hash_check_watch(acptr, RPL_LOGOFF);
+    }
     strcpy(acptr->name, newnick);
     add_to_client_hash_table(acptr->name, acptr);
+    hash_check_watch(acptr, RPL_LOGON);
 
     return 0;
 }
