@@ -1156,10 +1156,25 @@ check_dccsend(aClient *from, aClient *to, char *msg)
 
     if(!(*filename)) return 0;
 
-    while(*(filename + len) != ' ')
+    if(*filename == '"')
     {
-        if(!(*(filename + len))) break;
-        len++;
+        filename++;
+
+        if(!(*filename)) return 0;
+
+        while(*(filename + len) != '"')
+        {
+            if(!(*(filename + len))) break;
+            len++;
+        }
+    }
+    else
+    {
+        while(*(filename + len) != ' ')
+        {
+            if(!(*(filename + len))) break;
+            len++;
+        }
     }
     
     for(ext = filename + len;; ext--)
