@@ -2945,6 +2945,45 @@ m_unsgline(aClient *cptr, aClient *sptr, int parc, char *parv[])
     return 0;
 }
 
+int
+m_check(aClient *cptr, aClient *sptr, int parc, char *parv[])
+{
+    struct simBan *ban;
+
+    if (!IsAnOper(sptr))
+    {
+        sendto_one(sptr, getreply(ERR_NOPRIVILEGES), me.name, parv[0]);
+        return 0;
+    }
+
+    if (parc < 3 || mycmp(parv[1], "nick"))
+    {
+        sendto_one(sptr, "NOTICE %s :Syntax: CHECK NICK <nickname>", parv[0]);
+        return 0;
+    }
+    
+    if ((ban = check_mask_simbanned(parv[2], SBAN_NICK)))
+    {
+        char *reason = ban->reason ? ban->reason : "<no reason>";
+
+        if (ban->flags & SBAN_TEMPORARY)
+            sendto_one(sptr, "NOTICE %s :CHECK NICK: %s [expires in %dm]: %s",
+                       parv[0], ban->mask,
+                       (ban->timeset + ban->duration - NOW) / 60,
+                       reason);
+        else
+            sendto_one(sptr, "NOTICE %s :CHECK NICK: %s [permanent]: %s",
+                       parv[0], ban->mask, reason);
+    }
+    else
+    {
+        sendto_one(sptr, "NOTICE %s :CHECK NICK: no match", parv[0]);
+    }
+    
+    return 0;
+}
+
+
 u_long
 memcount_s_serv(MCs_serv *mc)
 {
