@@ -73,6 +73,9 @@ Changes for 1.8.4
 - Added local storage system for klines, making UNKLINE work as expected
 - Upgraded zlib to 1.2.3
 - Return an error on +R send to -r clients
+- Fixed watch status update not being sent to local users on SVSNICK
+- Fixed a bug when source is a server on INFO
+- Fixed dcc allow's handling with quoted filenames
 
 - Reworked memory accounting:
     stats z  shows short summary

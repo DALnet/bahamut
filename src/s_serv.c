@@ -405,22 +405,25 @@ m_info(aClient *cptr, aClient *sptr, int parc, char *parv[])
     static time_t last_used = 0L;
     if (hunt_server(cptr,sptr,":%s INFO :%s",1,parc,parv) == HUNTED_ISME) 
     {
-        sendto_realops_lev(SPY_LEV, "INFO requested by %s (%s@%s) [%s]",
-                           sptr->name, sptr->user->username, sptr->user->host,
-                           sptr->user->server);
-                        
-        if (!IsAnOper(sptr)) 
+        if(!IsULine(sptr) && !IsServer(sptr))
         {
-            if (IsSquelch(sptr)) {
-                sendto_one(sptr, rpl_str(RPL_ENDOFINFO), me.name, parv[0]);
-                return 0;
+            sendto_realops_lev(SPY_LEV, "INFO requested by %s (%s@%s) [%s]",
+                               sptr->name, sptr->user->username, sptr->user->host,
+                               sptr->user->server);
+                        
+            if (!IsAnOper(sptr)) 
+            {
+                if (IsSquelch(sptr)) {
+                    sendto_one(sptr, rpl_str(RPL_ENDOFINFO), me.name, parv[0]);
+                    return 0;
+                }
+                if (!MyConnect(sptr))
+                    return 0;
+                if ((last_used + MOTD_WAIT) > NOW) 
+                    return 0;
+                else 
+                    last_used = NOW;
             }
-            if (!MyConnect(sptr))
-                return 0;
-            if ((last_used + MOTD_WAIT) > NOW) 
-                return 0;
-            else 
-                last_used = NOW;
         }
         while (*text)
             sendto_one(sptr, rpl_str(RPL_INFO),
