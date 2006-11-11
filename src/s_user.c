@@ -1398,7 +1398,15 @@ m_message(aClient *cptr, aClient *sptr, int parc, char *parv[], int notice)
             /* super sources get free sends */
             if (!IsULine(sptr))
             {
+                if ((ret = can_send(sptr, chptr, parv[2])))
+                {
+                    if (ismine && !notice)
+                        send_msg_error(sptr, parv, target, ret);
+                    continue;
+                }
+
                 if (!notice)
+                {
                     switch (check_for_ctcp(parv[2], NULL))
                     {
                         case CTCP_NONE:
@@ -1417,12 +1425,6 @@ m_message(aClient *cptr, aClient *sptr, int parc, char *parv[], int notice)
                                 return 0;
 #endif
                     }
-
-                if ((ret = can_send(sptr, chptr, parv[2])))
-                {
-                    if (ismine && !notice)
-                        send_msg_error(sptr, parv, target, ret);
-                    continue;
                 }
             }
 
