@@ -2613,6 +2613,8 @@ m_watch(aClient *cptr, aClient *sptr, int parc, char *parv[])
     aClient  *acptr;
     char  *s, *p, *user;
     char def[2] = "l";
+    int listreq = 0;
+    int listcount = 0;
         
     if (parc < 2) 
     {
@@ -2644,6 +2646,7 @@ m_watch(aClient *cptr, aClient *sptr, int parc, char *parv[])
                 add_to_watch_hash_table(s+1, sptr);
             }
             show_watch(sptr, s+1, RPL_NOWON, RPL_NOWOFF);
+            listcount++;
             continue;
         }
         
@@ -2655,6 +2658,7 @@ m_watch(aClient *cptr, aClient *sptr, int parc, char *parv[])
         {
             del_from_watch_hash_table(s+1, sptr);
             show_watch(sptr, s+1, RPL_WATCHOFF, RPL_WATCHOFF);
+            listcount++;
             continue;
         }
                                         
@@ -2678,6 +2682,11 @@ m_watch(aClient *cptr, aClient *sptr, int parc, char *parv[])
             Link *lp;
             aWatch *anptr;
             int  count = 0;
+            
+            /* only allowed once per command */
+            if (listreq & 0x1)
+                continue;
+            listreq |= 0x1;
                                                         
             /*
              * Send a list of how many users they have on their WATCH list
@@ -2708,6 +2717,7 @@ m_watch(aClient *cptr, aClient *sptr, int parc, char *parv[])
                 {
                     sendto_one(sptr, rpl_str(RPL_WATCHLIST), me.name,
                                parv[0], buf);
+                    listcount++;
                     *buf = '\0';
                     count = strlen(parv[0])+strlen(me.name)+10;
                 }
@@ -2718,6 +2728,7 @@ m_watch(aClient *cptr, aClient *sptr, int parc, char *parv[])
             sendto_one(sptr, rpl_str(RPL_WATCHLIST), me.name, parv[0], buf);
             sendto_one(sptr, rpl_str(RPL_ENDOFWATCHLIST), me.name, parv[0],
                        *s);
+            listcount++;
             continue;
         }
                 
@@ -2730,6 +2741,11 @@ m_watch(aClient *cptr, aClient *sptr, int parc, char *parv[])
         {
             Link *lp = sptr->watch;
                         
+            /* only allowed once per command */
+            if (listreq & 0x2)
+                continue;
+            listreq |= 0x2;
+
             while (lp) 
             {
                 if ((acptr = find_person(lp->value.wptr->nick, NULL)))
@@ -2745,6 +2761,7 @@ m_watch(aClient *cptr, aClient *sptr, int parc, char *parv[])
                                lp->value.wptr->nick, "*", "*",
                                lp->value.wptr->lasttime);
                 lp = lp->next;
+                listcount++;
             }
                         
             sendto_one(sptr, rpl_str(RPL_ENDOFWATCHLIST), me.name, parv[0],
@@ -2754,6 +2771,13 @@ m_watch(aClient *cptr, aClient *sptr, int parc, char *parv[])
         /* Hmm.. unknown prefix character.. Ignore it. :-) */
     }
         
+    /* discourage repetitive listings */
+#ifdef NO_OPER_FLOOD
+    if (!IsAnOper(sptr))
+#endif
+    if (!NoMsgThrottle(sptr))
+        sptr->since += listcount/4;
+    
     return 0;
 }
 
