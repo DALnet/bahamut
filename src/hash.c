@@ -90,18 +90,16 @@ unsigned hash_nick_name(char *nname)
  */
 int hash_channel_name(char *name)
 {
-    unsigned char *hname = (unsigned char *) name;
     unsigned int hash = 0;
     int hash2 = 0;
     char lower;
-    int i = 30;
 
-    while (*hname && --i)
+    while (*name)
     {
-	lower = ToLower(*hname);
+	lower = ToLower(*name);
 	hash = (hash << 1) + lower;
 	hash2 = (hash2 >> 1) + lower;
-	hname++;
+	name++;
     }
     return ((hash & CH_MAX_INITIAL_MASK) << BITS_PER_COL) +
 	(hash2 & BITS_PER_COL_MASK);
