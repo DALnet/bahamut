@@ -798,7 +798,7 @@
  */
 /* defaults are very forgiving. */
 #define DEFAULT_JOIN_NUM  8
-#define DEFAULT_JOIN_TIME 4
+#define DEFAULT_JOIN_TIME 6
 #undef JOINRATE_SERVER_ONLY
 
 /* Debugging configs */

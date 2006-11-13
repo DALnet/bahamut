@@ -850,11 +850,10 @@ jrw_update(aChannel *chptr)
             chptr->jrw_debt_ctr = 0;
     }
     
-    /* warning bucket has a small debt... */
-    if (chptr->jrw_bucket >= 0)
+    if (chptr->jrw_bucket >= -(DEFAULT_JOIN_SIZE - DEFAULT_JOIN_TIME))
         chptr->jrw_bucket -= DEFAULT_JOIN_TIME;
     
-    /* ...and is always current, which pins it at the rate limit */
+    /* warning bucket is always current, which pins it at the rate limit */
     chptr->jrw_last = NOW;
     
     /* for statistical purposes, keep count of join attempts */
@@ -953,7 +952,7 @@ joinrate_dojoin(aChannel *chptr, aClient *cptr)
         jrw_update(chptr);
         jrl_update(chptr);
     }
-    else if (chptr->jrw_bucket < DEFAULT_JOIN_TIME && chptr->jrw_debt_ctr)
+    else if (chptr->jrw_bucket <= 0 && chptr->jrw_debt_ctr)
     {
         sendto_realops_lev(DEBUG_LEV, "Join rate warning on %s for %s!%s@%s"
                            " (%d in %d) [joined]", chptr->chname, cptr->name,
@@ -980,7 +979,7 @@ static void
 joinrate_warn(aChannel *chptr, aClient *cptr)
 {
     /* no slots free */
-    if (chptr->jrw_bucket < DEFAULT_JOIN_TIME && chptr->jrw_debt_ctr)
+    if (chptr->jrw_bucket <= 0 && chptr->jrw_debt_ctr)
     {
         sendto_realops_lev(DEBUG_LEV, "Join rate warning on %s for %s!%s@%s"
                            " (%d in %d) [failed]", chptr->chname, cptr->name,
