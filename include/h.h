@@ -243,8 +243,6 @@ extern int        deliver_it(aClient *, struct iovec *, int);
 extern int  	  deliver_it(aClient *, char *, int);
 #endif
 
-extern inline int check_registered(aClient *);
-extern inline int check_registered_user(aClient *);
 extern char 	 *get_client_name(aClient *, int);
 extern char 	 *my_name_for_link(char *, aConnect *);
 extern char 	 *myctime(time_t), *date(time_t);

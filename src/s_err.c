@@ -502,7 +502,8 @@ static char *replies[] =
     /* 448 */	                NULL,
     /* 449 */	                NULL,
     /* 450 */	                NULL,
-    /* 451 ERR_NOTREGISTERED */	":%s 451 %s :You have not registered",
+    /* 451 ERR_NOTREGISTERED */	":%s 451 %s %s :You must finish connecting "
+                                "with another nickname first.",
     /* 452 */	                NULL,
     /* 453 */	                NULL,
     /* 454 */	                NULL,

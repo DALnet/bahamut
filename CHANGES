@@ -50,6 +50,7 @@ Changes for 1.8.4
 - Changed ident handling to ignore encrypted pidentd responses
 - Changed WATCH to apply flood penalties to repeat list requests
 - Changed failed oper attempt notices to be more useful
+- Changed ERR_NOTREGISTERED text to avoid confusion with svsheld nicks
 - Added oper access flags for umodes ydb
 - Added string probability calculation to RWHO
 - Added automatic rejection of certain proxy types
