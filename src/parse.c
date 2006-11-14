@@ -292,9 +292,9 @@ int parse(aClient *cptr, char *buffer, char *bufend)
     /* patch to avoid server flooding from unregistered connects */
     
     if (!IsRegistered(cptr) && !(mptr->flags & MF_UNREG)) {
-	sendto_one(from, ":%s %d %s %s :Register first.",
-		   me.name, ERR_NOTREGISTERED, from->name, ch);
-	return -1;
+        sendto_one(from, err_str(ERR_NOTREGISTERED), me.name,
+                   *para[0] ? para[0] : "*", ch);
+        return -1;
     }
     
     if (IsRegisteredUser(cptr) && (mptr->flags & MF_RIDLE))
