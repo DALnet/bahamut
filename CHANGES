@@ -70,7 +70,7 @@ Changes for 1.8.4
 - Changed RPL_TIME to include raw timestamp
 - Changed ident handling to ignore encrypted pidentd responses
 - Changed WATCH to apply flood penalties to repeat list requests
-- Changed failed oper attempt notices to be more useful
+- Changed failed oper attempt notices to be more useful (from Unim4trix0)
 - Changed ERR_NOTREGISTERED text to avoid confusion with svsheld nicks
 - Added oper access flags for umodes ydb
 - Added string probability calculation to RWHO
