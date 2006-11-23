@@ -1109,6 +1109,7 @@ char *exploits_3char[] =
     "shs",
     "htm",
     "zip",
+    "rar",
     NULL
 };
 
