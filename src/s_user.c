@@ -1397,8 +1397,8 @@ m_message(aClient *cptr, aClient *sptr, int parc, char *parv[], int notice)
                                      parv[2]) == FLUSH_BUFFER)
                     return FLUSH_BUFFER;
 
-            /* super sources get free sends */
-            if (!IsULine(sptr))
+            /* servers and super sources get free sends */
+            if (IsClient(sptr) && !IsULine(sptr))
             {
                 if ((ret = can_send(sptr, chptr, parv[2])))
                 {
@@ -1575,8 +1575,8 @@ m_message(aClient *cptr, aClient *sptr, int parc, char *parv[], int notice)
 #endif
         }
 
-        /* super sources skip flood/silence checks */
-        if (!IsULine(sptr))
+        /* servers and super sources skip flood/silence checks */
+        if (IsClient(sptr) && !IsULine(sptr))
         {
             if (IsNoNonReg(acptr) && !IsRegNick(sptr) && !IsOper(sptr))
             {
@@ -1585,9 +1585,9 @@ m_message(aClient *cptr, aClient *sptr, int parc, char *parv[], int notice)
                            target);
                 continue;
             }
-            if (IsNoNonReg(sptr) && !IsRegNick(acptr))
+            if (ismine && IsNoNonReg(sptr) && !IsRegNick(acptr))
             {
-                if (ismine && !notice)
+                if (!notice)
                     sendto_one(sptr, err_str(ERR_OWNMODE), me.name, parv[0],
                            acptr->name, "+R");
                 continue;

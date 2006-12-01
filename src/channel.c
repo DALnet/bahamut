@@ -973,11 +973,13 @@ int has_voice(aClient *cptr, aChannel *chptr)
 int can_send(aClient *cptr, aChannel *chptr, char *msg)
 {
     chanMember   *cm;
+    int           ismine;
     
     if (IsServer(cptr) || IsULine(cptr))
         return 0;
     
     cm = find_user_member(chptr->members, cptr);
+    ismine = MyClient(cptr);
     
     if(!cm)
     {
@@ -987,13 +989,16 @@ int can_send(aClient *cptr, aChannel *chptr, char *msg)
             return (MODE_NOPRIVMSGS);
         if ((chptr->mode.mode & MODE_MODREG) && !IsRegNick(cptr))
             return (ERR_NEEDREGGEDNICK);
-        if ((chptr->mode.mode & MODE_NOCTRL) && msg_has_ctrls(msg))
-            return (ERR_NOCTRLSONCHAN);
-        if (MyClient(cptr) && is_banned(cptr, chptr, NULL))
-            return (MODE_BAN); /*
+        if (ismine)
+        {
+            if ((chptr->mode.mode & MODE_NOCTRL) && msg_has_ctrls(msg))
+                return (ERR_NOCTRLSONCHAN);
+            if (is_banned(cptr, chptr, NULL))
+                return (MODE_BAN); /*
                                 * channel is -n and user is not there;
                                 * we need to bquiet them if we can
                                 */
+        }
     }
     else
     {
@@ -1007,7 +1012,8 @@ int can_send(aClient *cptr, aChannel *chptr, char *msg)
             if ((chptr->mode.mode & MODE_MODREG) && !IsRegNick(cptr))
                 return (ERR_NEEDREGGEDNICK);
         }
-        if ((chptr->mode.mode & MODE_NOCTRL) && msg_has_ctrls(msg))
+        /* control code blocking isn't flood-critical, so only check locally */
+        if (ismine && (chptr->mode.mode & MODE_NOCTRL) && msg_has_ctrls(msg))
             return (ERR_NOCTRLSONCHAN);
     }
     
