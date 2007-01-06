@@ -3851,52 +3851,6 @@ int m_names(aClient *cptr, aClient *sptr, int parc, char *parv[])
     return 0;
 }
  
-void send_user_joins(aClient *cptr, aClient *user)
-{
-    Link   *lp;
-    aChannel *chptr;
-    int     cnt = 0, len = 0, clen;
-    char       *mask;
-
-    *buf = ':';
-    (void) strcpy(buf + 1, user->name);
-    (void) strcat(buf, " JOIN ");
-    len = strlen(user->name) + 7;
-
-    for (lp = user->user->channel; lp; lp = lp->next)
-    {
-        chptr = lp->value.chptr;
-        if (*chptr->chname == '&')
-            continue;
-        if ((mask = strchr(chptr->chname, ':')))
-            if (match(++mask, cptr->name))
-                continue;
-        clen = strlen(chptr->chname);
-        if (clen > (size_t) BUFSIZE - 7 - len)
-        {
-            if (cnt)
-                sendto_one(cptr, "%s", buf);
-            *buf = ':';
-            (void) strcpy(buf + 1, user->name);
-            (void) strcat(buf, " JOIN ");
-            len = strlen(user->name) + 7;
-            cnt = 0;
-        }
-        (void) strcpy(buf + len, chptr->chname);
-        cnt++;
-        len += clen;
-        if (lp->next)
-        {
-            len++;
-            (void) strcat(buf, ",");
-        }
-    }
-    if (*buf && cnt)
-        sendto_one(cptr, "%s", buf);
-
-    return;
-}
-
 void kill_ban_list(aClient *cptr, aChannel *chptr)
 {  
     void        *pnx;

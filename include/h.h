@@ -104,7 +104,6 @@ extern void 	 remove_matching_invites(aChannel *, aClient *, aClient *);
 #endif
 extern void 	 remove_user_from_channel(aClient *, aChannel *);
 extern void 	 del_invite(aClient *, aChannel *);
-extern void 	 send_user_joins(aClient *, aClient *);
 extern int  	 can_send(aClient *, aChannel *, char *);
 extern int   	 is_chan_op(aClient *, aChannel *);
 extern int  	 has_voice(aClient *, aChannel *);

@@ -298,11 +298,6 @@ int build_searchopts(aClient *sptr, int parc, char *parv[])
           args++;
           break;
       case 'I':
-          if(!IsAnOper(sptr))
-          {
-              sendto_one(sptr, getreply(ERR_NOPRIVILEGES), me.name, parv[0]);
-              return 0;
-          }
           wsopts.ip_show = change;
           break; 
       case 'i':
@@ -310,11 +305,6 @@ int build_searchopts(aClient *sptr, int parc, char *parv[])
           {
               sendto_one(sptr, getreply(ERR_WHOSYNTAX), me.name,
                          sptr->name, "WHO", "who");
-              return 0;
-          }
-          else if(!IsAnOper(sptr))
-          {
-              sendto_one(sptr, getreply(ERR_NOPRIVILEGES), me.name, parv[0]);
               return 0;
           }
           else
@@ -326,6 +316,12 @@ int build_searchopts(aClient *sptr, int parc, char *parv[])
                   char *err;
                   unsigned int maskval, ipval;
           
+                  if(!IsAnOper(sptr))
+                  {
+                      sendto_one(sptr, getreply(ERR_NOPRIVILEGES), me.name, parv[0]);
+                      return 0;
+                  }
+
                   *(cpos++) = '\0';
               
                   ipval = inet_addr(parv[args]);
@@ -374,8 +370,8 @@ int build_searchopts(aClient *sptr, int parc, char *parv[])
 	      }
 	      s++;
 	  }
-	  if(!IsAnOper(sptr)) /* only let users search for +/-oOaA */
-	      wsopts.umodes=(wsopts.umodes&(UMODE_o|UMODE_O|UMODE_a|UMODE_A));
+	  if(!IsAnOper(sptr)) /* only let users search for +/-roOaA */
+	      wsopts.umodes=(wsopts.umodes&(UMODE_r|UMODE_o|UMODE_O|UMODE_a|UMODE_A));
 	  wsopts.umode_plus=change;
 	  if(wsopts.umodes)
 	      wsopts.check_umode=1;
@@ -624,7 +620,7 @@ inline char *first_visible_channel(aClient *cptr, aClient *sptr)
 #define MAXWHOREPLIES 200
 #define WHO_HOPCOUNT(s, a) ( ( (IsULine((a)) || IsUmodeI((a))) && !IsAnOper((s)) ) ? 0 : a->hopcount)
 #define WHO_SERVER(s ,a) ((IsUmodeI((a)) && !IsAnOper((s))) ? HIDDEN_SERVER_NAME : a->user->server)
-#define WHO_HOST(a) ((wsopts.ip_show) ? (a)->hostip : (a)->user->host)
+#define WHO_HOST(a) ((wsopts.ip_show) ? IsULine((a)) ? "0.0.0.0" : (a)->hostip : (a)->user->host)
 int m_who(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     aClient *ac;

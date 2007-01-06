@@ -3,6 +3,11 @@ Changes for 1.9
 - Added noident/nodns/server flags to port blocks
 - Added "P" (primary o-line) flag to oper blocks
 - Changed stats o output to be in human-readable format
+- Changed +#channel target to be voice or higher, to match 005 defs
+- Changed /who to allow users to /who +m r
+- Fixed /rwho +m to verify the umodes are valid
+- Enabled USERIP/WHO +iI for users
+- Removed send_user_joins() function - it was ancient and not used anymore.
 
 - Reworked services special-casing:
     - shortform commands (NS/CS/etc) always sent between normal servers,
@@ -17,6 +22,9 @@ Changes for 1.9
 - Server protocol changes:
     Added CHANKILL <channel> [reason]
       completely destroys a channel and related state
+    Added SVSPANIC <1/0>
+      "panic" mode for services, where only oper commands are sent to it;
+      user commands are dropped with "services is down" response.
 
 
 Changes for 1.8.4

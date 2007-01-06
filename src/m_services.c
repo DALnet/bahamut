@@ -39,6 +39,8 @@
 /* Externally defined stuffs */
 extern int user_modes[];
 
+int svspanic = 0; /* Services panic */
+
 /*
  * the services aliases. *
  *
@@ -85,6 +87,13 @@ int m_aliased(aClient *cptr, aClient *sptr, int parc, char *parv[], AliasInfo *a
 
     /* second check is to avoid message loops when admins get stupid */
     if (!ai->client || ai->client->from == sptr->from)
+    {
+        sendto_one(sptr, err_str(ERR_SERVICESDOWN), me.name, parv[0],
+                   ai->nick);
+        return 0;
+    }
+
+    if(svspanic && !IsOper(sptr))
     {
         sendto_one(sptr, err_str(ERR_SERVICESDOWN), me.name, parv[0],
                    ai->nick);
@@ -147,6 +156,13 @@ int m_identify(aClient *cptr, aClient *sptr, int parc, char *parv[])
         aidx = AII_CS;
 
     if (!aliastab[aidx].client)
+    {
+        sendto_one(sptr, err_str(ERR_SERVICESDOWN), me.name, parv[0],
+                   aliastab[aidx].nick);
+        return 0;
+    }
+
+    if(svspanic && !IsOper(sptr))
     {
         sendto_one(sptr, err_str(ERR_SERVICESDOWN), me.name, parv[0],
                    aliastab[aidx].nick);
@@ -540,6 +556,23 @@ m_chankill(aClient *cptr, aClient *sptr, int parc, char *parv[])
     /* at this point, the channel should not exist locally */
     sendto_serv_butone(cptr, ":%s CHANKILL %s :%s", parv[0], parv[1],
                        (parc == 3) ? parv[2] : "");
+    return 0;
+}
+
+/* m_svspanic
+ *   Stops users from sending commands to u:lined servers.
+ * parv[0] - sender
+ * parv[1] - 1/0 (1 to enable, 0 to disable)
+ */
+int m_svspanic(aClient *cptr, aClient *sptr, int parc, char *parv[])
+{
+    if(!IsULine(sptr) || parc < 2)
+        return 0;
+
+    svspanic = atoi(parv[1]);
+
+    sendto_serv_butone(cptr, ":%s SVSPANIC %s", sptr->name, parv[1]);
+
     return 0;
 }
 

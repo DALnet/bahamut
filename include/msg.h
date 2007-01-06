@@ -99,6 +99,7 @@
 #define MSG_SVSKILL  "SVSKILL"   	/* SVSKILL */
 #define MSG_SVSMODE  "SVSMODE"   	/* SVSMODE */
 #define MSG_SVSHOLD  "SVSHOLD"		/* SVSHOLD */
+#define MSG_SVSPANIC "SVSPANIC"		/* SVSPANIC */
 #define MSG_AKILL    "AKILL"     	/* AKILL */
 #define MSG_RAKILL   "RAKILL"    	/* RAKILL */
 #define MSG_SILENCE  "SILENCE"   	/* SILENCE */
@@ -171,6 +172,7 @@ extern int  m_svsnick(aClient *, aClient *, int, char **);
 extern int  m_svskill(aClient *, aClient *, int, char **);
 extern int  m_svsmode(aClient *, aClient *, int, char **);
 extern int  m_svshold(aClient *, aClient *, int, char **);
+extern int  m_svspanic(aClient *, aClient *, int, char **);
 extern int  m_version(aClient *, aClient *, int, char **);
 extern int  m_help(aClient *, aClient *, int, char **);
 extern int  m_squit(aClient *, aClient *, int, char **);
@@ -325,6 +327,7 @@ struct Message msgtab[] =
     {MSG_SVSKILL,  m_svskill,  MAXPARA, 0,        0},
     {MSG_SVSMODE,  m_svsmode,  MAXPARA, 0,        0},
     {MSG_SVSHOLD,  m_svshold,  MAXPARA, 0,        0},
+    {MSG_SVSPANIC, m_svspanic, MAXPARA, 0,        0},
     {MSG_AKILL,    m_akill,    MAXPARA, 0,        0},
     {MSG_RAKILL,   m_rakill,   MAXPARA, 0,        0},
     {MSG_SILENCE,  m_silence,  MAXPARA, 0,        0},

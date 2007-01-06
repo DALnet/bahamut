@@ -495,12 +495,20 @@ static int rwho_parseopts(aClient *sptr, int parc, char *parv[])
                     return 0;
                 }
                 for (s = parv[arg]; *s; s++)
+                {
                     for (i = 1; user_modes[i]; i+=2)
                         if (*s == user_modes[i])
                         {
                             rwho_opts.umodes[neg] |= user_modes[i-1];
                             break;
                         }
+
+                    if (!user_modes[i])
+                    {
+                        rwho_synerr(sptr, "Invalid argument for match flag m");
+                        return 0;
+                    }
+                }
                 rwho_opts.check[neg] |= RWM_MODES;
                 arg++;
                 break;
