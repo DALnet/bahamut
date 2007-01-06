@@ -31,9 +31,6 @@
 #include "throttle.h"
 #include "clones.h"
 
-/* externally defined variables */
-extern int svspanic;
-
 /* externally defined functions */
 
 extern void fakelinkserver_update(char *, char *);

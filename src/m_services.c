@@ -95,8 +95,9 @@ int m_aliased(aClient *cptr, aClient *sptr, int parc, char *parv[], AliasInfo *a
 
     if(svspanic && !IsOper(sptr))
     {
-        sendto_one(sptr, err_str(ERR_SERVICESDOWN), me.name, parv[0],
-                   ai->nick);
+        if(MyClient(sptr))
+            sendto_one(sptr, err_str(ERR_SERVICESDOWN), me.name, parv[0],
+                       ai->nick);
         return 0;
     }
 
@@ -164,8 +165,9 @@ int m_identify(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
     if(svspanic && !IsOper(sptr))
     {
-        sendto_one(sptr, err_str(ERR_SERVICESDOWN), me.name, parv[0],
-                   aliastab[aidx].nick);
+        if(MyClient(sptr))
+            sendto_one(sptr, err_str(ERR_SERVICESDOWN), me.name, parv[0],
+                       aliastab[aidx].nick);
         return 0;
     }
 

@@ -295,10 +295,11 @@ hunt_server(aClient *cptr, aClient *sptr, char *command, int server,
     }
 #endif
 
-    if(svspanic && MyClient(sptr) && !IsAnOper(sptr) && IsULine(acptr))
+    if(svspanic && !IsOper(sptr) && IsULine(acptr))
     {
-        sendto_one(sptr, err_str(ERR_SERVICESDOWN), me.name, parv[0],
-                   acptr->name);
+        if(MyClient(sptr))
+            sendto_one(sptr, err_str(ERR_SERVICESDOWN), me.name, parv[0],
+                       acptr->name);
         return HUNTED_NOSUCH;
     }
 
@@ -1548,8 +1549,9 @@ m_message(aClient *cptr, aClient *sptr, int parc, char *parv[], int notice)
 #endif
                 if(svspanic && !IsOper(sptr))
                 {
-                    sendto_one(sptr, err_str(ERR_SERVICESDOWN), me.name, parv[0],
-                               ai->nick);
+                    if(MyClient(sptr))
+                        sendto_one(sptr, err_str(ERR_SERVICESDOWN), me.name, parv[0],
+                                   ai->nick);
                     continue;
                 }
 #ifdef PASS_SERVICES_MSGS
