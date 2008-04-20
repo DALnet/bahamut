@@ -18,8 +18,6 @@
  *
  */
 
-/* $Id: config.h 1303 2006-12-07 03:23:17Z epiphani $ */
-
 #ifndef	__config_include__
 #define	__config_include__
 

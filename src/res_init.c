@@ -17,8 +17,6 @@
  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  */
 
-/* $Id: res_init.c 1303 2006-12-07 03:23:17Z epiphani $ */
-
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>

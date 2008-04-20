@@ -18,8 +18,6 @@
  *
  */
 
-/* $Id: sys.h 1303 2006-12-07 03:23:17Z epiphani $ */
-
 #ifndef	__sys_include__
 #define __sys_include__
 #ifdef ISC202

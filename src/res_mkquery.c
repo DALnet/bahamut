@@ -18,8 +18,6 @@
  * PURPOSE.
  */
 
-/* $Id: res_mkquery.c 1303 2006-12-07 03:23:17Z epiphani $ */
-
 #include <stdio.h>
 #include <sys/types.h>
 #include <netinet/in.h>

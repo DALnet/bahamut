@@ -18,8 +18,6 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-/* $Id: klines.c 1303 2006-12-07 03:23:17Z epiphani $ */
-
 /*
  * This is a simple K-Line journal implementation.  When a K-Line with a
  * duration of KLINE_MIN_STORE_TIME or more is added, it is written to the

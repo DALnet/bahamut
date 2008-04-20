@@ -22,8 +22,6 @@
  * all the send* functions are declared here.
  */
 
-/* $Id: send.h 1303 2006-12-07 03:23:17Z epiphani $ */
-
 #ifndef SEND_H
 #define SEND_H
 

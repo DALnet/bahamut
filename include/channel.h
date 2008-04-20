@@ -17,8 +17,6 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-/* $Id: channel.h 1303 2006-12-07 03:23:17Z epiphani $ */
-
 #ifndef	__channel_include__
 #define __channel_include__
 #define find_channel(chname, chptr) (hash_find_channel(chname, chptr))

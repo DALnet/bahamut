@@ -18,8 +18,6 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-/* $Id: userban.h 1303 2006-12-07 03:23:17Z epiphani $ */
-
 #define UBAN_LOCAL     0x001   /* formerly known as a K: or Z: line */
 #define UBAN_NETWORK   0x002   /* formerly known as an autokill or an SZline */
 
