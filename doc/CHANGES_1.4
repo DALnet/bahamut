@@ -1,0 +1,266 @@
+Changes for 1.4.36
+- Fix bug that caused bans to be expired ~1 million times on startup
+- Remove opers from fdlists that are set -o via SVSMODE
+- Only show IPs of unknowns or clients to opers in /trace
+- Use OpenSSL instead of GMP for encryption (much cleaner! :)
+- Remove non-SSJOIN support
+- Allow for a server to detect it is out of synch, and request a 
+  channel resynch from an upstream hub
+- Fix remote /stats k/K/a bug (it works now :)
+- Optimize some sendto() things that are used a lot
+- Add usermode +I (server hiding)
+  - Fix /whois, /admin, /who, etc to not allow a user to discover which 
+    server a +I user is on
+- Don't let *MY* opers /kill U: lined things (but pass on kills destined for them already)
+- Chatops don't require you to be +gb (now, just +b)
+- Various typos fixed
+- No longer complain if a user is already on a +i channel, and they /join it
+- Use hash tables for very common res functions, which were taking up
+  as much as 80% of CPU time in a pooled server
+- add a command, /userip, for opers. Works just like /userhost.
+- Allow /who +c @#channel +#channel @+#channel for more refined /who listings
+- Add a /who flag for opers, +/-t, clients who have been on for more/less than <param> seconds
+- Don't let opers get stuck in weird anti-flooding bugs (oper recvq lock bug)
+- When an oper deopers, they are returned to the appropriate client class
+- Allow opers to /who +l <class> for local clients (class = Y: class)
+- Send optimizations for high-volume server connections
+- Remove fdlists for lists of clients and instead use linked lists for things:
+  - recvq clients, instead of searching through *all* clients
+  - listing clients, ditto
+- Remove certain things which actually caused poor server operation:
+  - HTM - relax sending out when we have high incoming traffic. 
+    This actually causes a nasty bursty cycle.
+  - busy clients
+    This was taking up a great deal of CPU time to save CPU time. Hmm.
+- Rewrite the entire base socket engine; now supports kqueue on freebsd.
+  - Poll() and select() use persistant states, so these should be twice as fast as well.
+  - Stop remapping fds. What's the point?
+- /stats w reports fd map (don't use this on a large server! :)
+- /stats z is more informative
+- Hide the source servers of numerics (mask them with me.name)
+- Hide /kill sources in quit messages (still in +s, though) and in messages
+  sent to killed client
+- Hide split sources in quit messages
+- Add a LINKSCONTROL command which allows a services-controlled /links list
+- Better server traffic accounting in /stats ? (uses a moving average instead of a plain average)
+- Fix a bug in which connecting servers will always remove a key if the channel exists (argh!)
+- Correctly propogate cmode +O
+- Show more squelched info in /whois to opers
+- Be smarter about broken FD_SETSIZE implementations
+- Crash if we try to free something twice in the block allocator, produces a useful coredump
+  instead of confused opers and an unrelated crash hours later.
+- ability to lock /lusers output via services for a dynamic amount of time
+- Fix 'ghost channels' where I create a channel but none of the users in it exist to me
+- Allow /who +i ip/cidr and /who +I (show IPs only) for opers
+- SAJOIN, like SAMODE for joining channels. Joins through all modes, sends a globop.
+- Local servers notify the channel of an invite, not the server the invitee is on
+- Remove the drone module, replace it with a powerful and generic module system that
+  has event-based hooks.
+- Streamline some privmsg stuff, fix a few bugs.
+- Fix a bug in which an IP ban on 1.2.3.4* wouldn't work.
+- Dehybridize some things.
+- SVSMODE +T, which sets a "client type" that can be seen in a /who +T <clienttype>
+- Don't allow ',' in channel keys
+- Fix umode +r/-r notification to clients
+- Pretty print some things in /stats ?
+- Remove support for non-NOQUIT servers
+- Modes sent from servers come from the local server now
+- Complain about /who +<flag>, where <flag> isn't valid, instead of sending the entire client list
+- Move SQLINES and SGLINES into another hash-based structure for fast lookups
+- Add SVSHOLD, which adds a local temp qline for a nick for N seconds, intended to replace
+  enforcers in services.
+- Make HTM work on outgoing traffic (the part of HTM that limits sending lots of expensive 
+  things like /list)
+- Don't complain about servers relinking that look 'juped'
+  (don't complain if the server that already exists is U: lined, unless I actually have a 
+   .conf U: line for it!)
+- Compile with GCC3!
+- Nicer umode separation, ie what used to come in as *** Notice -- comes in as:
+  +d : *** Debug --
+  +y : *** Spy --
+  +c : *** Client --
+- Channel join throttling (cmode +j, but disabled for user changes by default to be compatible with
+  pre-1.4.36), defaults to 8 network non-split joins in 4 seconds before saying channel is full.
+- Fix the DEBUGMODE pattern string exploit
+
+Changes for 1.4.35
+- Source address support on /connect problem fixed
+- Squelching added, umode +x or +X (+X is silent squelch), this
+  prevents the user from doing certain online tasks such as privmsg.
+  Meant to be set by a U: lined server or client using SVSMODE.
+- Complete rewrite of the kline/akill/zline system. (s)zlines no longer 
+  exist. K: lines set on IP addresses without username portions (or *)
+  are treated as Z: lines used to be. CIDR banning is now supported
+  in all K: line/akill bans (ie, 204.127.54.112/28).
+- +F usermode bypasses ircd's recvq throttling for opers
+- Improved handling under high load situations
+- Ban munching bug introduced in 1.4.34 is fixed
+- /rehash GC now works
+- lots of sendto_ops_lev changed to sendto_realops_lev for speed
+- Fix a bug where we'd try to target limit messages by a server and
+  write to locations of memory that weren't ours :)
+- Fix O: flags that just didn't work as advertised
+- Moved rejection notices to umode +j (re_j_ection)
+- Moved KILL messages from U: lined clients to umode +K (oper only)
+- Support for a loadable drone module, compile with --enable-dronemodule, 
+  ircd tries to load drone.so from DPATH on startup or on /rehash drones,
+  read src/drone.c to view the interface
+- /stats t shows more information
+- Various code cleanup and readability fixes
+- Users and opers will now recieve a different output to '/who ?'.
+- When 'HELP_FORWARD_HS' is defined, non-opers /quote help requests
+  will be forwarded to HelpServ.
+
+Changes for 1.4.34
+- Don't use FD_SETSIZE at all if USE_POLL is defined
+- Fixed a server negotiation bug that could break apart the network
+  when autoconnects and user connects were done at the same instant
+- Fix a bug where PART messages were not sent to 'userB' when 'userA's 
+  QUIT message was squelched on more than 1 channel
+- Fixed split riding ability left over from hybrid (where a channel
+  with a newer TS could 'take over' if it had ops and the older TS channel
+  did not)
+- Fixed 'topic riding' ability that allowed topics from newer TS'd channels
+  to propogate.
+- Fixed channel ban desync on netjoin
+- all channel modes are now sent with a TS
+- Target limiting anti-spam measure installed
+- Reject acebot-style drones by default
+- Minor fixes to prevent annoying auth error messages
+- Minor configuration/installation fixes
+
+-- WARNING --
+1.4.34 may cause desynch in net joins if used on a network with newer servers!
+This is because the algorithm for determining which channel modes to keep
+when servers rejoin has changed. You should upgrade your entire network 
+to 1.4.34.
+-- WARNING --
+
+Changes for 1.4.33
+- Only ops can invite on channels
+- Various desync-causing memory-corrupting bugs fixed
+- Fixed a problem with perm klines where they werent removing the user
+- Moved to zlib 1.1.4, as 1.1.3 was vulnerable (but not directly in ircd)
+- Fixed minor SVSKILL wrong direction issue.
+- Fixed a wierd desync issue with sqlined channels
+- Fixed /stats l's sendM statistic - it wasnt working properly with crypt
+
+Changes for 1.4.32
+- Throttling modified to be more friendly and punish repeat offenders
+- Major bug causing memory corruption (coredumps as well as
+  duplicate or missing messages) fixed
+- Lag on signon fixed (where a user connects, but the server chooses
+  to ignore the user until something is sent to them)
+- Fixed a netsplit detection bug when a leaf server splits from its hub
+  (for no_chanops_when_split)
+- Fix for .conf based K: lines (that just didn't work)
+
+Changes for 1.4.31
+- Connection Throttling Patch from Chip Norkus
+
+Changes for 1.4.30
+- Updated 'make profile'; now on glibc2 systems, you can kill -USR1 the
+  process and get a current profile dump, and restart profiling
+- Kline/akill/zline matching has been revamped, which should help greatly with
+  lag under heavy user loads with many klines/akills/zlines
+- Deny sending .zip files and . files (with a null extension) to prevent
+  the spreading of exploits
+
+Changes for 1.4.29
+- Umode +R to not allow msgs from non registered nicks
+- chanmode +R extended to deny msgs for -r clients in channel
+- +c/+R extended to squelch quit messages with color/from non reg'd nicks
+- wrapped HTM detection code in #ifndef HUB
+- Added channel qline reason display
+- Removed LITTLE_I_LINES as with services they are dumb
+- Massive code reformatting
+- Moved some oper notices around to reduce unnecessary traffic
+- klines match IP field too now, for NICKIP akills.
+- Changed default mask to @DALnet so it's known it's a fake address
+
+- This is the last 1.4 release planned.  For real this time.
+
+Changes for 1.4.28
+- Minor bug fixes
+
+Changes for 1.4.27
+- Fixed key bug
+- Fixed showstopper remoteclientsonlygetpiecesofaClient bug
+
+Changes for 1.4.25
+- Hide Nick Collisions (Revealing services location)
+- Make 005 show more info
+- Add who +i to search by IP
+- Hide stats L for non opers
+- Add NICKIP CAPAB for services to get nicks
+- Channel QLINES from Ryan
+- Removed * from valid key char
+
+Changes for 1.4.23
+- Some error message changes/fixes
+- Fixed a cloaking bug
+- Added support to source from a different local IP address when /connecting
+  out to another server; useful for servers which don't want to use the main
+  IP in the M: line as the server<->server IP
+  - To use: Add :<local IP> to the end of a C: line
+  - E.g.: C:192.168.0.1:pass:server.dal.net:7325:10:192.168.10.200
+- Block DCCs of .htm/.html files due to script viruses being spread in this
+  way
+- Prompt for max channels per user and oper pw encryption in the config
+  script
+- Example.conf brought up to date
+- Display proper error messages when you can't join a channel
+- Fixed the +a (away) who flag; its behavior was reversed from what it should
+  have been
+
+Changes for 1.4.22
+- Fixed a bug where a server with a bad name trying to connect or trying
+  to be used in /links could crash Bahamut
+
+Changes for 1.4.21
+- rate-squelch zipinbuf complain messages
+- turn off yet more DNS debug messages (forward<>reverse query error)
+- oper hostmasking no longer pollutes IPHASH (ouch)
+- configure script reworked to search better for libgmp.a
+- configure script bugs fixed
+
+Changes for 1.4.20
+- /whois works correctly for hostmasked opers. growl.
+- configure gives more information about gmp errors.
+
+Changes for 1.4.19 (released, but not an advised upgrade)
+- Fixed a crashing bug with /whois
+- Fixed a crashing bug with /oper (I need to remember how to handle nulls correctly :)
+- Imported res fixes from bahamut-stable
+- made configure work for solaris to find gmp
+
+Changes for 1.4.18 (never officially released)
+- Changed level of some debug messages to not go to all opers
+
+Changes for 1.4.17 (never officially released)
+- Oper hostmasking:
+  Your I: line password is oper<.password> where password is optional.
+  You then /server <yourserver> <yourport> <portpass:>opernick:operpass
+  Anyone +A can see your real username, host, and IP.
+
+Changes for 1.4.16
+- deal with long-time buffer overflow when more than MAXADDR
+  A DNS answers are received.
+
+Changes for 1.4.15 (never officially released)
+- Crash in res.c fixed (due to wrong question received under heavy load)
+- name resolution prevents ircd dns cache pollution
+
+Changes for 1.4.14 (previous release was 1.4.12)
+- RC4 streaming encryption added, diffie hellman key exchange
+  - Requires GMP library
+  - Vulnerable to man-in-the-middle attacks
+  - Requires 'E' flag in the N: line on both servers.
+- zlib-compressed links added
+  - Requires 'Z' flag in the N: line of a server
+    that wishes to zip outgoing links to that link.
+
+Changes for 1.4.12 (previous release was 1.4.8):
+- /stats ?, v fixed to hide u-lined servers
+- /lusers fixed to hide u-lined servers
+- name resolution is more strict

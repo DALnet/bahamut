@@ -1,0 +1,52 @@
+#************************************************************************
+#*   IRC - Internet Relay Chat, Makefile
+#*   Copyright (C) 1990, Jarkko Oikarinen
+#*
+#*   This program is free software; you can redistribute it and/or modify
+#*   it under the terms of the GNU General Public License as published by
+#*   the Free Software Foundation; either version 1, or (at your option)
+#*   any later version.
+#*
+#*   This program is distributed in the hope that it will be useful,
+#*   but WITHOUT ANY WARRANTY; without even the implied warranty of
+#*   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#*   GNU General Public License for more details.
+#*
+#*   You should have received a copy of the GNU General Public License
+#*   along with this program; if not, write to the Free Software
+#*   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+#*/
+
+RM=@RM@
+MV=@MV@
+
+INSTALL=@INSTALL@
+INSTALL_DATA=@INSTALL_DATA@
+INSTALL_DIR=@INSTALL_DIR@
+
+FILES=opers.txt reference.conf template.conf
+
+all:
+
+build:
+
+clean:
+
+install: all
+	@for i in $(FILES); do \
+		if test -f $(INSTALL_DIR)/$$i; then \
+			echo $(MV) $(INSTALL_DIR)/$$i $(INSTALL_DIR)/$$i.old; \
+			$(MV) $(INSTALL_DIR)/$$i $(INSTALL_DIR)/$$i.old; \
+		fi; \
+		echo $(INSTALL_DATA) $$i $(INSTALL_DIR); \
+		$(INSTALL_DATA) $$i $(INSTALL_DIR); \
+	done
+
+	-@if [ ! -f $(INSTALL_DIR)/ircd.motd ] ; then \
+		echo "ircd.motd does not exist, creating..."; \
+		touch $(INSTALL_DIR)/ircd.motd; \
+		echo "This is the default Bahamut MOTD" >> $(INSTALL_DIR)/ircd.motd; \
+	fi
+
+distclean: clean
+	$(RM) -f Makefile

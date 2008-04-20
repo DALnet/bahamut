@@ -1,0 +1,45 @@
+CC=@CC@
+RM=@RM@
+MV=@MV@
+IRCDLIBS=@LIBS@
+INSTALL=@INSTALL@
+INSTALL_BIN=@INSTALL_PROGRAM@
+INSTALL_DIR=@INSTALL_DIR@
+INCLUDEDIR=-I../include
+
+mkpasswd_SOURCES = mkpasswd.c
+mkpasswd_OBJECTS = mkpasswd.o
+convert_conf_SOURCES = convert_conf.c
+convert_conf_OBJECTS = convert_conf.o ../src/match.o
+PROGRAMS = mkpasswd convert_conf
+
+all_OBJECTS = $(mkpasswd_OBJECTS) $(convert_conf_OBJECTS)
+
+all: mkpasswd convert_conf
+
+build: all
+
+mkpasswd: $(mkpasswd_OBJECTS)
+	$(CC) -o mkpasswd $(mkpasswd_OBJECTS) $(IRCDLIBS)
+
+convert_conf: $(convert_conf_OBJECTS)
+	$(CC) -o convert_conf $(convert_conf_OBJECTS) $(IRCDLIBS)
+
+clean:
+	$(RM) -f $(all_OBJECTS) mkpasswd convert_conf *~ core
+
+distclean: clean
+	$(RM) -f Makefile
+
+.c.o:
+	$(CC) $(CFLAGS) $(INCLUDEDIR) -c $<
+
+install:
+	@for i in $(PROGRAMS); do \
+		if test -f $(INSTALL_DIR)/$$i; then \
+			echo $(MV) $(INSTALL_DIR)/$$i $(INSTALL_DIR)/$$i.old; \
+			$(MV) $(INSTALL_DIR)/$$i $(INSTALL_DIR)/$$i.old; \
+		fi; \
+		echo $(INSTALL_BIN) $$i $(INSTALL_DIR); \
+		$(INSTALL_BIN) $$i $(INSTALL_DIR); \
+	done
