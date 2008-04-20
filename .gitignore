@@ -1,0 +1,30 @@
+#
+# Normal rules
+#
+.*
+*.o
+*.o.*
+*.a
+*.s
+*.so
+*.so.dbg
+*.i
+*.lst
+*.orig
+*.rej
+
+#
+# Our specific rules
+#
+!.gitignore
+Makefile
+config.log
+autom4te.cache
+config.status
+include/setup.h
+zlib/zconf.h
+
+src/ircd
+src/version.c.last
+tools/convert_conf
+tools/mkpasswd
