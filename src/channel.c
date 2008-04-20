@@ -826,7 +826,7 @@ void remove_matching_invites(aChannel *chptr, aClient *cptr, aClient *from)
 
 /* refill join rate warning token bucket, and count a join attempt */
 static void
-jrw_update(aChannel *chptr)
+jrw_update(aChannel *chptr, int local)
 {
     int adj_delta;
     int bkt_delta;
@@ -847,7 +847,10 @@ jrw_update(aChannel *chptr)
         
         /* bucket has a free fill (not join) slot, reset debt counter */
         if (chptr->jrw_bucket >= DEFAULT_JOIN_NUM)
+        {
             chptr->jrw_debt_ctr = 0;
+            chptr->jrw_debt_ts = 0;
+        }
     }
     
     if (chptr->jrw_bucket >= -(DEFAULT_JOIN_SIZE - DEFAULT_JOIN_TIME))
@@ -856,8 +859,12 @@ jrw_update(aChannel *chptr)
     /* warning bucket is always current, which pins it at the rate limit */
     chptr->jrw_last = NOW;
     
-    /* for statistical purposes, keep count of join attempts */
-    if (chptr->jrw_debt_ctr++ == 0)
+    /* for statistical purposes, keep count of local join attempts */
+    if (local)
+        chptr->jrw_debt_ctr++;
+
+    /* statistical timestamp reflects all joins */
+    if (chptr->jrw_debt_ts == 0)
         chptr->jrw_debt_ts = NOW;
 }
 
@@ -899,7 +906,7 @@ static void
 joinrate_prejoin(aChannel *chptr)
 {
     jrl_update(chptr);
-    jrw_update(chptr);
+    jrw_update(chptr, 1);
 }
 
 /*
@@ -928,7 +935,7 @@ joinrate_check(aChannel *chptr, aClient *cptr, int warn)
     {
         sendto_realops_lev(DEBUG_LEV, "Join rate throttling on %s for"
                            " %s!%s@%s (%d%s in %d)", chptr->chname,
-                           cptr->name, cptr->user->username, cptr->hostip,
+                           cptr->name, cptr->user->username, cptr->user->host,
                            jnum, (chptr->jrl_bucket < 0) ? "+" : "", jtime);
     }
     return 0;
@@ -949,14 +956,14 @@ joinrate_dojoin(aChannel *chptr, aClient *cptr)
     
     if (!local)
     {
-        jrw_update(chptr);
+        jrw_update(chptr, 0);
         jrl_update(chptr);
     }
     else if (chptr->jrw_bucket <= 0 && chptr->jrw_debt_ctr)
     {
         sendto_realops_lev(DEBUG_LEV, "Join rate warning on %s for %s!%s@%s"
                            " (%d in %d) [joined]", chptr->chname, cptr->name,
-                           cptr->user->username, cptr->hostip,
+                           cptr->user->username, cptr->user->host,
                            chptr->jrw_debt_ctr, NOW - chptr->jrw_debt_ts);
     }
 
@@ -983,7 +990,7 @@ joinrate_warn(aChannel *chptr, aClient *cptr)
     {
         sendto_realops_lev(DEBUG_LEV, "Join rate warning on %s for %s!%s@%s"
                            " (%d in %d) [failed]", chptr->chname, cptr->name,
-                           cptr->user->username, cptr->hostip,
+                           cptr->user->username, cptr->user->host,
                            chptr->jrw_debt_ctr, NOW - chptr->jrw_debt_ts);
     }
 }
@@ -2777,7 +2784,7 @@ int m_join(aClient *cptr, aClient *sptr, int parc, char *parv[])
                         ban->reason);
                 sendto_realops_lev(REJ_LEV,
                                    "Forbidding restricted channel %s from %s",
-                                   name, get_client_name(cptr, TRUE));
+                                   name, get_client_name(cptr, FALSE));
                 continue;
             }
 

@@ -467,7 +467,7 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 			       ban->reason);
 		    sendto_realops_lev(REJ_LEV,
 				       "Forbidding restricted nick %s from %s",
-				       nick, get_client_name(cptr, TRUE));
+				       nick, get_client_name(cptr, FALSE));
 		    return 0;
 		}
 	    }
