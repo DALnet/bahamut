@@ -23,7 +23,7 @@ MV=@MV@
 ENGINE=@SENGINE@
 
 SHELL=/bin/sh
-SUBDIRS=zlib src doc tools
+SUBDIRS=src doc tools
 INSTDIRS=src doc tools
 CLEANSUBDIRS=src tools
 

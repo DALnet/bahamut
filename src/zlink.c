@@ -28,7 +28,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "zlib.h"
+#include <zlib.h>
 #include "memcount.h"
 
 #define COMPRESSION_LEVEL 	3 	/* 0 to 9, 0 = none */

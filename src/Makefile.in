@@ -1,7 +1,7 @@
 CC=@CC@
 RM=@RM@
 MV=@MV@
-IRCDLIBS=@LIBS@ ../zlib/libz.a
+IRCDLIBS=@LIBS@ 
 INCLUDEDIR=-I../include
 OPENSSLINC=@SSL_INCLUDES@
 ENGINE=@SENGINE@
@@ -354,14 +354,12 @@ rc4.o: rc4.c ../include/memcount.h ../include/struct.h \
   ../include/send.h ../include/fdlist.h ../include/ircsprintf.h \
   ../include/find.h ../include/blalloc.h ../include/throttle.h \
   ../include/queue.h
-zlink.o: zlink.c ../zlib/zlib.h ../zlib/zconf.h ../include/memcount.h \
+zlink.o: zlink.c ../include/memcount.h \
   ../include/struct.h ../include/config.h ../include/setup.h \
   ../include/defs.h ../include/sys.h ../include/hash.h ../include/sbuf.h \
   ../include/h.h ../include/send.h ../include/fdlist.h \
   ../include/ircsprintf.h ../include/find.h ../include/blalloc.h \
   ../include/throttle.h ../include/queue.h
-	$(CC) $(CFLAGS) $(INCLUDEDIR) -I../zlib -c $<
-
 socketengine_poll.o: socketengine_poll.c ../include/struct.h \
  ../include/config.h ../include/setup.h ../include/defs.h \
  ../include/sys.h ../include/hash.h ../include/sbuf.h \
