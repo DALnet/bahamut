@@ -5,8 +5,6 @@
  * None of the following should need to be changed by hand.  
  */
 
-/* $Id: defs.h 1303 2006-12-07 03:23:17Z epiphani $ */
-
 # if !defined( HAVE_BCOPY )
 #	define bcopy(a,b,c) memcpy(b,a,c)
 # endif

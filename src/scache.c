@@ -1,6 +1,3 @@
-
-/* $Id: scache.c 1303 2006-12-07 03:23:17Z epiphani $ */
-
 #include "struct.h"
 #include "common.h"
 #include "sys.h"

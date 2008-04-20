@@ -49,8 +49,6 @@
  * --Copyright--
  */
 
-/* $Id: inet_addr.c 1303 2006-12-07 03:23:17Z epiphani $ */
-
 #include "setup.h"
 #include "struct.h"
 #include "common.h"

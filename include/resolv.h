@@ -28,8 +28,6 @@
  * search list.
  */
 
-/* $Id: resolv.h 1303 2006-12-07 03:23:17Z epiphani $ */
-
 #ifndef	_PATH_RESCONF
 #define _PATH_RESCONF        "/etc/resolv.conf"
 #endif

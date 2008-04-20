@@ -17,8 +17,6 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-/* $Id: struct.c 1303 2006-12-07 03:23:17Z epiphani $ */
-
 /* This file contains quick and dirty functions for retriving information
  * from structures. */
 

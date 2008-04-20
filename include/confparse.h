@@ -4,8 +4,6 @@
  * Apply the GPL here.
  */
 
-/* $Id: confparse.h 1303 2006-12-07 03:23:17Z epiphani $ */
-
 /* our structures */
 
 typedef struct TopConf tConf;

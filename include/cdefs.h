@@ -48,11 +48,6 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE. -
  * --Copyright--
  */
-/* @(#)cdefs.h        8.1 (Berkeley) 6/2/93 $Id: cdefs.h,v 1.1.1.1 1998/07/01
- * 14:33:57 wd Exp $
- */
-
-/* $Id: cdefs.h 1303 2006-12-07 03:23:17Z epiphani $ */
 
 #ifndef	_CDEFS_H_
 #define	_CDEFS_H_

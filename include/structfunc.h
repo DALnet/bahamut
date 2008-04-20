@@ -17,8 +17,6 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-/* $Id: structfunc.h 1303 2006-12-07 03:23:17Z epiphani $ */
-
 /* This file includes external function defines for aClient (and possibly
  * other) structure references. */
 

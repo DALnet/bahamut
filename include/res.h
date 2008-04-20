@@ -2,8 +2,6 @@
  * irc2.7.2/ircd/res.h (C)opyright 1992 Darren Reed.
  */
 
-/* $Id: res.h 1303 2006-12-07 03:23:17Z epiphani $ */
-
 #ifndef	__res_include__
 #define	__res_include__
 

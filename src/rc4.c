@@ -17,8 +17,6 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-/* $Id: rc4.c 1303 2006-12-07 03:23:17Z epiphani $ */
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
