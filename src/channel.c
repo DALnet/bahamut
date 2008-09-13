@@ -82,6 +82,7 @@ static char modebuf[REALMODEBUFLEN], parabuf[REALMODEBUFLEN];
 
 /* externally defined function */
 extern Link *find_channel_link(Link *, aChannel *);     /* defined in list.c */
+extern int is_silenced(aClient *sptr, aClient *acptr); /* defined in s_user.c */
 #ifdef ANTI_SPAMBOT
 extern int  spam_num;           /* defined in s_serv.c */
 extern int  spam_time;          /* defined in s_serv.c */
@@ -1131,8 +1132,7 @@ int can_send(aClient *cptr, aChannel *chptr, char *msg)
             if ((chptr->mode.mode & MODE_MODREG) && !IsRegNick(cptr))
                 return (ERR_NEEDREGGEDNICK);
         }
-        /* control code blocking isn't flood-critical, so only check locally */
-        if (ismine && (chptr->mode.mode & MODE_NOCTRL) && msg_has_ctrls(msg))
+        if ((chptr->mode.mode & MODE_NOCTRL) && msg_has_ctrls(msg))
             return (ERR_NOCTRLSONCHAN);
     }
     
@@ -3444,6 +3444,12 @@ int m_invite(aClient *cptr, aClient *sptr, int parc, char *parv[])
             return 0;
         }
 
+        if (!IsULine(sptr) && IsNoNonReg(acptr) && !IsRegNick(sptr) && !IsOper(sptr))
+        {
+            sendto_one(sptr, err_str(ERR_NONONREG), me.name, parv[0], acptr->name);
+            return 0;
+        }
+
         sendto_one(sptr, rpl_str(RPL_INVITING), me.name, parv[0], acptr->name,
                    chptr->chname);
 
@@ -3466,8 +3472,9 @@ int m_invite(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
         add_invite(acptr, chptr);
 
-        sendto_prefix_one(acptr, sptr, ":%s INVITE %s :%s", parv[0],
-                          acptr->name, chptr->chname);
+        if (!is_silenced(sptr, acptr))
+            sendto_prefix_one(acptr, sptr, ":%s INVITE %s :%s", parv[0],
+                              acptr->name, chptr->chname);
         sendto_channelflags_butone(NULL, &me, chptr, CHFL_CHANOP,
                                    ":%s NOTICE @%s :%s invited %s into "
                                    "channel %s", me.name, chptr->chname,
