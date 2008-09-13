@@ -1404,7 +1404,7 @@ check_for_ctcp(char *str, char **dccptr)
 }
 
 /* is_silenced - Returns 1 if a sptr is silenced by acptr */
-static int
+int
 is_silenced(aClient *sptr, aClient *acptr)
 {
     Link *lp;
