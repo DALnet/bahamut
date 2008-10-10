@@ -32,7 +32,7 @@ enum c_hooktype {
                        */
    CHOOK_CHANMSG,     /* called for every privmsg or notice to a channel
                        * Params: 4: (aClient *source, aChannel *destination, 
-\                      *             int isnotice, char *msgtxt)
+                       *             int isnotice, char *msgtxt)
                        * Returns int
                        */
    CHOOK_USERMSG,     /* called for every privmsg or notice to a user
@@ -44,6 +44,26 @@ enum c_hooktype {
                        * Params: 3: (aClient *, int isnotice, char *msgtext)
                        * Returns int 
                        */
+   CHOOK_JOIN,        /* called for local JOINs
+                       * Params: 1: (aClient *, aChannel *)
+                       * Returns int
+                       */
+   CHOOK_SENDBURST,   /* called from m_server.c during netbursts
+                       * Params: 1: (aClient *)
+                       * Returns void
+                       */
+   CHOOK_THROTTLE,    /* called from channel.c during throttle warnings
+                       * Params: 3: (aClient *source, aChannel *channel,
+                       *             int type, int jnum, int jtime)
+                       * Returns void
+                       */
+   CHOOK_FORBID,      /* called from m_nick.c and channel.c when a user is
+                       * attempting to use a forbidden nick or join a forbidden
+                       * channel
+                       * Params: 3: (aClient *source, char *name,
+                       *             struct simBan *ban)
+                       * Returns void
+                       */
    CHOOK_SIGNOFF,     /* called on client exit (exit_client)
                        * Params: 1: (aClient *)
                        * Returns void */
@@ -54,7 +74,7 @@ enum c_hooktype {
 extern int call_hooks(enum c_hooktype hooktype, ...);
 extern int init_modules();
 
-#define MODULE_INTERFACE_VERSION 1006 /* the interface version (hooks, modules.c commands, etc) */
+#define MODULE_INTERFACE_VERSION 1007 /* the interface version (hooks, modules.c commands, etc) */
 
 #ifdef BIRCMODULE
 extern void *bircmodule_add_hook(enum c_hooktype, void *, void *);

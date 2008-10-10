@@ -26,6 +26,7 @@
 #include "h.h"
 #include "userban.h"
 #include "memcount.h"
+#include "hooks.h"
 
 int         server_was_split = YES;
 
@@ -894,6 +895,7 @@ jrl_update(aChannel *chptr)
             adj_delta = bkt_delta;
 
         chptr->jrl_bucket += adj_delta;
+        chptr->jrl_last = NOW;
     }
 }
 
@@ -931,10 +933,11 @@ joinrate_check(aChannel *chptr, aClient *cptr, int warn)
     /* throttled */
     if (warn)
     {
-        sendto_realops_lev(DEBUG_LEV, "Join rate throttling on %s for"
-                           " %s!%s@%s (%d%s in %d)", chptr->chname,
-                           cptr->name, cptr->user->username, cptr->user->host,
-                           jnum, (chptr->jrl_bucket < 0) ? "+" : "", jtime);
+        if (call_hooks(CHOOK_THROTTLE, cptr, chptr, 1, jnum, jtime) != FLUSH_BUFFER)
+            sendto_realops_lev(DEBUG_LEV, "Join rate throttling on %s for"
+                               " %s!%s@%s (%d%s in %d)", chptr->chname,
+                               cptr->name, cptr->user->username, cptr->user->host,
+                               jnum, (chptr->jrl_bucket < 0) ? "+" : "", jtime);
     }
     return 0;
 }
@@ -959,10 +962,11 @@ joinrate_dojoin(aChannel *chptr, aClient *cptr)
     }
     else if (chptr->jrw_bucket <= 0 && chptr->jrw_debt_ctr)
     {
-        sendto_realops_lev(DEBUG_LEV, "Join rate warning on %s for %s!%s@%s"
-                           " (%d in %d) [joined]", chptr->chname, cptr->name,
-                           cptr->user->username, cptr->user->host,
-                           chptr->jrw_debt_ctr, NOW - chptr->jrw_debt_ts);
+        if (call_hooks(CHOOK_THROTTLE, cptr, chptr, 2, chptr->jrw_debt_ctr, NOW - chptr->jrw_debt_ts) != FLUSH_BUFFER)
+            sendto_realops_lev(DEBUG_LEV, "Join rate warning on %s for %s!%s@%s"
+                               " (%d in %d) [joined]", chptr->chname,
+                               cptr->name, cptr->user->username, cptr->user->host,
+                               chptr->jrw_debt_ctr, NOW - chptr->jrw_debt_ts);
     }
 
     /* remote joins cause negative penalty here (distributed throttling) */
@@ -986,10 +990,12 @@ joinrate_warn(aChannel *chptr, aClient *cptr)
     /* no slots free */
     if (chptr->jrw_bucket <= 0 && chptr->jrw_debt_ctr)
     {
-        sendto_realops_lev(DEBUG_LEV, "Join rate warning on %s for %s!%s@%s"
-                           " (%d in %d) [failed]", chptr->chname, cptr->name,
-                           cptr->user->username, cptr->user->host,
-                           chptr->jrw_debt_ctr, NOW - chptr->jrw_debt_ts);
+        if (call_hooks(CHOOK_THROTTLE, cptr, chptr, 3, chptr->jrw_debt_ctr, NOW - chptr->jrw_debt_ts) != FLUSH_BUFFER)
+            sendto_realops_lev(DEBUG_LEV, "Join rate warning on %s for %s!%s@%s"
+                               " (%d in %d) [failed]", chptr->chname,
+                               cptr->name, cptr->user->username,
+                               cptr->user->host,
+                               chptr->jrw_debt_ctr, NOW - chptr->jrw_debt_ts);
     }
 }
 
@@ -2780,9 +2786,10 @@ int m_join(aClient *cptr, aClient *sptr, int parc, char *parv[])
                 sendto_one(sptr, getreply(ERR_CHANBANREASON), me.name, parv[0], name,
                         BadPtr(ban->reason) ? "Reserved channel" :      
                         ban->reason);
-                sendto_realops_lev(REJ_LEV,
-                                   "Forbidding restricted channel %s from %s",
-                                   name, get_client_name(cptr, FALSE));
+                if (call_hooks(CHOOK_FORBID, cptr, name, ban) != FLUSH_BUFFER)
+                    sendto_realops_lev(REJ_LEV,
+                                       "Forbidding restricted channel %s from %s",
+                                       name, get_client_name(cptr, FALSE));
                 continue;
             }
 
@@ -2854,6 +2861,10 @@ int m_join(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
         if (chptr && IsMember(sptr, chptr))
             continue;
+
+        if (call_hooks(CHOOK_JOIN, sptr, chptr) == FLUSH_BUFFER)
+            continue; /* Let modules reject JOINs */
+
         
         if (!chptr || (MyConnect(sptr) && !can_join(sptr, chptr, key)))
         {

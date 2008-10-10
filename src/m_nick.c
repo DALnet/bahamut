@@ -31,6 +31,7 @@
 #include <fcntl.h>
 #include "h.h"
 #include "userban.h"
+#include "hooks.h"
 
 extern int do_user(char *, aClient *, aClient *, char *, char *, char *,
 		   unsigned long, unsigned int, char *);
@@ -463,9 +464,10 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 			       BadPtr(parv[0]) ? "*" : parv[0], nick,
 			       BadPtr(ban->reason) ? "Erroneous Nickname" :
 			       ban->reason);
-		    sendto_realops_lev(REJ_LEV,
-				       "Forbidding restricted nick %s from %s",
-				       nick, get_client_name(cptr, FALSE));
+                    if (call_hooks(CHOOK_FORBID, cptr, nick, ban) != FLUSH_BUFFER)
+		        sendto_realops_lev(REJ_LEV,
+			    	           "Forbidding restricted nick %s from %s",
+				           nick, get_client_name(cptr, FALSE));
 		    return 0;
 		}
 	    }
@@ -589,9 +591,10 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 			       BadPtr(parv[0]) ? "*" : parv[0], nick,
 			       BadPtr(ban->reason) ? "Erroneous Nickname" :
 			       ban->reason);
-		    sendto_realops_lev(REJ_LEV,
-				       "Forbidding restricted nick %s from %s", nick,
-				       get_client_name(cptr, FALSE));
+                    if (call_hooks(CHOOK_FORBID, cptr, nick, ban) != FLUSH_BUFFER)
+		        sendto_realops_lev(REJ_LEV,
+				           "Forbidding restricted nick %s from %s", nick,
+				           get_client_name(cptr, FALSE));
 		    return 0;
 		}
 	    }
