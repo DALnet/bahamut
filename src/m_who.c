@@ -370,6 +370,12 @@ int build_searchopts(aClient *sptr, int parc, char *parv[])
 		      break;
 		  }
 	      }
+              if(!user_modes[i])
+              {
+                  sendto_one(sptr, getreply(ERR_WHOSYNTAX), me.name,
+                             sptr->name, "WHO", "who");
+                  return 0;
+              }
 	      s++;
 	  }
 	  if(!IsAnOper(sptr)) /* only let users search for +/-oOaA */
@@ -484,6 +490,14 @@ int build_searchopts(aClient *sptr, int parc, char *parv[])
 	      wsopts.nick=parv[args];
 	  }
       }
+
+  if(parc > args)
+  {
+      /* Too many arguments */
+      sendto_one(sptr, getreply(ERR_WHOSYNTAX), me.name, sptr->name, "WHO",
+             "who");
+      return 0;
+  }
 
   /* hey cool, it all worked! */
   return 1;
