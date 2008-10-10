@@ -306,6 +306,7 @@ static int
 m_server_estab(aClient *cptr)
 {
     aConnect *aconn;
+    aClient *acptr;
 
     char       *inpath, *host, *s, *encr;
     int         split;
@@ -333,12 +334,16 @@ m_server_estab(aClient *cptr)
     }
     memset(cptr->passwd, '\0', sizeof(cptr->passwd));
 
-    if (find_client(host, NULL))
+    if ((acptr = find_client(host, NULL)))
     {
-        sendto_gnotice("from %s: Link %s dropped, server already exists",
-                       me.name, inpath);
-        sendto_serv_butone(cptr, ":%s GNOTICE :Link %s dropped, server already"
-                           " exists", me.name, inpath);
+        /* Don't complain about juped servers */
+        if(!IsULine(acptr) || find_aUserver(acptr->name))
+        {
+            sendto_gnotice("from %s: Link %s dropped, server already exists",
+                           me.name, inpath);
+            sendto_serv_butone(cptr, ":%s GNOTICE :Link %s dropped, server already"
+                               " exists", me.name, inpath);
+        }
         return exit_client(cptr, cptr, cptr, "Server Exists");
     }
 
