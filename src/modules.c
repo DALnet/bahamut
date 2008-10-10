@@ -477,6 +477,10 @@ static DLink *chanmsg_hooks = NULL;
 static DLink *usermsg_hooks = NULL;
 static DLink *mymsg_hooks = NULL;
 static DLink *every10_hooks = NULL;
+static DLink *join_hooks = NULL;
+static DLink *sendburst_hooks = NULL;
+static DLink *throttle_hooks = NULL;
+static DLink *forbid_hooks = NULL;
 static DLink *signoff_hooks = NULL;
 static DLink *mload_hooks = NULL;
 static DLink *munload_hooks = NULL;
@@ -513,6 +517,18 @@ get_texthooktype(enum c_hooktype hooktype)
 
         case CHOOK_MYMSG:
             return "Message to me";
+
+        case CHOOK_JOIN:
+            return "Join";
+
+        case CHOOK_SENDBURST:
+            return "netburst";
+
+        case CHOOK_THROTTLE:
+            return "throttle";
+
+        case CHOOK_FORBID:
+            return "forbid";
 
         case CHOOK_SIGNOFF:
             return "Signoff";
@@ -566,6 +582,22 @@ get_hooklist(enum c_hooktype hooktype)
 
         case CHOOK_MYMSG:
             hooklist = &mymsg_hooks;
+            break;
+
+        case CHOOK_JOIN:
+            hooklist = &join_hooks;
+            break;
+
+        case CHOOK_SENDBURST:
+            hooklist = &sendburst_hooks;
+            break;
+
+        case CHOOK_THROTTLE:
+            hooklist = &throttle_hooks;
+            break;
+
+        case CHOOK_FORBID:
+            hooklist = &forbid_hooks;
             break;
 
         case CHOOK_SIGNOFF:
@@ -788,6 +820,65 @@ call_hooks(enum c_hooktype hooktype, ...)
                 break;
             }
 
+        case CHOOK_JOIN:
+            {
+                aClient *acptr = va_arg(vl, aClient *);
+                aChannel *chptr = va_arg(vl, aChannel *);
+
+                for(lp = join_hooks; lp; lp = lp->next)
+                {
+                    int (*rfunc) (aClient *, aChannel *) = 
+                                    ((aHook *)lp->value.cp)->funcptr;
+                    if((ret = (*rfunc)(acptr, chptr)) == FLUSH_BUFFER)
+                        break;
+                }
+                break;
+            }
+
+        case CHOOK_SENDBURST:
+            {
+                aClient *acptr = va_arg(vl, aClient *);
+                for(lp = sendburst_hooks; lp; lp = lp->next)
+                {
+                    void (*rfunc) (aClient *) = 
+                                    ((aHook *)lp->value.cp)->funcptr;
+                    (*rfunc)(acptr);
+                }
+                break;
+            }
+
+        case CHOOK_THROTTLE:
+            {
+                aClient *acptr = va_arg(vl, aClient *);
+                aChannel *chptr = va_arg(vl, aChannel *);
+                int type = va_arg(vl, int);
+                int jnum = va_arg(vl, int);
+                int jtime = va_arg(vl, int);
+                for(lp = throttle_hooks; lp; lp = lp->next)
+                {
+                    int (*rfunc) (aClient *, aChannel *, int, int, int) = 
+                                    ((aHook *)lp->value.cp)->funcptr;
+                    if((ret = (*rfunc)(acptr, chptr, type, jnum, jtime)) == FLUSH_BUFFER)
+                        break;
+                }
+                break;
+            }
+
+        case CHOOK_FORBID:
+            {
+                aClient *acptr = va_arg(vl, aClient *);
+                char *name = va_arg(vl, char *);
+                struct simBan *ban = va_arg(vl, struct simBan *);
+                for(lp = forbid_hooks; lp; lp = lp->next)
+                {
+                    int (*rfunc) (aClient *, char *, struct simBan *) = 
+                                    ((aHook *)lp->value.cp)->funcptr;
+                    if((ret = (*rfunc)(acptr, name, ban)) == FLUSH_BUFFER)
+                        break;
+                }
+                break;
+            }
+
         case CHOOK_SIGNOFF:
             {
                 aClient *acptr = va_arg(vl, aClient *);
@@ -907,6 +998,10 @@ memcount_modules(MCmodules *mc)
     mc->e_dlinks += mc_dlinks(usermsg_hooks);
     mc->e_dlinks += mc_dlinks(mymsg_hooks);
     mc->e_dlinks += mc_dlinks(every10_hooks);
+    mc->e_dlinks += mc_dlinks(join_hooks);
+    mc->e_dlinks += mc_dlinks(sendburst_hooks);
+    mc->e_dlinks += mc_dlinks(throttle_hooks);
+    mc->e_dlinks += mc_dlinks(forbid_hooks);
     mc->e_dlinks += mc_dlinks(signoff_hooks);
     mc->e_dlinks += mc_dlinks(mload_hooks);
     mc->e_dlinks += mc_dlinks(munload_hooks);
