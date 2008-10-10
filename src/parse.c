@@ -595,7 +595,7 @@ static void remove_unknown(aClient *cptr, char *sender, char *buffer)
     if (!strchr(sender, '.'))
 	sendto_one(cptr, ":%s KILL %s :%s (%s(?) <- %s)",
 		   me.name, sender, me.name, sender,
-		   get_client_name(cptr, FALSE));
+		   get_client_name(cptr, HIDEME));
     else
     {
 	sendto_realops_lev(DEBUG_LEV, 
