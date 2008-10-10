@@ -489,7 +489,11 @@ void exit_server(aClient *lcptr, aClient *cptr, aClient *from, char *comment)
 #ifdef HIDE_SPLIT_SERVERS
     ircsprintf(splitname, "%s %s", HIDDEN_SERVER_NAME, HIDDEN_SERVER_NAME);
 #else
-    ircsprintf(splitname, "%s %s", cptr->uplink->name, cptr->name);
+    /* Don't show uplink servers for a u:lined link! */
+    if(IsULine(cptr))
+        ircsprintf(splitname, "%s %s", cptr->name, cptr->name);
+    else
+        ircsprintf(splitname, "%s %s", cptr->uplink->name, cptr->name);
 #endif
 
     Debug((DEBUG_NOTICE, "exit_server(%s, %s, %s)", cptr->name, from->name,
