@@ -203,7 +203,7 @@ m_squit(aClient *cptr, aClient *sptr, int parc, char *parv[])
         if (acptr && IsMe(acptr)) 
         {
             acptr = cptr;
-            server = cptr->sockhost;
+            server = cptr->name;
         }
     }
     else
@@ -211,7 +211,7 @@ m_squit(aClient *cptr, aClient *sptr, int parc, char *parv[])
         /* This is actually protocol error. But, well, closing the
          * link is very proper answer to that...
          */
-        server = cptr->sockhost;
+        server = cptr->name;
         acptr = cptr;
     }
 
