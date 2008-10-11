@@ -1207,7 +1207,7 @@ confadd_global(cVar *vars[], int lnum)
     {
         if(tmp->type && (tmp->type->flag & SCONFF_NAME))
         {
-            unsigned char *s;
+            char *s;
             int valid = 0;
             if(x->servername)
             {

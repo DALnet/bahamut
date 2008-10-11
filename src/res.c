@@ -1097,7 +1097,8 @@ struct hostent *get_res(char *lp)
     ResRQ  *rptr = NULL;
     aCache     *cp = (aCache *) NULL;
     struct sockaddr_in sin;
-    int         rc, a, len = sizeof(sin), max;
+    int         rc, a, max;
+    unsigned    len = sizeof(sin);
     
     rc = recvfrom(resfd, buf, sizeof(buf), 0, (struct sockaddr *) &sin, &len);
     if (rc <= sizeof(HEADER))

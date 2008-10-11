@@ -60,9 +60,9 @@ static char ploadedsets;
 static char pfoldedsets;
 
 /* averaging functions */
-static int (*navgfunc)(unsigned char *, int);
-static int (*uavgfunc)(unsigned char *, int);
-static int (*gavgfunc)(unsigned char *, int);
+static int (*navgfunc)(char *, int);
+static int (*uavgfunc)(char *, int);
+static int (*gavgfunc)(char *, int);
 
 #if 0  /* currently unused */
 static void pload_adjacent(char *s, int inc)
@@ -123,7 +123,7 @@ static void pload(char *s, int inc)
     }
 }
 
-static int pavg_adjacent(unsigned char *s, int type)
+static int pavg_adjacent(char *s, int type)
 {
     unsigned char c1, c2, lc1, lc2;
     int count = 0;
@@ -195,7 +195,7 @@ static int pavg_adjacent(unsigned char *s, int type)
     return (total/count);
 }
 
-static int pavg_skip(unsigned char *s, int type)
+static int pavg_skip(char *s, int type)
 {
     unsigned char c1, c2, lc1, lc2;
     int count = 0;

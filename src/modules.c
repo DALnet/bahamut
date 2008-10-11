@@ -224,22 +224,22 @@ load_module(aClient *sptr, char *modname)
     }
 
     if(!modsym_load(sptr, modname, "bircmodule_check", tmpmod.handle, 
-                    (void **) &tmpmod.module_check))
+                    (void *) &tmpmod.module_check))
         return -1;
     if(!modsym_load(sptr, modname, "bircmodule_init", tmpmod.handle, 
-                    (void **) &tmpmod.module_init))
+                    (void *) &tmpmod.module_init))
         return -1;
     if(!modsym_load(sptr, modname, "bircmodule_shutdown", tmpmod.handle, 
-                    (void **) &tmpmod.module_shutdown))
+                    (void *) &tmpmod.module_shutdown))
         return -1;
     if(!modsym_load(sptr, modname, "bircmodule_getinfo", tmpmod.handle, 
-                    (void **) &tmpmod.module_getinfo))
+                    (void *) &tmpmod.module_getinfo))
         return -1;
     if(!modsym_load(sptr, modname, "bircmodule_command", tmpmod.handle, 
-                    (void **) &tmpmod.module_command))
+                    (void *) &tmpmod.module_command))
         return -1;
     if(!modsym_load(sptr, modname, "bircmodule_globalcommand", tmpmod.handle, 
-                    (void **) &tmpmod.module_globalcommand))
+                    (void *) &tmpmod.module_globalcommand))
         return -1;
 
     (*tmpmod.module_check)(&acsz);

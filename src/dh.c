@@ -256,7 +256,7 @@ int dh_generate_shared(void *session, char *public_key)
         return 0;
 
     si->session_shared_length = DH_size(si->dh);
-    si->session_shared = (char *) malloc(DH_size(si->dh));
+    si->session_shared = (unsigned char *) malloc(DH_size(si->dh));
     len = DH_compute_key(si->session_shared, tmp, si->dh);
     BN_free(tmp);
 
@@ -335,7 +335,7 @@ char *dh_get_s_public(char *buf, int maxlen, void *session)
     return buf;
 }
 
-int dh_get_s_shared(char *buf, int *maxlen, void *session)
+int dh_get_s_shared(unsigned char *buf, int *maxlen, void *session)
 {
     struct session_info *si = (struct session_info *) session;
 

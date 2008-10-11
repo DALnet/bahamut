@@ -126,7 +126,7 @@ void *zip_create_output_session()
  *   error message
  */
 char *zip_input(void *session, char *buffer, int *len, int *err,
-		char **nbuf, int *nbuflen)
+		unsigned char **nbuf, int *nbuflen)
 {
     struct zipped_link_in *z = (struct zipped_link_in *) session;
     z_stream *zin = &z->stream;
@@ -135,9 +135,9 @@ char *zip_input(void *session, char *buffer, int *len, int *err,
     *nbuf = NULL;
     *err = 0;
 
-    zin->next_in = buffer;
+    zin->next_in = (unsigned char *) buffer;
     zin->avail_in = *len;
-    zin->next_out = zipInBuf;
+    zin->next_out = (unsigned char *) zipInBuf;
     zin->avail_out = zipInBufSize;   
 
     ret = inflate(zin, Z_SYNC_FLUSH);
@@ -209,9 +209,9 @@ char *zip_output(void *session, char *buffer, int *len,
 	return NULL;
     }
     
-    zout->next_in = z->buf;
+    zout->next_in = (unsigned char *) z->buf;
     zout->avail_in = z->bufsize;
-    zout->next_out = zipOutBuf;
+    zout->next_out = (unsigned char *) zipOutBuf;
     zout->avail_out = zipOutBufSize;
    
     /*

@@ -174,7 +174,8 @@ void report_error(char *text, aClient * cptr)
 {
     int errtmp = errno;     /* debug may change 'errno' */
     char *host;
-    int err, len = sizeof(err);
+    int err;
+    unsigned int len = sizeof(err);
     extern char *strerror();
 
     host = (cptr) ? get_client_name(cptr, (IsServer(cptr) ? HIDEME : FALSE)) 
@@ -209,7 +210,8 @@ void report_listener_error(char *text, aListener *lptr)
 {
     int errtmp = errno;          /* debug may change 'errno' */
     char *host;
-    int err, len = sizeof(err);
+    int err;
+    unsigned int len = sizeof(err);
     extern char *strerror();
 
     host = get_listener_name(lptr);
@@ -271,7 +273,8 @@ int add_listener(aPort *aport)
     aListener *lptr;
     aListener lstn;
     struct sockaddr_in server;
-    int ad[4], len = sizeof(server);
+    int ad[4];
+    unsigned int len = sizeof(server);
     char ipname[20];
 
     memset(&lstn, 0, sizeof(aListener));
@@ -560,7 +563,7 @@ void write_pidfile()
 static int check_init(aClient * cptr, char *sockn)
 {
     struct sockaddr_in sk;
-    int len = sizeof(struct sockaddr_in);
+    unsigned int len = sizeof(struct sockaddr_in);
 
     /* If descriptor is a tty, special checking... * IT can't EVER be a tty */
 
@@ -946,7 +949,7 @@ void reset_sock_opts(int fd, int type)
 /* set_sock_opts */
 static void set_sock_opts(int fd, aClient * cptr)
 {
-    int opt;
+    unsigned int opt;
     
 #ifdef SO_REUSEADDR
     opt = 1;
@@ -972,7 +975,7 @@ static void set_sock_opts(int fd, aClient * cptr)
 #if defined(MAXBUFFERS)
     if (rcvbufmax == 0)
     {
-        int optlen;
+        unsigned int optlen;
 
         optlen = sizeof(rcvbufmax);
         getsockopt(fd, SOL_SOCKET, SO_RCVBUF, (char *) &rcvbufmax, &optlen);
@@ -996,7 +999,7 @@ static void set_sock_opts(int fd, aClient * cptr)
 #if defined(MAXBUFFERS)
     if (sndbufmax == 0)
     {
-        int optlen;
+        unsigned int optlen;
     
         optlen = sizeof(sndbufmax);
         getsockopt(fd, SOL_SOCKET, SO_SNDBUF, (char *) &sndbufmax, &optlen);
@@ -1071,7 +1074,7 @@ static void set_listener_sock_opts(int fd, aListener *lptr)
 # if defined(MAXBUFFERS)
     if (rcvbufmax == 0) 
     {
-        int optlen;
+        unsigned int optlen;
 
         optlen = sizeof(rcvbufmax);
         getsockopt(fd, SOL_SOCKET, SO_RCVBUF, (char *) &rcvbufmax, &optlen);
@@ -1092,7 +1095,7 @@ static void set_listener_sock_opts(int fd, aListener *lptr)
 #if defined(MAXBUFFERS)
     if (sndbufmax == 0) 
     {
-        int optlen;
+        unsigned int optlen;
 
         optlen = sizeof(sndbufmax);
         getsockopt(fd, SOL_SOCKET, SO_SNDBUF, (char *) &sndbufmax, &optlen);
@@ -1113,7 +1116,8 @@ static void set_listener_sock_opts(int fd, aListener *lptr)
 
 int get_sockerr(aClient * cptr)
 {
-    int errtmp = errno, err = 0, len = sizeof(err);
+    int errtmp = errno, err = 0;
+    unsigned int len = sizeof(err);
     
 #ifdef  SO_ERROR
     if (cptr->fd >= 0)
@@ -1189,7 +1193,7 @@ aClient *add_connection(aListener *lptr, int fd)
     aClient *acptr = NULL;
     char *s, *t;
     struct sockaddr_in addr;
-    int len = sizeof(struct sockaddr_in);
+    unsigned int len = sizeof(struct sockaddr_in);
     struct userBan *ban;
     
     if (getpeername(fd, (struct sockaddr *) &addr, &len) == -1)
@@ -1468,7 +1472,7 @@ void read_error_exit(aClient *cptr, int length, int err)
 void accept_connection(aListener *lptr)
 {
     static struct sockaddr_in addr;
-    int addrlen = sizeof(struct sockaddr_in);
+    unsigned int addrlen = sizeof(struct sockaddr_in);
     char host[HOSTLEN + 2];
     int newfd;
     int i;
