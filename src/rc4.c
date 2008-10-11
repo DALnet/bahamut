@@ -73,7 +73,7 @@ void *rc4_initstate(unsigned char *key, int keylen)
    return (void *) rc4;
 }
 
-void rc4_process_stream(void *rc4_context, unsigned char *istring,
+void rc4_process_stream(void *rc4_context, char *istring,
 			unsigned int stringlen)
 {
     struct rc4_state *rc4 = (struct rc4_state *) rc4_context;
@@ -98,8 +98,8 @@ void rc4_process_stream(void *rc4_context, unsigned char *istring,
 }
 
 void rc4_process_stream_to_buf(void *rc4_context, 
-			       const unsigned char *istring, 
-                               unsigned char *ostring, unsigned int stringlen)
+			       const char *istring, 
+                               char *ostring, unsigned int stringlen)
 {
     struct rc4_state *rc4 = (struct rc4_state *) rc4_context;
     RC4BYTE *s = rc4->mstate;

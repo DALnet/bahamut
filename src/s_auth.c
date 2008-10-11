@@ -52,7 +52,7 @@ void start_auth(aClient *cptr)
 {
     struct sockaddr_in sock;
     struct sockaddr_in localaddr;
-    int         locallen;
+    unsigned int locallen;
 
     Debug((DEBUG_NOTICE, "start_auth(%x) fd %d status %d",
 	   cptr, cptr->fd, cptr->status));
@@ -139,7 +139,7 @@ void send_authports(aClient *cptr)
 {
     struct sockaddr_in us, them;
     char        authbuf[32];
-    int         ulen, tlen;
+    unsigned int ulen, tlen;
 
     Debug((DEBUG_NOTICE, "write_authports(%x) fd %d authfd %d stat %d",
 	   cptr, cptr->fd, cptr->authfd, cptr->status));
