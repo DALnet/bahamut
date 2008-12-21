@@ -43,6 +43,7 @@
 #define SBAN_CHAN      0x010   /* sban on the chname field */
 #define SBAN_WILD      0x020   /* sban mask contains wildcards */
 #define SBAN_TEMPORARY 0x040   /* sban is temporary */
+#define SBAN_SVSHOLD   0x080   /* sban was set by SVSHOLD and shouldn't be removed by kill -HUP */
 
 struct userBan {
    unsigned int flags;

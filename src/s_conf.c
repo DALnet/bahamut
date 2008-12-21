@@ -2166,7 +2166,7 @@ int rehash(aClient *cptr, aClient *sptr, int sig)
         remove_userbans_match_flags(UBAN_NETWORK, 0);
         /* remove all but kill {} blocks from conf */
         remove_userbans_match_flags(UBAN_LOCAL, UBAN_CONF);
-        remove_simbans_match_flags(SBAN_NICK|SBAN_LOCAL|SBAN_TEMPORARY, 0);
+	remove_simbans_match_flags(SBAN_NICK|SBAN_LOCAL|SBAN_TEMPORARY, SBAN_SVSHOLD);
         remove_simbans_match_flags(SBAN_CHAN|SBAN_LOCAL|SBAN_TEMPORARY, 0);
         remove_simbans_match_flags(SBAN_GCOS|SBAN_LOCAL|SBAN_TEMPORARY, 0);
     }

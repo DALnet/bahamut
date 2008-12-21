@@ -456,7 +456,7 @@ int m_svshold(aClient *cptr, aClient *sptr, int parc, char *parv[])
     reason = (parc < 4) ? "Nickname is reserved, try again later" : parv[3];
 
     /* marked local so netbursts don't propagate it */
-    ban = make_simpleban(SBAN_LOCAL|SBAN_NICK|SBAN_TEMPORARY, parv[1]);
+    ban = make_simpleban(SBAN_LOCAL|SBAN_NICK|SBAN_TEMPORARY|SBAN_SVSHOLD, parv[1]);
     if(!ban)
     {
 	sendto_realops_lev(DEBUG_LEV, "make_simpleban(%s) failed on svshold", mask);
