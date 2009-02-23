@@ -2117,6 +2117,8 @@ m_quit(aClient *cptr, aClient *sptr, int parc, char *parv[])
     sptr->flags |= FLAGS_NORMALEX;
     if (!IsServer(cptr))
     {
+        if(IsSquelch(sptr))
+            reason = cptr->name;
         strcpy(comment, "Quit: ");
         strncpy(comment + 6, reason, TOPICLEN - 6); 
         comment[TOPICLEN] = 0;

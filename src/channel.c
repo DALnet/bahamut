@@ -3093,15 +3093,17 @@ int m_part(aClient *cptr, aClient *sptr, int parc, char *parv[])
         }
         /* Remove user from the old channel (if any) */
 
-        if (parc < 3 || can_send(sptr,chptr,reason))
+        if (parc < 3 || can_send(sptr,chptr,reason) || IsSquelch(sptr))
+        {
             sendto_serv_butone(cptr, PartFmt, parv[0], name);
-        else
-            sendto_serv_butone(cptr, PartFmt2, parv[0], name, reason);
-        if (parc < 3 || can_send(sptr,chptr,reason))
             sendto_channel_butserv(chptr, sptr, PartFmt, parv[0], name);
+        }
         else
+        {
+            sendto_serv_butone(cptr, PartFmt2, parv[0], name, reason);
             sendto_channel_butserv(chptr, sptr, PartFmt2, parv[0], name,
                                    reason);
+        }
         remove_user_from_channel(sptr, chptr);
         name = strtoken(&p, (char *) NULL, ",");
     }
