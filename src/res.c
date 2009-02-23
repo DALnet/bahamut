@@ -1239,7 +1239,7 @@ struct hostent *get_res(char *lp)
     {
 	if(rptr->has_rev == 0)
 	{
-	    sendto_realops_lev(DEBUG_LEV, "Blindly accepting dns result for %s", 
+	    sendto_realops_lev(ADMIN_LEV, "Blindly accepting dns result for %s", 
 			   rptr->he.h_name ? rptr->he.h_name : 
 			   inetntoa((char *)&rptr->addr));
 	}
