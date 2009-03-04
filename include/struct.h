@@ -779,7 +779,7 @@ struct User
     char        host[HOSTLEN + 1];
     char       *server;        /* pointer to scached server name */
     unsigned int servicetype;  /* set by SVSMODE +T */
-    unsigned int servicestamp; /* set by SVSMODE +d */
+    unsigned long servicestamp; /* set by SVSMODE +d */
     AliasInfo  *alias;         /* shortform alias data for U:lined clients */
     /*
      * In a perfect world the 'server' name should not be needed, a

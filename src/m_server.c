@@ -48,7 +48,7 @@ static void sendnick_TS(aClient *cptr, aClient *acptr)
             ubuf[0] = '+';
             ubuf[1] = '\0';
         }
-        sendto_one(cptr, "NICK %s %d %ld %s %s %s %s %lu %lu :%s",
+        sendto_one(cptr, "NICK %s %d %ld %s %s %s %s %lu %u :%s",
                        acptr->name, acptr->hopcount + 1, acptr->tsinfo, ubuf,
                        acptr->user->username, acptr->user->host,
                        acptr->user->server, acptr->user->servicestamp,

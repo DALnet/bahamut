@@ -51,6 +51,11 @@
 
 #undef	DEBUG			/* because theres alot of debug code in here */
 
+#define TYPE_SIZE  2
+#define CLASS_SIZE 2
+#define TTL_SIZE   4
+#define DLEN_SIZE  2
+
 extern int  dn_expand(char *, char *, char *, char *, int);
 extern int  dn_skipname(char *, char *);
 extern int
@@ -736,9 +741,9 @@ static int proc_answer(ResRQ * rptr, HEADER *hptr, char *buf, char *eob)
 	hostbuf[HOSTLEN] = '\0';
 	cp += n;
 	type = (int) _getshort(cp);
-	cp += sizeof(short);
+       cp += TYPE_SIZE;
 	class = (int) _getshort(cp);
-	cp += sizeof(short);
+       cp += CLASS_SIZE;
 	if(class != C_IN)
 	{
 	    sendto_realops_lev(DEBUG_LEV,
@@ -799,15 +804,15 @@ static int proc_answer(ResRQ * rptr, HEADER *hptr, char *buf, char *eob)
 	    break;
 	cp += n;
 	type = (int) _getshort(cp);
-	cp += sizeof(short);
+       cp += TYPE_SIZE;
 	
 	class = (int) _getshort(cp);
-	cp += sizeof(short);
+       cp += CLASS_SIZE;
 	
 	rptr->ttl = _getlong(cp);
-	cp += sizeof(rptr->ttl);
+       cp += TTL_SIZE;
 	dlen = (int) _getshort(cp);
-	cp += sizeof(short);
+       cp += DLEN_SIZE;
 	
 	/* Wait to set rptr->type until we verify this structure */
 
@@ -1437,7 +1442,7 @@ static unsigned int hash_id(unsigned int id)
 
 static unsigned int hash_cp(char *cp)
 {
-   return ((unsigned int) cp) % ARES_IDCACSIZE;
+   return ((unsigned long) cp) % ARES_IDCACSIZE;
 }
 
 /* Add a new cache item to the queue and hash table. */

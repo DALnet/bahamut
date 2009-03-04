@@ -204,8 +204,8 @@ void restart(char *mesg)
     was_here = YES;
         
 #ifdef  USE_SYSLOG
-    (void) syslog(LOG_WARNING, "Restarting Server because: %s, sbrk(0)-etext: %d",
-                  mesg, (u_int) sbrk((size_t) 0) - (u_int) sbrk0);
+    (void) syslog(LOG_WARNING, "Restarting Server because: %s, sbrk(0)-etext: %lu",
+                  mesg, (u_long) sbrk((size_t) 0) - (u_long) sbrk0);
 #endif
     server_reboot();
 }
@@ -229,7 +229,7 @@ void server_reboot()
 {
     int     i;
     sendto_ops("Aieeeee!!!  Restarting server... sbrk(0)-etext: %d",
-               (u_int) sbrk((size_t) 0) - (u_int) sbrk0);
+               (u_long) sbrk((size_t) 0) - (u_long) sbrk0);
         
     Debug((DEBUG_NOTICE, "Restarting server..."));
     dump_connections(me.fd);
