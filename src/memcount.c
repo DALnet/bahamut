@@ -1441,7 +1441,7 @@ void report_memory_usage(aClient *cptr, int detail)
     memtrace_reset();
 #endif  /* MEMTRACE */
 
-    sendto_one(cptr, "%ssbrk(0)-etext: %u", pfxbuf,
-               (u_int) sbrk((size_t) 0) - (u_int) sbrk0);    
+    sendto_one(cptr, "%ssbrk(0)-etext: %lu", pfxbuf,
+               (u_long) sbrk((size_t) 0) - (u_long) sbrk0);
 }
 

@@ -1,6 +1,6 @@
 #include "ircsprintf.h"
 
-char num[12] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+char num[24] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 char itoa_tab[10] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'  };
 char xtoa_tab[16] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 
 		      'a', 'b', 'c', 'd', 'e', 'f'  };
@@ -54,10 +54,26 @@ inline int irc_printf(char *str, const char *pattern, va_list vl)
 		    }
 		    else
 			u=0;
-		    /* fallthrough */
+                   i=va_arg(ap, unsigned long);
+                   if(!u)
+                       if(i&0x80000000)
+                       {
+                           buf[len++]='-'; /* it's negative.. */
+                           i = 0x80000000 - (i & ~0x80000000);
+                       }
+                   s=&num[23];
+                   do
+                   {
+                       *--s=itoa_tab[i%10];
+                       i/=10;
+                   } while(i!=0);
+                   while(*s)
+                       buf[len++]=*s++;
+                   format++;
+                   break;
 		case 'd':
 		case 'i':
-		    i=va_arg(ap, unsigned long);
+                   i=va_arg(ap, unsigned int);
 		    if(!u)
 			if(i&0x80000000)
 			{

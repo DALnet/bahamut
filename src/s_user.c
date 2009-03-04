@@ -1055,7 +1055,7 @@ register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
         ubuf[1] = '\0';
     }
     hash_check_watch(sptr, RPL_LOGON);
-    sendto_serv_butone(cptr, "NICK %s %d %ld %s %s %s %s %lu %lu :%s",
+    sendto_serv_butone(cptr, "NICK %s %d %ld %s %s %s %s %lu %u :%s",
                                nick, sptr->hopcount + 1, sptr->tsinfo, ubuf,
                                user->username, user->host, user->server, 
                                sptr->user->servicestamp,
