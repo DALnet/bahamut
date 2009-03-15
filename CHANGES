@@ -1,3 +1,21 @@
+Changes for 1.8.5
+-----------------
+- Fixes for x64 - this is a combination of Kobi's work and my own.
+- Fixed m_part() and m_quit() to ignore part/quit reasons from squelched users.
+- Fixed compiler errors with gcc4.
+- Changed a debug message that could leak servers' IPs to ADMIN_LEV. Thanks key!
+- Fix configure tests for zlib removal.
+- This patch is intended to mark SVSHOLDs as SBAN_SVSHOLD to stop them from being removed by a kill -HUP
+- Fix several small issues where IPs would be displayed when they shouldnt be, from Kobi (kobi@dal.net)
+- Do not display uplink of ulined servers, from Kobi (kobi@dal.net)
+- Fix slight errors in m_who argument parsing, from kobi (kobi@dal.net)
+- Do not display warnings about juped servers attempting to commit, from Kobi (kobi@dal.net).
+- Fixed m_invite to honor umode +R and silence restrictions.
+- Two small rwho fixes to option parsing, from Kobi (kobi@dal.net)
+- Add hooks for several events
+- Remove zlib from the distribution - rely on the library provided by the system.
+
+
 Changes for 1.8.4
 -----------------
 - Fixed recursive server removal for non-NOQUIT links
