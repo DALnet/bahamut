@@ -1,3 +1,7 @@
+Changes for 1.8.6
+-----------------
+- Fix msg_has_ctrls() so it doesn't block non-control characters.
+
 Changes for 1.8.5
 -----------------
 - Fixes for x64 - this is a combination of Kobi's work and my own.
