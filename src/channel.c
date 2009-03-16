@@ -102,7 +102,7 @@ static int list_length(Link *lp)
 static int
 msg_has_ctrls(char *msg)
 {
-    char *c;
+    unsigned char *c;
 
     if (msg == NULL) 
         return 0;
