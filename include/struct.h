@@ -646,6 +646,9 @@ typedef struct Whowas
 /* skip clone checks? */
 #define CONF_FLAGS_SKIPCLONES      0x0100
 
+/* Port block flags */
+#define CONF_FLAGS_P_SSL      0x01
+
 /* global configuration flags */
 
 #define FLAGS_HUB       0x0001
@@ -737,6 +740,7 @@ struct Conf_Port
 	char *allow;
 	char *address;
 	int   port;
+	int   flags; /* For ssl flag (and noidentd/nodns flags in the future...) */
     aListener *lstn;
 	int   legal;
 	aPort *next;
@@ -773,6 +777,11 @@ struct Listener {
         u_long          ccount;   /* total number of clients to connect here */
         int             clients;  /* number of clients currently on this */
         aPort           *aport;   /* link to the P: line I came from */
+        int             flags;    /* Flags for ssl (and nodns/noidentd in the future) */
+#ifdef USE_SSL
+        SSL             *ssl;
+        X509            *client_cert;
+#endif
 };
 
 

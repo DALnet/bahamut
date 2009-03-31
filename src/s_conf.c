@@ -1174,6 +1174,22 @@ confadd_port(cVar *vars[], int lnum)
             tmp->type = NULL;
             x->port = atoi(tmp->value);
         }
+        else if(tmp->type && (tmp->type->flag & SCONFF_FLAGS))
+        {
+            char *s = tmp->value;
+
+            while (*s)
+                switch (*s++)
+                {
+                    case 'S': x->flags |= CONF_FLAGS_P_SSL; break;
+                    default:
+                        confparse_error("Unknown port flag", lnum);
+                        free_port(x);
+                        return -1;
+                }
+
+            tmp->type = NULL;
+        }
     }
     if(!(x->port > 0))
     {
@@ -1964,6 +1980,7 @@ merge_ports()
         {
             MyFree(old_port->allow);
             old_port->allow = aport->allow;
+            old_port->flags = aport->flags;
             old_port->legal = 1;
             MyFree(aport->address);
             MyFree(aport);

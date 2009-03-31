@@ -937,9 +937,9 @@ register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
             } while(0);
 #endif
 
-        sendto_realops_lev(CCONN_LEV, "Client connecting: %s (%s@%s) [%s] {%s}",
+        sendto_realops_lev(CCONN_LEV, "Client connecting: %s (%s@%s) [%s] {%s}%s",
                            nick, user->username, user->host, sptr->hostip,
-                           sptr->class->name);
+                           sptr->class->name, IsSSL(sptr) ? " SSL" : "");
 
         send_lusers(sptr, sptr, 1, parv);
         
