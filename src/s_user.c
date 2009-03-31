@@ -1726,7 +1726,7 @@ m_message(aClient *cptr, aClient *sptr, int parc, char *parv[], int notice)
                            target);
                 continue;
             }
-            if (ismine && IsNoNonReg(sptr) && !IsRegNick(acptr))
+            if (ismine && IsNoNonReg(sptr) && !IsRegNick(acptr) && !IsOper(acptr))
             {
                 if (!notice)
                     sendto_one(sptr, err_str(ERR_OWNMODE), me.name, parv[0],
