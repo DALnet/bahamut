@@ -276,6 +276,9 @@ int add_listener(aPort *aport)
     int ad[4];
     unsigned int len = sizeof(server);
     char ipname[20];
+#ifdef USE_SSL
+    extern int ssl_capable;
+#endif
 
     memset(&lstn, 0, sizeof(aListener));
     ad[0] = ad[1] = ad[2] = ad[3] = 0;
@@ -360,6 +363,16 @@ int add_listener(aPort *aport)
 
     lptr->aport = aport;
     aport->lstn = lptr;
+
+    lptr->flags = aport->flags;
+#ifdef USE_SSL
+    if(lptr->flags & CONF_FLAGS_P_SSL && ssl_capable)
+    {
+        SetSSL(lptr);
+        lptr->ssl = NULL;
+        lptr->client_cert = NULL;
+    }
+#endif
 
     set_listener_non_blocking(lptr->fd, lptr);
     add_fd(lptr->fd, FDT_LISTENER, lptr);
