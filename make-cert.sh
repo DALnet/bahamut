@@ -1,0 +1,30 @@
+#!/bin/sh
+if [ -z "$DPATH" ]; then
+    if [ -z "$1" ]; then
+        echo "Couldn't find path, usage: $0 <PATH>"
+        exit 1
+    else
+        DPATH=$1
+    fi
+
+    if [ ! -d "$DPATH" ]; then
+        echo "Couldn't find installation path: $DPATH"
+        exit 1
+    fi
+fi
+RANDCMD="";
+if [ ! -r /dev/random -o ! -r /dev/urandom ]; then
+    for file in /var/run/egd-pool /dev/egd-pool /etc/egd-pool /etc/entropy "$HOME/.rnd" .rnd; do
+      test -r $file && {
+        RANDCMD="-rand $file";
+        break;
+      }
+    done
+    if [ -z "$RANDCMD" ]; then
+        echo "Couldn't find random generation."
+        exit 1
+    fi
+fi
+openssl req -new -x509 -days 1825 -nodes -config make-cert.cnf -out "$DPATH/ircd.crt" -keyout "$DPATH/ircd.key" $RANDCMD
+openssl x509 -subject -dates -fingerprint -noout -in "$DPATH/ircd.crt"
+
