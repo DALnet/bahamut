@@ -1774,6 +1774,14 @@ m_rehash(aClient *cptr, aClient *sptr, int parc, char *parv[])
             remove_simbans_match_flags(SBAN_CHAN|SBAN_TEMPORARY, 0);
             return 0;
         }
+#ifdef USE_SSL
+        else if(mycmp(parv[1], "SSL") == 0) {
+            sendto_one(sptr, rpl_str(RPL_REHASHING), me.name, parv[0],
+                 "ssl");
+            sendto_ops("%s is rehashing ssl", parv[0]);
+            ssl_rehash();
+        }
+#endif
     }
     else 
     {

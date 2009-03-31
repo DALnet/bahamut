@@ -372,6 +372,15 @@ int probability_loadsets(char *);
 void probability_fini(void);
 void get_probabilities(aClient *, int *, int *, int *);
 
+#ifdef USE_SSL
+int ssl_init();
+int ssl_rehash();
+int safe_ssl_read(aClient *, void *, int);
+int safe_ssl_write(aClient *, const void *, int);
+int safe_ssl_accept(aClient *, int);
+int ssl_smart_shutdown(SSL *);
+#endif
+
 
 #include "find.h"
 

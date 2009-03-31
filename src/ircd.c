@@ -644,6 +644,9 @@ main(int argc, char *argv[])
     char        tmp[PATH_MAX];
     FILE        *mcsfp;
     char        *conferr;
+#ifdef USE_SSL
+    extern int  ssl_capable;
+#endif
         
     if ((timeofday = time(NULL)) == -1) 
     {
@@ -884,6 +887,16 @@ main(int argc, char *argv[])
         
     NOW = time(NULL);
         
+#ifdef USE_SSL
+    printf("Trying to initialize ssl...\n");
+    if(!(ssl_capable = ssl_init()))
+    {
+        fprintf(stderr, "ssl failed!\n");
+        exit(-1);
+    }
+    printf("ssl has been loaded.\n");
+#endif
+
     init_sys();
     forked = 1;
 

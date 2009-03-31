@@ -1,7 +1,7 @@
 CC=@CC@
 RM=@RM@
 MV=@MV@
-IRCDLIBS=@LIBS@ 
+IRCDLIBS=@LIBS@ -lssl 
 INCLUDEDIR=-I../include
 OPENSSLINC=@SSL_INCLUDES@
 ENGINE=@SENGINE@
@@ -22,7 +22,7 @@ SOURCES = blalloc.c bsd.c channel.c clientlist.c clones.c confparse.c \
           m_who.c match.c memcount.c modules.c packet.c parse.c pcre.c \
           probability.c res.c s_auth.c s_bsd.c s_conf.c s_debug.c s_err.c \
           s_misc.c s_numeric.c s_serv.c s_user.c sbuf.c scache.c send.c \
-          struct.c support.c throttle.c userban.c whowas.c zlink.c \
+          struct.c support.c throttle.c userban.c whowas.c zlink.c ssl.c \
           $(ENGINE) $(CRYPTO)
 
 OBJECTS = $(SOURCES:.c=.o) version.o
@@ -378,4 +378,7 @@ socketengine_kqueue.o: socketengine_kqueue.c ../include/struct.h \
  ../include/common.h ../include/h.h ../include/send.h \
  ../include/fdlist.h ../include/ircsprintf.h ../include/find.h \
  ../include/fds.h
-socketengine_epoll.o: ../include/config.h ../include/h.h
+socketengine_epoll.o: ../include/struct.h ../include/config.h \
+ ../include/h.h
+ssl.o: ../include/struct.h ../include/config.h \
+ ../include/common.h ../include/sys.h ../include/h.h

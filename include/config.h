@@ -554,6 +554,13 @@
 #define EXEMPT_LISTS
 #define INVITE_LISTS
 
+/*
+ * USE_SSL - Add SSL support for users
+ */
+#define USE_SSL
+#define IRCDSSL_KPATH "ircd.key"
+#define IRCDSSL_CPATH "ircd.crt"
+
 /******************************************************************
  * STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP
  *
