@@ -2070,6 +2070,10 @@ do_user(char *nick, aClient *cptr, aClient *sptr, char *username, char *host,
 #ifndef NO_DEFAULT_INVISIBLE
         sptr->umode |= UMODE_i;
 #endif
+#ifdef USE_SSL
+        if(IsSSL(sptr))
+            sptr->umode |= UMODE_S;
+#endif
 #ifdef NO_USER_SERVERKILLS
         sptr->umode &= ~UMODE_k;
 #endif

@@ -897,8 +897,20 @@ void close_connection(aClient *cptr)
 
     if (cptr->fd >= 0)
     {
+#ifdef USE_SSL
+        if(!IsDead(cptr))
+#endif
         dump_connections(cptr->fd);
         local[cptr->fd] = NULL;
+#ifdef USE_SSL
+        if(IsSSL(cptr) && cptr->ssl)
+        {
+            SSL_set_shutdown(cptr->ssl, SSL_RECEIVED_SHUTDOWN);
+            ssl_smart_shutdown(cptr->ssl);
+            SSL_free(cptr->ssl);
+            cptr->ssl = NULL;
+        }
+#endif
         del_fd(cptr->fd);
         close(cptr->fd);
         cptr->fd = -2;
@@ -1286,6 +1298,41 @@ aClient *add_connection(aListener *lptr, int fd)
     start_auth(acptr);
 #endif
     check_client_fd(acptr);
+
+#ifdef USE_SSL
+    if(IsSSL(lptr))
+    {
+        extern SSL_CTX *ircdssl_ctx;
+
+        acptr->ssl = NULL;
+        if((acptr->ssl = SSL_new(ircdssl_ctx)) == NULL)
+        {
+              sendto_realops_lev(DEBUG_LEV, "SSL creation of "
+                        "new SSL object failed [client %s]",
+                        acptr->sockhost);
+              ircstp->is_ref++;
+              acptr->fd = -2;
+              free_client(acptr);
+              return NULL;
+        }
+        SetSSL(acptr);
+        set_non_blocking(fd, acptr);
+        set_sock_opts(fd, acptr);
+        SSL_set_fd(acptr->ssl, fd);
+        if(!safe_ssl_accept(acptr, fd))
+        {
+            SSL_set_shutdown(acptr->ssl, SSL_RECEIVED_SHUTDOWN);
+            ssl_smart_shutdown(acptr->ssl);
+            SSL_free(acptr->ssl);
+            ircstp->is_ref++;
+            acptr->fd = -2;
+            free_client(acptr);
+            close(fd);
+            return NULL;
+        }
+    }
+#endif
+
     return acptr;
 }
 
@@ -1372,10 +1419,26 @@ int read_packet(aClient * cptr)
     
 #if defined(MAXBUFFERS)
         if (IsPerson(cptr))
+        {
+#ifdef USE_SSL
+            if(IsSSL(cptr) && cptr->ssl)
+                length = safe_ssl_read(cptr, readbuf, 8192 * sizeof(char));
+            else
+#endif
             length = recv(cptr->fd, readbuf, 8192 * sizeof(char), 0);
+        }
+#ifdef USE_SSL
+        else if(IsSSL(cptr) && cptr->ssl)
+            length = safe_ssl_read(cptr, readbuf, rcvbufmax * sizeof(char));
+#endif
         else
             length = recv(cptr->fd, readbuf, rcvbufmax * sizeof(char), 0);
 #else
+#ifdef USE_SSL
+        if(IsSSL(cptr) && cptr->ssl)
+            length = safe_ssl_read(cptr, readbuf, sizeof(readbuf));
+        else
+#endif
         length = recv(cptr->fd, readbuf, sizeof(readbuf), 0);
 #endif
 
@@ -1548,6 +1611,15 @@ int readwrite_client(aClient *cptr, int isread, int iswrite)
      * - the socket is waiting for a connect() call
      * - the socket is blocked
      */
+
+#ifdef USE_SSL
+    if(cptr->ssl && IsSSL(cptr) && !SSL_is_init_finished(cptr->ssl))
+    {
+        if(IsDead(cptr) || !safe_ssl_accept(cptr, cptr->fd))
+            close_connection(cptr);
+        return 1;
+    }
+#endif
 
     if(iswrite)
     {

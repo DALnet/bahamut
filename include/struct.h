@@ -48,6 +48,15 @@
 #endif
 #endif
 
+#ifdef USE_SSL
+#include <openssl/rsa.h>       /* OpenSSL stuff */
+#include <openssl/crypto.h>
+#include <openssl/x509.h>
+#include <openssl/pem.h>
+#include <openssl/ssl.h>
+#include <openssl/err.h>
+#endif
+
 #define REPORT_DO_DNS_	   ":%s NOTICE AUTH :*** Looking up your hostname..."
 #define REPORT_FIN_DNS_	   ":%s NOTICE AUTH :*** Found your hostname"
 #define REPORT_FIN_DNSC_   ":%s NOTICE AUTH :*** Found your hostname, cached"
@@ -966,6 +975,11 @@ struct Client
     unsigned int num_target_errors;
 #endif
 
+#ifdef USE_SSL
+    SSL  *ssl;
+    X509 *client_cert;
+#endif
+
 };
 
 #define	CLIENT_LOCAL_SIZE sizeof(aClient)
@@ -1413,6 +1427,7 @@ typedef struct SearchOptions
 /* internal defines for cptr->sockerr */
 #define IRCERR_BUFALLOC	   -11
 #define IRCERR_ZIP	   -12
+#define IRCERR_SSL	   -13
 
 #endif /* __struct_include__ */
 
