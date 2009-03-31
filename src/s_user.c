@@ -87,6 +87,7 @@ int  user_modes[] =
     UMODE_x, 'x',
     UMODE_X, 'X',
     UMODE_j, 'j',
+    UMODE_S, 'S',
     UMODE_K, 'K',
     UMODE_I, 'I',
     0, 0
@@ -1969,6 +1970,8 @@ m_whois(aClient *cptr, aClient *sptr, int parc, char *parv[])
         if (user->away)
             sendto_one(sptr, rpl_str(RPL_AWAY), me.name, parv[0], name, 
                        user->away);
+        if(IsUmodeS(acptr))
+            sendto_one(sptr, rpl_str(RPL_USINGSSL), me.name, parv[0], name);
         
         buf[0] = '\0';
         if (IsAnOper(acptr))
@@ -2982,7 +2985,8 @@ m_umode(aClient *cptr, aClient *sptr, int parc, char *parv[])
                 case 'r':
                 case 'x':
                 case 'X':
-                    break; /* users can't set themselves +r,+x, or +X! */
+                case 'S':
+                    break; /* users can't set themselves +r,+x,+X or +S! */
                 case 'A':
                     /* set auto +a if user is setting +A */
                     if (MyClient(sptr) && (what == MODE_ADD))

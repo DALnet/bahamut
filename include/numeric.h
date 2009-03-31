@@ -86,6 +86,8 @@
 #define RPL_SILELIST         271
 #define RPL_ENDOFSILELIST    272
 
+#define RPL_USINGSSL         275
+
 #define	RPL_NONE             300
 #define RPL_AWAY             301
 #define RPL_USERHOST         302
@@ -232,6 +234,7 @@
 #define ERR_CHANBANREASON    485
 #define ERR_NONONREG         486
 #define ERR_MSGSERVICES      487
+#define ERR_NOSSL            488
 
 #define ERR_NOOPERHOST       491
 

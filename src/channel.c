@@ -1170,6 +1170,8 @@ static void channel_modes(aClient *cptr, char *mbuf, char *pbuf,
         *mbuf++ = 'O';
     if (chptr->mode.mode & MODE_MODREG)
         *mbuf++ = 'M';
+    if (chptr->mode.mode & MODE_SSLONLY)
+        *mbuf++ = 'S';
 #ifdef USE_CHANMODE_L
     if (chptr->mode.mode & MODE_LISTED)
         *mbuf++ = 'L';
@@ -1530,7 +1532,7 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
         MODE_MODERATED, 'm', MODE_NOPRIVMSGS, 'n',
         MODE_TOPICLIMIT, 't', MODE_REGONLY, 'R',
         MODE_INVITEONLY, 'i', MODE_NOCTRL, 'c', MODE_OPERONLY, 'O',
-        MODE_MODREG, 'M', 
+        MODE_MODREG, 'M', MODE_SSLONLY, 'S',
 #ifdef USE_CHANMODE_L
         MODE_LISTED, 'L',
 #endif
@@ -2327,6 +2329,11 @@ static int can_join(aClient *sptr, aChannel *chptr, char *key)
     {
         r = "+l";
         error = ERR_CHANNELISFULL;
+    }
+    else if (chptr->mode.mode & MODE_SSLONLY && !IsSSL(sptr))
+    {
+        r = "+S";
+        error = ERR_NOSSL;
     }
     else if (chptr->mode.mode & MODE_REGONLY && !IsRegNick(sptr))
         error = ERR_NEEDREGGEDNICK;
@@ -4387,6 +4394,7 @@ int m_sjoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
             SJ_MODEADD('M', MODE_MODREG);
             SJ_MODEADD('c', MODE_NOCTRL);
             SJ_MODEADD('O', MODE_OPERONLY);
+            SJ_MODEADD('S', MODE_SSLONLY);
 #ifdef USE_CHANMODE_L
             SJ_MODEADD('L', MODE_LISTED);
 #endif
@@ -4547,6 +4555,7 @@ int m_sjoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
         SJ_MODEPLUS('M', MODE_MODREG);
         SJ_MODEPLUS('c', MODE_NOCTRL);
         SJ_MODEPLUS('O', MODE_OPERONLY);
+        SJ_MODEPLUS('S', MODE_SSLONLY);
 #ifdef USE_CHANMODE_L
         SJ_MODEPLUS('L', MODE_LISTED);
 #endif
@@ -4562,6 +4571,7 @@ int m_sjoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
         SJ_MODEMINUS('M', MODE_MODREG);
         SJ_MODEMINUS('c', MODE_NOCTRL);
         SJ_MODEMINUS('O', MODE_OPERONLY);
+        SJ_MODEMINUS('S', MODE_SSLONLY);
 #ifdef USE_CHANMODE_L
         SJ_MODEMINUS('L', MODE_LISTED);
 #endif

@@ -26,8 +26,8 @@ static char *replies[] =
     /* 002 RPL_YOURHOST */	":%s 002 %s :Your host is %s, running "
                                 "version %s",
     /* 003 RPL_CREATED */	":%s 003 %s :This server was created %s",
-    /* 004 RPL_MYINFO */	":%s 004 %s %s %s aAbcdefFghiIjkKmnoOrRswxXy "
-                                "bceiIjklLmMnoOprRstv",
+    /* 004 RPL_MYINFO */	":%s 004 %s %s %s aAbcdefFghiIjkKmnoOrRsSwxXy "
+                                "bceiIjklLmMnoOprRsStv",
     /* 005 RPL_ISUPPORT */      ":%s 005 %s %s :are available on this server",
     /* 006 */	                NULL,
     /* 007 */	                NULL,
@@ -300,7 +300,7 @@ static char *replies[] =
     /* 272 RPL_ENDOFSILELIST*/	":%s 272 %s :End of /SILENCE list.",
     /* 273 */	                NULL,
     /* 274 */	                NULL,
-    /* 275 */	                NULL,	/* In use by Undernet */
+    /* 275 RPL_USINGSSL */	":%s 275 %s %s :is using a secure connection (SSL)",
     /* 276 */	                NULL,
     /* 277 */	                NULL,
     /* 278 */	                NULL,
@@ -553,7 +553,8 @@ static char *replies[] =
                                 "nick to private message that person",
     /* 487 ERR_MSGSERVICES */	":%s 487 %s :Error! \"/msg %s\" is no longer supported. "
                                 "Use \"/msg %s@%s\" or \"/%s\" instead.",
-    /* 488 */	                NULL,
+    /* 488 ERR_NOSSL */	        ":%s 488 %s :SSL Only channel (+S), You must connect "
+                                "using SSL to join this channel.",
     /* 489 */	                NULL,	/* In use by Undernet */
     /* 490 */	                NULL,
     /* 491 ERR_NOOPERHOST */	":%s 491 %s :No Oper block for your host",
