@@ -238,6 +238,7 @@ typedef struct SAliasInfo AliasInfo;
 #define FLAGS_RC4OUT       0x2000000  /* This link is rc4 encrypted. */
 #define FLAGS_ZIPPED_IN	   0x4000000  /* This link is gzipped. */
 #define FLAGS_ZIPPED_OUT   0x8000000 /* This link is gzipped. */
+#define FLAGS_SSL          0x10000000 /* client is using SSL */
 
 /* Capabilities of the ircd or clients */
 
@@ -307,6 +308,7 @@ typedef struct SAliasInfo AliasInfo;
 #define UMODE_j	    0x2000000   /* umode +j - client rejection notices */
 #define UMODE_K     0x4000000   /* umode +K - U: lined server kill messages */
 #define UMODE_I     0x8000000   /* umode +I - invisible oper (masked) */
+#define UMODE_S     0x10000000  /* umode +S - User is using SSL */
 
 /* for sendto_ops_lev */
 
@@ -329,7 +331,7 @@ typedef struct SAliasInfo AliasInfo;
  *  that mode will be 'silent.'
  */
 
-#define SEND_UMODES (UMODE_a|UMODE_i|UMODE_o|UMODE_r|UMODE_A|UMODE_I|UMODE_R)
+#define SEND_UMODES (UMODE_a|UMODE_i|UMODE_o|UMODE_r|UMODE_A|UMODE_I|UMODE_R|UMODE_S)
 #define ALL_UMODES (SEND_UMODES|UMODE_b|UMODE_c|UMODE_d|UMODE_e|UMODE_f|\
                     UMODE_g|UMODE_h|UMODE_j|UMODE_k|UMODE_m|UMODE_n|UMODE_s|\
                     UMODE_w|UMODE_y|UMODE_F|UMODE_K|UMODE_O)
@@ -365,6 +367,7 @@ typedef struct SAliasInfo AliasInfo;
 #define IsUmodej(x)		((x)->umode & UMODE_j)
 #define	IsUmodeK(x)		((x)->umode & UMODE_K)
 #define	IsUmodek(x)		((x)->umode & UMODE_k)
+#define IsUmodeS(x)		((x)->umode & UMODE_S)
 #define	IsUmodes(x)		((x)->umode & UMODE_s)
 #define	IsUmodeI(x)		((x)->umode & UMODE_I)
 #define IsNoNonReg(x)           ((x)->umode & UMODE_R)
@@ -422,6 +425,9 @@ typedef struct SAliasInfo AliasInfo;
 #define SetZipIn(x)		((x)->flags |= FLAGS_ZIPPED_IN)
 #define ZipOut(x)		((x)->flags & FLAGS_ZIPPED_OUT)
 #define SetZipOut(x)		((x)->flags |= FLAGS_ZIPPED_OUT)
+
+#define IsSSL(x)		((x)->flags & FLAGS_SSL)
+#define SetSSL(x)		((x)->flags |= FLAGS_SSL)
 
 #define ClearSAdmin(x)          ((x)->umode &= ~UMODE_a)
 #define ClearAdmin(x)           ((x)->umode &= ~UMODE_A)
@@ -1238,6 +1244,7 @@ struct Channel
 #define MODE_MODREG     0x10000
 #define MODE_LISTED	0x20000
 #define MODE_JOINRATE	0x40000
+#define MODE_SSLONLY	0x80000
 
 /* mode flags which take another parameter (With PARAmeterS) */
 
