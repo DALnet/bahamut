@@ -1,6 +1,8 @@
 CC=@CC@
 RM=@RM@
 MV=@MV@
+CP=@CP@
+SED=@SED@
 IRCDLIBS=@LIBS@
 INSTALL=@INSTALL@
 INSTALL_BIN=@INSTALL_PROGRAM@
@@ -26,7 +28,7 @@ convert_conf: $(convert_conf_OBJECTS)
 	$(CC) -o convert_conf $(convert_conf_OBJECTS) $(IRCDLIBS)
 
 clean:
-	$(RM) -f $(all_OBJECTS) mkpasswd convert_conf *~ core
+	$(RM) -f $(all_OBJECTS) mkpasswd convert_conf *~ core make-cert.sh
 
 distclean: clean
 	$(RM) -f Makefile
@@ -43,3 +45,6 @@ install:
 		echo $(INSTALL_BIN) $$i $(INSTALL_DIR); \
 		$(INSTALL_BIN) $$i $(INSTALL_DIR); \
 	done
+	$(CP) make-cert.tmpl make-cert.sh
+	$(SED) -i s:@@@DPATH@@@:$(INSTALL_DIR):g make-cert.sh
+	$(INSTALL_BIN) make-cert.sh $(INSTALL_DIR);
