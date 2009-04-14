@@ -2704,8 +2704,8 @@ int m_oper(aClient *cptr, aClient *sptr, int parc, char *parv[])
         Count.oper++;
         add_to_list(&oper_list, sptr);
         throttle_remove(oper_ip);
-        sendto_ops("%s (%s@%s) is now operator (%c)", parv[0],
-                   sptr->user->username, sptr->sockhost,
+        sendto_ops("%s (%s!%s@%s) is now operator (%c)", aoper->nick,
+                   sptr->name, sptr->user->username, sptr->sockhost,
                    IsOper(sptr) ? 'O' : 'o');
         send_umode_out(cptr, sptr, old);
         send_rplisupportoper(sptr);
