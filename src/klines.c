@@ -271,7 +271,7 @@ int m_unkline(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
     if (!existing)
     {
-        sendto_one(sptr, ":%s NOTICE %s :UNKINE: No such ban %s@%s", me.name,
+        sendto_one(sptr, ":%s NOTICE %s :UNKLINE: No such ban %s@%s", me.name,
                    parv[0], user, host);
         return 0;
     }
