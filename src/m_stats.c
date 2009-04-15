@@ -453,7 +453,7 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
     static time_t   last_used = 0L;
 
 #ifdef NO_USER_STATS
-    if (!IsAnOper(sptr))
+    if (!IsAnOper(sptr) && !IsULine(sptr))
     {
         sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name, parv[0]);
         return 0;
