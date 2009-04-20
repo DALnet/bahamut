@@ -108,6 +108,8 @@ struct ConfVar
 #define SCONFF_MASK                 0x100000
 #define SCONFT_IPMASK   "IPMASK"
 #define SCONFF_IPMASK               0x200000
+#define SCONFT_MAXRECVQ "MAXRECVQ"
+#define SCONFF_MAXRECVQ             0x400000
 
 #define SCONFF_STRING               0x800000    /* allow freeform strings */
 
@@ -227,6 +229,7 @@ sConf confclasstab[] =
     {SCONFT_MAXUSERS, SCONFF_MAXUSERS, VARTYPE_INT},
     {SCONFT_MAXLINKS, SCONFF_MAXUSERS, VARTYPE_INT},
     {SCONFT_MAXSENDQ, SCONFF_MAXSENDQ, VARTYPE_INT},
+    {SCONFT_MAXRECVQ, SCONFF_MAXRECVQ, VARTYPE_INT},
     {(char *) 0, 0, 0}
 };
 
