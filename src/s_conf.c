@@ -94,6 +94,7 @@ void initclass()
     new_classes->pingfreq = PINGFREQUENCY;
     new_classes->maxlinks = MAXIMUM_LINKS;
     new_classes->maxsendq = MAXSENDQLENGTH;
+    new_classes->maxrecvq = CLIENT_FLOOD;
     new_classes->links = 0;
 }
 
@@ -1392,6 +1393,23 @@ confadd_class(cVar *vars[], int lnum)
             tmp->type = NULL;
             x->maxsendq = atoi(tmp->value);
         }
+        else if(tmp->type && (tmp->type->flag & SCONFF_MAXRECVQ))
+        {
+            if(x->maxrecvq  > 0)
+            {
+                confparse_error("Multiple maxrecvq definitions", lnum);
+                free_class(x);
+                return -1;
+            }
+            tmp->type = NULL;
+            x->maxrecvq = atoi(tmp->value);
+            if((x->maxrecvq > 8000) || (x->maxrecvq < 512))
+            {
+                confparse_error("maxrecvq definition needs redefining", lnum);
+                free_class(x);
+                return -1;
+            }
+        }
     }
     if(!x->name)
     {
@@ -2015,6 +2033,7 @@ merge_classes()
             old_class->maxlinks = class->maxlinks;
             old_class->maxsendq = class->maxsendq;
             old_class->ip24clones = class->ip24clones;
+            old_class->maxrecvq = class->maxrecvq;
             class->maxlinks = -1;
         }
     }

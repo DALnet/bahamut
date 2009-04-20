@@ -1493,13 +1493,13 @@ int read_packet(aClient * cptr)
 #ifdef NO_OPER_FLOOD
         !IsAnOper(cptr) &&
 #endif
-        SBufLength(&cptr->recvQ) > CLIENT_FLOOD)
+        SBufLength(&cptr->recvQ) > ((cptr->class && cptr->class->maxrecvq) ? cptr->class->maxrecvq : CLIENT_FLOOD))
         {
             sendto_realops_lev(FLOOD_LEV, "Flood -- %s!%s@%s (%d) Exceeds %d"
                                " RecvQ", cptr->name[0] ? cptr->name : "*",
                                cptr->user ? cptr->user->username : "*",
                                cptr->user ? cptr->user->host : "*",
-                               SBufLength(&cptr->recvQ), CLIENT_FLOOD);
+                               SBufLength(&cptr->recvQ), (cptr->class && cptr->class->maxrecvq) ? cptr->class->maxrecvq : CLIENT_FLOOD);
             return exit_client(cptr, cptr, cptr, "Excess Flood");
         }
         return do_client_queue(cptr);
