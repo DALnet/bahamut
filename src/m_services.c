@@ -230,6 +230,7 @@ int m_svsnick(aClient *cptr, aClient *sptr, int parc, char *parv[])
     strcpy(acptr->name, newnick);
     add_to_client_hash_table(acptr->name, acptr);
     hash_check_watch(acptr, RPL_LOGON);
+    flush_user_banserial(acptr);
 
     return 0;
 }

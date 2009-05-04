@@ -91,6 +91,7 @@ extern int  	 bootopt;
 extern char 	*canonize(char *);
 extern void 	 check_fdlists();
 extern aChannel *find_channel(char *, aChannel *);
+extern void	flush_user_banserial(aClient *);
 extern aBan 	*nick_is_banned(aChannel *, char *, aClient *);
 extern void 	 remove_matching_bans(aChannel *, aClient *, aClient *);
 #ifdef EXEMPT_LISTS

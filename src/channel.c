@@ -537,6 +537,26 @@ static int is_banned(aClient *cptr, aChannel *chptr, chanMember *cm)
     return 0;
 }
 
+/*
+ * Forces the cached banned status for a user to be flushed in all the channels
+ * they are in.
+ */
+void flush_user_banserial(aClient *cptr)
+{
+	Link *ptr;
+
+	if (!IsPerson(cptr))
+		return;
+	for (ptr = cptr->user->channel; ptr; ptr = ptr->next)
+	{
+		aChannel *chptr = ptr->value.chptr;
+		chanMember *cm = find_user_member(chptr->members, cptr);
+
+		if (cm)
+			cm->banserial = chptr->banserial - 1;
+	}
+}
+
 aBan *nick_is_banned(aChannel *chptr, char *nick, aClient *cptr)
 {
     aBan *ban;
