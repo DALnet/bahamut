@@ -575,6 +575,13 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	    /* If it changed nicks, -r it */
 	    if (mycmp(parv[0], nick))
 		sptr->umode &= ~UMODE_r;
+
+	    /*
+	     * Flush the banserial for the channels the user is in, since this
+	     * could be a SVSNICK induced nick change, which overrides any ban
+	     * checking on the originating server.
+	     */
+	    flush_user_banserial(sptr);
 	}
     } 
     else
