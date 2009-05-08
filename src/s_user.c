@@ -57,6 +57,7 @@ extern void reset_sock_opts();
 extern int send_lusers(aClient *,aClient *,int, char **);
 #endif
 extern int server_was_split;
+extern int svspanic;
 
 static char buf[BUFSIZE], buf2[BUFSIZE];
 int  user_modes[] =
@@ -290,6 +291,14 @@ hunt_server(aClient *cptr, aClient *sptr, char *command, int server,
         return HUNTED_NOSUCH;
     }
 #endif
+
+    if(IsULine(acptr) && (svspanic>1 || (svspanic>0 && !IsARegNick(sptr))) && !IsOper(sptr))
+    {
+        if(MyClient(sptr))
+            sendto_one(sptr, err_str(ERR_SERVICESDOWN), me.name, parv[0],
+                       acptr->name);
+        return HUNTED_NOSUCH;
+    }
 
     if (MyClient(acptr))
         return HUNTED_ISME;
@@ -1067,7 +1076,7 @@ register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
         /* if the I:line doesn't have a password and the user does
          * send it over to NickServ
          */
-        if (sptr->passwd[0] && aliastab[AII_NS].client)
+        if (sptr->passwd[0] && aliastab[AII_NS].client && !svspanic)
             sendto_alias(&aliastab[AII_NS], sptr, "SIDENTIFY %s",sptr->passwd);
 
         memset(sptr->passwd, '\0', PASSWDLEN);
@@ -1687,6 +1696,14 @@ m_message(aClient *cptr, aClient *sptr, int parc, char *parv[], int notice)
                     sendto_alias(ai, sptr, "%s", parv[2]);
                     continue;
                 }
+            }
+
+            if((svspanic>1 || (svspanic>0 && !IsARegNick(sptr))) && !IsOper(sptr))
+            {
+                if(MyClient(sptr))
+                    sendto_one(sptr, err_str(ERR_SERVICESDOWN), me.name, parv[0],
+                               acptr->name);
+                continue;
             }
 
             /* no flood/dcc/whatever checks, just send */
