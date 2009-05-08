@@ -37,6 +37,8 @@
 /* Externally defined stuffs */
 extern int user_modes[];
 
+int svspanic = 0; /* Services panic */
+
 /*
  * the services aliases. *
  *
@@ -86,6 +88,14 @@ int m_aliased(aClient *cptr, aClient *sptr, int parc, char *parv[], AliasInfo *a
     {
         sendto_one(sptr, err_str(ERR_SERVICESDOWN), me.name, parv[0],
                    ai->nick);
+        return 0;
+    }
+
+    if((svspanic>1 && !IsOper(sptr)) || (svspanic>0 && !IsARegNick(sptr) && !IsOper(sptr)))
+    {
+        if(MyClient(sptr))
+            sendto_one(sptr, err_str(ERR_SERVICESDOWN), me.name, parv[0],
+                       ai->nick);
         return 0;
     }
 
@@ -525,6 +535,24 @@ m_svsclone(aClient *cptr, aClient *sptr, int parc, char *parv[])
     d = atoi(parv[2]);
     clones_set(parv[1], CLIM_HARD_GLOBAL, d);
     sendto_serv_butone(cptr, ":%s SVSCLONE %s %s", parv[0], parv[1], parv[2]);
+
+    return 0;
+}
+
+
+/* m_svspanic
+ *   Stops users from sending commands to u:lined servers.
+ * parv[0] - sender
+ * parv[1] - 2/1/0 (0 - all users can use services, 1 - only +r users can use services, 2 - only opers (+o) can use services)
+ */
+int m_svspanic(aClient *cptr, aClient *sptr, int parc, char *parv[])
+{
+    if(!IsULine(sptr) || parc < 2)
+        return 0;
+
+    svspanic = atoi(parv[1]);
+
+    sendto_serv_butone(cptr, ":%s SVSPANIC %s", sptr->name, parv[1]);
 
     return 0;
 }
