@@ -3473,10 +3473,19 @@ int m_invite(aClient *cptr, aClient *sptr, int parc, char *parv[])
             return 0;
         }
 
-        if (!IsULine(sptr) && IsNoNonReg(acptr) && !IsRegNick(sptr) && !IsOper(sptr))
+        if (!IsULine(sptr) && !IsOper(sptr))
         {
-            sendto_one(sptr, err_str(ERR_NONONREG), me.name, parv[0], acptr->name);
-            return 0;
+            if (IsNoNonReg(acptr) && !IsRegNick(sptr))
+            {
+                sendto_one(sptr, err_str(ERR_NONONREG), me.name, parv[0], acptr->name);
+                return 0;
+            }
+
+            if (IsUmodeC(acptr) && (!IsNoNonReg(acptr) || IsRegNick(sptr)) && acptr->user->joined && !find_shared_chan(sptr, acptr))
+            {
+                sendto_one(sptr, err_str(ERR_NOSHAREDCHAN), me.name, parv[0], acptr->name);
+                return 0;
+            }
         }
 
         sendto_one(sptr, rpl_str(RPL_INVITING), me.name, parv[0], acptr->name,
@@ -4909,6 +4918,23 @@ char  *pretty_mask(char *mask)
     else if (!user && strchr(cp, '.'))
         return make_nick_user_host(NULL, NULL, cp);
     return make_nick_user_host(cp, user, host);
+}
+
+/* Check if two users share a common channel */
+int find_shared_chan(aClient *cptr1, aClient *cptr2)
+{
+    Link *l1, *l2;
+
+    for(l1 = cptr1->user->channel; l1; l1 = l1->next)
+    {
+        for(l2 = cptr2->user->channel; l2; l2 = l2->next)
+        {
+            if(l1->value.chptr == l2->value.chptr)
+                return 1; /* Found a shared channel */
+        }
+    }
+
+    return 0; /* No shared channels */
 }
 
 u_long
