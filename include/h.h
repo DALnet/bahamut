@@ -108,6 +108,7 @@ extern int   	 is_chan_op(aClient *, aChannel *);
 extern int  	 has_voice(aClient *, aChannel *);
 extern int  	 count_channels(aClient *);
 extern char 	*pretty_mask(char *);
+extern int       find_shared_chan(aClient *cptr1, aClient *cptr2);
 
 
 extern aClient 	*find_chasing(aClient *, char *, int *);

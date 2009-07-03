@@ -68,6 +68,7 @@ int  user_modes[] =
     UMODE_w, 'w',
     UMODE_s, 's',
     UMODE_c, 'c',
+    UMODE_C, 'C',
     UMODE_r, 'r',
     UMODE_R, 'R',
     UMODE_k, 'k',
@@ -1743,11 +1744,25 @@ m_message(aClient *cptr, aClient *sptr, int parc, char *parv[], int notice)
                            target);
                 continue;
             }
+            if (IsUmodeC(acptr) && !IsOper(sptr) && (!IsNoNonReg(acptr) || IsRegNick(sptr)) && acptr->user->joined && !find_shared_chan(sptr, acptr))
+            {
+                if (ismine && !notice)
+                    sendto_one(sptr, err_str(ERR_NOSHAREDCHAN), me.name, parv[0],
+                           target);
+                continue;
+            }
             if (ismine && IsNoNonReg(sptr) && !IsRegNick(acptr) && !IsOper(acptr))
             {
                 if (!notice)
                     sendto_one(sptr, err_str(ERR_OWNMODE), me.name, parv[0],
                            acptr->name, "+R");
+                continue;
+            }
+            if (ismine && IsUmodeC(sptr) && !IsOper(sptr) && (!IsNoNonReg(sptr) || IsRegNick(acptr)) && sptr->user->joined && !find_shared_chan(sptr, acptr))
+            {
+                if (!notice)
+                    sendto_one(sptr, err_str(ERR_OWNMODE), me.name, parv[0],
+                           acptr->name, "+C");
                 continue;
             }
 

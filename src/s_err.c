@@ -26,7 +26,7 @@ static char *replies[] =
     /* 002 RPL_YOURHOST */	":%s 002 %s :Your host is %s, running "
                                 "version %s",
     /* 003 RPL_CREATED */	":%s 003 %s :This server was created %s",
-    /* 004 RPL_MYINFO */	":%s 004 %s %s %s aAbcdefFghiIjkKmnoOrRsSwxXy "
+    /* 004 RPL_MYINFO */	":%s 004 %s %s %s aAbcCdefFghiIjkKmnoOrRsSwxXy "
                                 "bceiIjklLmMnoOprRsStv",
     /* 005 RPL_ISUPPORT */      ":%s 005 %s %s :are available on this server",
     /* 006 */	                NULL,
@@ -559,7 +559,7 @@ static char *replies[] =
     /* 490 */	                NULL,
     /* 491 ERR_NOOPERHOST */	":%s 491 %s :No Oper block for your host",
     /* 492 */	                NULL,
-    /* 493 */	                NULL,
+    /* 493 ERR_NOSHAREDCHAN */	":%s 493 %s :You cannot message that person because you do not share a common channel with them.",
     /* 494 ERR_OWNMODE */	":%s 494 %s %s :You cannot message that person while you are %s, so your message was not sent",
     /* 495 */	                NULL,
     /* 496 */	                NULL,

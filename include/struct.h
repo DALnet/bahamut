@@ -309,6 +309,7 @@ typedef struct SAliasInfo AliasInfo;
 #define UMODE_K     0x4000000   /* umode +K - U: lined server kill messages */
 #define UMODE_I     0x8000000   /* umode +I - invisible oper (masked) */
 #define UMODE_S     0x10000000  /* umode +S - User is using SSL */
+#define UMODE_C     0x20000000  /* umode +C - User is only accepting private messages from users who share a common channel with them */
 
 /* for sendto_ops_lev */
 
@@ -331,13 +332,13 @@ typedef struct SAliasInfo AliasInfo;
  *  that mode will be 'silent.'
  */
 
-#define SEND_UMODES (UMODE_a|UMODE_i|UMODE_o|UMODE_r|UMODE_A|UMODE_I|UMODE_R|UMODE_S)
+#define SEND_UMODES (UMODE_a|UMODE_i|UMODE_o|UMODE_r|UMODE_A|UMODE_I|UMODE_R|UMODE_S|UMODE_C)
 #define ALL_UMODES (SEND_UMODES|UMODE_b|UMODE_c|UMODE_d|UMODE_e|UMODE_f|\
                     UMODE_g|UMODE_h|UMODE_j|UMODE_k|UMODE_m|UMODE_n|UMODE_s|\
                     UMODE_w|UMODE_y|UMODE_F|UMODE_K|UMODE_O)
 
 /* modes users can set themselves */
-#define USER_UMODES (UMODE_i|UMODE_k|UMODE_w|UMODE_s|UMODE_R)
+#define USER_UMODES (UMODE_i|UMODE_k|UMODE_w|UMODE_s|UMODE_R|UMODE_C)
 
 /* modes only opers can have */
 #define OPER_UMODES (UMODE_a|UMODE_b|UMODE_c|UMODE_d|UMODE_e|UMODE_f|UMODE_g|\
@@ -357,6 +358,7 @@ typedef struct SAliasInfo AliasInfo;
 #define IsAdmin(x)              ((x)->umode & UMODE_A)
 #define IsUmodef(x)             ((x)->umode & UMODE_f)
 #define IsUmodec(x)             ((x)->umode & UMODE_c)
+#define IsUmodeC(x)		((x)->umode & UMODE_C)
 #define IsUmodey(x)             ((x)->umode & UMODE_y)
 #define IsUmoded(x)             ((x)->umode & UMODE_d)
 #define IsUmodeb(x)             ((x)->umode & UMODE_b)
