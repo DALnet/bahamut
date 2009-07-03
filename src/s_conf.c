@@ -27,6 +27,7 @@
 #include "h.h"
 #include "userban.h"
 #include "confparse.h"
+#include "throttle.h"
 #include "memcount.h"
 
 /* This entire file has basically been rewritten from scratch with the
@@ -2205,6 +2206,7 @@ int rehash(aClient *cptr, aClient *sptr, int sig)
 	remove_simbans_match_flags(SBAN_NICK|SBAN_LOCAL|SBAN_TEMPORARY, SBAN_SVSHOLD);
         remove_simbans_match_flags(SBAN_CHAN|SBAN_LOCAL|SBAN_TEMPORARY, 0);
         remove_simbans_match_flags(SBAN_GCOS|SBAN_LOCAL|SBAN_TEMPORARY, 0);
+        throttle_rehash();
     }
 
     for (i = 0; i <= highest_fd; i++)
