@@ -74,7 +74,7 @@ void start_auth(aClient *cptr)
 	return;
     }
 #ifdef SHOW_HEADERS
-    sendto_one(cptr, REPORT_DO_ID);
+    sendto_one(cptr, "%s", REPORT_DO_ID);
 #endif
     set_non_blocking(cptr->authfd, cptr);
     /*
@@ -113,7 +113,7 @@ void start_auth(aClient *cptr)
 	close(cptr->authfd);
 	cptr->authfd = -1;
 #ifdef SHOW_HEADERS
-	sendto_one(cptr, REPORT_FAIL_ID);
+	sendto_one(cptr, "%s", REPORT_FAIL_ID);
 #endif
 	return;
     }
@@ -190,7 +190,7 @@ static void authsenderr(aClient *cptr)
     cptr->authfd = -1;
     cptr->flags &= ~(FLAGS_AUTH | FLAGS_WRAUTH);
 #ifdef SHOW_HEADERS
-    sendto_one(cptr, REPORT_FAIL_ID);
+    sendto_one(cptr, "%s", REPORT_FAIL_ID);
 #endif
 
     return;
@@ -306,13 +306,13 @@ void read_authports(aClient *cptr)
       ircstp->is_abad++;
       strcpy(cptr->username, "unknown");
 #ifdef SHOW_HEADERS
-      sendto_one(cptr, rejected ? REPORT_REJECT_ID : REPORT_FAIL_ID);
+      sendto_one(cptr, "%s", rejected ? REPORT_REJECT_ID : REPORT_FAIL_ID);
 #endif
       return;
    }
 #ifdef SHOW_HEADERS
    else
-      sendto_one(cptr, REPORT_FIN_ID);
+      sendto_one(cptr, "%s", REPORT_FIN_ID);
 #endif
 
    ircstp->is_asuc++;

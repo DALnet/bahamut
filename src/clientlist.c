@@ -68,7 +68,7 @@ void remove_from_list(DLink **list, void *ptr, DLink *link)
       }
    }
 
-   sendto_realops("remove_from_list(%x, %x) failed!!", (u_long) list, (u_long) ptr);
+   sendto_realops("remove_from_list(%p, %p) failed!!", list, ptr);
 }
 
 u_long

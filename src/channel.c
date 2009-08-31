@@ -985,9 +985,9 @@ joinrate_dojoin(aChannel *chptr, aClient *cptr)
     {
         if (call_hooks(CHOOK_THROTTLE, cptr, chptr, 2, chptr->jrw_debt_ctr, NOW - chptr->jrw_debt_ts) != FLUSH_BUFFER)
             sendto_realops_lev(DEBUG_LEV, "Join rate warning on %s for %s!%s@%s"
-                               " (%d in %d) [joined]", chptr->chname,
+                               " (%d in %ld) [joined]", chptr->chname,
                                cptr->name, cptr->user->username, cptr->user->host,
-                               chptr->jrw_debt_ctr, NOW - chptr->jrw_debt_ts);
+                               chptr->jrw_debt_ctr, (long)(NOW - chptr->jrw_debt_ts));
     }
 
     /* remote joins cause negative penalty here (distributed throttling) */
@@ -1013,10 +1013,10 @@ joinrate_warn(aChannel *chptr, aClient *cptr)
     {
         if (call_hooks(CHOOK_THROTTLE, cptr, chptr, 3, chptr->jrw_debt_ctr, NOW - chptr->jrw_debt_ts) != FLUSH_BUFFER)
             sendto_realops_lev(DEBUG_LEV, "Join rate warning on %s for %s!%s@%s"
-                               " (%d in %d) [failed]", chptr->chname,
+                               " (%d in %ld) [failed]", chptr->chname,
                                cptr->name, cptr->user->username,
                                cptr->user->host,
-                               chptr->jrw_debt_ctr, NOW - chptr->jrw_debt_ts);
+                               chptr->jrw_debt_ctr, (long)(NOW - chptr->jrw_debt_ts));
     }
 }
 
@@ -4363,8 +4363,8 @@ int m_sjoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
 #else
             chptr->channelts = tstosend = newts;
             if (!IsULine(sptr))
-            sendto_realops_lev(DEBUG_LEV, "Changing TS for %s from %d to %d on"
-                               " client SJOIN", chptr->chname, oldts, newts);
+            sendto_realops_lev(DEBUG_LEV, "Changing TS for %s from %ld to %ld on"
+                               " client SJOIN", chptr->chname, (long)oldts, (long)newts);
 #endif
         }
         else 

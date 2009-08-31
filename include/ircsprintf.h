@@ -7,12 +7,12 @@
 /* define this if you intend to use ircsnprintf or ircvsnprintf */
 /* It's not used, and sNprintf functions are not in all libraries */
 #define WANT_SNPRINTF
+#define ircsprintf sprintf
+#define ircvsprintf vsprintf
 
-int ircsprintf(char *str, const char *format, ...);
-int ircvsprintf(char *str, const char *format, va_list ap);
 #ifdef WANT_SNPRINTF
-int ircvsnprintf(char *str, size_t size, const char *format, va_list ap);
-int ircsnprintf(char *str, size_t size, const char *format, ...);
+#define ircvsnprintf vsnprintf
+#define ircsnprintf snprintf
 #endif
 /* This code contributed by Rossi 'vejeta' Marcello <vjt@users.sourceforge.net>
  * Originally in va_copy.h, however there wasnt much there, so i stuck it in

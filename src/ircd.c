@@ -228,7 +228,7 @@ void s_restart()
 void server_reboot() 
 {
     int     i;
-    sendto_ops("Aieeeee!!!  Restarting server... sbrk(0)-etext: %d",
+    sendto_ops("Aieeeee!!!  Restarting server... sbrk(0)-etext: %lu",
                (u_long) sbrk((size_t) 0) - (u_long) sbrk0);
         
     Debug((DEBUG_NOTICE, "Restarting server..."));
@@ -420,9 +420,9 @@ static time_t check_pings(time_t currenttime)
                     }
 #ifdef SHOW_HEADERS
                     if (DoingDNS(cptr))
-                        sendto_one(cptr, REPORT_FAIL_DNS);
+                        sendto_one(cptr, "%s", REPORT_FAIL_DNS);
                     if (DoingAuth(cptr))
-                        sendto_one(cptr, REPORT_FAIL_ID);
+                        sendto_one(cptr, "%s", REPORT_FAIL_ID);
 #endif
                     Debug((DEBUG_NOTICE, "DNS/AUTH timeout %s",
                            get_client_name(cptr, TRUE)));
@@ -1018,8 +1018,8 @@ void io_loop()
 
         if (timeofday < lasttimeofday) 
         {
-            ircsprintf(to_send, "System clock running backwards - (%d < %d)",
-                       timeofday, lasttimeofday);
+            ircsprintf(to_send, "System clock running backwards - (%ld < %ld)",
+                       (long)timeofday, (long)lasttimeofday);
             report_error(to_send, &me);
         }
 

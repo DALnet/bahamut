@@ -1213,7 +1213,7 @@ static void rwho_reply(aClient *cptr, aClient *ac, char *buf, chanMember *cm)
 #endif
 
     if (rwho_opts.rplfields & RWO_TS)
-        dst += ircsprintf(dst, " %d", ac->tsinfo);
+        dst += ircsprintf(dst, " %ld", (long)ac->tsinfo);
 
     if (rwho_opts.rplfields & RWO_STYPE)
         dst += ircsprintf(dst, " %d", ac->user->servicetype);

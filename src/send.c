@@ -190,7 +190,7 @@ static int send_message(aClient *to, char *msg, int len, void* sbuf)
          * Kept in. - lucas
          */
         if (IsServer(to)) 
-            sendto_ops("Max SendQ limit exceeded for %s: %d > %d",
+            sendto_ops("Max SendQ limit exceeded for %s: %d > %ld",
                        get_client_name(to, HIDEME), SBufLength(&to->sendQ),
                        to->class->maxsendq);
         to->flags |= FLAGS_SENDQEX;

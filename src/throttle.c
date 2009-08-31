@@ -449,8 +449,8 @@ throttle_check(char *host, int fd, time_t sotime)
 
             /* let +c ops know */
             sendto_realops_lev(REJ_LEV, "throttled connections from %s (%d in"
-                               " %d seconds) for %d minutes (offense %d)",
-                               tp->addr, tp->conns, sotime - tp->first, 
+                               " %ld seconds) for %d minutes (offense %d)",
+                               tp->addr, tp->conns, (long)(sotime - tp->first),
                                zlength / 60, tp->stage + 1);
 
             elength = ircsnprintf(errbufr, 512, ":%s NOTICE ZUSR :You have"
@@ -473,8 +473,7 @@ throttle_check(char *host, int fd, time_t sotime)
             /* We steal this message from undernet, because mIRC detects it 
              * and doesn't try to autoreconnect */
             elength = ircsnprintf(errbufr, 512, "ERROR :Your host is trying "
-                                  "to (re)connect too fast -- throttled.\r\n",
-                                  tp->addr);
+                                  "to (re)connect too fast -- throttled.\r\n");
             send(fd, errbufr, elength, 0);
 
             tp->zline_start = sotime;
@@ -567,10 +566,10 @@ void throttle_stats(aClient *cptr, char *name)
         int ztime = throttle_get_zline_time(tp->stage);
 
         if (tp->zline_start && tp->zline_start + ztime > NOW)
-            sendto_one(cptr, ":%s %d %s :throttled: %s [stage %d, %d secs"
+            sendto_one(cptr, ":%s %d %s :throttled: %s [stage %d, %ld secs"
                              " remain, %d futile retries]", me.name,
                             RPL_STATSDEBUG, name, tp->addr, tp->stage, 
-                            (tp->zline_start + ztime) - NOW, tp->re_zlines);
+                            (long)((tp->zline_start + ztime) - NOW), tp->re_zlines);
     }
 }
 
