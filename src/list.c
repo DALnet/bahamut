@@ -222,7 +222,7 @@ void free_client(aClient *cptr)
 	 * hybrid team wants to hear about it
 	 */
 	sendto_ops("list.c couldn't BlockHeapFree(free_remote_aClients,cptr) "
-		   "cptr = %lX", cptr);
+		   "cptr = %p", cptr);
 	sendto_ops("Please report to the bahamut team! "
 		   "coders@dal.net");
 	abort();
@@ -260,7 +260,7 @@ void free_channel(aChannel *chan)
 {
     if (BlockHeapFree(free_channels, chan)) {
 	sendto_ops("list.c couldn't BlockHeapFree(free_channels,chan) "
-		   "chan = %lX", chan);
+		   "chan = %p", chan);
 	sendto_ops("Please report to the bahamut team!");
     }
 }
@@ -320,7 +320,7 @@ void free_user(anUser *user, aClient *cptr)
 #endif
     /* sanity check */
     if (user->joined || user->invited || user->channel)
-	sendto_ops("* %#x user (%s!%s@%s) %#x %#x %#x %d *",
+	sendto_ops("* %p user (%s!%s@%s) %p %p %p %d *",
 		   cptr, cptr ? cptr->name : "<noname>",
 		   user->username, user->host, user,
 		   user->invited, user->channel, user->joined);
@@ -328,12 +328,12 @@ void free_user(anUser *user, aClient *cptr)
     if (BlockHeapFree(free_anUsers, user)) 
     {
 	sendto_ops("list.c couldn't BlockHeapFree(free_anUsers,user) "
-		   "user = %lX", user);
+		   "user = %p", user);
 	sendto_ops("Please report to the bahamut team! "
 		   "bahamut-bugs@bahamut.net");
 #if defined(USE_SYSLOG) && defined(SYSLOG_BLOCK_ALLOCATOR)
 	syslog(LOG_DEBUG, "list.c couldn't BlockHeapFree(free_anUsers,user) "
-	       "user = %lX", user);
+	       "user = %p", user);
 #endif
     }
 }
@@ -472,7 +472,7 @@ Link *make_link()
 void free_link(Link *lp)
 {
     if (BlockHeapFree(free_Links, lp)) {
-	sendto_ops("list.c couldn't BlockHeapFree(free_Links,lp) lp = %lX", 
+	sendto_ops("list.c couldn't BlockHeapFree(free_Links,lp) lp = %p",
 		   lp);
 	sendto_ops("Please report to the bahamut team!");
     }
@@ -506,7 +506,7 @@ DLink *find_dlink(DLink *lp, void *what)
 void free_dlink(DLink *lp)
 {
     if (BlockHeapFree(free_DLinks, lp)) {
-	sendto_ops("list.c couldn't BlockHeapFree(free_DLinks,lp) lp = %lX", 
+	sendto_ops("list.c couldn't BlockHeapFree(free_DLinks,lp) lp = %p",
 		   lp);
 	sendto_ops("Please report to the bahamut team!");
     }
@@ -526,7 +526,7 @@ void free_chanmember(chanMember *mp)
 {
     if (BlockHeapFree(free_chanMembers, mp)) {
 	sendto_ops("list.c couldn't BlockHeapFree(free_chanMembers,mp) "
-		   "mp = %lX", mp);
+		   "mp = %p", mp);
 	sendto_ops("Please report to the bahamut team!");
     }
 }

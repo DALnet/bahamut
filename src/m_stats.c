@@ -179,19 +179,19 @@ show_opers(aClient *cptr, char *name)
     {
         if (cptr2->umode & UMODE_h)
         {
-        sendto_one(cptr, ":%s %d %s :%s (%s@%s) Idle: %d",
+        sendto_one(cptr, ":%s %d %s :%s (%s@%s) Idle: %ld",
                me.name, RPL_STATSDEBUG, name, cptr2->name,
                cptr2->user->username, cptr2->user->host,
-               timeofday - cptr2->user->last);
+               (long)(timeofday - cptr2->user->last));
         j++;
         }
     }
     else
     {
-        sendto_one(cptr, ":%s %d %s :%s (%s@%s) Idle: %d",
+        sendto_one(cptr, ":%s %d %s :%s (%s@%s) Idle: %ld",
                me.name, RPL_STATSDEBUG, name, cptr2->name,
                cptr2->user->username, cptr2->user->host,
-               timeofday - cptr2->user->last);
+               (long)(timeofday - cptr2->user->last));
         j++;
     }
     }
@@ -218,12 +218,12 @@ show_servers(aClient *cptr, char *name)
         continue;
 #endif
     j++;
-    sendto_one(cptr, ":%s %d %s :%s (%s!%s@%s) Idle: %d",
+    sendto_one(cptr, ":%s %d %s :%s (%s!%s@%s) Idle: %ld",
            me.name, RPL_STATSDEBUG, name, cptr2->name,
            (cptr2->serv->bynick[0] ? cptr2->serv->bynick : "Remote."),
            (cptr2->serv->byuser[0] ? cptr2->serv->byuser : "*"),
            (cptr2->serv->byhost[0] ? cptr2->serv->byhost : "*"),
-           timeofday - cptr2->lasttime);
+           (long)(timeofday - cptr2->lasttime));
     }
     sendto_one(cptr, ":%s %d %s :%d Server%s", me.name, RPL_STATSDEBUG,
            name, j, (j == 1) ? "" : "s");
@@ -287,8 +287,8 @@ serv_info(aClient *cptr, char *name)
             zip_out_get_stats(acptr->serv->zip_out, &ib, &ob, &rat);
             if(ib)
             {
-                sendto_one(cptr, ":%s %d %s : - [O] Zip inbytes %d, "
-                            "outbytes %d (%3.2f%%)", me.name, RPL_STATSDEBUG,
+                sendto_one(cptr, ":%s %d %s : - [O] Zip inbytes %lu, "
+                            "outbytes %lu (%3.2f%%)", me.name, RPL_STATSDEBUG,
                              name, ib, ob, rat);
             }
         }
@@ -301,8 +301,8 @@ serv_info(aClient *cptr, char *name)
             zip_in_get_stats(acptr->serv->zip_in, &ib, &ob, &rat);
             if(ob)
             {
-                sendto_one(cptr, ":%s %d %s : - [I] Zip inbytes %d, "
-                            "outbytes %d (%3.2f%%)", me.name, RPL_STATSDEBUG,
+                sendto_one(cptr, ":%s %d %s : - [I] Zip inbytes %lu, "
+                            "outbytes %lu (%3.2f%%)", me.name, RPL_STATSDEBUG,
                              name, ib, ob, rat);
             }
         }
@@ -412,13 +412,13 @@ tstats(aClient *cptr, char *name)
                      me.name, RPL_STATSDEBUG, name);
     sendto_one(cptr, ":%s %d %s :connected %u %u",
                me.name, RPL_STATSDEBUG, name, sp->is_cl, sp->is_sv);
-    sendto_one(cptr, ":%s %d %s :bytes sent %u.%uK %u.%uK",
+    sendto_one(cptr, ":%s %d %s :bytes sent %lu.%dK %lu.%dK",
                me.name, RPL_STATSDEBUG, name,
                sp->is_cks, sp->is_cbs, sp->is_sks, sp->is_sbs);
-    sendto_one(cptr, ":%s %d %s :bytes recv %u.%uK %u.%uK",
+    sendto_one(cptr, ":%s %d %s :bytes recv %lu.%dK %lu.%dK",
                me.name, RPL_STATSDEBUG, name,
                sp->is_ckr, sp->is_cbr, sp->is_skr, sp->is_sbr);
-    sendto_one(cptr, ":%s %d %s :time connected %u %u",
+    sendto_one(cptr, ":%s %d %s :time connected %lu %lu",
                me.name, RPL_STATSDEBUG, name, sp->is_cti, sp->is_sti);
 #ifdef FLUD
     sendto_one(cptr, ":%s %d %s :CTCP Floods Blocked %u",

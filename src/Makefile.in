@@ -17,7 +17,7 @@ RES_SRC =
 #RES_SRC = res_mkquery.c res_init.c res_comp.c
 
 SOURCES = blalloc.c bsd.c channel.c clientlist.c clones.c confparse.c \
-          fdlist.c fds.c hash.c hide.c inet_addr.c ircd.c ircsprintf.c \
+          fdlist.c fds.c hash.c hide.c inet_addr.c ircd.c \
           klines.c list.c m_nick.c m_rwho.c m_server.c m_services.c m_stats.c \
           m_who.c match.c memcount.c modules.c packet.c parse.c pcre.c \
           probability.c res.c s_auth.c s_bsd.c s_conf.c s_debug.c s_err.c \
@@ -132,7 +132,6 @@ ircd.o: ircd.c ../include/struct.h ../include/config.h ../include/setup.h \
   ../include/dh.h ../include/throttle.h ../include/queue.h \
   ../include/userban.h ../include/clones.h ../include/hooks.h \
   ../include/fds.h ../include/memcount.h ../include/blalloc.h
-ircsprintf.o: ircsprintf.c ../include/ircsprintf.h ../include/setup.h
 klines.o: klines.c ../include/struct.h ../include/config.h \
   ../include/setup.h ../include/defs.h ../include/sys.h ../include/hash.h \
   ../include/sbuf.h ../include/common.h ../include/h.h ../include/send.h \

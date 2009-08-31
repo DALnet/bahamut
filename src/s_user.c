@@ -1280,7 +1280,7 @@ check_dccsend(aClient *from, aClient *to, char *msg)
                        "to send you this file, you may obtain"
                        " more information on using the dccallow system by "
                        "typing /dccallow help",
-                       me.name, to->name, from->name, to->name);
+                       me.name, to->name, from->name);
         }
         
         for(tlp = to->user->channel; tlp && !chptr; tlp = tlp->next)

@@ -328,7 +328,7 @@ m_server_estab(aClient *cptr)
     if (*aconn->apasswd && !StrEq(aconn->apasswd, encr))
     {
         ircstp->is_ref++;
-        sendto_one(cptr, "ERROR :Wrong link password", inpath);
+        sendto_one(cptr, "ERROR :Wrong link password");
         sendto_ops("Link %s dropped, wrong password", inpath);
         return exit_client(cptr, cptr, cptr, "Bad Password");
     }

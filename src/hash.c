@@ -532,7 +532,7 @@ int   del_from_watch_hash_table(char *nick, aClient *cptr)
 	sendto_ops("WATCH debug error: del_from_watch_hash_table "
 		   "found a watch entry with no client "
 		   "counterpoint processing nick %s on client %s!",
-		   nick, cptr->user);
+		   nick, get_client_name(cptr, HIDEME));
     else
     {
 	if (!last) /* First one matched */

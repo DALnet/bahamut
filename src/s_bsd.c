@@ -715,7 +715,7 @@ int check_server_init(aClient * cptr)
             if (!hp->h_addr_list[i])
             {
                 sendto_realops_lev(ADMIN_LEV,
-                    "Server IP# Mismatch: %s != %s[%08x]",
+                    "Server IP# Mismatch: %s != %s[%08lx]",
                     inetntoa((char *) &cptr->ip), hp->h_name,
                     *((unsigned long *) hp->h_addr));
                 hp = NULL;
@@ -1058,7 +1058,7 @@ static void set_sock_opts(int fd, aClient * cptr)
         else if (opt > 0)
         {
             for (*readbuf = '\0'; opt > 0; opt--, s += 3)
-                ircsprintf(s, "%02.2x:", *t++);
+                ircsprintf(s, "%2.2x:", *t++);
             *s = '\0';
             sendto_realops("Connection %s using IP opts: (%s)",
                             get_client_name(cptr, HIDEME), readbuf);
@@ -1293,7 +1293,7 @@ aClient *add_connection(aListener *lptr, int fd)
         return NULL;
 
 #ifdef SHOW_HEADERS
-    sendto_one(acptr, REPORT_DO_DNS);
+    sendto_one(acptr, "%s", REPORT_DO_DNS);
 #endif
     lin.flags = ASYNC_CLIENT;
     lin.value.cptr = acptr;
@@ -1303,7 +1303,7 @@ aClient *add_connection(aListener *lptr, int fd)
         SetDNS(acptr);
 #ifdef SHOW_HEADERS
     else
-        sendto_one(acptr, REPORT_FIN_DNSC);
+        sendto_one(acptr, "%s", REPORT_FIN_DNSC);
 #endif
     nextdnscheck = 1;
     
@@ -1995,7 +1995,7 @@ void do_dns_async()
                 {
                     del_queries((char *) cptr);
 #ifdef SHOW_HEADERS
-                    sendto_one(cptr, REPORT_FIN_DNS);
+                    sendto_one(cptr, "%s", REPORT_FIN_DNS);
 #endif
                     ClearDNS(cptr);
                     cptr->hostp = hp;

@@ -1300,7 +1300,7 @@ void send_simbans(aClient *cptr, unsigned int flags)
          if((ban->flags & flags) == flags)
          {
             if(ban->flags & SBAN_GCOS)
-               sendto_one(cptr, ":%s SGLINE %d :%s:%s", me.name, strlen(ban->mask),
+               sendto_one(cptr, ":%s SGLINE %d :%s:%s", me.name, (int)strlen(ban->mask),
                           ban->mask, ban->reason);
             else
                sendto_one(cptr, ":%s SQLINE %s :%s", me.name,
@@ -1320,7 +1320,7 @@ void send_simbans(aClient *cptr, unsigned int flags)
       if((ban->flags & flags) == flags)
       {
          if(ban->flags & SBAN_GCOS)
-            sendto_one(cptr, ":%s SGLINE %d :%s:%s", me.name, strlen(ban->mask),
+            sendto_one(cptr, ":%s SGLINE %d :%s:%s", me.name, (int)strlen(ban->mask),
                        ban->mask, ban->reason);
          else
             sendto_one(cptr, ":%s SQLINE %s :%s", me.name,

@@ -332,20 +332,21 @@ int m_svinfo(aClient *cptr, aClient *sptr, int parc, char *parv[])
     if (deltat > tsmaxdelta) 
     {
         sendto_gnotice("from %s: Link %s dropped, excessive TS delta (my "
-                       "TS=%d, their TS=%d, delta=%d)",
-                       me.name, get_client_name(sptr, HIDEME), tmptime,
-                       theirtime, deltat);
+                       "TS=%ld, their TS=%ld, delta=%ld)",
+                       me.name, get_client_name(sptr, HIDEME),
+		       (long)tmptime, (long)theirtime, (long)deltat);
         sendto_serv_butone(sptr, ":%s GNOTICE :Link %s dropped, excessive "
-                           "TS delta (delta=%d)",
-                           me.name, get_client_name(sptr, HIDEME), deltat);
+                           "TS delta (delta=%ld)",
+                           me.name, get_client_name(sptr, HIDEME),
+			   (long)deltat);
         return exit_client(sptr, sptr, sptr, "Excessive TS delta");
     }
 
     if (deltat > tswarndelta) 
     {
-        sendto_realops("Link %s notable TS delta (my TS=%d, their TS=%d, "
-                       "delta=%d)", get_client_name(sptr, HIDEME), tmptime,
-                       theirtime, deltat);
+        sendto_realops("Link %s notable TS delta (my TS=%ld, their TS=%ld, "
+                       "delta=%ld)", get_client_name(sptr, HIDEME),
+		       (long)tmptime, (long)theirtime, (long)deltat);
     }
 
     return 0;
@@ -371,12 +372,12 @@ m_burst(aClient *cptr, aClient *sptr, int parc, char *parv[])
          * they're not BURST capab
          */
         
-        sendto_gnotice("from %s: synch to %s in %d %s at %s sendq", me.name,
-                       *parv, (timeofday-sptr->firsttime), 
+        sendto_gnotice("from %s: synch to %s in %ld %s at %s sendq", me.name,
+                       *parv, (long)(timeofday-sptr->firsttime),
                        (timeofday-sptr->firsttime)==1?"sec":"secs", parv[1]);
         sendto_serv_butone(NULL,
-                           ":%s GNOTICE :synch to %s in %d %s at %s sendq",
-                           me.name, sptr->name, (timeofday-sptr->firsttime),
+                           ":%s GNOTICE :synch to %s in %ld %s at %s sendq",
+                           me.name, sptr->name, (long)(timeofday-sptr->firsttime),
                            (timeofday-sptr->firsttime)==1?"sec":"secs",
                            parv[1]);
         
@@ -2520,9 +2521,9 @@ m_akill(aClient *cptr, aClient *sptr, int parc, char *parv[])
     if(oban)
     {
         /* pass along the akill anyways */
-        sendto_serv_butone(cptr, ":%s AKILL %s %s %d %s %d :%s",
-                           sptr->name, host, user, length, akiller,
-                           timeset, reason);
+        sendto_serv_butone(cptr, ":%s AKILL %s %s %ld %s %ld :%s",
+                           sptr->name, host, user, (long)length, akiller,
+                           (long)timeset, reason);
        userban_free(ban);
        return 0;
     }
@@ -2537,9 +2538,9 @@ m_akill(aClient *cptr, aClient *sptr, int parc, char *parv[])
     add_hostbased_userban(ban);
 
     /* send it off to any other servers! */
-    sendto_serv_butone(cptr, ":%s AKILL %s %s %d %s %d :%s",
-                       sptr->name, host, user, length, akiller,
-                       timeset, reason);
+    sendto_serv_butone(cptr, ":%s AKILL %s %s %ld %s %ld :%s",
+                       sptr->name, host, user, (long)length, akiller,
+                       (long)timeset, reason);
 
     /* Check local users against it */
     userban_sweep(ban);
@@ -2997,9 +2998,9 @@ m_check(aClient *cptr, aClient *sptr, int parc, char *parv[])
         char *reason = ban->reason ? ban->reason : "<no reason>";
 
         if (ban->flags & SBAN_TEMPORARY)
-            sendto_one(sptr, "NOTICE %s :CHECK NICK: %s [expires in %dm]: %s",
+            sendto_one(sptr, "NOTICE %s :CHECK NICK: %s [expires in %ldm]: %s",
                        parv[0], ban->mask,
-                       (ban->timeset + ban->duration - NOW) / 60,
+                       (long)((ban->timeset + ban->duration - NOW) / 60),
                        reason);
         else
             sendto_one(sptr, "NOTICE %s :CHECK NICK: %s [permanent]: %s",

@@ -299,15 +299,15 @@ int m_luserslock(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
       if(luserslock_expiretime != -1 && luserslock_expiretime < until)
       {
-         sendto_realops("LUSERS lock extended by %s (%d minute duration from now)", 
-                        sptr->name, 1 + (until - NOW) / 60);
+         sendto_realops("LUSERS lock extended by %s (%ld minute duration from now)",
+                        sptr->name, (long)(1 + (until - NOW) / 60));
 
          luserslock_expiretime = until;
       }
       else if(luserslock_expiretime == -1)
       {
-         sendto_realops("LUSERS lock activated by %s (%d minute duration)", 
-                        sptr->name, 1 + (until - NOW) / 60);
+         sendto_realops("LUSERS lock activated by %s (%ld minute duration)",
+                        sptr->name, (long)(1 + (until - NOW) / 60));
     
          luserslock_expiretime = until;
          dolocklusers();
@@ -339,7 +339,7 @@ void fakelusers_sendlock(aClient *sptr)
    if(luserslock_expiretime == -1)
       sendto_one(sptr, ":%s LUSERSLOCK CANCEL", me.name);
    else
-      sendto_one(sptr, ":%s LUSERSLOCK UNTIL %d", (int) luserslock_expiretime);
+      sendto_one(sptr, ":%s LUSERSLOCK UNTIL %ld", me.name, (time_t) luserslock_expiretime);
 }
 
 u_long

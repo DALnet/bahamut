@@ -189,7 +189,7 @@ get_client_name(aClient *sptr, int showip)
         if (sptr->name[0])
             s += ircsprintf(s, "%s", sptr->name);
         else
-            s += ircsprintf(s, "<unnamed>", sptr->name);
+            s += ircsprintf(s, "%s", "<unnamed>");
 
         if (IsServer(sptr))
         {

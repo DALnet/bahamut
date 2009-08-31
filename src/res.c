@@ -376,7 +376,7 @@ time_t timeout_query_list(time_t now)
 		{
 		case ASYNC_CLIENT:
 #ifdef SHOW_HEADERS
-		    sendto_one(cptr, REPORT_FAIL_DNS);
+		    sendto_one(cptr, "%s", REPORT_FAIL_DNS);
 #endif
 		    ClearDNS(cptr);
                     check_client_fd(cptr);
@@ -777,7 +777,7 @@ static int proc_answer(ResRQ * rptr, HEADER *hptr, char *buf, char *eob)
 	{
 	    sendto_realops_lev(DEBUG_LEV,
 			       "rptr->type is unknown type %d! "
-			       "(rptr->name == %x)", 
+			       "(rptr->name == %p)",
 			       rptr->type, rptr->name);
 	    return -1;
 	}    
@@ -1946,8 +1946,8 @@ int m_dns(aClient *cptr, aClient *sptr, int parc, char *parv[])
         }
 	for (cp = cachetop; cp; cp = cp->list_next)
 	{
-	    sendto_one(sptr, "NOTICE %s :Ex %d ttl %d host %s(%s)",
-		       parv[0], cp->expireat - timeofday, cp->ttl,
+	    sendto_one(sptr, "NOTICE %s :Ex %ld ttl %ld host %s(%s)",
+		       parv[0], (long)(cp->expireat - timeofday), (long)cp->ttl,
 		       cp->he.h_name, inetntoa(cp->he.h_addr));
 	    for (i = 0; cp->he.h_aliases[i]; i++)
 		sendto_one(sptr, "NOTICE %s : %s = %s (CN)",
