@@ -449,7 +449,7 @@ int m_svsmode(aClient *cptr, aClient *sptr, int parc, char *parv[])
 /* m_svshold
  *   Adds a temporary local nick ban.
  * parv[0] - sender
- * parv[1] - nick
+ * parv[1] - nick/channel
  * parv[2] - duration (0 to remove existing ban)
  * parv[3] - optional reason
  */
@@ -467,7 +467,10 @@ int m_svshold(aClient *cptr, aClient *sptr, int parc, char *parv[])
     reason = (parc < 4) ? "Nickname is reserved, try again later" : parv[3];
 
     /* marked local so netbursts don't propagate it */
-    ban = make_simpleban(SBAN_LOCAL|SBAN_NICK|SBAN_TEMPORARY|SBAN_SVSHOLD, parv[1]);
+    if(*mask == '#')
+        ban = make_simpleban(SBAN_LOCAL|SBAN_CHAN|SBAN_TEMPORARY|SBAN_SVSHOLD, parv[1]);
+    else
+        ban = make_simpleban(SBAN_LOCAL|SBAN_NICK|SBAN_TEMPORARY|SBAN_SVSHOLD, parv[1]);
     if(!ban)
     {
 	sendto_realops_lev(DEBUG_LEV, "make_simpleban(%s) failed on svshold", mask);
