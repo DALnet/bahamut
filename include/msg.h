@@ -122,6 +122,7 @@
 #define MSG_RWHO     "RWHO"         /* RWHO */
 #define MSG_SVSCLONE "SVSCLONE"     /* SVSCLONE */
 #define MSG_SVSPANIC "SVSPANIC"     /* SVSPANIC */
+#define MSG_CHANKILL "CHANKILL"     /* CHANKILL */
 #define MSG_PUT      "PUT"          /* PUT */
 #define MSG_POST     "POST"         /* POST */
 #define MSG_CHECK    "CHECK"        /* CHECK */
@@ -216,6 +217,7 @@ extern int  m_module(aClient *, aClient *, int, char **);
 extern int  m_rwho(aClient *, aClient *, int, char **);
 extern int  m_svsclone(aClient *, aClient *, int, char **);
 extern int  m_svspanic(aClient *, aClient *, int, char **);
+extern int  m_chankill(aClient *, aClient *, int, char **);
 extern int  m_put(aClient *, aClient *, int, char **);
 extern int  m_post(aClient *, aClient *, int, char **);
 extern int  m_check(aClient *, aClient *, int, char **);
@@ -341,6 +343,7 @@ struct Message msgtab[] =
     {MSG_RWHO,     m_rwho,     MAXPARA, 0,        0},
     {MSG_SVSCLONE, m_svsclone, MAXPARA, 0,        0},
     {MSG_SVSPANIC, m_svspanic, MAXPARA, 0,        0},
+    {MSG_CHANKILL, m_chankill, MAXPARA, 0,        0},
     {MSG_PUT,      m_put,      2,       MF_UNREG, 0},
     {MSG_POST,     m_post,     2,       MF_UNREG, 0},
     {MSG_CHECK,    m_check,    MAXPARA, 0,        0},
