@@ -160,12 +160,20 @@ clones_check(aClient *cptr)
 
     if (ceip)
     {
-        /* local limit priority stack: soft set, class, default */
+        /* local limit priority stack: soft set, services, class, default */
         if ((limit = ceip->sllimit))
         {
             lpri = 3;
             if (ceip->lcount >= limit)
                 return report_lclone(cptr, ceip, limit, 0, "soft", NULL);
+        }
+        /* Let services change local clone limits too */
+        else if ((limit = ceip->limit))
+        {
+            lpri = 2;
+            if (ceip->lcount >= limit)
+                return report_lclone(cptr, ceip, limit, 0, "hard",
+                                     cptr->user->allow->class->name);
         }
         else if ((limit = cptr->user->allow->class->connfreq))
         {
@@ -212,6 +220,13 @@ clones_check(aClient *cptr)
         {
             if (ce24->lcount >= limit)
                 return report_lclone(cptr, ce24, limit, 1, "soft", NULL);
+        }
+        /* Let services change local limits too */
+        else if ((limit = ce24->limit))
+        {
+            if (ce24->lcount >= limit)
+                return report_lclone(cptr, ce24, limit, 1, "hard",
+                                     cptr->user->allow->class->name);
         }
         else if (lpri <= 2 && (limit = cptr->user->allow->class->ip24clones))
         {
