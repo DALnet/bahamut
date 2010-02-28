@@ -594,6 +594,45 @@ int m_chankill(aClient *cptr, aClient *sptr, int parc, char *parv[])
     return 0;
 }
 
+/* m_svshost - Lets services change a user's host.
+ * -Kobi_S 30/01/2010
+ */
+int m_svshost(aClient *cptr, aClient *sptr, int parc, char *parv[])
+{
+    aClient *acptr;
+
+    if(!IsULine(sptr) || parc<3 || *parv[2]==0)
+        return 0; /* Not a u:lined server or not enough parameters */
+
+    if(!(acptr = find_person(parv[1], NULL)))
+        return 0; /* Target user doesn't exist */
+
+    if(strlen(parv[2]) > HOSTLEN)
+        return 0; /* The requested host is too long */
+
+    /* Save the real hostname if it's a local client */
+    if(MyClient(acptr))
+    {
+        acptr->user->real_oper_host =
+            MyMalloc(strlen(acptr->user->host) + 1);
+        acptr->user->real_oper_username =
+            MyMalloc(strlen(acptr->user->username) + 1);
+        acptr->user->real_oper_ip =
+            MyMalloc(strlen(acptr->hostip) + 1);
+        strcpy(acptr->user->real_oper_host, acptr->user->host);
+        strcpy(acptr->user->real_oper_username, acptr->user->username);
+        strcpy(acptr->user->real_oper_ip, acptr->hostip);
+        strcpy(acptr->sockhost, parv[2]);
+    }
+
+    strcpy(acptr->user->host, parv[2]); /* Set the requested host */
+
+    /* Pass it to all the other servers */
+    sendto_serv_butone(cptr, ":%s SVSHOST %s %s", parv[0], parv[1], parv[2]);
+
+    return 0;
+}
+
 
 u_long
 memcount_m_services(MCm_services *mc)
