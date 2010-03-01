@@ -3695,8 +3695,8 @@ add_dccallow(aClient *sptr, aClient *optr)
     return 0;
 }
 
-static int 
-del_dccallow(aClient *sptr, aClient *optr) 
+int
+del_dccallow(aClient *sptr, aClient *optr, int silent) 
 {
     Link **lpp, *lp;
     int found = 0;
@@ -3742,8 +3742,9 @@ del_dccallow(aClient *sptr, aClient *optr)
         sendto_realops_lev(DEBUG_LEV, "%s was in dccallowme list of %s but "
                            "not in dccallowrem list!", optr->name, sptr->name);
 
-    sendto_one(sptr, rpl_str(RPL_DCCSTATUS), me.name, sptr->name, optr->name,
-               "removed from");
+    if(!silent)
+        sendto_one(sptr, rpl_str(RPL_DCCSTATUS), me.name, sptr->name, optr->name,
+                   "removed from");
     
     return 0;
 }
@@ -3844,7 +3845,7 @@ m_dccallow(aClient *cptr, aClient *sptr, int parc, char *parv[])
                                    acptr->name);
             
             lastcptr = acptr;
-            del_dccallow(sptr, acptr);
+            del_dccallow(sptr, acptr, 0);
         }
         else
         {
