@@ -37,6 +37,7 @@ extern int do_user(char *, aClient *, aClient *, char *, char *, char *,
 		   unsigned long, unsigned int, char *);
 
 extern int register_user(aClient *, aClient *, char *, char *);
+extern int del_dccallow(aClient *, aClient *, int);
 
 
 extern int user_modes[];
@@ -93,7 +94,7 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     struct simBan *ban;
     aClient    *acptr, *uplink;
-    Link       *lp;
+    Link       *lp, *lp2;
     char        nick[NICKLEN + 2];
     ts_val      newts = 0;
     int         sameuser = 0, samenick = 0;
@@ -583,6 +584,23 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	     */
 	    flush_user_banserial(sptr);
 	}
+        /* Remove dccallow entries for users who don't share common channel(s) unless they only change their nick capitalization -Kobi_S */
+        if(mycmp(parv[0], nick))
+        {
+            for(lp = sptr->user->dccallow; lp; lp = lp2)
+            {
+                lp2 = lp->next;
+                if(lp->flags == DCC_LINK_ME)
+                    continue;
+                if(!find_shared_chan(sptr, lp->value.cptr))
+                {
+                    sendto_one(lp->value.cptr, ":%s %d %s :%s has been removed from "
+                               "your DCC allow list for signing off",
+                               me.name, RPL_DCCINFO, lp->value.cptr->name, parv[0]);
+                    del_dccallow(lp->value.cptr, sptr, 1);
+                }
+            }
+        }
     } 
     else
     {
