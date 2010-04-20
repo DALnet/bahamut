@@ -1060,7 +1060,7 @@ m_goper(aClient *cptr, aClient *sptr, int parc, char *parv[])
         return 0;
     }
 
-    sendto_serv_butone(cptr, ":%s GOPER :%s", parv[0], message);
+    sendto_serv_butone_super(cptr, 0, ":%s GOPER :%s", parv[0], message);
     sendto_ops("from %s: %s", parv[0], message);
     return 0;
 }
@@ -1093,7 +1093,7 @@ m_gnotice(aClient *cptr, aClient *sptr, int parc, char *parv[])
         return 0;
     }
 
-    sendto_serv_butone(cptr, ":%s GNOTICE :%s", parv[0], message);
+    sendto_serv_butone_super(cptr, 0, ":%s GNOTICE :%s", parv[0], message);
     sendto_gnotice("from %s: %s", parv[0], message);
     return 0;
 }
@@ -1120,7 +1120,7 @@ m_globops(aClient *cptr, aClient *sptr, int parc, char *parv[])
     }
     if (strlen(message) > TOPICLEN)
         message[TOPICLEN] = '\0';
-    sendto_serv_butone(cptr, ":%s GLOBOPS :%s", parv[0], message);
+    sendto_serv_butone_super(cptr, ULF_NOGLOBOPS, ":%s GLOBOPS :%s", parv[0], message);
     send_globops("from %s: %s", parv[0], message);
     return 0;
 }
@@ -1146,7 +1146,7 @@ m_chatops(aClient *cptr, aClient *sptr, int parc, char *parv[])
     
     if (strlen(message) > TOPICLEN)
         message[TOPICLEN] = '\0';
-    sendto_serv_butone(cptr, ":%s CHATOPS :%s", parv[0], message);
+    sendto_serv_butone_super(cptr, 0, ":%s CHATOPS :%s", parv[0], message);
     send_chatops("from %s: %s", parv[0], message);
     return 0;
 }

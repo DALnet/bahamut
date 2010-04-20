@@ -675,6 +675,16 @@ typedef struct Whowas
 #define CONN_DKEY	0x010	/* cryptable   */
 #define CONN_HUB	0x100	/* hubbable!   */
 
+/* U:line flags in Server struct */
+
+#define ULF_SFDIRECT    0x00000001  /* send shortform commands */
+#define ULF_NOBTOPIC    0x00000002  /* don't send TOPICs on burst */
+#define ULF_NOAWAY      0x00000004  /* don't send AWAYs at all */
+#define ULF_NOBAWAY     0x00000008  /* don't send AWAYs on burst */
+#define ULF_NOCHANMSG   0x00000010  /* don't send channel messages/notices */
+#define ULF_NONOTICE    0x00000020  /* don't send private notices */
+#define ULF_NOGLOBOPS   0x00000040  /* don't send globops */
+
 
 struct Conf_Connect
 {
@@ -688,6 +698,7 @@ struct Conf_Connect
 	int   port;
 	int   flags;
 	int   legal;
+	int   uflags;   /* U:lined flags */
 	aClient *acpt;  /* whos using this! */
 	time_t   hold;	/* used for autoconnections */
     char *class_name;   /* the accual name of our class */
@@ -842,6 +853,7 @@ struct Server
 #endif
     void       *zip_out;
     void       *zip_in;
+    int         uflags;           /* U:lined flags */
 };
 
 struct Client 

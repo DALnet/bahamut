@@ -711,6 +711,18 @@ static int server_info[] =
     0, 0
 };
 
+static int server_uflags[] =
+{
+    ULF_SFDIRECT,  's',
+    ULF_NOBTOPIC,  'T',
+    ULF_NOAWAY,    'a',
+    ULF_NOBAWAY,   'A',
+    ULF_NOCHANMSG, 'c',
+    ULF_NONOTICE,  'n',
+    ULF_NOGLOBOPS, 'g',
+    0, 0
+};
+
 int
 confadd_connect(cVar *vars[], int lnum)
 {
@@ -791,6 +803,26 @@ confadd_connect(cVar *vars[], int lnum)
                 if (*m==(char)(*(i+1)))
                 {
                     x->flags |= flag;
+                    break;
+                }
+            }
+        }
+        else if(tmp->type && (tmp->type->flag & SCONFF_UFLAGS))
+        {
+            if(x->uflags > 0)
+            {
+                confparse_error("Multiple uflag definitions", lnum);
+                free_connect(x);
+                return -1;
+            }
+            tmp->type = NULL;
+            x->uflags = 0;
+            for (m=(*tmp->value) ? tmp->value : m; *m; m++)
+            {
+                for (i=server_uflags; (flag = *i); i+=2)
+                if (*m==(char)(*(i+1)))
+                {
+                    x->uflags |= flag;
                     break;
                 }
             }
@@ -1805,6 +1837,7 @@ merge_connects()
             old_aconn->class_name = aconn->class_name;
             old_aconn->port = aconn->port;
             old_aconn->flags = aconn->flags;
+            old_aconn->uflags = aconn->uflags;
             old_aconn->class = find_class(aconn->class_name);
             old_aconn->class->refs++;
             old_aconn->legal = 1;
