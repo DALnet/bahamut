@@ -151,6 +151,14 @@
 #define HELPSERV "HelpServ"
 
 /*
+ * DENY_SERVICES_MSGS
+ * Define this to cause PRIVMSG <service> to be rejected with numeric 487,
+ * explaining that "/msg <service>" is no longer supported, and to use
+ * "/msg <service>@<services_name>" or "/<service>" instead.
+ */
+#define DENY_SERVICES_MSGS
+
+/*
  * PASS_SERVICES_MSGS
  * Define this to cause PRIVMSG <service> to be passed to services as-is,
  * instead of being converted to the shortform ("PRIVMSG NickServ" -> "NS").

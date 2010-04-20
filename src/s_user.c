@@ -1688,8 +1688,20 @@ m_message(aClient *cptr, aClient *sptr, int parc, char *parv[], int notice)
         {
             AliasInfo *ai;
 
+            if (notice && (confopts & FLAGS_SERVHUB) && (acptr->uplink->serv->uflags & ULF_NONOTICE))
+                continue;
+
             if (ismine && !notice && (ai = acptr->user->alias))
             {
+#ifdef DENY_SERVICES_MSGS
+                if (!s && !mycmp(ai->server, Services_Name))
+                {
+                    sendto_one(sptr, err_str(ERR_MSGSERVICES), me.name,
+                               parv[0], ai->nick, ai->nick, ai->server,
+                               ai->nick);
+                    continue;
+                }
+#endif
 #ifdef PASS_SERVICES_MSGS
                 if (s)  /* if passing, skip this and use generic send below */
 #endif
@@ -2421,7 +2433,7 @@ m_away(aClient *cptr, aClient *sptr, int parc, char *parv[])
             MyFree(away);
             sptr->user->away = NULL;
             /* Don't spam unaway unless they were away - lucas */
-            sendto_serv_butone(cptr, ":%s AWAY", parv[0]);
+            sendto_serv_butone_super(cptr, ULF_NOAWAY, ":%s AWAY", parv[0]);
         }
         
         if (MyConnect(sptr))
@@ -2448,7 +2460,7 @@ m_away(aClient *cptr, aClient *sptr, int parc, char *parv[])
      * readded because of anti-flud stuffs -epi
      */
     
-    sendto_serv_butone(cptr, ":%s AWAY :%s", parv[0], parv[1]);
+    sendto_serv_butone_super(cptr, ULF_NOAWAY, ":%s AWAY :%s", parv[0], parv[1]);
 
     if (away)
         MyFree(away);

@@ -110,8 +110,10 @@ struct ConfVar
 #define SCONFF_IPMASK               0x200000
 #define SCONFT_MAXRECVQ "MAXRECVQ"
 #define SCONFF_MAXRECVQ             0x400000
+#define SCONFT_UFLAGS   "UFLAGS"
+#define SCONFF_UFLAGS               0x800000
 
-#define SCONFF_STRING               0x800000    /* allow freeform strings */
+#define SCONFF_STRING               0x1000000   /* allow freeform strings */
 
 /* subtoken aliases */
 
@@ -262,6 +264,7 @@ sConf confconnecttab[] =
     {SCONFT_APASSWD, SCONFF_APASSWD, VARTYPE_NAME},
     {SCONFT_CPASSWD, SCONFF_CPASSWD, VARTYPE_NAME},
     {SCONFT_FLAGS, SCONFF_FLAGS, VARTYPE_NAME},
+    {SCONFT_UFLAGS, SCONFF_UFLAGS, VARTYPE_NAME},
     {SCONFT_PORT, SCONFF_PORT, VARTYPE_INT},
     {SCONFT_CLASS, SCONFF_CLASS, VARTYPE_NAME},
     {(char *) 0, 0, 0}

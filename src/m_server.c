@@ -137,6 +137,9 @@ do_server_estab(aClient *cptr)
     {
         Count.myulined++;
         cptr->flags |= FLAGS_ULINE;
+
+        /* If the server has special u:line flags, let's set them.. */
+        cptr->serv->uflags = cptr->serv->aconn->uflags;
     }
 
     fakelinkserver_update(cptr->name, cptr->info);

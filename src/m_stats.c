@@ -597,7 +597,7 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
                            tmp->class->name);
                     sendto_one(sptr, rpl_str(RPL_STATSNLINE), me.name,
                            sptr->name, "N", tmp->host, tmp->name, tmp->flags,
-                           tmp->class->name);
+                           tmp->uflags, tmp->class->name);
                 }
                 else
                 {
@@ -606,7 +606,7 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
                                tmp->class->name);
                     sendto_one(sptr, rpl_str(RPL_STATSNLINE), me.name,
                                sptr->name, "N", "*", tmp->name, tmp->flags,
-                               tmp->class->name);
+                               tmp->uflags, tmp->class->name);
                 }
             }
         }
