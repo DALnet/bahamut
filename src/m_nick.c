@@ -585,7 +585,7 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	    flush_user_banserial(sptr);
 	}
         /* Remove dccallow entries for users who don't share common channel(s) unless they only change their nick capitalization -Kobi_S */
-        if(mycmp(parv[0], nick))
+        if(sptr->user && mycmp(parv[0], nick))
         {
             for(lp = sptr->user->dccallow; lp; lp = lp2)
             {
