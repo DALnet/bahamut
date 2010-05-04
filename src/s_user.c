@@ -366,9 +366,11 @@ check_oper_can_mask(aClient *sptr, char *name, char *password, char **onick)
     if(!(aoper = find_oper(name, sptr->user->username, sptr->user->host,
                            sptr->hostip)))
     {
-        sendto_ops_lev(ADMIN_LEV, "Failed OPERMASK attempt by %s (%s@%s) "
-                       "[Unknown Account %s]", sptr->name,
-                       sptr->user->username, sptr->user->host, name);
+        sendto_ops_lev(ADMIN_LEV, "Failed OPERMASK attempt by %s (%s@%s) [Unknown Account %s]",
+                       sptr->name, sptr->user->username, sptr->user->host, name);
+        sendto_realops("Failed OPERMASK attempt by %s [Unknown account %s]",
+                       sptr->name, name);
+
         return 0;
     }
 
@@ -396,9 +398,9 @@ check_oper_can_mask(aClient *sptr, char *name, char *password, char **onick)
         return 1;
     }
 
-    sendto_realops("Failed OPERMASK attempt by %s (%s@%s) [Bad Password "
-                   "for %s]", sptr->name, sptr->user->username,
-                   sptr->user->host, name);
+    sendto_ops_lev(ADMIN_LEV, "Failed OPERMASK attempt by %s (%s@%s) [Bad Password for %s]",
+                   sptr->name, sptr->user->username, sptr->user->host, name);
+    sendto_realops("Failed OPERMASK attempt by %s [Bad Password for %s]", sptr->name, name);
 
     return 0;
 }
@@ -2692,10 +2694,9 @@ int m_oper(aClient *cptr, aClient *sptr, int parc, char *parv[])
                                sptr->hostip)))
         {
             sendto_one(sptr, err_str(ERR_NOOPERHOST), me.name, parv[0]);
-            sendto_ops_lev(ADMIN_LEV, "Failed OPER attempt by %s (%s@%s)"
-                           " [Unknown Account %s]", parv[0],
-                           sptr->user->username, sptr->user->host, name);
-
+            sendto_ops_lev(ADMIN_LEV, "Failed OPER attempt by %s (%s@%s) [Unknown Account %s]",
+                           parv[0], sptr->user->username, sptr->user->host, name);
+            sendto_realops("Failed OPER attempt by %s [Unknown Account %s]", parv[0], name);
             return 0;
         }
         oper_ip = sptr->hostip;
@@ -2708,10 +2709,9 @@ int m_oper(aClient *cptr, aClient *sptr, int parc, char *parv[])
                                       sptr->user->real_oper_ip))) 
         {
             sendto_one(sptr, err_str(ERR_NOOPERHOST), me.name, parv[0]);
-            sendto_ops_lev(ADMIN_LEV, "Failed OPER attempt by %s (%s@%s)"
-                           " [Unknown Account %s]", parv[0],
-                           sptr->user->username, sptr->user->host, name);
-            
+            sendto_ops_lev(ADMIN_LEV, "Failed OPER attempt by %s (%s@%s) [Unknown Account %s]",
+                           parv[0], sptr->user->username, sptr->user->host, name);
+            sendto_realops("Failed OPER attempt by %s [Unknown account %s]", parv[0], name);
             return 0;
         }
         oper_ip = sptr->user->real_oper_ip;
@@ -2798,9 +2798,9 @@ int m_oper(aClient *cptr, aClient *sptr, int parc, char *parv[])
     {
         sendto_one(sptr, err_str(ERR_PASSWDMISMATCH), me.name, parv[0]);
 #ifdef FAILED_OPER_NOTICE
-        sendto_realops("Failed OPER attempt by %s (%s@%s) [Bad Password for"
-                       " %s]", parv[0], sptr->user->username, sptr->sockhost,
-                       name);
+        sendto_ops_lev(ADMIN_LEV, "Failed OPER attempt by %s (%s@%s) [Bad Password for %s]",
+                       parv[0], sptr->user->username, sptr->sockhost, name);
+        sendto_realops("Failed OPER attempt by %s [Bad Password for %s]", parv[0], name);
 #endif
     }
     return 0;
