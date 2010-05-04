@@ -1,3 +1,46 @@
+Changes for 1.8.8
+-----------------
+epiphani (2):
+      Fix possible null dereference in m_nick
+      Fix Makefile for BSD, and the lack of -i in sed
+
+
+Changes for 1.8.7
+-----------------
+Kobi Shmueli (19):
+      Added SSL initizalation and rehashing stuff
+      Added the needed changes for SSL to acutally work
+      Added flags support for the port block and mark SSL users with SSL on the umode +c notice
+      Added make-cert.sh & make-cert.cnf to create the server certificate
+      Added SSL umode/cmode/flag
+      Let users/opers message +o users even if the sender is +R
+      Fixed NO_USER_STATS to allow /stats from u:lined servers
+      Rakarra's opernick patch
+      typo (UNKINE --> UNKLINE)
+      Let server admins set a maxrecvq per class block (take #2)
+      Added SVSPANIC (Stops users from sending commands to services).
+      Make kill -HUP remove all throttles.
+      Added umode +C
+      Re-added CHANKILL from the old 1.8.4-trunk (I think Quension wrote it).
+      Changed SVSHOLD to support channels.
+      Let SVSCLONE override local clone limits too.
+      Let services change hosts (take #5)
+      dccallow fix
+      Re-added the SERVICESHUB sutff with conf flags
+
+Ned T. Crigler (2):
+      Force the cached banserial of a user to be updated on a SVSNICK.
+      Remove the use of ircsprintf.
+
+epiphani (6):
+      Update docs to reflect SSL configuration support
+      Move make-cert tools into the tools directory
+      Fix up some templating and configure script stuff to make SSL tools install cleanly
+      Allow port definitions that do not perform DNS or ident checks.
+      Update notifcations for failed OPER attempts
+      Update TODO and Patchlevel.  This is 1.8.7.
+
+
 Changes for 1.8.6
 -----------------
 - Fix msg_has_ctrls() so it doesn't block non-control characters.
