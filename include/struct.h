@@ -656,6 +656,8 @@ typedef struct Whowas
 
 /* Port block flags */
 #define CONF_FLAGS_P_SSL      0x01
+#define CONF_FLAGS_P_NODNS    0x02
+#define CONF_FLAGS_P_NOIDENT  0x04
 
 /* global configuration flags */
 

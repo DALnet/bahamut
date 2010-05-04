@@ -1292,23 +1292,28 @@ aClient *add_connection(aListener *lptr, int fd)
     if(call_hooks(CHOOK_PREACCESS, acptr) == FLUSH_BUFFER)
         return NULL;
 
+    /* do the dns check, if we're thusly configured */
+    if(!(lptr->flags & CONF_FLAGS_P_NODNS))
+    {
 #ifdef SHOW_HEADERS
-    sendto_one(acptr, "%s", REPORT_DO_DNS);
+        sendto_one(acptr, "%s", REPORT_DO_DNS);
 #endif
-    lin.flags = ASYNC_CLIENT;
-    lin.value.cptr = acptr;
-    Debug((DEBUG_DNS, "lookup %s", inetntoa((char *) &addr.sin_addr)));
-    acptr->hostp = gethost_byaddr((char *) &acptr->ip, &lin);
-    if (!acptr->hostp)
-        SetDNS(acptr);
+        lin.flags = ASYNC_CLIENT;
+        lin.value.cptr = acptr;
+        Debug((DEBUG_DNS, "lookup %s", inetntoa((char *) &addr.sin_addr)));
+        acptr->hostp = gethost_byaddr((char *) &acptr->ip, &lin);
+        if (!acptr->hostp)
+            SetDNS(acptr);
 #ifdef SHOW_HEADERS
-    else
-        sendto_one(acptr, "%s", REPORT_FIN_DNSC);
+        else
+            sendto_one(acptr, "%s", REPORT_FIN_DNSC);
 #endif
-    nextdnscheck = 1;
+        nextdnscheck = 1;
+    }
     
 #ifdef DO_IDENTD
-    start_auth(acptr);
+    if(!(lptr->flags & CONF_FLAGS_P_NOIDENT))
+        start_auth(acptr);
 #endif
     check_client_fd(acptr);
 
