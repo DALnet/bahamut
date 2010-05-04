@@ -46,5 +46,6 @@ install:
 		$(INSTALL_BIN) $$i $(INSTALL_DIR); \
 	done
 	$(CP) make-cert.tmpl make-cert.sh
-	$(SED) -i s:@@@DPATH@@@:$(INSTALL_DIR):g make-cert.sh
+	cat make-cert.sh | $(SED) -i s:@@@DPATH@@@:$(INSTALL_DIR):g > make-cert.temp
+	$(MV) make-cert.temp make-cert.sh
 	$(INSTALL_BIN) make-cert.sh $(INSTALL_DIR);
