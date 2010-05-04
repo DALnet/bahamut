@@ -1,10 +1,8 @@
 1.8 TODO List
 -------------
-- show usernames on failed /oper to +A only
 - consider temp hold in CHANKILL, do resync
 - unified nick/user/host scrubbing, fix channel ban masks
 - sort out WATCH timestamps
 - nonblocking dns hooks for modules (dnsbl)
 - consider adding external commands -- alias in conf, popen()/fileno()
-- add noident/nodns options to port blocks
 - update socketengine dependencies in Makefile
