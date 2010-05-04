@@ -1216,6 +1216,8 @@ confadd_port(cVar *vars[], int lnum)
                 switch (*s++)
                 {
                     case 'S': x->flags |= CONF_FLAGS_P_SSL; break;
+                    case 'n': x->flags |= CONF_FLAGS_P_NODNS; break;
+                    case 'i': x->flags |= CONF_FLAGS_P_NOIDENT; break;
                     default:
                         confparse_error("Unknown port flag", lnum);
                         free_port(x);
