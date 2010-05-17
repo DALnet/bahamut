@@ -162,11 +162,11 @@ int safe_ssl_read(aClient *acptr, void *buf, int sz)
                 {
 	    case SSL_ERROR_WANT_READ:
 		    errno = EWOULDBLOCK;
-		    return 0;
+		    return -1;
 		}
 	    case SSL_ERROR_SSL:
 		if(errno == EAGAIN)
-		    return 0;
+		    return -1;
 	    default:
 		return fatal_ssl_error(ssl_err, SAFE_SSL_READ, acptr);
 	}
@@ -190,11 +190,11 @@ int safe_ssl_write(aClient *acptr, const void *buf, int sz)
 	    case SSL_ERROR_WANT_WRITE:
 	    case SSL_ERROR_WANT_READ:
 		    errno = EWOULDBLOCK;
-		    return 0;
+		    return -1;
 		}
 	    case SSL_ERROR_SSL:
 		if(errno == EAGAIN)
-		    return 0;
+		    return -1;
 	    default:
 		return fatal_ssl_error(ssl_err, SAFE_SSL_WRITE, acptr);
         }
