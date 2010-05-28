@@ -613,15 +613,24 @@ int m_svshost(aClient *cptr, aClient *sptr, int parc, char *parv[])
     /* Save the real hostname if it's a local client */
     if(MyClient(acptr))
     {
-        acptr->user->real_oper_host =
-            MyMalloc(strlen(acptr->user->host) + 1);
-        acptr->user->real_oper_username =
-            MyMalloc(strlen(acptr->user->username) + 1);
-        acptr->user->real_oper_ip =
-            MyMalloc(strlen(acptr->hostip) + 1);
-        strcpy(acptr->user->real_oper_host, acptr->user->host);
-        strcpy(acptr->user->real_oper_username, acptr->user->username);
-        strcpy(acptr->user->real_oper_ip, acptr->hostip);
+        if(!acptr->user->real_oper_host)
+        {
+            acptr->user->real_oper_host =
+                MyMalloc(strlen(acptr->user->host) + 1);
+            strcpy(acptr->user->real_oper_host, acptr->user->host);
+        }
+        if(!acptr->user->real_oper_username)
+        {
+            acptr->user->real_oper_username =
+                MyMalloc(strlen(acptr->user->username) + 1);
+            strcpy(acptr->user->real_oper_username, acptr->user->username);
+        }
+        if(!acptr->user->real_oper_ip)
+        {
+            acptr->user->real_oper_ip =
+                MyMalloc(strlen(acptr->hostip) + 1);
+            strcpy(acptr->user->real_oper_ip, acptr->hostip);
+        }
         strcpy(acptr->sockhost, parv[2]);
     }
 
