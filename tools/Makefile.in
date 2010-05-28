@@ -49,3 +49,4 @@ install:
 	cat make-cert.sh | $(SED) s:@@@DPATH@@@:$(INSTALL_DIR):g > make-cert.temp
 	$(MV) make-cert.temp make-cert.sh
 	$(INSTALL_BIN) make-cert.sh $(INSTALL_DIR);
+	$(INSTALL_BIN) make-cert.cnf $(INSTALL_DIR);
