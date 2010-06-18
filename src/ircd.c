@@ -164,6 +164,15 @@ void s_toggleprof()
 
 #endif
 
+static void build_version(void)
+{
+    char *s=PATCHES;
+    if(*s != 0)
+        sprintf(version, "%s-%.1d.%.1d.%.2d", BASENAME, MAJOR, MINOR, PATCH);
+    else
+        sprintf(version, "%s-%.1d.%.1d.%.2d-%s", BASENAME, MAJOR, MINOR, PATCH, PATCHES);
+}
+
 void s_die() 
 {
     FILE *fp;
@@ -1282,13 +1291,6 @@ static void setup_signals()
      */
     (void) siginterrupt(SIGALRM, 1);
 #endif
-}
-
-void build_version(void) 
-{
-    char *s=PATCHES;
-    ircsprintf(version, "%s-%.1d.%.1d(%.2d)%s", BASENAME,
-               MAJOR, MINOR, PATCH, (*s != 0 ? PATCHES : ""));  
 }
 
 u_long
