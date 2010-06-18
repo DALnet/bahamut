@@ -80,5 +80,5 @@ extern int init_modules();
 extern void *bircmodule_add_hook(enum c_hooktype, void *, void *);
 extern void bircmodule_del_hook();
 extern int bircmodule_malloc(int);
-extern int bircmodule_free(void *);
+extern void bircmodule_free(void *);
 #endif
