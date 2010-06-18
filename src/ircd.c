@@ -168,9 +168,9 @@ static void build_version(void)
 {
     char *s=PATCHES;
     if(*s != 0)
-        sprintf(version, "%s-%.1d.%.1d.%.2d", BASENAME, MAJOR, MINOR, PATCH);
+        sprintf(version, "%s-%d.%d.%d-%s", BASENAME, MAJOR, MINOR, PATCH, PATCHES);
     else
-        sprintf(version, "%s-%.1d.%.1d.%.2d-%s", BASENAME, MAJOR, MINOR, PATCH, PATCHES);
+        sprintf(version, "%s-%d.%d.%d", BASENAME, MAJOR, MINOR, PATCH);
 }
 
 void s_die() 
