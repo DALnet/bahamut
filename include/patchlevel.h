@@ -26,6 +26,4 @@
 
 #define PATCHES ""
 
-void build_version(void);
-
 #endif
