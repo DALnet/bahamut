@@ -1,3 +1,19 @@
+Changes for 1.8.9
+-----------------
+Kobi Shmueli (2):
+      Made make install copy make-cert.cnf to INSTALL_DIR.
+      Fixed a memleak bug on SVSHOST if used twice on the same user (reported by DiAvOl).
+
+Ned T. Crigler (1):
+      Fix safe_ssl_read/safe_ssl_write to return -1 for EWOULDBLOCK/EAGAIN.
+
+epiphani (4):
+      Fix regression in make install
+      Fix badly declared bircmodule_free() in hooks header
+      Update build_version for more common version string
+      Significant update of autoconf/configure scripts
+
+
 Changes for 1.8.8
 -----------------
 epiphani (2):
