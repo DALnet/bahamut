@@ -38,6 +38,7 @@
 extern int user_modes[];
 
 int svspanic = 0; /* Services panic */
+int svsnoop = 0; /* Services disabled all o:lines (off by default) */
 
 /*
  * the services aliases. *
@@ -642,6 +643,25 @@ int m_svshost(aClient *cptr, aClient *sptr, int parc, char *parv[])
     return 0;
 }
 
+/* m_svsnoop - Let services (temporary) disable all o:lines on a given server.
+ * parv[1] = server name
+ * parv[2] = +/-
+ */
+int m_svsnoop(aClient *cptr, aClient *sptr, int parc, char *parv[])
+{
+    if(!IsULine(sptr) || parc<3)
+        return 0; /* Not a u:lined server or not enough parameters */
+
+    if(hunt_server(cptr, sptr, ":%s SVSNOOP %s :%s", 1, parc, parv) != HUNTED_ISME)
+        return 0;
+
+    if(parv[2][0] == '+')
+        svsnoop = 1;
+    else
+        svsnoop = 0;
+
+    return 0;
+}
 
 u_long
 memcount_m_services(MCm_services *mc)
