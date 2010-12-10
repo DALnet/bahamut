@@ -58,6 +58,7 @@ extern int send_lusers(aClient *,aClient *,int, char **);
 #endif
 extern int server_was_split;
 extern int svspanic;
+extern int svsnoop;
 
 static char buf[BUFSIZE], buf2[BUFSIZE];
 int  user_modes[] =
@@ -2732,6 +2733,15 @@ int m_oper(aClient *cptr, aClient *sptr, int parc, char *parv[])
     if (StrEq(encr, aoper->passwd))
     {
         int old = (sptr->umode & ALL_UMODES);
+
+        if(svsnoop)
+        {
+            sendto_one(sptr, err_str(ERR_NOOPERHOST), me.name, parv[0]);
+            sendto_ops_lev(ADMIN_LEV, "Failed OPER attempt by %s (%s@%s) [svsnoop is enabled]",
+                           parv[0], sptr->user->username, sptr->user->host);
+            return 0;
+        }
+
         /* attach our conf */
         sptr->user->oper = aoper;
         aoper->opers++;
