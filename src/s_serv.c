@@ -2399,6 +2399,8 @@ m_capab(aClient *cptr, aClient *sptr, int parc, char *parv[])
         else if (strcmp(parv[i], "NOQUIT") == 0)
             SetNoquit(cptr);
 #endif
+	else if (strcmp(parv[i], "NICKIPSTR") == 0)
+	    SetNickIPStr(cptr);
     }
 
     return 0;

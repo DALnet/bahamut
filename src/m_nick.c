@@ -34,7 +34,7 @@
 #include "hooks.h"
 
 extern int do_user(char *, aClient *, aClient *, char *, char *, char *,
-		   unsigned long, unsigned int, char *);
+		   unsigned long, char *, char *);
 
 extern int register_user(aClient *, aClient *, char *, char *);
 extern int del_dccallow(aClient *, aClient *, int);
@@ -431,12 +431,13 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	    if (parc==10)
 	    {
 		return do_user(nick, cptr, sptr, parv[5], parv[6],
-			       parv[7], strtoul(parv[8], NULL, 0), 0, parv[9]);
+			       parv[7], strtoul(parv[8], NULL, 0),
+			       "0.0.0.0", parv[9]);
 	    } else if (parc==11)
 	    {
 		return do_user(nick, cptr, sptr, parv[5], parv[6], parv[7],
-			       strtoul(parv[8], NULL, 0), 
-			       strtoul(parv[9], NULL, 0), parv[10]);
+			       strtoul(parv[8], NULL, 0),
+			       parv[9], parv[10]);
 	    }
 	}
     }
