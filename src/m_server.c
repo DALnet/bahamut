@@ -48,11 +48,22 @@ static void sendnick_TS(aClient *cptr, aClient *acptr)
             ubuf[0] = '+';
             ubuf[1] = '\0';
         }
-        sendto_one(cptr, "NICK %s %d %ld %s %s %s %s %lu %u :%s",
-                       acptr->name, acptr->hopcount + 1, acptr->tsinfo, ubuf,
-                       acptr->user->username, acptr->user->host,
-                       acptr->user->server, acptr->user->servicestamp,
-                       htonl(acptr->ip.s_addr), acptr->info);
+	if (IsNickIPStr(cptr))
+	{
+	    sendto_one(cptr, "NICK %s %d %ld %s %s %s %s %lu %s :%s",
+			   acptr->name, acptr->hopcount + 1, acptr->tsinfo, ubuf,
+			   acptr->user->username, acptr->user->host,
+			   acptr->user->server, acptr->user->servicestamp,
+			   inetntoa((char *)&acptr->ip), acptr->info);
+	}
+	else
+	{
+	    sendto_one(cptr, "NICK %s %d %ld %s %s %s %s %lu %u :%s",
+			   acptr->name, acptr->hopcount + 1, acptr->tsinfo, ubuf,
+			   acptr->user->username, acptr->user->host,
+			   acptr->user->server, acptr->user->servicestamp,
+			   htonl(acptr->ip.s_addr), acptr->info);
+	}
     }
 }
 
@@ -378,12 +389,12 @@ m_server_estab(aClient *cptr)
 #ifdef HAVE_ENCRYPTION_ON
         if(!WantDKEY(cptr))
             sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURST UNCONNECT ZIP "
-                       "NICKIP TSMODE");
+                       "NICKIP NICKIPSTR TSMODE");
         else
             sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURST UNCONNECT DKEY "
-                       "ZIP NICKIP TSMODE");
+                       "ZIP NICKIP NICKIPSTR TSMODE");
 #else
-        sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURST UNCONNECT ZIP NICKIP TSMODE");
+        sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURST UNCONNECT ZIP NICKIP NICKIPSTR TSMODE");
 #endif
 
         sendto_one(cptr, "SERVER %s 1 :%s",

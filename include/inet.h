@@ -36,6 +36,8 @@ extern __u_l inet_makeaddr(int, int);
 extern __u_l inet_network(char *);
 extern __u_l inet_lnaof(struct in_addr);
 extern __u_l inet_netof(struct in_addr);
+extern int inet_pton(int, const char *, void *);
+extern const char *inet_ntop(int, const void *, char *, socklen_t);
 
 #else
 extern __u_l inet_addr();
@@ -47,5 +49,7 @@ extern __u_l inet_makeaddr();
 extern __u_l inet_network();
 extern __u_l inet_lnaof();
 extern __u_l inet_netof();
+extern int inet_pton();
+extern const char *inet_ntop();
 
 #undef __u_l

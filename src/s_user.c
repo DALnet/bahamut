@@ -39,6 +39,7 @@
 #include "userban.h"
 #include "hooks.h"
 #include "memcount.h"
+#include "inet.h"
 
 #if defined( HAVE_STRING_H)
 #include <string.h>
@@ -47,7 +48,7 @@
 #endif
 
 int do_user(char *, aClient *, aClient *, char *, char *, char *,
-            unsigned long, unsigned int, char *);
+            unsigned long, char *, char *);
 extern char motd_last_changed_date[];
 extern int  send_motd(aClient *, aClient *, int, char **);
 extern void send_topic_burst(aClient *);
@@ -1069,12 +1070,23 @@ register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
         ubuf[1] = '\0';
     }
     hash_check_watch(sptr, RPL_LOGON);
-    sendto_serv_butone(cptr, "NICK %s %d %ld %s %s %s %s %lu %u :%s",
-                               nick, sptr->hopcount + 1, sptr->tsinfo, ubuf,
-                               user->username, user->host, user->server, 
-                               sptr->user->servicestamp,
-                               htonl(sptr->ip.s_addr), sptr->info);
-   
+    if (IsNickIPStr(cptr))
+    {
+	sendto_serv_butone(cptr, "NICK %s %d %ld %s %s %s %s %lu %s :%s",
+				   nick, sptr->hopcount + 1, sptr->tsinfo, ubuf,
+				   user->username, user->host, user->server,
+				   sptr->user->servicestamp,
+				   inetntoa((char *)&sptr->ip), sptr->info);
+    }
+    else
+    {
+	sendto_serv_butone(cptr, "NICK %s %d %ld %s %s %s %s %lu %u :%s",
+				   nick, sptr->hopcount + 1, sptr->tsinfo, ubuf,
+				   user->username, user->host, user->server,
+				   sptr->user->servicestamp,
+				   htonl(sptr->ip.s_addr), sptr->info);
+    }
+
     if(MyClient(sptr))
     {
         /* if the I:line doesn't have a password and the user does
@@ -2089,7 +2101,7 @@ m_user(aClient *cptr, aClient *sptr, int parc, char *parv[])
 /* do_user */
 int 
 do_user(char *nick, aClient *cptr, aClient *sptr, char *username, char *host, 
-        char *server, unsigned long serviceid, unsigned int ip, char *realname)
+        char *server, unsigned long serviceid, char *ip, char *realname)
 {
     anUser     *user;
     
@@ -2138,13 +2150,14 @@ do_user(char *nick, aClient *cptr, aClient *sptr, char *username, char *host,
     sptr->user->servicestamp = serviceid;
     if (!MyConnect(sptr))  
     {
-        sptr->ip.s_addr=ntohl(ip);
-        
+	if (inet_pton(AF_INET, ip, &sptr->ip) == 0)
+	    sptr->ip.s_addr = ntohl(strtoul(ip, NULL, 10));
+
         /* add non-local clients to the throttle checker.  obviously, we only
          * do this for REMOTE clients!@$$@!  throttle_check() is called
          * elsewhere for the locals! -wd */
 #ifdef THROTTLE_ENABLE
-        if (ip != 0) 
+        if (sptr->ip.s_addr != 0)
            throttle_check(inetntoa((char *)&sptr->ip), -1, sptr->tsinfo);
 #endif
     }

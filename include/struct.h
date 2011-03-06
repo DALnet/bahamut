@@ -251,6 +251,7 @@ typedef struct SAliasInfo AliasInfo;
 #ifdef NOQUIT
 #define CAPAB_NOQUIT  0x0040 /* noquit support */
 #endif
+#define CAPAB_NICKIPSTR 0x0080 /* Nick IP as a string support */
 
 
 #define SetDKEY(x)	((x)->capabilities |= CAPAB_DKEY)
@@ -275,6 +276,8 @@ typedef struct SAliasInfo AliasInfo;
 #define IsNoquit(x)     ((x)->capabilities & CAPAB_NOQUIT)
 #endif
 
+#define SetNickIPStr(x)	((x)->capabilities |= CAPAB_NICKIPSTR)
+#define IsNickIPStr(x)	((x)->capabilities & CAPAB_NICKIPSTR)
 
 /* flag macros. */
 #define IsULine(x) ((x)->flags & FLAGS_ULINE)
