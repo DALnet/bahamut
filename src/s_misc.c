@@ -194,7 +194,7 @@ get_client_name(aClient *sptr, int showip)
         if (IsServer(sptr))
         {
             if (showip == TRUE)
-                s += ircsprintf(s, "[%s]", inetntoa((char *)&sptr->ip));
+                s += ircsprintf(s, "[%s]", cipntoa(sptr));
             else if (showip != HIDEME)
                 s += ircsprintf(s, "[%s]", sptr->sockhost);
         }
@@ -202,7 +202,7 @@ get_client_name(aClient *sptr, int showip)
         {
             if (showip == TRUE)
                 s += ircsprintf(s, "!%s@%s", sptr->user->username,
-                                inetntoa((char *)&sptr->ip));
+                                cipntoa(sptr));
             else if (showip != HIDEME)
                 s += ircsprintf(s, "!%s@%s", sptr->user->username,
                                 sptr->user->host);
@@ -222,7 +222,7 @@ get_client_name(aClient *sptr, int showip)
 
                 if (showip == TRUE)
                     s += ircsprintf(s, "]%s@%s)", sptr->username,
-                                    inetntoa((char *)&sptr->ip));
+                                    cipntoa(sptr));
                 else
                     s += ircsprintf(s, "]%s@%s)", sptr->username,
                                     sptr->sockhost);
@@ -850,14 +850,14 @@ exit_banned_client(aClient *cptr, int loc, char type, char *banmsg, int fast)
         sendto_one(cptr, "NOTICE %s :*** Reason: %s", target, reason);
         sendto_one(cptr, "NOTICE %s :*** Connection info: %s [%s]", target,
                    get_client_name(cptr, FALSE),
-                   inetntoa((char *)&cptr->ip.s_addr));
+                   cipntoa(cptr));
         sendto_one(cptr, "NOTICE %s :*** Ban contact: %s", target,
                    loc ? Local_Kline_Address : Network_Kline_Address);
         sendto_one(cptr, "NOTICE %s :*** When contacting %s, please include "
                    "all of the information shown above", target, Network_Name);
         sendto_one(cptr, err_str(ERR_YOUREBANNEDCREEP), me.name, target, rbuf);
         
-        throttle_force(inetntoa((char *)&cptr->ip.s_addr));
+        throttle_force(cipntoa(cptr));
     }
     
     return exit_client(cptr, cptr, &me, rbuf);

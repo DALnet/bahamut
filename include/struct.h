@@ -112,7 +112,7 @@ typedef struct SAliasInfo AliasInfo;
 
 /* comply with RFC1123 */
 
-#define HOSTIPLEN	15	/* Length of dotted quad form of IP */
+#define HOSTIPLEN	45	/* Length of an IPv4 or IPv6 address */
 
 #define	NICKLEN		30	
 

@@ -608,7 +608,7 @@ int check_client(aClient *cptr)
     int i;
 
     Debug((DEBUG_DNS, "ch_cl: check access for %s[%s]",
-           cptr->name, inetntoa((char *) &cptr->ip)));
+           cptr->name, cipntoa(cptr)));
 
     if (check_init(cptr, sockname))
         return -2;
@@ -716,7 +716,7 @@ int check_server_init(aClient * cptr)
             {
                 sendto_realops_lev(ADMIN_LEV,
                     "Server IP# Mismatch: %s != %s[%08lx]",
-                    inetntoa((char *) &cptr->ip), hp->h_name,
+                    cipntoa(cptr), hp->h_name,
                     *((unsigned long *) hp->h_addr));
                 hp = NULL;
             }

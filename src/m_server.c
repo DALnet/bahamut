@@ -54,7 +54,7 @@ static void sendnick_TS(aClient *cptr, aClient *acptr)
 			   acptr->name, acptr->hopcount + 1, acptr->tsinfo, ubuf,
 			   acptr->user->username, acptr->user->host,
 			   acptr->user->server, acptr->user->servicestamp,
-			   inetntoa((char *)&acptr->ip), acptr->info);
+			   cipntoa(acptr), acptr->info);
 	}
 	else
 	{
@@ -456,7 +456,7 @@ m_server_estab(aClient *cptr)
     cptr->serv->up = me.name;
     cptr->serv->aconn = aconn;
 
-    throttle_remove(inetntoa((char *)&cptr->ip));
+    throttle_remove(cipntoa(cptr));
 
 #ifdef HAVE_ENCRYPTION_ON
     if(!CanDoDKEY(cptr) || !WantDKEY(cptr))
