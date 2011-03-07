@@ -1004,16 +1004,14 @@ register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
         }
 
         /* do this late because of oper masking */
-        if (sptr->ip.s_addr)
-            clones_add(sptr);        
+	clones_add(sptr);
     }
     else if (IsServer(cptr)) 
     {
         aClient    *acptr;
 
         /* do this early because exit_client() calls clones_remove() */
-        if (sptr->ip.s_addr)
-            clones_add(sptr);        
+	clones_add(sptr);
         
         if ((acptr = find_server(user->server, NULL)) &&
             acptr->from != sptr->from)

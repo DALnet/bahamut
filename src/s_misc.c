@@ -363,8 +363,7 @@ exit_one_client_in_split(aClient *cptr, aClient *dead, char *reason)
     if (cptr->user->alias)
         cptr->user->alias->client = NULL;
 
-    if (cptr->ip.s_addr)
-        clones_remove(cptr);
+    clones_remove(cptr);
 
 #ifdef RWHO_PROBABILITY
     probability_remove(cptr);
@@ -763,8 +762,7 @@ exit_one_client(aClient *cptr, aClient *sptr, aClient *from, char *comment)
             while ((lp = sptr->user->channel))
                 remove_user_from_channel(sptr, lp->value.chptr);
 
-            if (sptr->ip.s_addr)
-                clones_remove(sptr);
+	    clones_remove(sptr);
 
 #ifdef RWHO_PROBABILITY
             probability_remove(sptr);
