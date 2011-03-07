@@ -205,7 +205,8 @@ int user_match_ban(aClient *cptr, struct userBan *ban)
 
    if(ban->flags & (UBAN_CIDR4|UBAN_CIDR4BIG))
    {
-      if((cptr->ip.s_addr & ban->cidr4mask) == ban->cidr4ip)
+      if(cptr->ip_family == AF_INET &&
+	 (cptr->ip.ip4.s_addr & ban->cidr4mask) == ban->cidr4ip)
          return 1;
       return 0;
    }
@@ -257,9 +258,9 @@ struct userBan *check_userbanned(aClient *cptr, unsigned int yflags, unsigned in
       }
    }
 
-   if(yflags & UBAN_CIDR4)
+   if(yflags & UBAN_CIDR4 && cptr->ip_family == AF_INET)
    {
-      unsigned char *s = (unsigned char *) &cptr->ip.s_addr;
+      unsigned char *s = (unsigned char *) &cptr->ip.ip4.s_addr;
       int a, b;
 
       a = (int) *s++;
@@ -277,7 +278,7 @@ struct userBan *check_userbanned(aClient *cptr, unsigned int yflags, unsigned in
          if((!(bl->ban->flags & UBAN_WILDUSER)) && match(bl->ban->u, cptr->user->username)) 
             continue;
 
-         if((cptr->ip.s_addr & bl->ban->cidr4mask) == bl->ban->cidr4ip)
+         if((cptr->ip.ip4.s_addr & bl->ban->cidr4mask) == bl->ban->cidr4ip)
             return bl->ban;
       }
 
@@ -293,7 +294,7 @@ struct userBan *check_userbanned(aClient *cptr, unsigned int yflags, unsigned in
          if((!(bl->ban->flags & UBAN_WILDUSER)) && match(bl->ban->u, cptr->user->username)) 
             continue;
 
-         if((cptr->ip.s_addr & bl->ban->cidr4mask) == bl->ban->cidr4ip)
+         if((cptr->ip.ip4.s_addr & bl->ban->cidr4mask) == bl->ban->cidr4ip)
             return bl->ban;
       }
    }

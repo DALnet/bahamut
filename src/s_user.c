@@ -444,7 +444,8 @@ reject_proxy(aClient *cptr, char *cmd, char *args)
  */
 
 int 
-register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
+register_user(aClient *cptr, aClient *sptr, char *nick, char *username,
+	      char *hostip)
 {
     aAllow  *pwaconf = NULL;
     char       *parv[3];
@@ -466,7 +467,7 @@ register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
     parv[0] = sptr->name;
     parv[1] = parv[2] = NULL;
           
-    p = cipntoa(sptr);
+    p = hostip ? hostip : cipntoa(sptr);
     strncpyzt(sptr->hostip, p, HOSTIPLEN + 1);
     if (MyConnect(sptr)) 
     {
@@ -937,7 +938,8 @@ register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
                     strncpyzt(sptr->user->username, onick, USERLEN + 1);
                     strncpyzt(sptr->username, onick, USERLEN + 1);
                     sptr->flags |= FLAGS_GOTID; /* fake ident */
-                    sptr->ip.s_addr = 0;
+		    sptr->ip_family = AF_INET;
+                    memset(&sptr->ip, 0, sizeof(sptr->ip));
                     strcpy(sptr->hostip, "0.0.0.0");
                     strncpy(sptr->sockhost, Staff_Address, HOSTLEN + 1);
                 }
@@ -1082,7 +1084,8 @@ register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
 				   nick, sptr->hopcount + 1, sptr->tsinfo, ubuf,
 				   user->username, user->host, user->server,
 				   sptr->user->servicestamp,
-				   htonl(sptr->ip.s_addr), sptr->info);
+				   (sptr->ip_family == AF_INET) ?
+				   htonl(sptr->ip.ip4.s_addr) : 1, sptr->info);
     }
 
     if(MyClient(sptr))
@@ -2148,21 +2151,44 @@ do_user(char *nick, aClient *cptr, aClient *sptr, char *username, char *host,
     sptr->user->servicestamp = serviceid;
     if (!MyConnect(sptr))  
     {
-	if (inet_pton(AF_INET, ip, &sptr->ip) == 0)
-	    sptr->ip.s_addr = ntohl(strtoul(ip, NULL, 10));
+	if (inet_pton(AF_INET, ip, &sptr->ip.ip4) == 1)
+	{
+	    if (sptr->ip.ip4.s_addr != htonl(1))
+		sptr->ip_family = AF_INET;
+	    else
+		sptr->ip_family = 0;
+	}
+	else
+	{
+	    char *end;
+	    unsigned long l;
+
+	    l = ntohl(strtoul(ip, &end, 10));
+	    if (*ip != '\0' && *end == '\0' && l != 1)
+	    {
+		sptr->ip_family = AF_INET;
+		sptr->ip.ip4.s_addr = l;
+	    }
+	    else
+		sptr->ip_family = 0;
+	}
 
         /* add non-local clients to the throttle checker.  obviously, we only
          * do this for REMOTE clients!@$$@!  throttle_check() is called
          * elsewhere for the locals! -wd */
 #ifdef THROTTLE_ENABLE
-        if (sptr->ip.s_addr != 0)
-           throttle_check(cipntoa(sptr), -1, sptr->tsinfo);
+	if (sptr->ip_family == 0)
+	    ;
+	else if (sptr->ip_family == AF_INET && sptr->ip.ip4.s_addr == 0)
+	    ;
+	else
+	    throttle_check(ip, -1, sptr->tsinfo);
 #endif
     }
     if(MyConnect(sptr))
         sptr->oflag=0;
     if (sptr->name[0])          /* NICK already received, now I have USER... */
-        return register_user(cptr, sptr, sptr->name, username);
+        return register_user(cptr, sptr, sptr->name, username, ip);
     else
         strncpyzt(sptr->user->username, username, USERLEN + 1);
     return 0;

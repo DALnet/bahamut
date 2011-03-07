@@ -125,7 +125,10 @@ Link *ac_fludees(aClient *cptr)
 
 struct in_addr ac_ip(aClient *cptr)
 {
-	return cptr->ip;
+	if (cptr->ip_family == AF_INET)
+		return cptr->ip.ip4;
+	else
+		return (struct in_addr){1};
 }
 
 char *ac_hostip(aClient *cptr)

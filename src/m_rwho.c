@@ -930,26 +930,36 @@ static int rwho_match(aClient *cptr, int *failcode, aClient **failclient)
 
     if (rwho_opts.check[0] & RWM_IP)
     {
-        if (rwho_opts.ip_str[0])
+	if (rwho_opts.ip_str[0])
         {
             if (match(rwho_opts.ip_str[0], cptr->hostip))
                 return 0;
         }
-        else if ((cptr->ip.s_addr & rwho_opts.ip_mask[0])
-                 != rwho_opts.ip_addr[0])
-            return 0;
+        else if (cptr->ip_family == AF_INET)
+	{
+	    if ((cptr->ip.ip4.s_addr & rwho_opts.ip_mask[0])
+		!= rwho_opts.ip_addr[0])
+		return 0;
+	}
+	else
+	    return 0;
     }
 
     if (rwho_opts.check[1] & RWM_IP)
     {
-        if (rwho_opts.ip_str[1])
+	if (rwho_opts.ip_str[1])
         {
             if (!match(rwho_opts.ip_str[1], cptr->hostip))
                 return 0;
         }
-        else if ((cptr->ip.s_addr & rwho_opts.ip_mask[1])
-                 == rwho_opts.ip_addr[1])
-            return 0;
+        else if (cptr->ip_family == AF_INET)
+	{
+	    if ((cptr->ip.ip4.s_addr & rwho_opts.ip_mask[1])
+		== rwho_opts.ip_addr[1])
+		return 0;
+	}
+	else
+	    return 0;
     }
 
     if ((rwho_opts.check[0] & RWM_HOST) &&

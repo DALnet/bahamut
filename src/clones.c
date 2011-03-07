@@ -274,8 +274,10 @@ clones_add(aClient *cptr)
     CloneEnt *ceip;
     CloneEnt *ce24;
 
-    if (cptr->ip.s_addr == 0)
-	    return;
+    if (cptr->ip_family != AF_INET)
+	return;
+    if (cptr->ip.ip4.s_addr == 0)
+	return;
 
     get_clones(cptr, &ceip, &ce24, 1);
 
@@ -304,8 +306,10 @@ clones_remove(aClient *cptr)
     CloneEnt *ceip;
     CloneEnt *ce24;
 
-    if (cptr->ip.s_addr == 0)
-	    return;
+    if (cptr->ip_family != AF_INET)
+	return;
+    if (cptr->ip.ip4.s_addr == 0)
+	return;
 
     get_clones(cptr, &ceip, &ce24, 0);
 

@@ -642,8 +642,9 @@ int check_client(aClient *cptr)
 
     Debug((DEBUG_DNS, "ch_cl: access ok: %s[%s]", cptr->name, sockname));
 
-    if (inet_netof(cptr->ip) == IN_LOOPBACKNET ||
-    inet_netof(cptr->ip) == inet_netof(mysk.sin_addr))
+    if (cptr->ip_family == AF_INET &&
+	(inet_netof(cptr->ip.ip4) == IN_LOOPBACKNET ||
+	 inet_netof(cptr->ip.ip4) == inet_netof(mysk.sin_addr)))
     {
         ircstp->is_loc++;
         cptr->flags |= FLAGS_LOCAL;
@@ -1235,6 +1236,7 @@ aClient *add_connection(aListener *lptr, int fd)
      * something valid to put into error messages...
      */
     get_sockhost(acptr, (char *) inetntoa((char *) &addr.sin_addr));
+    acptr->ip_family = AF_INET;
     memcpy((char *) &acptr->ip, (char *) &addr.sin_addr,
     sizeof(struct in_addr));
     
@@ -1895,6 +1897,7 @@ connect_inet(aConnect *aconn, aClient *cptr, int *lenp)
     memcpy((char *) &server.sin_addr, (char *) &aconn->ipnum, 
             sizeof(struct in_addr));
     
+    cptr->ip_family = AF_INET;
     memcpy((char *) &cptr->ip, (char *) &aconn->ipnum,
             sizeof(struct in_addr));
 

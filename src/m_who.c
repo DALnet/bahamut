@@ -567,7 +567,8 @@ int chk_who(aClient *ac, int showall)
 	    return 0;
 
     if(wsopts.cidr4_plus)
-	if((ac->ip.s_addr & wsopts.cidr4_mask) != wsopts.cidr4_ip)
+	if(ac->ip_family != AF_INET ||
+	   (ac->ip.ip4.s_addr & wsopts.cidr4_mask) != wsopts.cidr4_ip)
 	    return 0;
     
     if(wsopts.ip_plus)
