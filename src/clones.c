@@ -274,6 +274,9 @@ clones_add(aClient *cptr)
     CloneEnt *ceip;
     CloneEnt *ce24;
 
+    if (cptr->ip.s_addr == 0)
+	    return;
+
     get_clones(cptr, &ceip, &ce24, 1);
 
     cptr->clone.prev = NULL;
@@ -300,6 +303,9 @@ clones_remove(aClient *cptr)
 {
     CloneEnt *ceip;
     CloneEnt *ce24;
+
+    if (cptr->ip.s_addr == 0)
+	    return;
 
     get_clones(cptr, &ceip, &ce24, 0);
 
