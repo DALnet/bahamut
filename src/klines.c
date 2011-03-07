@@ -148,8 +148,13 @@ m_kline(aClient *cptr, aClient *sptr, int parc, char *parv[])
             return 0;
         
         user = acptr->user->username;
-        ircsprintf(hostbuf, "%s/24", acptr->hostip);
-        host = hostbuf;
+	if (acptr->ip_family == AF_INET)
+	{
+	    ircsprintf(hostbuf, "%s/24", acptr->hostip);
+	    host = hostbuf;
+	}
+	else
+	    host = acptr->hostip;
     }
 
     if (!match(user, "akjhfkahfasfjd") &&

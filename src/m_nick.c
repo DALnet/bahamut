@@ -36,7 +36,7 @@
 extern int do_user(char *, aClient *, aClient *, char *, char *, char *,
 		   unsigned long, char *, char *);
 
-extern int register_user(aClient *, aClient *, char *, char *);
+extern int register_user(aClient *, aClient *, char *, char *, char *);
 extern int del_dccallow(aClient *, aClient *, int);
 
 
@@ -632,7 +632,7 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	{
 	    /* USER already received, now we have NICK */
        
-	    if (register_user(cptr, sptr, nick, sptr->user->username)
+	    if (register_user(cptr, sptr, nick, sptr->user->username, NULL)
 		== FLUSH_BUFFER)
 		return FLUSH_BUFFER;
 	}

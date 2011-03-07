@@ -62,7 +62,8 @@ static void sendnick_TS(aClient *cptr, aClient *acptr)
 			   acptr->name, acptr->hopcount + 1, acptr->tsinfo, ubuf,
 			   acptr->user->username, acptr->user->host,
 			   acptr->user->server, acptr->user->servicestamp,
-			   htonl(acptr->ip.s_addr), acptr->info);
+			   (acptr->ip_family == AF_INET) ?
+			   htonl(acptr->ip.ip4.s_addr) : 1, acptr->info);
 	}
     }
 }

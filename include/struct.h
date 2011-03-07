@@ -887,7 +887,11 @@ struct Client
     Link       *fludees;
 #endif
     
-    struct in_addr ip;      /* keep real ip# too */
+    int ip_family;
+    union
+    {
+	struct in_addr ip4;
+    } ip; /* keep real ip# too */
     char        hostip[HOSTIPLEN + 1]; /* Keep real ip as string 
 					* too - Dianora */
     
