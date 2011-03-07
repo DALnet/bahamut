@@ -130,6 +130,15 @@ char *inetntoa(char *in)
     return buf;
 }
 
+/* cipntoa - Return the client IP address as a string. */
+char *cipntoa(aClient *cptr)
+{
+    if (cptr->hostip[0] != '\0')
+	return cptr->hostip;
+    else
+	return inetntoa((char *)&cptr->ip);
+}
+
 #if !defined( HAVE_INET_NETOF )
 /* inet_netof --   return the net portion of an internet number */
 

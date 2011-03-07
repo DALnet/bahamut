@@ -174,7 +174,7 @@ int user_match_ban(aClient *cptr, struct userBan *ban)
    {
       char iptmp[HOSTIPLEN + 1];
 
-      strncpyzt(iptmp, inetntoa((char *)&cptr->ip), HOSTIPLEN + 1);
+      strncpyzt(iptmp, cipntoa(cptr), HOSTIPLEN + 1);
       if(ban->flags & UBAN_WILD)
       {
          if(match(ban->h, iptmp) == 0)
@@ -218,7 +218,7 @@ struct userBan *check_userbanned(aClient *cptr, unsigned int yflags, unsigned in
    char iptmp[HOSTIPLEN + 1];
    uBanEnt *bl;
 
-   strncpyzt(iptmp, inetntoa((char *)&cptr->ip), HOSTIPLEN + 1);
+   strncpyzt(iptmp, cipntoa(cptr), HOSTIPLEN + 1);
 
    if(yflags & UBAN_IP)
    {

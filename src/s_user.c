@@ -414,7 +414,7 @@ static int
 reject_proxy(aClient *cptr, char *cmd, char *args)
 {
     sendto_realops_lev(REJ_LEV, "proxy attempt from %s: %s %s",
-                       inetntoa((char *)&cptr->ip), cmd, args ? args : "");
+                       cipntoa(cptr), cmd, args ? args : "");
     return exit_client(cptr, cptr, &me, "relay connection");
 }
 
@@ -466,7 +466,7 @@ register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
     parv[0] = sptr->name;
     parv[1] = parv[2] = NULL;
           
-    p = inetntoa((char *) &sptr->ip);
+    p = cipntoa(sptr);
     strncpyzt(sptr->hostip, p, HOSTIPLEN + 1);
     if (MyConnect(sptr)) 
     {
@@ -1074,7 +1074,7 @@ register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
 				   nick, sptr->hopcount + 1, sptr->tsinfo, ubuf,
 				   user->username, user->host, user->server,
 				   sptr->user->servicestamp,
-				   inetntoa((char *)&sptr->ip), sptr->info);
+				   cipntoa(sptr), sptr->info);
     }
     else
     {
@@ -2156,7 +2156,7 @@ do_user(char *nick, aClient *cptr, aClient *sptr, char *username, char *host,
          * elsewhere for the locals! -wd */
 #ifdef THROTTLE_ENABLE
         if (sptr->ip.s_addr != 0)
-           throttle_check(inetntoa((char *)&sptr->ip), -1, sptr->tsinfo);
+           throttle_check(cipntoa(sptr), -1, sptr->tsinfo);
 #endif
     }
     if(MyConnect(sptr))
