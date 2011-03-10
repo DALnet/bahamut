@@ -890,6 +890,7 @@ struct Client
     union
     {
 	struct in_addr ip4;
+	struct in6_addr ip6;
     } ip; /* keep real ip# too */
     char        hostip[HOSTIPLEN + 1]; /* Keep real ip as string 
 					* too - Dianora */

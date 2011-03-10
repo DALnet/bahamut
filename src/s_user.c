@@ -540,8 +540,17 @@ register_user(aClient *cptr, aClient *sptr, char *nick, char *username,
         /*
          * Check that the hostname has AT LEAST ONE dot (.) in it. If
          * not, drop the client (spoofed host) -ThemBones
+	 *
+	 * allow valid IPv6 addresses, though.
          */
-        if (!dots) 
+	if (sptr->ip_family == AF_INET6 &&
+	    inet_pton(AF_INET6, user->host, tmpstr2) == 1)
+	{
+	    bad_dns = NO;
+	    dots = 1;
+	}
+
+	if (!dots) 
         {
             sendto_realops("Invalid hostname for %s, dumping user %s",
                            sptr->hostip, sptr->name);

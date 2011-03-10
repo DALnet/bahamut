@@ -24,6 +24,7 @@
 #include "h.h"
 #include "numeric.h"
 #include "memcount.h"
+#include "inet.h"
 
 #define FOREVER for(;;)
 
@@ -130,13 +131,35 @@ char *inetntoa(char *in)
     return buf;
 }
 
+/* inet6ntoa - return the string notation of a given IPv6 address. */
+char *inet6ntoa(char *in)
+{
+    static char buf[HOSTIPLEN + 2];
+
+    buf[1] = '\0';
+    if (inet_ntop(AF_INET6, in, buf + 1, sizeof(buf) - 1))
+    {
+	/* addresses should not start with a ':' character */
+	if (buf[1] == ':')
+	{
+	    buf[0] = '0';
+	    return buf;
+	}
+    }
+    return buf + 1;
+}
+
 /* cipntoa - Return the client IP address as a string. */
 char *cipntoa(aClient *cptr)
 {
     if (cptr->hostip[0] != '\0')
 	return cptr->hostip;
+    else if (cptr->ip_family == AF_INET)
+	return inetntoa((char *)&cptr->ip.ip4);
+    else if (cptr->ip_family == AF_INET6)
+	return inet6ntoa((char *)&cptr->ip.ip6);
     else
-	return inetntoa((char *)&cptr->ip);
+	return "invalid.address.family.invalid";
 }
 
 #if !defined( HAVE_INET_NETOF )

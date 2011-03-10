@@ -282,6 +282,9 @@ clones_add(aClient *cptr)
 
     if (cptr->ip_family == AF_INET && cptr->ip.ip4.s_addr == 0)
 	return;
+    if (cptr->ip_family == AF_INET6 &&
+	memcmp(&cptr->ip.ip6, &in6addr_any, sizeof(struct in6_addr)) == 0)
+	return;
 
     get_clones(cptr, &ceip, &ce24, 1);
 
@@ -313,6 +316,9 @@ clones_remove(aClient *cptr)
     CloneEnt *ce24;
 
     if (cptr->ip_family == AF_INET && cptr->ip.ip4.s_addr == 0)
+	return;
+    if (cptr->ip_family == AF_INET6 &&
+	memcmp(&cptr->ip.ip6, &in6addr_any, sizeof(struct in6_addr)) == 0)
 	return;
 
     get_clones(cptr, &ceip, &ce24, 0);
