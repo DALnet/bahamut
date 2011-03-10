@@ -54,11 +54,13 @@ void start_auth(aClient *cptr)
     {
 	struct sockaddr sa;
 	struct sockaddr_in addr4;
+	struct sockaddr_in6 addr6;
     } sock;
     union
     {
 	struct sockaddr sa;
 	struct sockaddr_in addr4;
+	struct sockaddr_in6 addr6;
     } localaddr;
     unsigned int locallen;
 
@@ -98,6 +100,8 @@ void start_auth(aClient *cptr)
     getsockname(cptr->fd, &localaddr.sa, &locallen);
     if (localaddr.sa.sa_family == AF_INET)
 	localaddr.addr4.sin_port = htons(0);
+    else if (localaddr.sa.sa_family == AF_INET6)
+	localaddr.addr6.sin6_port = htons(0);
 
     if (bind(cptr->authfd, &localaddr.sa,
 	     sizeof(localaddr)) == -1)
@@ -115,6 +119,13 @@ void start_auth(aClient *cptr)
 	       sizeof(struct in_addr));
 	sock.addr4.sin_port = htons(113);
 	sock.addr4.sin_family = AF_INET;
+    }
+    else if (cptr->ip_family == AF_INET6)
+    {
+	memcpy((char *) &sock.addr6.sin6_addr, (char *) &cptr->ip.ip6,
+	       sizeof(struct in6_addr));
+	sock.addr6.sin6_port = htons(113);
+	sock.addr6.sin6_family = AF_INET6;
     }
 
     if (connect(cptr->authfd, &sock.sa,
@@ -153,11 +164,13 @@ void send_authports(aClient *cptr)
     {
 	struct sockaddr sa;
 	struct sockaddr_in addr4;
+	struct sockaddr_in6 addr6;
     } us;
     union
     {
 	struct sockaddr sa;
 	struct sockaddr_in addr4;
+	struct sockaddr_in6 addr6;
     } them;
     char        authbuf[32];
     unsigned int ulen = sizeof(us), tlen = sizeof(them);
@@ -183,6 +196,14 @@ void send_authports(aClient *cptr)
 			  (unsigned int) ntohs(us.addr4.sin_port));
 	Debug((DEBUG_SEND, "sending [%s] to auth port %s.113",
 	       authbuf, inetntoa((char *) &them.sin_addr)));
+    }
+    else if (us.sa.sa_family == AF_INET6)
+    {
+	(void) ircsprintf(authbuf, "%u , %u\r\n",
+			  (unsigned int) ntohs(them.addr6.sin6_port),
+			  (unsigned int) ntohs(us.addr6.sin6_port));
+	Debug((DEBUG_SEND, "sending [%s] to auth port %s.113",
+	       authbuf, inet6ntoa((char *) &them.sin_addr)));
     }
 
     if (send(cptr->authfd, authbuf, strlen(authbuf), 0) != strlen(authbuf)) {

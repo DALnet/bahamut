@@ -180,6 +180,7 @@ extern char 	 *getreply(int);
 extern char 	 *strerror(int);
 extern int  	  dgets(int, char *, int);
 extern char 	 *inetntoa(char *);
+extern char 	 *inet6ntoa(char *);
 extern char 	 *cipntoa(aClient *);
 extern int  	  dbufalloc, dbufblocks, debuglevel, errno;
 extern int  	  highest_fd, debuglevel, portnum,

@@ -276,6 +276,7 @@ int add_listener(aPort *aport)
     {
 	struct sockaddr sa;
 	struct sockaddr_in addr4;
+	struct sockaddr_in6 addr6;
     } server;
     unsigned int len = sizeof(server);
 #ifdef USE_SSL
@@ -290,9 +291,17 @@ int add_listener(aPort *aport)
     {
         strncpyzt(lstn.vhost_string, aport->address, sizeof(lstn.vhost_string));
 
-	server.addr4.sin_family = AF_INET;
-	server.addr4.sin_addr.s_addr = inet_addr(aport->address);
-	server.addr4.sin_port = htons(lstn.port);
+	if (inet_pton(AF_INET6, aport->address, &server.addr6.sin6_addr) == 1)
+	{
+	    server.addr6.sin6_family = AF_INET6;
+	    server.addr6.sin6_port = htons(lstn.port);
+	}
+	else
+	{
+	    server.addr4.sin_family = AF_INET;
+	    server.addr4.sin_addr.s_addr = inet_addr(aport->address);
+	    server.addr4.sin_port = htons(lstn.port);
+	}
     }
     else
     {
@@ -584,6 +593,7 @@ static int check_init(aClient * cptr, char *sockn)
     {
 	struct sockaddr sa;
 	struct sockaddr_in addr4;
+	struct sockaddr_in6 addr6;
     } sk;
     unsigned int len = sizeof(sk);
 
@@ -604,6 +614,13 @@ static int check_init(aClient * cptr, char *sockn)
 	       sizeof(struct in_addr));
 
 	cptr->port = (int) (ntohs(sk.addr4.sin_port));
+    }
+    else if (sk.sa.sa_family == AF_INET6)
+    {
+	strcpy(sockn, (char *) inet6ntoa((char *) &sk.addr6.sin6_addr));
+	memcpy((char *) &cptr->ip.ip6, (char *) &sk.addr6.sin6_addr,
+	       sizeof(struct in6_addr));
+	cptr->port = (int) (ntohs(sk.addr6.sin6_port));
     }
 
     return 0;
@@ -1243,6 +1260,7 @@ aClient *add_connection(aListener *lptr, int fd)
     {
 	struct sockaddr sa;
 	struct sockaddr_in addr4;
+	struct sockaddr_in6 addr6;
     } addr;
     unsigned int len = sizeof(addr);
     struct userBan *ban;
@@ -1291,6 +1309,14 @@ aClient *add_connection(aListener *lptr, int fd)
 	    return NULL;
 	}
     }
+    else if (acptr->ip_family == AF_INET6)
+    {
+	get_sockhost(acptr, (char *) inet6ntoa((char *) &addr.addr6.sin6_addr));
+	memcpy((char *) &acptr->ip.ip6, (char *) &addr.addr6.sin6_addr,
+		sizeof(struct in6_addr));
+	acptr->port = ntohs(addr.addr6.sin6_port);
+    }
+
 
     lptr->ccount++;
     lptr->clients++;
@@ -1592,6 +1618,7 @@ void accept_connection(aListener *lptr)
     {
 	struct sockaddr sa;
 	struct sockaddr_in addr4;
+	struct sockaddr_in6 addr6;
     } addr;
     unsigned int addrlen = sizeof(addr);
     char host[HOSTLEN + 2];
@@ -1626,6 +1653,11 @@ void accept_connection(aListener *lptr)
 	if (addr.sa.sa_family == AF_INET)
 	{
 	    strncpyzt(host, (char *) inetntoa((char *) &addr.addr4.sin_addr),
+		      sizeof(host));
+	}
+	else if (addr.sa.sa_family == AF_INET6)
+	{
+	    strncpyzt(host, (char *) inet6ntoa((char *) &addr.addr6.sin6_addr),
 		      sizeof(host));
 	}
 	else
