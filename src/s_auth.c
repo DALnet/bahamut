@@ -41,7 +41,7 @@ static void authsenderr(aClient *);
 
 /*
  * start_auth
- * 
+ *
  * Flag the client to show that an attempt to contact the ident server on
  * the client's host.  The connect and subsequently the socket are all
  * put into 'non-blocking' mode.  Should the connect or any later phase
@@ -50,13 +50,21 @@ static void authsenderr(aClient *);
  */
 void start_auth(aClient *cptr)
 {
-    struct sockaddr_in sock;
-    struct sockaddr_in localaddr;
+    union
+    {
+	struct sockaddr sa;
+	struct sockaddr_in addr4;
+    } sock;
+    union
+    {
+	struct sockaddr sa;
+	struct sockaddr_in addr4;
+    } localaddr;
     unsigned int locallen;
 
     Debug((DEBUG_NOTICE, "start_auth(%x) fd %d status %d",
 	   cptr, cptr->fd, cptr->status));
-    if ((cptr->authfd = socket(AF_INET, SOCK_STREAM, 0)) == -1)
+    if ((cptr->authfd = socket(cptr->ip_family, SOCK_STREAM, 0)) == -1)
     {
 #ifdef	USE_SYSLOG
 	syslog(LOG_ERR, "Unable to create auth socket for %s:%m",
@@ -77,6 +85,7 @@ void start_auth(aClient *cptr)
     sendto_one(cptr, "%s", REPORT_DO_ID);
 #endif
     set_non_blocking(cptr->authfd, cptr);
+
     /*
      * get the local address of the client and bind to that to make the
      * auth request.  This used to be done only for ifdef VIRTTUAL_HOST,
@@ -84,28 +93,31 @@ void start_auth(aClient *cptr)
      * originate from that same address-- and machines with multiple IP
      * addresses are common now
      */
-    locallen = sizeof(struct sockaddr_in);
+    locallen = sizeof(localaddr);
+    memset(&localaddr, '\0', sizeof(localaddr));
+    getsockname(cptr->fd, &localaddr.sa, &locallen);
+    if (localaddr.sa.sa_family == AF_INET)
+	localaddr.addr4.sin_port = htons(0);
 
-    memset(&localaddr, '\0', locallen);
-    getsockname(cptr->fd, (struct sockaddr *) &localaddr, &locallen);
-    localaddr.sin_port = htons(0);
-
-    if (bind(cptr->authfd, (struct sockaddr *) &localaddr,
-	     sizeof(localaddr)) == -1) 
+    if (bind(cptr->authfd, &localaddr.sa,
+	     sizeof(localaddr)) == -1)
     {
 	report_error("binding auth stream socket %s:%s", cptr);
 	close(cptr->authfd);
         cptr->authfd = -1;
 	return;
     }
-    
-    memcpy((char *) &sock.sin_addr, (char *) &cptr->ip,
-	   sizeof(struct in_addr));
 
-    sock.sin_port = htons(113);
-    sock.sin_family = AF_INET;
+    memset(&sock, '\0', sizeof(sock));
+    if (cptr->ip_family == AF_INET)
+    {
+	memcpy((char *) &sock.addr4.sin_addr, (char *) &cptr->ip.ip4,
+	       sizeof(struct in_addr));
+	sock.addr4.sin_port = htons(113);
+	sock.addr4.sin_family = AF_INET;
+    }
 
-    if (connect(cptr->authfd, (struct sockaddr *) &sock,
+    if (connect(cptr->authfd, &sock.sa,
 		sizeof(sock)) == -1 && errno != EINPROGRESS)
     {
 	ircstp->is_abad++;
@@ -128,7 +140,7 @@ void start_auth(aClient *cptr)
 
 /*
  * send_authports
- * 
+ *
  * Send the ident server a query giving "theirport , ourport". The write
  * is only attempted *once* so it is deemed to be a fail if the entire
  * write doesn't write all the data given.  This shouldnt be a problem
@@ -137,16 +149,24 @@ void start_auth(aClient *cptr)
  */
 void send_authports(aClient *cptr)
 {
-    struct sockaddr_in us, them;
+    union
+    {
+	struct sockaddr sa;
+	struct sockaddr_in addr4;
+    } us;
+    union
+    {
+	struct sockaddr sa;
+	struct sockaddr_in addr4;
+    } them;
     char        authbuf[32];
-    unsigned int ulen, tlen;
+    unsigned int ulen = sizeof(us), tlen = sizeof(them);
 
     Debug((DEBUG_NOTICE, "write_authports(%x) fd %d authfd %d stat %d",
 	   cptr, cptr->fd, cptr->authfd, cptr->status));
-    tlen = ulen = sizeof(us);
 
-    if (getsockname(cptr->fd, (struct sockaddr *) &us, &ulen) ||
-	getpeername(cptr->fd, (struct sockaddr *) &them, &tlen))
+    if (getsockname(cptr->fd, &us.sa, &ulen) ||
+	getpeername(cptr->fd, &them.sa, &tlen))
     {
 #ifdef	USE_SYSLOG
 	syslog(LOG_DEBUG, "auth get{sock,peer}name error for %s:%m",
@@ -156,12 +176,14 @@ void send_authports(aClient *cptr)
 	return;
     }
 
-    (void) ircsprintf(authbuf, "%u , %u\r\n",
-		      (unsigned int) ntohs(them.sin_port),
-		      (unsigned int) ntohs(us.sin_port));
-    
-    Debug((DEBUG_SEND, "sending [%s] to auth port %s.113",
-	   authbuf, inetntoa((char *) &them.sin_addr)));
+    if (us.sa.sa_family == AF_INET)
+    {
+	(void) ircsprintf(authbuf, "%u , %u\r\n",
+			  (unsigned int) ntohs(them.addr4.sin_port),
+			  (unsigned int) ntohs(us.addr4.sin_port));
+	Debug((DEBUG_SEND, "sending [%s] to auth port %s.113",
+	       authbuf, inetntoa((char *) &them.sin_addr)));
+    }
 
     if (send(cptr->authfd, authbuf, strlen(authbuf), 0) != strlen(authbuf)) {
 	authsenderr(cptr);
