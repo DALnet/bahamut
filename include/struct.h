@@ -788,10 +788,9 @@ struct Listener {
         struct Listener *next;              /* next listener */
         int             fd;                 /* fd of this listener */
         u_short         port; 
-        char            allow_string[32];   /* allow from */
-        char            vhost_string[32];   /* bind to */
+        char            allow_string[HOSTLEN + 1];   /* allow from */
+        char            vhost_string[HOSTLEN + 1];   /* bind to */
         struct in_addr  allow_ip;           /* allow from */
-        struct in_addr  vhost_ip;           /* bind to */
         time_t          lasttime;           /* last time I accepted */
         long            sendK;              /* counters, see below */
         u_short         sendB;           

@@ -77,7 +77,7 @@ int rcvbufmax = 0, sndbufmax = 0;
 void reset_sock_opts(int, int);
 #endif
 
-static void set_listener_sock_opts(int, aListener *);
+static void set_listener_sock_opts(int, aListener *, int);
 static void set_listener_non_blocking(int, aListener *);
 /* listener list, count */
 aListener *listen_list = NULL;
@@ -272,64 +272,69 @@ int add_listener(aPort *aport)
 {
     aListener *lptr;
     aListener lstn;
-    struct sockaddr_in server;
-    int ad[4];
+    union
+    {
+	struct sockaddr sa;
+	struct sockaddr_in addr4;
+    } server;
     unsigned int len = sizeof(server);
-    char ipname[20];
 #ifdef USE_SSL
     extern int ssl_capable;
 #endif
 
     memset(&lstn, 0, sizeof(aListener));
-    ad[0] = ad[1] = ad[2] = ad[3] = 0;
+    lstn.port = aport->port;
 
-    if(!BadPtr(aport->allow))
+    memset(&server, 0, sizeof(server));
+    if (!BadPtr(aport->address) && (*aport->address != '*'))
     {
+        strncpyzt(lstn.vhost_string, aport->address, sizeof(lstn.vhost_string));
+
+	server.addr4.sin_family = AF_INET;
+	server.addr4.sin_addr.s_addr = inet_addr(aport->address);
+	server.addr4.sin_port = htons(lstn.port);
+    }
+    else
+    {
+	server.addr4.sin_family = AF_INET;
+	server.addr4.sin_addr.s_addr = INADDR_ANY;
+	server.addr4.sin_port = htons(lstn.port);
+    }
+
+    if(!BadPtr(aport->allow) && server.sa.sa_family == AF_INET)
+    {
+	int ad[4];
+	char ipname[20];
+
+	ad[0] = ad[1] = ad[2] = ad[3] = 0;
+
         strncpyzt(lstn.allow_string, aport->allow, sizeof(lstn.allow_string));
-        sscanf(lstn.allow_string, "%d.%d.%d.%d", &ad[0], &ad[1], 
+        sscanf(lstn.allow_string, "%d.%d.%d.%d", &ad[0], &ad[1],
                                                  &ad[2], &ad[3]);
         ircsprintf(ipname, "%d.%d.%d.%d", ad[0], ad[1], ad[2], ad[3]);
         lstn.allow_ip.s_addr = inet_addr(ipname);
     }
 
-    if (!BadPtr(aport->address) && (*aport->address != '*'))
-    {
-        lstn.vhost_ip.s_addr = inet_addr(aport->address);
-        strncpyzt(lstn.vhost_string, aport->address, sizeof(lstn.vhost_string));
-    }
-
-    lstn.port = aport->port;
-
     if(lstn.port <= 0) /* stop stupidity cold */
         return -1;
 
-    lstn.fd = socket(AF_INET, SOCK_STREAM, 0);
+    lstn.fd = socket(server.sa.sa_family, SOCK_STREAM, 0);
     if (lstn.fd < 0)
     {
         report_listener_error("opening stream socket %s:%s", &lstn);
         return -1;
     }
 
-    set_listener_sock_opts(lstn.fd, &lstn);
+    set_listener_sock_opts(lstn.fd, &lstn, server.sa.sa_family);
 
-    memset(&server, '\0', sizeof(server));
-    server.sin_family = AF_INET;
-
-    if (lstn.vhost_ip.s_addr)
-        server.sin_addr.s_addr = lstn.vhost_ip.s_addr;
-    else
-        server.sin_addr.s_addr = INADDR_ANY;
-
-    server.sin_port = htons(lstn.port);
-
-    if (bind(lstn.fd, (struct sockaddr *) &server, sizeof(struct sockaddr_in)))
+    if (bind(lstn.fd, &server.sa, sizeof(server)))
     {
         report_listener_error("binding stream socket %s:%s", &lstn);
         close(lstn.fd);
         return -1;
     }
 
-    if (getsockname(lstn.fd, (struct sockaddr *) &server, &len)) 
+    if (getsockname(lstn.fd, &server.sa, &len))
     {
         report_listener_error("getsockname failed for %s:%s", &lstn);
         close(lstn.fd);
@@ -575,23 +580,31 @@ void write_pidfile()
  */
 static int check_init(aClient * cptr, char *sockn)
 {
-    struct sockaddr_in sk;
-    unsigned int len = sizeof(struct sockaddr_in);
+    union
+    {
+	struct sockaddr sa;
+	struct sockaddr_in addr4;
+    } sk;
+    unsigned int len = sizeof(sk);
 
     /* If descriptor is a tty, special checking... * IT can't EVER be a tty */
 
-    if (getpeername(cptr->fd, (struct sockaddr *) &sk, &len) == -1)
+    if (getpeername(cptr->fd, &sk.sa, &len) == -1)
         return -1;
 
-    strcpy(sockn, (char *) inetntoa((char *) &sk.sin_addr));
-    if (inet_netof(sk.sin_addr) == IN_LOOPBACKNET)
+    if (sk.sa.sa_family == AF_INET)
     {
-        cptr->hostp = NULL;
-        strncpyzt(sockn, me.sockhost, HOSTLEN);
+	strcpy(sockn, (char *) inetntoa((char *) &sk.addr4.sin_addr));
+	if (inet_netof(sk.addr4.sin_addr) == IN_LOOPBACKNET)
+	{
+	    cptr->hostp = NULL;
+	    strncpyzt(sockn, me.sockhost, HOSTLEN);
+	}
+	memcpy((char *) &cptr->ip.ip4, (char *) &sk.addr4.sin_addr,
+	       sizeof(struct in_addr));
+
+	cptr->port = (int) (ntohs(sk.addr4.sin_port));
     }
-    memcpy((char *) &cptr->ip, (char *) &sk.sin_addr, sizeof(struct in_addr));
-    
-    cptr->port = (int) (ntohs(sk.sin_port));
 
     return 0;
 }
@@ -1070,10 +1083,19 @@ static void set_sock_opts(int fd, aClient * cptr)
 #endif
 }
 
-static void set_listener_sock_opts(int fd, aListener *lptr)
+static void set_listener_sock_opts(int fd, aListener *lptr, int family)
 {
     int opt;
 
+#ifdef IPV6_V6ONLY
+    if (family == AF_INET6)
+    {
+	opt = 1;
+	if (setsockopt(fd, IPPROTO_IPV6, IPV6_V6ONLY, (char *) &opt,
+		       sizeof(opt)) < 0)
+	    report_listener_error("setsockopt(IPV6_V6ONLY) %s:%s", lptr);
+    }
+#endif
 #ifdef SO_REUSEADDR
     opt = 1;
     if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (char *) &opt, 
@@ -1217,49 +1239,57 @@ aClient *add_connection(aListener *lptr, int fd)
 {
     Link lin;
     aClient *acptr = NULL;
-    char *s, *t;
-    struct sockaddr_in addr;
-    unsigned int len = sizeof(struct sockaddr_in);
+    union
+    {
+	struct sockaddr sa;
+	struct sockaddr_in addr4;
+    } addr;
+    unsigned int len = sizeof(addr);
     struct userBan *ban;
-    
-    if (getpeername(fd, (struct sockaddr *) &addr, &len) == -1)
-    { 
+
+    if (getpeername(fd, &addr.sa, &len) == -1)
+    {
         ircstp->is_ref++;
         close(fd);
         return NULL;
     }
 
     acptr = make_client(NULL, &me);
+    acptr->ip_family = addr.sa.sa_family;
 
-    /* 
+    /*
      * Copy ascii address to 'sockhost' just in case. Then we have
      * something valid to put into error messages...
      */
-    get_sockhost(acptr, (char *) inetntoa((char *) &addr.sin_addr));
-    acptr->ip_family = AF_INET;
-    memcpy((char *) &acptr->ip, (char *) &addr.sin_addr,
-    sizeof(struct in_addr));
-    
-    acptr->port = ntohs(addr.sin_port);
-    /* 
-     * Check that this socket (client) is allowed to accept
-     * connections from this IP#.
-     */
-    for (s = (char *) &lptr->allow_ip, t = (char *) &acptr->ip, len = 4;
-         len > 0; len--, s++, t++)
+    if (acptr->ip_family == AF_INET)
     {
-        if (!*s)
-            continue;
-        if (*s != *t)
-            break;
-    }
-    if (len)
-    {
-        ircstp->is_ref++;
-        acptr->fd = -2;
-        free_client(acptr);
-        close(fd);
-        return NULL;
+	char *s, *t;
+
+	get_sockhost(acptr, (char *) inetntoa((char *) &addr.addr4.sin_addr));
+	memcpy((char *) &acptr->ip.ip4, (char *) &addr.addr4.sin_addr,
+		sizeof(struct in_addr));
+	acptr->port = ntohs(addr.addr4.sin_port);
+
+	/*
+	 * Check that this socket (client) is allowed to accept
+	 * connections from this IP#.
+	 */
+	for (s = (char *) &lptr->allow_ip, t = (char *) &acptr->ip.ip4, len = 4;
+	     len > 0; len--, s++, t++)
+	{
+	    if (!*s)
+		continue;
+	    if (*s != *t)
+		break;
+	}
+	if (len)
+	{
+	    ircstp->is_ref++;
+	    acptr->fd = -2;
+	    free_client(acptr);
+	    close(fd);
+	    return NULL;
+	}
     }
 
     lptr->ccount++;
@@ -1302,9 +1332,13 @@ aClient *add_connection(aListener *lptr, int fd)
 #endif
         lin.flags = ASYNC_CLIENT;
         lin.value.cptr = acptr;
-        Debug((DEBUG_DNS, "lookup %s", inetntoa((char *) &addr.sin_addr)));
-        acptr->hostp = gethost_byaddr((char *) &acptr->ip, &lin);
-        if (!acptr->hostp)
+	if (acptr->ip_family == AF_INET)
+	{
+	    Debug((DEBUG_DNS, "lookup %s",
+		   inetntoa((char *) &addr.addr4.sin_addr)));
+	    acptr->hostp = gethost_byaddr((char *) &acptr->ip.ip4, &lin);
+	}
+	if (acptr->ip_family == AF_INET && !acptr->hostp)
             SetDNS(acptr);
 #ifdef SHOW_HEADERS
         else
@@ -1554,18 +1588,22 @@ void read_error_exit(aClient *cptr, int length, int err)
 
 void accept_connection(aListener *lptr)
 {
-    static struct sockaddr_in addr;
-    unsigned int addrlen = sizeof(struct sockaddr_in);
+    union
+    {
+	struct sockaddr sa;
+	struct sockaddr_in addr4;
+    } addr;
+    unsigned int addrlen = sizeof(addr);
     char host[HOSTLEN + 2];
     int newfd;
     int i;
-    
+
     lptr->lasttime = timeofday;
-    
-    for (i = 0; i < 100; i++) /* accept up to 100 times per call 
+
+    for (i = 0; i < 100; i++) /* accept up to 100 times per call
                                * to deal with high connect rates */
     {
-        if((newfd = accept(lptr->fd, (struct sockaddr *) &addr, &addrlen)) < 0) 
+        if((newfd = accept(lptr->fd, &addr.sa, &addrlen)) < 0)
         {
             switch(errno)
             {
@@ -1585,11 +1623,20 @@ void accept_connection(aListener *lptr)
         return;
         }
 
-        strncpyzt(host, (char *) inetntoa((char *) &addr.sin_addr), 
-                  sizeof(host));
+	if (addr.sa.sa_family == AF_INET)
+	{
+	    strncpyzt(host, (char *) inetntoa((char *) &addr.addr4.sin_addr),
+		      sizeof(host));
+	}
+	else
+	{
+	    /* unknown address family. */
+	    close(newfd);
+	    return;
+	}
 
         /* if they are throttled, drop them silently. */
-        if (throttle_check(host, newfd, NOW) == 0) 
+        if (throttle_check(host, newfd, NOW) == 0)
         {
             ircstp->is_ref++;
             ircstp->is_throt++;
@@ -1597,7 +1644,7 @@ void accept_connection(aListener *lptr)
             return;
         }
 
-        if (newfd >= MAX_ACTIVECONN) 
+        if (newfd >= MAX_ACTIVECONN)
         {
             ircstp->is_ref++;
             sendto_realops_lev(CCONN_LEV,"All connections in use. fd: %d (%s)",
