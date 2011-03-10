@@ -94,14 +94,20 @@ get_clones(aClient *cptr, CloneEnt **ceip, CloneEnt **ce24, int create)
     char ip24[HOSTIPLEN+1];
     char *s;
 
-    strcpy(ip24, cptr->hostip);
-    /* deliberate core if strrchr fails -- we need a valid IP string */
-    s = strrchr(ip24, '.');
-    *++s = '*';
-    *++s = 0;
+    if (cptr->ip_family == AF_INET)
+    {
+	strcpy(ip24, cptr->hostip);
+	/* deliberate core if strrchr fails -- we need a valid IP string */
+	s = strrchr(ip24, '.');
+	*++s = '*';
+	*++s = 0;
+    }
 
     *ceip = get_clone(cptr->hostip, create);
-    *ce24 = get_clone(ip24, create);
+    if (cptr->ip_family == AF_INET)
+	*ce24 = get_clone(ip24, create);
+    else
+	*ce24 = NULL;
 }
 
 static int
@@ -274,9 +280,7 @@ clones_add(aClient *cptr)
     CloneEnt *ceip;
     CloneEnt *ce24;
 
-    if (cptr->ip_family != AF_INET)
-	return;
-    if (cptr->ip.ip4.s_addr == 0)
+    if (cptr->ip_family == AF_INET && cptr->ip.ip4.s_addr == 0)
 	return;
 
     get_clones(cptr, &ceip, &ce24, 1);
@@ -288,12 +292,14 @@ clones_add(aClient *cptr)
     ceip->clients = cptr;
 
     ceip->gcount++;
-    ce24->gcount++;
+    if (ce24)
+	ce24->gcount++;
 
     if (MyConnect(cptr))
     {
         ceip->lcount++;
-        ce24->lcount++;
+	if (ce24)
+	    ce24->lcount++;
     }
 }
 
@@ -306,9 +312,7 @@ clones_remove(aClient *cptr)
     CloneEnt *ceip;
     CloneEnt *ce24;
 
-    if (cptr->ip_family != AF_INET)
-	return;
-    if (cptr->ip.ip4.s_addr == 0)
+    if (cptr->ip_family == AF_INET && cptr->ip.ip4.s_addr == 0)
 	return;
 
     get_clones(cptr, &ceip, &ce24, 0);
@@ -321,17 +325,20 @@ clones_remove(aClient *cptr)
         ceip->clients = cptr->clone.next;
 
     ceip->gcount--;
-    ce24->gcount--;
+    if (ce24)
+	ce24->gcount--;
 
     /* !$%#&*%@ user state handling! */
     if (cptr->uplink == &me)
     {
         ceip->lcount--;
-        ce24->lcount--;
+	if (ce24)
+	    ce24->lcount--;
     }
 
     expire_clone(ceip);
-    expire_clone(ce24);
+    if (ce24)
+	expire_clone(ce24);
 }
 #endif  /* THROTTLE_ENABLE */
 
