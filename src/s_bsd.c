@@ -651,8 +651,9 @@ int check_client(aClient *cptr)
     if (hp)
     {
         for (i = 0; hp->h_addr_list[i]; i++)
-            if (!memcmp(hp->h_addr_list[i], (char *) &cptr->ip,
-                    sizeof(struct in_addr))) 
+            if (hp->h_addrtype == cptr->ip_family &&
+		!memcmp(hp->h_addr_list[i], (char *) &cptr->ip,
+			hp->h_length))
                 break;
 
         if (!hp->h_addr_list[i])
@@ -1365,7 +1366,14 @@ aClient *add_connection(aListener *lptr, int fd)
 	    acptr->hostp = gethost_byaddr((char *) &acptr->ip.ip4, &lin,
 					  AF_INET);
 	}
-	if (acptr->ip_family == AF_INET && !acptr->hostp)
+	else if (acptr->ip_family == AF_INET6)
+	{
+	    Debug((DEBUG_DNS, "lookup %s",
+		   inet6ntoa((char *) &addr.addr6.s6_addr)));
+	    acptr->hostp = gethost_byaddr((char *) &acptr->ip.ip6, &lin,
+					  AF_INET6);
+	}
+	if (!acptr->hostp)
             SetDNS(acptr);
 #ifdef SHOW_HEADERS
         else
@@ -1828,7 +1836,7 @@ int connect_server(aConnect *aconn, aClient * by, struct hostent *hp)
                                  hp, aconn, aconn->name, s));
             if (!hp)
                 return 0;
-            memcpy((char *) &aconn->ipnum, hp->h_addr, sizeof(struct in_addr));
+            memcpy((char *) &aconn->ipnum, hp->h_addr, hp->h_length);
         }
     }
     cptr = make_client(NULL, &me);
@@ -2095,7 +2103,7 @@ void do_dns_async()
                 if (hp && aconn)
                 {
                     memcpy((char *) &aconn->ipnum, hp->h_addr,
-                           sizeof(struct in_addr));
+			   hp->h_length);
         
                     connect_server(aconn, NULL, hp);
                 } 
@@ -2107,7 +2115,7 @@ void do_dns_async()
                 aconn = ln.value.aconn;
                 if (hp && aconn)
                     memcpy((char *) &aconn->ipnum, hp->h_addr,
-                            sizeof(struct in_addr));
+			   hp->h_length);
 
                 break;
             default:

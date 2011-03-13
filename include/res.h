@@ -50,6 +50,7 @@ typedef struct reslist
     union
     {
 	struct in_addr addr4;
+	struct in6_addr addr6;
     } addr;
     char       *name;
     Link        cinfo;
