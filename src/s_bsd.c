@@ -737,7 +737,7 @@ int check_server_init(aClient * cptr)
         else
             s = aconn->host;
         Debug((DEBUG_DNS, "sv_ci:cache lookup (%s)", s));
-        if((hp = gethost_byname(s, &lin)))
+        if((hp = gethost_byname(s, &lin, AF_INET)))
         {
             for (i = 0; hp->h_addr_list[i]; i++)
                 if (!memcmp(hp->h_addr_list[i], (char *) &cptr->ip, 
@@ -1362,7 +1362,8 @@ aClient *add_connection(aListener *lptr, int fd)
 	{
 	    Debug((DEBUG_DNS, "lookup %s",
 		   inetntoa((char *) &addr.addr4.sin_addr)));
-	    acptr->hostp = gethost_byaddr((char *) &acptr->ip.ip4, &lin);
+	    acptr->hostp = gethost_byaddr((char *) &acptr->ip.ip4, &lin,
+					  AF_INET);
 	}
 	if (acptr->ip_family == AF_INET && !acptr->hostp)
             SetDNS(acptr);
@@ -1822,7 +1823,7 @@ int connect_server(aConnect *aconn, aClient * by, struct hostent *hp)
         if ((aconn->ipnum.s_addr = inet_addr(s)) == -1) 
         {
             aconn->ipnum.s_addr = 0;
-            hp = gethost_byname(s, &lin);
+            hp = gethost_byname(s, &lin, AF_INET);
             Debug((DEBUG_NOTICE, "co_sv: hp %x ac %x na %s ho %s",
                                  hp, aconn, aconn->name, s));
             if (!hp)
