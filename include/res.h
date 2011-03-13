@@ -17,6 +17,11 @@
 
 #define	AR_TTL		600	 /* TTL in seconds for dns cache entries */
 
+struct res_in_addr
+{
+    char buf[16];
+};
+
 struct hent 
 {
     char       *h_name;		    /* official name of host */
@@ -25,7 +30,7 @@ struct hent
     int         h_length;	    /* length of address */
     
     /* list of addresses from name server */
-    struct in_addr h_addr_list[IRC_MAXADDRS];
+    struct res_in_addr h_addr_list[IRC_MAXADDRS];
     
 #define	h_addr	h_addr_list[0]	    /* address, for backward compatiblity */
 };
@@ -42,7 +47,10 @@ typedef struct reslist
     char        resend;			/* send flag. 0 == dont resend */
     time_t      sentat;
     time_t      timeout;
-    struct in_addr addr;
+    union
+    {
+	struct in_addr addr4;
+    } addr;
     char       *name;
     Link        cinfo;
     struct hent he;

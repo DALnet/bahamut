@@ -2342,7 +2342,7 @@ static int lookup_confhost(aConnect *aconn)
     
     if (IsDigit(*s))
     aconn->ipnum.s_addr = inet_addr(s);
-    else if ((hp = gethost_byname(s, &ln)))
+    else if ((hp = gethost_byname(s, &ln, AF_INET)))
     memcpy((char *) &(aconn->ipnum), hp->h_addr,
            sizeof(struct in_addr));
 

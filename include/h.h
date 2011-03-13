@@ -296,8 +296,8 @@ extern void     set_effective_class(aClient *);
 extern void     initclass();
 
 extern struct hostent *get_res(char *);
-extern struct hostent *gethost_byaddr(char *, Link *);
-extern struct hostent *gethost_byname(char *, Link *);
+extern struct hostent *gethost_byaddr(char *, Link *, int);
+extern struct hostent *gethost_byname(char *, Link *, int);
 extern void 	  flush_cache(void);
 extern int  	  init_resolver(int);
 extern time_t 	  timeout_query_list(time_t);
