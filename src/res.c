@@ -81,6 +81,7 @@ static void rem_cache(aCache *);
 static void rem_request(ResRQ *);
 static int  do_query_name(Link *, char *, ResRQ *, int);
 static int  do_query_number(Link *, struct in_addr *, ResRQ *);
+static int  do_query_number6(Link *, struct in6_addr *, ResRQ *);
 static void resend_query(ResRQ *);
 static int  proc_answer(ResRQ *, HEADER *, char *, char *);
 static int  query_name(char *, int, int, ResRQ *);
@@ -509,6 +510,8 @@ struct hostent *gethost_byaddr(char *addr, Link *lp, int family)
 	return NULL;
     if (family == AF_INET)
 	(void) do_query_number(lp, (struct in_addr *) addr, NULL);
+    else if (family == AF_INET6)
+	(void) do_query_number6(lp, (struct in6_addr *) addr, NULL);
     return ((struct hostent *) NULL);
 }
 
@@ -536,12 +539,13 @@ static int do_query_name(Link *lp, char *name, ResRQ * rptr, int family)
      */
     if (!rptr)
     {
-	rptr = make_request(lp, AF_INET);
-	rptr->type = T_A;
+	rptr = make_request(lp, family);
+	rptr->type = (family == AF_INET6) ? T_AAAA : T_A;
 	rptr->name = (char *) MyMalloc(strlen(name) + 1);
 	(void) strcpy(rptr->name, name);
     }
-    return (query_name(hname, C_IN, T_A, rptr));
+    return (query_name(hname, C_IN, (family == AF_INET6) ? T_AAAA : T_A,
+		       rptr));
 }
 
 /* Use this to do reverse IP# lookups. */
@@ -563,6 +567,45 @@ static int do_query_number(Link *lp, struct in_addr *numb, ResRQ * rptr)
 	memcpy((char *) &rptr->he.h_addr,
 	       (char *) &numb->s_addr, sizeof(struct in_addr));
 	rptr->he.h_length = sizeof(struct in_addr);
+    }
+    return (query_name(ipbuf, C_IN, T_PTR, rptr));
+}
+
+/* Use this to do reverse IP# lookups for IPv6 addresses. */
+static int do_query_number6(Link *lp, struct in6_addr *numb, ResRQ * rptr)
+{
+    char        ipbuf[RES_HOSTLEN + 1];
+    u_char *cp;
+
+    cp = (u_char *) &numb->s6_addr;
+    (void)ircsprintf(ipbuf,
+		     "%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.ip6.arpa.",
+		     (u_int) (cp[15] & 0xf), (u_int) (cp[15] >> 4),
+		     (u_int) (cp[14] & 0xf), (u_int) (cp[14] >> 4),
+		     (u_int) (cp[13] & 0xf), (u_int) (cp[13] >> 4),
+		     (u_int) (cp[12] & 0xf), (u_int) (cp[12] >> 4),
+		     (u_int) (cp[11] & 0xf), (u_int) (cp[11] >> 4),
+		     (u_int) (cp[10] & 0xf), (u_int) (cp[10] >> 4),
+		     (u_int) (cp[ 9] & 0xf), (u_int) (cp[ 9] >> 4),
+		     (u_int) (cp[ 8] & 0xf), (u_int) (cp[ 8] >> 4),
+		     (u_int) (cp[ 7] & 0xf), (u_int) (cp[ 7] >> 4),
+		     (u_int) (cp[ 6] & 0xf), (u_int) (cp[ 6] >> 4),
+		     (u_int) (cp[ 5] & 0xf), (u_int) (cp[ 5] >> 4),
+		     (u_int) (cp[ 4] & 0xf), (u_int) (cp[ 4] >> 4),
+		     (u_int) (cp[ 3] & 0xf), (u_int) (cp[ 3] >> 4),
+		     (u_int) (cp[ 2] & 0xf), (u_int) (cp[ 2] >> 4),
+		     (u_int) (cp[ 1] & 0xf), (u_int) (cp[ 1] >> 4),
+		     (u_int) (cp[ 0] & 0xf), (u_int) (cp[ 0] >> 4));
+
+    if (!rptr)
+    {
+	rptr = make_request(lp, AF_INET6);
+	rptr->type = T_PTR;
+	memcpy((char *) &rptr->addr.addr6,
+	       (char *) &numb->s6_addr, sizeof(struct in6_addr));
+	memcpy((char *) &rptr->he.h_addr,
+	       (char *) &numb->s6_addr, sizeof(struct in6_addr));
+	rptr->he.h_length = sizeof(struct in6_addr);
     }
     return (query_name(ipbuf, C_IN, T_PTR, rptr));
 }
@@ -628,9 +671,14 @@ static void resend_query(ResRQ * rptr)
     case T_PTR:
 	if (rptr->he.h_addrtype == AF_INET)
 	    (void) do_query_number(NULL, &rptr->addr.addr4, rptr);
+	else if (rptr->he.h_addrtype == AF_INET6)
+	    (void) do_query_number6(NULL, &rptr->addr.addr6, rptr);
 	break;
     case T_A:
 	(void) do_query_name(NULL, rptr->name, rptr, AF_INET);
+	break;
+    case T_AAAA:
+	(void) do_query_name(NULL, rptr->name, rptr, AF_INET6);
 	break;
     default:
 	break;
@@ -677,6 +725,82 @@ int arpa_to_ip(char *arpastring, unsigned int *saddr)
     ipptr[1] = (u_char) atoi(fragptr[2]);
     ipptr[2] = (u_char) atoi(fragptr[1]);
     ipptr[3] = (u_char) atoi(fragptr[0]);
+    return 1;
+}
+
+/* returns 0 on failure, nonzero on success */
+int arpa6_to_ip(char *arpastring, unsigned char *addr6)
+{
+    int idx = 0, n = 16;
+    unsigned char buf[16];
+
+    while(arpastring[idx])
+    {
+	u_char c, x;
+
+	c = arpastring[idx];
+	if (c >= '0' && c <= '9')
+	{
+	    x = c - '0';
+	    idx++;
+	}
+	else if (c >= 'a' && c <= 'f')
+	{
+	    x = (c - 'a') + 10;
+	    idx++;
+	}
+	else if (c >= 'A' && c <= 'F')
+	{
+	    x = (c - 'A') + 10;
+	    idx++;
+	}
+	else
+	    return 0;
+
+	c = arpastring[idx];
+	if (c == '.')
+	    idx++;
+	else
+	    return 0;
+
+	c = arpastring[idx];
+	if (c >= '0' && c <= '9')
+	{
+	    x |= (c - '0') << 4;
+	    idx++;
+	}
+	else if (c >= 'a' && c <= 'f')
+	{
+	    x |= ((c - 'a') + 10) << 4;
+	    idx++;
+	}
+	else if (c >= 'A' && c <= 'F')
+	{
+	    x |= ((c - 'A') + 10) << 4;
+	    idx++;
+	}
+	else
+	    return 0;
+
+	buf[--n] = x;
+
+	c = arpastring[idx];
+	if (c == '.')
+	    idx++;
+	else
+	    return 0;
+
+	if (n == 0)
+	    break;
+    }
+
+    if(n != 0)
+	return 0;
+
+    if(mycmp(arpastring + idx, "ip6.arpa"))
+	return 0;
+
+    memcpy(addr6, buf, sizeof(struct in6_addr));
     return 1;
 }
 
@@ -778,6 +902,10 @@ static int proc_answer(ResRQ * rptr, HEADER *hptr, char *buf, char *eob)
 	{
 	    strcpy(tmphost, rptr->name);
 	}
+	else if(rptr->type == T_AAAA && rptr->name)
+	{
+	    strcpy(tmphost, rptr->name);
+	}
 	else if(rptr->type == T_PTR)
 	{
 	    u_char *ipp;
@@ -788,6 +916,28 @@ static int proc_answer(ResRQ * rptr, HEADER *hptr, char *buf, char *eob)
 		ircsprintf(tmphost, "%u.%u.%u.%u.in-addr.arpa",
 			   (u_int) (ipp[3]), (u_int) (ipp[2]),
 			   (u_int) (ipp[1]), (u_int) (ipp[0]));
+	    }
+	    else if (hp->h_addrtype == AF_INET6)
+	    {
+		ipp = (u_char *) &rptr->addr.addr6.s6_addr;
+		(void)ircsprintf(tmphost,
+				 "%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.ip6.arpa",
+				 (u_int) (ipp[15] & 0xf), (u_int) (ipp[15] >> 4),
+				 (u_int) (ipp[14] & 0xf), (u_int) (ipp[14] >> 4),
+				 (u_int) (ipp[13] & 0xf), (u_int) (ipp[13] >> 4),
+				 (u_int) (ipp[12] & 0xf), (u_int) (ipp[12] >> 4),
+				 (u_int) (ipp[11] & 0xf), (u_int) (ipp[11] >> 4),
+				 (u_int) (ipp[10] & 0xf), (u_int) (ipp[10] >> 4),
+				 (u_int) (ipp[ 9] & 0xf), (u_int) (ipp[ 9] >> 4),
+				 (u_int) (ipp[ 8] & 0xf), (u_int) (ipp[ 8] >> 4),
+				 (u_int) (ipp[ 7] & 0xf), (u_int) (ipp[ 7] >> 4),
+				 (u_int) (ipp[ 6] & 0xf), (u_int) (ipp[ 6] >> 4),
+				 (u_int) (ipp[ 5] & 0xf), (u_int) (ipp[ 5] >> 4),
+				 (u_int) (ipp[ 4] & 0xf), (u_int) (ipp[ 4] >> 4),
+				 (u_int) (ipp[ 3] & 0xf), (u_int) (ipp[ 3] >> 4),
+				 (u_int) (ipp[ 2] & 0xf), (u_int) (ipp[ 2] >> 4),
+				 (u_int) (ipp[ 1] & 0xf), (u_int) (ipp[ 1] >> 4),
+				 (u_int) (ipp[ 0] & 0xf), (u_int) (ipp[ 0] >> 4));
 	    }
 	    else
 		*tmphost = '\0';
@@ -858,6 +1008,7 @@ static int proc_answer(ResRQ * rptr, HEADER *hptr, char *buf, char *eob)
 	switch (type)
 	{
 	case T_A:
+	case T_AAAA:
 	    if(rptr->name == NULL)
 	    {
 		sendto_realops_lev(DEBUG_LEV,"Received DNS_A answer, but null "
@@ -883,10 +1034,13 @@ static int proc_answer(ResRQ * rptr, HEADER *hptr, char *buf, char *eob)
 #endif
 	    }
 	    hp->h_length = dlen;
-	    if (ans == 1)
+	    if (ans == 1 && type == T_A)
 		hp->h_addrtype = (class == C_IN) ? AF_INET : AF_UNSPEC;
+	    else if (ans == 1 && type == T_AAAA)
+		hp->h_addrtype = (class == C_IN) ? AF_INET6 : AF_UNSPEC;
 	    /* from Christophe Kalt <kalt@stealth.net> */
-	    if (dlen != sizeof(struct in_addr))
+	    if ((type == T_A && dlen != sizeof(struct in_addr)) ||
+		(type == T_AAAA && dlen != sizeof(struct in6_addr)))
 	    {
 		sendto_realops("Bad IP length (%d) returned for %s",
 			       dlen, hostbuf);
@@ -898,7 +1052,7 @@ static int proc_answer(ResRQ * rptr, HEADER *hptr, char *buf, char *eob)
 	    if(adr < IRC_MAXADDRS)
 	    {
 		/* ensure we never go over the bounds of our adr array */
-		memcpy((char *)&hp->h_addr_list[adr], cp, sizeof(struct in_addr));
+		memcpy((char *)&hp->h_addr_list[adr], cp, dlen);
 		Debug((DEBUG_INFO, "got ip # %s for %s",
 		       resntoa((char *) &hp->h_addr_list[adr],
 			       hp->h_addrtype), hostbuf));
@@ -925,9 +1079,32 @@ static int proc_answer(ResRQ * rptr, HEADER *hptr, char *buf, char *eob)
 	    acc = NULL;
 	    if(!num_acc_answers || !(acc = is_acceptable_answer(hostbuf)))
 	    {
-		struct in_addr ptrrep;
+		union
+		{
+			struct in_addr addr4;
+			struct in6_addr addr6;
+		} ptrrep;
 
-		if(!(arpa_to_ip(hostbuf, &ptrrep.s_addr)))
+		if(arpa6_to_ip(hostbuf, ptrrep.addr6.s6_addr))
+		{
+		    if(rptr->he.h_addrtype != AF_INET6 ||
+		       memcmp(&ptrrep.addr6.s6_addr, rptr->addr.addr6.s6_addr,
+			      sizeof(struct in6_addr)) != 0)
+		    {
+#ifdef DNS_ANS_DEBUG
+			char ipbuf[RES_HOSTLEN + 1];
+
+			strcpy(ipbuf, inet6ntoa((char *)&ptrrep.addr6));
+			sendto_realops_lev(DEBUG_LEV,
+					   "Received DNS_PTR answer for %s, "
+					   "but asked question for %s",
+					   ipbuf, resntoa((char*)&rptr->addr,
+							  rptr->he.h_addrtype));
+#endif
+			return PROCANSWER_STRANGE;
+		    }
+		}
+		else if(!(arpa_to_ip(hostbuf, &ptrrep.addr4.s_addr)))
 		{
 #ifdef DNS_ANS_DEBUG
 		    sendto_realops_lev(DEBUG_LEV, 
@@ -938,21 +1115,23 @@ static int proc_answer(ResRQ * rptr, HEADER *hptr, char *buf, char *eob)
 #endif
 		    return PROCANSWER_STRANGE;
 		}
-		
-		if(rptr->he.h_addrtype != AF_INET ||
-		   ptrrep.s_addr != rptr->addr.addr4.s_addr)
+		else
 		{
+		    if(rptr->he.h_addrtype != AF_INET ||
+		       ptrrep.addr4.s_addr != rptr->addr.addr4.s_addr)
+		    {
 #ifdef DNS_ANS_DEBUG
-		    char ipbuf[16];
-		    
-		    strcpy(ipbuf, inetntoa((char *)&ptrrep));
-		    sendto_realops_lev(DEBUG_LEV,
-				       "Received DNS_PTR answer for %s, "
-				       "but asked question for %s", 
-				       ipbuf, resntoa((char*)&rptr->addr,
-						      rptr->he.h_addrtype));
+			char ipbuf[16];
+
+			strcpy(ipbuf, inetntoa((char *)&ptrrep.addr4));
+			sendto_realops_lev(DEBUG_LEV,
+					   "Received DNS_PTR answer for %s, "
+					   "but asked question for %s", 
+					   ipbuf, resntoa((char*)&rptr->addr,
+							  rptr->he.h_addrtype));
 #endif
-		    return PROCANSWER_STRANGE;
+			return PROCANSWER_STRANGE;
+		    }
 		}
 	    }
 	    
@@ -1063,7 +1242,7 @@ static int proc_answer(ResRQ * rptr, HEADER *hptr, char *buf, char *eob)
 				       "from an acceptable (%s)", acc);
 #endif
 	    }
-	    else if(origtype == T_A)
+	    else if(origtype == T_A || origtype == T_AAAA)
 	    {
 		if(mycmp(rptr->name, hostbuf) != 0)
 		{
@@ -1273,7 +1452,7 @@ struct hostent *get_res(char *lp)
 	return hp2;
     }
 
-    if(a > 0 && rptr->type == T_A)
+    if(a > 0 && (rptr->type == T_A || rptr->type == T_AAAA))
     {
 	if(rptr->has_rev == 0)
 	{
@@ -1749,6 +1928,8 @@ find_cache_number(ResRQ * rptr, char *numb, int family)
 	return ((aCache *) NULL);
     if (family == AF_INET)
 	h_length = sizeof(struct in_addr);
+    else if (family == AF_INET6)
+	h_length = sizeof(struct in6_addr);
     else
 	h_length = 0;
     hashv = hash_number((u_char *) numb, h_length);
