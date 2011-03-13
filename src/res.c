@@ -56,6 +56,8 @@
 #define TTL_SIZE   4
 #define DLEN_SIZE  2
 
+#define RES_HOSTLEN 127 /* big enough to handle addresses in in6.arpa */
+
 extern int  dn_expand(char *, char *, char *, char *, int);
 extern int  dn_skipname(char *, char *);
 extern int
@@ -68,7 +70,7 @@ extern int  errno, h_errno;
 extern int  highest_fd;
 extern aClient *local[];
 
-static char hostbuf[HOSTLEN + 1];
+static char hostbuf[RES_HOSTLEN + 1];
 static int  incache = 0;
 static CacheTable hashtable[ARES_CACSIZE];
 static ResHash idcphashtable[ARES_IDCACSIZE];
@@ -501,10 +503,10 @@ struct hostent *gethost_byaddr(char *addr, Link *lp)
 
 static int do_query_name(Link *lp, char *name, ResRQ * rptr)
 {
-    char        hname[HOSTLEN + 1];
+    char        hname[RES_HOSTLEN + 1];
     int         len;
     
-    strncpyzt(hname, name, HOSTLEN);
+    strncpyzt(hname, name, RES_HOSTLEN);
     len = strlen(hname);
     
     if (rptr && !strchr(hname, '.') && _res.options & RES_DEFNAMES)
@@ -628,7 +630,7 @@ static void resend_query(ResRQ * rptr)
 int arpa_to_ip(char *arpastring, unsigned int *saddr)
 {
     int idx = 0, onum = 0;
-    char ipbuf[HOSTLEN + 1];
+    char ipbuf[RES_HOSTLEN + 1];
     char *fragptr[4];
     u_char *ipptr;
          
@@ -671,7 +673,7 @@ int arpa_to_ip(char *arpastring, unsigned int *saddr)
 
 #define MAX_ACCEPTABLE_ANS 10
 
-static char acceptable_answers[MAX_ACCEPTABLE_ANS][HOSTLEN + 1];
+static char acceptable_answers[MAX_ACCEPTABLE_ANS][RES_HOSTLEN + 1];
 static int num_acc_answers = 0;
 
 #define add_acceptable_answer(x) do { \
@@ -691,7 +693,7 @@ static inline char *is_acceptable_answer(char *h)
 }
 
 #ifdef DNS_ANS_DEBUG_MAX
-static char dhostbuf[HOSTLEN + 1];
+static char dhostbuf[RES_HOSTLEN + 1];
 #endif
 
 /* process name server reply. */
@@ -736,9 +738,9 @@ static int proc_answer(ResRQ * rptr, HEADER *hptr, char *buf, char *eob)
     else
     {
 	int strangeness = 0;
-	char tmphost[HOSTLEN];
+	char tmphost[RES_HOSTLEN];
 
-	hostbuf[HOSTLEN] = '\0';
+	hostbuf[RES_HOSTLEN] = '\0';
 	cp += n;
 	type = (int) _getshort(cp);
        cp += TYPE_SIZE;
@@ -798,7 +800,7 @@ static int proc_answer(ResRQ * rptr, HEADER *hptr, char *buf, char *eob)
     while (hptr->ancount-- > 0 && cp && cp < eob) 
     {
 	n = dn_expand(buf, eob, cp, hostbuf, sizeof(hostbuf)-1);
-	hostbuf[HOSTLEN] = '\0';
+	hostbuf[RES_HOSTLEN] = '\0';
 	
 	if (n <= 0)
 	    break;
@@ -826,7 +828,7 @@ static int proc_answer(ResRQ * rptr, HEADER *hptr, char *buf, char *eob)
 	    {
 		strncpy(hostbuf, _res.defdname,
 			sizeof(hostbuf) - 1 - len);
-		hostbuf[HOSTLEN] = '\0';
+		hostbuf[RES_HOSTLEN] = '\0';
 		len = MIN(len + strlen(_res.defdname),
 			  sizeof(hostbuf)) - 1;
 	    }
@@ -954,7 +956,7 @@ static int proc_answer(ResRQ * rptr, HEADER *hptr, char *buf, char *eob)
 	     * dn_expand also guarantee buffer is terminated with
 	     * null byte? Lets not take chances. -Dianora
 	     */
-	    hostbuf[HOSTLEN] = '\0';
+	    hostbuf[RES_HOSTLEN] = '\0';
 	    cp += n;
 	    len = strlen(hostbuf);
 	    
@@ -1070,7 +1072,7 @@ static int proc_answer(ResRQ * rptr, HEADER *hptr, char *buf, char *eob)
 		break;
 	    }
 	    
-	    hostbuf[HOSTLEN] = '\0';
+	    hostbuf[RES_HOSTLEN] = '\0';
 	    cp += n;
 	    
 	    add_acceptable_answer(hostbuf);
