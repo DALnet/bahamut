@@ -91,7 +91,7 @@ static int  add_request(ResRQ *);
 static ResRQ *make_request(Link *);
 static int  send_res_msg(char *, int, int);
 static ResRQ *find_id(int);
-static int  hash_number(unsigned char *);
+static int  hash_number(unsigned char *, int);
 static unsigned int hash_id(unsigned int);
 static unsigned int hash_cp(char *);
 static void update_list(ResRQ *, aCache *);
@@ -1412,15 +1412,26 @@ static struct hostent *getres_err(ResRQ * rptr, char *lp)
     return (struct hostent *) NULL;
 }
 
-static int hash_number(unsigned char *ip)
+static int hash_number(unsigned char *ip, int len)
 {
+    u_int *p, *end;
     u_int   hashv = 0;
 
-    /* could use loop but slower */
-    hashv += (int) *ip++;
-    hashv += hashv + (int) *ip++;
-    hashv += hashv + (int) *ip++;
-    hashv += hashv + (int) *ip++;
+    for (p = (u_int *)ip, end = (u_int *)(ip + len); p < end; p++)
+    {
+	u_int h;
+
+	/* Bob Jenkins 4-byte integer hash, full avalanche */
+	h = hashv + *p;
+	h = (h+0x7ed55d16) + (h<<12);
+	h = (h^0xc761c23c) ^ (h>>19);
+	h = (h+0x165667b1) + (h<<5);
+	h = (h+0xd3a2646c) ^ (h<<9);
+	h = (h+0xfd7046c5) + (h<<3);
+	h = (h^0xb55a4f09) ^ (h>>16);
+	hashv = h;
+    }
+
     hashv %= ARES_CACSIZE;
     return (hashv);
 }
@@ -1429,9 +1440,18 @@ static int hash_number(unsigned char *ip)
 static int hash_name(char *name)
 {
     u_int   hashv = 0;
-    
+
+    /* Bob Jenkins one-at-a-time hash */
     for (; *name && *name != '.'; name++)
+    {
 	hashv += *name;
+	hashv += (hashv << 10);
+	hashv ^= (hash >> 6);
+    }
+    hashv += (hashv << 3);
+    hashv ^= (hashv >> 11);
+    hashv += (hashv << 15);
+
     hashv %= ARES_CACSIZE;
     return (hashv);
 }
@@ -1439,6 +1459,13 @@ static int hash_name(char *name)
 
 static unsigned int hash_id(unsigned int id)
 {
+    /* Bob Jenkins 4-byte integer hash, full avalanche */
+    id = (id+0x7ed55d16) + (id<<12);
+    id = (id^0xc761c23c) ^ (id>>19);
+    id = (id+0x165667b1) + (id<<5);
+    id = (id+0xd3a2646c) ^ (id<<9);
+    id = (id+0xfd7046c5) + (id<<3);
+    id = (id^0xb55a4f09) ^ (id>>16);
    return id % ARES_IDCACSIZE;
 }
 
@@ -1476,7 +1503,7 @@ static aCache *add_to_cache(aCache * ocp)
     hashtable[hashv].name_list = ocp;
 #endif
     
-    hashv = hash_number((u_char *) ocp->he.h_addr);
+    hashv = hash_number((u_char *) ocp->he.h_addr, ocp->he.h_length);
     
     ocp->hnum_next = hashtable[hashv].num_list;
     hashtable[hashv].num_list = ocp;
@@ -1677,7 +1704,7 @@ find_cache_number(ResRQ * rptr, char *numb)
 
     if ((u_char *) numb == (u_char *) NULL)
 	return ((aCache *) NULL);
-    hashv = hash_number((u_char *) numb);
+    hashv = hash_number((u_char *) numb, sizeof(struct in_addr));
     cp = hashtable[hashv].num_list;
 #ifdef DEBUG
     Debug((DEBUG_DNS, "find_cache_number:find %s[%08x]: hashv = %d",
@@ -1715,7 +1742,8 @@ find_cache_number(ResRQ * rptr, char *numb)
 	 * if the first IP# has the same hashnumber as the IP# we are
 	 * looking for, its been done already.
 	 */
-	if (hashv == hash_number((u_char *) cp->he.h_addr_list[0]))
+	if (hashv == hash_number((u_char *) cp->he.h_addr_list[0],
+				 cp->he.h_length))
 	    continue;
 	for (i = 1; cp->he.h_addr_list[i]; i++)
 	    if (!memcmp(cp->he.h_addr_list[i], numb,
@@ -1853,7 +1881,7 @@ static void rem_cache(aCache * ocp)
 	}
 #endif
     /* remove cache entry from hashed number list */
-    hashv = hash_number((u_char *) hp->h_addr);
+    hashv = hash_number((u_char *) hp->h_addr, hp->h_length);
     if (hashv < 0)
 	return;
 #ifdef	DEBUG

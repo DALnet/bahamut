@@ -74,8 +74,8 @@ typedef struct reshash
     ResRQ *cp_list;
 } ResHash;
 
-#define ARES_CACSIZE	307
-#define ARES_IDCACSIZE  2099
+#define ARES_CACSIZE	8192
+#define ARES_IDCACSIZE  8192
 
 #define	IRC_MAXCACHED	281
 
