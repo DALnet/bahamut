@@ -295,12 +295,14 @@ int add_listener(aPort *aport)
 	{
 	    server.addr6.sin6_family = AF_INET6;
 	    server.addr6.sin6_port = htons(lstn.port);
+	    len = sizeof(server.addr6);
 	}
 	else
 	{
 	    server.addr4.sin_family = AF_INET;
 	    server.addr4.sin_addr.s_addr = inet_addr(aport->address);
 	    server.addr4.sin_port = htons(lstn.port);
+	    len = sizeof(server.addr4);
 	}
     }
     else
@@ -308,6 +310,7 @@ int add_listener(aPort *aport)
 	server.addr4.sin_family = AF_INET;
 	server.addr4.sin_addr.s_addr = INADDR_ANY;
 	server.addr4.sin_port = htons(lstn.port);
+	len = sizeof(server.addr4);
     }
 
     if(!BadPtr(aport->allow) && server.sa.sa_family == AF_INET)
@@ -336,7 +339,7 @@ int add_listener(aPort *aport)
 
     set_listener_sock_opts(lstn.fd, &lstn, server.sa.sa_family);
 
-    if (bind(lstn.fd, &server.sa, sizeof(server)))
+    if (bind(lstn.fd, &server.sa, len))
     {
         report_listener_error("binding stream socket %s:%s", &lstn);
         close(lstn.fd);
