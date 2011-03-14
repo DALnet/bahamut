@@ -99,12 +99,17 @@ void start_auth(aClient *cptr)
     memset(&localaddr, '\0', sizeof(localaddr));
     getsockname(cptr->fd, &localaddr.sa, &locallen);
     if (localaddr.sa.sa_family == AF_INET)
+    {
 	localaddr.addr4.sin_port = htons(0);
+	locallen = sizeof(localaddr.addr4);
+    }
     else if (localaddr.sa.sa_family == AF_INET6)
+    {
 	localaddr.addr6.sin6_port = htons(0);
+	locallen = sizeof(localaddr.addr6);
+    }
 
-    if (bind(cptr->authfd, &localaddr.sa,
-	     sizeof(localaddr)) == -1)
+    if (bind(cptr->authfd, &localaddr.sa, locallen) == -1)
     {
 	report_error("binding auth stream socket %s:%s", cptr);
 	close(cptr->authfd);
