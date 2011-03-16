@@ -2168,10 +2168,15 @@ do_user(char *nick, aClient *cptr, aClient *sptr, char *username, char *host,
 	    unsigned long l;
 
 	    l = ntohl(strtoul(ip, &end, 10));
-	    if (*ip != '\0' && *end == '\0' && l != 1)
+	    if (*ip != '\0' && *end == '\0')
 	    {
-		sptr->ip_family = AF_INET;
+		if (l != htonl(1))
+		    sptr->ip_family = AF_INET;
+		else
+		    sptr->ip_family = 0;
+
 		sptr->ip.ip4.s_addr = l;
+		ip = inetntoa((char *)&sptr->ip);
 	    }
 	    else
 		sptr->ip_family = 0;

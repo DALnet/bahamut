@@ -128,7 +128,11 @@ struct in_addr ac_ip(aClient *cptr)
 	if (cptr->ip_family == AF_INET)
 		return cptr->ip.ip4;
 	else
-		return (struct in_addr){1};
+	{
+		int ip = htonl(1);
+
+		return (struct in_addr){ip};
+	}
 }
 
 char *ac_hostip(aClient *cptr)
