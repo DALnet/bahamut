@@ -1079,23 +1079,18 @@ register_user(aClient *cptr, aClient *sptr, char *nick, char *username,
         ubuf[1] = '\0';
     }
     hash_check_watch(sptr, RPL_LOGON);
-    if (IsNickIPStr(cptr))
-    {
-	sendto_serv_butone(cptr, "NICK %s %d %ld %s %s %s %s %lu %s :%s",
-				   nick, sptr->hopcount + 1, sptr->tsinfo, ubuf,
-				   user->username, user->host, user->server,
-				   sptr->user->servicestamp,
-				   cipntoa(sptr), sptr->info);
-    }
-    else
-    {
-	sendto_serv_butone(cptr, "NICK %s %d %ld %s %s %s %s %lu %u :%s",
-				   nick, sptr->hopcount + 1, sptr->tsinfo, ubuf,
-				   user->username, user->host, user->server,
-				   sptr->user->servicestamp,
-				   (sptr->ip_family == AF_INET) ?
-				   htonl(sptr->ip.ip4.s_addr) : 1, sptr->info);
-    }
+
+    sendto_serv_butone_nickipstr(cptr, 1, "NICK %s %d %ld %s %s %s %s %lu %s :%s",
+				 nick, sptr->hopcount + 1, sptr->tsinfo, ubuf,
+				 user->username, user->host, user->server,
+				 sptr->user->servicestamp,
+				 cipntoa(sptr), sptr->info);
+    sendto_serv_butone_nickipstr(cptr, 0, "NICK %s %d %ld %s %s %s %s %lu %u :%s",
+				 nick, sptr->hopcount + 1, sptr->tsinfo, ubuf,
+				 user->username, user->host, user->server,
+				 sptr->user->servicestamp,
+				 (sptr->ip_family == AF_INET) ?
+				 htonl(sptr->ip.ip4.s_addr) : 1, sptr->info);
 
     if(MyClient(sptr))
     {
