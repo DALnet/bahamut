@@ -741,18 +741,27 @@ int check_server_init(aClient * cptr)
         else
             s = aconn->host;
         Debug((DEBUG_DNS, "sv_ci:cache lookup (%s)", s));
-        if((hp = gethost_byname(s, &lin, AF_INET)))
+        if((hp = gethost_byname(s, &lin, cptr->ip_family)))
         {
             for (i = 0; hp->h_addr_list[i]; i++)
-                if (!memcmp(hp->h_addr_list[i], (char *) &cptr->ip, 
-                        sizeof(struct in_addr)))
+                if (hp->h_addrtype == cptr->ip_family &&
+		    !memcmp(hp->h_addr_list[i], (char *) &cptr->ip,
+			    hp->h_length))
                     break;
             if (!hp->h_addr_list[i])
             {
+		const char *h_addr_str;
+
+		if (hp->h_addrtype == AF_INET)
+		    h_addr_str = inetntoa((char *)hp->h_addr);
+		else if (hp->h_addrtype == AF_INET6)
+		    h_addr_str = inet6ntoa((char *)hp->h_addr);
+		else
+		    h_addr_str = "invalid.address.family.invalid";
+
                 sendto_realops_lev(ADMIN_LEV,
-                    "Server IP# Mismatch: %s != %s[%08lx]",
-                    cipntoa(cptr), hp->h_name,
-                    *((unsigned long *) hp->h_addr));
+                    "Server IP# Mismatch: %s != %s[%s]",
+                    cipntoa(cptr), hp->h_name, h_addr_str);
                 hp = NULL;
             }
         }
@@ -761,8 +770,9 @@ int check_server_init(aClient * cptr)
     {
         hp = cptr->hostp;
         for (i = 0; hp->h_addr_list[i]; i++)
-            if (!memcmp(hp->h_addr_list[i], (char *) &cptr->ip,
-                    sizeof(struct in_addr)))
+	    if (hp->h_addrtype == cptr->ip_family &&
+		!memcmp(hp->h_addr_list[i], (char *) &cptr->ip,
+			hp->h_length))
                 break;
     }
 
@@ -776,8 +786,9 @@ int check_server_init(aClient * cptr)
         get_sockhost(cptr, fullname);
         for (i = 0; hp->h_addr_list[i]; i++)
         {
-            if(!memcmp((char *) &aconn->ipnum, (char *) hp->h_addr_list[i],
-                        sizeof(struct in_addr)))
+            if(aconn->ipnum_family == hp->h_addrtype &&
+	       !memcmp((char *) &aconn->ipnum, (char *) hp->h_addr_list[i],
+		       hp->h_length))
                 ok = 1;
             else
                 ok = 0;
@@ -786,9 +797,10 @@ int check_server_init(aClient * cptr)
     else
     {
         /* having no luck finding a host.. check against IP */
-        if(!memcmp((char *) &aconn->ipnum, (char *) &cptr->ip,
-                   sizeof(struct in_addr)))
-            ok = 1;
+	if(aconn->ipnum_family == cptr->ip_family &&
+	   !memcmp((char *) &aconn->ipnum, (char *) &cptr->ip,
+		   sizeof(aconn->ipnum)))
+	    ok = 1;
         else
             ok = 0;
     }
@@ -807,9 +819,12 @@ int check_server_init(aClient * cptr)
     aconn->acpt = cptr;
     set_effective_class(cptr);
 
-    if ((aconn->ipnum.s_addr == -1))
-    memcpy((char *) &aconn->ipnum, (char *) &cptr->ip,
-           sizeof(struct in_addr));
+    if (aconn->ipnum_family == 0)
+    {
+	aconn->ipnum_family = cptr->ip_family;
+	memcpy((char *) &aconn->ipnum, (char *) &cptr->ip,
+	       sizeof(aconn->ipnum));
+    }
 
     get_sockhost(cptr, aconn->host);
     
@@ -847,15 +862,15 @@ int completed_connection(aClient * cptr)
 #ifdef HAVE_ENCRYPTION_ON
     if(!(aconn->flags & CONN_DKEY))
         sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURST UNCONNECT ZIP"
-                         " NICKIP TSMODE");
+                         " NICKIP NICKIPSTR TSMODE");
     else
     {
         sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURST UNCONNECT DKEY"
-                         " ZIP NICKIP TSMODE");
+                         " ZIP NICKIP NICKIPSTR TSMODE");
         SetWantDKEY(cptr);
     }
 #else
-    sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURST UNCONNECT ZIP NICKIP TSMODE");
+    sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURST UNCONNECT ZIP NICKIP NICKIPSTR TSMODE");
 #endif
 
     if(aconn->flags & CONN_ZIP)
@@ -1805,9 +1820,21 @@ int connect_server(aConnect *aconn, aClient * by, struct hostent *hp)
     char *s;
     int errtmp, len;
 
-    Debug((DEBUG_NOTICE, "Connect to %s[%s] @%s", aconn->name, aconn->host, 
-                                    inetntoa((char *) &aconn->ipnum)));
-    
+    if (aconn->ipnum_family == AF_INET)
+    {
+	Debug((DEBUG_NOTICE, "Connect to %s[%s] @%s", aconn->name, aconn->host,
+	       inetntoa((char *)aconn->ipnum.ip4)));
+    }
+    else if (aconn->ipnum_family == AF_INET6)
+    {
+	Debug((DEBUG_NOTICE, "Connect to %s[%s] @%s", aconn->name, aconn->host,
+	       inet6ntoa((char *)aconn->ipnum.ip6)));
+    }
+    else
+    {
+	Debug((DEBUG_NOTICE, "Connect to %s[%s]", aconn->name, aconn->host));
+    }
+
     if ((c2ptr = find_server(aconn->name, NULL)))
     {
         sendto_ops("Server %s already present from %s",
@@ -1818,11 +1845,12 @@ int connect_server(aConnect *aconn, aClient * by, struct hostent *hp)
                        get_client_name(c2ptr, HIDEME));
         return -1;
     }
-    /* 
+
+    /*
      * If we dont know the IP# for this host and itis a hostname and not
      * a ip# string, then try and find the appropriate host record.
      */
-    if ((!aconn->ipnum.s_addr))
+    if (aconn->ipnum_family == 0)
     {
         Link lin;
 
@@ -1831,14 +1859,37 @@ int connect_server(aConnect *aconn, aClient * by, struct hostent *hp)
         nextdnscheck = 1;
         s = (char *) strchr(aconn->host, '@');
         s++;            /* should NEVER be NULL */
-        if ((aconn->ipnum.s_addr = inet_addr(s)) == -1) 
+
+	if (inet_pton(AF_INET, s, &aconn->ipnum.ip4) == 1)
+	    aconn->ipnum_family = AF_INET;
+	else if (inet_pton(AF_INET6, s, &aconn->ipnum.ip6) == 1)
+	    aconn->ipnum_family = AF_INET6;
+	else
         {
-            aconn->ipnum.s_addr = 0;
-            hp = gethost_byname(s, &lin, AF_INET);
+	    union
+	    {
+		struct sockaddr_in ip4;
+		struct sockaddr_in6 ip6;
+	    } tmp_addr;
+	    int family;
+
+	    /* Try to use the same address family as what we bind to. */
+	    if (aconn->source &&
+		inet_pton(AF_INET, aconn->source, &tmp_addr.ip4) == 1)
+		family = AF_INET;
+	    else if (aconn->source &&
+		     inet_pton(AF_INET6, aconn->source, &tmp_addr.ip6) == 1)
+		family = AF_INET6;
+	    else
+		family = AF_INET;
+
+            hp = gethost_byname(s, &lin, family);
             Debug((DEBUG_NOTICE, "co_sv: hp %x ac %x na %s ho %s",
                                  hp, aconn, aconn->name, s));
             if (!hp)
                 return 0;
+
+	    aconn->ipnum_family = hp->h_addrtype;
             memcpy((char *) &aconn->ipnum, hp->h_addr, hp->h_length);
         }
     }
@@ -1915,67 +1966,36 @@ int connect_server(aConnect *aconn, aClient * by, struct hostent *hp)
 static struct sockaddr *
 connect_inet(aConnect *aconn, aClient *cptr, int *lenp)
 {
-    static struct sockaddr_in server;
+    static union
+    {
+	struct sockaddr sa;
+	struct sockaddr_in addr4;
+	struct sockaddr_in6 addr6;
+    } server;
     struct hostent *hp;
-    struct sockaddr_in sin;
-    
-    /* 
+    union
+    {
+	struct sockaddr sa;
+	struct sockaddr_in addr4;
+	struct sockaddr_in6 addr6;
+    } sin;
+    unsigned int len;
+
+    /*
      * Might as well get sockhost from here, the connection is attempted
      * with it so if it fails its useless.
      */
-    cptr->fd = socket(AF_INET, SOCK_STREAM, 0);
-    if (cptr->fd >= MAX_ACTIVECONN)
-    {
-        sendto_realops("No more connections allowed (%s)", cptr->name);
-        return NULL;
-    }
     memset((char *) &server, '\0', sizeof(server));
     memset((char *) &sin, '\0', sizeof(sin));
-    server.sin_family = sin.sin_family = AF_INET;
     get_sockhost(cptr, aconn->host);
 
-    if (aconn->source)
-        sin.sin_addr.s_addr = inet_addr(aconn->source);
-
-    if (cptr->fd < 0)
-    {
-        report_error("opening stream socket to server %s:%s", cptr);
-        cptr->fd = -2;
-        return NULL;
-    }
-    /* 
-     * Bind to a local IP# (with unknown port - let unix decide) so *
-     * we have some chance of knowing the IP# that gets used for a host *
-     * with more than one IP#.
-     * 
-     * No we don't bind it, not all OS's can handle connecting with an
-     * already bound socket, different ip# might occur anyway leading to
-     * a freezing select() on this side for some time.
-     */
-    if (aconn->source)
-    {
-        /* 
-         * * No, we do bind it if we have virtual host support. If we
-         * don't explicitly bind it, it will default to IN_ADDR_ANY and
-         * we lose due to the other server not allowing our base IP
-         * --smg
-         */
-        if (bind(cptr->fd, (struct sockaddr *) &sin, sizeof(sin)) == -1)
-        {
-            report_error("error binding to local port for %s:%s", cptr);
-            close(cptr->fd);
-            return NULL;
-        }
-    }
-    /* 
+    /*
      * By this point we should know the IP# of the host listed in the
      * conf line, whether as a result of the hostname lookup or the ip#
      * being present instead. If we dont know it, then the connect
      * fails.
      */
-    if (IsDigit(*aconn->host) && (aconn->ipnum.s_addr == -1))
-        aconn->ipnum.s_addr = inet_addr(aconn->host);
-    if (aconn->ipnum.s_addr == -1)
+    if (aconn->ipnum_family == 0)
     {
         hp = cptr->hostp;
         if (!hp)
@@ -1983,17 +2003,100 @@ connect_inet(aConnect *aconn, aClient *cptr, int *lenp)
             Debug((DEBUG_FATAL, "%s: unknown host", aconn->host));
             return NULL;
         }
-        memcpy((char *) &aconn->ipnum, hp->h_addr, sizeof(struct in_addr));
+	aconn->ipnum_family = hp->h_addrtype;
+        memcpy((char *) &aconn->ipnum, hp->h_addr, hp->h_length);
     }
-    memcpy((char *) &server.sin_addr, (char *) &aconn->ipnum, 
-            sizeof(struct in_addr));
-    
-    cptr->ip_family = AF_INET;
-    memcpy((char *) &cptr->ip, (char *) &aconn->ipnum,
-            sizeof(struct in_addr));
 
-    server.sin_port = htons((aconn->port > 0) ? aconn->port : PORTNUM);
-    *lenp = sizeof(server);
+    if (aconn->ipnum_family == AF_INET)
+    {
+	server.addr4.sin_family = AF_INET;
+	memcpy((char *) &server.addr4.sin_addr, (char *) &aconn->ipnum.ip4,
+	       sizeof(struct in_addr));
+	server.addr4.sin_port = htons((aconn->port > 0) ? aconn->port : PORTNUM);
+	len = sizeof(server.addr4);
+
+	cptr->ip_family = AF_INET;
+	memcpy((char *) &cptr->ip.ip4, (char *) &aconn->ipnum.ip4,
+	       sizeof(struct in_addr));
+    }
+    else if (aconn->ipnum_family == AF_INET6)
+    {
+	server.addr6.sin6_family = AF_INET6;
+	memcpy((char *) &server.addr6.sin6_addr, (char *) &aconn->ipnum.ip6,
+	       sizeof(struct in6_addr));
+	server.addr6.sin6_port = htons((aconn->port > 0) ? aconn->port : PORTNUM);
+	len = sizeof(server.addr6);
+
+	cptr->ip_family = AF_INET6;
+	memcpy((char *) &cptr->ip.ip6, (char *) &aconn->ipnum.ip6,
+	       sizeof(struct in6_addr));
+    }
+    else
+    {
+	report_error("unknown address family connecting to server %s:%s", cptr);
+	return NULL;
+    }
+
+    cptr->fd = socket(server.sa.sa_family, SOCK_STREAM, 0);
+    if (cptr->fd >= MAX_ACTIVECONN)
+    {
+        sendto_realops("No more connections allowed (%s)", cptr->name);
+        return NULL;
+    }
+    if (cptr->fd < 0)
+    {
+        report_error("opening stream socket to server %s:%s", cptr);
+        cptr->fd = -2;
+        return NULL;
+    }
+
+    /*
+     * Bind to a local IP# (with unknown port - let unix decide) so *
+     * we have some chance of knowing the IP# that gets used for a host *
+     * with more than one IP#.
+     *
+     * No we don't bind it, not all OS's can handle connecting with an
+     * already bound socket, different ip# might occur anyway leading to
+     * a freezing select() on this side for some time.
+     */
+    if (aconn->source)
+    {
+        /*
+         * * No, we do bind it if we have virtual host support. If we
+         * don't explicitly bind it, it will default to IN_ADDR_ANY and
+         * we lose due to the other server not allowing our base IP
+         * --smg
+         */
+	if (inet_pton(AF_INET, aconn->source, &sin.addr4.sin_addr) == 1)
+	{
+	    sin.addr4.sin_family = AF_INET;
+	    len = sizeof(sin.addr4);
+	}
+	else if (inet_pton(AF_INET6, aconn->source, &sin.addr6.sin6_addr) == 1)
+	{
+	    sin.addr6.sin6_family = AF_INET6;
+	    len = sizeof(sin.addr6);
+	}
+	else
+	    sin.sa.sa_family = 0;
+
+	if (server.sa.sa_family != sin.sa.sa_family)
+	{
+	    report_error("address family for bind and connect do not match "
+			 "for %s:%s", cptr);
+	    close(cptr->fd);
+	    return NULL;
+	}
+
+        if (bind(cptr->fd, (struct sockaddr *) &sin, len) == -1)
+        {
+            report_error("error binding to local port for %s:%s", cptr);
+            close(cptr->fd);
+            return NULL;
+        }
+    }
+
+    *lenp = len;
     return (struct sockaddr *) &server;
 }
 
@@ -2105,11 +2208,11 @@ void do_dns_async()
                 aconn = ln.value.aconn;
                 if (hp && aconn)
                 {
-                    memcpy((char *) &aconn->ipnum, hp->h_addr,
-			   hp->h_length);
-        
+		    aconn->ipnum_family = hp->h_addrtype;
+                    memcpy((char *) &aconn->ipnum, hp->h_addr, hp->h_length);
+
                     connect_server(aconn, NULL, hp);
-                } 
+                }
                 else
                     sendto_ops("Connect to %s failed: host lookup",
                                 (aconn) ? aconn->host : "unknown");
@@ -2117,9 +2220,11 @@ void do_dns_async()
             case ASYNC_CONF:
                 aconn = ln.value.aconn;
                 if (hp && aconn)
+		{
+		    aconn->ipnum_family = hp->h_addrtype;
                     memcpy((char *) &aconn->ipnum, hp->h_addr,
 			   hp->h_length);
-
+		}
                 break;
             default:
                 break;

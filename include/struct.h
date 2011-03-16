@@ -700,7 +700,12 @@ struct Conf_Connect
 	char *cpasswd;  /* cline password - to connect out with  */
 	char *name;
 	char *source;	/* when connecting, use this IP address  */
-	struct in_addr ipnum;	/* ip address host field */
+	int ipnum_family;
+	union
+	{
+	    struct in_addr ip4;
+	    struct in6_addr ip6;
+	} ipnum;	/* ip address host field */
 	int   port;
 	int   flags;
 	int   legal;
