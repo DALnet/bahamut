@@ -885,6 +885,49 @@ confadd_connect(cVar *vars[], int lnum)
         free_connect(x);
         return -1;
     }
+
+    if(x->source)
+    {
+	union
+	{
+	    struct sockaddr_in ip4;
+	    struct sockaddr_in6 ip6;
+	} tmp_addr;
+	int host_family, source_family;
+	const char *s;
+
+	s = strchr(x->host, '@');
+	if (s)
+	    s++;
+	else
+	    s = x->host;
+
+	if (inet_pton(AF_INET, s, &tmp_addr.ip4) == 1)
+	    host_family = AF_INET;
+	else if (inet_pton(AF_INET6, s, &tmp_addr.ip6) == 1)
+	    host_family = AF_INET6;
+	else
+	    host_family = 0;
+
+	if (inet_pton(AF_INET, x->source, &tmp_addr.ip4) == 1)
+	    source_family = AF_INET;
+	else if (inet_pton(AF_INET6, x->source, &tmp_addr.ip6) == 1)
+	    source_family = AF_INET6;
+	else
+	{
+	    confparse_error("Invalid source address in connect block", lnum);
+	    free_connect(x);
+	    return -1;
+	}
+
+	if (host_family != 0 && host_family != source_family)
+	{
+	    confparse_error("Address family of host does not match "
+			    "address family of source in connect block", lnum);
+	    free_connect(x);
+	    return -1;
+	}
+    }
     x->next = new_connects;
     new_connects = x;
     return lnum;
@@ -2326,18 +2369,36 @@ static int lookup_confhost(aConnect *aconn)
 	ln.value.aconn = aconn;
 	ln.flags = ASYNC_CONF;
 
-	if (IsDigit(*s))
-	    aconn->ipnum.s_addr = inet_addr(s);
-	else if (IsAlpha(*s) &&
-		 (hp = gethost_byname(s, &ln, AF_INET)))
+	if (inet_pton(AF_INET, s, &aconn->ipnum.ip4) == 1)
+	    aconn->ipnum_family = AF_INET;
+	else if (inet_pton(AF_INET6, s, &aconn->ipnum.ip6) == 1)
+	    aconn->ipnum_family = AF_INET6;
+	else if (IsAlpha(*s))
 	{
-	    memcpy((char *) &(aconn->ipnum), hp->h_addr,
-		   sizeof(struct in_addr));
+	    union
+	    {
+		struct sockaddr_in ip4;
+		struct sockaddr_in6 ip6;
+	    } tmp_addr;
+	    int family;
+
+	    /* Try to use the same address family as what we bind to. */
+	    if (aconn->source &&
+		inet_pton(AF_INET, aconn->source, &tmp_addr.ip4) == 1)
+		family = AF_INET;
+	    else if (aconn->source &&
+		     inet_pton(AF_INET6, aconn->source, &tmp_addr.ip6) == 1)
+		family = AF_INET6;
+	    else
+		family = AF_INET;
+
+	    if ((hp = gethost_byname(s, &ln, family)))
+	    {
+		aconn->ipnum_family = hp->h_addrtype;
+		memcpy((char *) &aconn->ipnum, hp->h_addr, hp->h_length);
+	    }
 	}
     }
-
-    if (aconn->ipnum.s_addr == -1)
-	memset((char *) &aconn->ipnum, '\0', sizeof(struct in_addr));
 
     Debug((DEBUG_ERROR, "Host/server name error: (%s) (%s)",
 	   aconn->host, aconn->name));
