@@ -2298,7 +2298,7 @@ int rehash(aClient *cptr, aClient *sptr, int sig)
 /*
  * lookup_confhost Do (start) DNS lookups of all hostnames in the conf
  * line and convert an IP addresses in a.b.c.d number for to IP#s.
- * 
+ *
  * cleaned up Aug 3'97 - Dianora
  * rewritten to kill aConfItem, Feb/04 - epi
  */
@@ -2307,54 +2307,41 @@ static int lookup_confhost(aConnect *aconn)
     char   *s;
     struct hostent *hp;
     Link        ln;
-    if (BadPtr(aconn->host) || BadPtr(aconn->name)) 
-    {
-    if (aconn->ipnum.s_addr == -1)
-        memset((char *) &aconn->ipnum, '\0', sizeof(struct in_addr));
 
-    Debug((DEBUG_ERROR, "Host/server name error: (%s) (%s)",
-           aconn->host, aconn->name));
-    return -1;
-    }
-    if ((s = strchr(aconn->host, '@')))
-    s++;
-    else
-    s = aconn->host;
     /*
      * Do name lookup now on hostnames given and store the ip
      * numbers in conf structure.
      */
-    if (!IsAlpha(*s) && !IsDigit(*s)) 
+    if (!BadPtr(aconn->host) && !BadPtr(aconn->name))
     {
+	if ((s = strchr(aconn->host, '@')))
+	    s++;
+	else
+	    s = aconn->host;
+
+	/*
+	 * Prepare structure in case we have to wait for a reply which
+	 * we get later and store away.
+	 */
+	ln.value.aconn = aconn;
+	ln.flags = ASYNC_CONF;
+
+	if (IsDigit(*s))
+	    aconn->ipnum.s_addr = inet_addr(s);
+	else if (IsAlpha(*s) &&
+		 (hp = gethost_byname(s, &ln, AF_INET)))
+	{
+	    memcpy((char *) &(aconn->ipnum), hp->h_addr,
+		   sizeof(struct in_addr));
+	}
+    }
+
     if (aconn->ipnum.s_addr == -1)
-        memset((char *) &aconn->ipnum, '\0', sizeof(struct in_addr));
+	memset((char *) &aconn->ipnum, '\0', sizeof(struct in_addr));
 
     Debug((DEBUG_ERROR, "Host/server name error: (%s) (%s)",
-           aconn->host, aconn->name));
+	   aconn->host, aconn->name));
     return -1;
-    }
-    /*
-     * Prepare structure in case we have to wait for a reply which
-     * we get later and store away.
-     */
-    ln.value.aconn = aconn;
-    ln.flags = ASYNC_CONF;
-    
-    if (IsDigit(*s))
-    aconn->ipnum.s_addr = inet_addr(s);
-    else if ((hp = gethost_byname(s, &ln, AF_INET)))
-    memcpy((char *) &(aconn->ipnum), hp->h_addr,
-           sizeof(struct in_addr));
-
-    if (aconn->ipnum.s_addr == -1)
-    memset((char *) &aconn->ipnum, '\0', sizeof(struct in_addr));
-    {
-    Debug((DEBUG_ERROR, "Host/server name error: (%s) (%s)",
-           aconn->host, aconn->name));
-    return -1;
-    }
-    /* NOTREACHED */
-    return 0;
 }
 
 u_long
