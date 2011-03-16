@@ -661,12 +661,14 @@ struct userBan *make_hostbased_ban(char *user, char *phost)
    char host[512];
    unsigned int flags = 0, c4h = 0, c4m = 0;
    int numcount, othercount, wildcount, dotcount, slashcount;
+   int coloncount;
    char *tmp;
    struct userBan *b;
 
    strncpy(host, phost, 512);
 
    numcount = othercount = wildcount = dotcount = slashcount = 0;
+   coloncount = 0;
 
    for(tmp = host; *tmp; tmp++)
    {
@@ -698,6 +700,10 @@ struct userBan *make_hostbased_ban(char *user, char *phost)
             slashcount++;
             break;
 
+	 case ':':
+	    coloncount++;
+	    break;
+
          default:
             othercount++;
             break;
@@ -717,8 +723,17 @@ struct userBan *make_hostbased_ban(char *user, char *phost)
       goto success;
    }
 
-   /* everything must have a dot. never more than one slash. */
-   if(dotcount == 0 || slashcount > 1)
+   /* IPv6 addresses. */
+   if (coloncount != 0 && wildcount == 0)
+   {
+       struct in6_addr tmp_addr;
+
+       if (inet_pton(AF_INET6, host, &tmp_addr) != 1)
+	   return NULL;
+   }
+
+   /* everything must have a dot or colon. never more than one slash. */
+   if((dotcount == 0 && coloncount == 0) || slashcount > 1)
       return NULL;
 
    /* wildcarded IP address? -- can we convert it to a CIDR? */
