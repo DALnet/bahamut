@@ -322,9 +322,6 @@ ks_write(int f, char type, struct userBan *ub)
     char *host = ub->h;
     int len;
 
-    /* userban.c */
-    unsigned int netmask_to_cidr(unsigned int);
-
     if (ub->flags & UBAN_TEMPORARY)
         expiretime = ub->timeset + ub->duration;
 
@@ -336,8 +333,11 @@ ks_write(int f, char type, struct userBan *ub)
 
     if (ub->flags & (UBAN_CIDR4|UBAN_CIDR4BIG))
     {
-        host = inetntoa((char *)&ub->cidr4ip);
-        ircsprintf(cidr, "/%d", netmask_to_cidr(ntohl(ub->cidr4mask)));
+	if (ub->cidr_family == AF_INET)
+	    host = inetntoa((char *)&ub->cidr_ip);
+	else if (ub->cidr_family == AF_INET6)
+	    host = inet6ntoa((char *)&ub->cidr_ip);
+        ircsprintf(cidr, "/%d", ub->cidr_bits);
     }
 
     if (type == '+')

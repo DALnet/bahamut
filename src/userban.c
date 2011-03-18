@@ -66,24 +66,6 @@ void simban_free(struct simBan *);
 unsigned int host_hash(char *n);
 unsigned int ip_hash(char *n);
 
-unsigned int cidr_to_netmask(unsigned int cidr)
-{
-   if (cidr == 0)
-      return 0;
-
-   return (0xFFFFFFFF - (1 << (32 - cidr)) + 1);
-}
-
-unsigned int netmask_to_cidr(unsigned int mask) 
-{
-   int tmp = 0;
-
-   while (!(mask & (1 << tmp)) && tmp < 32) 
-      tmp++;
-
-   return (32 - tmp); 
-}
-
 /* userban (akill/kline) functions */
 
 void add_hostbased_userban(struct userBan *b)
@@ -102,7 +84,7 @@ void add_hostbased_userban(struct userBan *b)
 
    if(b->flags & UBAN_CIDR4)
    {
-      unsigned char *s = (unsigned char *) &bl->ban->cidr4ip;
+      unsigned char *s = (unsigned char *) &bl->ban->cidr_ip;
       int a, b;
 
       a = (int) *s++;
@@ -205,10 +187,11 @@ int user_match_ban(aClient *cptr, struct userBan *ban)
 
    if(ban->flags & (UBAN_CIDR4|UBAN_CIDR4BIG))
    {
-      if(cptr->ip_family == AF_INET &&
-	 (cptr->ip.ip4.s_addr & ban->cidr4mask) == ban->cidr4ip)
-         return 1;
-      return 0;
+       if (cptr->ip_family == ban->cidr_family &&
+	   bitncmp(&cptr->ip, &ban->cidr_ip, ban->cidr_bits) == 0)
+	   return 1;
+       else
+	   return 0;
    }
 
    return 0;
@@ -278,10 +261,14 @@ struct userBan *check_userbanned(aClient *cptr, unsigned int yflags, unsigned in
          if((!(bl->ban->flags & UBAN_WILDUSER)) && match(bl->ban->u, cptr->user->username)) 
             continue;
 
-         if((cptr->ip.ip4.s_addr & bl->ban->cidr4mask) == bl->ban->cidr4ip)
-            return bl->ban;
+	 if(cptr->ip_family == bl->ban->cidr_family &&
+	    bitncmp(&cptr->ip, &bl->ban->cidr_ip, bl->ban->cidr_bits) == 0)
+	     return bl->ban;
       }
+   }
 
+   if(yflags & UBAN_CIDR4)
+   {
       LIST_FOREACH(bl, &CIDR4BIG_bans, lp) 
       {
          if((bl->ban->flags & UBAN_TEMPORARY) && bl->ban->timeset + bl->ban->duration <= NOW)
@@ -294,8 +281,9 @@ struct userBan *check_userbanned(aClient *cptr, unsigned int yflags, unsigned in
          if((!(bl->ban->flags & UBAN_WILDUSER)) && match(bl->ban->u, cptr->user->username)) 
             continue;
 
-         if((cptr->ip.ip4.s_addr & bl->ban->cidr4mask) == bl->ban->cidr4ip)
-            return bl->ban;
+	 if(cptr->ip_family == bl->ban->cidr_family &&
+	    bitncmp(&cptr->ip, &bl->ban->cidr_ip, bl->ban->cidr_bits) == 0)
+	     return bl->ban;
       }
    }
 
@@ -353,7 +341,10 @@ struct userBan *find_userban_exact(struct userBan *borig, unsigned int careflags
          if(!(borig->flags & UBAN_WILDUSER) && mycmp(borig->u, bl->ban->u))
             continue;
 
-         if(!((borig->cidr4ip == bl->ban->cidr4ip) && (borig->cidr4mask == bl->ban->cidr4mask)))
+	 if (!(borig->cidr_family == bl->ban->cidr_family &&
+	       memcmp(&borig->cidr_ip, &bl->ban->cidr_ip,
+		      sizeof(borig->cidr_ip)) == 0 &&
+	       borig->cidr_bits == bl->ban->cidr_bits))
             continue;
 
          return bl->ban;
@@ -364,7 +355,7 @@ struct userBan *find_userban_exact(struct userBan *borig, unsigned int careflags
 
    if(borig->flags & UBAN_CIDR4)
    {
-      unsigned char *s = (unsigned char *) &borig->cidr4ip;
+      unsigned char *s = (unsigned char *) &borig->cidr_ip;
       int a, b;
 
       a = (int) *s++;
@@ -377,8 +368,10 @@ struct userBan *find_userban_exact(struct userBan *borig, unsigned int careflags
          if(!(borig->flags & UBAN_WILDUSER) && mycmp(borig->u, bl->ban->u))
             continue;
 
-         if(!((borig->cidr4ip == bl->ban->cidr4ip) && (borig->cidr4mask == bl->ban->cidr4mask)))
-            continue;
+	 if (!(borig->cidr_family == bl->ban->cidr_family &&
+	       memcmp(&borig->cidr_ip, &bl->ban->cidr_ip,
+		      sizeof(borig->cidr_ip)) == 0 &&
+	       borig->cidr_bits == bl->ban->cidr_bits))
 
          return bl->ban;
       }
@@ -531,7 +524,20 @@ static inline void report_list_match_flags(aClient *cptr, uBanEnt *bl, unsigned 
          kset[2] = '\0';
 
          if(ban->flags & (UBAN_CIDR4|UBAN_CIDR4BIG))
-            snprintf(host, 128, "%s/%d", inetntoa((char *)&ban->cidr4ip), netmask_to_cidr(ntohl(ban->cidr4mask)));
+	 {
+	     if (ban->cidr_family == AF_INET)
+	     {
+		 snprintf(host, 128, "%s/%d",
+			  inetntoa((char*)&ban->cidr_ip),
+			  ban->cidr_bits);
+	     }
+	     else if (ban->cidr_family == AF_INET6)
+	     {
+		 snprintf(host, 128, "%s/%d",
+			  inet6ntoa((char*)&ban->cidr_ip),
+			  ban->cidr_bits);
+	     }
+	 }
          else
             strcpy(host, ban->h);
 
@@ -644,7 +650,20 @@ char *get_userban_host(struct userBan *ban, char *buf, int buflen)
    *buf = '\0';
 
    if(ban->flags & (UBAN_CIDR4|UBAN_CIDR4BIG))
-      snprintf(buf, buflen, "%s/%d", inetntoa((char *)&ban->cidr4ip), netmask_to_cidr(ntohl(ban->cidr4mask)));
+   {
+	 if (ban->cidr_family == AF_INET)
+	 {
+	     snprintf(buf, buflen, "%s/%d",
+		      inetntoa((char*)&ban->cidr_ip),
+		      ban->cidr_bits);
+	 }
+	 else if (ban->cidr_family == AF_INET6)
+	 {
+	     snprintf(buf, buflen, "%s/%d",
+		      inet6ntoa((char*)&ban->cidr_ip),
+		      ban->cidr_bits);
+	 }
+   }
    else
       snprintf(buf, buflen, "%s", ban->h);
 
@@ -654,227 +673,107 @@ char *get_userban_host(struct userBan *ban, char *buf, int buflen)
 /*
  * Fills in the following fields
  * of a userban structure, or returns NULL if invalid stuff is passed.
- *  - flags, u, h, cidr4ip, cidr4mask
+ *  - flags, u, h, cidr_*
  */
-struct userBan *make_hostbased_ban(char *user, char *phost)
+struct userBan *make_hostbased_ban(char *user, char *host)
 {
-   char host[512];
-   unsigned int flags = 0, c4h = 0, c4m = 0;
-   int numcount, othercount, wildcount, dotcount, slashcount;
-   int coloncount;
-   char *tmp;
+   int cidr_family = 0;
+   struct
+   {
+       char buf[16];
+   } cidr_ip;		/* CIDR IP */
+   int cidr_bits;	/* CIDR bits */
+   unsigned int flags = 0;
    struct userBan *b;
+   char *p;
 
-   strncpy(host, phost, 512);
+   int has_colon, has_dot, has_ip4, has_wild, has_nonwild;
 
-   numcount = othercount = wildcount = dotcount = slashcount = 0;
-   coloncount = 0;
-
-   for(tmp = host; *tmp; tmp++)
+   /* check for an IP address with an optional CIDR or trailing .* */
+   cidr_bits = inet_parse_cidr(AF_INET, host, &cidr_ip,
+			       sizeof(struct in_addr));
+   if (cidr_bits == 32)
    {
-      switch(*tmp)
-      {
-         case '0':
-         case '1':
-         case '2':
-         case '3':
-         case '4':
-         case '5':
-         case '6':
-         case '7':
-         case '8':
-         case '9':
-            numcount++;
-            break;
-
-         case '*':
-         case '?':
-            wildcount++;
-            break;
-
-         case '.':
-            dotcount++;
-            break;
-
-         case '/':
-            slashcount++;
-            break;
-
-	 case ':':
-	    coloncount++;
-	    break;
-
-         default:
-            othercount++;
-            break;
-      }      
+       flags = UBAN_IP;
+       goto success;
+   }
+   else if (cidr_bits > 0)
+   {
+       cidr_family = AF_INET;
+       flags = (cidr_bits < 16) ? UBAN_CIDR4BIG : UBAN_CIDR4;
+       goto success;
+   }
+   else
+   {
+       cidr_bits = inet_parse_cidr(AF_INET6, host, &cidr_ip,
+				   sizeof(struct in6_addr));
+       if (cidr_bits == 128)
+       {
+	   flags = UBAN_IP;
+	   goto success;
+       }
+       else if (cidr_bits > 0)
+       {
+	   cidr_family = AF_INET6;
+	   flags = UBAN_CIDR4BIG;
+	   goto success;
+       }
    }
 
-   if(wildcount && !numcount && !othercount)
+   has_colon = has_dot = has_wild = has_nonwild = 0;
+   has_ip4 = 1;
+   for (p = host; *p != '\0'; p++)
    {
-      if(!user || !*user || mycmp(user, "*") == 0)
-         return NULL; /* all wildcards? aagh! */
-
-      flags = (UBAN_HOST|UBAN_WILD);
-
-      if(mycmp(host, "*.*") == 0 || mycmp(host, "*") == 0)
-         flags |= UBAN_WILDHOST;
-
-      goto success;
-   }
-
-   /* IPv6 addresses. */
-   if (coloncount != 0 && wildcount == 0)
-   {
-       struct in6_addr tmp_addr;
-
-       if (inet_pton(AF_INET6, host, &tmp_addr) != 1)
+       if (*p == '/')
 	   return NULL;
+       else if (*p == '.')
+	   has_dot = 1;
+       else if (*p == '*' || *p == '?')
+	   has_wild = 1;
+       else
+       {
+	   has_nonwild = 1;
+
+	   if (*p == ':')
+	       has_colon = 1;
+	   if (!(*p >= '0' && *p <= '9'))
+	       has_ip4 = 0;
+       }
    }
 
-   /* everything must have a dot or colon. never more than one slash. */
-   if((dotcount == 0 && coloncount == 0) || slashcount > 1)
-      return NULL;
-
-   /* wildcarded IP address? -- can we convert it to a CIDR? */
-   if(wildcount && numcount && !othercount)
+   /* host is all wildcards? */
+   if (has_wild && !has_nonwild)
    {
-      char octet[4][8];
-      int i1, i2;
-      int gotwild;
+       if(!user || !*user || mycmp(user, "*") == 0)
+	   return NULL;
 
-      if(slashcount)
-         return NULL; /* slashes and wildcards? */
+       flags = (UBAN_HOST | UBAN_WILD);
 
-      /* I see... more than 3 dots? */
-      if(dotcount > 3)
-         return NULL;
-
-      i1 = i2 = 0;
-
-      /* separate this thing into dotcount octets. */
-      for(tmp = host; *tmp; tmp++)
-      {
-         if(*tmp == '.')
-         {
-            octet[i1][i2] = '\0';
-            i2 = 0;
-            i1++;
-            continue;
-         }
-         if(i2 < 6)
-         {
-            octet[i1][i2++] = *tmp;
-         }
-      }
-      octet[i1][i2] = '\0';
-
-      /* verify that each octet is all numbers or just a '*' */
-      /* bans that match 123.123.123.1?? are still valid, just not convertable to a CIDR */
-
-      for(gotwild = i1 = 0; i1 <= dotcount; i1++)
-      {
-         if(strcmp(octet[i1], "*") == 0)
-         {
-            gotwild++;
-            continue;
-         }
-
-         /* ban in the format of 1.2.*.4 */
-         if(gotwild)
-         {
-            flags = (UBAN_IP|UBAN_WILD);
-            goto success;
-         }
-
-         for(i2 = 0; octet[i1][i2]; i2++)
-         {
-             switch(octet[i1][i2])
-             {
-                case '0':
-                case '1':
-                case '2':
-                case '3':
-                case '4':
-                case '5':
-                case '6':
-                case '7':
-                case '8':
-                case '9':
-                   break;
-
-                default:
-                   flags = (UBAN_IP|UBAN_WILD);
-                   goto success;
-             }
-         }
-      }
-
-      if(octet[0][0] == '*')
-         return NULL; /* the first octet is a wildcard? what the hell? */
-
-      if(octet[1][0] == '*')
-      {
-         sprintf(host, "%s.0.0.0/8", octet[0]);
-         goto cidrforce;
-      }
-      else if(dotcount >= 2 && octet[2][0] == '*')
-      {
-         sprintf(host, "%s.%s.0.0/16", octet[0], octet[1]);
-         goto cidrforce;
-      }
-      else if(dotcount >= 3 && octet[3][0] == '*')
-      {
-         sprintf(host, "%s.%s.%s.0/24", octet[0], octet[1], octet[2]);
-         goto cidrforce;
-      }
-
-      return NULL; /* we should never get here. If we do, something is wrong. */
+       if(mycmp(host, "*.*") == 0 || mycmp(host, "*") == 0)
+	   flags |= UBAN_WILDHOST;
    }
 
-   /* CIDR IP4 address? */
-   if(!wildcount && numcount && !othercount && slashcount)
+   /* everything must have a dot or colon. */
+   else if (!has_dot && !has_colon)
+       return NULL;
+
+   /* an IPv6 address? */
+   else if (has_colon)
    {
-      int sval;
-      char *sep, *err;
-      struct in_addr ia, na;
-
-cidrforce:
-      sep = strchr(host, '/'); /* guaranteed to be here because slashcount */
-      *sep = '\0';
-      sep++;
- 
-      if((ia.s_addr = inet_addr(host)) == 0xFFFFFFFF) /* invalid ip4 address! */
-         return NULL;
-
-      /* is there a problem with the / mask? */
-      sval = strtol(sep, &err, 10);
-      if(*err != '\0')
-         return NULL;
-
-      if(sval < 0 || sval > 32)
-         return NULL;
-
-      na.s_addr = htonl(cidr_to_netmask(sval));
-      ia.s_addr &= na.s_addr;
-
-      c4h = ia.s_addr;
-      c4m = na.s_addr;
-      
-      flags = (sval < 16) ? UBAN_CIDR4BIG : UBAN_CIDR4;
-      goto success;
+       /* it must have a wildcard; non-wildcards are handled above. */
+       if (!has_wild)
+	   return NULL;
+       else
+	   flags = (UBAN_IP | (has_wild ? UBAN_WILD : 0));
    }
 
-   if(slashcount)
-      return NULL;
- 
-   if(!othercount)
-   {
-      flags = (UBAN_IP | (wildcount ? UBAN_WILD : 0));
-      goto success;
-   }
+   /* an IPv4 address? */
+   else if (has_ip4)
+       flags = (UBAN_IP | (has_wild ? UBAN_WILD : 0));
 
-   flags = (UBAN_HOST | (wildcount ? UBAN_WILD : 0));
+   /* or a hostname */
+   else
+       flags = (UBAN_HOST | (has_wild ? UBAN_WILD : 0));
 
 success:
    b = userban_alloc();
@@ -885,13 +784,14 @@ success:
 
    if(flags & (UBAN_CIDR4BIG|UBAN_CIDR4))
    {
-      b->cidr4ip = c4h;
-      b->cidr4mask = c4m;
-      b->h = NULL;
+       b->cidr_family = cidr_family;
+       memcpy(&b->cidr_ip, &cidr_ip, sizeof(cidr_ip));
+       b->cidr_bits = cidr_bits;
+       b->h = NULL;
    }
    else
    {
-      b->cidr4ip = b->cidr4mask = 0;
+      b->cidr_family = 0;
       b->h = (char *)MyMalloc(strlen(host) + 1);
       strcpy(b->h, host);
    }
@@ -909,7 +809,7 @@ success:
 
    b->flags = flags;
 
-   return b;   
+   return b;
 }
 
 /* simban (simple ban) functions */
