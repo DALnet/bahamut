@@ -388,4 +388,7 @@ int ssl_smart_shutdown(SSL *);
 
 #include "find.h"
 
+int bitncmp(const void *l, const void *r, size_t n);
+int inet_parse_cidr(int af, const char *src, void *dst, size_t size);
+
 #endif  /* H_H */

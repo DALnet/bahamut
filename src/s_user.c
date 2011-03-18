@@ -2162,6 +2162,8 @@ do_user(char *nick, aClient *cptr, aClient *sptr, char *username, char *host,
 	    else
 		sptr->ip_family = 0;
 	}
+	else if (inet_pton(AF_INET6, ip, &sptr->ip.ip6) == 1)
+	    sptr->ip_family = AF_INET6;
 	else
 	{
 	    char *end;
