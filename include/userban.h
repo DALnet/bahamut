@@ -50,8 +50,12 @@ struct userBan {
    char *u;                    /* username */
    char *h;                    /* host or IP or GECOS or NICK */
 
-   unsigned int cidr4ip;       /* cidr4 IP */   
-   unsigned int cidr4mask;     /* cidr4 mask */   
+   int cidr_bits;              /* CIDR bits to match */
+   int cidr_family;            /* CIDR family to match */
+   struct
+   {
+       char ip[16];
+   } cidr_ip;                  /* CIDR IP to match */
 
    char *reason;
    time_t timeset;             /* time this ban was set */
