@@ -41,7 +41,6 @@ int chk_who(aClient *, int);
 extern int user_modes[];
 
 extern Link *find_channel_link(Link *, aChannel *);
-extern unsigned int cidr_to_netmask(unsigned int);
 
 int build_searchopts(aClient *sptr, int parc, char *parv[])
 {
@@ -317,33 +316,36 @@ int build_searchopts(aClient *sptr, int parc, char *parv[])
           }
           else
           {
-              char *cpos;
-          
-              if((cpos = strchr(parv[args], '/'))) 
-              {  
-                  char *err;
-                  unsigned int maskval, ipval;
-          
-                  *(cpos++) = '\0';
-              
-                  ipval = inet_addr(parv[args]);
-                  maskval = strtol(cpos, &err, 10);
-                  if(ipval == 0xFFFFFFFF || *err != '\0' ||
-                     maskval < 1 || maskval > 32)
+	      if (strchr(parv[args], '/'))
+	      {
+		  int bits;
+
+		  bits = inet_parse_cidr(AF_INET, parv[args],
+					 &wsopts.cidr_ip,
+					 sizeof(wsopts.cidr_ip));
+		  if (bits > 0)
+		      wsopts.cidr_family = AF_INET;
+		  else
+		  {
+		      bits = inet_parse_cidr(AF_INET6, parv[args],
+					     &wsopts.cidr_ip,
+					     sizeof(wsopts.cidr_ip));
+		      if (bits > 0)
+			  wsopts.cidr_family = AF_INET6;
+		  }
+		  if (bits > 0)
+		  {
+		      wsopts.cidr_bits = bits;
+		      wsopts.cidr_plus = change;
+		  }
+		  else
                   {
                       sendto_one(sptr, getreply(ERR_WHOSYNTAX), me.name, sptr->name,
                          "WHO", "who");
                       return 0;
                   }
-              
-                  maskval = htonl(cidr_to_netmask(maskval));
-                  ipval &= maskval;
-           
-                  wsopts.cidr4_plus = change;
-                  wsopts.cidr4_mask = maskval;
-                  wsopts.cidr4_ip = ipval;
-                  args++;
-              }
+		  args++;
+	      }
               else
               {
                   wsopts.ip=parv[args];
@@ -470,7 +472,7 @@ int build_searchopts(aClient *sptr, int parc, char *parv[])
 			       wsopts.serv_plus || wsopts.nick_plus || 
 			       wsopts.user_plus || wsopts.ts_value || 
                    wsopts.client_type_plus || wsopts.ip_plus || 
-                   wsopts.chan_plus || wsopts.cidr4_mask))
+                   wsopts.chan_plus || wsopts.cidr_bits))
       {
 	  if(parv[args]==NULL)
 	  {
@@ -566,9 +568,9 @@ int chk_who(aClient *ac, int showall)
 	   (!wsopts.host_plus && !hchkfn(wsopts.host, ac->user->host)))
 	    return 0;
 
-    if(wsopts.cidr4_plus)
-	if(ac->ip_family != AF_INET ||
-	   (ac->ip.ip4.s_addr & wsopts.cidr4_mask) != wsopts.cidr4_ip)
+    if(wsopts.cidr_plus)
+	if(ac->ip_family != wsopts.cidr_family ||
+	   bitncmp(&ac->ip, &wsopts.cidr_ip, wsopts.cidr_bits) != 0)
 	    return 0;
     
     if(wsopts.ip_plus)
