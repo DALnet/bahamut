@@ -1439,8 +1439,12 @@ typedef struct SearchOptions
     char *ip;
     int class;
     int class_value;
-    unsigned int cidr4_ip;
-    unsigned int cidr4_mask;
+    int cidr_bits;
+    int cidr_family;
+    struct
+    {
+	char ip[16];
+    } cidr_ip;
     int ts;
     int ts_value;
     aChannel *channel;
@@ -1453,7 +1457,7 @@ typedef struct SearchOptions
     unsigned host_plus:1;
     unsigned gcos_plus:1;
     unsigned ip_plus:1;
-    unsigned cidr4_plus:1;
+    unsigned cidr_plus:1;
     unsigned chan_plus:1;
     unsigned serv_plus:1;
     unsigned away_plus:1;

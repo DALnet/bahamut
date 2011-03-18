@@ -33,7 +33,6 @@
 #include "pcre.h"
 
 extern int user_modes[];
-extern unsigned int cidr_to_netmask(unsigned int);
 extern Link *find_channel_link(Link *, aChannel *);
 
 /* max capturing submatches to allow in all fields combined */
@@ -167,8 +166,12 @@ static struct {
     int      (*host_func[2])(); /* host match function */
     int       umodes[2];        /* usermodes */
     unsigned  stype;            /* services type */
-    unsigned  ip_mask[2];       /* IP netmask */
-    unsigned  ip_addr[2];       /* IP address */
+    unsigned  ip_family[2];	/* CIDR family to match */
+    int       ip_cidr_bits[2];	/* CIDR bits to match */
+    struct
+    {
+	char ip[16];
+    } ip_addr[2];		/* IP address */
     char     *ip_str[2];        /* IP string if CIDR is invalid */
     ts_val    ts[2];            /* signon timestamp */
     int       joined[2];        /* min/max joined chans */
@@ -439,27 +442,33 @@ static int rwho_parseopts(aClient *sptr, int parc, char *parv[])
                     rwho_synerr(sptr, "missing argument for match flag i");
                     return 0;
                 }
-                if ((s = strchr(parv[arg], '/')))
+                if (strchr(parv[arg], '/'))
                 {
-                    *s++ = 0;
-                    i = strtol(s, &s, 10);
-                    if (*s == 0 && 1 < i && i < 32)
-                        rwho_opts.ip_mask[neg] = htonl(cidr_to_netmask(i));
+		    int bits;
+
+		    bits = inet_parse_cidr(AF_INET, parv[arg],
+					   &rwho_opts.ip_addr[neg],
+					   sizeof(struct in_addr));
+		    if (bits > 0)
+			rwho_opts.ip_family[neg] = AF_INET;
+		    else
+		    {
+			bits = inet_parse_cidr(AF_INET6, parv[arg],
+					       &rwho_opts.ip_addr[neg],
+					       sizeof(struct in6_addr));
+			if (bits > 0)
+			    rwho_opts.ip_family[neg] = AF_INET6;
+		    }
+		    if (bits > 0)
+			rwho_opts.ip_cidr_bits[neg] = bits;
+		    else
+		    {
+			rwho_synerr(sptr, "invalid CIDR IP for match flag i");
+			return 0;
+		    }
                 }
-                else
-                    rwho_opts.ip_mask[neg] = ~0;
-                rwho_opts.ip_addr[neg] = inet_addr(parv[arg]);
-                if (!rwho_opts.ip_mask[neg] ||
-                    (rwho_opts.ip_mask[neg] != ~0 &&
-                     rwho_opts.ip_addr[neg] == 0xFFFFFFFF))
-                {
-                    rwho_synerr(sptr, "invalid CIDR IP for match flag i");
-                    return 0;
-                }
-                if (rwho_opts.ip_addr[neg] == 0xFFFFFFFF)
+		else
                     rwho_opts.ip_str[neg] = parv[arg];
-                else
-                    rwho_opts.ip_addr[neg] &= rwho_opts.ip_mask[neg];
                 rwho_opts.check[neg] |= RWM_IP;
                 arg++;
                 break;
@@ -935,10 +944,10 @@ static int rwho_match(aClient *cptr, int *failcode, aClient **failclient)
             if (match(rwho_opts.ip_str[0], cptr->hostip))
                 return 0;
         }
-        else if (cptr->ip_family == AF_INET)
+        else if (cptr->ip_family == rwho_opts.ip_family[0])
 	{
-	    if ((cptr->ip.ip4.s_addr & rwho_opts.ip_mask[0])
-		!= rwho_opts.ip_addr[0])
+	    if (bitncmp(&cptr->ip, &rwho_opts.ip_addr[0],
+			rwho_opts.ip_cidr_bits[0]) != 0)
 		return 0;
 	}
 	else
@@ -952,10 +961,10 @@ static int rwho_match(aClient *cptr, int *failcode, aClient **failclient)
             if (!match(rwho_opts.ip_str[1], cptr->hostip))
                 return 0;
         }
-        else if (cptr->ip_family == AF_INET)
+        else if (cptr->ip_family == rwho_opts.ip_family[1])
 	{
-	    if ((cptr->ip.ip4.s_addr & rwho_opts.ip_mask[1])
-		== rwho_opts.ip_addr[1])
+	    if (bitncmp(&cptr->ip, &rwho_opts.ip_addr[1],
+			rwho_opts.ip_cidr_bits[1]) == 0)
 		return 0;
 	}
 	else
