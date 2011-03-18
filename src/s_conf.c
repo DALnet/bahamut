@@ -395,9 +395,39 @@ find_oper(char *name, char *username, char *sockhost, char *hostip)
 
         for(i = 0; aoper->hosts[i]; i++)
         {
-            if(!mycmp(name, aoper->nick) && (!match(aoper->hosts[i], userhost) 
+            if(!mycmp(name, aoper->nick) && (!match(aoper->hosts[i], userhost)
                     || !match(aoper->hosts[i], userip)))
                 return aoper;
+	    if(strchr(aoper->hosts[i], '/'))
+	    {
+		char cidrbuf[USERLEN + HOSTLEN + 3];
+		char ipbuf1[16], ipbuf2[16];
+		char *s;
+		int bits;
+		int family;
+
+		s = strchr(aoper->hosts[i], '@');
+		if (s)
+		    s++;
+		else
+		    s = aoper->hosts[i];
+
+		if (inet_pton(AF_INET, hostip, ipbuf1) == 1)
+		    family = AF_INET;
+		else if (inet_pton(AF_INET6, hostip, ipbuf1) == 1)
+		    family = AF_INET6;
+		else
+		    family = 0;
+
+		bits = inet_parse_cidr(family, s, ipbuf2, sizeof(ipbuf2));
+		if (bits > 0 && bitncmp(ipbuf1, ipbuf2, bits) == 0)
+		{
+		    /* Check the wildcards in the rest of the string. */
+		    ircsprintf(cidrbuf, "%s@%s", username, s);
+		    if (match(aoper->hosts[i], cidrbuf) == 0)
+			return aoper;
+		}
+	    }
         }
     }
     return NULL;
@@ -526,11 +556,44 @@ attach_Iline(aClient *cptr, struct hostent *hp, char *sockhost)
             {
                 if (!match(allow->ipmask, useriphost))
                     return (attach_iline(cptr, allow, iphost, 1));
+		else if (strchr(allow->ipmask, '/'))
+		{
+		    char cidrbuf[USERLEN + 1 + HOSTLEN + 1];
+		    char ipbuf[16];
+		    char *s;
+		    int bits;
+
+		    s = strchr(allow->ipmask, '@');
+		    if (s)
+			s++;
+		    else
+			continue;
+
+		    bits = inet_parse_cidr(cptr->ip_family, s,
+					   ipbuf, sizeof(ipbuf));
+		    if (bits > 0 && bitncmp(&cptr->ip, ipbuf, bits) == 0)
+		    {
+			/* Check the wildcards in the rest of the string. */
+			ircsprintf(cidrbuf, "%s@%s", cptr->username, s);
+			if (match(allow->ipmask, cidrbuf) == 0)
+			    return (attach_iline(cptr, allow, iphost, 1));
+		    }
+		}
             }
             else
             {
                 if (!match(allow->ipmask, iphost))
                     return (attach_iline(cptr, allow, iphost, 0));
+		else if (strchr(allow->ipmask, '/'))
+		{
+		    char ipbuf[16];
+		    int bits;
+
+		    bits = inet_parse_cidr(cptr->ip_family, allow->ipmask,
+					   ipbuf, sizeof(ipbuf));
+		    if (bits > 0 && bitncmp(&cptr->ip, ipbuf, bits) == 0)
+			return (attach_iline(cptr, allow, iphost, 1));
+		}
             }
         }
     }

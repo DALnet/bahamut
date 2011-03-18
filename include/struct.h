@@ -796,7 +796,11 @@ struct Listener {
         u_short         port; 
         char            allow_string[HOSTLEN + 1];   /* allow from */
         char            vhost_string[HOSTLEN + 1];   /* bind to */
-        struct in_addr  allow_ip;           /* allow from */
+	int allow_cidr_bits;
+	struct
+	{
+	    char ip[16];
+	} allow_ip;	/* allow from */
         time_t          lasttime;           /* last time I accepted */
         long            sendK;              /* counters, see below */
         u_short         sendB;           

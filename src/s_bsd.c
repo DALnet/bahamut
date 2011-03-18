@@ -313,18 +313,19 @@ int add_listener(aPort *aport)
 	len = sizeof(server.addr4);
     }
 
-    if(!BadPtr(aport->allow) && server.sa.sa_family == AF_INET)
+    if(!BadPtr(aport->allow))
     {
-	int ad[4];
-	char ipname[20];
-
-	ad[0] = ad[1] = ad[2] = ad[3] = 0;
+	int bits;
 
         strncpyzt(lstn.allow_string, aport->allow, sizeof(lstn.allow_string));
-        sscanf(lstn.allow_string, "%d.%d.%d.%d", &ad[0], &ad[1],
-                                                 &ad[2], &ad[3]);
-        ircsprintf(ipname, "%d.%d.%d.%d", ad[0], ad[1], ad[2], ad[3]);
-        lstn.allow_ip.s_addr = inet_addr(ipname);
+
+	bits = inet_parse_cidr(server.sa.sa_family,
+			       lstn.allow_string, &lstn.allow_ip,
+			       sizeof(lstn.allow_ip));
+	if (bits > 0)
+	    lstn.allow_cidr_bits = bits;
+	else
+	    lstn.allow_cidr_bits = -1;
     }
 
     if(lstn.port <= 0) /* stop stupidity cold */
@@ -1300,33 +1301,10 @@ aClient *add_connection(aListener *lptr, int fd)
      */
     if (acptr->ip_family == AF_INET)
     {
-	char *s, *t;
-
 	get_sockhost(acptr, (char *) inetntoa((char *) &addr.addr4.sin_addr));
 	memcpy((char *) &acptr->ip.ip4, (char *) &addr.addr4.sin_addr,
 		sizeof(struct in_addr));
 	acptr->port = ntohs(addr.addr4.sin_port);
-
-	/*
-	 * Check that this socket (client) is allowed to accept
-	 * connections from this IP#.
-	 */
-	for (s = (char *) &lptr->allow_ip, t = (char *) &acptr->ip.ip4, len = 4;
-	     len > 0; len--, s++, t++)
-	{
-	    if (!*s)
-		continue;
-	    if (*s != *t)
-		break;
-	}
-	if (len)
-	{
-	    ircstp->is_ref++;
-	    acptr->fd = -2;
-	    free_client(acptr);
-	    close(fd);
-	    return NULL;
-	}
     }
     else if (acptr->ip_family == AF_INET6)
     {
@@ -1336,6 +1314,19 @@ aClient *add_connection(aListener *lptr, int fd)
 	acptr->port = ntohs(addr.addr6.sin6_port);
     }
 
+    /*
+     * Check that this socket (client) is allowed to accept
+     * connections from this IP#.
+     */
+    if (lptr->allow_cidr_bits > 0 &&
+	bitncmp(&acptr->ip, &lptr->allow_ip, lptr->allow_cidr_bits) != 0)
+    {
+	ircstp->is_ref++;
+	acptr->fd = -2;
+	free_client(acptr);
+	close(fd);
+	return NULL;
+    }
 
     lptr->ccount++;
     lptr->clients++;

@@ -207,6 +207,37 @@ static char *make_nick_user_host(char *nick, char *name, char *host)
     return (namebuf);
 }
 
+/* Determine whether a client matches a CIDR banstr. */
+static int client_matches_cidrstr(aClient *cptr, char *banstr)
+{
+    char cidrbuf[NICKLEN + USERLEN + HOSTLEN + 6];
+    char ipbuf[16];
+    char *s;
+    int bits;
+
+    if (!strchr(banstr, '/'))
+	return 0;
+
+    s = strchr(banstr, '@');
+    if (s)
+	s++;
+    else
+	return 0;
+
+    bits = inet_parse_cidr(cptr->ip_family, s, ipbuf, sizeof(ipbuf));
+    if (bits > 0 && bitncmp(&cptr->ip, ipbuf, bits) == 0)
+    {
+	/* Check the wildcards in the rest of the string. */
+	snprintf(cidrbuf, sizeof(cidrbuf), "%s!%s@%s",
+		 check_string(cptr->name),
+		 check_string(cptr->user->username),
+		 s);
+	if (match(banstr, cidrbuf) == 0)
+	    return 1;
+    }
+    return 0;
+}
+
 #ifdef EXEMPT_LISTS
 /* Exempt list functions (+e) */
 
@@ -380,7 +411,8 @@ anInvite* is_invited(aClient* cptr, aChannel* chptr)
 
     for (invite = chptr->invite_list; invite; invite = invite->next)
     {
-        if (!match(invite->invstr, s) || !match(invite->invstr, s2))
+        if (!match(invite->invstr, s) || !match(invite->invstr, s2) ||
+	    client_matches_cidrstr(cptr, invite->invstr))
             break;
     }
     return invite;
@@ -518,13 +550,15 @@ static int is_banned(aClient *cptr, aChannel *chptr, chanMember *cm)
 
 #ifdef EXEMPT_LISTS
     for (exempt = chptr->banexempt_list; exempt; exempt = exempt->next)
-        if (!match(exempt->banstr, s) || !match(exempt->banstr, s2))
+        if (!match(exempt->banstr, s) || !match(exempt->banstr, s2) ||
+	    client_matches_cidrstr(cptr, exempt->banstr))
             return 0;
 #endif
 
     for (ban = chptr->banlist; ban; ban = ban->next)
         if ((match(ban->banstr, s) == 0) ||
-            (match(ban->banstr, s2) == 0))
+            (match(ban->banstr, s2) == 0) ||
+	    client_matches_cidrstr(cptr, ban->banstr))
             break;
 
     if (ban)
@@ -575,14 +609,16 @@ aBan *nick_is_banned(aChannel *chptr, char *nick, aClient *cptr)
     for (exempt = chptr->banexempt_list; exempt; exempt = exempt->next)
         if (exempt->type == MTYP_FULL &&
             ((match(exempt->banstr, s2) == 0) ||
-             (match(exempt->banstr, s) == 0)))
+             (match(exempt->banstr, s) == 0) ||
+	     client_matches_cidrstr(cptr, exempt->banstr)))
             return NULL;
 #endif
 
     for (ban = chptr->banlist; ban; ban = ban->next)
         if (ban->type == MTYP_FULL &&        /* only check applicable bans */
             ((match(ban->banstr, s2) == 0) ||    /* check host before IP */
-             (match(ban->banstr, s) == 0)))
+             (match(ban->banstr, s) == 0) ||
+	     client_matches_cidrstr(cptr, ban->banstr)))
             break;
     return (ban);
 }
@@ -614,7 +650,8 @@ void remove_matching_bans(aChannel *chptr, aClient *cptr, aClient *from)
   {
       bnext = ban->next;
       if((match(ban->banstr, targhost) == 0) ||
-         (match(ban->banstr, targip) == 0))
+         (match(ban->banstr, targip) == 0) ||
+	 client_matches_cidrstr(cptr, ban->banstr))
       {
           if (strlen(parabuf) + strlen(ban->banstr) + 10 < (size_t) MODEBUFLEN)
           {
@@ -699,7 +736,8 @@ void remove_matching_exempts(aChannel *chptr, aClient *cptr, aClient *from)
     {
         enext = ex->next;
         if((match(ex->banstr, targhost) == 0) ||
-           (match(ex->banstr, targip) == 0))
+           (match(ex->banstr, targip) == 0) ||
+	   client_matches_cidrstr(cptr, ex->banstr))
         {
             if (strlen(parabuf) + strlen(ex->banstr) + 10 < (size_t) MODEBUFLEN)
             {
