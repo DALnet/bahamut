@@ -676,7 +676,8 @@ exit_client(aClient *cptr, aClient *sptr, aClient *from, char *comment)
         if (IsServer(sptr)) 
         {
             sendto_ops("%s was connected for %lu seconds.  %lu/%lu "
-                       "sendK/recvK.", sptr->name, timeofday - sptr->firsttime,
+                       "sendK/recvK.", sptr->name,
+		       (long)(timeofday - sptr->firsttime),
                        sptr->sendK, sptr->receiveK);
 #ifdef USE_SYSLOG
             syslog(LOG_NOTICE, "%s was connected for %lu seconds.  %lu/%lu "

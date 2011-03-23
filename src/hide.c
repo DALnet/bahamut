@@ -339,7 +339,8 @@ void fakelusers_sendlock(aClient *sptr)
    if(luserslock_expiretime == -1)
       sendto_one(sptr, ":%s LUSERSLOCK CANCEL", me.name);
    else
-      sendto_one(sptr, ":%s LUSERSLOCK UNTIL %ld", me.name, (time_t) luserslock_expiretime);
+      sendto_one(sptr, ":%s LUSERSLOCK UNTIL %ld", me.name,
+		 (long)luserslock_expiretime);
 }
 
 u_long

@@ -104,10 +104,10 @@ msg_has_ctrls(char *msg)
 {
     unsigned char *c;
 
-    if (msg == NULL) 
+    if (msg == NULL)
         return 0;
 
-    for (c = msg; *c; c++)
+    for (c = (unsigned char *)msg; *c; c++)
     {
         /* not a control code */
         if (*c > 31)
@@ -3335,7 +3335,8 @@ void send_topic_burst(aClient *cptr)
         {
             if(chptr->topic[0] != '\0')
                 sendto_one(cptr, ":%s TOPIC %s %s %ld :%s", me.name, chptr->chname,
-                           chptr->topic_nick, chptr->topic_time, chptr->topic);
+                           chptr->topic_nick, (long)chptr->topic_time,
+			   chptr->topic);
         }
 
     if (!(confopts & FLAGS_SERVHUB) || !(cptr->serv->uflags & ULF_NOBAWAY))
@@ -3451,7 +3452,8 @@ int m_topic(aClient *cptr, aClient *sptr, int parc, char *parv[])
      * -wd */
 
     sendto_serv_butone(cptr, ":%s TOPIC %s %s %lu :%s", parv[0],
-                       chptr->chname, chptr->topic_nick, chptr->topic_time,
+                       chptr->chname, chptr->topic_nick,
+		       (unsigned long)chptr->topic_time,
                        chptr->topic);
     sendto_channel_butserv_me(chptr, sptr, ":%s TOPIC %s :%s", parv[0],
                               chptr->chname, chptr->topic);

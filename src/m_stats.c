@@ -419,7 +419,8 @@ tstats(aClient *cptr, char *name)
                me.name, RPL_STATSDEBUG, name,
                sp->is_ckr, sp->is_cbr, sp->is_skr, sp->is_sbr);
     sendto_one(cptr, ":%s %d %s :time connected %lu %lu",
-               me.name, RPL_STATSDEBUG, name, sp->is_cti, sp->is_sti);
+               me.name, RPL_STATSDEBUG, name,
+	       (long)sp->is_cti, (long)sp->is_sti);
 #ifdef FLUD
     sendto_one(cptr, ":%s %d %s :CTCP Floods Blocked %u",
                me.name, RPL_STATSDEBUG, name, sp->is_flud);
