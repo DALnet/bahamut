@@ -1186,7 +1186,7 @@ void sendto_ops_lev(int lev, char *pattern, ...)
     aClient *cptr;
     int     i;
     char        nbuf[1024];
-    va_list vl;
+    va_list vl, vl2;
     char *tmsg;
 
 #ifdef NICER_UMODENOTICE_SEPARATION
@@ -1278,10 +1278,12 @@ void sendto_ops_lev(int lev, char *pattern, ...)
                 if (!SendServNotice(cptr))
                     continue;
         }
+        va_copy(vl2, vl);
         ircsprintf(nbuf, ":%s NOTICE %s :*** %s -- ", me.name, 
                    cptr->name, tmsg);
         strncat(nbuf, pattern, sizeof(nbuf) - strlen(nbuf));
-        vsendto_one(cptr, nbuf, vl);
+        vsendto_one(cptr, nbuf, vl2);
+        va_end(vl2);
     }
     va_end(vl);
     return;
@@ -1368,7 +1370,7 @@ void send_globops(char *pattern, ...)
 {
     aClient *cptr;
     char nbuf[1024];
-    va_list vl;
+    va_list vl, vl2;
     DLink *lp;
           
     va_start(vl, pattern);
@@ -1380,9 +1382,11 @@ void send_globops(char *pattern, ...)
 
         if (IsAnOper(cptr))
         {
+            va_copy(vl2, vl);
             ircsprintf(nbuf, ":%s NOTICE %s :*** Global -- %s",
                        me.name, cptr->name, pattern);
-            vsendto_one(cptr, nbuf, vl);
+            vsendto_one(cptr, nbuf, vl2);
+            va_end(vl2);
         }
     }
     va_end(vl);
@@ -1393,7 +1397,7 @@ void send_chatops(char *pattern, ...)
 {
     aClient *cptr;
     char nbuf[1024];
-    va_list vl;
+    va_list vl, vl2;
     DLink *lp;
           
     va_start(vl, pattern);
@@ -1405,9 +1409,11 @@ void send_chatops(char *pattern, ...)
 
         if (IsAnOper(cptr))
         {
+            va_copy(vl2, vl);
             ircsprintf(nbuf, ":%s NOTICE %s :*** ChatOps -- %s",
                        me.name, cptr->name, pattern);
-            vsendto_one(cptr, nbuf, vl);
+            vsendto_one(cptr, nbuf, vl2);
+            va_end(vl2);
         }
     }
     va_end(vl);
@@ -1675,15 +1681,18 @@ void vsendto_realops(char *pattern, va_list vl)
     aClient *cptr;
     char nbuf[1024];
     DLink *lp;
+    va_list vl2;
 
     for (lp = oper_list; lp; lp = lp->next)
     {
         cptr = lp->value.cptr;
         if (IsAnOper(cptr))
         {
+            va_copy(vl2, vl);
             ircsprintf(nbuf, ":%s NOTICE %s :*** Notice -- %s",
                        me.name, cptr->name, pattern);
-            vsendto_one(cptr, nbuf, vl);
+            vsendto_one(cptr, nbuf, vl2);
+            va_end(vl2);
         }
     }
     return;
@@ -1714,7 +1723,7 @@ void sendto_realops_lev(int lev, char *pattern, ...)
 {
     aClient *cptr;
     char nbuf[1024];
-    va_list vl;
+    va_list vl, vl2;
     DLink *lp;
     char *tmsg;
 
@@ -1804,9 +1813,11 @@ void sendto_realops_lev(int lev, char *pattern, ...)
                     continue;
                 break;
         }
+        va_copy(vl2, vl);
         ircsnprintf(nbuf, 1024, ":%s NOTICE %s :*** %s -- %s",
                     me.name, cptr->name, tmsg, pattern);
-        vsendto_one(cptr, nbuf, vl);
+        vsendto_one(cptr, nbuf, vl2);
+        va_end(vl2);
     }
     va_end(vl);
     return;
@@ -1856,7 +1867,7 @@ void sendto_locops(char *pattern, ...)
 {
     aClient *cptr;
     char nbuf[1024];
-    va_list vl;
+    va_list vl, vl2;
     DLink *lp;
 
     va_start(vl, pattern);
@@ -1867,9 +1878,11 @@ void sendto_locops(char *pattern, ...)
 
         if (SendGlobops(cptr))
         {
+            va_copy(vl2, vl);
             ircsprintf(nbuf, ":%s NOTICE %s :*** LocOps -- %s",
                        me.name, cptr->name, pattern);
-            vsendto_one(cptr, nbuf, vl);
+            vsendto_one(cptr, nbuf, vl2);
+            va_end(vl);
         }
     }
     va_end(vl);
@@ -1881,7 +1894,7 @@ void sendto_gnotice(char *pattern, ...)
 {
     aClient *cptr;
     char nbuf[1024];
-    va_list vl;
+    va_list vl, vl2;
     DLink *lp;
         
     va_start(vl, pattern);
@@ -1891,9 +1904,11 @@ void sendto_gnotice(char *pattern, ...)
         cptr = lp->value.cptr;
         if (SendRnotice(cptr)) 
         {
+            va_copy(vl2, vl);
             ircsprintf(nbuf, ":%s NOTICE %s :*** Routing -- %s",
                        me.name, cptr->name, pattern);
-            vsendto_one(cptr, nbuf, vl);
+            vsendto_one(cptr, nbuf, vl2);
+            va_end(vl2);
         }
     }
     va_end(vl);
