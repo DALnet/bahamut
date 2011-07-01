@@ -44,7 +44,11 @@
 #ifdef __OpenBSD__
 #define RAND_SRC "/dev/arandom"
 #else
-#define RAND_SRC "/dev/random"
+#ifdef __linux__
+#define RAND_SRC "/dev/urandom"
+#else
+#define RAND_SRC "/dev/urandom"
+#endif
 #endif
 
 
