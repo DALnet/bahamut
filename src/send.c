@@ -792,6 +792,35 @@ void sendto_serv_butone_nickipstr(aClient *one, int flag, char *pattern, ...)
     return;
 }
 
+/* sendto_capab_serv_butone - Send a message to all servers with "include" capab and without "exclude" capab */
+void sendto_capab_serv_butone(aClient *one, int include, int exclude, char *pattern, ...)
+{
+    aClient *cptr;
+    int k = 0;
+    fdlist send_fdlist;
+    va_list vl;
+    DLink *lp;
+
+    va_start(vl, pattern);
+    for(lp = server_list; lp; lp = lp->next)
+    {
+        cptr = lp->value.cptr;
+
+        if ((one==cptr) ||
+            (include && !(cptr->capabilities & include)) ||
+            (exclude && (cptr->capabilities & exclude)))
+            continue;
+
+        send_fdlist.entry[++k] = cptr->fd;
+    }
+    send_fdlist.last_entry = k;
+    if (k)
+        vsendto_fdlist(&send_fdlist, pattern, vl);
+    va_end(vl);
+
+    return;
+}
+
 /*
  * sendto_server_butone
  * 

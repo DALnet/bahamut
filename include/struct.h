@@ -1212,7 +1212,7 @@ struct Channel
     Mode        mode;
     char        chname[CHANNELLEN+1];
     char        topic[TOPICLEN + 1];
-    char        topic_nick[NICKLEN + 1];
+    char        topic_nick[NICKLEN + 1 + USERLEN + 1 + HOSTLEN + 1];
     time_t      topic_time;
     int         users;
     chanMember* members;
