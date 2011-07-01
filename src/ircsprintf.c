@@ -124,6 +124,7 @@ inline int irc_printf(char *str, const char *pattern, va_list vl)
 	    }
 	}
 	buf[len]=0;
+	va_end(ap);
 	return len;
 #ifdef WANT_SNPRINTF
     }
@@ -218,6 +219,7 @@ inline int irc_printf(char *str, const char *pattern, va_list vl)
 	    }
 	}
 	buf[len]=0;
+        va_end(ap);
 	return len;
     }
 #endif /* WANT_SNPRINTF */
