@@ -486,8 +486,10 @@ static inline int prefix_buffer(int remote, aClient *from, char *prefix,
     char *p;      /* temp pointer */
     int msglen;   /* the length of the message we end up with */
     int sidx = 1; /* start at offset 1 */
+    va_list vl2; /* copy of vl */
 
     *buffer = ':';
+    va_copy(vl2, vl);
 
     if(!remote && IsPerson(from))
     {
@@ -526,9 +528,10 @@ static inline int prefix_buffer(int remote, aClient *from, char *prefix,
                 buffer[sidx++] = *p;
     }
 
-    msglen = ircvsprintf(&buffer[sidx], pattern + 3, vl);
+    msglen = ircvsprintf(&buffer[sidx], pattern + 3, vl2);
     msglen += sidx;
 
+    va_end(vl2);
     return msglen;
 }
 
@@ -1482,7 +1485,8 @@ void sendto_prefix_one(aClient *to, aClient *from, char *pattern, ...)
                 sendto_ops("Send message (%s) to %s[%s] dropped from "
                            "%s(Fake Dir)", temp, to->name, to->from->name,
                            from->name);
-                va_end(vl);
+                va_end(vl2);
+		va_end(vl);
                 return;
             }
             
@@ -1911,7 +1915,7 @@ void sendto_locops(char *pattern, ...)
             ircsprintf(nbuf, ":%s NOTICE %s :*** LocOps -- %s",
                        me.name, cptr->name, pattern);
             vsendto_one(cptr, nbuf, vl2);
-            va_end(vl);
+            va_end(vl2);
         }
     }
     va_end(vl);
