@@ -7,7 +7,9 @@ IRCDLIBS=@LIBS@
 INSTALL=@INSTALL@
 INSTALL_BIN=@INSTALL_PROGRAM@
 INSTALL_DIR=@INSTALL_DIR@
-INCLUDEDIR=-I../include
+CFLAGS=@CFLAGS@ -fno-strict-aliasing
+CPPFLAGS=@CPPFLAGS@ -I../include
+LDFLAGS=@LDFLAGS@
 
 mkpasswd_SOURCES = mkpasswd.c
 mkpasswd_OBJECTS = mkpasswd.o
@@ -22,10 +24,10 @@ all: mkpasswd convert_conf
 build: all
 
 mkpasswd: $(mkpasswd_OBJECTS)
-	$(CC) -o mkpasswd $(mkpasswd_OBJECTS) $(IRCDLIBS)
+	$(CC) $(LDFLAGS) -o mkpasswd $(mkpasswd_OBJECTS) $(IRCDLIBS)
 
 convert_conf: $(convert_conf_OBJECTS)
-	$(CC) -o convert_conf $(convert_conf_OBJECTS) $(IRCDLIBS)
+	$(CC) $(LDFLAGS) -o convert_conf $(convert_conf_OBJECTS) $(IRCDLIBS)
 
 clean:
 	$(RM) -f $(all_OBJECTS) mkpasswd convert_conf *~ core make-cert.sh
@@ -34,7 +36,7 @@ distclean: clean
 	$(RM) -f Makefile
 
 .c.o:
-	$(CC) $(CFLAGS) $(INCLUDEDIR) -c $<
+	$(CC) $(CPPFLAGS) $(CFLAGS) -c $<
 
 install:
 	@for i in $(PROGRAMS); do \

@@ -1,15 +1,15 @@
 CC=@CC@
 RM=@RM@
 MV=@MV@
-IRCDLIBS=@LIBS@ -lssl 
-INCLUDEDIR=-I../include
-OPENSSLINC=@SSL_INCLUDES@
+IRCDLIBS=@LIBS@
 ENGINE=@SENGINE@
 CRYPTO=@ENCRYPT_SRC@
 INSTALL=@INSTALL@
 INSTALL_BIN=@INSTALL_PROGRAM@
 INSTALL_DIR=@INSTALL_DIR@
 CFLAGS=@CFLAGS@ -fno-strict-aliasing
+CPPFLAGS=@CPPFLAGS@ -I../include
+LDFLAGS=@LDFLAGS@
 
 RES_SRC =
 
@@ -46,10 +46,10 @@ distclean: clean
 	$(RM) -f Makefile version.c.last
 
 .c.o:
-	$(CC) $(CFLAGS) $(INCLUDEDIR) -c $<
+	$(CC) $(CPPFLAGS) $(CFLAGS) -c $<
 
 ircd: $(OBJECTS)
-	$(CC) ${LDFLAGS} -o ircd $(OBJECTS) $(IRCDLIBS)
+	$(CC) $(LDFLAGS) -o ircd $(OBJECTS) $(IRCDLIBS)
 	mv version.c version.c.last
 
 install:
@@ -347,7 +347,6 @@ dh.o: dh.c ../include/memcount.h ../include/struct.h ../include/config.h \
   ../include/sbuf.h ../include/h.h ../include/send.h ../include/fdlist.h \
   ../include/ircsprintf.h ../include/find.h ../include/blalloc.h \
   ../include/throttle.h ../include/queue.h ../include/dh.h
-	$(CC) $(CFLAGS) $(OPENSSLINC) $(INCLUDEDIR) -c $<
 rc4.o: rc4.c ../include/memcount.h ../include/struct.h \
   ../include/config.h ../include/setup.h ../include/defs.h \
   ../include/sys.h ../include/hash.h ../include/sbuf.h ../include/h.h \

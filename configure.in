@@ -394,7 +394,7 @@ if test "$check_hmodules" = "yes"; then
     AC_CHECK_FUNCS(dlopen dlsym, [set_hmodules="enabled"])
     if test "$set_hmodules" = "enabled"; then
         AC_DEFINE(USE_HOOKMODULES)
-        MOD_LIBS="-Wl,-export-dynamic"
+        MOD_LDFLAGS="-Wl,-export-dynamic"
     fi
 fi
 
@@ -440,7 +440,7 @@ if test "X$cf_enable_openssl" != "Xno" ; then
   if test "X$cf_openssl_basedir" != "X" ; then
     if test -f "${cf_openssl_basedir}/include/openssl/opensslv.h" ; then
       SSL_INCLUDES="-I${cf_openssl_basedir}/include"
-      SSL_LIBS="-L${cf_openssl_basedir}/lib"
+      SSL_LDFLAGS="-L${cf_openssl_basedir}/lib"
     else
       dnl OpenSSL wasn't found in the directory specified.  Naughty
       dnl administrator...
@@ -460,7 +460,9 @@ if test "X$cf_enable_openssl" != "Xno" ; then
   dnl If we have a basedir defined, then everything is okay.  Otherwise,
   dnl we have a problem.
   if test "X$cf_openssl_basedir" != "X" ; then
-    LIBS="$save_LIBS $SSL_LIBS -lcrypto"
+    CPPFLAGS="$CPPFLAGS $SSL_INCLUDES"
+    LDFLAGS="$LDFLAGS $SSL_LDFLAGS"
+    LIBS="-lssl -lcrypto $save_LIBS"
     AC_MSG_RESULT($cf_openssl_basedir)
     cf_enable_openssl="yes"
     encryption="enabled"
@@ -613,7 +615,7 @@ fi
 
 if test "$solaris2" != "yes" && test "$aix" != "yes" && 
    test "$set_hmodules" = "enabled"; then
-    LIBS="$LIBS $MOD_LIBS"
+    LDFLAGS="$LDFLAGS $MOD_LDFLAGS"
 fi
 
 if test "$check_maxconnections" = "auto"; then
@@ -691,10 +693,14 @@ then
 fi
 if test -n "${ZLIB_HOME}"
 then
-        ZLIB_OLD_LDFLAGS=$LDFLAGS
-        ZLIB_OLD_CPPFLAGS=$LDFLAGS
-        LDFLAGS="$LDFLAGS -L${ZLIB_HOME}/lib"
-        CPPFLAGS="$CPPFLAGS -I${ZLIB_HOME}/include"
+        ZLIB_OLD_CPPFLAGS="$CPPFLAGS"
+        ZLIB_OLD_LDFLAGS="$LDFLAGS"
+	if test "x$ZLIB_HOME" = "x/usr"; then
+	    :
+	else
+	    CPPFLAGS="$CPPFLAGS -I${ZLIB_HOME}/include"
+	    LDFLAGS="$LDFLAGS -L${ZLIB_HOME}/lib"
+	fi
 	AC_LANG_PUSH([C])
         AC_CHECK_LIB(z, inflateEnd, [zlib_cv_libz=yes], [zlib_cv_libz=no])
         AC_CHECK_HEADER(zlib.h, [zlib_cv_zlib_h=yes], [zlib_cv_zlib_h=no])
@@ -712,8 +718,8 @@ then
                 # If either header or library was not found, revert and bomb
                 #
                 AC_MSG_CHECKING(zlib in ${ZLIB_HOME})
+		CPPFLAGS="$ZLIB_OLD_CPPFLAGS"
                 LDFLAGS="$ZLIB_OLD_LDFLAGS"
-                CPPFLAGS="$ZLIB_OLD_CPPFLAGS"
                 AC_MSG_RESULT(failed)
                 AC_MSG_ERROR(either specify a valid zlib installation with --with-zlib=DIR or disable zlib usage with --without-zlib)
         fi
@@ -729,8 +735,6 @@ fi
 
 INSTALL_DIR="${prefix}"
 
-AC_SUBST(SSL_INCLUDES)
-AC_SUBST(SSL_LIBS)
 AC_SUBST(LIBS)
 AC_SUBST(SENGINE)
 AC_SUBST(INSTALL_DIR)
