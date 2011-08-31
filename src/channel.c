@@ -3450,6 +3450,14 @@ int m_topic(aClient *cptr, aClient *sptr, int parc, char *parv[])
                        chptr->chname);
             return 0;
         }
+
+        /* if -t and banned, you can't change the topic */
+        if (!(chptr->mode.mode & MODE_TOPICLIMIT) && !is_chan_op(sptr, chptr) && is_banned(sptr, chptr, NULL))
+        {
+            sendto_one(sptr, err_str(ERR_CHANOPRIVSNEEDED), me.name, parv[0], chptr->chname);
+            return 0;
+        }
+
         tnick = make_nick_user_host(sptr->name, sptr->user->username, sptr->user->host);
     }
     else
