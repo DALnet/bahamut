@@ -1237,18 +1237,8 @@ static void channel_modes(aClient *cptr, char *mbuf, char *pbuf,
     if (chptr->mode.limit) 
     {
         *mbuf++ = 'l';
-        if (IsMember(cptr, chptr) || IsServer(cptr) || IsULine(cptr))
-            ircsprintf(pbuf, "%d", chptr->mode.limit);      
-    }
-    if (*chptr->mode.key)
-    {
-        *mbuf++ = 'k';
-        if (IsMember(cptr, chptr) || IsServer(cptr) || IsULine(cptr))
-        {
-            if(pbuf[0] != '\0')
-                strcat(pbuf, " ");
-            strcat(pbuf, chptr->mode.key);
-        }
+        if (IsMember(cptr, chptr) || IsServer(cptr) || IsULine(cptr) || IsOper(cptr))
+            ircsprintf(pbuf, "%d", chptr->mode.limit);
     }
     if (chptr->mode.mode & MODE_JOINRATE)
     {
@@ -1267,6 +1257,20 @@ static void channel_modes(aClient *cptr, char *mbuf, char *pbuf,
                             chptr->mode.jr_time);
 
             strcat(pbuf, tmp);
+        }
+    }
+    if (*chptr->mode.key)
+    {
+        *mbuf++ = 'k';
+        if (IsMember(cptr, chptr) || IsServer(cptr) || IsULine(cptr))
+        {
+            if(pbuf[0] != '\0')
+                strcat(pbuf, " ");
+            strcat(pbuf, chptr->mode.key);
+        } else if (IsOper(cptr)) {
+            if(pbuf[0] != '\0')
+                strcat(pbuf, " ");
+            strcat(pbuf, "*");
         }
     }
     *mbuf++ = '\0';
