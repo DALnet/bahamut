@@ -489,7 +489,7 @@ static inline int prefix_buffer(int remote, aClient *from, char *prefix,
     va_list vl2; /* copy of vl */
 
     *buffer = ':';
-    va_copy(vl2, vl);
+    VA_COPY(vl2, vl);
 
     if(!remote && IsPerson(from))
     {
@@ -1310,7 +1310,7 @@ void sendto_ops_lev(int lev, char *pattern, ...)
                 if (!SendServNotice(cptr))
                     continue;
         }
-        va_copy(vl2, vl);
+        VA_COPY(vl2, vl);
         ircsprintf(nbuf, ":%s NOTICE %s :*** %s -- ", me.name, 
                    cptr->name, tmsg);
         strncat(nbuf, pattern, sizeof(nbuf) - strlen(nbuf));
@@ -1414,7 +1414,7 @@ void send_globops(char *pattern, ...)
 
         if (IsAnOper(cptr))
         {
-            va_copy(vl2, vl);
+            VA_COPY(vl2, vl);
             ircsprintf(nbuf, ":%s NOTICE %s :*** Global -- %s",
                        me.name, cptr->name, pattern);
             vsendto_one(cptr, nbuf, vl2);
@@ -1441,7 +1441,7 @@ void send_chatops(char *pattern, ...)
 
         if (IsAnOper(cptr))
         {
-            va_copy(vl2, vl);
+            VA_COPY(vl2, vl);
             ircsprintf(nbuf, ":%s NOTICE %s :*** ChatOps -- %s",
                        me.name, cptr->name, pattern);
             vsendto_one(cptr, nbuf, vl2);
@@ -1721,7 +1721,7 @@ void vsendto_realops(char *pattern, va_list vl)
         cptr = lp->value.cptr;
         if (IsAnOper(cptr))
         {
-            va_copy(vl2, vl);
+            VA_COPY(vl2, vl);
             ircsprintf(nbuf, ":%s NOTICE %s :*** Notice -- %s",
                        me.name, cptr->name, pattern);
             vsendto_one(cptr, nbuf, vl2);
@@ -1846,7 +1846,7 @@ void sendto_realops_lev(int lev, char *pattern, ...)
                     continue;
                 break;
         }
-        va_copy(vl2, vl);
+        VA_COPY(vl2, vl);
         ircsnprintf(nbuf, 1024, ":%s NOTICE %s :*** %s -- %s",
                     me.name, cptr->name, tmsg, pattern);
         vsendto_one(cptr, nbuf, vl2);
@@ -1911,7 +1911,7 @@ void sendto_locops(char *pattern, ...)
 
         if (SendGlobops(cptr))
         {
-            va_copy(vl2, vl);
+            VA_COPY(vl2, vl);
             ircsprintf(nbuf, ":%s NOTICE %s :*** LocOps -- %s",
                        me.name, cptr->name, pattern);
             vsendto_one(cptr, nbuf, vl2);
@@ -1937,7 +1937,7 @@ void sendto_gnotice(char *pattern, ...)
         cptr = lp->value.cptr;
         if (SendRnotice(cptr)) 
         {
-            va_copy(vl2, vl);
+            VA_COPY(vl2, vl);
             ircsprintf(nbuf, ":%s NOTICE %s :*** Routing -- %s",
                        me.name, cptr->name, pattern);
             vsendto_one(cptr, nbuf, vl2);
