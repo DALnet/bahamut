@@ -814,6 +814,12 @@
 #define DEFAULT_JOIN_TIME 6
 #undef JOINRATE_SERVER_ONLY
 
+/*
+ * Don't allow local clients to set CIDR channel bans/invites/exempts
+ * until all servers and services are upgraded.
+ */
+#define NO_LOCAL_CIDR_CHANNELBANS
+
 /* Debugging configs */
 
 #undef DNS_DEBUG

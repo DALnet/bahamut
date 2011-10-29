@@ -1787,6 +1787,16 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
                 break;
             }
 
+#ifdef NO_LOCAL_CIDR_CHANNELBANS
+            if(MyClient(sptr) && strchr(parv[args],'/'))
+            {
+                sendto_one(sptr,":%s NOTICE %s :*** Notice -- CIDR channel bans/invites/exempts are not supported yet.",
+                           me.name, sptr->name);
+                args++;
+                break;
+            }
+#endif
+
             strcpy(nuhbuf, collapse(pretty_mask(parv[args])));
             parv[args] = nuhbuf;
             /* if we're going to overflow our mode buffer,
@@ -1847,6 +1857,16 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
                 args++; 
                 break;
             }
+
+#ifdef NO_LOCAL_CIDR_CHANNELBANS
+            if(MyClient(sptr) && strchr(parv[args],'/'))
+            {
+                sendto_one(sptr,":%s NOTICE %s :*** Notice -- CIDR channel bans/invites/exempts are not supported yet.",
+                           me.name, sptr->name);
+                args++;
+                break;
+            }
+#endif
 
             strcpy(nuhbuf, collapse(pretty_mask(parv[args])));
             parv[args] = nuhbuf;
@@ -1909,6 +1929,16 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
                 args++;
                 break;
             }
+
+#ifdef NO_LOCAL_CIDR_CHANNELBANS
+            if(MyClient(sptr) && strchr(parv[args],'/'))
+            {
+                sendto_one(sptr,":%s NOTICE %s :*** Notice -- CIDR channel bans/invites/exempts are not supported yet.",
+                           me.name, sptr->name);
+                args++;
+                break;
+            }
+#endif
 
             /* make a 'pretty' ban mask here, then try and set it */
             /* okay kids, let's do this again.
