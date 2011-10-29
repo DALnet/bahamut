@@ -3490,7 +3490,7 @@ int m_topic(aClient *cptr, aClient *sptr, int parc, char *parv[])
     if((tmpptr = strchr(tnick, '!')))
         *tmpptr = '\0'; /* Remove the user@host part before we send it to non-NICKIPSTR servers */
     sendto_capab_serv_butone(cptr, 0, CAPAB_NICKIPSTR, ":%s TOPIC %s %s %lu :%s", parv[0],
-                             chptr->chname, chptr->topic_nick,
+                             chptr->chname, tnick,
                              (unsigned long)chptr->topic_time, chptr->topic);
     sendto_channel_butserv_me(chptr, sptr, ":%s TOPIC %s :%s", parv[0],
                               chptr->chname, chptr->topic);
