@@ -13,24 +13,19 @@ LDFLAGS=@LDFLAGS@
 
 mkpasswd_SOURCES = mkpasswd.c
 mkpasswd_OBJECTS = mkpasswd.o
-convert_conf_SOURCES = convert_conf.c
-convert_conf_OBJECTS = convert_conf.o ../src/match.o
-PROGRAMS = mkpasswd convert_conf
+PROGRAMS = mkpasswd
 
-all_OBJECTS = $(mkpasswd_OBJECTS) $(convert_conf_OBJECTS)
+all_OBJECTS = $(mkpasswd_OBJECTS)
 
-all: mkpasswd convert_conf
+all: mkpasswd
 
 build: all
 
 mkpasswd: $(mkpasswd_OBJECTS)
 	$(CC) $(LDFLAGS) -o mkpasswd $(mkpasswd_OBJECTS) $(IRCDLIBS)
 
-convert_conf: $(convert_conf_OBJECTS)
-	$(CC) $(LDFLAGS) -o convert_conf $(convert_conf_OBJECTS) $(IRCDLIBS)
-
 clean:
-	$(RM) -f $(all_OBJECTS) mkpasswd convert_conf *~ core make-cert.sh
+	$(RM) -f $(all_OBJECTS) mkpasswd *~ core make-cert.sh
 
 distclean: clean
 	$(RM) -f Makefile
