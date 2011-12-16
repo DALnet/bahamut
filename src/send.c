@@ -1168,7 +1168,7 @@ void sendto_all_servmask(aClient *from, char *mask, char *pattern, ...)
     DLink   *lp;
     int      i;
     int      k;
-    va_list  vl;
+    va_list  vl, vl2;
 
     va_start(vl, pattern);
 
@@ -1191,8 +1191,10 @@ void sendto_all_servmask(aClient *from, char *mask, char *pattern, ...)
     /* send to my clients if I match */
     if (!match(mask, me.name))
     {
-        pfix = va_arg(vl, char *);
-        k = prefix_buffer(0, from, pfix, sendbuf, pattern, vl);
+        VA_COPY(vl2, vl);
+        pfix = va_arg(vl2, char *);
+        k = prefix_buffer(0, from, pfix, sendbuf, pattern, vl2);
+        va_end(vl2);
         sbuf_begin_share(sendbuf, k, &share_buf);
         for (i = 0; i <= highest_fd; i++)
         {
