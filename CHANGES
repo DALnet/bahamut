@@ -1,3 +1,67 @@
+Changes for 2.0.1
+-----------------
+Kobi Shmueli (2):
+      Fixed the m_topic() SIGSEGV bug I introduced on Bahamut 2.0.0.
+      Added NO_LOCAL_CIDR_CHANNELBANS define.
+
+Ned T. Crigler (1):
+      Fix compilation for FreeBSD 4
+
+epiphani (2):
+      Fix crash in sendto_all_servmask when using x64 architectures
+      Remove legacy convert_conf tool
+
+
+Changes for 2.0.0
+-----------------
+Emilio Escobar (4):
+      Fix SIGSEGV in vsprintf when compiled in 64-bit
+      Added check for Linux to use /dev/urandom instead of /dev/random. BSD /dev/random does not block like it does on Linux.
+      Fixed va_free statements and modified prefix_buffer to use copy of va_list to keep original defined.
+      Added needed va_end
+
+Juan Baez (1):
+      Fixed problem with initconf() where the function would not call fclose after it was done with the config file.
+
+Kobi Shmueli (2):
+      Re-added SVSNOOP to let services temporary disable all o:lines on a given server.
+      Support for nick!user@host topics, requires capab NICKIPSTR.
+
+Ned T. Crigler (24):
+      Add NICKIPSTR capability.
+      Move zero IP checking into clones_add/clones_remove.
+      Add cipntoa, a function to return a client's IP address as a string.
+      Introduce the possibility of multiple address families.
+      Make clones.c support non-IPv4 addresses.
+      Refactor the functions in s_auth.c in preparation for IPv6 client support.
+      Refactor the functions in s_bsd.c in preparation for IPv6 client support.
+      Allow IPv6 clients to connect to the server.
+      Change the resolver to use a larger maximum hostname length.
+      Use improved hashing algorithms in the resolver.
+      Refactor the functions in res.c in preparation for IPv6 support.
+      Make resolving IPv6 hostnames work for clients.
+      Fix some problems found on FreeBSD 6.4
+      Fix relaying of NICKIPSTR NICK messages.
+      Fix some issues when receiving a numeric IP address from a server.
+      Reindent and cleanup lookup_confhost.
+      Allow connections to and from IPv6 servers.
+      Allow colons in klines.
+      Add bitncmp and inet_parse_cidr.
+      Add CIDR support to channel bans, O:lines and I:lines.
+      Add IPv6 CIDR support to /who and /rwho.
+      Add IPv6 CIDR support to klines.
+      Silence some warnings found on FreeBSD 8.2
+      Fix various problems with non-standard build configurations.
+
+epiphani (6):
+      Fix compatibility with gcc 2.95 in zlink header include order
+      Update 005 numeric with +S channel mode
+      Fix misspelled file name
+      Allow Opers to view the state of +l and +k from outside the channel
+      Don't allow banned users to change topics on -t channels.
+      Update patchlevel.  This is 2.0.0
+
+
 Changes for 1.8.9
 -----------------
 Kobi Shmueli (2):
