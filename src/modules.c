@@ -140,9 +140,17 @@ modsym_load(aClient *sptr, char *modname, char *symbol, void *modulehandle,
     void *ret;
     const char *error;
 
-    ret = dlsym(modulehandle, symbol);
+    /* Clear dlerror() to make sure we're dealing with our own error. */
+    dlerror();
 
-    if((error = dlerror()) != NULL)
+    ret = dlsym(modulehandle, symbol);
+    error = dlerror();
+
+    /* Even if there was no error, ret must not be NULL or we will crash. */
+    if(error == NULL && ret == NULL)
+	error = "dlsym returned NULL";
+
+    if(error != NULL)
     {
         if(sptr)
             sendto_one(sptr, ":%s NOTICE %s :Module symbol error for %s/%s: %s",
