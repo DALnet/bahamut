@@ -134,7 +134,7 @@ void start_auth(aClient *cptr)
     }
 
     if (connect(cptr->authfd, &sock.sa,
-		sizeof(sock)) == -1 && errno != EINPROGRESS)
+		locallen) == -1 && errno != EINPROGRESS)
     {
 	ircstp->is_abad++;
 	/* No error report from this... */
