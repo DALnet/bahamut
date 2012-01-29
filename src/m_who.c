@@ -154,19 +154,64 @@ int build_searchopts(aClient *sptr, int parc, char *parv[])
 	      return 0;
 	  }
       }
-      else
+      else if (IsAnOper(sptr))
       {
-	  /* If the arguement has a . in it, treat it as an
-	   * address. Otherwise treat it as a nick. -Rak */
-	  if (strchr(parv[0], '.'))
+	  int bits;
+
+	  bits = inet_parse_cidr(AF_INET, parv[0],
+				 &wsopts.cidr_ip, sizeof(wsopts.cidr_ip));
+	  if (bits > 0)
 	  {
-	      wsopts.host_plus=1;
-	      wsopts.host=parv[0];
+	      wsopts.cidr_family = AF_INET;
+	      wsopts.cidr_bits = bits;
+	      wsopts.cidr_plus = 1;
 	  }
 	  else
 	  {
-	      wsopts.nick_plus=1;
-	      wsopts.nick=parv[0];
+	      bits = inet_parse_cidr(AF_INET6, parv[0],
+				     &wsopts.cidr_ip, sizeof(wsopts.cidr_ip));
+	      if (bits > 0)
+	      {
+		  wsopts.cidr_family = AF_INET6;
+		  wsopts.cidr_bits = bits;
+		  wsopts.cidr_plus = 1;
+	      }
+	      else
+	      {
+		  /*
+		   * The argument could be an IPv6 address with a wildcard, a
+		   * hostname, or a nickname.
+		   */
+		  if (strchr(parv[0], ':'))
+		  {
+		      wsopts.ip_plus = 1;
+		      wsopts.ip = parv[0];
+		  }
+		  else if (strchr(parv[0], '.'))
+		  {
+		      wsopts.host_plus = 1;
+		      wsopts.host = parv[0];
+		  }
+		  else
+		  {
+		      wsopts.nick_plus = 1;
+		      wsopts.nick = parv[0];
+		  }
+	      }
+	  }
+      }
+      else
+      {
+	  /* The argument could be either a hostname or a nickname. */
+	  if (strchr(parv[0], '.'))
+	  {
+	      wsopts.host_plus = 1;
+	      wsopts.host = parv[0];
+	  }
+	  else
+	  {
+	      wsopts.nick_plus = 1;
+	      wsopts.nick = parv[0];
 	  }
       }
       return 1;
