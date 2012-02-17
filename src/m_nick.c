@@ -27,7 +27,6 @@
 #include "msg.h"
 #include "channel.h"
 #include <sys/stat.h>
-#include <utmp.h>
 #include <fcntl.h>
 #include "h.h"
 #include "userban.h"

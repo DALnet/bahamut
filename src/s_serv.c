@@ -38,7 +38,6 @@
 #endif
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <utmp.h>
 #include "h.h"
 #if defined( HAVE_STRING_H )
 #include <string.h>

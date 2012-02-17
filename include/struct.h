@@ -1364,7 +1364,6 @@ extern char *generation, *creation;
 #define ZIP_NEXT_BUFFER -4
 #define RC4_NEXT_BUFFER -3
 #define	FLUSH_BUFFER	-2
-#define	UTMP		"/etc/utmp"
 #define	COMMA		","
 
 #ifdef ORATIMING

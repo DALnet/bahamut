@@ -40,7 +40,6 @@
 #include <stdio.h>
 #include <signal.h>
 #include <fcntl.h>
-#include <utmp.h>
 #include <sys/resource.h>
 #include "hooks.h"
 
