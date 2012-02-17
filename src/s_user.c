@@ -30,7 +30,6 @@
 #include "throttle.h"
 #include "clones.h"
 #include <sys/stat.h>
-#include <utmp.h>
 #include <fcntl.h>
 #include "h.h"
 #ifdef FLUD

@@ -205,9 +205,6 @@ extern void 	  set_non_blocking(int, aClient *);
 extern int  	  setup_ping(void);
 extern void 	  summon(aClient *, char *, char *, char *);
 extern int  	  unixport(aClient *, char *, int);
-extern int  	  utmp_open(void);
-extern int  	  utmp_read(int, char *, char *, char *, int);
-extern int  	  utmp_close(int);
 
 extern void 	do_dns_async(void);
 extern int 	completed_connection(aClient *);
