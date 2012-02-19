@@ -1,3 +1,15 @@
+Changes for 2.0.2
+-----------------
+Ned T. Crigler (4):
+      Clear dlerror() and ensure that dlsym never returns NULL
+      Fix identd connections on FreeBSD.
+      Make /who without any flags parse IP addresses and CIDR.
+      Remove references to utmp.h and utmp.
+
+epiphani (1):
+      Updated version.c.SH
+
+
 Changes for 2.0.1
 -----------------
 Kobi Shmueli (2):
