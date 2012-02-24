@@ -1184,8 +1184,10 @@ void sendto_all_servmask(aClient *from, char *mask, char *pattern, ...)
     }
     if (k)
     {
+        VA_COPY(vl2, vl);
         send_fdlist.last_entry = k;
-        vsendto_fdlist(&send_fdlist, pattern, vl);
+        vsendto_fdlist(&send_fdlist, pattern, vl2);
+        va_end(vl2);
     }
 
     /* send to my clients if I match */
@@ -1195,6 +1197,7 @@ void sendto_all_servmask(aClient *from, char *mask, char *pattern, ...)
         pfix = va_arg(vl2, char *);
         k = prefix_buffer(0, from, pfix, sendbuf, pattern, vl2);
         va_end(vl2);
+
         sbuf_begin_share(sendbuf, k, &share_buf);
         for (i = 0; i <= highest_fd; i++)
         {
@@ -1206,6 +1209,7 @@ void sendto_all_servmask(aClient *from, char *mask, char *pattern, ...)
         }
         sbuf_end_share(&share_buf, 1);
     }
+    va_end(vl);
 }
 
 /*
