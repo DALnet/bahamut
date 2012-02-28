@@ -818,7 +818,7 @@
  * Don't allow local clients to set CIDR channel bans/invites/exempts
  * until all servers and services are upgraded.
  */
-#define NO_LOCAL_CIDR_CHANNELBANS
+#undef NO_LOCAL_CIDR_CHANNELBANS
 
 /* Debugging configs */
 
