@@ -18,7 +18,7 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-/* $Id$ */
+/* $Id: support.c 1303 2006-12-07 03:23:17Z epiphani $ */
 
 #include "struct.h"
 #include "common.h"
@@ -41,7 +41,7 @@ extern void outofmemory();
  * of separators 
  * argv 9/90
  * 
- *      $Id$
+ *      $Id: support.c 1303 2006-12-07 03:23:17Z epiphani $
  */
 
 char *strtoken(char **save, char *str, char *fs)

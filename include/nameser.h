@@ -20,7 +20,7 @@
  * @(#)nameser.h        5.24 (Berkeley) 6/1/90
  */
 
-/* $Id$ */
+/* $Id: nameser.h 1303 2006-12-07 03:23:17Z epiphani $ */
 
 /* Define constants based on rfc883 */
 

@@ -18,7 +18,7 @@
  * PURPOSE.
  */
 
-/* $Id$ */
+/* $Id: res_comp.c 1303 2006-12-07 03:23:17Z epiphani $ */
 
 #include <sys/types.h>
 #include <stdio.h>

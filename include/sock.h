@@ -18,7 +18,7 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-/* $Id$ */
+/* $Id: sock.h 1303 2006-12-07 03:23:17Z epiphani $ */
 
 #ifndef FD_ZERO
 #define FD_ZERO(set)      (((set)->fds_bits[0]) = 0)

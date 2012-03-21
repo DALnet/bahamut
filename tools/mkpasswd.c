@@ -7,7 +7,7 @@
 #include <time.h>
 
 #ifndef lint
-/* static char *rcs_version = "$Id$"; */
+/* static char *rcs_version = "$Id: mkpasswd.c 1303 2006-12-07 03:23:17Z epiphani $"; */
 #endif
 
 extern char *getpass();

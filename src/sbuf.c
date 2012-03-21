@@ -16,7 +16,7 @@
  *   along with this program; if not, write to the Free Software
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * $Id$
+ * $Id: sbuf.c 1303 2006-12-07 03:23:17Z epiphani $
  */
 
 #include "sbuf.h"

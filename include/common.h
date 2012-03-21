@@ -18,7 +18,7 @@
  *
  */
 
-/* $Id$ */
+/* $Id: common.h 1303 2006-12-07 03:23:17Z epiphani $ */
 
 #ifndef	__common_include__
 #define __common_include__

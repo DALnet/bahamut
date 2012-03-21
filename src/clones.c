@@ -21,7 +21,7 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-/* $Id$ */
+/* $Id: clones.c 1303 2006-12-07 03:23:17Z epiphani $ */
 
 /*
  * WARNING: code is chummy with throttle.c

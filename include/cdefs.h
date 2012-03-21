@@ -52,7 +52,7 @@
  * 14:33:57 wd Exp $
  */
 
-/* $Id$ */
+/* $Id: cdefs.h 1303 2006-12-07 03:23:17Z epiphani $ */
 
 #ifndef	_CDEFS_H_
 #define	_CDEFS_H_

@@ -20,7 +20,7 @@
  * @(#)inet.h   5.4 (Berkeley) 6/1/90
  */
 
-/* $Id$ */
+/* $Id: inet.h 1303 2006-12-07 03:23:17Z epiphani $ */
 
 /* External definitions for functions in inet(3) */
 #include "config.h"		/* for system definitions */

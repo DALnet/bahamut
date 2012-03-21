@@ -3,7 +3,7 @@
  *   Copyright (C) 2003 Lucas Madar
  */
 
-/* $Id$ */
+/* $Id: clientlist.c 1303 2006-12-07 03:23:17Z epiphani $ */
 
 #include "struct.h"
 #include "common.h"

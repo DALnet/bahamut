@@ -5,7 +5,7 @@
  * Hacked up for use in ircd by Dianora                             
  *************************************************************************/
 
-/* $Id$ */
+/* $Id: blalloc.c 1303 2006-12-07 03:23:17Z epiphani $ */
 
 /* INCLUDES */
 #include "struct.h"

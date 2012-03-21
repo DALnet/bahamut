@@ -20,7 +20,7 @@
  * This is all DOUGH_HASH now - Dianora 
  */
 
-/* $Id$ */
+/* $Id: hash.h 1303 2006-12-07 03:23:17Z epiphani $ */
 
 #ifndef	__hash_include__
 #define __hash_include__

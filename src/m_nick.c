@@ -20,7 +20,7 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-/* $Id$ */
+/* $Id: m_nick.c 1303 2006-12-07 03:23:17Z epiphani $ */
 
 #include "struct.h"
 #include "common.h"
