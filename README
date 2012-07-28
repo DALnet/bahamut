@@ -1,11 +1,10 @@
-Welcome to Bahamut 1.8
-----------------------
+Welcome to Bahamut!
+-------------------
 
 Please refer to the INSTALL file for help instructions on building and
 installing ircd.  The doc/ directory may also be of interest.
 
-Please refer to the CHANGES file to see what has changed in the 1.8
-revision of Bahamut.
+Please refer to the CHANGES file to see what has changed recently.
 
 *** IMPORTANT ***
 Please send any SECURITY RELATED bugs to coders@dal.net - any 
