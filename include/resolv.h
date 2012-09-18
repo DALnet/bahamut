@@ -57,7 +57,7 @@
 
 #define RES_DEFAULT	(RES_RECURSE | RES_DEFNAMES | RES_DNSRCH)
 
-#if ((__GNU_LIBRARY__ == 6) && (__GLIBC__ >= 2) && (__GLIBC_MINOR__ >= 3))
+#if ((__GNU_LIBRARY__ == 6) && (__GLIBC__ >= 2) && (__GLIBC_MINOR__ >= 3)) || defined(__UCLIBC__)
 # define MAXRESOLVSORT		10	/* number of net to sort on */
 
 struct __res_state {

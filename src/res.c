@@ -878,10 +878,8 @@ static int proc_answer(ResRQ * rptr, HEADER *hptr, char *buf, char *eob)
 
 	hostbuf[RES_HOSTLEN] = '\0';
 	cp += n;
-	type = (int) _getshort(cp);
-       cp += TYPE_SIZE;
-	class = (int) _getshort(cp);
-       cp += CLASS_SIZE;
+	GETSHORT(type, cp);
+	GETSHORT(class, cp);
 	if(class != C_IN)
 	{
 	    sendto_realops_lev(DEBUG_LEV,
@@ -972,16 +970,11 @@ static int proc_answer(ResRQ * rptr, HEADER *hptr, char *buf, char *eob)
 	if (n <= 0)
 	    break;
 	cp += n;
-	type = (int) _getshort(cp);
-       cp += TYPE_SIZE;
+	GETSHORT(type, cp);
+	GETSHORT(class, cp);
 	
-	class = (int) _getshort(cp);
-       cp += CLASS_SIZE;
-	
-	rptr->ttl = _getlong(cp);
-       cp += TTL_SIZE;
-	dlen = (int) _getshort(cp);
-       cp += DLEN_SIZE;
+	GETLONG(rptr->ttl, cp);
+	GETSHORT(dlen, cp);
 	
 	/* Wait to set rptr->type until we verify this structure */
 
