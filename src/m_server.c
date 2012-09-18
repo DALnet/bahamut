@@ -820,7 +820,7 @@ int m_dkey(aClient *cptr, aClient *sptr, int parc, char *parv[])
     if(mycmp(parv[1], "PUB") == 0)
     {
         unsigned char keybuf[1024];
-        int keylen;
+        size_t keylen;
 
         if(parc != 4 || !sptr->serv->sessioninfo_in ||
            !sptr->serv->sessioninfo_out)
