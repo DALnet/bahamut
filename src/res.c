@@ -837,7 +837,8 @@ static int proc_answer(ResRQ * rptr, HEADER *hptr, char *buf, char *eob)
 {
     char   *cp, **alias, *acc;
     struct hent *hp;
-    int class, type, dlen, len, ans = 0, n, origtype = rptr->type;
+    unsigned int dlen, len;
+    int class, type, ans = 0, n, origtype = rptr->type;
     int adr = 0;
 
     num_acc_answers = 0;
@@ -1042,7 +1043,7 @@ static int proc_answer(ResRQ * rptr, HEADER *hptr, char *buf, char *eob)
 	    if ((type == T_A && dlen != sizeof(struct in_addr)) ||
 		(type == T_AAAA && dlen != sizeof(struct in6_addr)))
 	    {
-		sendto_realops("Bad IP length (%d) returned for %s",
+		sendto_realops("Bad IP length (%u) returned for %s",
 			       dlen, hostbuf);
 		Debug((DEBUG_DNS, "Bad IP length (%d) returned for %s",
 		       dlen, hostbuf));
@@ -1311,8 +1312,8 @@ struct hostent *get_res(char *lp)
     ResRQ  *rptr = NULL;
     aCache     *cp = (aCache *) NULL;
     struct sockaddr_in sin;
-    int         rc, a, max;
-    unsigned    len = sizeof(sin);
+    int         a, max;
+    unsigned    len = sizeof(sin), rc;
     
     rc = recvfrom(resfd, buf, sizeof(buf), 0, (struct sockaddr *) &sin, &len);
     if (rc <= sizeof(HEADER))

@@ -160,7 +160,7 @@ void del_fd(int fd)
 
 void set_fd_flags(int fd, unsigned int flags)
 {
-   int oldflags;
+   unsigned int oldflags;
    fd_range_assert(fd);
    fd_used_assert(fd);
 
@@ -176,7 +176,7 @@ void set_fd_flags(int fd, unsigned int flags)
 
 void unset_fd_flags(int fd, unsigned int flags)
 {
-   int oldflags;
+   unsigned int oldflags;
    fd_range_assert(fd);
    fd_used_assert(fd);
 

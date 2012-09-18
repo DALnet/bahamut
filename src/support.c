@@ -379,7 +379,7 @@ void *MyRealloc(void *x, size_t y)
  * 
  * cleaned up by - Dianora aug 7 1997 *argh*
  */
-int dgets(int fd, char *buf, int num)
+int dgets(int fd, char *buf, size_t num)
 {
     static char dgbuf[8192];
     static char *head = dgbuf, *tail = dgbuf;
@@ -414,7 +414,7 @@ int dgets(int fd, char *buf, int num)
 	    ((s = strchr(head, '\n')) ||
 	     (s = strchr(head, '\r'))) && s < tail)
 	{
-	    n = MIN(s - head + 1, num);	/* at least 1 byte */
+	    n = MIN((size_t) (s - head + 1), num);	/* at least 1 byte */
 	    memcpy(buf, head, n);
 	    head += n;
 	    if (head == tail)
@@ -422,7 +422,7 @@ int dgets(int fd, char *buf, int num)
 	    return n;
 	}
 	
-	if (tail - head >= num) 
+	if ((size_t) (tail - head) >= num) 
 	{      /* dgets buf is big enough */
 	    n = num;
 	    memcpy(buf, head, n);
@@ -444,7 +444,7 @@ int dgets(int fd, char *buf, int num)
 	{
 	    if (tail > head)
 	    {
-		n = MIN(tail - head, num);
+		n = MIN((size_t) (tail - head), num);
 		memcpy(buf, head, n);
 		head += n;
 		if (head == tail)

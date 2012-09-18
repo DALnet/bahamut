@@ -4110,7 +4110,8 @@ void send_user_joins(aClient *cptr, aClient *user)
 {
     Link   *lp;
     aChannel *chptr;
-    int     cnt = 0, len = 0, clen;
+    int     cnt = 0, len = 0;
+    size_t  clen;
     char       *mask;
 
     *buf = ':';

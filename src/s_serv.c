@@ -2886,7 +2886,7 @@ m_unsqline(aClient *cptr, aClient *sptr, int parc, char *parv[])
 int m_sgline(aClient *cptr, aClient *sptr, int parc, char *parv[]) 
 {
     struct simBan *ban;
-    int len;
+    unsigned int len;
     unsigned int flags;
     char *mask, *reason;
     

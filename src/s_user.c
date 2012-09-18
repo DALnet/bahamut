@@ -2974,7 +2974,7 @@ m_ison(aClient *cptr, aClient *sptr, int parc, char *parv[])
     aClient *acptr;
     char   *s, **pav = parv;
     char       *p = (char *) NULL;
-    int     len, len2;
+    size_t     len, len2;
 
     if (parc < 2) 
     {

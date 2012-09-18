@@ -179,6 +179,7 @@ void send_authports(aClient *cptr)
     } them;
     char        authbuf[32];
     unsigned int ulen = sizeof(us), tlen = sizeof(them);
+    int slen;
 
     Debug((DEBUG_NOTICE, "write_authports(%x) fd %d authfd %d stat %d",
 	   cptr, cptr->fd, cptr->authfd, cptr->status));
@@ -211,7 +212,8 @@ void send_authports(aClient *cptr)
 	       authbuf, inet6ntoa((char *) &them.sin_addr)));
     }
 
-    if (send(cptr->authfd, authbuf, strlen(authbuf), 0) != strlen(authbuf)) {
+    slen = strlen(authbuf);
+    if (send(cptr->authfd, authbuf, slen, 0) != slen) {
 	authsenderr(cptr);
 	return;
     }

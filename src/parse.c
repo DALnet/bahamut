@@ -609,7 +609,7 @@ static void remove_unknown(aClient *cptr, char *sender, char *buffer)
 static u_long
 r_msgtree_memcount(MESSAGE_TREE *mptr, int *count)
 {
-    int     i;
+    size_t  i;
     u_long  m = sizeof(*mptr);
 
     (*count)++;

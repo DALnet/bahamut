@@ -896,7 +896,7 @@ struct Client
     Link       *fludees;
 #endif
     
-    int ip_family;
+    unsigned int ip_family;
     union
     {
 	struct in_addr ip4;
@@ -1438,8 +1438,8 @@ typedef struct SearchOptions
     char *ip;
     int class;
     int class_value;
-    int cidr_bits;
-    int cidr_family;
+    unsigned int cidr_bits;
+    unsigned int cidr_family;
     struct
     {
 	char ip[16];
