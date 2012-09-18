@@ -70,11 +70,10 @@ static int verify_is_hex(char *string)
         if(tmpidx == 2)
         {
             char *eptr;
-            unsigned char x;
-   
+
             tmpidx = 0;
-   
-            x = strtol(tmp, &eptr, 16);
+
+            (void) strtol(tmp, &eptr, 16);
             if(*eptr != '\0')
                 return 0;
         }

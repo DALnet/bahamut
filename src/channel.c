@@ -4413,7 +4413,7 @@ int m_sjoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
     static Mode mode, *oldmode;
     chanMember  *cm;
     int         args = 0, haveops = 0, keepourmodes = 1, keepnewmodes = 1,
-                doesop = 0, what = 0, pargs = 0, fl, people = 0,
+                what = 0, pargs = 0, fl, people = 0,
                 isnew, clientjoin = 0, pbpos, sjbufpos, created = 0;
     char        *s, *s0, *para;
     static char numeric[16], sjbuf[BUFSIZE];
@@ -4578,8 +4578,6 @@ int m_sjoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
         }
     }
 
-    doesop = (parv[4 + args][0] == '@' || parv[4 + args][1] == '@');
-
     oldmode = &chptr->mode;
 
     /* newts is the ts the remote server is providing */ 
@@ -4595,6 +4593,8 @@ int m_sjoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
 #ifdef OLD_WEIRD_CHANOP_NEGOTIATION
     else if (newts < oldts)
     {
+        int doesop = (parv[4 + args][0] == '@' || parv[4 + args][1] == '@');
+
         /* if remote ts is older, and they have ops, don't keep our modes. */
         if (doesop)   
         {
@@ -4608,6 +4608,8 @@ int m_sjoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
     }
     else /* if our TS is older, and we have ops, don't keep their modes */
     {
+        int doesop = (parv[4 + args][0] == '@' || parv[4 + args][1] == '@');
+
         if (haveops)
             keepnewmodes = 0;
         if (doesop && !haveops)

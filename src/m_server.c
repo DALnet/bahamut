@@ -324,10 +324,8 @@ m_server_estab(aClient *cptr)
     aClient *acptr;
 
     char       *inpath, *host, *s, *encr;
-    int         split;
 
     inpath = get_client_name(cptr, HIDEME);  /* "refresh" inpath with host  */
-    split = mycmp(cptr->name, cptr->sockhost);
     host = cptr->name;
 
     if (!(aconn = cptr->serv->aconn))
@@ -484,14 +482,13 @@ m_server_estab(aClient *cptr)
 int m_server(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     int     i;
-    char        info[REALLEN + 1], *inpath, *host;
+    char        info[REALLEN + 1], *host;
     aClient    *acptr, *bcptr;
     aConnect   *aconn;
     int         hop;
     char        nbuf[HOSTLEN * 2 + USERLEN + 5]; /* same size as in s_misc.c */
 
     info[0] = '\0';
-    inpath = get_client_name(cptr, HIDEME);
 
     if (parc < 2 || *parv[1] == '\0')
     {
