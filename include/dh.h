@@ -2,8 +2,8 @@
 extern int dh_init();
 extern void dh_end_session(void *);
 extern void *dh_start_session();
-extern char *dh_get_s_public(char *, int, void *);
-extern int dh_get_s_shared(unsigned char *, int *, void *);
+extern char *dh_get_s_public(char *, size_t, void *);
+extern int dh_get_s_shared(unsigned char *, size_t *, void *);
 extern int dh_generate_shared(void *, char *);
 
 extern int dh_hexstr_to_raw(char *string, unsigned char *hexout, int *hexlen);
@@ -24,7 +24,7 @@ struct session_info
 {
     DH *dh;
     unsigned char *session_shared;
-    int session_shared_length;
+    size_t session_shared_length;
 };
 
 /*

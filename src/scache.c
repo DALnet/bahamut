@@ -110,7 +110,7 @@ u_long
 memcount_scache(MCscache *mc)
 {
     SCACHE *ce;
-    int i;
+    size_t i;
 
     mc->file = __FILE__;
 

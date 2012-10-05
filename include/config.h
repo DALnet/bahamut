@@ -892,10 +892,10 @@
 
 #if defined(DEBUGMODE) || defined(DNS_DEBUG)
 extern void debug(int level, char *pattern, ...);
-#define Debug(x) debug x
+#define Debug(x) do { debug x } while (0);
 #define LOGFILE LPATH
 #else
-#define Debug(x) ;
+#define Debug(x) do {} while (0);
 #define LOGFILE "/dev/null"
 #endif
 

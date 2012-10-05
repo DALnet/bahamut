@@ -141,7 +141,7 @@ unsigned int
 hash_get_key_hash(hash_table *table, void *key, size_t offset) 
 {
     char *rkey = (char *)key + offset;
-    int len = table->keylen;
+    unsigned int len = table->keylen;
     unsigned int hash = 0;
 
     if (!len)

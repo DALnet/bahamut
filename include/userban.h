@@ -50,8 +50,8 @@ struct userBan {
    char *u;                    /* username */
    char *h;                    /* host or IP or GECOS or NICK */
 
-   int cidr_bits;              /* CIDR bits to match */
-   int cidr_family;            /* CIDR family to match */
+   unsigned int cidr_bits;     /* CIDR bits to match */
+   unsigned int cidr_family;   /* CIDR family to match */
    struct
    {
        char ip[16];
