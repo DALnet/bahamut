@@ -169,7 +169,7 @@ void *BlockHeapAlloc(BlockHeap *bh)
 	    unit = 0;
 	    while (unit < bh->numlongs)
 	    {
-		if ((mask == 0x1L) && (walker->allocMap[unit] == ~0))
+		if ((mask == 0x1L) && (walker->allocMap[unit] == (unsigned long) ~0))
 		{
 		    /* Entire subunit is used, skip to next one. */
 		    unit++;

@@ -99,7 +99,7 @@ static char readbuf[8192];
 #endif
 
 /* Silly macro to ignore certain report error statements */
-#define silent_report_error(x,y)
+#define silent_report_error(x,y) do { } while(0)
 
 
 /*
@@ -654,7 +654,7 @@ int check_client(aClient *cptr)
     if (hp)
     {
         for (i = 0; hp->h_addr_list[i]; i++)
-            if (hp->h_addrtype == cptr->ip_family &&
+            if ((unsigned) hp->h_addrtype == cptr->ip_family &&
 		!memcmp(hp->h_addr_list[i], (char *) &cptr->ip,
 			hp->h_length))
                 break;
@@ -744,7 +744,7 @@ int check_server_init(aClient * cptr)
         if((hp = gethost_byname(s, &lin, cptr->ip_family)))
         {
             for (i = 0; hp->h_addr_list[i]; i++)
-                if (hp->h_addrtype == cptr->ip_family &&
+                if ((unsigned) hp->h_addrtype == cptr->ip_family &&
 		    !memcmp(hp->h_addr_list[i], (char *) &cptr->ip,
 			    hp->h_length))
                     break;
@@ -770,7 +770,7 @@ int check_server_init(aClient * cptr)
     {
         hp = cptr->hostp;
         for (i = 0; hp->h_addr_list[i]; i++)
-	    if (hp->h_addrtype == cptr->ip_family &&
+	    if ((unsigned) hp->h_addrtype == cptr->ip_family &&
 		!memcmp(hp->h_addr_list[i], (char *) &cptr->ip,
 			hp->h_length))
                 break;
@@ -797,7 +797,7 @@ int check_server_init(aClient * cptr)
     else
     {
         /* having no luck finding a host.. check against IP */
-	if(aconn->ipnum_family == cptr->ip_family &&
+	if((unsigned) aconn->ipnum_family == cptr->ip_family &&
 	   !memcmp((char *) &aconn->ipnum, (char *) &cptr->ip,
 		   sizeof(aconn->ipnum)))
 	    ok = 1;

@@ -178,7 +178,7 @@ extern char 	 *rpl_str(int);
 extern char 	 *err_str(int);
 extern char 	 *getreply(int);
 extern char 	 *strerror(int);
-extern int  	  dgets(int, char *, int);
+extern int  	  dgets(int, char *, size_t);
 extern char 	 *inetntoa(char *);
 extern char 	 *inet6ntoa(char *);
 extern char 	 *cipntoa(aClient *);

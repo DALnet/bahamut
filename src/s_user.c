@@ -1946,7 +1946,7 @@ m_whois(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
     for (p = NULL, tmp = parv[1]; (nick = strtoken(&p, tmp, ",")); tmp = NULL)
     {
-        int invis, member, showchan;
+        int showchan;
                 
         acptr = hash_find_client(nick, (aClient *) NULL);
         if (!acptr || !IsPerson(acptr))
@@ -1957,8 +1957,6 @@ m_whois(aClient *cptr, aClient *sptr, int parc, char *parv[])
                 
         user = acptr->user;
         name = (!*acptr->name) ? "?" : acptr->name;
-        invis = IsInvisible(acptr);
-        member = (user->channel) ? 1 : 0;
                 
         a2cptr = acptr->uplink;
                 
@@ -2109,10 +2107,7 @@ do_user(char *nick, aClient *cptr, aClient *sptr, char *username, char *host,
 {
     anUser     *user;
     
-    long        oflags;
-    
     user = make_user(sptr);
-    oflags = sptr->umode;
     
     /*
      * changed the goto into if-else...   -Taner 
@@ -2979,7 +2974,7 @@ m_ison(aClient *cptr, aClient *sptr, int parc, char *parv[])
     aClient *acptr;
     char   *s, **pav = parv;
     char       *p = (char *) NULL;
-    int     len, len2;
+    size_t     len, len2;
 
     if (parc < 2) 
     {

@@ -70,11 +70,10 @@ static int verify_is_hex(char *string)
         if(tmpidx == 2)
         {
             char *eptr;
-            unsigned char x;
-   
+
             tmpidx = 0;
-   
-            x = strtol(tmp, &eptr, 16);
+
+            (void) strtol(tmp, &eptr, 16);
             if(*eptr != '\0')
                 return 0;
         }
@@ -316,7 +315,7 @@ void dh_end_session(void *session)
     MyFree(si);
 }
 
-char *dh_get_s_public(char *buf, int maxlen, void *session)
+char *dh_get_s_public(char *buf, size_t maxlen, void *session)
 {
     struct session_info *si = (struct session_info *) session;
     char *tmp;
@@ -339,7 +338,7 @@ char *dh_get_s_public(char *buf, int maxlen, void *session)
     return buf;
 }
 
-int dh_get_s_shared(unsigned char *buf, int *maxlen, void *session)
+int dh_get_s_shared(unsigned char *buf, size_t *maxlen, void *session)
 {
     struct session_info *si = (struct session_info *) session;
 
