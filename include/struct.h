@@ -1029,6 +1029,8 @@ struct Client
     X509 *client_cert;
 #endif
 
+    char *webirc_username;
+    char *webirc_ip;
 };
 
 #define	CLIENT_LOCAL_SIZE sizeof(aClient)

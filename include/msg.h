@@ -128,6 +128,8 @@
 #define MSG_POST     "POST"         /* POST */
 #define MSG_CHECK    "CHECK"        /* CHECK */
 
+#define MSG_WEBIRC   "WEBIRC"       /* WEBIRC */
+
 #define MAXPARA      15
 
 extern int  m_kline(aClient *, aClient *, int, char **);
@@ -224,6 +226,7 @@ extern int  m_svsnoop(aClient *, aClient *, int, char **);
 extern int  m_put(aClient *, aClient *, int, char **);
 extern int  m_post(aClient *, aClient *, int, char **);
 extern int  m_check(aClient *, aClient *, int, char **);
+extern int  m_webirc(aClient *, aClient *, int, char **);
 
 /* aliastab indexes */
 #define AII_NS  0
@@ -354,6 +357,8 @@ struct Message msgtab[] =
     {MSG_CHECK,    m_check,    MAXPARA, 0,        0},
     {MSG_LUSERSLOCK, m_luserslock, MAXPARA, 0,       0},
     {MSG_LINKSCONTROL, m_linkscontrol, MAXPARA, 0,      0},
+
+    {MSG_WEBIRC,   m_webirc,   MAXPARA, MF_UNREG, 0},
     { 0 }
 };
 

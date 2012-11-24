@@ -23,7 +23,7 @@ SOURCES = blalloc.c bsd.c channel.c clientlist.c clones.c confparse.c \
           probability.c res.c s_auth.c s_bsd.c s_conf.c s_debug.c s_err.c \
           s_misc.c s_numeric.c s_serv.c s_user.c sbuf.c scache.c send.c \
           struct.c support.c throttle.c userban.c whowas.c zlink.c ssl.c \
-	  bitncmp.c inet_parse_cidr.c \
+	  bitncmp.c inet_parse_cidr.c m_webirc.c \
           $(ENGINE) $(CRYPTO)
 
 OBJECTS = $(SOURCES:.c=.o) version.o

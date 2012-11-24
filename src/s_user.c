@@ -2045,6 +2045,22 @@ m_whois(aClient *cptr, aClient *sptr, int parc, char *parv[])
             sendto_one(sptr, rpl_str(RPL_WHOISOPERATOR), me.name, parv[0], 
                        name, buf);
         
+
+	if (MyConnect(acptr) && acptr->webirc_ip && IsAdmin(sptr))
+	{
+            sendto_one(sptr, ":%s 337 %s %s :%s (%s@%s)",
+		       me.name, parv[0], name,
+		       "User connected using a webirc gateway",
+		       acptr->webirc_username, acptr->webirc_ip);
+	}
+	else if (MyConnect(acptr) && acptr->webirc_ip && IsAnOper(sptr))
+	{
+            sendto_one(sptr, ":%s 337 %s %s :%s (%s)",
+		       me.name, parv[0], name,
+		       "User connected using a webirc gateway",
+		       acptr->webirc_username);
+	}
+
         /* don't give away that this oper is on this server if they're hidden! */
         if (acptr->user && MyConnect(acptr) && ((sptr == acptr) || 
                 !IsUmodeI(acptr) || (parc > 2) || IsAnOper(sptr)))
