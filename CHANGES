@@ -1,4 +1,18 @@
-Changes for 2.0.2:
+Changes for 2.0.4:
+------------------
+Ned T. Crigler (1):
+      Add the WEBIRC command.
+
+William Pitcock (6):
+      res: portability improvements for uclibc
+      .gitignore: add include/setup.h.in.
+      include: remove setup.h.in.
+      ircd: clean up compiler warnings using -Wall
+      dh: avoid possible integer underflow using type enforcement.
+      ircd: various warning cleanups and type enforcement enhancements
+
+
+Changes for 2.0.3:
 ------------------
 Ned T. Crigler (1):
       Fix va_list bug in sendto_all_servmask.
