@@ -1112,11 +1112,6 @@ confadd_options(cVar *vars[], int lnum)
             tmp->type = NULL;
             new_confopts |= FLAGS_SMOTD;
         }
-        else if(tmp->type && (tmp->type->flag & OPTF_SMOTD))
-        {
-            tmp->type = NULL;
-            new_confopts |= FLAGS_SMOTD;
-        }
         else if(tmp->type && (tmp->type->flag & OPTF_CRYPTPASS))
         {
             tmp->type = NULL;
