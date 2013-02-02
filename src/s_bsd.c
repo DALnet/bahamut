@@ -673,6 +673,12 @@ int check_client(aClient *cptr)
         }
     }
 
+    /*
+     * Use the client's IP address instead of truncating a long hostname.
+     */
+    if (hp && strlen(hp->h_name) > HOSTLEN)
+	hp = NULL;
+
     if ((i = attach_Iline(cptr, hp, sockname)))
     {
         Debug((DEBUG_DNS, "ch_cl: access denied: %s[%s]",
