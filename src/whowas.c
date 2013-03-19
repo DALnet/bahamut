@@ -53,8 +53,8 @@ void add_history(aClient *cptr, int online)
     new->logoff = NOW;
     strncpyzt(new->name, cptr->name, NICKLEN + 1);
     strncpyzt(new->username, cptr->user->username, USERLEN + 1);
-    strncpyzt(new->hostname, cptr->user->host, HOSTLEN);
-    strncpyzt(new->realname, cptr->info, REALLEN);
+    strncpyzt(new->hostname, cptr->user->host, HOSTLEN + 1);
+    strncpyzt(new->realname, cptr->info, REALLEN + 1);
     /*
      * Its not string copied, a pointer to the scache hash is copied
      * -Dianora

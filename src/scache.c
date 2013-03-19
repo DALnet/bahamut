@@ -73,14 +73,14 @@ char *find_or_add(char *name)
     if ((ptr = scache_hash[hash_index])) 
     {
 	newptr = scache_hash[hash_index] = (SCACHE *) MyMalloc(sizeof(SCACHE));
-	strncpyzt(newptr->name, name, HOSTLEN);
+	strncpyzt(newptr->name, name, HOSTLEN + 1);
 	newptr->next = ptr;
 	return (newptr->name);
     }
     else
     {
 	ptr = scache_hash[hash_index] = (SCACHE *) MyMalloc(sizeof(SCACHE));
-	strncpyzt(ptr->name, name, HOSTLEN);
+	strncpyzt(ptr->name, name, HOSTLEN + 1);
 	ptr->next = (SCACHE *) NULL;
 	return (ptr->name);
     }

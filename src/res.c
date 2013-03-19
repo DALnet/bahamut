@@ -520,7 +520,7 @@ static int do_query_name(Link *lp, char *name, ResRQ * rptr, int family)
     char        hname[RES_HOSTLEN + 1];
     int         len;
     
-    strncpyzt(hname, name, RES_HOSTLEN);
+    strncpyzt(hname, name, RES_HOSTLEN + 1);
     len = strlen(hname);
     
     if (rptr && !strchr(hname, '.') && _res.options & RES_DEFNAMES)

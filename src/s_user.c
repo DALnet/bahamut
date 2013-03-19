@@ -515,7 +515,7 @@ register_user(aClient *cptr, aClient *sptr, char *nick, char *username,
             spamchar = *user->host;
 #endif
                 
-        strncpyzt(user->host, sptr->sockhost, HOSTLEN);
+        strncpyzt(user->host, sptr->sockhost, HOSTLEN + 1);
                 
         dots = 0;
         p = user->host;

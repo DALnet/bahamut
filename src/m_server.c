@@ -501,11 +501,11 @@ int m_server(aClient *cptr, aClient *sptr, int parc, char *parv[])
     if (parc > 3 && atoi(parv[2]))
     {
         hop = atoi(parv[2]);
-        strncpyzt(info, parv[3], REALLEN);
+        strncpyzt(info, parv[3], REALLEN + 1);
     }
     else if (parc > 2)
     {
-        strncpyzt(info, parv[2], REALLEN);
+        strncpyzt(info, parv[2], REALLEN + 1);
         if ((parc > 3) && ((i = strlen(info)) < (REALLEN - 2)))
         {
             strcat(info, " ");
@@ -595,7 +595,7 @@ int m_server(aClient *cptr, aClient *sptr, int parc, char *parv[])
     if (IsUnknown(cptr) || IsHandshake(cptr))
     {
         strncpyzt(cptr->name, host, sizeof(cptr->name));
-        strncpyzt(cptr->info, info[0] ? info : me.name, REALLEN);
+        strncpyzt(cptr->info, info[0] ? info : me.name, REALLEN + 1);
         cptr->hopcount = hop;
 
         switch (check_server_init(cptr))
@@ -719,7 +719,7 @@ int m_server(aClient *cptr, aClient *sptr, int parc, char *parv[])
         make_server(acptr);
         acptr->hopcount = hop;
         strncpyzt(acptr->name, host, sizeof(acptr->name));
-        strncpyzt(acptr->info, info, REALLEN);
+        strncpyzt(acptr->info, info, REALLEN + 1);
         acptr->serv->up = find_or_add(parv[0]);
 
         fakelinkserver_update(acptr->name, acptr->info);

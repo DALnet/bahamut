@@ -611,7 +611,7 @@ static int check_init(aClient * cptr, char *sockn)
 	if (inet_netof(sk.addr4.sin_addr) == IN_LOOPBACKNET)
 	{
 	    cptr->hostp = NULL;
-	    strncpyzt(sockn, me.sockhost, HOSTLEN);
+	    strncpyzt(sockn, me.sockhost, HOSTLEN + 1);
 	}
 	memcpy((char *) &cptr->ip.ip4, (char *) &sk.addr4.sin_addr,
 	       sizeof(struct in_addr));
