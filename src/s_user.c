@@ -1898,6 +1898,7 @@ m_whois(aClient *cptr, aClient *sptr, int parc, char *parv[])
     aChannel   *chptr;
     char       *nick, *tmp, *name;
     char       *p = NULL;
+    ServicesTag *servicestag;
     int         len, mlen;
 
     if (parc < 2)
@@ -2041,10 +2042,19 @@ m_whois(aClient *cptr, aClient *sptr, int parc, char *parv[])
             strcat(buf, " - Server Administrator");
         else if (IsSAdmin(acptr))
             strcat(buf, " - Services Administrator");
-        if (buf[0])
+        if (buf[0] && (!acptr->user->servicestag || acptr->user->servicestag->raw!=RPL_WHOISOPERATOR))
             sendto_one(sptr, rpl_str(RPL_WHOISOPERATOR), me.name, parv[0], 
                        name, buf);
-        
+
+        if(acptr->user->servicestag)
+        {
+            servicestag = acptr->user->servicestag;
+            while(servicestag)
+            {
+                if(*servicestag->tag && (!servicestag->umode || (sptr->umode & servicestag->umode))) sendto_one(sptr, ":%s %d %s %s :%s", me.name, servicestag->raw, parv[0], name, servicestag->tag);
+                servicestag = servicestag->next;
+            }
+        }
 
 	if (MyConnect(acptr) && acptr->webirc_ip && IsAdmin(sptr))
 	{

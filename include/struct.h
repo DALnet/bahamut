@@ -106,6 +106,7 @@ typedef long ts_val;
 
 typedef struct MotdItem aMotd;
 typedef struct SAliasInfo AliasInfo;
+typedef struct SServicesTag ServicesTag;
 
 
 
@@ -818,6 +819,13 @@ struct Listener {
 #endif
 };
 
+struct SServicesTag
+{
+  char *tag;
+  int raw;
+  long umode;
+  ServicesTag *next;
+};
 
 /* Client structures */
 struct User
@@ -832,6 +840,7 @@ struct User
     char       *server;        /* pointer to scached server name */
     unsigned int servicetype;  /* set by SVSMODE +T */
     unsigned long servicestamp; /* set by SVSMODE +d */
+    ServicesTag *servicestag;  /* set by SVSTAG */
     AliasInfo  *alias;         /* shortform alias data for U:lined clients */
     /*
      * In a perfect world the 'server' name should not be needed, a
