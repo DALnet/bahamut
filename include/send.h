@@ -54,8 +54,12 @@ extern void sendto_channel_remote_butone(aClient *one, aClient *from,
 				         aChannel *chptr, char *pattern, ...) ATTRIBUTE_PRINTF(4, 5);
 extern void sendto_channel_butserv(aChannel *chptr, aClient *from,
 				   char *pattern, ...) ATTRIBUTE_PRINTF(3, 4);
+extern void sendto_channel_butserv_noopvoice(aChannel *chptr, aClient *from, char *pattern, ...) ATTRIBUTE_PRINTF(3, 4);
+
 extern void sendto_channel_butserv_me(aChannel *chptr, aClient *from,
 				      char *pattern, ...) ATTRIBUTE_PRINTF(3, 4);
+extern void sendto_channelopvoice_butserv_me(aChannel *chptr, aClient *from,
+				             char *pattern, ...) ATTRIBUTE_PRINTF(3, 4);
 extern void sendto_channelflags_butone(aClient *, aClient *, aChannel *,
                                        int, char *, ...) ATTRIBUTE_PRINTF(5, 6);
 extern void sendto_common_channels(aClient *user, char *pattern, ...) ATTRIBUTE_PRINTF(2, 3);

@@ -38,6 +38,7 @@ extern void reset_sock_opts(int, int);
 
 static void sendnick_TS(aClient *cptr, aClient *acptr)
 {
+    ServicesTag *servicestag;
     static char ubuf[12];
 
     if (IsPerson(acptr))
@@ -65,6 +66,11 @@ static void sendnick_TS(aClient *cptr, aClient *acptr)
 			   (acptr->ip_family == AF_INET) ?
 			   htonl(acptr->ip.ip4.s_addr) : 1, acptr->info);
 	}
+        for(servicestag = acptr->user->servicestag; servicestag; servicestag = servicestag->next)
+        {
+            sendto_one(cptr, "SVSTAG %s %ld %d %ld :%s", acptr->name, acptr->tsinfo, servicestag->raw,
+                       servicestag->umode, servicestag->tag);
+        }
     }
 }
 

@@ -1126,6 +1126,17 @@ int is_chan_op(aClient *cptr, aChannel *chptr)
     return 0;
 }
 
+int is_chan_opvoice(aClient *cptr, aChannel *chptr)
+{
+    chanMember   *cm;
+    
+    if (chptr)
+        if ((cm = find_user_member(chptr->members, cptr)))
+            return ((cm->flags & CHFL_CHANOP) || (cm->flags & CHFL_VOICE));
+    
+    return 0;
+}
+
 int is_deopped(aClient *cptr, aChannel *chptr)
 {
     chanMember   *cm;
@@ -1230,6 +1241,8 @@ static void channel_modes(aClient *cptr, char *mbuf, char *pbuf,
         *mbuf++ = 'M';
     if (chptr->mode.mode & MODE_SSLONLY)
         *mbuf++ = 'S';
+    if (chptr->mode.mode & MODE_AUDITORIUM)
+        *mbuf++ = 'A';
 #ifdef USE_CHANMODE_L
     if (chptr->mode.mode & MODE_LISTED)
         *mbuf++ = 'L';
@@ -1559,10 +1572,16 @@ int m_mode(aClient *cptr, aClient *sptr, int parc, char *parv[])
                     ircstp->is_fake++;
                 break;
             default:
-                sendto_channel_butserv_me(chptr, sptr,
-                                      ":%s MODE %s %s %s", parv[0],
-                                      chptr->chname, modebuf,
-                                      parabuf);
+                if(chptr->mode.mode & MODE_AUDITORIUM)
+                    sendto_channelopvoice_butserv_me(chptr, sptr,
+                                          ":%s MODE %s %s %s", parv[0],
+                                          chptr->chname, modebuf,
+                                          parabuf);
+                else
+                    sendto_channel_butserv_me(chptr, sptr,
+                                          ":%s MODE %s %s %s", parv[0],
+                                          chptr->chname, modebuf,
+                                          parabuf);
                 sendto_serv_butone(cptr, ":%s MODE %s %ld %s %s", parv[0],
                                    chptr->chname, chptr->channelts, modebuf,
                                    parabuf);
@@ -1594,7 +1613,7 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
         MODE_MODERATED, 'm', MODE_NOPRIVMSGS, 'n',
         MODE_TOPICLIMIT, 't', MODE_REGONLY, 'R',
         MODE_INVITEONLY, 'i', MODE_NOCTRL, 'c', MODE_OPERONLY, 'O',
-        MODE_MODREG, 'M', MODE_SSLONLY, 'S',
+        MODE_MODREG, 'M', MODE_SSLONLY, 'S', MODE_AUDITORIUM, 'A',
 #ifdef USE_CHANMODE_L
         MODE_LISTED, 'L',
 #endif
@@ -1735,9 +1754,15 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
             
             /* if we have the user, set them +/-[vo] */
             if(change=='+')
+            {
                 cm->flags|=(*modes=='o' ? CHFL_CHANOP : CHFL_VOICE);
+                if(chptr->mode.mode & MODE_AUDITORIUM) sendto_channel_butserv_noopvoice(chptr, who, ":%s JOIN :%s", who->name, chptr->chname);
+            }
             else
+            {
                 cm->flags&=~((*modes=='o' ? CHFL_CHANOP : CHFL_VOICE));
+                if(chptr->mode.mode & MODE_AUDITORIUM) sendto_channel_butserv_noopvoice(chptr, who, PartFmt, who->name, chptr->chname);
+            }
             
             /* we've decided their mode was okay, cool */
             *mbuf++ = *modes;
@@ -2270,6 +2295,30 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
                     chptr->mode.mode&=~MODE_REGISTERED;
             }
             *mbuf++='r';
+            nmodes++;
+            break;
+
+        case 'A':
+            if (MyClient(sptr) && (seenalready & MODE_AUDITORIUM))
+                break;
+            seenalready |= MODE_AUDITORIUM;
+            if (MyClient(sptr))
+            {
+                sendto_one(sptr, err_str(ERR_ONLYSERVERSCANCHANGE),
+                           me.name, cptr->name, chptr->chname);
+                break;
+            }
+            else
+            {       
+                if((prelen + (mbuf - morig) + pidx + 1) > REALMODEBUFLEN)
+                    break;
+             
+                if(change=='+')
+                    chptr->mode.mode|=MODE_AUDITORIUM;
+                else
+                    chptr->mode.mode&=~MODE_AUDITORIUM;
+            }
+            *mbuf++='A';
             nmodes++;
             break;
 
@@ -3330,9 +3379,17 @@ int m_kick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
             if (IsMember(who, chptr))
             {
-                sendto_channel_butserv(chptr, sptr,
-                                       ":%s KICK %s %s :%s", parv[0],
-                                       name, who->name, comment);
+                if((chptr->mode.mode & MODE_AUDITORIUM) && !is_chan_opvoice(who, chptr))
+                {
+                    sendto_channelopvoice_butserv_me(chptr, sptr,
+                                                     ":%s KICK %s %s :%s", parv[0],
+                                                     name, who->name, comment);
+                    sendto_one(who, ":%s KICK %s %s :%s", parv[0], name, who->name, comment);
+                }
+                else
+                    sendto_channel_butserv(chptr, sptr,
+                                           ":%s KICK %s %s :%s", parv[0],
+                                           name, who->name, comment);
                 sendto_serv_butone(cptr, ":%s KICK %s %s :%s", parv[0], name,
                                    who->name, comment);
                 remove_user_from_channel(who, chptr);
@@ -4085,6 +4142,7 @@ int m_names(aClient *cptr, aClient *sptr, int parc, char *parv[])
             buf[idx++] = '@';
         else if(cm->flags & CHFL_VOICE)
             buf[idx++] = '+';
+        else if((chptr->mode.mode & MODE_AUDITORIUM) && (sptr != acptr) && !is_chan_opvoice(sptr, chptr)) continue;
         for(s = acptr->name; *s; s++)
             buf[idx++] = *s;
         buf[idx++] = ' ';
@@ -4534,6 +4592,7 @@ int m_sjoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
             SJ_MODEADD('c', MODE_NOCTRL);
             SJ_MODEADD('O', MODE_OPERONLY);
             SJ_MODEADD('S', MODE_SSLONLY);
+            SJ_MODEADD('A', MODE_AUDITORIUM);
 #ifdef USE_CHANMODE_L
             SJ_MODEADD('L', MODE_LISTED);
 #endif
@@ -4697,6 +4756,7 @@ int m_sjoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
         SJ_MODEPLUS('c', MODE_NOCTRL);
         SJ_MODEPLUS('O', MODE_OPERONLY);
         SJ_MODEPLUS('S', MODE_SSLONLY);
+        SJ_MODEPLUS('A', MODE_AUDITORIUM);
 #ifdef USE_CHANMODE_L
         SJ_MODEPLUS('L', MODE_LISTED);
 #endif
@@ -4713,6 +4773,7 @@ int m_sjoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
         SJ_MODEMINUS('c', MODE_NOCTRL);
         SJ_MODEMINUS('O', MODE_OPERONLY);
         SJ_MODEMINUS('S', MODE_SSLONLY);
+        SJ_MODEMINUS('A', MODE_AUDITORIUM);
 #ifdef USE_CHANMODE_L
         SJ_MODEMINUS('L', MODE_LISTED);
 #endif

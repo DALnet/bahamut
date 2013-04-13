@@ -308,6 +308,8 @@ aServer *make_server(aClient *cptr)
  */
 void free_user(anUser *user, aClient *cptr)
 {
+    ServicesTag *servicestag;
+
     if (user->away)
 	MyFree(user->away);
 #if (RIDICULOUS_PARANOIA_LEVEL>=1)
@@ -318,6 +320,13 @@ void free_user(anUser *user, aClient *cptr)
     if (user->real_oper_ip)
 	MyFree(user->real_oper_ip);
 #endif
+    while(user->servicestag)
+    {
+        servicestag = user->servicestag;
+        user->servicestag = servicestag->next;
+        MyFree(servicestag->tag);
+        MyFree(servicestag);
+    }
     /* sanity check */
     if (user->joined || user->invited || user->channel)
 	sendto_ops("* %p user (%s!%s@%s) %p %p %p %d *",
