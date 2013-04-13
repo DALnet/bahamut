@@ -1590,6 +1590,27 @@ m_message(aClient *cptr, aClient *sptr, int parc, char *parv[], int notice)
                     continue;
                 }
 
+                if((chptr->mode.mode & MODE_AUDITORIUM) && !is_chan_opvoice(sptr, chptr))
+                {
+                    /* Channel is in auditorium mode! */
+                    if(strlen(chptr->chname)+6 > CHANNELLEN) continue; /* Channel is too long.. we must be able to add
+                                                                           -relay to it... */
+                    char channel[CHANNELLEN + 1];
+                    strcpy(channel, chptr->chname);
+                    strcat(channel, "-relay");
+                    if(!(chptr = find_channel(channel, NULL))) continue; /* Can't find the relay channel... */
+                    /* I originally thought it's a good idea to enforce #chan-relay modes but then I figured out we
+                       would most likely want to have it +snt and only accept messages from #chan members... -Kobi.
+                    if ((ret = can_send(sptr, chptr, parv[2])))
+                    {
+                        if (ismine && !notice)
+                            send_msg_error(sptr, parv, target, ret);
+                        continue;
+                    }
+                    */
+                    s = target = chptr->chname; /* We want ops to see the message coming to #chan-relay and not to #chan */
+                }
+
                 if (!notice)
                 {
                     switch (check_for_ctcp(parv[2], NULL))

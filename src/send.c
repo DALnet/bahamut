@@ -1066,6 +1066,50 @@ void sendto_channel_butserv(aChannel *chptr, aClient *from, char *pattern, ...)
     {
         if (MyConnect(acptr = cm->cptr))
         {
+            if((chptr->mode.mode & MODE_AUDITORIUM) && (acptr != from) && !is_chan_opvoice(acptr, chptr) &&
+               !is_chan_opvoice(from, chptr)) continue;
+            if(!didlocal)
+            {
+                didlocal = prefix_buffer(0, from, pfix, sendbuf, pattern, vl);
+                sbuf_begin_share(sendbuf, didlocal, &share_buf);
+            }
+            
+            if (check_fake_direction(from, acptr))
+                continue;
+
+            send_message(acptr, sendbuf, didlocal, share_buf);
+
+            /* vsendto_prefix_one(acptr, from, pattern, vl); */
+        }
+    }
+    sbuf_end_share(&share_buf, 1);
+    va_end(vl);
+}
+
+/*
+ * sendto_channel_butserv_noopvoice
+ * 
+ * Send a message to all members of a channel that are connected to this
+ * server and aren't opped or voiced.
+ */
+void sendto_channel_butserv_noopvoice(aChannel *chptr, aClient *from, char *pattern, ...)
+{
+    chanMember  *cm;
+    aClient *acptr;
+    va_list vl;
+    int didlocal = 0;
+    char *pfix;
+    void *share_buf = NULL;
+
+    va_start(vl, pattern);
+    
+    pfix = va_arg(vl, char *);
+
+    for (cm = chptr->members; cm; cm = cm->next)
+    {
+        if (MyConnect(acptr = cm->cptr))
+        {
+            if((acptr == from) || is_chan_opvoice(acptr, chptr)) continue;
             if(!didlocal)
             {
                 didlocal = prefix_buffer(0, from, pfix, sendbuf, pattern, vl);
@@ -1115,6 +1159,56 @@ void sendto_channel_butserv_me(aChannel *chptr, aClient *from, char *pattern, ..
     {
         if (MyConnect(acptr = cm->cptr))
         {
+            if(!is_chan_opvoice(acptr, chptr)) continue;
+            if (!didlocal)
+            {
+                didlocal = prefix_buffer(0, from, pfix, sendbuf, pattern, vl);
+                sbuf_begin_share(sendbuf, didlocal, &share_buf);
+            }
+            
+            if(check_fake_direction(from, acptr))
+                continue;
+
+            send_message(acptr, sendbuf, didlocal, share_buf);
+
+        }
+    }
+    sbuf_end_share(&share_buf, 1);
+    va_end(vl);
+}
+
+/*
+ * sendto_channelopvoice_butserv_me
+ * 
+ * Send a message to all members of a channel that are connected to this
+ * server. Possibly hide the origin, if it's a server, with me.name if certain paranoia is on.
+ */
+void sendto_channelopvoice_butserv_me(aChannel *chptr, aClient *from, char *pattern, ...)
+{
+    chanMember  *cm;
+    aClient *acptr;
+    va_list vl;
+    int didlocal = 0;
+    char *pfix;
+    void *share_buf = NULL;
+
+    va_start(vl, pattern);
+    
+    pfix = va_arg(vl, char *);
+
+#ifdef HIDE_SERVERMODE_ORIGINS
+    if(IsServer(from) && !IsULine(from))
+    {
+       from = &me;
+       pfix = me.name;
+    }
+#endif
+
+    for (cm = chptr->members; cm; cm = cm->next)
+    {
+        if (MyConnect(acptr = cm->cptr))
+        {
+            if(!is_chan_opvoice(acptr, chptr)) continue;
             if (!didlocal)
             {
                 didlocal = prefix_buffer(0, from, pfix, sendbuf, pattern, vl);
