@@ -662,6 +662,88 @@ int m_svsnoop(aClient *cptr, aClient *sptr, int parc, char *parv[])
     return 0;
 }
 
+/* m_svstag - Lets services add "tags" to users
+ * parv[1] = nick
+ * parv[2] = ts
+ * parv[3] = [-][raw]
+ * parv[4] = required umode(s) to see the tag
+ * parv[5] = tag line
+ * -Kobi_S 23/03/2013
+ */
+int m_svstag(aClient *cptr, aClient *sptr, int parc, char *parv[])
+{
+    aClient *acptr;
+    ServicesTag *servicestag;
+    long ts;
+
+    if(!IsServer(sptr) || parc<4)
+        return 0; /* Not a u:lined server or not enough parameters */
+
+    if(!(acptr = find_person(parv[1], NULL)))
+        return 0; /* Target user doesn't exist */
+
+    if(!IsULine(sptr))
+    {
+        if(cptr->from!=acptr->from)
+            return 0; /* Wrong direction */
+    }
+
+    ts = atol(parv[2]);
+    if (ts && (ts != acptr->tsinfo))
+        return 0; /* TS info doesn't match the client */
+
+    if(*parv[3] == '-')
+    {
+        /* Remove all current tags */
+        while(acptr->user->servicestag) {
+            servicestag = acptr->user->servicestag;
+            acptr->user->servicestag = servicestag->next;
+            MyFree(servicestag->tag);
+            MyFree(servicestag);
+        }
+
+        if(parv[3][1] == '\0')
+        {
+            /* If we only got "SVSTAG nick ts -", we'll just pass it to the other servers (we already cleared the old tags) */
+            sendto_serv_butone(cptr, ":%s SVSTAG %s %s %s", parv[0], parv[1], parv[2], parv[3]);
+            return 0;
+        }
+    }
+
+    if(parc<6) return 0; /* Not enough parameters (sanity check) */
+
+    servicestag = acptr->user->servicestag;
+    if(servicestag)
+    {
+        while(servicestag->next) {
+            servicestag = servicestag->next;
+        }
+    }
+
+    if(servicestag)
+    {
+        /* The user already has a servicestag */
+        servicestag->next = MyMalloc(sizeof(ServicesTag));
+        servicestag = servicestag->next;
+    }
+    else
+    {
+        /* This is the first servicestag for the user... */
+        acptr->user->servicestag = MyMalloc(sizeof(ServicesTag));
+        servicestag = acptr->user->servicestag;
+    }
+    servicestag->raw = abs(atoi(parv[3]));
+    servicestag->umode = atol(parv[4]);
+    servicestag->tag =  MyMalloc(strlen(parv[5]) + 1);
+    strcpy(servicestag->tag, parv[5]);
+    servicestag->next = NULL;
+
+    /* Pass it to all the other servers */
+    sendto_serv_butone(cptr, ":%s SVSTAG %s %s %s %s :%s", parv[0], parv[1], parv[2], parv[3], parv[4], parv[5]);
+
+    return 0;
+}
+
 u_long
 memcount_m_services(MCm_services *mc)
 {
