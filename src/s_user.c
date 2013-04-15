@@ -1590,6 +1590,27 @@ m_message(aClient *cptr, aClient *sptr, int parc, char *parv[], int notice)
                     continue;
                 }
 
+                if((chptr->mode.mode & MODE_AUDITORIUM) && !is_chan_opvoice(sptr, chptr))
+                {
+                    /* Channel is in auditorium mode! */
+                    if(strlen(chptr->chname)+6 > CHANNELLEN) continue; /* Channel is too long.. we must be able to add
+                                                                           -relay to it... */
+                    char channel[CHANNELLEN + 1];
+                    strcpy(channel, chptr->chname);
+                    strcat(channel, "-relay");
+                    if(!(chptr = find_channel(channel, NULL))) continue; /* Can't find the relay channel... */
+                    /* I originally thought it's a good idea to enforce #chan-relay modes but then I figured out we
+                       would most likely want to have it +snt and only accept messages from #chan members... -Kobi.
+                    if ((ret = can_send(sptr, chptr, parv[2])))
+                    {
+                        if (ismine && !notice)
+                            send_msg_error(sptr, parv, target, ret);
+                        continue;
+                    }
+                    */
+                    s = target = chptr->chname; /* We want ops to see the message coming to #chan-relay and not to #chan */
+                }
+
                 if (!notice)
                 {
                     switch (check_for_ctcp(parv[2], NULL))
@@ -1898,6 +1919,7 @@ m_whois(aClient *cptr, aClient *sptr, int parc, char *parv[])
     aChannel   *chptr;
     char       *nick, *tmp, *name;
     char       *p = NULL;
+    ServicesTag *servicestag;
     int         len, mlen;
 
     if (parc < 2)
@@ -2041,10 +2063,19 @@ m_whois(aClient *cptr, aClient *sptr, int parc, char *parv[])
             strcat(buf, " - Server Administrator");
         else if (IsSAdmin(acptr))
             strcat(buf, " - Services Administrator");
-        if (buf[0])
+        if (buf[0] && (!acptr->user->servicestag || acptr->user->servicestag->raw!=RPL_WHOISOPERATOR))
             sendto_one(sptr, rpl_str(RPL_WHOISOPERATOR), me.name, parv[0], 
                        name, buf);
-        
+
+        if(acptr->user->servicestag)
+        {
+            servicestag = acptr->user->servicestag;
+            while(servicestag)
+            {
+                if(*servicestag->tag && (!servicestag->umode || (sptr->umode & servicestag->umode))) sendto_one(sptr, ":%s %d %s %s :%s", me.name, servicestag->raw, parv[0], name, servicestag->tag);
+                servicestag = servicestag->next;
+            }
+        }
 
 	if (MyConnect(acptr) && acptr->webirc_ip && IsAdmin(sptr))
 	{

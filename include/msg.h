@@ -124,6 +124,7 @@
 #define MSG_SVSPANIC "SVSPANIC"     /* SVSPANIC */
 #define MSG_CHANKILL "CHANKILL"     /* CHANKILL */
 #define MSG_SVSHOST  "SVSHOST"      /* SVSHOST */
+#define MSG_SVSTAG   "SVSTAG"       /* SVSTAG */
 #define MSG_PUT      "PUT"          /* PUT */
 #define MSG_POST     "POST"         /* POST */
 #define MSG_CHECK    "CHECK"        /* CHECK */
@@ -223,6 +224,7 @@ extern int  m_svspanic(aClient *, aClient *, int, char **);
 extern int  m_chankill(aClient *, aClient *, int, char **);
 extern int  m_svshost(aClient *, aClient *, int, char **);
 extern int  m_svsnoop(aClient *, aClient *, int, char **);
+extern int  m_svstag(aClient *, aClient *, int, char **);
 extern int  m_put(aClient *, aClient *, int, char **);
 extern int  m_post(aClient *, aClient *, int, char **);
 extern int  m_check(aClient *, aClient *, int, char **);
@@ -352,6 +354,7 @@ struct Message msgtab[] =
     {MSG_CHANKILL, m_chankill, MAXPARA, 0,        0},
     {MSG_SVSHOST,  m_svshost,  MAXPARA, 0,        0},
     {MSG_SVSNOOP,  m_svsnoop,  MAXPARA, 0,        0},
+    {MSG_SVSTAG,   m_svstag,   MAXPARA, 0,        0},
     {MSG_PUT,      m_put,      2,       MF_UNREG, 0},
     {MSG_POST,     m_post,     2,       MF_UNREG, 0},
     {MSG_CHECK,    m_check,    MAXPARA, 0,        0},
