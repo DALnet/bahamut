@@ -889,6 +889,9 @@ void sendto_common_channels(aClient *from, char *pattern, ...)
         
                 if (!MyConnect(cptr) || sentalong[cptr->fd] == sent_serial)
                         continue;
+
+                if((channels->value.chptr->mode.mode & MODE_AUDITORIUM) && (cptr != from) &&
+                   !is_chan_opvoice(cptr, channels->value.chptr) && !is_chan_opvoice(from, channels->value.chptr)) continue;
             
                 sentalong[cptr->fd] = sent_serial;
                 if (!msglen)
@@ -950,6 +953,8 @@ void send_quit_to_common_channels(aClient *from, char *reason)
                 cptr = users->cptr;
                 if (!MyConnect(cptr) || sentalong[cptr->fd] == sent_serial)
                     continue;
+                if((channels->value.chptr->mode.mode & MODE_AUDITORIUM) && (cptr != from) &&
+                   !is_chan_opvoice(cptr, channels->value.chptr) && !is_chan_opvoice(from, channels->value.chptr)) continue;
                 sentalong[cptr->fd] = sent_serial;
                 if (check_fake_direction(from, cptr))
                     continue;
@@ -995,6 +1000,9 @@ void send_part_to_common_channels(aClient *from, char *reason)
               
                 if (!MyConnect(cptr) || sentalong[cptr->fd] == sent_serial)
                     continue;
+
+                if((channels->value.chptr->mode.mode & MODE_AUDITORIUM) && (cptr != from) &&
+                   !is_chan_opvoice(cptr, channels->value.chptr) && !is_chan_opvoice(from, channels->value.chptr)) continue;
                 
                 sentalong[cptr->fd] = sent_serial;
                 if (check_fake_direction(from, cptr))
