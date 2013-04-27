@@ -33,13 +33,15 @@ extern void fakelinkserver_update(char *, char *);
 extern void fakeserver_sendserver(aClient *);
 extern void fakelusers_sendlock(aClient *);
 extern void reset_sock_opts(int, int);
+extern int user_modes[];
 
 /* internal functions */
 
 static void sendnick_TS(aClient *cptr, aClient *acptr)
 {
     ServicesTag *servicestag;
-    static char ubuf[12];
+    static char ubuf[30];
+    int *s, flag, i;
 
     if (IsPerson(acptr))
     {
@@ -68,8 +70,16 @@ static void sendnick_TS(aClient *cptr, aClient *acptr)
 	}
         for(servicestag = acptr->user->servicestag; servicestag; servicestag = servicestag->next)
         {
-            sendto_one(cptr, "SVSTAG %s %ld %d %ld :%s", acptr->name, acptr->tsinfo, servicestag->raw,
-                       servicestag->umode, servicestag->tag);
+            ubuf[0] = '+';
+            i = 1;
+            for (s = user_modes; (flag = *s); s += 2)
+                if(servicestag->umode & flag)
+                {
+                   ubuf[i++] = *(s + 1);
+                }
+            ubuf[i++] = '\0';
+            sendto_one(cptr, "SVSTAG %s %ld %d %s :%s", acptr->name, acptr->tsinfo, servicestag->raw,
+                       ubuf, servicestag->tag);
         }
     }
 }

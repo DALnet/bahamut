@@ -674,10 +674,12 @@ int m_svstag(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     aClient *acptr;
     ServicesTag *servicestag;
+    int *s, flag;
+    char *m;
     long ts;
 
     if(!IsServer(sptr) || parc<4)
-        return 0; /* Not a u:lined server or not enough parameters */
+        return 0; /* Not a server or not enough parameters */
 
     if(!(acptr = find_person(parv[1], NULL)))
         return 0; /* Target user doesn't exist */
@@ -685,7 +687,7 @@ int m_svstag(aClient *cptr, aClient *sptr, int parc, char *parv[])
     if(!IsULine(sptr))
     {
         if(cptr->from!=acptr->from)
-            return 0; /* Wrong direction */
+            return 0; /* Wrong direction (from a non-u:lined server) */
     }
 
     ts = atol(parv[2]);
@@ -733,7 +735,22 @@ int m_svstag(aClient *cptr, aClient *sptr, int parc, char *parv[])
         servicestag = acptr->user->servicestag;
     }
     servicestag->raw = abs(atoi(parv[3]));
-    servicestag->umode = atol(parv[4]);
+    servicestag->umode = 0;
+
+    /* parse the usermodes (stolen from m_nick) */
+    m = &parv[4][0];
+    if(*m == '+') m++; /* Skip the first plus... */
+    while (*m)
+    {
+        for (s = user_modes; (flag = *s); s += 2)
+            if (*m == *(s + 1))
+            {
+                servicestag->umode |= flag;
+                break;
+            }
+        m++;
+    }
+
     servicestag->tag =  MyMalloc(strlen(parv[5]) + 1);
     strcpy(servicestag->tag, parv[5]);
     servicestag->next = NULL;
