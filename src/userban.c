@@ -351,10 +351,10 @@ struct userBan *find_userban_exact(struct userBan *borig, unsigned int careflags
          if(!(borig->flags & UBAN_WILDUSER) && mycmp(borig->u, bl->ban->u))
             continue;
 
-	 if (!(borig->cidr_family == bl->ban->cidr_family &&
-	       memcmp(&borig->cidr_ip, &bl->ban->cidr_ip,
-		      sizeof(borig->cidr_ip)) == 0 &&
-	       borig->cidr_bits == bl->ban->cidr_bits))
+	 /* CIDR fields do not match? */
+	 if(borig->cidr_family != bl->ban->cidr_family ||
+	    borig->cidr_bits != bl->ban->cidr_bits ||
+	    bitncmp(&borig->cidr_ip, &bl->ban->cidr_ip, borig->cidr_bits) != 0)
             continue;
 
          return bl->ban;
@@ -372,16 +372,19 @@ struct userBan *find_userban_exact(struct userBan *borig, unsigned int careflags
       b = (int) *s;
 
       LIST_FOREACH(bl, &CIDR4_bans[a][b], lp) {
+         /* must have same wilduser, etc setting */
          if((bl->ban->flags ^ borig->flags) & (UBAN_WILDUSER|careflags))
             continue;
 
+         /* user fields do not match? */
          if(!(borig->flags & UBAN_WILDUSER) && mycmp(borig->u, bl->ban->u))
             continue;
 
-	 if (!(borig->cidr_family == bl->ban->cidr_family &&
-	       memcmp(&borig->cidr_ip, &bl->ban->cidr_ip,
-		      sizeof(borig->cidr_ip)) == 0 &&
-	       borig->cidr_bits == bl->ban->cidr_bits))
+	 /* CIDR fields do not match? */
+	 if(borig->cidr_family != bl->ban->cidr_family ||
+	    borig->cidr_bits != bl->ban->cidr_bits ||
+	    bitncmp(&borig->cidr_ip, &bl->ban->cidr_ip, borig->cidr_bits) != 0)
+            continue;
 
          return bl->ban;
       }
