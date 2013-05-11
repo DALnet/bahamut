@@ -1,3 +1,17 @@
+Changes for 2.0.6:
+------------------
+Kobi Shmueli (5):
+      Added SVSTAG command to let services add "tags" to users.
+      Added cmode +A (Auditorium mode).
+      Auditorium mode fixes (cmode +A)
+      Changed SVSTAG to send/receive umodes in text and fixed incorrect and missing comments.
+      Changes to deal with bogus akills
+
+Ned T. Crigler (2):
+      Fix 63 character hostname truncation.
+      Fix pasteo in find_userban_exact.
+
+
 Changes for 2.0.5:
 ------------------
 Juan Baez (1):
