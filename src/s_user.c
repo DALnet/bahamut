@@ -2063,6 +2063,8 @@ m_whois(aClient *cptr, aClient *sptr, int parc, char *parv[])
             strcat(buf, " - Server Administrator");
         else if (IsSAdmin(acptr))
             strcat(buf, " - Services Administrator");
+        /* We don't go through the services tag list here by design, only the first services tag entry
+           may change RPL_WHOISOPERATOR -Kobi_S. */
         if (buf[0] && (!acptr->user->servicestag || acptr->user->servicestag->raw!=RPL_WHOISOPERATOR))
             sendto_one(sptr, rpl_str(RPL_WHOISOPERATOR), me.name, parv[0], 
                        name, buf);

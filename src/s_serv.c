@@ -2501,7 +2501,14 @@ m_akill(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
     /* is this an old bogus akill? */
     if(timeset + length <= NOW)
-       return 0;
+    {
+       /* Let's warn about bogus akills but also try to fix them as services will only send AKILL commands
+          when it really wants to take out the users (now)... -Kobi_S */
+       sendto_realops_lev(DEBUG_LEV, "m_akill: Got bogus akill from %s with timeset=%ld when NOW=%ld for %s@%s",
+                          sptr->name, (long)timeset, (long)NOW, user, host);
+       timeset = NOW;
+       length = 30;
+    }
 
     current_date=smalldate((time_t)timeset);
     /* cut reason down a little, eh? */
@@ -2577,7 +2584,11 @@ m_rakill(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
     ban = make_hostbased_ban(parv[2], parv[1]);
     if(!ban)
+    {
+       sendto_realops_lev(DEBUG_LEV, "make_hostbased_ban(%s, %s) failed"
+                                     " on rakill", parv[2], parv[1]);
        return 0;
+    }
 
     ban->flags |= UBAN_NETWORK;
     oban = find_userban_exact(ban, UBAN_NETWORK);
