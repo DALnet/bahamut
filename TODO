@@ -1,8 +1,0 @@
-1.8 TODO List
--------------
-- consider temp hold in CHANKILL, do resync
-- unified nick/user/host scrubbing, fix channel ban masks
-- sort out WATCH timestamps
-- nonblocking dns hooks for modules (dnsbl)
-- consider adding external commands -- alias in conf, popen()/fileno()
-- update socketengine dependencies in Makefile
