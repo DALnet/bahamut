@@ -1,3 +1,9 @@
+Changes for 2.0.7:
+------------------
+Kobi Shmueli (1):
+      Fixed a bug on sendto_channel_butserv_me() function (src/send.c)     The bug causes Bahamut to hide mode and topic changes even if the channel isn't in auditorium mode.
+
+
 Changes for 2.0.6:
 ------------------
 Kobi Shmueli (5):
