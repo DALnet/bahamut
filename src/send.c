@@ -1167,7 +1167,7 @@ void sendto_channel_butserv_me(aChannel *chptr, aClient *from, char *pattern, ..
     {
         if (MyConnect(acptr = cm->cptr))
         {
-            if(!is_chan_opvoice(acptr, chptr)) continue;
+            if((chptr->mode.mode & MODE_AUDITORIUM) && !is_chan_opvoice(acptr, chptr)) continue;
             if (!didlocal)
             {
                 didlocal = prefix_buffer(0, from, pfix, sendbuf, pattern, vl);
