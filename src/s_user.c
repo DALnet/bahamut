@@ -1501,6 +1501,7 @@ m_message(aClient *cptr, aClient *sptr, int parc, char *parv[], int notice)
     char *target;
     char *dccmsg;
     int tleft = MAXRECIPIENTS;  /* targets left */
+    char channel[CHANNELLEN + 1]; /* for the auditorium mode -Kobi. */
 
     cmd = notice ? MSG_NOTICE : MSG_PRIVATE;
     ismine = MyClient(sptr);
@@ -1595,7 +1596,6 @@ m_message(aClient *cptr, aClient *sptr, int parc, char *parv[], int notice)
                     /* Channel is in auditorium mode! */
                     if(strlen(chptr->chname)+6 > CHANNELLEN) continue; /* Channel is too long.. we must be able to add
                                                                            -relay to it... */
-                    char channel[CHANNELLEN + 1];
                     strcpy(channel, chptr->chname);
                     strcat(channel, "-relay");
                     if(!(chptr = find_channel(channel, NULL))) continue; /* Can't find the relay channel... */
