@@ -1178,6 +1178,8 @@ int can_send(aClient *cptr, aChannel *chptr, char *msg)
             return (MODE_NOPRIVMSGS);
         if ((chptr->mode.mode & MODE_MODREG) && !IsRegNick(cptr))
             return (ERR_NEEDREGGEDNICK);
+        if (chptr->mode.mode & MODE_NONOTICE)
+            return (MODE_NONOTICE);
         if (ismine)
         {
             if ((chptr->mode.mode & MODE_NOCTRL) && msg_has_ctrls(msg))
@@ -1200,6 +1202,8 @@ int can_send(aClient *cptr, aChannel *chptr, char *msg)
                 return (MODE_BAN);
             if ((chptr->mode.mode & MODE_MODREG) && !IsRegNick(cptr))
                 return (ERR_NEEDREGGEDNICK);
+            if (chptr->mode.mode & MODE_NONOTICE)
+                return (MODE_NONOTICE);
         }
         if ((chptr->mode.mode & MODE_NOCTRL) && msg_has_ctrls(msg))
             return (ERR_NOCTRLSONCHAN);
@@ -1243,6 +1247,8 @@ static void channel_modes(aClient *cptr, char *mbuf, char *pbuf,
         *mbuf++ = 'S';
     if (chptr->mode.mode & MODE_AUDITORIUM)
         *mbuf++ = 'A';
+    if (chptr->mode.mode & MODE_NONOTICE)
+        *mbuf++ = 'T'
 #ifdef USE_CHANMODE_L
     if (chptr->mode.mode & MODE_LISTED)
         *mbuf++ = 'L';
@@ -1617,6 +1623,7 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
 #ifdef USE_CHANMODE_L
         MODE_LISTED, 'L',
 #endif
+        MODE_NONOTICE, 'T'
         0x0, 0x0
     };
     
@@ -4596,6 +4603,8 @@ int m_sjoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
 #ifdef USE_CHANMODE_L
             SJ_MODEADD('L', MODE_LISTED);
 #endif
+            SJ_MODEADD('T', MODE_NONOTICE);
+            
             case 'k':
                 strncpyzt(mode.key, parv[4 + args], KEYLEN + 1);
                 args++;
@@ -4760,6 +4769,7 @@ int m_sjoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
 #ifdef USE_CHANMODE_L
         SJ_MODEPLUS('L', MODE_LISTED);
 #endif
+        SJ_MODEPLUS('T', MODE_NONOTICE);
 
         SJ_MODEMINUS('p', MODE_PRIVATE);
         SJ_MODEMINUS('s', MODE_SECRET);
@@ -4777,7 +4787,7 @@ int m_sjoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
 #ifdef USE_CHANMODE_L
         SJ_MODEMINUS('L', MODE_LISTED);
 #endif
-
+        SJ_MODEMINUS('T', MODE_NONOTICE);
     }
 
     if ((oldmode->mode & MODE_JOINRATE) && !(mode.mode & MODE_JOINRATE))
