@@ -1291,6 +1291,7 @@ struct Channel
 #define MODE_JOINRATE	0x40000
 #define MODE_SSLONLY	0x80000
 #define MODE_AUDITORIUM 0x100000
+#define MODE_NONOTIC	0x200000
 
 /* mode flags which take another parameter (With PARAmeterS) */
 
