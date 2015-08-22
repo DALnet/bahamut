@@ -1748,7 +1748,9 @@ int readwrite_client(aClient *cptr, int isread, int iswrite)
 #ifdef USE_SSL
     if(cptr->ssl && IsSSL(cptr) && !SSL_is_init_finished(cptr->ssl))
     {
-        if(IsDead(cptr) || !safe_ssl_accept(cptr, cptr->fd))
+        if(IsDead(cptr) || (IsConnecting(cptr)?
+                               !safe_ssl_connect(cptr, cptr->fd) // Hack by janicez designed to permit use of SSL outconnects.
+                             : !safe_ssl_accept(cptr, cptr->fd)))
             close_connection(cptr);
         return 1;
     }
@@ -1933,6 +1935,35 @@ int connect_server(aConnect *aconn, aClient * by, struct hostent *hp)
         if (errno == EINTR)
             errno = ETIMEDOUT;
         return -1;
+    }
+
+    if ((aconn->flags & CONN_SSL) != 0) {
+        extern SSL_CTX *ircdlinkssl_ctx;
+
+        cptr->ssl = NULL;
+        if ((cptr->ssl = SSL_new(ircdlinkssl_ctx)) == NULL) {
+              sendto_realops_lev(DEBUG_LEV, "SSL creation of "
+                        "new SSL object failed [server %s]",
+                        acptr->sockhost);
+              acptr->fd = -2;
+              free_client(acptr);
+              return NULL;
+        }
+        SetSSL(acptr);
+        set_non_blocking(fd, acptr);
+        set_sock_opts(fd, acptr);
+        SSL_set_fd(acptr->ssl, fd);
+        if(!safe_ssl_connect(acptr, fd))
+        {
+            SSL_set_shutdown(acptr->ssl, SSL_RECEIVED_SHUTDOWN);
+            ssl_smart_shutdown(acptr->ssl);
+            SSL_free(acptr->ssl);
+            ircstp->is_ref++;
+            acptr->fd = -2;
+            free_client(acptr);
+            close(fd);
+            return NULL;
+        }
     }
     
     make_server(cptr);
