@@ -99,6 +99,7 @@
 #define MSG_SVSHOLD  "SVSHOLD"		/* SVSHOLD */
 #define MSG_AKILL    "AKILL"     	/* AKILL */
 #define MSG_RAKILL   "RAKILL"    	/* RAKILL */
+#define MSG_NBANRESET "NBANRESET" 	/* NBANRESET */
 #define MSG_SILENCE  "SILENCE"   	/* SILENCE */
 #define MSG_WATCH    "WATCH"     	/* WATCH */
 #define MSG_SQLINE   "SQLINE" 		/* SQLINE */
@@ -137,6 +138,7 @@ extern int  m_kline(aClient *, aClient *, int, char **);
 extern int  m_unkline(aClient *, aClient *, int, char **);
 extern int  m_akill(aClient *, aClient *, int, char **);
 extern int  m_rakill(aClient *, aClient *, int, char **);
+extern int  m_nbanreset(aClient *, aClient *, int, char **);
 extern int  m_locops(aClient *, aClient *, int, char **);
 extern int  m_private(aClient *, aClient *, int, char **);
 extern int  m_topic(aClient *, aClient *, int, char **);
@@ -329,6 +331,7 @@ struct Message msgtab[] =
     {MSG_SVSHOLD,  m_svshold,  MAXPARA, 0,        0},
     {MSG_AKILL,    m_akill,    MAXPARA, 0,        0},
     {MSG_RAKILL,   m_rakill,   MAXPARA, 0,        0},
+    {MSG_NBANRESET,m_nbanreset,      1, 0,        0},
     {MSG_SILENCE,  m_silence,  MAXPARA, 0,        0},
     {MSG_WATCH,    m_watch,          1, 0,        0},
     {MSG_DCCALLOW, m_dccallow,       1, 0,        0},
