@@ -50,7 +50,7 @@ install: all
 	-@if [ ! -f $(INSTALL_DIR)/ircd.smotd ] ; then \
 		echo "ircd.smotd does not exist, creating..."; \
 		touch $(INSTALL_DIR)/ircd.smotd; \
-		echo "Usage is governed by the DALnet AUP at <http://www.dal.net/aup/>." >> $(INSTALL_DIR)/ircd.smotd; \
+		echo "Usage is governed by the DALnet AUP at <http://www.dal.net/aup/>" >> $(INSTALL_DIR)/ircd.smotd; \
 	fi
 	
 distclean: clean
