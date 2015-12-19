@@ -507,10 +507,16 @@ static inline int prefix_buffer(int remote, aClient *from, char *prefix,
                 for(p = user->username; *p; p++)
                     buffer[sidx++] = *p;
             }
-            if (*user->host && !MyConnect(from)) 
+            if (*user->host) 
             {
                 buffer[sidx++] = '@';
-                for(p = user->host; *p; p++)
+#ifdef USER_HOSTMASKING
+                if(IsUmodeH(from))
+                    p = user->mhost;
+                else
+#endif
+                    p = user->host;
+                for(; *p; p++)
                     buffer[sidx++] = *p;
                 flag = 1;
             }
@@ -938,7 +944,12 @@ void send_quit_to_common_channels(aClient *from, char *reason)
     INC_SERIAL
     
     msglen=sprintf(sendbuf,":%s!%s@%s QUIT :%s", from->name,
-                   from->user->username,from->user->host, reason);      
+                   from->user->username,
+#ifdef USER_HOSTMASKING
+                   IsUmodeH(from)?from->user->mhost:
+#endif
+                                                    from->user->host,
+                   reason);      
     sbuf_begin_share(sendbuf, msglen, &share_buf);
    
     if(from->fd >= 0)
@@ -984,7 +995,11 @@ void send_part_to_common_channels(aClient *from, char *reason)
         if (can_send(from, channels->value.chptr, reason)) 
         {
             msglen = sprintf(sendbuf,":%s!%s@%s PART %s",
-                             from->name,from->user->username,from->user->host,
+                             from->name,from->user->username,
+#ifdef USER_HOSTMASKING
+                             IsUmodeH(from)?from->user->mhost:
+#endif
+                                                              from->user->host,
                              channels->value.chptr->chname);
             sbuf_begin_share(sendbuf, msglen, &share_buf);
 
@@ -1631,10 +1646,16 @@ void sendto_prefix_one(aClient *to, aClient *from, char *pattern, ...)
                     for(idx = user->username; *idx; idx++)
                         sender[sidx++] = *idx;
                 }
-                if (*user->host && !MyConnect(from)) 
+                if (*user->host) 
                 {
                     sender[sidx++] = '@';
-                    for(idx = user->host; *idx; idx++)
+#ifdef USER_HOSTMASKING
+                    if(IsUmodeH(from))
+                        idx = user->mhost;
+                    else
+#endif
+                        idx = user->host;
+                    for(; *idx; idx++)
                         sender[sidx++] = *idx;
                     flag = 1;
                 }
@@ -1740,10 +1761,16 @@ void vsendto_prefix_one(aClient *to, aClient *from, char *pattern, va_list vl)
                     for(idx = user->username; *idx; idx++)
                         sender[sidx++] = *idx;
                 }
-                if (*user->host && !MyConnect(from)) 
+                if (*user->host) 
                 {
                     sender[sidx++] = '@';
-                    for(idx = user->host; *idx; idx++)
+#ifdef USER_HOSTMASKING
+                    if(IsUmodeH(from))
+                        idx = user->mhost;
+                    else
+#endif
+                        idx = user->host;
+                    for(; *idx; idx++)
                         sender[sidx++] = *idx;
                     flag = 1;
                 }
