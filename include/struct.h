@@ -600,6 +600,10 @@ typedef struct Whowas
     char        name[NICKLEN + 1];
     char        username[USERLEN + 1];
     char        hostname[HOSTLEN + 1];
+#ifdef USER_HOSTMASKING
+    char        mhostname[HOSTLEN + 1];
+    char        hostip[HOSTIPLEN + 1];
+#endif
     char       *servername;
     char        realname[REALLEN + 1];
     time_t      logoff;
