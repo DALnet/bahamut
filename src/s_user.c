@@ -2998,7 +2998,7 @@ m_userhost(aClient *cptr, aClient *sptr, int parc, char *parv[])
                                "%s%s=%c%s@%s", acptr->name,
                               IsAnOper(acptr) ? "*" : "",
                               (acptr->user->away) ? '-' : '+',
-                              acptr->user->username, acptr->user->host);
+                              acptr->user->username, (IsUmodeH(acptr) && sptr!=acptr && !IsAnOper(sptr))?acptr->user->mhost:acptr->user->host);
         }
     sendto_one(sptr, "%s", buf);
     return 0;
