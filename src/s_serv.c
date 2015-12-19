@@ -2774,7 +2774,11 @@ m_watch(aClient *cptr, aClient *sptr, int parc, char *parv[])
                 if ((acptr = find_person(lp->value.wptr->nick, NULL)))
                     sendto_one(sptr, rpl_str(RPL_NOWON), me.name, parv[0],
                                acptr->name, acptr->user->username,
-                               acptr->user->host, acptr->tsinfo);
+#ifdef USER_HOSTMASKING
+                               IsUmodeH(acptr)?acptr->user->mhost:
+#endif
+                                                                  acptr->user->host,
+                               acptr->tsinfo);
                 /*
                  * But actually, only show them offline if its a capital
                  * 'L' (full list wanted).
