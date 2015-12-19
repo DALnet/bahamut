@@ -4021,6 +4021,9 @@ m_dccallow(aClient *cptr, aClient *sptr, int parc, char *parv[])
                     sendto_one(sptr, ":%s %d %s :%s (%s@%s)", me.name,
                                RPL_DCCLIST, sptr->name, lp->value.cptr->name,
                                lp->value.cptr->user->username,
+#ifdef USER_HOSTMASKING
+                               IsUmodeH(lp->value.cptr)?lp->value.cptr->user->mhost:
+#endif
                                lp->value.cptr->user->host);
                 }
                 sendto_one(sptr, rpl_str(RPL_ENDOFDCCLIST), me.name,
