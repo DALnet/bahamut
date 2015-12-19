@@ -81,6 +81,10 @@ static void sendnick_TS(aClient *cptr, aClient *acptr)
             sendto_one(cptr, "SVSTAG %s %ld %d %s :%s", acptr->name, acptr->tsinfo, servicestag->raw,
                        ubuf, servicestag->tag);
         }
+#ifdef USER_HOSTMASKING
+        if(acptr->flags & FLAGS_SPOOFED)
+            sendto_one(cptr, "SVSHOST %s %s", acptr->name, acptr->user->mhost);
+#endif
     }
 }
 

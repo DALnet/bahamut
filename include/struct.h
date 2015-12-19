@@ -241,6 +241,7 @@ typedef struct SServicesTag ServicesTag;
 #define FLAGS_ZIPPED_IN	   0x4000000  /* This link is gzipped. */
 #define FLAGS_ZIPPED_OUT   0x8000000 /* This link is gzipped. */
 #define FLAGS_SSL          0x10000000 /* client is using SSL */
+#define FLAGS_SPOOFED      0x20000000 /* User's host was spoofed (via SVSHOST) */
 
 /* Capabilities of the ircd or clients */
 

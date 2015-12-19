@@ -601,15 +601,25 @@ int m_svshost(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     aClient *acptr;
 
-    if(!IsULine(sptr) || parc<3 || *parv[2]==0)
-        return 0; /* Not a u:lined server or not enough parameters */
+    if(!IsServer(sptr) || parc<3 || *parv[2]==0)
+        return 0; /* Not a server or not enough parameters */
 
     if(!(acptr = find_person(parv[1], NULL)))
         return 0; /* Target user doesn't exist */
 
+    if(!IsULine(sptr))
+    {
+        if(cptr->from!=acptr->from)
+            return 0; /* Wrong direction */
+    }
+
     if(strlen(parv[2]) > HOSTLEN)
         return 0; /* The requested host is too long */
 
+#ifdef USER_HOSTMASKING
+    strcpy(acptr->user->mhost, parv[2]); /* Set the requested (masked) host */
+    acptr->flags |= FLAGS_SPOOFED;
+#else
     /* Save the real hostname if it's a local client */
     if(MyClient(acptr))
     {
@@ -633,8 +643,8 @@ int m_svshost(aClient *cptr, aClient *sptr, int parc, char *parv[])
         }
         strcpy(acptr->sockhost, parv[2]);
     }
-
     strcpy(acptr->user->host, parv[2]); /* Set the requested host */
+#endif
 
     /* Pass it to all the other servers */
     sendto_serv_butone(cptr, ":%s SVSHOST %s %s", parv[0], parv[1], parv[2]);
