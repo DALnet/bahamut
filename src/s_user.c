@@ -421,6 +421,19 @@ reject_proxy(aClient *cptr, char *cmd, char *args)
 }
 
 
+/* mask_host - Gets a normal host or ip and return them masked.
+ * -Kobi_S 19/12/2015
+ */
+char *mask_host(char *orghost)
+{
+    static char newhost[HOSTLEN + 1];
+
+    /* TODO: Add the actual host-masking code here... */
+
+    return orghost; /* I guess the user won't be host-masked after all... :( */
+}
+
+
 /*
  * * register_user 
  *  This function is called when both NICK and USER messages 
@@ -566,6 +579,8 @@ register_user(aClient *cptr, aClient *sptr, char *nick, char *username,
             strcpy(user->host, sptr->hostip);
             strcpy(sptr->sockhost, sptr->hostip);
         }
+
+        strncpyzt(user->mhost, mask_host(user->host), HOSTLEN + 1);
         
         pwaconf = sptr->user->allow;
 
@@ -2170,6 +2185,7 @@ do_user(char *nick, aClient *cptr, aClient *sptr, char *username, char *host,
     {
         user->server = find_or_add(server);
         strncpyzt(user->host, host, sizeof(user->host));
+        strncpyzt(user->mhost, mask_host(host), HOSTLEN + 1);
     } 
     else
     {
@@ -2195,6 +2211,7 @@ do_user(char *nick, aClient *cptr, aClient *sptr, char *username, char *host,
 #endif
         strncpyzt(user->host, host, sizeof(user->host));
 #ifdef USER_HOSTMASKING
+        strncpyzt(user->mhost, mask_host(host), HOSTLEN + 1);
         sptr->umode |= UMODE_H;
 #endif
         user->server = me.name;

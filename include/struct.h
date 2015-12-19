@@ -839,6 +839,9 @@ struct User
     int         joined;        /* number of channels joined */
     char        username[USERLEN + 1];
     char        host[HOSTLEN + 1];
+#ifdef USER_HOSTMASKING
+    char        mhost[HOSTLEN + 1];
+#endif
     char       *server;        /* pointer to scached server name */
     unsigned int servicetype;  /* set by SVSMODE +T */
     unsigned long servicestamp; /* set by SVSMODE +d */
