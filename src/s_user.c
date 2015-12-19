@@ -2400,7 +2400,11 @@ m_kill(aClient *cptr, aClient *sptr, int parc, char *parv[])
                 *s = 0;
             
             ircsnprintf(mypath, KILLLEN + 1, "%s!%s!%s", myname, 
-                        sptr->user->host, sptr->user->username); 
+#ifdef USER_HOSTMASKING
+                        IsUmodeH(sptr)?sptr->user->mhost:
+#endif
+                        sptr->user->host,
+                        sptr->user->username); 
         }
         else
         {
@@ -2434,21 +2438,33 @@ m_kill(aClient *cptr, aClient *sptr, int parc, char *parv[])
                            "Received KILL message for %s!%s@%s. "
                            "From %s Path: %s %s", acptr->name,
                            acptr->user ? acptr->user->username : unknownfmt,
-                           acptr->user ? acptr->user->host : unknownfmt,
+                           acptr->user ?
+#ifdef USER_HOSTMASKING
+                             IsUmodeH(acptr)?acptr->user->mhost:
+#endif
+                             acptr->user->host : unknownfmt,
                            parv[0], mypath, reason);
         else if (IsAnOper(sptr))
             sendto_ops_lev(0,
                            "Received KILL message for %s!%s@%s. From %s "
                            "Path: %s %s", acptr->name, 
                            acptr->user ? acptr->user->username : unknownfmt,
-                           acptr->user ? acptr->user->host : unknownfmt,
+                           acptr->user ?
+#ifdef USER_HOSTMASKING
+                             IsUmodeH(acptr)?acptr->user->mhost:
+#endif
+                             acptr->user->host : unknownfmt,
                            parv[0], mypath, reason);
         else
             sendto_ops_lev(SKILL_LEV, 
                            "Received KILL message for %s!%s@%s. "
                            "From %s Path: %s %s", acptr->name,
                            acptr->user ? acptr->user->username : unknownfmt,
-                           acptr->user ? acptr->user->host : unknownfmt,
+                           acptr->user ?
+#ifdef USER_HOSTMASKING
+                             IsUmodeH(acptr)?acptr->user->mhost:
+#endif
+                             acptr->user->host : unknownfmt,
                            parv[0], mypath, reason);
                 
 #if defined(USE_SYSLOG) && defined(SYSLOG_KILL)
