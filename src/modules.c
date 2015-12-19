@@ -489,6 +489,7 @@ static DLink *join_hooks = NULL;
 static DLink *sendburst_hooks = NULL;
 static DLink *throttle_hooks = NULL;
 static DLink *forbid_hooks = NULL;
+static DLink *whois_hooks = NULL;
 static DLink *signoff_hooks = NULL;
 static DLink *mload_hooks = NULL;
 static DLink *munload_hooks = NULL;
@@ -537,6 +538,9 @@ get_texthooktype(enum c_hooktype hooktype)
 
         case CHOOK_FORBID:
             return "forbid";
+
+        case CHOOK_WHOIS:
+            return "whois";
 
         case CHOOK_SIGNOFF:
             return "Signoff";
@@ -606,6 +610,10 @@ get_hooklist(enum c_hooktype hooktype)
 
         case CHOOK_FORBID:
             hooklist = &forbid_hooks;
+            break;
+
+        case CHOOK_WHOIS:
+            hooklist = &whois_hooks;
             break;
 
         case CHOOK_SIGNOFF:
@@ -887,6 +895,20 @@ call_hooks(enum c_hooktype hooktype, ...)
                 break;
             }
 
+        case CHOOK_WHOIS:
+            {
+                aClient *sptr = va_arg(vl, aClient *);
+                aClient *acptr = va_arg(vl, aClient *);
+                for(lp = whois_hooks; lp; lp = lp->next)
+                {
+                    int (*rfunc) (aClient *, aClient *) = 
+                                    ((aHook *)lp->value.cp)->funcptr;
+                    if((ret = (*rfunc)(sptr, acptr)) == FLUSH_BUFFER)
+                        break;
+                }
+                break;
+            }
+
         case CHOOK_SIGNOFF:
             {
                 aClient *acptr = va_arg(vl, aClient *);
@@ -1010,6 +1032,7 @@ memcount_modules(MCmodules *mc)
     mc->e_dlinks += mc_dlinks(sendburst_hooks);
     mc->e_dlinks += mc_dlinks(throttle_hooks);
     mc->e_dlinks += mc_dlinks(forbid_hooks);
+    mc->e_dlinks += mc_dlinks(whois_hooks);
     mc->e_dlinks += mc_dlinks(signoff_hooks);
     mc->e_dlinks += mc_dlinks(mload_hooks);
     mc->e_dlinks += mc_dlinks(munload_hooks);

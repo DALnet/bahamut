@@ -1994,6 +1994,8 @@ m_whois(aClient *cptr, aClient *sptr, int parc, char *parv[])
             sendto_one(sptr, err_str(ERR_NOSUCHNICK), me.name, parv[0], nick);
             continue;
         }
+
+        if (call_hooks(CHOOK_WHOIS, sptr, acptr) == FLUSH_BUFFER) continue;
                 
         user = acptr->user;
         name = (!*acptr->name) ? "?" : acptr->name;
