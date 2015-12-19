@@ -2619,7 +2619,11 @@ show_watch(aClient *cptr, char *name, int rpl1, int rpl2)
     if ((acptr = find_person(name, NULL)))
         sendto_one(cptr, rpl_str(rpl1), me.name, cptr->name,
                    acptr->name, acptr->user->username,
-                   acptr->user->host, acptr->lasttime);
+#ifdef USER_HOSTMASKING
+                   IsUmodeH(acptr)?acptr->user->mhost:
+#endif
+                                                      acptr->user->host,
+                   acptr->lasttime);
     else
         sendto_one(cptr, rpl_str(rpl2), me.name, cptr->name,
                    name, "*", "*", 0);
