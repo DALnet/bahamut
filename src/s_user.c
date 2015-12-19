@@ -2001,7 +2001,13 @@ m_whois(aClient *cptr, aClient *sptr, int parc, char *parv[])
         a2cptr = acptr->uplink;
                 
         sendto_one(sptr, rpl_str(RPL_WHOISUSER), me.name, parv[0], name,
-                   user->username, user->host, acptr->info);
+                   user->username, IsUmodeH(acptr)?user->mhost:user->host, acptr->info);
+        if(IsUmodeH(acptr) && (sptr==acptr || IsAnOper(sptr)))
+        {
+            sendto_one(sptr, rpl_str(RPL_WHOISACTUALLY), me.name,
+                       sptr->name, name, user->username, user->host,
+                       acptr->ip);
+         }
 #if (RIDICULOUS_PARANOIA_LEVEL>=1)
 #if (RIDICULOUS_PARANOIA_LEVEL==1)
         if(MyConnect(acptr) && user->real_oper_host && 
