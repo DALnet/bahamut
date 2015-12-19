@@ -2006,7 +2006,7 @@ m_whois(aClient *cptr, aClient *sptr, int parc, char *parv[])
         {
             sendto_one(sptr, rpl_str(RPL_WHOISACTUALLY), me.name,
                        sptr->name, name, user->username, user->host,
-                       acptr->ip);
+                       acptr->hostip);
          }
 #if (RIDICULOUS_PARANOIA_LEVEL>=1)
 #if (RIDICULOUS_PARANOIA_LEVEL==1)
