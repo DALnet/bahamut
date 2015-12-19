@@ -84,6 +84,9 @@ int  user_modes[] =
     UMODE_n, 'n',
     UMODE_m, 'm',
     UMODE_h, 'h',
+#ifdef USER_HOSTMASKING
+    UMODE_H, 'H',
+#endif
 #ifdef NO_OPER_FLOOD
     UMODE_F, 'F',
 #endif
@@ -2191,6 +2194,9 @@ do_user(char *nick, aClient *cptr, aClient *sptr, char *username, char *host,
         sptr->umode &= ~UMODE_s;
 #endif
         strncpyzt(user->host, host, sizeof(user->host));
+#ifdef USER_HOSTMASKING
+        sptr->umode |= UMODE_H;
+#endif
         user->server = me.name;
     }
     strncpyzt(sptr->info, realname, sizeof(sptr->info));
