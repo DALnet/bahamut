@@ -59,6 +59,7 @@ extern int send_lusers(aClient *,aClient *,int, char **);
 extern int server_was_split;
 extern int svspanic;
 extern int svsnoop;
+extern int uhm_type;
 
 static char buf[BUFSIZE], buf2[BUFSIZE];
 int  user_modes[] =
@@ -424,11 +425,13 @@ reject_proxy(aClient *cptr, char *cmd, char *args)
 /* mask_host - Gets a normal host or ip and return them masked.
  * -Kobi_S 19/12/2015
  */
-char *mask_host(char *orghost)
+char *mask_host(char *orghost, int type)
 {
     static char newhost[HOSTLEN + 1];
 
-    /* TODO: Add the actual host-masking code here... */
+    if(!type) type = uhm_type;
+
+    if (call_hooks(CHOOK_MASKHOST, orghost, &newhost, type) != FLUSH_BUFFER) return newhost;
 
     return orghost; /* I guess the user won't be host-masked after all... :( */
 }
@@ -580,7 +583,7 @@ register_user(aClient *cptr, aClient *sptr, char *nick, char *username,
             strcpy(sptr->sockhost, sptr->hostip);
         }
 
-        strncpyzt(user->mhost, mask_host(user->host), HOSTLEN + 1);
+        strncpyzt(user->mhost, mask_host(user->host,0), HOSTLEN + 1);
         
         pwaconf = sptr->user->allow;
 
@@ -2193,7 +2196,7 @@ do_user(char *nick, aClient *cptr, aClient *sptr, char *username, char *host,
     {
         user->server = find_or_add(server);
         strncpyzt(user->host, host, sizeof(user->host));
-        strncpyzt(user->mhost, mask_host(host), HOSTLEN + 1);
+        strncpyzt(user->mhost, mask_host(host,0), HOSTLEN + 1);
     } 
     else
     {
@@ -2219,8 +2222,9 @@ do_user(char *nick, aClient *cptr, aClient *sptr, char *username, char *host,
 #endif
         strncpyzt(user->host, host, sizeof(user->host));
 #ifdef USER_HOSTMASKING
-        strncpyzt(user->mhost, mask_host(host), HOSTLEN + 1);
-        sptr->umode |= UMODE_H;
+        strncpyzt(user->mhost, mask_host(host,0), HOSTLEN + 1);
+        if(uhm_type > 0) sptr->umode |= UMODE_H;
+        else sptr->umode &= ~UMODE_H;
 #endif
         user->server = me.name;
     }
@@ -3179,6 +3183,12 @@ m_umode(aClient *cptr, aClient *sptr, int parc, char *parv[])
                 case 'X':
                 case 'S':
                     break; /* users can't set themselves +r,+x,+X or +S! */
+                case 'H':
+                    if ((uhm_type > 0) && (what == MODE_ADD))
+                        sptr->umode |= UMODE_H;
+                    else
+                        sptr->umode &= ~UMODE_H;
+                    break;
                 case 'A':
                     /* set auto +a if user is setting +A */
                     if (MyClient(sptr) && (what == MODE_ADD))

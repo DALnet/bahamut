@@ -69,6 +69,11 @@ enum c_hooktype {
                        * Params: 2: (aClient *source, aClient *target)
                        * Returns int
                        */
+   CHOOK_MASKHOST,    /* called from s_user.c when in order to
+                       * mask a user host/IP
+                       * Params: 3: (char *orghost, char **newhost, int type)
+                       * Returns int
+                       */
    CHOOK_SIGNOFF,     /* called on client exit (exit_client)
                        * Params: 1: (aClient *)
                        * Returns void */
