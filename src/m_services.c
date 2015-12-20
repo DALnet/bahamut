@@ -38,6 +38,7 @@ extern int user_modes[];
 
 int svspanic = 0; /* Services panic */
 int svsnoop = 0; /* Services disabled all o:lines (off by default) */
+int uhm_type = 0; /* User host-masking type (off by default) */
 
 /*
  * the services aliases. *
@@ -767,6 +768,29 @@ int m_svstag(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
     /* Pass it to all the other servers */
     sendto_serv_butone(cptr, ":%s SVSTAG %s %s %s %s :%s", parv[0], parv[1], parv[2], parv[3], parv[4], parv[5]);
+
+    return 0;
+}
+
+/* m_svsuhm
+ *   Define the running user host-masking type
+ * parv[0] - sender
+ * parv[1] - host-masking type (number)
+ */
+int m_svsuhm(aClient *cptr, aClient *sptr, int parc, char *parv[])
+{
+    if(!IsServer(sptr) || parc < 2)
+        return 0;
+
+    if(!IsULine(sptr))
+    {
+        if(aliastab[AII_OS].client && aliastab[AII_OS].client->from!=cptr->from)
+            return 0; /* Wrong direction (from a non-u:lined server) */
+    }
+
+    uhm_type = atoi(parv[1]);
+
+    sendto_serv_butone(cptr, ":%s SVSUHM %s", sptr->name, parv[1]);
 
     return 0;
 }

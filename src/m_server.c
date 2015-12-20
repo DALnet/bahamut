@@ -34,6 +34,7 @@ extern void fakeserver_sendserver(aClient *);
 extern void fakelusers_sendlock(aClient *);
 extern void reset_sock_opts(int, int);
 extern int user_modes[];
+extern int uhm_type;
 
 /* internal functions */
 
@@ -256,6 +257,10 @@ do_server_estab(aClient *cptr)
 
     /* Send out fake server list and other 'fake' stuff */
     fakeserver_sendserver(cptr);
+
+    /* Send UHM (user host-masking) type */
+    if(confopts & FLAGS_HUB)
+        sendto_one(cptr, "SVSUHM %d", uhm_type);
 
     /* send clone list */
     clones_send(cptr);
