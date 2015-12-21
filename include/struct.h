@@ -1487,6 +1487,7 @@ typedef struct SearchOptions
     unsigned show_chan:1;
     unsigned search_chan:1;
     unsigned ip_show:1;
+    unsigned realhost_show:1;
     unsigned client_type_plus:1;
 } SOpts;
 

@@ -73,6 +73,9 @@ int build_searchopts(aClient *sptr, int parc, char *parv[])
       "Flag C: show first visible channel user is in",
       "Flag M: check for user in channels I am a member of",
       "Flag I: always show IPs instead of hosts",
+#ifdef USER_HOSTMASKING
+      "Flag R: show the real host even if the user's host is masked (umode +H)",
+#endif
       NULL
   };
 
@@ -346,6 +349,16 @@ int build_searchopts(aClient *sptr, int parc, char *parv[])
           }
           wsopts.ip_show = change;
           break; 
+#ifdef USER_HOSTMASKING
+      case 'R':
+          if(!IsAnOper(sptr))
+          {
+              sendto_one(sptr, getreply(ERR_NOPRIVILEGES), me.name, parv[0]);
+              return 0;
+          }
+          wsopts.realhost_show = change;
+          break; 
+#endif
       case 'i':
           if(parv[args]==NULL)
           {
@@ -684,7 +697,7 @@ inline char *first_visible_channel(aClient *cptr, aClient *sptr)
 #define WHO_HOPCOUNT(s, a) ( ( (IsULine((a)) || IsUmodeI((a))) && !IsAnOper((s)) ) ? 0 : a->hopcount)
 #define WHO_SERVER(s ,a) ((IsUmodeI((a)) && !IsAnOper((s))) ? HIDDEN_SERVER_NAME : a->user->server)
 #ifdef USER_HOSTMASKING
-#define WHO_HOST(s, a) ((IsUmodeH((a)) && !IsAnOper((s))) ? (a)->user->mhost : (wsopts.ip_show) ? (a)->hostip : (a)->user->host)
+#define WHO_HOST(s, a) ((wsopts.ip_show) ? (a)->hostip : (IsUmodeH((a)) && !wsopts.realhost_show) ? (a)->user->mhost : (a)->user->host)
 #else
 #define WHO_HOST(a, a) ((wsopts.ip_show) ? (a)->hostip : (a)->user->host)
 #endif
