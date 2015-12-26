@@ -1306,7 +1306,12 @@ check_dccsend(aClient *from, aClient *to, char *msg)
 
         sendto_one(to, ":%s NOTICE %s :%s (%s@%s) has attempted to send you a "
                    "file named %s, which was blocked.", me.name, to->name,
-                   from->name, from->user->username, from->user->host, tmpfn);
+                   from->name, from->user->username,
+#ifdef USER_HOSTMASKING
+                   IsUmodeH(from)?from->user->mhost:
+#endif
+                                                    from->user->host,
+                   tmpfn);
 
         if(!SeenDCCNotice(to))
         {
