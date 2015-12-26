@@ -1934,7 +1934,12 @@ m_trace(aClient *cptr, aClient *sptr, int parc, char *parv[])
             class = acptr->class->name;
         else
             class = "NONE";
-        name = get_client_name(acptr,FALSE);
+#ifdef USER_HOSTMASKING
+        if(IsUmodeH(acptr) && !IsAnOper(sptr))
+            name = get_client_name(acptr,HIDEME);
+        else
+#endif
+            name = get_client_name(acptr,FALSE);
         if (IsAnOper(acptr)) 
         {
             sendto_one(sptr, rpl_str(RPL_TRACEOPERATOR),
