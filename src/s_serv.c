@@ -2604,6 +2604,38 @@ m_rakill(aClient *cptr, aClient *sptr, int parc, char *parv[])
     return 0;
 }
 
+/*
+ * Allow U-lined servers to remove all network-wide bans in case of an emergency -xPsycho
+ */
+
+int
+m_nbanreset(aClient *cptr, aClient *sptr, int parc, char *parv[])
+{
+    if(!IsServer(sptr))
+    {
+        return 0;
+    }
+
+    if(!IsULine(sptr))
+    {
+        sendto_serv_butone(&me, ":%s GLOBOPS :Non-ULined server %s trying to NBANRESET!",  me.name, sptr->name);
+        send_globops("From %s: Non-ULined server %s trying to NBANRESET!", me.name, sptr->name);
+        return 0;
+    }
+
+    sendto_ops("%s is removing all network bans and resetting throttles", sptr->name);
+
+    remove_userbans_match_flags(UBAN_NETWORK, 0);
+    remove_simbans_match_flags(SBAN_NICK|SBAN_NETWORK, 0);
+    remove_simbans_match_flags(SBAN_CHAN|SBAN_NETWORK, 0);
+    remove_simbans_match_flags(SBAN_GCOS|SBAN_NETWORK, 0);
+    throttle_rehash();
+
+    sendto_serv_butone(cptr, ":%s NBANRESET", sptr->name);
+
+    return 0;
+}
+
         
 /*
  * RPL_NOWON   - Online at the moment (Succesfully added to WATCH-list)
