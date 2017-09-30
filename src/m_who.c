@@ -699,7 +699,7 @@ inline char *first_visible_channel(aClient *cptr, aClient *sptr)
 #ifdef USER_HOSTMASKING
 #define WHO_HOST(s, a) ((wsopts.ip_show) ? (a)->hostip : (IsUmodeH((a)) && !wsopts.realhost_show) ? (a)->user->mhost : (a)->user->host)
 #else
-#define WHO_HOST(a, a) ((wsopts.ip_show) ? (a)->hostip : (a)->user->host)
+#define WHO_HOST(s, a) ((wsopts.ip_show) ? (a)->hostip : (a)->user->host)
 #endif
 int m_who(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
