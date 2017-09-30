@@ -583,7 +583,9 @@ register_user(aClient *cptr, aClient *sptr, char *nick, char *username,
             strcpy(sptr->sockhost, sptr->hostip);
         }
 
+#ifdef USER_HOSTMASKING
         strncpyzt(user->mhost, mask_host(user->host,0), HOSTLEN + 1);
+#endif
         
         pwaconf = sptr->user->allow;
 
@@ -2011,7 +2013,11 @@ m_whois(aClient *cptr, aClient *sptr, int parc, char *parv[])
         a2cptr = acptr->uplink;
                 
         sendto_one(sptr, rpl_str(RPL_WHOISUSER), me.name, parv[0], name,
-                   user->username, IsUmodeH(acptr)?user->mhost:user->host, acptr->info);
+                   user->username, 
+#ifdef USER_HOSTMASKING
+                   IsUmodeH(acptr)?user->mhost:
+#endif
+                   user->host, acptr->info);
         if(IsUmodeH(acptr) && (sptr==acptr || IsAnOper(sptr)))
         {
             sendto_one(sptr, rpl_str(RPL_WHOISACTUALLY), me.name,
@@ -2201,7 +2207,9 @@ do_user(char *nick, aClient *cptr, aClient *sptr, char *username, char *host,
     {
         user->server = find_or_add(server);
         strncpyzt(user->host, host, sizeof(user->host));
+#ifdef USER_HOSTMASKING
         strncpyzt(user->mhost, mask_host(host,0), HOSTLEN + 1);
+#endif
     } 
     else
     {
@@ -3025,7 +3033,11 @@ m_userhost(aClient *cptr, aClient *sptr, int parc, char *parv[])
                                "%s%s=%c%s@%s", acptr->name,
                               IsAnOper(acptr) ? "*" : "",
                               (acptr->user->away) ? '-' : '+',
-                              acptr->user->username, (IsUmodeH(acptr) && sptr!=acptr && !IsAnOper(sptr))?acptr->user->mhost:acptr->user->host);
+                              acptr->user->username, 
+#ifdef USER_HOSTMASKING
+                              (IsUmodeH(acptr) && sptr!=acptr && !IsAnOper(sptr))?acptr->user->mhost:
+#endif
+                              acptr->user->host);
         }
     sendto_one(sptr, "%s", buf);
     return 0;
