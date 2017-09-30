@@ -180,7 +180,11 @@ show_opers(aClient *cptr, char *name)
         {
         sendto_one(cptr, ":%s %d %s :%s (%s@%s) Idle: %ld",
                me.name, RPL_STATSDEBUG, name, cptr2->name,
-               cptr2->user->username, IsUmodeH(cptr2)?cptr2->user->mhost:cptr2->user->host,
+               cptr2->user->username,
+#ifdef USER_HOSTMASKING
+               IsUmodeH(cptr2)?cptr2->user->mhost:
+#endif
+               cptr2->user->host,
                (long)(timeofday - cptr2->user->last));
         j++;
         }
