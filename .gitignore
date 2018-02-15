@@ -32,4 +32,6 @@ zlib/zconf.h
 src/ircd
 src/version.c.last
 tools/convert_conf
+tools/make-cert.sh
 tools/mkpasswd
+

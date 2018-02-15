@@ -1934,7 +1934,12 @@ m_trace(aClient *cptr, aClient *sptr, int parc, char *parv[])
             class = acptr->class->name;
         else
             class = "NONE";
-        name = get_client_name(acptr,FALSE);
+#ifdef USER_HOSTMASKING
+        if(IsUmodeH(acptr) && !IsAnOper(sptr))
+            name = get_client_name(acptr,HIDEME);
+        else
+#endif
+            name = get_client_name(acptr,FALSE);
         if (IsAnOper(acptr)) 
         {
             sendto_one(sptr, rpl_str(RPL_TRACEOPERATOR),
@@ -2651,7 +2656,11 @@ show_watch(aClient *cptr, char *name, int rpl1, int rpl2)
     if ((acptr = find_person(name, NULL)))
         sendto_one(cptr, rpl_str(rpl1), me.name, cptr->name,
                    acptr->name, acptr->user->username,
-                   acptr->user->host, acptr->lasttime);
+#ifdef USER_HOSTMASKING
+                   IsUmodeH(acptr)?acptr->user->mhost:
+#endif
+                                                      acptr->user->host,
+                   acptr->lasttime);
     else
         sendto_one(cptr, rpl_str(rpl2), me.name, cptr->name,
                    name, "*", "*", 0);
@@ -2802,7 +2811,11 @@ m_watch(aClient *cptr, aClient *sptr, int parc, char *parv[])
                 if ((acptr = find_person(lp->value.wptr->nick, NULL)))
                     sendto_one(sptr, rpl_str(RPL_NOWON), me.name, parv[0],
                                acptr->name, acptr->user->username,
-                               acptr->user->host, acptr->tsinfo);
+#ifdef USER_HOSTMASKING
+                               IsUmodeH(acptr)?acptr->user->mhost:
+#endif
+                                                                  acptr->user->host,
+                               acptr->tsinfo);
                 /*
                  * But actually, only show them offline if its a capital
                  * 'L' (full list wanted).

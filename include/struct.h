@@ -241,6 +241,7 @@ typedef struct SServicesTag ServicesTag;
 #define FLAGS_ZIPPED_IN	   0x4000000  /* This link is gzipped. */
 #define FLAGS_ZIPPED_OUT   0x8000000 /* This link is gzipped. */
 #define FLAGS_SSL          0x10000000 /* client is using SSL */
+#define FLAGS_SPOOFED      0x20000000 /* User's host was spoofed (via SVSHOST) */
 
 /* Capabilities of the ircd or clients */
 
@@ -315,6 +316,7 @@ typedef struct SServicesTag ServicesTag;
 #define UMODE_I     0x8000000   /* umode +I - invisible oper (masked) */
 #define UMODE_S     0x10000000  /* umode +S - User is using SSL */
 #define UMODE_C     0x20000000  /* umode +C - User is only accepting private messages from users who share a common channel with them */
+#define UMODE_H     0x40000000  /* umode +H - User is host-masked */
 
 /* for sendto_ops_lev */
 
@@ -337,13 +339,13 @@ typedef struct SServicesTag ServicesTag;
  *  that mode will be 'silent.'
  */
 
-#define SEND_UMODES (UMODE_a|UMODE_i|UMODE_o|UMODE_r|UMODE_A|UMODE_I|UMODE_R|UMODE_S|UMODE_C)
+#define SEND_UMODES (UMODE_a|UMODE_i|UMODE_o|UMODE_r|UMODE_A|UMODE_I|UMODE_R|UMODE_S|UMODE_C|UMODE_H)
 #define ALL_UMODES (SEND_UMODES|UMODE_b|UMODE_c|UMODE_d|UMODE_e|UMODE_f|\
                     UMODE_g|UMODE_h|UMODE_j|UMODE_k|UMODE_m|UMODE_n|UMODE_s|\
                     UMODE_w|UMODE_y|UMODE_F|UMODE_K|UMODE_O)
 
 /* modes users can set themselves */
-#define USER_UMODES (UMODE_i|UMODE_k|UMODE_w|UMODE_s|UMODE_R|UMODE_C)
+#define USER_UMODES (UMODE_i|UMODE_k|UMODE_w|UMODE_s|UMODE_R|UMODE_C|UMODE_H)
 
 /* modes only opers can have */
 #define OPER_UMODES (UMODE_a|UMODE_b|UMODE_c|UMODE_d|UMODE_e|UMODE_f|UMODE_g|\
@@ -377,6 +379,7 @@ typedef struct SServicesTag ServicesTag;
 #define IsUmodeS(x)		((x)->umode & UMODE_S)
 #define	IsUmodes(x)		((x)->umode & UMODE_s)
 #define	IsUmodeI(x)		((x)->umode & UMODE_I)
+#define	IsUmodeH(x)		((x)->umode & UMODE_H)
 #define IsNoNonReg(x)           ((x)->umode & UMODE_R)
 #define IsWSquelch(x)           ((x)->umode & UMODE_x)
 #define IsSSquelch(x)           ((x)->umode & UMODE_X)
@@ -598,6 +601,10 @@ typedef struct Whowas
     char        name[NICKLEN + 1];
     char        username[USERLEN + 1];
     char        hostname[HOSTLEN + 1];
+#ifdef USER_HOSTMASKING
+    char        mhostname[HOSTLEN + 1];
+    char        hostip[HOSTIPLEN + 1];
+#endif
     char       *servername;
     char        realname[REALLEN + 1];
     time_t      logoff;
@@ -837,6 +844,9 @@ struct User
     int         joined;        /* number of channels joined */
     char        username[USERLEN + 1];
     char        host[HOSTLEN + 1];
+#ifdef USER_HOSTMASKING
+    char        mhost[HOSTLEN + 1];
+#endif
     char       *server;        /* pointer to scached server name */
     unsigned int servicetype;  /* set by SVSMODE +T */
     unsigned long servicestamp; /* set by SVSMODE +d */
@@ -1477,6 +1487,7 @@ typedef struct SearchOptions
     unsigned show_chan:1;
     unsigned search_chan:1;
     unsigned ip_show:1;
+    unsigned realhost_show:1;
     unsigned client_type_plus:1;
 } SOpts;
 

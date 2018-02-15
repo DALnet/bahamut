@@ -180,7 +180,11 @@ show_opers(aClient *cptr, char *name)
         {
         sendto_one(cptr, ":%s %d %s :%s (%s@%s) Idle: %ld",
                me.name, RPL_STATSDEBUG, name, cptr2->name,
-               cptr2->user->username, cptr2->user->host,
+               cptr2->user->username,
+#ifdef USER_HOSTMASKING
+               IsUmodeH(cptr2)?cptr2->user->mhost:
+#endif
+               cptr2->user->host,
                (long)(timeofday - cptr2->user->last));
         j++;
         }
@@ -536,7 +540,7 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
             sincetime = (acptr->since > timeofday) ? 0 : 
                                 timeofday - acptr->since;
             sendto_one(sptr, Lformat, me.name, RPL_STATSLINKINFO, parv[0],
-                        get_client_name(acptr, TRUE),
+                        get_client_name(acptr, (IsUmodeH(acptr) && !IsAnOper(sptr))?HIDEME:TRUE),
                         (int) SBufLength(&acptr->sendQ),
                         (int) acptr->sendM, (int) acptr->sendK,
                         (int) acptr->receiveM, (int) acptr->receiveK,
