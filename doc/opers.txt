@@ -35,6 +35,7 @@ Usermodes: (* designates that the umode is oper only)
  *+F        -  Can bypass the ircd's recvq throttling
  *+K        -  Can see U:lined kill messages
  *+O        -  Is a local IRC Operator.
+  +S        -  Is connected using a secure connection (SSL)
 
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
@@ -141,6 +142,7 @@ COMMAND         - USAGE and DESCRIPTION
                     SQLINES   - Clears sqlines
                     SGLINES   - Clears sglines
                     TSQGLINES - Clears temporary nick/channel/gcos blocks
+                    SSL       - Re-reads the server SSL certificate files
 
   RESTART       - RESTART
                   Restarts the IRC server.
