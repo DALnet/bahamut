@@ -611,12 +611,21 @@ void get_paths(char *argv)
 static int bad_command()
 {
     printf("Usage: ircd ");
+    printf("[-c] ");
 #ifdef CMDLINE_CONFIG
     printf("[-f configfile] ");
 #endif
-    printf("[-t] [-v]\n");
+    printf("[-t] [-v]");
+#ifdef DEBUGMODE
+    printf(" [-x]");
+#endif
+    printf("\n");
+    printf("-c check ircd config file for errors and quit\n");
     printf("-t will cause ircd not to fork (mostly for debugging)\n");
     printf("-v will cause ircd to print its version and quit\n");
+#ifdef DEBUGMODE
+    printf("-x will cause ircd to start and run in debug mode\n");
+#endif
     printf("Server Not Started\n");
     return (-1);
 }
@@ -739,6 +748,40 @@ main(int argc, char *argv[])
                 
         switch (flag) 
         {
+        case '?':
+            bad_command();
+            exit(0);
+        case 'c':
+            get_paths(myargv[0]);
+            if (chdir(dpath))
+            {
+                 (void) printf("\n");
+                 (void) printf("Error changing to ircd config file location\n");
+                 (void) printf("Server Not Started\n");
+                 (void) printf("Exiting\n");
+                 exit(-1);
+            }
+
+            (void) printf("Checking ircd config file for errors\n");
+            if (initconf(configfile) == -1)
+            {
+                 (void) printf("Server Not Started\n");
+                 (void) printf("Exiting\n");
+                 exit (-1);
+            }
+            conferr = finishconf();
+            if (conferr)
+            {
+                 (void) printf("ERROR: %s\n", conferr);
+                 (void) printf("Server Not Started\n");
+                 (void) printf("Exiting\n");
+                 exit(-1);
+            }
+
+            (void) printf("No errors found\n");
+            (void) printf("Server Not Started\n");
+            (void) printf("Exiting\n");
+
 #ifdef CMDLINE_CONFIG
         case 'f':
             (void) setuid((uid_t) uid);
