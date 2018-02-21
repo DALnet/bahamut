@@ -1,7 +1,7 @@
 The following outlines the features and commands
 that Bahamut has for operators of the server.
-- 11/13/02 - srd (srd@dal.net)
-- 10/02/04 - Quension (quension@dal.net)
+- 13-Nov-2002 - Holbrook (holbrook@dal.net)
+- 02-Oct-2004 - Quension (quension@dal.net)
 
 Based upon opers.txt for ircd-hybrid by:
 ThemBones (kraemer@u.washington.edu)
@@ -127,9 +127,23 @@ COMMAND         - USAGE and DESCRIPTION
                   Opers can see unregistered connections on a server
                   with TRACE as well as connection class counts.
 
-  REHASH        - REHASH [option]
-                  When no [option] is given, ircd will re-read the
-                  ircd.conf file.
+  REHASH        - REHASH [server] [option]
+                  When no [server] and [option] is given, the server
+                  you are connected to will re-read the ircd.conf
+                  file.
+
+                  When [server] is given and no [option], the server
+                  [server] will re-read the ircd.conf file.
+
+                  When [option] without [server] is given, the server
+                  you are connected to will perform the [option]
+                  specified. When [server] and [option] is given, the
+                  server [server] will perform the [option] specified.
+
+                  Note: When using REHASH with [server], the server
+                  you are on, the target [server] and all hubs
+                  in-between must be running bahamut version 2.0.8
+                  and above.
 
                   [option] can be one of the following:
                     DNS       - Re-read the /etc/resolv.conf file

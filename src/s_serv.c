@@ -83,6 +83,8 @@ void send_fake_users(aClient *);
 void send_fake_lusers(aClient *);
 void fakelusers_sendlock(aClient *);
 
+int local_rehash(aClient *, aClient *, char *, char *);
+
 /*
  * m_functions execute protocol messages on this server: *
  * 
@@ -1688,112 +1690,185 @@ m_set(aClient *cptr, aClient *sptr, int parc, char *parv[])
     return 0;
 }
 
-/* m_rehash */
-int 
+/* local_rehash
+ * Takes over m_rehash() once the targeted server is reached, whether
+ * local or remote rehash is being performed.
+ * - Holbrook
+ */
+int
+local_rehash(aClient *cptr, aClient *sptr, char *sender, char *option)
+{
+	if (mycmp(option, "DNS") == 0)
+	{
+		flush_cache();		/* Flush the DNS cache */
+		res_init();			/* Re-Read /etc/resolv.conf file */
+		sendto_one(sptr, ":%s NOTICE %s :Rehashing DNS", me.name, sender);
+		sendto_ops("%s is rehashing DNS while whistling innocently", sender);
+		return 0;
+	}
+	else if (mycmp(option, "TKLINES") == 0)
+	{
+		remove_userbans_match_flags(UBAN_LOCAL|UBAN_TEMPORARY, 0);
+		sendto_one(sptr, ":%s NOTICE %s :Clearing temp klines", me.name, sender);
+		sendto_ops("%s is clearing temp klines while whistling innocently", sender);
+		return 0;
+	}
+	else if (mycmp(option, "GC") == 0)
+	{
+		block_garbage_collect();
+		sendto_one(sptr, ":%s NOTICE %s :Garbage collecting", me.name, sender);
+		sendto_ops("%s is garbage collecting while whistling innocently", sender);
+		return 0;
+	}
+	else if (mycmp(option, "MOTD") == 0)
+	{
+		read_motd(MOTD);
+		if (confopts & FLAGS_SMOTD)
+			read_shortmotd(SHORTMOTD);
+		sendto_one(sptr, ":%s NOTICE %s :Re-reading MOTD file", me.name, sender);
+		sendto_ops("%s is forcing re-reading of MOTD file", sender);
+		return 0;
+	}
+	else if (mycmp(option, "AKILLS") == 0)
+	{
+		remove_userbans_match_flags(UBAN_NETWORK, 0);
+		sendto_one(sptr, ":%s NOTICE %s :Rehashing akills", me.name, sender);
+		sendto_ops("%s is rehashing akills", sender);
+		return 0;
+	}
+	else if (mycmp(option, "THROTTLES") == 0)
+	{
+		throttle_rehash();
+		sendto_one(sptr, ":%s NOTICE %s :Rehashing throttles", me.name, sender);
+		sendto_ops("%s is rehashing throttles", sender);
+		return 0;
+	}
+	else if (mycmp(option, "SQLINES") == 0)
+	{
+		remove_simbans_match_flags(SBAN_NICK|SBAN_NETWORK, 0);
+		remove_simbans_match_flags(SBAN_CHAN|SBAN_NETWORK, 0);
+		sendto_one(sptr, ":%s NOTICE %s :Rehashing sqlines", me.name, sender);
+		sendto_ops("%s is rehashing sqlines", sender);
+		return 0;
+	}
+	else if (mycmp(option, "SGLINES") == 0)
+	{
+		remove_simbans_match_flags(SBAN_GCOS|SBAN_NETWORK, 0);
+		sendto_one(sptr, ":%s NOTICE %s :Rehashing sqlines", me.name, sender);
+		sendto_ops("%s is rehashing sglines", sender);
+		return 0;
+	}
+	else if (mycmp(option, "TSQGLINES") == 0)
+	{
+		remove_simbans_match_flags(SBAN_GCOS|SBAN_TEMPORARY, 0);
+		remove_simbans_match_flags(SBAN_NICK|SBAN_TEMPORARY, 0);
+		remove_simbans_match_flags(SBAN_CHAN|SBAN_TEMPORARY, 0);
+		sendto_one(sptr, ":%s NOTICE %s :Rehashing temporary sqlines/sglines", me.name, sender);
+		sendto_ops("%s is rehashing temporary sqlines/sglines", sender);
+		return 0;
+	}
+#ifdef USE_SSL
+	else if (mycmp(option, "SSL") == 0)
+	{
+		ssl_rehash();
+		sendto_one(sptr, ":%s NOTICE %s :Rehashing ssl", me.name, sender);
+		sendto_ops("%s is rehashing ssl", sender);
+		return 0;
+	}
+#endif
+	else if (mycmp(option, "CONF") == 0)
+	{
+		if (!MyClient(sptr))
+			sendto_one(sptr, ":%s NOTICE %s :Rehashing server config file", me.name, sender);
+		else
+			sendto_one(sptr, rpl_str(RPL_REHASHING), me.name, sender, configfile);
+
+		sendto_ops("%s is rehashing Server config file while whistline innocently", sender);
+#ifdef USE_SYSLOG
+		syslog(LOG_INFO, "REHASH from %s\n", get_client_name(sptr, FALSE));
+#endif
+		return rehash(cptr, sptr, 0);
+	}
+	else
+	{
+		sendto_one(sptr, ":%s NOTICE %s :Invalid rehash option (%s) given. Rehash aborted.", me.name, sender, option);
+		return -1;
+	}
+
+	return 0;				/* Shouldn't ever get here either! */
+}
+
+/* m_rehash
+ *  parv[0] = sender prefix
+ *  parv[1] = servername or rehash option if no parv[2]
+ *  parv[2] = rehash option
+ *
+ *  Changed m_rehash to handle determination of local vs remote
+ *  rehash. local_rehash() takes over the old m_rehash() stuff.
+ *  - Holbrook
+ */
+int
 m_rehash(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
-    if (!OPCanRehash(sptr)) 
-    {
-        sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name, parv[0]);
-        return 0;
-    }
-        
-    if (parc > 1) 
-    {
-        if (mycmp(parv[1], "DNS") == 0) 
-        {
-            sendto_one(sptr, rpl_str(RPL_REHASHING), me.name, parv[0], "DNS");
-            flush_cache();              /* flush the dns cache */
-            res_init();         /* re-read /etc/resolv.conf */
-            sendto_ops("%s is rehashing DNS while whistling innocently",
-                       parv[0]);
-            return 0;
-        }
-        else if (mycmp(parv[1], "TKLINES") == 0)
-        {
-            sendto_one(sptr, rpl_str(RPL_REHASHING), me.name, parv[0],
-                       "temp klines");
-            remove_userbans_match_flags(UBAN_LOCAL|UBAN_TEMPORARY, 0);
-            sendto_ops("%s is clearing temp klines while whistling innocently",
-                       parv[0]);
-            return 0;
-        }
-        else if (mycmp(parv[1], "GC") == 0) 
-        {
-            sendto_one(sptr, rpl_str(RPL_REHASHING), me.name, parv[0],
-                       "garbage collecting");
-            block_garbage_collect();
-            sendto_ops("%s is garbage collecting while whistling innocently",
-                       parv[0]);
-            return 0;
-        }
-        else if (mycmp(parv[1], "MOTD") == 0) 
-        {
-            sendto_ops("%s is forcing re-reading of MOTD file", parv[0]);
-            read_motd(MOTD);
-        if(confopts & FLAGS_SMOTD)
-                read_shortmotd(SHORTMOTD);
-            return (0);
-        }
-        else if(mycmp(parv[1], "AKILLS") == 0) 
-        {
-            sendto_one(sptr, rpl_str(RPL_REHASHING), me.name, parv[0],
-                       "akills");
-            remove_userbans_match_flags(UBAN_NETWORK, 0);
-            sendto_ops("%s is rehashing akills", parv[0]);
-            return 0;
-        }
-        else if(mycmp(parv[1], "THROTTLES") == 0) {
-            sendto_one(sptr, rpl_str(RPL_REHASHING), me.name, parv[0],
-                 "throttles");
-            throttle_rehash();
-            sendto_ops("%s is rehashing throttles", parv[0]);
-            return 0;
-        }
-        else if(mycmp(parv[1], "SQLINES") == 0) {
-            sendto_one(sptr, rpl_str(RPL_REHASHING), me.name, parv[0],
-                 "sqlines");
-            sendto_ops("%s is rehashing sqlines", parv[0]);
-            remove_simbans_match_flags(SBAN_NICK|SBAN_NETWORK, 0);
-            remove_simbans_match_flags(SBAN_CHAN|SBAN_NETWORK, 0);
-            return 0;
-        }
-        else if(mycmp(parv[1], "SGLINES") == 0) {
-            sendto_one(sptr, rpl_str(RPL_REHASHING), me.name, parv[0],
-                 "sglines");
-            sendto_ops("%s is rehashing sglines", parv[0]);
-            remove_simbans_match_flags(SBAN_GCOS|SBAN_NETWORK, 0);
-            return 0;
-        }
-        else if(mycmp(parv[1], "TSQGLINES") == 0) {
-            sendto_one(sptr, rpl_str(RPL_REHASHING), me.name, parv[0],
-                 "tsqglines");
-            sendto_ops("%s is rehashing temporary sqlines/glines", parv[0]);
-            remove_simbans_match_flags(SBAN_GCOS|SBAN_TEMPORARY, 0);
-            remove_simbans_match_flags(SBAN_NICK|SBAN_TEMPORARY, 0);
-            remove_simbans_match_flags(SBAN_CHAN|SBAN_TEMPORARY, 0);
-            return 0;
-        }
-#ifdef USE_SSL
-        else if(mycmp(parv[1], "SSL") == 0) {
-            sendto_one(sptr, rpl_str(RPL_REHASHING), me.name, parv[0],
-                 "ssl");
-            sendto_ops("%s is rehashing ssl", parv[0]);
-            ssl_rehash();
-        }
-#endif
-    }
-    else 
-    {
-        sendto_one(sptr, rpl_str(RPL_REHASHING), me.name, parv[0], configfile);
-        sendto_ops("%s is rehashing Server config file while whistling "
-                   "innocently", parv[0]);
-# ifdef USE_SYSLOG
-        syslog(LOG_INFO, "REHASH From %s\n", get_client_name(sptr, FALSE));
-# endif
-        return rehash(cptr, sptr, 
-                      (parc > 1) ? ((*parv[1] == 'q') ? 2 : 0) : 0);
-    }
+	char *option = "CONF";
+	
+	if (MyClient(sptr))
+	{
+		if (!OPCanRehash(sptr))
+		{
+			sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name, parv[0]);
+			return -1;
+		}
+		
+		if (parc > 3)
+		{
+			sendto_one(sptr, ":%s NOTICE %s :Too many parameters given. Rehash aborted.", me.name, parv[0]);
+			return -1;
+		}
+
+		else if (parc > 2)
+		{
+			if (hunt_server(cptr, sptr, ":%s REHASH %s :%s", 1, parc, parv) != HUNTED_ISME)
+				return 0;
+			else
+				option = parv[2];
+		}
+
+		else if (parc > 1)
+		{
+			if (strchr(parv[1], '.'))
+			{
+				if (hunt_server(cptr, sptr, ":%s REHASH %s :CONF", 1, parc, parv) != HUNTED_ISME)
+					return 0;
+			}
+			else
+				option = parv[1];
+		}
+
+		local_rehash(cptr, sptr, parv[0], option);
+		return 0;
+	}
+	else
+	{
+		if (!IsPrivileged(sptr))
+		{
+			sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name, parv[0]);
+			return -1;
+		}
+
+		if (hunt_server(cptr, sptr, ":%s REHASH %s %s", 1, parc, parv) != HUNTED_ISME)
+			return 0;
+
+		if (!(confopts & FLAGS_REMREHOK))
+		{
+			sendto_ops("%s attempted to rehash me.", parv[0]);
+			sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name, parv[0]);
+			return -1;
+		}
+
+		local_rehash(cptr, sptr, parv[0], parv[2]);		/* By now, we should know this is meant for us. */
+	}
+
     return 0;                   /* shouldn't ever get here */
 }
 

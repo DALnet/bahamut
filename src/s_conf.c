@@ -1137,6 +1137,11 @@ confadd_options(cVar *vars[], int lnum)
             tmp->type = NULL;
             tswarndelta = atoi(tmp->value);
         }
+	else if(tmp->type && (tmp->type->flag & OPTF_REMREHOK))
+	{
+	    tmp->type = NULL;
+	    new_confopts |= FLAGS_REMREHOK;
+	}
     }
     return lnum;
 }
