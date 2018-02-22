@@ -134,7 +134,7 @@ typedef struct SServicesTag ServicesTag;
 #define	KEYLEN		    23
 #define	BUFSIZE		    512	/* WARNING: *DONT* CHANGE THIS!!!! */
 #define	MAXRECIPIENTS       20
-#define	MAXBANS	 	    500
+#define	MAXBANS	 	    200
 #define MAXINVITELIST       100
 #define MAXEXEMPTLIST       100
 
