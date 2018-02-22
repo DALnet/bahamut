@@ -236,9 +236,7 @@ static void create_prime()
 
 int dh_init()
 {
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
     ERR_load_crypto_strings();
-#endif
 
     create_prime();
     if(init_random() == -1)
@@ -284,18 +282,8 @@ void *dh_start_session()
     memset(si, 0, sizeof(struct session_info));
 
     si->dh = DH_new();
-	if(si->dh == NULL)
-		return NULL;
-
-	BIGNUM *dhp_bn, *dhg_bn;
-	dhp_bn = BN_dup(ircd_prime);
-	dhg_bn = BN_dup(ircd_generator);
-	if(dhp_bn == NULL || dhg_bn == NULL || !DH_set0_pqg(si->dh, dhp_bn, NULL, dhg_bn)) {
-		DH_free(si->dh);
-		BN_free(dhp_bn);
-		BN_free(dhg_bn);
-		return NULL;
-	}
+    si->dh->p = BN_dup(ircd_prime);
+    si->dh->g = BN_dup(ircd_generator);
 
     if(!DH_generate_key(si->dh))
     {
@@ -332,17 +320,11 @@ char *dh_get_s_public(char *buf, size_t maxlen, void *session)
     struct session_info *si = (struct session_info *) session;
     char *tmp;
 
-    if(!si || !si->dh)
-		return NULL;
+    if(!si || !si->dh || !si->dh->pub_key)
+        return NULL;   
 
-	const BIGNUM *pub_key;
-	const BIGNUM *priv_key;
-	DH_get0_key(si->dh, &pub_key, &priv_key);
-	if(pub_key == NULL || priv_key == NULL)
-		return NULL;
-
-	tmp = BN_bn2hex(pub_key);
-    if(!tmp)
+    tmp = BN_bn2hex(si->dh->pub_key);
+    if(!tmp) 
         return NULL;
 
     if(strlen(tmp) + 1 > maxlen)
@@ -378,3 +360,4 @@ memcount_dh(MCdh *mc)
 
     return 0;
 }
+
