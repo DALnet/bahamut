@@ -1182,13 +1182,13 @@ m_admin(aClient *cptr, aClient *sptr, int parc, char *parv[])
                            sptr->name, sptr->user->username, sptr->user->host,
                            sptr->user->server);
     
-        sendto_one(sptr, rpl_str(RPL_ADMINME),
+    sendto_one(sptr, rpl_str(RPL_ADMINME),
                    me.name, parv[0], me.name);
-        sendto_one(sptr, rpl_str(RPL_ADMINLOC1),
+    sendto_one(sptr, rpl_str(RPL_ADMINLOC1),
                    me.name, parv[0], MeLine->admin[0] ? MeLine->admin[0] : "");
-        sendto_one(sptr, rpl_str(RPL_ADMINLOC2),
+    sendto_one(sptr, rpl_str(RPL_ADMINLOC2),
                    me.name, parv[0], MeLine->admin[1] ? MeLine->admin[1] : "");
-        sendto_one(sptr, rpl_str(RPL_ADMINEMAIL),
+    sendto_one(sptr, rpl_str(RPL_ADMINEMAIL),
                    me.name, parv[0], MeLine->admin[2] ? MeLine->admin[2] : "");
     return 0;
 }

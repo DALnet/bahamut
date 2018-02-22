@@ -150,7 +150,7 @@ myctime(time_t value)
 inline char *
 get_listener_name(aListener *lptr)
 {
-   static char nbuf[HOSTLEN * 2 + USERLEN + 5];
+   static char nbuf[HOSTLEN+2+HOSTLEN+1+5+2+HOSTLEN+1+1];
 
    ircsprintf(nbuf, "%s[@%s.%d][%s]", me.name, BadPtr(lptr->vhost_string) ?
               "0.0.0.0" : lptr->vhost_string, lptr->port, 
