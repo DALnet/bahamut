@@ -2099,7 +2099,16 @@ m_whois(aClient *cptr, aClient *sptr, int parc, char *parv[])
                 !IsUmodeI(acptr) || (parc > 2) || IsAnOper(sptr)))
             sendto_one(sptr, rpl_str(RPL_WHOISIDLE), me.name, parv[0], name,
                        timeofday - user->last, acptr->firsttime);
-        
+
+
+		if (sptr->user && IsAdmin(acptr) && SendSpyNotice(acptr))
+		{
+			sendto_one(acptr, ":%s NOTICE %s "
+				":*** Spy -- %s!%s@%s is doing a /whois on you.",
+				me.name, name,
+				sptr->name, sptr->user->username, sptr->user->host);
+		}
+
         continue;
     }
     sendto_one(sptr, rpl_str(RPL_ENDOFWHOIS), me.name, parv[0], parv[1]);
