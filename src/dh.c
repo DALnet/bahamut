@@ -34,6 +34,7 @@
 #include <openssl/err.h>
 #include <openssl/bn.h>
 #include <openssl/dh.h>
+#include "libcrypto-compat.h"
 
 #include "memcount.h"
 
