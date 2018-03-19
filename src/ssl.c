@@ -50,7 +50,11 @@ int ssl_init()
 
     SSL_load_error_strings();
     SSLeay_add_ssl_algorithms();
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
     ircdssl_ctx = SSL_CTX_new(SSLv23_server_method());
+#else
+    ircdssl_ctx = SSL_CTX_new(TLS_server_method());
+#endif
 
     if(!ircdssl_ctx)
     {
@@ -112,7 +116,11 @@ int ssl_rehash()
     if(ircdssl_ctx)
 	SSL_CTX_free(ircdssl_ctx);
 
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
     if(!(ircdssl_ctx = SSL_CTX_new(SSLv23_server_method())))
+#else
+    if(!(ircdssl_ctx = SSL_CTX_new(TLS_server_method())))
+#endif
     {
 	disable_ssl(1);
 

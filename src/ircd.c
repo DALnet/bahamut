@@ -47,6 +47,7 @@
 #include "hooks.h"
 #include "fds.h"
 #include "memcount.h"
+#include "libcrypto-compat.h"
 
 aMotd      *motd;
 aMotd      *helpfile;           /* misnomer, aMotd could be generalized */

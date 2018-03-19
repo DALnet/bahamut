@@ -56,6 +56,7 @@
 #include <openssl/pem.h>
 #include <openssl/ssl.h>
 #include <openssl/err.h>
+#include "libcrypto-compat.h"
 #endif
 
 #define REPORT_DO_DNS_	   ":%s NOTICE AUTH :*** Looking up your hostname..."

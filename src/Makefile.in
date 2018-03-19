@@ -18,8 +18,8 @@ RES_SRC =
 
 SOURCES = blalloc.c bsd.c channel.c clientlist.c clones.c confparse.c \
           fdlist.c fds.c hash.c hide.c inet_addr.c ircd.c \
-          klines.c list.c m_nick.c m_rwho.c m_server.c m_services.c m_stats.c \
-          m_who.c match.c memcount.c modules.c packet.c parse.c pcre.c \
+          klines.c libcrypto-compat.c list.c m_nick.c m_rwho.c m_server.c m_services.c \
+          m_stats.c m_who.c match.c memcount.c modules.c packet.c parse.c pcre.c \
           probability.c res.c s_auth.c s_bsd.c s_conf.c s_debug.c s_err.c \
           s_misc.c s_numeric.c s_serv.c s_user.c sbuf.c scache.c send.c \
           struct.c support.c throttle.c userban.c whowas.c zlink.c ssl.c \
@@ -138,6 +138,8 @@ klines.o: klines.c ../include/struct.h ../include/config.h \
   ../include/sbuf.h ../include/common.h ../include/h.h ../include/send.h \
   ../include/fdlist.h ../include/ircsprintf.h ../include/find.h \
   ../include/userban.h ../include/numeric.h ../include/memcount.h
+libcrypto-compat.o: libcrypto-compat.c ../include/libcrypto-compat.h \
+  ../include/struct.h
 list.o: list.c ../include/struct.h ../include/config.h ../include/setup.h \
   ../include/defs.h ../include/sys.h ../include/hash.h ../include/sbuf.h \
   ../include/common.h ../include/h.h ../include/send.h \
