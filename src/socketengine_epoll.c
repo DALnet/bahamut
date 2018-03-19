@@ -187,3 +187,7 @@ int engine_read_message(time_t delay)
     return 0;
 }
 
+char *engine_name()
+{
+    return "epoll";
+}
