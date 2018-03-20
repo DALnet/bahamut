@@ -43,7 +43,7 @@ before_script:
   - sudo apt-get install autoconf -qq
 
 script:
-  - autoconf
+  - autoreconf -vif
   - ./configure
   - make
   - make test
