@@ -2,6 +2,7 @@
 # Normal rules
 #
 .*
+!.travis.yml
 *.o
 *.o.*
 *.a
