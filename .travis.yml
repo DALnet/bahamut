@@ -31,10 +31,12 @@ os:
 addons:
    apt:
       packages:
+         - autoconf
          - check
          - libssl-dev
 
 script:
+  - autoconf
   - ./configure
   - make
   - make test
