@@ -21,6 +21,9 @@
 
  language: c
 
+dist: trusty
+sudo: required
+
  compiler:
    - gcc
    - clang
@@ -34,7 +37,7 @@ addons:
          - autoconf
          - check
          - libssl-dev
-         
+
 before_script:
   - autoconf
 
