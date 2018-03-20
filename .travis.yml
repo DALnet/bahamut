@@ -24,28 +24,28 @@
  language: c
 
  compiler:
-         - gcc
-         - clang
+   - gcc
+   - clang
 
 os:
-        - linux
+   - linux
 
 addons:
-        apt:
-                packages:
-                        - check
-                        - libssl-dev
+   apt:
+      packages:
+         - check
+         - libssl-dev
 
 script:
-        - ./configure
-        - make
-        - make test
+  - ./configure
+  - make
+  - make test
 
 notifications:
-        irc:
-                channels:
-                        - "irc.dal.net:#coders"
-                template:
-                        - "bahamut-build #%{build_number} (%{commit} by %{author}): %{message}"
-                        - "See detail at %{build_url}"
-         email: false
+   irc:
+      channels:
+         - "irc.dal.net:#coders"
+      template:
+         - "bahamut-build #%{build_number} (%{commit} by %{author}): %{message}"
+         - "See detail at %{build_url}"
+   email: false
