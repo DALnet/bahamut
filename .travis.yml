@@ -46,10 +46,12 @@ script:
   - ./configure
   - make
 
+install: true
+
 notifications:
    irc:
       channels:
-         - "irc.dal.net:#coders"
+         - "irc.dal.net#coders"
       template:
          - "bahamut-build #%{build_number} (%{commit} by %{author}): %{message}"
          - "See detail at %{build_url}"
