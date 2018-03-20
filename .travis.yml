@@ -41,6 +41,7 @@ addons:
          - libssl-dev
 
 script:
+  - automake --add-missing
   - autoreconf -vif
   - ./configure
   - make
