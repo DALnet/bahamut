@@ -34,9 +34,11 @@ addons:
          - autoconf
          - check
          - libssl-dev
+         
+before_script:
+  - autoconf
 
 script:
-  - autoconf
   - ./configure
   - make
   - make test
