@@ -19,12 +19,12 @@
  #   along with this program; if not, write to the Free Software
  #   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
- language: c
+language: c
 
 dist: trusty
 sudo: required
 
- compiler:
+compiler:
    - gcc
    - clang
 
@@ -39,9 +39,11 @@ addons:
          - libssl-dev
 
 before_script:
-  - autoconf
+  - sudo apt-get update -qq
+  - sudo apt-get install autoconf -qq
 
 script:
+  - autoconf
   - ./configure
   - make
   - make test
