@@ -45,7 +45,6 @@ script:
   - autoreconf -vif
   - ./configure
   - make
-  - make test
 
 notifications:
    irc:
