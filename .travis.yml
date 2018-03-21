@@ -41,8 +41,9 @@ addons:
          - libssl-dev
          - shtool
 
+before_script: echo "automake --add-missing -f; autoreconf -vfi; exit 0" > autogen.sh && chmod +x autogen.sh
 script:
-  - autoreconf -vif
+  - ./autogen.sh
   - ./configure
   - make
 
