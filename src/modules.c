@@ -927,7 +927,12 @@ call_hooks(enum c_hooktype hooktype, ...)
                 {
                     int (*rfunc) (char *, char **, int) = 
                                     ((aHook *)lp->value.cp)->funcptr;
-                    if((ret = (*rfunc)(orghost, &newhost, type)) == FLUSH_BUFFER)
+                    /* Possible results by the module:
+                       1 = Success, the host has been masked (so don't try other modules).
+                       0 = Failure, the host wasn't masked but try other modules (maybe they will mask the host).
+                       -2 (FLUSH_BUFFER) = Failure, the host wasn't masked but *don't* try other modules.
+                     */
+                    if((ret = (*rfunc)(orghost, &newhost, type)) != 0)
                         break;
                 }
                 break;
