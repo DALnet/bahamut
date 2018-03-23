@@ -76,6 +76,7 @@ char *infotext[] =
          "Quension            Trevor Talbot       quension@dal.net",
 	 "Kobi_S              Kobi Shmueli        kobi@dal.net",
 	 "RuneB               Ned T. Crigler      runeb@dal.net",
+	 "skill               Emilio A. Escobar   skill@dal.net",
 	 "",
 	 "The following people have contributed code or support",
 	 "to the bahamut team:",
