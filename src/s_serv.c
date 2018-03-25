@@ -2069,7 +2069,7 @@ m_trace(aClient *cptr, aClient *sptr, int parc, char *parv[])
                            *(acptr->serv->bynick) ? acptr->serv->bynick : "*", 
                            *(acptr->serv->byuser) ? acptr->serv->byuser : "*", 
                            *(acptr->serv->byhost) ? acptr->serv->byhost : 
-                           me.name);
+                           me.name, timeofday - acptr->lasttime);
                 break;
             case STAT_LOG:
                 sendto_one(sptr, rpl_str(RPL_TRACELOG), me.name,
