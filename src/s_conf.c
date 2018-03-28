@@ -627,8 +627,8 @@ attach_iline(aClient *cptr, aAllow *allow, char *uhost, int doid)
 static int oper_access[] =
 {
     ~0,            '*',
-    OFLAG_LOCAL,   'o',
     OFLAG_GLOBAL,  'O',
+    OFLAG_LOCAL,   'o',
     OFLAG_REHASH,  'r',
     OFLAG_DIE,     'D',
     OFLAG_RESTART, 'R',
@@ -2461,6 +2461,89 @@ static int lookup_confhost(aConnect *aconn)
     Debug((DEBUG_ERROR, "Host/server name error: (%s) (%s)",
 	   aconn->host, aconn->name));
     return -1;
+}
+
+/* oflagtotext()
+ * Return the oflags in human readable format.
+ * Oct06 -Kobi_S
+ */
+char *oflagtotext(int oflags)
+{
+    static char res[BUFSIZE + 1];
+    int *i, flag, len = 0;
+
+    for (i=oper_access; (flag = *i); i+=2)
+        if ((oflags & flag) == flag)
+        {
+            res[len++] = (char)(*(i+1));
+            oflags &= ~flag;
+        }
+
+    res[len++] = 0;
+
+    return res;
+}
+
+/* cflagtotext()
+ * Return the cflags in human readable format.
+ * Sep08 -Kobi_S
+ */
+char *cflagtotext(int cflags, int uflags)
+{
+    static char res[BUFSIZE + 1];
+    int *i, flag, len = 0;
+
+    for (i=server_info; (flag = *i); i+=2)
+        if ((cflags & flag) == flag)
+        {
+            res[len++] = (char)(*(i+1));
+            cflags &= ~flag;
+        }
+
+    if(!len)
+        res[len++] = '-';
+
+    if(uflags)
+    {
+        res[len++] = '/';
+
+        for (i=server_uflags; (flag = *i); i+=2)
+            if ((uflags & flag) == flag)
+            {
+                res[len++] = (char)(*(i+1));
+                uflags &= ~flag;
+            }
+    }
+
+    res[len++] = 0;
+
+    return res;
+}
+
+/* iflagtotext()
+ * Return the iflags in human readable format.
+ * Sep08 -Kobi_S
+ */
+char *iflagtotext(int iflags)
+{
+    static char res[BUFSIZE + 1];
+    int len = 0;
+
+    if(iflags & CONF_FLAGS_I_OPERPORT)
+        res[len++] = 'm';
+    if(iflags & CONF_FLAGS_NOTHROTTLE)
+        res[len++] = 'T';
+    if(iflags & CONF_FLAGS_FORCEFLOOD)
+        res[len++] = 'F';
+    if(iflags & CONF_FLAGS_SKIPCLONES)
+        res[len++] = 'C';
+
+    if(!len)
+        res[len++] = '-';
+
+    res[len++] = 0;
+
+    return res;
 }
 
 u_long
