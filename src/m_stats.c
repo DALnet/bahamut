@@ -49,6 +49,9 @@ extern aCache *cachetop;
 #ifdef DEBUGMODE
 extern void report_fds(aClient *);
 #endif
+extern char *oflagtotext(int oflags); /* For stats o */
+extern char *cflagtotext(int cflags, int uflags); /* For stats c */
+extern char *iflagtotext(int iflags); /* For stats i */
 
 /* internal function defines */
 
@@ -596,8 +599,8 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
                            sptr->name, "C", tmp->host, tmp->name, tmp->port,
                            tmp->class->name);
                     sendto_one(sptr, rpl_str(RPL_STATSNLINE), me.name,
-                           sptr->name, "N", tmp->host, tmp->name, tmp->flags,
-                           tmp->uflags, tmp->class->name);
+                           sptr->name, "N", tmp->host, tmp->name, cflagtotext(tmp->flags, tmp->uflags),
+                           tmp->class->name);
                 }
                 else
                 {
@@ -605,8 +608,8 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
                                sptr->name, "C", "*", tmp->name, tmp->port,
                                tmp->class->name);
                     sendto_one(sptr, rpl_str(RPL_STATSNLINE), me.name,
-                               sptr->name, "N", "*", tmp->name, tmp->flags,
-                               tmp->uflags, tmp->class->name);
+                               sptr->name, "N", "*", tmp->name, cflagtotext(tmp->flags, tmp->uflags),
+                               tmp->class->name);
                 }
             }
         }
@@ -722,7 +725,7 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
                     continue;
                 sendto_one(sptr, rpl_str(RPL_STATSILINE), me.name,
                            sptr->name, (tmp->legal == -1 ? "Ix" : "I"),
-                           tmp->ipmask, tmp->flags, tmp->hostmask, tmp->port,
+                           tmp->ipmask, iflagtotext(tmp->flags), tmp->hostmask, tmp->port,
                            tmp->class->name);
             }
             break;
@@ -787,7 +790,7 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
                     for(i = 0; tmp->hosts[i]; i++)
                         sendto_one(sptr, rpl_str(RPL_STATSOLINE), me.name,
                                 sptr->name, (tmp->legal == -1 ? "Ox" : "O"),
-                                tmp->hosts[i], tmp->nick, tmp->flags,
+                                tmp->hosts[i], tmp->nick, oflagtotext(tmp->flags),
                                 tmp->class->name);
             }
             else
@@ -797,7 +800,7 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
                     if (tmp->legal == -1)
                         continue;
                     sendto_one(sptr, rpl_str(RPL_STATSOLINE), me.name,
-                            sptr->name, "O", "*", tmp->nick, tmp->flags,
+                            sptr->name, "O", "*", tmp->nick, oflagtotext(tmp->flags),
                             tmp->class->name);
                 }
             }
