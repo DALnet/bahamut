@@ -928,12 +928,12 @@ call_hooks(enum c_hooktype hooktype, ...)
                     int (*rfunc) (char *, char **, int) = 
                                     ((aHook *)lp->value.cp)->funcptr;
                     /* Possible results by the module:
-                       1 = Success, the host has been masked (so don't try other modules).
-                       0 = Failure, the host wasn't masked but try other modules (maybe they will mask the host).
-                       -2 (FLUSH_BUFFER) = Failure, the host wasn't masked but *don't* try other modules.
+                       1 (UHM_SUCCESS)                      = Success, the host has been masked (so don't try other modules).
+                       0 (UHM_SOFT_FAILURE)                 = Failure, the host wasn't masked but try other modules (maybe they will mask the host).
+                       -2 (UHM_HARD_FAILURE / FLUSH_BUFFER) = Failure, the host wasn't masked but *don't* try other modules.
                      */
-                    if((ret = (*rfunc)(orghost, &newhost, type)) != 0)
-                        break;
+                    if((ret = (*rfunc)(orghost, &newhost, type)) != UHM_SOFT_FAILURE)
+                        break; /* We stop trying other modules if we get UHM_SUCCESS or UHM_HARD_FAILURE */
                 }
                 break;
             }

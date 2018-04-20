@@ -431,7 +431,7 @@ char *mask_host(char *orghost, int type)
 
     if(!type) type = uhm_type;
 
-    if (call_hooks(CHOOK_MASKHOST, orghost, &newhost, type) == 1) return newhost;
+    if (call_hooks(CHOOK_MASKHOST, orghost, &newhost, type) == UHM_SUCCESS) return newhost;
 
     return orghost; /* I guess the user won't be host-masked after all... :( */
 }

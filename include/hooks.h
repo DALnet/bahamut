@@ -92,3 +92,7 @@ extern void bircmodule_del_hook();
 extern int bircmodule_malloc(int);
 extern void bircmodule_free(void *);
 #endif
+
+#define UHM_SUCCESS      1
+#define UHM_SOFT_FAILURE 0
+#define UHM_HARD_FAILURE FLUSH_BUFFER
