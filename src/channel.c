@@ -32,6 +32,12 @@ int         server_was_split = YES;
 
 aChannel   *channel = NullChn;
 
+#ifdef USER_HOSTMASKING
+#define GET_USER_HOST IsUmodeH(cptr)?cptr->user->mhost:cptr->user->host
+#else
+#define GET_USER_HOST cptr->user->host
+#endif
+
 #ifdef INVITE_LISTS
 /* +I list functions */
 int       add_invite_id(aClient*, aChannel*, char*);
@@ -274,9 +280,9 @@ int add_exempt_id(aClient* cptr, aChannel* chptr, char* exempt_id)
     {
         exempt->who = (char *) MyMalloc(strlen(cptr->name) +
                                      strlen(cptr->user->username) +
-                                     strlen(cptr->user->host) + 3);
+                                     strlen(GET_USER_HOST) + 3);
         (void) ircsprintf(exempt->who, "%s!%s@%s",
-                          cptr->name, cptr->user->username, cptr->user->host);
+                          cptr->name, cptr->user->username, GET_USER_HOST);
     }
     else
     {
@@ -362,9 +368,9 @@ int add_invite_id(aClient* cptr, aChannel* chptr, char* invite_id)
     {
         invite->who = (char *) MyMalloc(strlen(cptr->name) +
                                      strlen(cptr->user->username) +
-                                     strlen(cptr->user->host) + 3);
+                                     strlen(GET_USER_HOST) + 3);
         (void) ircsprintf(invite->who, "%s!%s@%s",
-                          cptr->name, cptr->user->username, cptr->user->host);
+                          cptr->name, cptr->user->username, GET_USER_HOST);
     }
     else
     {
@@ -401,17 +407,27 @@ int del_invite_id(aChannel* chptr, char* invite_id)
 anInvite* is_invited(aClient* cptr, aChannel* chptr)
 {
     char         s[NICKLEN + USERLEN + HOSTLEN + 6];
+#ifdef USER_HOSTMASKING
+    char         s3[NICKLEN + USERLEN + HOSTLEN + 6];
+#endif
     char        *s2;
     anInvite*    invite;
 
     strcpy(s, make_nick_user_host(cptr->name, cptr->user->username,
                                   cptr->user->host));
+#ifdef USER_HOSTMASKING
+    strcpy(s3, make_nick_user_host(cptr->name, cptr->user->username,
+                                   cptr->user->mhost));
+#endif
     s2 = make_nick_user_host(cptr->name, cptr->user->username,
                              cptr->hostip);
 
     for (invite = chptr->invite_list; invite; invite = invite->next)
     {
         if (!match(invite->invstr, s) || !match(invite->invstr, s2) ||
+#ifdef USER_HOSTMASKING
+            !match(invite->invstr, s3) ||
+#endif
 	    client_matches_cidrstr(cptr, invite->invstr))
             break;
     }
@@ -458,9 +474,9 @@ static int add_banid(aClient *cptr, aChannel *chptr, char *banid)
     {
         ban->who = (char *) MyMalloc(strlen(cptr->name) +
                                      strlen(cptr->user->username) +
-                                     strlen(cptr->user->host) + 3);
+                                     strlen(GET_USER_HOST) + 3);
         (void) ircsprintf(ban->who, "%s!%s@%s",
-                          cptr->name, cptr->user->username, cptr->user->host);
+                          cptr->name, cptr->user->username, GET_USER_HOST);
     }
     else
     {
@@ -529,6 +545,9 @@ static int is_banned(aClient *cptr, aChannel *chptr, chanMember *cm)
     aBanExempt *exempt;
 #endif
     char        s[NICKLEN + USERLEN + HOSTLEN + 6];
+#ifdef USER_HOSTMASKING
+    char        s3[NICKLEN + USERLEN + HOSTLEN + 6];
+#endif
     char       *s2;
     
     if (!IsPerson(cptr))
@@ -545,12 +564,19 @@ static int is_banned(aClient *cptr, aChannel *chptr, chanMember *cm)
 
     strcpy(s, make_nick_user_host(cptr->name, cptr->user->username,
                                   cptr->user->host));
+#ifdef USER_HOSTMASKING
+    strcpy(s3, make_nick_user_host(cptr->name, cptr->user->username,
+                                   cptr->user->mhost));
+#endif
     s2 = make_nick_user_host(cptr->name, cptr->user->username,
                              cptr->hostip);
 
 #ifdef EXEMPT_LISTS
     for (exempt = chptr->banexempt_list; exempt; exempt = exempt->next)
         if (!match(exempt->banstr, s) || !match(exempt->banstr, s2) ||
+#ifdef USER_HOSTMASKING
+            !match(exempt->banstr, s3) ||
+#endif
 	    client_matches_cidrstr(cptr, exempt->banstr))
             return 0;
 #endif
@@ -558,6 +584,9 @@ static int is_banned(aClient *cptr, aChannel *chptr, chanMember *cm)
     for (ban = chptr->banlist; ban; ban = ban->next)
         if ((match(ban->banstr, s) == 0) ||
             (match(ban->banstr, s2) == 0) ||
+#ifdef USER_HOSTMASKING
+            (match(ban->banstr, s3) == 0) ||
+#endif
 	    client_matches_cidrstr(cptr, ban->banstr))
             break;
 
@@ -598,17 +627,27 @@ aBan *nick_is_banned(aChannel *chptr, char *nick, aClient *cptr)
     aBanExempt *exempt;
 #endif
     char *s, s2[NICKLEN+USERLEN+HOSTLEN+6];
+#ifdef USER_HOSTMASKING
+    char s3[NICKLEN+USERLEN+HOSTLEN+6];
+#endif
     
     if (!IsPerson(cptr)) return NULL;
     
     strcpy(s2, make_nick_user_host(nick, cptr->user->username,
                                    cptr->user->host));
+#ifdef USER_HOSTMASKING
+    strcpy(s3, make_nick_user_host(nick, cptr->user->username,
+                                   cptr->user->mhost));
+#endif
     s = make_nick_user_host(nick, cptr->user->username, cptr->hostip);
 
 #ifdef EXEMPT_LISTS
     for (exempt = chptr->banexempt_list; exempt; exempt = exempt->next)
         if (exempt->type == MTYP_FULL &&
             ((match(exempt->banstr, s2) == 0) ||
+#ifdef USER_HOSTMASKING
+             (match(exempt->banstr, s3) == 0) ||
+#endif
              (match(exempt->banstr, s) == 0) ||
 	     client_matches_cidrstr(cptr, exempt->banstr)))
             return NULL;
@@ -617,6 +656,9 @@ aBan *nick_is_banned(aChannel *chptr, char *nick, aClient *cptr)
     for (ban = chptr->banlist; ban; ban = ban->next)
         if (ban->type == MTYP_FULL &&        /* only check applicable bans */
             ((match(ban->banstr, s2) == 0) ||    /* check host before IP */
+#ifdef USER_HOSTMASKING
+             (match(ban->banstr, s3) == 0) ||
+#endif
              (match(ban->banstr, s) == 0) ||
 	     client_matches_cidrstr(cptr, ban->banstr)))
             break;
@@ -627,6 +669,9 @@ void remove_matching_bans(aChannel *chptr, aClient *cptr, aClient *from)
 {
     aBan *ban, *bnext;
     char targhost[NICKLEN+USERLEN+HOSTLEN+6];
+#ifdef USER_HOSTMASKING
+    char targmhost[NICKLEN+USERLEN+HOSTLEN+6];
+#endif
     char targip[NICKLEN+USERLEN+HOSTLEN+6];
     char *m;
     int count = 0, send = 0;
@@ -635,6 +680,10 @@ void remove_matching_bans(aChannel *chptr, aClient *cptr, aClient *from)
     
     strcpy(targhost, make_nick_user_host(cptr->name, cptr->user->username,
                                          cptr->user->host));
+#ifdef USER_HOSTMASKING
+    strcpy(targmhost, make_nick_user_host(cptr->name, cptr->user->username,
+                                          cptr->user->mhost));
+#endif
   strcpy(targip, make_nick_user_host(cptr->name, cptr->user->username,
                                      cptr->hostip));
   
@@ -650,6 +699,9 @@ void remove_matching_bans(aChannel *chptr, aClient *cptr, aClient *from)
   {
       bnext = ban->next;
       if((match(ban->banstr, targhost) == 0) ||
+#ifdef USER_HOSTMASKING
+         (match(ban->banstr, targmhost) == 0) ||
+#endif
          (match(ban->banstr, targip) == 0) ||
 	 client_matches_cidrstr(cptr, ban->banstr))
       {
@@ -713,6 +765,9 @@ void remove_matching_exempts(aChannel *chptr, aClient *cptr, aClient *from)
 {
     aBanExempt *ex, *enext;
     char targhost[NICKLEN+USERLEN+HOSTLEN+6];
+#ifdef USER_HOSTMASKING
+    char targmhost[NICKLEN+USERLEN+HOSTLEN+6];
+#endif
     char targip[NICKLEN+USERLEN+HOSTLEN+6];
     char *m;
     int count = 0, send = 0;
@@ -721,6 +776,10 @@ void remove_matching_exempts(aChannel *chptr, aClient *cptr, aClient *from)
 
     strcpy(targhost, make_nick_user_host(cptr->name, cptr->user->username,
                                          cptr->user->host));
+#ifdef USER_HOSTMASKING
+    strcpy(targmhost, make_nick_user_host(cptr->name, cptr->user->username,
+                                          cptr->user->mhost));
+#endif
     strcpy(targip, make_nick_user_host(cptr->name, cptr->user->username,
                                        cptr->hostip));
 
@@ -736,6 +795,9 @@ void remove_matching_exempts(aChannel *chptr, aClient *cptr, aClient *from)
     {
         enext = ex->next;
         if((match(ex->banstr, targhost) == 0) ||
+#ifdef USER_HOSTMASKING
+           (match(ex->banstr, targmhost) == 0) ||
+#endif
            (match(ex->banstr, targip) == 0) ||
 	   client_matches_cidrstr(cptr, ex->banstr))
         {
@@ -800,6 +862,9 @@ void remove_matching_invites(aChannel *chptr, aClient *cptr, aClient *from)
 {
     anInvite *inv, *inext;
     char targhost[NICKLEN+USERLEN+HOSTLEN+6];
+#ifdef USER_HOSTMASKING
+    char targmhost[NICKLEN+USERLEN+HOSTLEN+6];
+#endif
     char targip[NICKLEN+USERLEN+HOSTLEN+6];
     char *m;
     int count = 0, send = 0;
@@ -808,6 +873,10 @@ void remove_matching_invites(aChannel *chptr, aClient *cptr, aClient *from)
 
     strcpy(targhost, make_nick_user_host(cptr->name, cptr->user->username,
                                          cptr->user->host));
+#ifdef USER_HOSTMASKING
+    strcpy(targmhost, make_nick_user_host(cptr->name, cptr->user->username,
+                                          cptr->user->mhost));
+#endif
     strcpy(targip, make_nick_user_host(cptr->name, cptr->user->username,
                                        cptr->hostip));
 
@@ -823,6 +892,9 @@ void remove_matching_invites(aChannel *chptr, aClient *cptr, aClient *from)
     {
         inext = inv->next;
         if((match(inv->invstr, targhost) == 0) ||
+#ifdef USER_HOSTMASKING
+           (match(inv->invstr, targmhost) == 0) ||
+#endif
            (match(inv->invstr, targip) == 0))
         {
             if (strlen(parabuf) + strlen(inv->invstr) + 10 < (size_t) MODEBUFLEN)

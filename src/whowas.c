@@ -54,6 +54,10 @@ void add_history(aClient *cptr, int online)
     strncpyzt(new->name, cptr->name, NICKLEN + 1);
     strncpyzt(new->username, cptr->user->username, USERLEN + 1);
     strncpyzt(new->hostname, cptr->user->host, HOSTLEN + 1);
+#ifdef USER_HOSTMASKING
+    strncpyzt(new->mhostname, cptr->user->mhost, HOSTLEN + 1);
+    strncpyzt(new->hostip, cptr->hostip, HOSTLEN + 1);
+#endif
     strncpyzt(new->realname, cptr->info, REALLEN + 1);
     /*
      * Its not string copied, a pointer to the scache hash is copied
@@ -144,8 +148,18 @@ int m_whowas(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		sendto_one(sptr, rpl_str(RPL_WHOWASUSER),
 			   me.name, parv[0], temp->name,
 			   temp->username,
-			   temp->hostname,
+#ifdef USER_HOSTMASKING
+			   (temp->umode & UMODE_H)?temp->mhostname:
+#endif
+                                                                   temp->hostname,
 			   temp->realname);
+#ifdef USER_HOSTMASKING
+                if((temp->umode & UMODE_H) && IsAnOper(sptr))
+                {
+                    sendto_one(sptr, rpl_str(RPL_WHOISACTUALLY), me.name, sptr->name,
+                               temp->name, "*", temp->hostname, temp->hostip);
+                }
+#endif
 		if((temp->umode & UMODE_I) && !IsAnOper(sptr))
 		    sendto_one(sptr, rpl_str(RPL_WHOISSERVER),
 			       me.name, parv[0], temp->name,

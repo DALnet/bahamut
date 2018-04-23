@@ -64,6 +64,16 @@ enum c_hooktype {
                        *             struct simBan *ban)
                        * Returns void
                        */
+   CHOOK_WHOIS,       /* called from s_user.c when a user is
+                       * doing a /whois
+                       * Params: 2: (aClient *source, aClient *target)
+                       * Returns int
+                       */
+   CHOOK_MASKHOST,    /* called from s_user.c when in order to
+                       * mask a user host/IP
+                       * Params: 3: (char *orghost, char **newhost, int type)
+                       * Returns int
+                       */
    CHOOK_SIGNOFF,     /* called on client exit (exit_client)
                        * Params: 1: (aClient *)
                        * Returns void */
@@ -74,7 +84,7 @@ enum c_hooktype {
 extern int call_hooks(enum c_hooktype hooktype, ...);
 extern int init_modules();
 
-#define MODULE_INTERFACE_VERSION 1007 /* the interface version (hooks, modules.c commands, etc) */
+#define MODULE_INTERFACE_VERSION 1008 /* the interface version (hooks, modules.c commands, etc) */
 
 #ifdef BIRCMODULE
 extern void *bircmodule_add_hook(enum c_hooktype, void *, void *);
@@ -82,3 +92,7 @@ extern void bircmodule_del_hook();
 extern int bircmodule_malloc(int);
 extern void bircmodule_free(void *);
 #endif
+
+#define UHM_SUCCESS      1
+#define UHM_SOFT_FAILURE 0
+#define UHM_HARD_FAILURE FLUSH_BUFFER

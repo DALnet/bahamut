@@ -455,7 +455,11 @@ int hash_check_watch(aClient *cptr, int reply)
 	sendto_one(lp->value.cptr, rpl_str(reply), me.name,
 		   lp->value.cptr->name, cptr->name,
 		   (IsPerson(cptr)?cptr->user->username:"<N/A>"),
+#ifdef USER_HOSTMASKING
+		   (IsPerson(cptr)?IsUmodeH(cptr)?cptr->user->mhost:cptr->user->host:"<N/A>"),
+#else
 		   (IsPerson(cptr)?cptr->user->host:"<N/A>"),
+#endif
 		   anptr->lasttime, cptr->info);
     
     return 0;

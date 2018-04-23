@@ -34,7 +34,7 @@
 /* Internally defined stuffs */
 SOpts wsopts;
 int build_searchopts(aClient *, int, char **);
-int chk_who(aClient *, int);
+int chk_who(aClient *, aClient *, int);
 
 /* Externally defined stuffs */
 extern int user_modes[];
@@ -73,6 +73,9 @@ int build_searchopts(aClient *sptr, int parc, char *parv[])
       "Flag C: show first visible channel user is in",
       "Flag M: check for user in channels I am a member of",
       "Flag I: always show IPs instead of hosts",
+#ifdef USER_HOSTMASKING
+      "Flag R: show the real host even if the user's host is masked (umode +H)",
+#endif
       NULL
   };
 
@@ -346,6 +349,16 @@ int build_searchopts(aClient *sptr, int parc, char *parv[])
           }
           wsopts.ip_show = change;
           break; 
+#ifdef USER_HOSTMASKING
+      case 'R':
+          if(!IsAnOper(sptr))
+          {
+              sendto_one(sptr, getreply(ERR_NOPRIVILEGES), me.name, parv[0]);
+              return 0;
+          }
+          wsopts.realhost_show = change;
+          break; 
+#endif
       case 'i':
           if(parv[args]==NULL)
           {
@@ -559,7 +572,7 @@ int (*uchkfn)(char *, char *);
 int (*hchkfn)(char *, char *);
 int (*ichkfn)(char *, char *);
 
-int chk_who(aClient *ac, int showall)
+int chk_who(aClient *ac, aClient *sptr, int showall)
 {
     if(!IsClient(ac))
 	return 0;
@@ -683,7 +696,11 @@ inline char *first_visible_channel(aClient *cptr, aClient *sptr)
 #define MAXWHOREPLIES 200
 #define WHO_HOPCOUNT(s, a) ( ( (IsULine((a)) || IsUmodeI((a))) && !IsAnOper((s)) ) ? 0 : a->hopcount)
 #define WHO_SERVER(s ,a) ((IsUmodeI((a)) && !IsAnOper((s))) ? HIDDEN_SERVER_NAME : a->user->server)
-#define WHO_HOST(a) ((wsopts.ip_show) ? (a)->hostip : (a)->user->host)
+#ifdef USER_HOSTMASKING
+#define WHO_HOST(s, a) ((wsopts.ip_show) ? (a)->hostip : (IsUmodeH((a)) && !wsopts.realhost_show) ? (a)->user->mhost : (a)->user->host)
+#else
+#define WHO_HOST(s, a) ((wsopts.ip_show) ? (a)->hostip : (a)->user->host)
+#endif
 int m_who(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     aClient *ac;
@@ -743,7 +760,7 @@ int m_who(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	    {
 		ac=cm->cptr;
 		i=0;
-		if(!chk_who(ac,showall))
+		if(!chk_who(ac,sptr,showall))
 		    continue;
 		/* If we have channel flags set, verify they match */
 		if(wsopts.channelflags && ((cm->flags & wsopts.channelflags) == 0))
@@ -760,7 +777,7 @@ int m_who(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		status[++i]=0;
 		sendto_one(sptr, getreply(RPL_WHOREPLY), me.name, sptr->name,
 			   wsopts.channel->chname, ac->user->username,
-			   WHO_HOST(ac), WHO_SERVER(sptr, ac), ac->name, status,
+			   WHO_HOST(sptr,ac), WHO_SERVER(sptr, ac), ac->name, status,
 			   WHO_HOPCOUNT(sptr, ac),
 			   ac->info);
 	    }
@@ -776,7 +793,7 @@ int m_who(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	ac=find_person(wsopts.nick,NULL);
 	if(ac!=NULL)
 	{
-	    if(!chk_who(ac,1))
+	    if(!chk_who(ac,sptr,1))
 	    {
 		sendto_one(sptr, getreply(RPL_ENDOFWHO), me.name, sptr->name,
 			   wsopts.host!=NULL ? wsopts.host : wsopts.nick, "WHO");
@@ -790,7 +807,7 @@ int m_who(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		status[2]=0;
 		sendto_one(sptr, getreply(RPL_WHOREPLY), me.name, sptr->name,
 			   wsopts.show_chan ? first_visible_channel(ac, sptr)
-			   : "*", ac->user->username, WHO_HOST(ac),
+			   : "*", ac->user->username, WHO_HOST(sptr,ac),
 			   WHO_SERVER(sptr, ac), ac->name, status,
 			   WHO_HOPCOUNT(sptr, ac),
 			   ac->info);
@@ -811,7 +828,7 @@ int m_who(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	    for(cm = lp->value.chptr->members; cm; cm = cm->next)
 	    {
 		ac = cm->cptr;
-		if(!chk_who(ac, 1))
+		if(!chk_who(ac, sptr, 1))
 		    continue;
 		
 		if(shown==MAXWHOREPLIES && !IsAnOper(sptr))
@@ -831,7 +848,7 @@ int m_who(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		status[++i]=0;
 		sendto_one(sptr, getreply(RPL_WHOREPLY), me.name, sptr->name,
 			   lp->value.chptr->chname, ac->user->username,
-			   WHO_HOST(ac),WHO_SERVER(sptr, ac), ac->name,
+			   WHO_HOST(sptr,ac),WHO_SERVER(sptr, ac), ac->name,
 			   status, WHO_HOPCOUNT(sptr, ac), ac->info);
 		shown++;
 	    }
@@ -841,7 +858,7 @@ int m_who(aClient *cptr, aClient *sptr, int parc, char *parv[])
     {
 	for(ac=client;ac;ac=ac->next)
 	{
-	    if(!chk_who(ac,showall))
+	    if(!chk_who(ac,sptr,showall))
 		continue;
 	    /* wow, they passed it all, give them the reply...
 	     * IF they haven't reached the max, or they're an oper */
@@ -857,7 +874,7 @@ int m_who(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	    status[2]=0;
 	    sendto_one(sptr, getreply(RPL_WHOREPLY), me.name, sptr->name,
 		       wsopts.show_chan ? first_visible_channel(ac, sptr) :
-		       "*", ac->user->username, WHO_HOST(ac),
+		       "*", ac->user->username, WHO_HOST(sptr,ac),
 		       WHO_SERVER(sptr, ac), ac->name, status,
 		       WHO_HOPCOUNT(sptr, ac), ac->info);
 	    shown++;

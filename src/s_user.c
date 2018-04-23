@@ -59,6 +59,7 @@ extern int send_lusers(aClient *,aClient *,int, char **);
 extern int server_was_split;
 extern int svspanic;
 extern int svsnoop;
+extern int uhm_type;
 
 static char buf[BUFSIZE], buf2[BUFSIZE];
 int  user_modes[] =
@@ -84,6 +85,9 @@ int  user_modes[] =
     UMODE_n, 'n',
     UMODE_m, 'm',
     UMODE_h, 'h',
+#ifdef USER_HOSTMASKING
+    UMODE_H, 'H',
+#endif
 #ifdef NO_OPER_FLOOD
     UMODE_F, 'F',
 #endif
@@ -418,6 +422,21 @@ reject_proxy(aClient *cptr, char *cmd, char *args)
 }
 
 
+/* mask_host - Gets a normal host or ip and return them masked.
+ * -Kobi_S 19/12/2015
+ */
+char *mask_host(char *orghost, int type)
+{
+    static char newhost[HOSTLEN + 1];
+
+    if(!type) type = uhm_type;
+
+    if (call_hooks(CHOOK_MASKHOST, orghost, &newhost, type) == UHM_SUCCESS) return newhost;
+
+    return orghost; /* I guess the user won't be host-masked after all... :( */
+}
+
+
 /*
  * * register_user 
  *  This function is called when both NICK and USER messages 
@@ -563,6 +582,10 @@ register_user(aClient *cptr, aClient *sptr, char *nick, char *username,
             strcpy(user->host, sptr->hostip);
             strcpy(sptr->sockhost, sptr->hostip);
         }
+
+#ifdef USER_HOSTMASKING
+        strncpyzt(user->mhost, mask_host(user->host,0), HOSTLEN + 1);
+#endif
         
         pwaconf = sptr->user->allow;
 
@@ -1285,7 +1308,12 @@ check_dccsend(aClient *from, aClient *to, char *msg)
 
         sendto_one(to, ":%s NOTICE %s :%s (%s@%s) has attempted to send you a "
                    "file named %s, which was blocked.", me.name, to->name,
-                   from->name, from->user->username, from->user->host, tmpfn);
+                   from->name, from->user->username,
+#ifdef USER_HOSTMASKING
+                   IsUmodeH(from)?from->user->mhost:
+#endif
+                                                    from->user->host,
+                   tmpfn);
 
         if(!SeenDCCNotice(to))
         {
@@ -1976,6 +2004,8 @@ m_whois(aClient *cptr, aClient *sptr, int parc, char *parv[])
             sendto_one(sptr, err_str(ERR_NOSUCHNICK), me.name, parv[0], nick);
             continue;
         }
+
+        if (call_hooks(CHOOK_WHOIS, sptr, acptr) == FLUSH_BUFFER) continue;
                 
         user = acptr->user;
         name = (!*acptr->name) ? "?" : acptr->name;
@@ -1983,7 +2013,17 @@ m_whois(aClient *cptr, aClient *sptr, int parc, char *parv[])
         a2cptr = acptr->uplink;
                 
         sendto_one(sptr, rpl_str(RPL_WHOISUSER), me.name, parv[0], name,
-                   user->username, user->host, acptr->info);
+                   user->username, 
+#ifdef USER_HOSTMASKING
+                   IsUmodeH(acptr)?user->mhost:
+#endif
+                   user->host, acptr->info);
+        if(IsUmodeH(acptr) && (sptr==acptr || IsAnOper(sptr)))
+        {
+            sendto_one(sptr, rpl_str(RPL_WHOISACTUALLY), me.name,
+                       sptr->name, name, user->username, user->host,
+                       acptr->hostip);
+         }
 #if (RIDICULOUS_PARANOIA_LEVEL>=1)
 #if (RIDICULOUS_PARANOIA_LEVEL==1)
         if(MyConnect(acptr) && user->real_oper_host && 
@@ -2167,6 +2207,9 @@ do_user(char *nick, aClient *cptr, aClient *sptr, char *username, char *host,
     {
         user->server = find_or_add(server);
         strncpyzt(user->host, host, sizeof(user->host));
+#ifdef USER_HOSTMASKING
+        strncpyzt(user->mhost, mask_host(host,0), HOSTLEN + 1);
+#endif
     } 
     else
     {
@@ -2191,6 +2234,11 @@ do_user(char *nick, aClient *cptr, aClient *sptr, char *username, char *host,
         sptr->umode &= ~UMODE_s;
 #endif
         strncpyzt(user->host, host, sizeof(user->host));
+#ifdef USER_HOSTMASKING
+        strncpyzt(user->mhost, mask_host(host,0), HOSTLEN + 1);
+        if(uhm_type > 0) sptr->umode |= UMODE_H;
+        else sptr->umode &= ~UMODE_H;
+#endif
         user->server = me.name;
     }
     strncpyzt(sptr->info, realname, sizeof(sptr->info));
@@ -2371,7 +2419,11 @@ m_kill(aClient *cptr, aClient *sptr, int parc, char *parv[])
                 *s = 0;
             
             ircsnprintf(mypath, KILLLEN + 1, "%s!%s!%s", myname, 
-                        sptr->user->host, sptr->user->username); 
+#ifdef USER_HOSTMASKING
+                        IsUmodeH(sptr)?sptr->user->mhost:
+#endif
+                        sptr->user->host,
+                        sptr->user->username); 
         }
         else
         {
@@ -2405,21 +2457,33 @@ m_kill(aClient *cptr, aClient *sptr, int parc, char *parv[])
                            "Received KILL message for %s!%s@%s. "
                            "From %s Path: %s %s", acptr->name,
                            acptr->user ? acptr->user->username : unknownfmt,
-                           acptr->user ? acptr->user->host : unknownfmt,
+                           acptr->user ?
+#ifdef USER_HOSTMASKING
+                             IsUmodeH(acptr)?acptr->user->mhost:
+#endif
+                             acptr->user->host : unknownfmt,
                            parv[0], mypath, reason);
         else if (IsAnOper(sptr))
             sendto_ops_lev(0,
                            "Received KILL message for %s!%s@%s. From %s "
                            "Path: %s %s", acptr->name, 
                            acptr->user ? acptr->user->username : unknownfmt,
-                           acptr->user ? acptr->user->host : unknownfmt,
+                           acptr->user ?
+#ifdef USER_HOSTMASKING
+                             IsUmodeH(acptr)?acptr->user->mhost:
+#endif
+                             acptr->user->host : unknownfmt,
                            parv[0], mypath, reason);
         else
             sendto_ops_lev(SKILL_LEV, 
                            "Received KILL message for %s!%s@%s. "
                            "From %s Path: %s %s", acptr->name,
                            acptr->user ? acptr->user->username : unknownfmt,
-                           acptr->user ? acptr->user->host : unknownfmt,
+                           acptr->user ?
+#ifdef USER_HOSTMASKING
+                             IsUmodeH(acptr)?acptr->user->mhost:
+#endif
+                             acptr->user->host : unknownfmt,
                            parv[0], mypath, reason);
                 
 #if defined(USE_SYSLOG) && defined(SYSLOG_KILL)
@@ -2969,7 +3033,11 @@ m_userhost(aClient *cptr, aClient *sptr, int parc, char *parv[])
                                "%s%s=%c%s@%s", acptr->name,
                               IsAnOper(acptr) ? "*" : "",
                               (acptr->user->away) ? '-' : '+',
-                              acptr->user->username, acptr->user->host);
+                              acptr->user->username, 
+#ifdef USER_HOSTMASKING
+                              (IsUmodeH(acptr) && sptr!=acptr && !IsAnOper(sptr))?acptr->user->mhost:
+#endif
+                              acptr->user->host);
         }
     sendto_one(sptr, "%s", buf);
     return 0;
@@ -3132,6 +3200,12 @@ m_umode(aClient *cptr, aClient *sptr, int parc, char *parv[])
                 case 'X':
                 case 'S':
                     break; /* users can't set themselves +r,+x,+X or +S! */
+                case 'H':
+                    if ((uhm_type > 0) && (what == MODE_ADD))
+                        sptr->umode |= UMODE_H;
+                    else
+                        sptr->umode &= ~UMODE_H;
+                    break;
                 case 'A':
                     /* set auto +a if user is setting +A */
                     if (MyClient(sptr) && (what == MODE_ADD))
@@ -3976,6 +4050,9 @@ m_dccallow(aClient *cptr, aClient *sptr, int parc, char *parv[])
                     sendto_one(sptr, ":%s %d %s :%s (%s@%s)", me.name,
                                RPL_DCCLIST, sptr->name, lp->value.cptr->name,
                                lp->value.cptr->user->username,
+#ifdef USER_HOSTMASKING
+                               IsUmodeH(lp->value.cptr)?lp->value.cptr->user->mhost:
+#endif
                                lp->value.cptr->user->host);
                 }
                 sendto_one(sptr, rpl_str(RPL_ENDOFDCCLIST), me.name,

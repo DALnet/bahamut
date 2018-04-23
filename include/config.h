@@ -852,6 +852,12 @@
  * -wd */
 #define DONT_CHECK_QLINE_REMOTE
 
+/* USER_HOSTMASKING is used to enable host-masking for users.
+ * If you are connected to the main DALnet network, you should not
+ * have this enabled yet.
+ */
+#define USER_HOSTMASKING
+
 /* ------------------------- END CONFIGURATION SECTION -------------------- */
 #ifdef APOLLO
 #define RESTARTING_SYSTEMCALLS
