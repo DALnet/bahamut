@@ -160,6 +160,8 @@ struct ConfVar
 #define OPTF_LCLONES                0x080000
 #define OPTT_GCLONES    "GLOBAL_CLONES"
 #define OPTF_GCLONES                0x100000
+#define OPTT_SPAMFILTERURL "SPAMFILTERURL"
+#define OPTF_SPAMFILTERURL          0x200000
 
 /* module block definitions */
 
@@ -211,6 +213,7 @@ sConf confopttab[] =
     {OPTT_SPLITOPOK, OPTF_SPLITOPOK, VARTYPE_NONE},
     {OPTT_LCLONES, OPTF_LCLONES, VARTYPE_NAME},
     {OPTT_GCLONES, OPTF_GCLONES, VARTYPE_NAME},
+    {OPTT_SPAMFILTERURL, OPTF_SPAMFILTERURL, VARTYPE_NAME},
     {(char *) 0, 0, 0}
 };
 

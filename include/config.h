@@ -100,6 +100,9 @@
 /* Sent to users when they encounter mode +R */
 #define DEFAULT_NS_REGISTER_URL "http://docs.dal.net/docs/nsemail.html"
 
+/* SpamFilter KB/Help URL (sent to users when they're getting warned/blocked by spamfilter) */
+#define DEFAULT_SPAMFILTER_URL "http://www.dal.net/kb/view.php?kb=411"
+
 /* self explanitory */
 #define DEFAULT_MAXCHANNELSPERUSER 10
 

@@ -210,8 +210,8 @@ int check_sf(aClient *cptr, char *text, char *caction, int action, char *target)
                 sendto_one(cptr, ":%s NOTICE %s :*** Notice -- Your message has been %s. Reason: %s",
                            me.name, cptr->name, blocked?"blocked":"warned",
                            p->reason?p->reason:"<none>");
-                sendto_one(cptr, ":%s NOTICE %s :*** Notice -- Please visit http://www.dal.net/kb/view.php?kb=411 for more information.",
-                           me.name, cptr->name);
+                sendto_one(cptr, ":%s NOTICE %s :*** Notice -- Please visit %s for more information.",
+                           me.name, cptr->name, SpamFilter_URL);
                 warned++;
             }
             if(!reported && (p->flags & SF_ACT_REPORT))
