@@ -162,6 +162,7 @@ int check_sf(aClient *cptr, char *text, char *caction, int action, char *target)
     unsigned short matched;
     char stripamsg[512];
     char stripcmsg[512];
+    unsigned int len = 0; /* For regexp */
     int ovector[30]; /* For regexp */
 
     if(IsAnOper(cptr))
@@ -190,7 +191,9 @@ int check_sf(aClient *cptr, char *text, char *caction, int action, char *target)
         }
         else if(p->flags & SF_FLAG_REGEXP)
         {
-            if(pcre_exec(p->re, NULL, p->text, p->len, 0, 0, ovector, 30) > 0)
+            if(!len)
+                len = strlen(text);
+            if(pcre_exec(p->re, NULL, text, len, 0, 0, ovector, 30) > 0)
                 matched = 1;
             else
                 matched = 0;
