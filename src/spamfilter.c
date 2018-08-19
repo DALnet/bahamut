@@ -280,6 +280,8 @@ struct spam_filter *new_sf(char *text, long flags, char *reason)
     {
         if(p->reason)
             MyFree(p->reason);
+        if(p->re)
+            pcre_free(p->re);
     }
     else
     {
@@ -319,7 +321,7 @@ int del_sf(char *text)
             if(p->reason)
                 MyFree(p->reason);
             if(p->re)
-                MyFree(p->re);
+                pcre_free(p->re);
             MyFree(p);
             return 1; /* Success */
         }
