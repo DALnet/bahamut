@@ -48,6 +48,7 @@
 #include "fds.h"
 #include "memcount.h"
 #include "libcrypto-compat.h"
+#include "spamfilter.h"
 
 aMotd      *motd;
 aMotd      *helpfile;           /* misnomer, aMotd could be generalized */
@@ -897,6 +898,8 @@ main(int argc, char *argv[])
         
     NOW = time(NULL);
         
+    load_spamfilter();
+
 #ifdef USE_SSL
     printf("Trying to initialize ssl...\n");
     if(!(ssl_capable = ssl_init()))

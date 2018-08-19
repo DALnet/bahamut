@@ -27,6 +27,7 @@
 #include "userban.h"
 #include "memcount.h"
 #include "hooks.h"
+#include "spamfilter.h"
 
 int         server_was_split = YES;
 
@@ -1315,6 +1316,8 @@ static void channel_modes(aClient *cptr, char *mbuf, char *pbuf,
         *mbuf++ = 'S';
     if (chptr->mode.mode & MODE_AUDITORIUM)
         *mbuf++ = 'A';
+    if (chptr->mode.mode & MODE_PRIVACY)
+        *mbuf++ = 'P';
 #ifdef USE_CHANMODE_L
     if (chptr->mode.mode & MODE_LISTED)
         *mbuf++ = 'L';
@@ -1686,6 +1689,7 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
         MODE_TOPICLIMIT, 't', MODE_REGONLY, 'R',
         MODE_INVITEONLY, 'i', MODE_NOCTRL, 'c', MODE_OPERONLY, 'O',
         MODE_MODREG, 'M', MODE_SSLONLY, 'S', MODE_AUDITORIUM, 'A',
+        MODE_PRIVACY, 'P',
 #ifdef USE_CHANMODE_L
         MODE_LISTED, 'L',
 #endif
@@ -3311,6 +3315,10 @@ int m_part(aClient *cptr, aClient *sptr, int parc, char *parv[])
             name = strtoken(&p, (char *) NULL, ",");
             continue;
         }
+
+        if(MyClient(sptr) && reason && !(chptr->mode.mode & MODE_PRIVACY) && check_sf(sptr, reason, "part", SF_CMD_PART, chptr->chname))
+            return FLUSH_BUFFER;
+
         /* Remove user from the old channel (if any) */
 
         if (parc < 3 || can_send(sptr,chptr,reason) || IsSquelch(sptr))
@@ -3451,6 +3459,11 @@ int m_kick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
             if (IsMember(who, chptr))
             {
+                if(MyClient(sptr))
+                {
+                    if(!(chptr->mode.mode & MODE_PRIVACY) && check_sf(sptr, comment, "kick", SF_CMD_KICK, chptr->chname))
+                        return FLUSH_BUFFER;
+                }
                 if((chptr->mode.mode & MODE_AUDITORIUM) && !is_chan_opvoice(who, chptr))
                 {
                     sendto_channelopvoice_butserv_me(chptr, sptr,
@@ -3609,6 +3622,8 @@ int m_topic(aClient *cptr, aClient *sptr, int parc, char *parv[])
                        chptr->chname);
             return 0;
         }
+        if(!(chptr->mode.mode & MODE_PRIVACY) && check_sf(sptr, topic, "topic", SF_CMD_TOPIC, chptr->chname))
+            return FLUSH_BUFFER;
 
         /* if -t and banned, you can't change the topic */
         if (!(chptr->mode.mode & MODE_TOPICLIMIT) && !is_chan_op(sptr, chptr) && is_banned(sptr, chptr, NULL))
@@ -4665,6 +4680,7 @@ int m_sjoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
             SJ_MODEADD('O', MODE_OPERONLY);
             SJ_MODEADD('S', MODE_SSLONLY);
             SJ_MODEADD('A', MODE_AUDITORIUM);
+            SJ_MODEADD('P', MODE_PRIVACY);
 #ifdef USE_CHANMODE_L
             SJ_MODEADD('L', MODE_LISTED);
 #endif
@@ -4829,6 +4845,7 @@ int m_sjoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
         SJ_MODEPLUS('O', MODE_OPERONLY);
         SJ_MODEPLUS('S', MODE_SSLONLY);
         SJ_MODEPLUS('A', MODE_AUDITORIUM);
+        SJ_MODEPLUS('P', MODE_PRIVACY);
 #ifdef USE_CHANMODE_L
         SJ_MODEPLUS('L', MODE_LISTED);
 #endif
@@ -4846,6 +4863,7 @@ int m_sjoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
         SJ_MODEMINUS('O', MODE_OPERONLY);
         SJ_MODEMINUS('S', MODE_SSLONLY);
         SJ_MODEMINUS('A', MODE_AUDITORIUM);
+        SJ_MODEMINUS('P', MODE_PRIVACY);
 #ifdef USE_CHANMODE_L
         SJ_MODEMINUS('L', MODE_LISTED);
 #endif

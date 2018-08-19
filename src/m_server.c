@@ -258,6 +258,9 @@ do_server_estab(aClient *cptr)
     /* Send out fake server list and other 'fake' stuff */
     fakeserver_sendserver(cptr);
 
+    /* Send the spamfilters... */
+    spamfilter_sendserver(cptr);
+
     /* Send UHM (user host-masking) type */
     if(confopts & FLAGS_HUB)
         sendto_one(cptr, "SVSUHM %d", uhm_type);
