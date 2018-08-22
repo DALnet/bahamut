@@ -531,6 +531,14 @@ void init_sys()
         return;
     }
 
+    return;
+}
+
+/* This was originally part of init_sys(), however, I wanted to be able to stop the ircd between init_sys() to the actual forking -Kobi */
+void init_fork()
+{
+    int fd;
+
     close(1);
 
     if (!(bootopt & BOOT_DEBUG) && !(bootopt & BOOT_STDERR))
@@ -560,6 +568,7 @@ void init_sys()
     resfd = init_resolver(0x1f);
     add_fd(resfd, FDT_RESOLVER, NULL);
     set_fd_flags(resfd, FDF_WANTREAD);
+
     return;
 }
 

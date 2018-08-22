@@ -121,6 +121,7 @@ time_t      nextdnscheck = 0;      /* next time to poll dns to force timeout */
 time_t      nextexpire = 1;        /* next expire run on the dns cache */
 time_t      nextbanexpire = 1;     /* next time to expire the throttles/userbans */
 
+extern int listen_count;
 #ifdef PROFILING
 extern void _start, etext;
 
@@ -908,6 +909,20 @@ main(int argc, char *argv[])
 #endif
 
     init_sys();
+
+    /* moved this to here such that we allow more verbose error
+     * checking on startup.  -epi
+     * moved again to stop loading the ircd if it isn't listening to any ports -Kobi.
+     */
+    open_listeners();
+
+    if(listen_count < 1)
+    {
+        fprintf(stderr, "Error: Not listening to any ports!\n");
+        exit(-1);
+    }
+
+    init_fork();
     forked = 1;
 
 #ifdef USE_SYSLOG
@@ -921,11 +936,6 @@ main(int argc, char *argv[])
     /* this should be sooner, but the fork/detach stuff is so brain-dead... */
     klinestore_init(0);
     
-    /* moved this to here such that we allow more verbose error
-     * checking on startup.  -epi
-     */
-    open_listeners();
-
     get_my_name(&me, me.sockhost, sizeof(me.sockhost) - 1);
     if (me.name[0] == '\0')
         strncpyzt(me.name, me.sockhost, sizeof(me.name));
