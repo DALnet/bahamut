@@ -17,7 +17,7 @@ Usermodes: (* designates that the umode is oper only)
   +r        -  Is registered/identified to services.
   +s        -  Can see oper kill messages.
   +R        -  Will not receive messages from -r clients.
-  +C        -  Will only receive messages from clients sharing common channels with you.
+  +C        -  Only allow messages from clients sharing common channels with you.
  *+a        -  Designates the user as being a services administrator.
  *+b        -  Can see chatops messages.
  *+c        -  Can see client connections and exits.
