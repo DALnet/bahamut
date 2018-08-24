@@ -541,7 +541,7 @@ static char *replies[] =
     /* 478 ERR_BANLISTFULL */	":%s 478 %s %s %s :Channel %s list is full",
     /* 479 ERR_BADCHANNAME */   ":%s 479 %s %s :Channel name contains illegal "
                                 "characters",
-    /* 480 */	                NULL,
+    /* 480 ERR_NEEDTOWAIT */	":%s 480 %s :You need to wait %ld seconds before being able to talk in %s",
     /* 481 ERR_NOPRIVILEGES */	":%s 481 %s :Permission Denied, You do not "
                                 "have the correct irc operator privileges",
     /* 482 ERR_CHANOPRIVSNEEDED */	":%s 482 %s %s :You're not channel "

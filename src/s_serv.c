@@ -67,6 +67,7 @@ extern void outofmemory(void);  /* defined in list.c */
 extern void s_die(void);
 extern int  match(char *, char *);      /* defined in match.c */
 extern char *engine_name(); /* defined in socketengine_*.c */
+extern struct FlagList xflags_list[]; /* for m_check() */
 
 /* Local function prototypes */
 
@@ -3074,28 +3075,56 @@ m_check(aClient *cptr, aClient *sptr, int parc, char *parv[])
         return 0;
     }
 
-    if (parc < 3 || mycmp(parv[1], "nick"))
+    if (parc < 3 || (mycmp(parv[1], "nick") && mycmp(parv[1], "channel")))
     {
         sendto_one(sptr, "NOTICE %s :Syntax: CHECK NICK <nickname>", parv[0]);
+        sendto_one(sptr, "NOTICE %s :Syntax: CHECK CHANNEL <channel>", parv[0]);
         return 0;
     }
     
-    if ((ban = check_mask_simbanned(parv[2], SBAN_NICK)))
+    if(!mycmp(parv[1], "nick"))
     {
-        char *reason = ban->reason ? ban->reason : "<no reason>";
+        if ((ban = check_mask_simbanned(parv[2], SBAN_NICK)))
+        {
+            char *reason = ban->reason ? ban->reason : "<no reason>";
 
-        if (ban->flags & SBAN_TEMPORARY)
-            sendto_one(sptr, "NOTICE %s :CHECK NICK: %s [expires in %ldm]: %s",
-                       parv[0], ban->mask,
-                       (long)((ban->timeset + ban->duration - NOW) / 60),
-                       reason);
+            if (ban->flags & SBAN_TEMPORARY)
+                sendto_one(sptr, "NOTICE %s :CHECK NICK: %s [expires in %ldm]: %s",
+                           parv[0], ban->mask,
+                            (long)((ban->timeset + ban->duration - NOW) / 60),
+                           reason);
+             else
+                sendto_one(sptr, "NOTICE %s :CHECK NICK: %s [permanent]: %s",
+                           parv[0], ban->mask, reason);
+        }
         else
-            sendto_one(sptr, "NOTICE %s :CHECK NICK: %s [permanent]: %s",
-                       parv[0], ban->mask, reason);
+        {
+            sendto_one(sptr, "NOTICE %s :CHECK NICK: no match", parv[0]);
+        }
     }
-    else
+    if(!mycmp(parv[1], "channel"))
     {
-        sendto_one(sptr, "NOTICE %s :CHECK NICK: no match", parv[0]);
+        aChannel *chptr;
+        struct FlagList *xflag;
+
+        if((chptr = find_channel(parv[2], NULL)))
+        {
+            sendto_one(sptr, "NOTICE %s :CHECK CHANNEL: %s", parv[0], chptr->chname);
+            sendto_one(sptr, "NOTICE %s :JOIN_CONNECT_TIME: %d", parv[0], chptr->join_connect_time);
+            sendto_one(sptr, "NOTICE %s :TALK_CONNECT_TIME: %d", parv[0], chptr->talk_connect_time);
+            sendto_one(sptr, "NOTICE %s :TALK_JOIN_TIME: %d", parv[0], chptr->talk_join_time);
+            sendto_one(sptr, "NOTICE %s :MAX_BANS: %d", parv[0], chptr->max_bans);
+            sendto_one(sptr, "NOTICE %s :GREETMSG: %s", parv[0], chptr->greetmsg?chptr->greetmsg:"<NONE>");
+            for(xflag = xflags_list; xflag->option; xflag++)
+            {
+                sendto_one(sptr, "NOTICE %s :%s: %s", parv[0], xflag->option, (chptr->xflags & xflag->flag)?"On":"Off");
+            }
+            sendto_one(sptr, "NOTICE %s :*** End of Check ***", parv[0]);
+        }
+        else
+        {
+            sendto_one(sptr, "NOTICE %s :CHECK CHANNEL: no match", parv[0]);
+        }
     }
     
     return 0;
