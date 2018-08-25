@@ -89,6 +89,7 @@ static char modebuf[REALMODEBUFLEN], parabuf[REALMODEBUFLEN];
 /* externally defined function */
 extern Link *find_channel_link(Link *, aChannel *);     /* defined in list.c */
 extern int is_silenced(aClient *sptr, aClient *acptr); /* defined in s_user.c */
+extern int services_jr; /* for m_join() */
 #ifdef ANTI_SPAMBOT
 extern int  spam_num;           /* defined in s_serv.c */
 extern int  spam_time;          /* defined in s_serv.c */
@@ -1135,7 +1136,7 @@ joinrate_warn(aChannel *chptr, aClient *cptr)
  * adds a user to a channel by adding another link to the channels
  * member chain.
  */
-static void add_user_to_channel(aChannel *chptr, aClient *who, int flags)
+void add_user_to_channel(aChannel *chptr, aClient *who, int flags)
 {
     Link   *ptr;
     chanMember *cm;
@@ -2675,7 +2676,7 @@ int check_channelname(aClient *cptr, unsigned char *cn)
  * *  Get Channel block for chname (and allocate a new channel *
  * block, if it didn't exist before).
  */
-static aChannel *
+aChannel *
 get_channel(aClient *cptr, char *chname, int flag, int *created)
 {
     aChannel *chptr;
@@ -2843,6 +2844,45 @@ static void sub1_from_channel(aChannel *chptr)
         free_channel(chptr);
         Count.chan--;
     }
+}
+
+/* Check if a services join request should be sent to services and send it if needed... -Kobi.
+   Returns:
+    0 = Success (sent the request to services)
+    1 = Failure (didn't send the request to services)
+ */
+int send_sjr_to_services(aClient *sptr, char *chname, char *key)
+{
+    aChannel *chptr = find_channel(chname, NULL);
+    int is_invited = 0;
+    Link *lp;
+
+    if(chptr)
+    {
+        if(!(chptr->mode.mode & MODE_REGISTERED) && services_jr!=2) return 1; /* Channel isn't +r, let the local server handle the request
+                                                                                 (unless sjr is enabled for all channels [services_jr==2]) */
+        for(lp = sptr->user->invited; lp; lp = lp->next)
+        {
+            if(lp->value.chptr == chptr)
+            {
+                is_invited = 1;
+                break;
+            }
+        }
+    }
+    else if(services_jr!=2) return 1; /* Channel doesn't exist (so it can't be +r) */
+
+    if(!aliastab[AII_NS].client)
+        return 1; /* Services are off-line, let the local server handle the request */
+
+    if(key)
+        sendto_one(aliastab[AII_NS].client->from, ":%s SJR %d %s :%s", sptr->name,
+                   is_invited, chname, key);
+    else
+        sendto_one(aliastab[AII_NS].client->from, ":%s SJR %d %s", sptr->name,
+                   is_invited, chname);
+
+    return 0;
 }
 
 /*
@@ -3076,6 +3116,9 @@ int m_join(aClient *cptr, aClient *sptr, int parc, char *parv[])
                 ts_warn("User on %s remotely JOINing new channel",
                         sptr->user->server);
         }
+
+        if(services_jr && send_sjr_to_services(sptr, name, key)==0)
+            continue;
 
         chptr = get_channel(sptr, name, CREATE, NULL);
 

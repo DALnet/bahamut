@@ -233,6 +233,8 @@ extern int  m_put(aClient *, aClient *, int, char **);
 extern int  m_post(aClient *, aClient *, int, char **);
 extern int  m_check(aClient *, aClient *, int, char **);
 extern int  m_webirc(aClient *, aClient *, int, char **);
+extern int m_aj(aClient *, aClient *, int, char **);
+extern int m_sjr(aClient *, aClient *, int, char **, AliasInfo *);
 
 /* aliastab indexes */
 #define AII_NS  0
@@ -367,6 +369,8 @@ struct Message msgtab[] =
     {MSG_LUSERSLOCK, m_luserslock, MAXPARA, 0,       0},
     {MSG_LINKSCONTROL, m_linkscontrol, MAXPARA, 0,      0},
 
+    {"AJ",         m_aj,       MAXPARA, 0,        0},
+    {"SJR",        m_sjr,      MAXPARA, MF_ALIAS, AII_NS},
     {MSG_WEBIRC,   m_webirc,   MAXPARA, MF_UNREG, 0},
     { 0 }
 };
