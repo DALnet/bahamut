@@ -1,8 +1,8 @@
 The following outlines features and commands available on the Bahamut server
 
-- 08/25/18 - Visigoth (visigoth@dal.net)
 - 11/13/02 - srd (srd@dal.net)
 - 10/02/04 - Quension (quension@dal.net)
+- 08/25/18 - Visigoth (visigoth@dal.net)
 
 Original ircd-hybrid opers.txt written by ThemBones (kraemer@u.washington.edu)
 
