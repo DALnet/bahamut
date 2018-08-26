@@ -1619,7 +1619,7 @@ m_message(aClient *cptr, aClient *sptr, int parc, char *parv[], int notice)
                     continue;
                 }
 
-                if((chptr->mode.mode & MODE_AUDITORIUM) && !is_chan_opvoice(sptr, chptr) && !IsAnOper(sptr))
+                if((chptr->mode.mode & MODE_AUDITORIUM) && !is_chan_opvoice(sptr, chptr))
                 {
                     /* Channel is in auditorium mode! */
                     if(strlen(chptr->chname)+6 > CHANNELLEN) continue; /* Channel is too long.. we must be able to add
