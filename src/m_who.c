@@ -746,7 +746,7 @@ int m_who(aClient *cptr, aClient *sptr, int parc, char *parv[])
     if(wsopts.channel!=NULL)
     {
 	if(IsMember(sptr,wsopts.channel) && (!(wsopts.channel->mode.mode & MODE_AUDITORIUM) ||
-           is_chan_opvoice(sptr, wsopts.channel)))
+           is_chan_opvoice(sptr, wsopts.channel) || IsAnOper(sptr)))
 	    showall=1;
 	else if(SecretChannel(wsopts.channel) && IsAdmin(sptr))
 	    showall=1;
