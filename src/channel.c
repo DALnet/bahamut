@@ -4214,7 +4214,7 @@ int m_names(aClient *cptr, aClient *sptr, int parc, char *parv[])
             buf[idx++] = '@';
         else if(cm->flags & CHFL_VOICE)
             buf[idx++] = '+';
-        else if((chptr->mode.mode & MODE_AUDITORIUM) && (sptr != acptr) && !is_chan_opvoice(sptr, chptr)) continue;
+        else if((chptr->mode.mode & MODE_AUDITORIUM) && (sptr != acptr) && !is_chan_opvoice(sptr, chptr) && !IsAnOper(sptr)) continue;
         for(s = acptr->name; *s; s++)
             buf[idx++] = *s;
         buf[idx++] = ' ';

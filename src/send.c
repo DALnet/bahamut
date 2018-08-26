@@ -1203,8 +1203,9 @@ void sendto_channel_butserv_me(aChannel *chptr, aClient *from, char *pattern, ..
 /*
  * sendto_channelopvoice_butserv_me
  * 
- * Send a message to all members of a channel that are connected to this
+ * Send a message to all opped or voiced members of a channel that are connected to this
  * server. Possibly hide the origin, if it's a server, with me.name if certain paranoia is on.
+ * IRC Operators will also receive this message (even if they're not opped/voiced).
  */
 void sendto_channelopvoice_butserv_me(aChannel *chptr, aClient *from, char *pattern, ...)
 {
@@ -1231,7 +1232,7 @@ void sendto_channelopvoice_butserv_me(aChannel *chptr, aClient *from, char *patt
     {
         if (MyConnect(acptr = cm->cptr))
         {
-            if(!is_chan_opvoice(acptr, chptr)) continue;
+            if(!is_chan_opvoice(acptr, chptr) && !IsAnOper(acptr)) continue;
             if (!didlocal)
             {
                 didlocal = prefix_buffer(0, from, pfix, sendbuf, pattern, vl);
