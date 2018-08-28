@@ -2235,7 +2235,6 @@ do_user(char *nick, aClient *cptr, aClient *sptr, char *username, char *host,
 #endif
         strncpyzt(user->host, host, sizeof(user->host));
 #ifdef USER_HOSTMASKING
-        strncpyzt(user->mhost, mask_host(host,0), HOSTLEN + 1);
         if(uhm_type > 0) sptr->umode |= UMODE_H;
         else sptr->umode &= ~UMODE_H;
 #endif
