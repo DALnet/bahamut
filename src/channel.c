@@ -1827,7 +1827,30 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
             /* if we have the user, set them +/-[vo] */
             if(change=='+')
             {
+                int resend_nicklist = (chptr->mode.mode & MODE_AUDITORIUM) && MyClient(who) && !((cm->flags & CHFL_CHANOP) || (cm->flags & CHFL_VOICE));
                 cm->flags|=(*modes=='o' ? CHFL_CHANOP : CHFL_VOICE);
+                if (resend_nicklist)
+                {
+                    char *fake_parv[3];
+
+                    sendto_one(who, ":%s KICK %s %s :%s",
+                               me.name, chptr->chname, who->name, "Resending nicklist...");
+                    sendto_prefix_one(who, who, ":%s JOIN :%s", who->name, chptr->chname);
+
+                    if(chptr->topic[0] != '\0')
+                    {
+                        sendto_one(who, rpl_str(RPL_TOPIC), me.name, who->name,
+                                   chptr->chname, chptr->topic);
+                        sendto_one(who, rpl_str(RPL_TOPICWHOTIME), me.name, who->name,
+                                   chptr->chname, chptr->topic_nick, chptr->topic_time);
+                    }
+
+                    fake_parv[0] = who->name;
+                    fake_parv[1] = chptr->chname;
+                    fake_parv[2] = NULL;
+
+                    m_names(who, who, 2, fake_parv);
+                }
                 if(chptr->mode.mode & MODE_AUDITORIUM) sendto_channel_butserv_noopvoice(chptr, who, ":%s JOIN :%s", who->name, chptr->chname);
             }
             else
