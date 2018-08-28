@@ -98,7 +98,9 @@ int  user_modes[] =
     UMODE_S, 'S',
     UMODE_K, 'K',
     UMODE_I, 'I',
+#ifdef SPAMFILTER
     UMODE_P, 'P',
+#endif
     0, 0
 };
 
@@ -1611,11 +1613,13 @@ m_message(aClient *cptr, aClient *sptr, int parc, char *parv[], int notice)
                                      parv[2]) == FLUSH_BUFFER)
                     return FLUSH_BUFFER;
 
+#ifdef SPAMFILTER
             if(!(chptr->mode.mode & MODE_PRIVACY))
             {
                 if(ismine && check_sf(sptr, parv[2], notice?"notice":"msg", SF_CMD_CHANNEL, chptr->chname))
                     return FLUSH_BUFFER;
             }
+#endif
 
             /* servers and super sources get free sends */
             if (IsClient(sptr) && !IsULine(sptr))
@@ -1821,8 +1825,10 @@ m_message(aClient *cptr, aClient *sptr, int parc, char *parv[], int notice)
                 continue;
 #endif
 
+#ifdef SPAMFILTER
             if(!IsUmodeP(acptr) && check_sf(sptr, parv[2], notice?"notice":"msg", notice?SF_CMD_NOTICE:SF_CMD_PRIVMSG, acptr->name))
                 return FLUSH_BUFFER;
+#endif
         }
 
         /* servers and super sources skip flood/silence checks */
@@ -2329,6 +2335,7 @@ m_quit(aClient *cptr, aClient *sptr, int parc, char *parv[])
         strcpy(comment, "Quit: ");
         strncpy(comment + 6, reason, TOPICLEN - 6); 
         comment[TOPICLEN] = 0;
+#ifdef SPAMFILTER
         if((blocked = check_sf(sptr, reason, "quit", SF_CMD_QUIT, sptr->name)))
         {
             for(lp = sptr->user->channel; lp; lp = lpn)
@@ -2343,6 +2350,7 @@ m_quit(aClient *cptr, aClient *sptr, int parc, char *parv[])
                 }
             }
         }
+#endif
 
         return exit_client(cptr, sptr, sptr, comment);
     }
@@ -2641,8 +2649,10 @@ m_away(aClient *cptr, aClient *sptr, int parc, char *parv[])
     if (strlen(awy2) > (size_t) TOPICLEN)
         awy2[TOPICLEN] = '\0';
 
+#ifdef SPAMFILTER
     if(MyClient(sptr) && check_sf(sptr, awy2, "away", SF_CMD_AWAY, sptr->name))
         return FLUSH_BUFFER;
+#endif
 
     /*
      * some lamers scripts continually do a /away, hence making a lot of

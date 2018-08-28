@@ -369,7 +369,9 @@ struct Message msgtab[] =
     {MSG_LUSERSLOCK, m_luserslock, MAXPARA, 0,       0},
     {MSG_LINKSCONTROL, m_linkscontrol, MAXPARA, 0,      0},
     {"SPAMOPS",    m_spamops,  MAXPARA, 0,        0},
+#ifdef SPAMFILTER
     {"SF",         m_sf,       MAXPARA, 0,        0},
+#endif
     {MSG_WEBIRC,   m_webirc,   MAXPARA, MF_UNREG, 0},
     { 0 }
 };

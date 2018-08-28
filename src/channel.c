@@ -1689,7 +1689,9 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
         MODE_TOPICLIMIT, 't', MODE_REGONLY, 'R',
         MODE_INVITEONLY, 'i', MODE_NOCTRL, 'c', MODE_OPERONLY, 'O',
         MODE_MODREG, 'M', MODE_SSLONLY, 'S', MODE_AUDITORIUM, 'A',
+#ifdef SPAMFILTER
         MODE_PRIVACY, 'P',
+#endif
 #ifdef USE_CHANMODE_L
         MODE_LISTED, 'L',
 #endif
@@ -3316,8 +3318,10 @@ int m_part(aClient *cptr, aClient *sptr, int parc, char *parv[])
             continue;
         }
 
+#ifdef SPAMFILTER
         if(MyClient(sptr) && reason && !(chptr->mode.mode & MODE_PRIVACY) && check_sf(sptr, reason, "part", SF_CMD_PART, chptr->chname))
             return FLUSH_BUFFER;
+#endif
 
         /* Remove user from the old channel (if any) */
 
@@ -3459,11 +3463,13 @@ int m_kick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
             if (IsMember(who, chptr))
             {
+#ifdef SPAMFILTER
                 if(MyClient(sptr))
                 {
                     if(!(chptr->mode.mode & MODE_PRIVACY) && check_sf(sptr, comment, "kick", SF_CMD_KICK, chptr->chname))
                         return FLUSH_BUFFER;
                 }
+#endif
                 if((chptr->mode.mode & MODE_AUDITORIUM) && !is_chan_opvoice(who, chptr))
                 {
                     sendto_channelopvoice_butserv_me(chptr, sptr,
@@ -3622,8 +3628,10 @@ int m_topic(aClient *cptr, aClient *sptr, int parc, char *parv[])
                        chptr->chname);
             return 0;
         }
+#ifdef SPAMFILTER
         if(!(chptr->mode.mode & MODE_PRIVACY) && check_sf(sptr, topic, "topic", SF_CMD_TOPIC, chptr->chname))
             return FLUSH_BUFFER;
+#endif
 
         /* if -t and banned, you can't change the topic */
         if (!(chptr->mode.mode & MODE_TOPICLIMIT) && !is_chan_op(sptr, chptr) && is_banned(sptr, chptr, NULL))

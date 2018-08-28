@@ -861,6 +861,12 @@
  */
 #define USER_HOSTMASKING
 
+/* SPAMFILTER is used to enable spam filtering on the network.
+ * If you are connected to the main DALnet network, you should
+ * have this enabled.
+ */
+#define SPAMFILTER
+
 /* ------------------------- END CONFIGURATION SECTION -------------------- */
 #ifdef APOLLO
 #define RESTARTING_SYSTEMCALLS

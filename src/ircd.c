@@ -899,7 +899,9 @@ main(int argc, char *argv[])
         
     NOW = time(NULL);
         
+#ifdef SPAMFILTER
     load_spamfilter();
+#endif
 
 #ifdef USE_SSL
     printf("Trying to initialize ssl...\n");
