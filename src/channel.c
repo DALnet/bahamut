@@ -1322,14 +1322,14 @@ static void channel_modes(aClient *cptr, char *mbuf, char *pbuf,
     if (chptr->mode.limit) 
     {
         *mbuf++ = 'l';
-        if (IsMember(cptr, chptr) || IsServer(cptr) || IsULine(cptr) || IsOper(cptr))
+        if (IsMember(cptr, chptr) || IsServer(cptr) || IsULine(cptr) || IsAnOper(cptr))
             ircsprintf(pbuf, "%d", chptr->mode.limit);
     }
     if (chptr->mode.mode & MODE_JOINRATE)
     {
         *mbuf++ = 'j';
 
-        if (IsMember(cptr, chptr) || IsServer(cptr) || IsULine(cptr))
+        if (IsMember(cptr, chptr) || IsServer(cptr) || IsULine(cptr) || IsAnOper(cptr))
         {
             char tmp[16];
             if(pbuf[0] != '\0')
