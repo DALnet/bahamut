@@ -207,8 +207,8 @@ int check_sf(aClient *cptr, char *text, char *caction, int action, char *target)
                 blocked = 1;
             if(!warned && (p->flags & SF_ACT_WARN))
             {
-                sendto_one(cptr, ":%s NOTICE %s :*** Notice -- Your message has been %s. Reason: %s",
-                           me.name, cptr->name, blocked?"blocked":"warned",
+                sendto_one(cptr, ":%s NOTICE %s :*** Notice -- Your message has %s. Reason: %s",
+                           me.name, cptr->name, blocked?"been blocked":"triggered a warning",
                            p->reason?p->reason:"<none>");
                 sendto_one(cptr, ":%s NOTICE %s :*** Notice -- Please visit %s for more information.",
                            me.name, cptr->name, SpamFilter_URL);
