@@ -62,8 +62,7 @@ int ssl_init()
 	return 0;
     }
 
-    if(SSL_CTX_use_certificate_file(ircdssl_ctx,
-		IRCDSSL_CPATH, SSL_FILETYPE_PEM) <= 0)
+    if(SSL_CTX_use_certificate_chain_file(ircdssl_ctx, IRCDSSL_CPATH) <= 0)
     {
 	ERR_print_errors_fp(stderr);
 	SSL_CTX_free(ircdssl_ctx);
@@ -127,8 +126,7 @@ int ssl_rehash()
 	return 0;
     }
 
-    if(SSL_CTX_use_certificate_file(ircdssl_ctx,
-		IRCDSSL_CPATH, SSL_FILETYPE_PEM) <= 0)
+    if(SSL_CTX_use_certificate_chain_file(temp_ircdssl_ctx, IRCDSSL_CPATH) <= 0)
     {
 	disable_ssl(1);
 
