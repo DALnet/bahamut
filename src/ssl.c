@@ -48,6 +48,13 @@ int ssl_init()
     }
     fclose(file);
 
+    if(!(file = fopen(IRCDSSL_KPATH,"r")))
+    {
+        fprintf(stderr, "Can't open %s!\n", IRCDSSL_KPATH);
+        return 0;
+    }
+    fclose(file);
+
     SSL_load_error_strings();
     SSLeay_add_ssl_algorithms();
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
@@ -87,66 +94,96 @@ int ssl_init()
     return 1;
 }
 
-static void disable_ssl(int do_errors)
+static void abort_ssl_rehash(int do_errors)
 {
     if(do_errors)
     {
-	char buf[256];
-	unsigned long e;
+		char buf[256];
+		unsigned long e;
 
-	while((e = ERR_get_error()))
-	{
-	    ERR_error_string_n(e, buf, sizeof(buf) - 1);
-	    sendto_realops("SSL ERROR: %s", buf);
-	}
+		while((e = ERR_get_error()))
+		{
+			ERR_error_string_n(e, buf, sizeof(buf) - 1);
+			sendto_realops("SSL ERROR: %s", buf);
+		}
     }
 
-    if(ircdssl_ctx)
-	SSL_CTX_free(ircdssl_ctx);
+	sendto_realops("Aborting SSL rehash due to error(s) detected during rehash. Using current SSL configuration.");
 
-    sendto_ops("Disabling SSL support due to unrecoverable SSL errors. /rehash again to retry.");
-    ssl_capable = 0;
-    
     return;
 }
 
 int ssl_rehash()
 {
-    if(ircdssl_ctx)
-	SSL_CTX_free(ircdssl_ctx);
+    FILE *file;
+	SSL_CTX *temp_ircdssl_ctx;
+
+    if(!(file = fopen(IRCDSSL_CPATH,"r")))
+    {
+		sendto_realops("SSL ERROR: Cannot open server certificate file.");
+		abort_ssl_rehash(0);
+
+        return 0;
+    }
+    fclose(file);
+
+    if(!(file = fopen(IRCDSSL_KPATH,"r")))
+    {
+		sendto_realops("SSL ERROR: Cannot open server key file.");
+		abort_ssl_rehash(0);
+
+        return 0;
+    }
+    fclose(file);
 
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
-    if(!(ircdssl_ctx = SSL_CTX_new(SSLv23_server_method())))
+    if(!(temp_ircdssl_ctx = SSL_CTX_new(SSLv23_server_method())))
 #else
-    if(!(ircdssl_ctx = SSL_CTX_new(TLS_server_method())))
+    if(!(temp_ircdssl_ctx = SSL_CTX_new(TLS_server_method())))
 #endif
     {
-	disable_ssl(1);
+		abort_ssl_rehash(1);
 
-	return 0;
+		return 0;
     }
 
     if(SSL_CTX_use_certificate_chain_file(temp_ircdssl_ctx, IRCDSSL_CPATH) <= 0)
     {
-	disable_ssl(1);
+		abort_ssl_rehash(1);
+    	if(temp_ircdssl_ctx) {
+			SSL_CTX_free(temp_ircdssl_ctx);
+		}
 
-	return 0;
+		return 0;
     }
 
-    if(SSL_CTX_use_PrivateKey_file(ircdssl_ctx,
+    if(SSL_CTX_use_PrivateKey_file(temp_ircdssl_ctx,
 		IRCDSSL_KPATH, SSL_FILETYPE_PEM) <= 0)
     {
-	disable_ssl(1);
+		abort_ssl_rehash(1);
+    	if(temp_ircdssl_ctx) {
+			SSL_CTX_free(temp_ircdssl_ctx);
+		}
 
-	return 0;
+		return 0;
     }
-    if(!SSL_CTX_check_private_key(ircdssl_ctx)) 
+
+    if(!SSL_CTX_check_private_key(temp_ircdssl_ctx))
     {
-	sendto_realops("SSL ERROR: Server certificate does not match server key");
-	disable_ssl(0);
+		sendto_realops("SSL ERROR: Server certificate does not match server key");
+		abort_ssl_rehash(0);
+	    if(temp_ircdssl_ctx) {
+			SSL_CTX_free(temp_ircdssl_ctx);
+		}
 
-	return 0;
+		return 0;
     }
+
+    if(ircdssl_ctx) {
+		SSL_CTX_free(ircdssl_ctx);
+	}
+
+	ircdssl_ctx = temp_ircdssl_ctx;
 
     return 1;
 }
