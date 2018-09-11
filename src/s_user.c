@@ -39,6 +39,7 @@
 #include "hooks.h"
 #include "memcount.h"
 #include "inet.h"
+#include "spamfilter.h"
 
 #if defined( HAVE_STRING_H)
 #include <string.h>
@@ -99,6 +100,9 @@ int  user_modes[] =
     UMODE_S, 'S',
     UMODE_K, 'K',
     UMODE_I, 'I',
+#ifdef SPAMFILTER
+    UMODE_P, 'P',
+#endif
     0, 0
 };
 
@@ -1622,6 +1626,14 @@ m_message(aClient *cptr, aClient *sptr, int parc, char *parv[], int notice)
                                      parv[2]) == FLUSH_BUFFER)
                     return FLUSH_BUFFER;
 
+#ifdef SPAMFILTER
+            if(!(chptr->mode.mode & MODE_PRIVACY))
+            {
+                if(ismine && check_sf(sptr, parv[2], notice?"notice":"msg", SF_CMD_CHANNEL, chptr->chname))
+                    return FLUSH_BUFFER;
+            }
+#endif
+
             /* servers and super sources get free sends */
             if (IsClient(sptr) && !IsULine(sptr))
             {
@@ -1827,6 +1839,11 @@ m_message(aClient *cptr, aClient *sptr, int parc, char *parv[], int notice)
 #ifdef MSG_TARGET_LIMIT
             if (check_target_limit(sptr, acptr))
                 continue;
+#endif
+
+#ifdef SPAMFILTER
+            if(!IsUmodeP(acptr) && check_sf(sptr, parv[2], notice?"notice":"msg", notice?SF_CMD_NOTICE:SF_CMD_PRIVMSG, acptr->name))
+                return FLUSH_BUFFER;
 #endif
         }
 
@@ -2321,6 +2338,9 @@ m_quit(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     char *reason = (parc > 1 && parv[1]) ? parv[1] : cptr->name;
     char  comment[TOPICLEN + 1];
+    int blocked;
+    aChannel *chptr;
+    Link *lp, *lpn;
     
     sptr->flags |= FLAGS_NORMALEX;
     if (!IsServer(cptr))
@@ -2330,6 +2350,23 @@ m_quit(aClient *cptr, aClient *sptr, int parc, char *parv[])
         strcpy(comment, "Quit: ");
         strncpy(comment + 6, reason, TOPICLEN - 6); 
         comment[TOPICLEN] = 0;
+#ifdef SPAMFILTER
+        if((blocked = check_sf(sptr, reason, "quit", SF_CMD_QUIT, sptr->name)))
+        {
+            for(lp = sptr->user->channel; lp; lp = lpn)
+            {
+                lpn = lp->next;
+                chptr = lp->value.chptr;
+                if(!(chptr->mode.mode & MODE_PRIVACY))
+                {
+                    sendto_serv_butone(cptr, ":%s PART %s", parv[0], chptr->chname);
+                    sendto_channel_butserv(chptr, sptr, ":%s PART %s", parv[0], chptr->chname);
+                    remove_user_from_channel(sptr, chptr);
+                }
+            }
+        }
+#endif
+
         return exit_client(cptr, sptr, sptr, comment);
     }
     else
@@ -2626,6 +2663,12 @@ m_away(aClient *cptr, aClient *sptr, int parc, char *parv[])
 #endif
     if (strlen(awy2) > (size_t) TOPICLEN)
         awy2[TOPICLEN] = '\0';
+
+#ifdef SPAMFILTER
+    if(MyClient(sptr) && check_sf(sptr, awy2, "away", SF_CMD_AWAY, sptr->name))
+        return FLUSH_BUFFER;
+#endif
+
     /*
      * some lamers scripts continually do a /away, hence making a lot of
      * unnecessary traffic. *sigh* so... as comstud has done, I've

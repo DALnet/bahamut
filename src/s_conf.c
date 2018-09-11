@@ -112,6 +112,8 @@ void init_globals()
     strncpyzt(Stats_Name, DEFAULT_STATS_NAME, sizeof(Stats_Name));
     strncpyzt(NS_Register_URL, DEFAULT_NS_REGISTER_URL,
               sizeof(NS_Register_URL));
+    strncpyzt(SpamFilter_URL, DEFAULT_SPAMFILTER_URL,
+              sizeof(SpamFilter_URL));
     strncpyzt(Network_Kline_Address, DEFAULT_NKLINE_ADDY,
                                             sizeof(Network_Kline_Address));
     strncpyzt(Local_Kline_Address, DEFAULT_LKLINE_ADDY,
@@ -1041,6 +1043,11 @@ confadd_options(cVar *vars[], int lnum)
         {
             tmp->type = NULL;
             strncpyzt(NS_Register_URL, tmp->value, sizeof(NS_Register_URL));
+        }
+        else if(tmp->type && (tmp->type->flag & OPTF_SPAMFILTERURL))
+        {
+            tmp->type = NULL;
+            strncpyzt(SpamFilter_URL, tmp->value, sizeof(SpamFilter_URL));
         }
         else if(tmp->type && (tmp->type->flag & OPTF_MAXCHAN))
         {
