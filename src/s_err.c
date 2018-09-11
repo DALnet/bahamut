@@ -26,8 +26,8 @@ static char *replies[] =
     /* 002 RPL_YOURHOST */	":%s 002 %s :Your host is %s, running "
                                 "version %s",
     /* 003 RPL_CREATED */	":%s 003 %s :This server was created %s",
-    /* 004 RPL_MYINFO */	":%s 004 %s %s %s aAbcCdefFghHiIjkKmnoOrRsSwxXy "
-                                "AbceiIjklLmMnoOprRsStv",
+    /* 004 RPL_MYINFO */	":%s 004 %s %s %s aAbcCdefFghHiIjkKmnoOPrRsSwxXy "
+                                "AbceiIjklLmMnoOpPrRsStv",
     /* 005 RPL_ISUPPORT */      ":%s 005 %s %s :are available on this server",
     /* 006 */	                NULL,
     /* 007 */	                NULL,
@@ -541,7 +541,7 @@ static char *replies[] =
     /* 478 ERR_BANLISTFULL */	":%s 478 %s %s %s :Channel %s list is full",
     /* 479 ERR_BADCHANNAME */   ":%s 479 %s %s :Channel name contains illegal "
                                 "characters",
-    /* 480 */	                NULL,
+    /* 480 ERR_NEEDTOWAIT */	":%s 480 %s :You need to wait %ld seconds before being able to talk in %s",
     /* 481 ERR_NOPRIVILEGES */	":%s 481 %s :Permission Denied, You do not "
                                 "have the correct irc operator privileges",
     /* 482 ERR_CHANOPRIVSNEEDED */	":%s 482 %s %s :You're not channel "

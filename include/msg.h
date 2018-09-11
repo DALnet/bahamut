@@ -233,6 +233,8 @@ extern int  m_put(aClient *, aClient *, int, char **);
 extern int  m_post(aClient *, aClient *, int, char **);
 extern int  m_check(aClient *, aClient *, int, char **);
 extern int  m_webirc(aClient *, aClient *, int, char **);
+extern int m_spamops(aClient *, aClient *, int, char **);
+extern int m_sf(aClient *, aClient *, int, char **);
 extern int m_aj(aClient *, aClient *, int, char **);
 extern int m_sjr(aClient *, aClient *, int, char **, AliasInfo *);
 
@@ -368,9 +370,15 @@ struct Message msgtab[] =
     {MSG_CHECK,    m_check,    MAXPARA, 0,        0},
     {MSG_LUSERSLOCK, m_luserslock, MAXPARA, 0,       0},
     {MSG_LINKSCONTROL, m_linkscontrol, MAXPARA, 0,      0},
+<<<<<<< HEAD
 
     {"AJ",         m_aj,       MAXPARA, 0,        0},
     {"SJR",        m_sjr,      MAXPARA, MF_ALIAS, AII_NS},
+=======
+    {"SPAMOPS",    m_spamops,  MAXPARA, 0,        0},
+    {"SF",         m_sf,       MAXPARA, 0,        0},
+    {"SVSXCF",     m_svsxcf,   MAXPARA, 0,        0},
+>>>>>>> 172a0d2be79f54c5be5fea26e22ae8e117d2ac38
     {MSG_WEBIRC,   m_webirc,   MAXPARA, MF_UNREG, 0},
     { 0 }
 };

@@ -135,7 +135,7 @@ typedef struct SServicesTag ServicesTag;
 #define	KEYLEN		    23
 #define	BUFSIZE		    512	/* WARNING: *DONT* CHANGE THIS!!!! */
 #define	MAXRECIPIENTS       20
-#define	MAXBANS	 	    500
+#define	MAXBANS	 	    200
 #define MAXINVITELIST       100
 #define MAXEXEMPTLIST       100
 
@@ -318,6 +318,7 @@ typedef struct SServicesTag ServicesTag;
 #define UMODE_S     0x10000000  /* umode +S - User is using SSL */
 #define UMODE_C     0x20000000  /* umode +C - User is only accepting private messages from users who share a common channel with them */
 #define UMODE_H     0x40000000  /* umode +H - User is host-masked */
+#define UMODE_P     0x80000000  /* umode +P - User wants extra privacy (no spamfilter) */
 
 /* for sendto_ops_lev */
 
@@ -340,13 +341,13 @@ typedef struct SServicesTag ServicesTag;
  *  that mode will be 'silent.'
  */
 
-#define SEND_UMODES (UMODE_a|UMODE_i|UMODE_o|UMODE_r|UMODE_A|UMODE_I|UMODE_R|UMODE_S|UMODE_C|UMODE_H)
+#define SEND_UMODES (UMODE_a|UMODE_i|UMODE_o|UMODE_r|UMODE_A|UMODE_I|UMODE_R|UMODE_S|UMODE_C|UMODE_H|UMODE_P)
 #define ALL_UMODES (SEND_UMODES|UMODE_b|UMODE_c|UMODE_d|UMODE_e|UMODE_f|\
                     UMODE_g|UMODE_h|UMODE_j|UMODE_k|UMODE_m|UMODE_n|UMODE_s|\
                     UMODE_w|UMODE_y|UMODE_F|UMODE_K|UMODE_O)
 
 /* modes users can set themselves */
-#define USER_UMODES (UMODE_i|UMODE_k|UMODE_w|UMODE_s|UMODE_R|UMODE_C|UMODE_H)
+#define USER_UMODES (UMODE_i|UMODE_k|UMODE_w|UMODE_s|UMODE_R|UMODE_C|UMODE_H|UMODE_P)
 
 /* modes only opers can have */
 #define OPER_UMODES (UMODE_a|UMODE_b|UMODE_c|UMODE_d|UMODE_e|UMODE_f|UMODE_g|\
@@ -381,6 +382,7 @@ typedef struct SServicesTag ServicesTag;
 #define	IsUmodes(x)		((x)->umode & UMODE_s)
 #define	IsUmodeI(x)		((x)->umode & UMODE_I)
 #define	IsUmodeH(x)		((x)->umode & UMODE_H)
+#define	IsUmodeP(x)		((x)->umode & UMODE_P)
 #define IsNoNonReg(x)           ((x)->umode & UMODE_R)
 #define IsWSquelch(x)           ((x)->umode & UMODE_x)
 #define IsSSquelch(x)           ((x)->umode & UMODE_X)
@@ -1190,6 +1192,7 @@ struct ChanLink
     struct ChanLink *next;
     aClient *cptr;
     int flags;
+    time_t when;
     unsigned int banserial;     /* used for bquiet cache */
 };
 
@@ -1258,6 +1261,12 @@ struct Channel
     int         jrw_debt_ctr;   /* join rate warning: in-debt counter */
     int         jrw_debt_ts;    /* join rate warning: debt begin timestamp */
     unsigned int banserial;     /* used for bquiet cache */
+    int join_connect_time;      /* Number of seconds the user must be online to be able to join */
+    int talk_connect_time;      /* Number of seconds the user must be online to be able to talk on the channel */
+    int talk_join_time;         /* Number of seconds the user must be on the channel to be able to tlak on the channel */
+    int max_bans;               /* Maximum number of bans ops can add (default: MAXBANS) */
+    char *greetmsg;             /* Special greeting message */
+    int xflags;                 /* The eXtended channel flags */
 };
 
 #define	TS_CURRENT	5	/* current TS protocol version */
@@ -1302,6 +1311,7 @@ struct Channel
 #define MODE_JOINRATE	0x40000
 #define MODE_SSLONLY	0x80000
 #define MODE_AUDITORIUM 0x100000
+#define MODE_PRIVACY    0x200000 /* cmode +P - Channel wants extra privacy (no spamfilter) */
 
 /* mode flags which take another parameter (With PARAmeterS) */
 
@@ -1333,6 +1343,24 @@ struct Channel
 		find_channel_link((blah->user)->channel, chan)) ? 1 : 0)
 
 #define	IsChannelName(name) ((name) && (*(name) == '#'))
+
+/* Extended Channel Flags */
+#define XFLAG_SET               0x0001 /* This is to indicate the channel has enabled xflag(s) */
+#define XFLAG_NO_NOTICE         0x0002
+#define XFLAG_NO_CTCP           0x0004
+#define XFLAG_NO_PART_MSG       0x0008
+#define XFLAG_NO_QUIT_MSG       0x0010
+#define XFLAG_EXEMPT_IDENTD     0x0020
+#define XFLAG_EXEMPT_REGISTERED 0x0040
+#define XFLAG_EXEMPT_INVITES    0x0080
+#define XFLAG_EXEMPT_OPPED      0x0100
+#define XFLAG_EXEMPT_VOICED     0x0200
+
+struct FlagList
+{
+    char *option;
+    int flag;
+};
 
 /* Misc macros */
 

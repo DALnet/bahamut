@@ -39,6 +39,7 @@
 #include "hooks.h"
 #include "memcount.h"
 #include "inet.h"
+#include "spamfilter.h"
 
 #if defined( HAVE_STRING_H)
 #include <string.h>
@@ -56,6 +57,8 @@ extern void outofmemory(void);  /* defined in list.c */
 extern void reset_sock_opts();
 extern int send_lusers(aClient *,aClient *,int, char **);
 #endif
+extern int is_xflags_exempted(aClient *sptr, aChannel *chptr); /* for m_message() */
+extern time_t get_user_jointime(aClient *cptr, aChannel *chptr); /* for send_msg_error() */
 extern int server_was_split;
 extern int svspanic;
 extern int svsnoop;
@@ -97,6 +100,9 @@ int  user_modes[] =
     UMODE_S, 'S',
     UMODE_K, 'K',
     UMODE_I, 'I',
+#ifdef SPAMFILTER
+    UMODE_P, 'P',
+#endif
     0, 0
 };
 
@@ -1467,7 +1473,7 @@ is_silenced(aClient *sptr, aClient *acptr)
 {
     Link *lp;
     anUser *user;
-    char sender[HOSTLEN+NICKLEN+USERLEN+5];
+    char sender[HOSTLEN+1+USERLEN+1+HOSTLEN+1];
 
     if (!(acptr->user)||!(lp=acptr->user->silence)||!(user=sptr->user))
         return 0;
@@ -1489,12 +1495,23 @@ is_silenced(aClient *sptr, aClient *acptr)
     return 0;
 }
 
+static inline time_t get_highest(time_t val1, time_t val2)
+{
+    if(val1 > val2) return val1;
+    else return val2;
+}
+
 static inline void 
-send_msg_error(aClient *sptr, char *parv[], char *nick, int ret) 
+send_msg_error(aClient *sptr, char *parv[], char *nick, int ret, aChannel *chptr) 
 {
     if(ret == ERR_NOCTRLSONCHAN)
         sendto_one(sptr, err_str(ERR_NOCTRLSONCHAN), me.name,
                    parv[0], nick, parv[2]);
+    else if(ret == ERR_NEEDTOWAIT)
+    {
+        sendto_one(sptr, err_str(ERR_NEEDTOWAIT), me.name,
+                   parv[0], get_highest((sptr->firsttime + chptr->talk_connect_time - NOW), get_user_jointime(sptr, chptr) + chptr->talk_join_time - NOW), chptr->chname);
+    }
     else if(ret == ERR_NEEDREGGEDNICK)
         sendto_one(sptr, err_str(ERR_NEEDREGGEDNICK), me.name,
                    parv[0], nick, "speak in", aliastab[AII_NS].nick,
@@ -1609,15 +1626,25 @@ m_message(aClient *cptr, aClient *sptr, int parc, char *parv[], int notice)
                                      parv[2]) == FLUSH_BUFFER)
                     return FLUSH_BUFFER;
 
+#ifdef SPAMFILTER
+            if(!(chptr->mode.mode & MODE_PRIVACY))
+            {
+                if(ismine && check_sf(sptr, parv[2], notice?"notice":"msg", SF_CMD_CHANNEL, chptr->chname))
+                    return FLUSH_BUFFER;
+            }
+#endif
+
             /* servers and super sources get free sends */
             if (IsClient(sptr) && !IsULine(sptr))
             {
                 if ((ret = can_send(sptr, chptr, parv[2])))
                 {
                     if (ismine && !notice)
-                        send_msg_error(sptr, parv, target, ret);
+                        send_msg_error(sptr, parv, target, ret, chptr);
                     continue;
                 }
+
+                if (notice && (chptr->xflags & XFLAG_NO_NOTICE) && !is_xflags_exempted(sptr,chptr)) continue;
 
                 if((chptr->mode.mode & MODE_AUDITORIUM) && !is_chan_opvoice(sptr, chptr))
                 {
@@ -1632,7 +1659,7 @@ m_message(aClient *cptr, aClient *sptr, int parc, char *parv[], int notice)
                     if ((ret = can_send(sptr, chptr, parv[2])))
                     {
                         if (ismine && !notice)
-                            send_msg_error(sptr, parv, target, ret);
+                            send_msg_error(sptr, parv, target, ret, chptr);
                         continue;
                     }
                     */
@@ -1658,6 +1685,7 @@ m_message(aClient *cptr, aClient *sptr, int parc, char *parv[], int notice)
                             if (check_for_flud(sptr, NULL, chptr, 1))
                                 return 0;
 #endif
+                            if ((chptr->xflags & XFLAG_NO_CTCP) && !is_xflags_exempted(sptr,chptr)) continue;
                     }
                 }
             }
@@ -1811,6 +1839,11 @@ m_message(aClient *cptr, aClient *sptr, int parc, char *parv[], int notice)
 #ifdef MSG_TARGET_LIMIT
             if (check_target_limit(sptr, acptr))
                 continue;
+#endif
+
+#ifdef SPAMFILTER
+            if(!IsUmodeP(acptr) && check_sf(sptr, parv[2], notice?"notice":"msg", notice?SF_CMD_NOTICE:SF_CMD_PRIVMSG, acptr->name))
+                return FLUSH_BUFFER;
 #endif
         }
 
@@ -2235,7 +2268,6 @@ do_user(char *nick, aClient *cptr, aClient *sptr, char *username, char *host,
 #endif
         strncpyzt(user->host, host, sizeof(user->host));
 #ifdef USER_HOSTMASKING
-        strncpyzt(user->mhost, mask_host(host,0), HOSTLEN + 1);
         if(uhm_type > 0) sptr->umode |= UMODE_H;
         else sptr->umode &= ~UMODE_H;
 #endif
@@ -2306,6 +2338,9 @@ m_quit(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     char *reason = (parc > 1 && parv[1]) ? parv[1] : cptr->name;
     char  comment[TOPICLEN + 1];
+    int blocked;
+    aChannel *chptr;
+    Link *lp, *lpn;
     
     sptr->flags |= FLAGS_NORMALEX;
     if (!IsServer(cptr))
@@ -2315,6 +2350,23 @@ m_quit(aClient *cptr, aClient *sptr, int parc, char *parv[])
         strcpy(comment, "Quit: ");
         strncpy(comment + 6, reason, TOPICLEN - 6); 
         comment[TOPICLEN] = 0;
+#ifdef SPAMFILTER
+        if((blocked = check_sf(sptr, reason, "quit", SF_CMD_QUIT, sptr->name)))
+        {
+            for(lp = sptr->user->channel; lp; lp = lpn)
+            {
+                lpn = lp->next;
+                chptr = lp->value.chptr;
+                if(!(chptr->mode.mode & MODE_PRIVACY))
+                {
+                    sendto_serv_butone(cptr, ":%s PART %s", parv[0], chptr->chname);
+                    sendto_channel_butserv(chptr, sptr, ":%s PART %s", parv[0], chptr->chname);
+                    remove_user_from_channel(sptr, chptr);
+                }
+            }
+        }
+#endif
+
         return exit_client(cptr, sptr, sptr, comment);
     }
     else
@@ -2611,6 +2663,12 @@ m_away(aClient *cptr, aClient *sptr, int parc, char *parv[])
 #endif
     if (strlen(awy2) > (size_t) TOPICLEN)
         awy2[TOPICLEN] = '\0';
+
+#ifdef SPAMFILTER
+    if(MyClient(sptr) && check_sf(sptr, awy2, "away", SF_CMD_AWAY, sptr->name))
+        return FLUSH_BUFFER;
+#endif
+
     /*
      * some lamers scripts continually do a /away, hence making a lot of
      * unnecessary traffic. *sigh* so... as comstud has done, I've
@@ -2895,6 +2953,20 @@ int m_oper(aClient *cptr, aClient *sptr, int parc, char *parv[])
             sendto_ops_lev(ADMIN_LEV, "Failed OPER attempt by %s (%s@%s) [svsnoop is enabled]",
                            parv[0], sptr->user->username, sptr->user->host);
             return 0;
+        }
+        else
+        {
+            for(lp = sptr->user->channel; lp; lp = lpn)
+            {
+                lpn = lp->next;
+                chptr = lp->value.chptr;
+                if((chptr->xflags & XFLAG_NO_QUIT_MSG) && !is_xflags_exempted(sptr,chptr))
+                {
+                    sendto_serv_butone(cptr, ":%s PART %s", parv[0], chptr->chname);
+                    sendto_channel_butserv(chptr, sptr, ":%s PART %s", parv[0], chptr->chname);
+                    remove_user_from_channel(sptr, chptr);
+                }
+            }
         }
 
         /* attach our conf */

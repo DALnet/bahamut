@@ -802,6 +802,147 @@ int m_svsuhm(aClient *cptr, aClient *sptr, int parc, char *parv[])
     return 0;
 }
 
+struct FlagList xflags_list[] =
+{
+  { "NO_NOTICE",         XFLAG_NO_NOTICE         },
+  { "NO_CTCP",           XFLAG_NO_CTCP           },
+  { "NO_PART_MSG",       XFLAG_NO_PART_MSG       },
+  { "NO_QUIT_MSG",       XFLAG_NO_QUIT_MSG       },
+  { "EXEMPT_OPPED",      XFLAG_EXEMPT_OPPED      },
+  { "EXEMPT_VOICED",     XFLAG_EXEMPT_VOICED     },
+  { "EXEMPT_IDENTD",     XFLAG_EXEMPT_IDENTD     },
+  { "EXEMPT_REGISTERED", XFLAG_EXEMPT_REGISTERED },
+  { "EXEMPT_INVITES",    XFLAG_EXEMPT_INVITES    },
+  { NULL,                0                       }
+};
+
+/* m_svsxcf
+ *   Control eXtended Channel Flags.
+ * parv[0] - sender
+ * parv[1] - channel
+ * parv[2] - optional setting:value or DEFAULT
+ * parv[3] - optional setting:value
+ * ...
+ * parv[parc-1] - optional setting:value
+ *
+ * Settings:
+ *   JOIN_CONNECT_TIME - Number of seconds the user must be online to be able to join
+ *   TALK_CONNECT_TIME - Number of seconds the user must be online to be able to talk on the channel
+ *   TALK_JOIN_TIME    - Number of seconds the user must be on the channel to be able to tlak on the channel
+ *   MAX_BANS          - Will let us increase the ban limit for specific channels
+ *
+ * 1/0 (on/off) options:
+ *   NO_NOTICE         - no notices can be sent to the channel (on/off)
+ *   NO_CTCP           - no ctcps can be sent to the channel (on/off)
+ *   NO_PART_MSG       - no /part messages (on/off)
+ *   NO_QUIT_MSG       - no /quit messages (on/off)
+ *   EXEMPT_OPPED      - exempt opped users (on/off)
+ *   EXEMPT_VOICED     - exempt voiced users (on/off)
+ *   EXEMPT_IDENTD     - exempt users with identd (on/off)
+ *   EXEMPT_REGISTERED - exempt users with umode +r (on/off)
+ *   EXEMPT_INVITES    - exempt users who are +I'ed (on/off)
+ *
+ * Special option:
+ *   GREETMSG - A message that will be sent when a user joins the channel
+ */
+int m_svsxcf(aClient *cptr, aClient *sptr, int parc, char *parv[])
+{
+    aChannel *chptr;
+    char *opt, *value;
+    struct FlagList *xflag;
+    int i; /* Counter for the option:value loop */
+    char pbuf[512];
+
+    if(!IsServer(sptr) || parc < 2)
+        return 0;
+
+    if(!(chptr = find_channel(parv[1], NULL)))
+        return 0;
+
+    if(!IsULine(sptr))
+    {
+        if(aliastab[AII_CS].client && aliastab[AII_CS].client->from!=cptr->from)
+        {
+            /*
+             * We don't accept commands from a non-services direction.
+             * Also, we remove non-existed xflagss if they come from this location.
+             * Note: we don't need to worry about existed xflags on the other side
+             * because they will be overrided anyway.
+             */
+            if(!(chptr->xflags & XFLAG_SET))
+            {
+                sendto_one(cptr, ":%s SVSXCF %s", me.name, parv[1]);
+            }
+            return 0; /* Wrong direction (from a non-u:lined server) */
+        }
+    }
+
+    make_parv_copy(pbuf, parc, parv);
+    sendto_serv_butone(cptr, ":%s SVSXCF %s", parv[0], pbuf);
+
+    i = 2;
+
+    if(parc<3 || !strcasecmp(parv[2],"DEFAULT"))
+    {
+        /* Reset all the extended channel flags back to their defaults... */
+        chptr->join_connect_time = 0;
+        chptr->talk_connect_time = 0;
+        chptr->talk_join_time = 0;
+        chptr->max_bans = MAXBANS;
+        chptr->xflags = 0;
+        if(chptr->greetmsg)
+          MyFree(chptr->greetmsg);
+        i++;
+    }
+
+    for(; i<parc; i++)
+    {
+        opt = parv[i];
+        if((value = strchr(parv[i],':')))
+        {
+            *value = '\0';
+            value++;
+            if(!*value) continue; /* Just in case someone does something like option: with no value */
+            if(!parv[i][0]) continue; /* Just in case someone does something like :value with no option */
+            if(!strcasecmp(opt,"JOIN_CONNECT_TIME")) { chptr->join_connect_time = atoi(value); chptr->xflags |= XFLAG_SET; }
+            else if(!strcasecmp(opt,"TALK_CONNECT_TIME")) { chptr->talk_connect_time = atoi(value); chptr->xflags |= XFLAG_SET; }
+            else if(!strcasecmp(opt,"TALK_JOIN_TIME")) { chptr->talk_join_time = atoi(value); chptr->xflags |= XFLAG_SET; }
+            else if(!strcasecmp(opt,"MAX_BANS")) { chptr->max_bans = atoi(value); chptr->xflags |= XFLAG_SET; }
+            else
+            {
+                for(xflag = xflags_list; xflag->option; xflag++)
+                {
+                    if(!strcasecmp(opt,xflag->option))
+                    {
+                        if((atoi(value) == 1) || !strcasecmp(value,"on"))
+                        {
+                          chptr->xflags |= xflag->flag;
+                          chptr->xflags |= XFLAG_SET;
+                        }
+                        else
+                          chptr->xflags &= ~(xflag->flag);
+                    }
+                }
+            }
+        }
+        else if(!strcasecmp(parv[i],"GREETMSG"))
+        {
+            i++;
+            if(i > parc)
+            {
+                if(chptr->greetmsg)
+                  MyFree(chptr->greetmsg);
+                break;
+            }
+            chptr->greetmsg = (char *)MyMalloc(strlen(parv[i]) + 1);
+            strcpy(chptr->greetmsg, parv[i]);
+            chptr->xflags |= XFLAG_SET;
+        }
+    }
+
+    return 0;
+}
+
 /* m_aj - Approve channel join by services (mostly stolen from bahamut-irctoo)
  * parv[1] = [@+]nick
  * parv[2] = nick TS

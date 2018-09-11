@@ -1,43 +1,47 @@
-The following outlines the features and commands
-that Bahamut has for operators of the server.
+The following outlines features and commands available on the Bahamut server
+
 - 11/13/02 - srd (srd@dal.net)
 - 10/02/04 - Quension (quension@dal.net)
+- 08/25/18 - Visigoth (visigoth@dal.net)
 
-Based upon opers.txt for ircd-hybrid by:
-ThemBones (kraemer@u.washington.edu)
+Original ircd-hybrid opers.txt written by ThemBones (kraemer@u.washington.edu)
 
-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
 Usermodes: (* designates that the umode is oper only)
 
  USERMODE      DESCRIPTION
 -----------------------------------------------------------------
-  +i        -  Is 'invisible'.
-  +w        -  Can see wallops messages.
-  +r        -  Is registered/identified to services.
-  +s        -  Can see oper kill messages.
-  +R        -  Will not receive messages from -r clients.
-  +C        -  Will receive messages from only clients with whom you share common channels.
- *+a        -  Designates the user as being a services administrator.
- *+b        -  Can see chatops messages.
- *+c        -  Can see client connections and exits.
- *+d        -  Can see debug messages.
- *+e        -  Can see dccallow failure notices.
- *+f        -  Can see flood messages.
- *+g        -  Can recieve globops messages.
- *+h        -  Is available for help, being listed in /stats P
- *+j        -  Can see rejected connection notices 
- *+k        -  Can see server kill messages.
- *+m        -  Can see spambot notices.
- *+n        -  Can see routing notices.
- *+o        -  Is a global IRC Operator.
- *+y        -  Can see certain information requests. (e.g. /stats)
- *+A        -  Is a server administrator.
- *+F        -  Can bypass the ircd's recvq throttling
- *+K        -  Can see U:lined kill messages
- *+O        -  Is a local IRC Operator.
-  +S        -  Is connected using a secure connection (SSL)
-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+  +i     -  Is 'invisible'.
+  +w     -  Can see wallops messages.
+  +r     -  Is registered/identified to services.
+  +s     -  Can see oper kill messages.
+  +R     -  Will not receive messages from -r clients.
+  +C     -  Allow messages only from clients sharing channels with you.
+  +S     -  Is connected using a secure connection (SSL).
+  +H     -  When enabled, masks a client's hostname.
+  +P     -  When enabled, opt's out of server side spam filter protection.
+ *+a     -  Designates the oper as being a Services Administrator.
+ *+b     -  Can see chatops messages.
+ *+c     -  Can see client connections and exits.
+ *+d     -  Can see debug messages.
+ *+e     -  Can see dccallow failure notices.
+ *+f     -  Can see flood messages.
+ *+g     -  Can recieve globops messages.
+ *+h     -  Is available for help. (listed in /stats p)
+ *+j     -  Can see rejected connection notices.
+ *+k     -  Can see server kill messages.
+ *+m     -  Can see spambot notices.
+ *+n     -  Can see routing notices.
+ *+o     -  Is a global IRC Operator.
+ *+y     -  Can see certain information requests. (e.g. /stats)
+ *+A     -  Is a Server Administrator.
+ *+F     -  Can bypass the ircd's recvq throttling.
+ *+K     -  Can see U:lined kill messages.
+ *+O     -  Is a local IRC Operator.
+ *+I     -  When enabled, allows 'hidden' opers. (unlisted in /stats p, etc.)
+
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
 Oper Commands: (+ indicates that /quote must be used with ircII)
 
@@ -224,3 +228,4 @@ COMMAND         - USAGE and DESCRIPTION
                                            limit for <ip> to <value>
                      DEFLCLONES          - Same as local_clones in conf
                      DEFGCLONES          - Same as global_clones in conf
+                     

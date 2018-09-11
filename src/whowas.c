@@ -56,7 +56,7 @@ void add_history(aClient *cptr, int online)
     strncpyzt(new->hostname, cptr->user->host, HOSTLEN + 1);
 #ifdef USER_HOSTMASKING
     strncpyzt(new->mhostname, cptr->user->mhost, HOSTLEN + 1);
-    strncpyzt(new->hostip, cptr->hostip, HOSTLEN + 1);
+    strncpyzt(new->hostip, cptr->hostip, HOSTIPLEN + 1);
 #endif
     strncpyzt(new->realname, cptr->info, REALLEN + 1);
     /*
