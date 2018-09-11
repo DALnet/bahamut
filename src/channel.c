@@ -89,6 +89,7 @@ static char modebuf[REALMODEBUFLEN], parabuf[REALMODEBUFLEN];
 /* externally defined function */
 extern Link *find_channel_link(Link *, aChannel *);     /* defined in list.c */
 extern int is_silenced(aClient *sptr, aClient *acptr); /* defined in s_user.c */
+extern struct FlagList xflags_list[]; /* for send_topic_burst() */
 #ifdef ANTI_SPAMBOT
 extern int  spam_num;           /* defined in s_serv.c */
 extern int  spam_time;          /* defined in s_serv.c */
@@ -452,7 +453,7 @@ static int add_banid(aClient *cptr, aChannel *chptr, char *banid)
          * older servers.  This check can be corrected later.  -Quension */
         if (MyClient(cptr))
         {
-            if (++cnt >= MAXBANS)
+            if (++cnt >= chptr->max_bans)
             {
                 sendto_one(cptr, getreply(ERR_BANLISTFULL), me.name, cptr->name,
                         chptr->chname, banid, "ban");
@@ -1151,6 +1152,7 @@ static void add_user_to_channel(aChannel *chptr, aClient *who, int flags)
         cm->cptr = who;
         cm->next = chptr->members;
         cm->banserial = chptr->banserial;
+        cm->when = NOW;
 
         chptr->members = cm;
         chptr->users++;
@@ -1231,6 +1233,35 @@ int has_voice(aClient *cptr, aChannel *chptr)
     return 0;
 }
 
+time_t get_user_jointime(aClient *cptr, aChannel *chptr)
+{
+    chanMember   *cm;
+
+    if (chptr)
+        if ((cm = find_user_member(chptr->members, cptr)))
+            return cm->when;
+
+    return 0;
+}
+
+/* is_xflags_exempted - Check if a user is exempted from the channel's xflags */
+int is_xflags_exempted(aClient *sptr, aChannel *chptr)
+{
+    if(IsAnOper(sptr)) return 1; /* IRC Operators are always exempted */
+    if((chptr->xflags & XFLAG_EXEMPT_OPPED) && (chptr->xflags & XFLAG_EXEMPT_VOICED))
+    {
+      if(is_chan_opvoice(sptr,chptr)) return 1;
+    }
+    else
+    {
+      if((chptr->xflags & XFLAG_EXEMPT_OPPED) && is_chan_op(sptr,chptr)) return 1;
+      if((chptr->xflags & XFLAG_EXEMPT_VOICED) && has_voice(sptr,chptr)) return 1;
+    }
+    if((chptr->xflags & XFLAG_EXEMPT_REGISTERED) && IsRegNick(sptr)) return 1;
+    if((chptr->xflags & XFLAG_EXEMPT_IDENTD) && sptr->user && sptr->user->username[0]!='~') return 1;
+    return 0;
+}
+
 int can_send(aClient *cptr, aChannel *chptr, char *msg)
 {
     chanMember   *cm;
@@ -1275,6 +1306,13 @@ int can_send(aClient *cptr, aChannel *chptr, char *msg)
         }
         if ((chptr->mode.mode & MODE_NOCTRL) && msg_has_ctrls(msg))
             return (ERR_NOCTRLSONCHAN);
+        if(ismine)
+        {
+            if (chptr->talk_connect_time && (cptr->firsttime + chptr->talk_connect_time > NOW) && !is_xflags_exempted(cptr,chptr))
+                return (ERR_NEEDTOWAIT);
+            if (chptr->talk_join_time && (cm->when + chptr->talk_join_time > NOW) && !is_xflags_exempted(cptr,chptr))
+                return (ERR_NEEDTOWAIT);
+        }
     }
     
     return 0;
@@ -2551,7 +2589,12 @@ static int can_join(aClient *sptr, aChannel *chptr, char *key)
     
     joinrate_prejoin(chptr);
 
-    if (chptr->mode.mode & MODE_INVITEONLY)
+    if (chptr->join_connect_time && (sptr->firsttime + chptr->join_connect_time > NOW) && !is_xflags_exempted(sptr,chptr))
+    {
+        r = "+X";
+        error = ERR_NEEDTOWAIT;
+    }
+    else if (chptr->mode.mode & MODE_INVITEONLY)
     {
         r = "+i";
         error = ERR_INVITEONLYCHAN;
@@ -2583,7 +2626,7 @@ static int can_join(aClient *sptr, aChannel *chptr, char *key)
     }
 
 #ifdef INVITE_LISTS
-    if (error && !jrl && is_invited(sptr, chptr))
+    if (error && !jrl && is_invited(sptr, chptr) && (error!=ERR_NEEDTOWAIT || (chptr->xflags & XFLAG_EXEMPT_INVITES)))
         error = 0;
 #endif
 
@@ -2594,6 +2637,16 @@ static int can_join(aClient *sptr, aChannel *chptr, char *key)
     {
         if (!jrl)
             joinrate_warn(chptr, sptr);
+
+        if(error==ERR_NEEDTOWAIT)
+        {
+            sendto_one(sptr,":%s NOTICE %s :*** Notice -- You must wait %ld seconds before you will be able to join %s", me.name, sptr->name, (sptr->firsttime + chptr->join_connect_time - NOW), chptr->chname);
+            /* Let's also fake a nice reject message most clients will recognize -Kobi. */
+            if(chptr->xflags & XFLAG_EXEMPT_REGISTERED)
+                error = ERR_NEEDREGGEDNICK;
+            else
+                error = ERR_INVITEONLYCHAN;
+        }
 
         if (error==ERR_NEEDREGGEDNICK)
             sendto_one(sptr, getreply(ERR_NEEDREGGEDNICK), me.name, sptr->name,
@@ -2732,6 +2785,7 @@ get_channel(aClient *cptr, char *chname, int flag, int *created)
         chptr->nextch = channel;
         channel = chptr;
         chptr->channelts = timeofday;
+        chptr->max_bans = MAXBANS;
         (void) add_to_channel_hash_table(chname, chptr);
         Count.chan++;
     }
@@ -2863,6 +2917,7 @@ static void sub1_from_channel(aChannel *chptr)
 #ifdef FLUD
         free_fluders(NULL, chptr);
 #endif
+        if(chptr->greetmsg) MyFree(chptr->greetmsg);
         free_channel(chptr);
         Count.chan--;
     }
@@ -3172,6 +3227,10 @@ int m_join(aClient *cptr, aClient *sptr, int parc, char *parv[])
             }
             parv[1] = name;
             (void) m_names(cptr, sptr, 2, parv);
+            if(chptr->greetmsg)
+            {
+                sendto_one(sptr, ":%s!%s@%s PRIVMSG %s :%s", Network_Name, Network_Name, DEFAULT_STAFF_ADDRESS, name, chptr->greetmsg);
+            }
         }
     }
         
@@ -3336,7 +3395,7 @@ int m_part(aClient *cptr, aClient *sptr, int parc, char *parv[])
         }
         /* Remove user from the old channel (if any) */
 
-        if (parc < 3 || can_send(sptr,chptr,reason) || IsSquelch(sptr))
+        if (parc < 3 || can_send(sptr,chptr,reason) || IsSquelch(sptr) || ((chptr->xflags & XFLAG_NO_PART_MSG) && !is_xflags_exempted(sptr,chptr)))
         {
             sendto_serv_butone(cptr, PartFmt, parv[0], name);
             sendto_channel_butserv(chptr, sptr, PartFmt, parv[0], name);
@@ -3515,6 +3574,7 @@ void send_topic_burst(aClient *cptr)
 {
     aChannel *chptr;
     aClient *acptr;
+    struct FlagList *xflag;
     char *tmpptr;            /* Temporary pointer to remove the user@host part from tnick for non-NICKIPSTR servers */
     char tnick[NICKLEN + 1]; /* chptr->topic_nick without the user@host part for non-NICKIPSTR servers */
     int len;                 /* tnick's length */
@@ -3540,6 +3600,21 @@ void send_topic_burst(aClient *cptr)
                                tnick, (long)chptr->topic_time,
 			       chptr->topic);
                 }
+            }
+            if(chptr->xflags & XFLAG_SET)
+            {
+                /* Not very optimized but we'll survive... -Kobi. */
+                sendto_one(cptr, ":%s SVSXCF %s JOIN_CONNECT_TIME:%d TALK_CONNECT_TIME:%d TALK_JOIN_TIME:%d", me.name, chptr->chname, chptr->join_connect_time, chptr->talk_connect_time, chptr->talk_join_time);
+                for(xflag = xflags_list; xflag->option; xflag++)
+                {
+                    sendto_one(cptr, ":%s SVSXCF %s:%d", me.name, xflag->option, (chptr->xflags & xflag->flag)?1:0);
+                }
+                if(chptr->greetmsg && (chptr->max_bans != MAXBANS))
+                    sendto_one(cptr, ":%s SVSXCF %s MAX_BANS:%d GREETMSG :%s", me.name, chptr->chname, chptr->max_bans, chptr->greetmsg);
+                else if(chptr->greetmsg)
+                    sendto_one(cptr, ":%s SVSXCF %s GREETMSG :%s", me.name, chptr->chname, chptr->greetmsg);
+                else if(chptr->max_bans != MAXBANS)
+                    sendto_one(cptr, ":%s SVSXCF %s MAX_BANS:%d", me.name, chptr->chname, chptr->max_bans);
             }
         }
 

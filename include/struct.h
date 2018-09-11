@@ -1190,6 +1190,7 @@ struct ChanLink
     struct ChanLink *next;
     aClient *cptr;
     int flags;
+    time_t when;
     unsigned int banserial;     /* used for bquiet cache */
 };
 
@@ -1258,6 +1259,12 @@ struct Channel
     int         jrw_debt_ctr;   /* join rate warning: in-debt counter */
     int         jrw_debt_ts;    /* join rate warning: debt begin timestamp */
     unsigned int banserial;     /* used for bquiet cache */
+    int join_connect_time;      /* Number of seconds the user must be online to be able to join */
+    int talk_connect_time;      /* Number of seconds the user must be online to be able to talk on the channel */
+    int talk_join_time;         /* Number of seconds the user must be on the channel to be able to tlak on the channel */
+    int max_bans;               /* Maximum number of bans ops can add (default: MAXBANS) */
+    char *greetmsg;             /* Special greeting message */
+    int xflags;                 /* The eXtended channel flags */
 };
 
 #define	TS_CURRENT	5	/* current TS protocol version */
@@ -1333,6 +1340,24 @@ struct Channel
 		find_channel_link((blah->user)->channel, chan)) ? 1 : 0)
 
 #define	IsChannelName(name) ((name) && (*(name) == '#'))
+
+/* Extended Channel Flags */
+#define XFLAG_SET               0x0001 /* This is to indicate the channel has enabled xflag(s) */
+#define XFLAG_NO_NOTICE         0x0002
+#define XFLAG_NO_CTCP           0x0004
+#define XFLAG_NO_PART_MSG       0x0008
+#define XFLAG_NO_QUIT_MSG       0x0010
+#define XFLAG_EXEMPT_IDENTD     0x0020
+#define XFLAG_EXEMPT_REGISTERED 0x0040
+#define XFLAG_EXEMPT_INVITES    0x0080
+#define XFLAG_EXEMPT_OPPED      0x0100
+#define XFLAG_EXEMPT_VOICED     0x0200
+
+struct FlagList
+{
+    char *option;
+    int flag;
+};
 
 /* Misc macros */
 

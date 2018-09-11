@@ -367,6 +367,7 @@ struct Message msgtab[] =
     {MSG_LUSERSLOCK, m_luserslock, MAXPARA, 0,       0},
     {MSG_LINKSCONTROL, m_linkscontrol, MAXPARA, 0,      0},
 
+    {"SVSXCF",     m_svsxcf,   MAXPARA, 0,        0},
     {MSG_WEBIRC,   m_webirc,   MAXPARA, MF_UNREG, 0},
     { 0 }
 };
