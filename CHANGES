@@ -1,3 +1,12 @@
+Changes for 2.1.0:
+------------------
+Kobi Shmueli (3):
+      Added user host-masking feature. Users can use umode %%UMODE%% to have their hostnames masked.
+      Added spamfilter feature %%INSERT_HELP%%
+      Added extended channel flags %%INSERT_HELP%%
+      
+Ryan Smith (1):
+      Added support for commercial SSL certificates to handle soon to be changes to IRC clients to reject self-signed certificates.
 Changes for 2.0.7:
 ------------------
 Kobi Shmueli (1):
