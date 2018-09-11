@@ -56,6 +56,8 @@ extern void outofmemory(void);  /* defined in list.c */
 extern void reset_sock_opts();
 extern int send_lusers(aClient *,aClient *,int, char **);
 #endif
+extern int is_xflags_exempted(aClient *sptr, aChannel *chptr); /* for m_message() */
+extern time_t get_user_jointime(aClient *cptr, aChannel *chptr); /* for send_msg_error() */
 extern int server_was_split;
 extern int svspanic;
 extern int svsnoop;
@@ -1489,12 +1491,23 @@ is_silenced(aClient *sptr, aClient *acptr)
     return 0;
 }
 
+static inline time_t get_highest(time_t val1, time_t val2)
+{
+    if(val1 > val2) return val1;
+    else return val2;
+}
+
 static inline void 
-send_msg_error(aClient *sptr, char *parv[], char *nick, int ret) 
+send_msg_error(aClient *sptr, char *parv[], char *nick, int ret, aChannel *chptr) 
 {
     if(ret == ERR_NOCTRLSONCHAN)
         sendto_one(sptr, err_str(ERR_NOCTRLSONCHAN), me.name,
                    parv[0], nick, parv[2]);
+    else if(ret == ERR_NEEDTOWAIT)
+    {
+        sendto_one(sptr, err_str(ERR_NEEDTOWAIT), me.name,
+                   parv[0], get_highest((sptr->firsttime + chptr->talk_connect_time - NOW), get_user_jointime(sptr, chptr) + chptr->talk_join_time - NOW), chptr->chname);
+    }
     else if(ret == ERR_NEEDREGGEDNICK)
         sendto_one(sptr, err_str(ERR_NEEDREGGEDNICK), me.name,
                    parv[0], nick, "speak in", aliastab[AII_NS].nick,
@@ -1615,9 +1628,11 @@ m_message(aClient *cptr, aClient *sptr, int parc, char *parv[], int notice)
                 if ((ret = can_send(sptr, chptr, parv[2])))
                 {
                     if (ismine && !notice)
-                        send_msg_error(sptr, parv, target, ret);
+                        send_msg_error(sptr, parv, target, ret, chptr);
                     continue;
                 }
+
+                if (notice && (chptr->xflags & XFLAG_NO_NOTICE) && !is_xflags_exempted(sptr,chptr)) continue;
 
                 if((chptr->mode.mode & MODE_AUDITORIUM) && !is_chan_opvoice(sptr, chptr))
                 {
@@ -1632,7 +1647,7 @@ m_message(aClient *cptr, aClient *sptr, int parc, char *parv[], int notice)
                     if ((ret = can_send(sptr, chptr, parv[2])))
                     {
                         if (ismine && !notice)
-                            send_msg_error(sptr, parv, target, ret);
+                            send_msg_error(sptr, parv, target, ret, chptr);
                         continue;
                     }
                     */
@@ -1658,6 +1673,7 @@ m_message(aClient *cptr, aClient *sptr, int parc, char *parv[], int notice)
                             if (check_for_flud(sptr, NULL, chptr, 1))
                                 return 0;
 #endif
+                            if ((chptr->xflags & XFLAG_NO_CTCP) && !is_xflags_exempted(sptr,chptr)) continue;
                     }
                 }
             }
@@ -2894,6 +2910,20 @@ int m_oper(aClient *cptr, aClient *sptr, int parc, char *parv[])
             sendto_ops_lev(ADMIN_LEV, "Failed OPER attempt by %s (%s@%s) [svsnoop is enabled]",
                            parv[0], sptr->user->username, sptr->user->host);
             return 0;
+        }
+        else
+        {
+            for(lp = sptr->user->channel; lp; lp = lpn)
+            {
+                lpn = lp->next;
+                chptr = lp->value.chptr;
+                if((chptr->xflags & XFLAG_NO_QUIT_MSG) && !is_xflags_exempted(sptr,chptr))
+                {
+                    sendto_serv_butone(cptr, ":%s PART %s", parv[0], chptr->chname);
+                    sendto_channel_butserv(chptr, sptr, ":%s PART %s", parv[0], chptr->chname);
+                    remove_user_from_channel(sptr, chptr);
+                }
+            }
         }
 
         /* attach our conf */
