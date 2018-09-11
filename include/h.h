@@ -60,6 +60,7 @@ extern char Services_Name[HOSTLEN+1];
 extern char Stats_Name[HOSTLEN+1];
 extern char Staff_Address[HOSTLEN+1];
 extern char NS_Register_URL[TOPICLEN+1];
+extern char SpamFilter_URL[TOPICLEN+1];
 extern char Network_Kline_Address[HOSTLEN+1];
 extern char Local_Kline_Address[HOSTLEN+1];
 extern int  maxchannelsperuser, tsmaxdelta, tswarndelta;

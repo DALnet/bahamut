@@ -26,8 +26,8 @@ static char *replies[] =
     /* 002 RPL_YOURHOST */	":%s 002 %s :Your host is %s, running "
                                 "version %s",
     /* 003 RPL_CREATED */	":%s 003 %s :This server was created %s",
-    /* 004 RPL_MYINFO */	":%s 004 %s %s %s aAbcCdefFghHiIjkKmnoOrRsSwxXy "
-                                "AbceiIjklLmMnoOprRsStv",
+    /* 004 RPL_MYINFO */	":%s 004 %s %s %s aAbcCdefFghHiIjkKmnoOPrRsSwxXy "
+                                "AbceiIjklLmMnoOpPrRsStv",
     /* 005 RPL_ISUPPORT */      ":%s 005 %s %s :are available on this server",
     /* 006 */	                NULL,
     /* 007 */	                NULL,

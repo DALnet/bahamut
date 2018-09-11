@@ -48,6 +48,7 @@
 #include "fds.h"
 #include "memcount.h"
 #include "libcrypto-compat.h"
+#include "spamfilter.h"
 
 aMotd      *motd;
 aMotd      *helpfile;           /* misnomer, aMotd could be generalized */
@@ -60,6 +61,7 @@ char Network_Name[HOSTLEN+1];
 char Services_Name[HOSTLEN+1];
 char Stats_Name[HOSTLEN+1];
 char NS_Register_URL[TOPICLEN+1];
+char SpamFilter_URL[TOPICLEN+1];
 char Network_Kline_Address[HOSTLEN+1];
 char Local_Kline_Address[HOSTLEN+1];
 char Staff_Address[HOSTLEN+1];
@@ -897,6 +899,10 @@ main(int argc, char *argv[])
         
     NOW = time(NULL);
         
+#ifdef SPAMFILTER
+    load_spamfilter();
+#endif
+
 #ifdef USE_SSL
     printf("Trying to initialize ssl...\n");
     if(!(ssl_capable = ssl_init()))
@@ -1311,6 +1317,8 @@ memcount_ircd(MCircd *mc)
     mc->s_confbuf.m += sizeof(Stats_Name);
     mc->s_confbuf.c++;
     mc->s_confbuf.m += sizeof(NS_Register_URL);
+    mc->s_confbuf.c++;
+    mc->s_confbuf.m += sizeof(SpamFilter_URL);
     mc->s_confbuf.c++;
     mc->s_confbuf.m += sizeof(Network_Kline_Address);
     mc->s_confbuf.c++;
