@@ -45,6 +45,12 @@ build:
 		cd $$i;\
 		${MAKE} build; cd ..;\
 	done
+	@if [ -f modules/install.sh ] ; then \
+		echo "Building modules"; \
+		cd modules; \
+		./install.sh build; \
+		cd ..;\
+	fi
 	@echo "******************************************************************************"
 	@echo "* For help with bahamut, please refer to http://bahamut.dal.net/             *"
 	@echo "* If you encouter serious security related bugs, please mail coders@dal.net  *"
@@ -108,6 +114,12 @@ install: all
 		$(MAKE) install; \
 		cd ..; \
 	done
+	@if [ -f modules/install.sh ] ; then \
+		echo "Building modules"; \
+		cd modules; \
+		./install.sh install; \
+		cd ..;\
+	fi
 	@echo ""
 	@echo "Now edit $(INSTALL_DIR)/template.conf"
 	@echo "and move it to ircd.conf - and you'll be all set."
