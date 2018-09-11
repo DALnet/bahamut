@@ -88,7 +88,7 @@ char *infotext[] =
      "Raistlin_Majere     Jason Slagle        raistlin@bahamut.net",
 	 "Rakarra             Ian Westcott        rakarra@dal.net",
      "sedition            David Parton        sedition@dal.net",
-	 "srd                 Holbrook Bunting          srd@powertrip.net",
+	 "srd                 Holbrook Bunting    srd@powertrip.net",
 	 "White_Dragon        Chip Norkus         wd@dal.net",
      "xPsycho             Ryan Smith          xpsycho@dal.net",
 	 "",
