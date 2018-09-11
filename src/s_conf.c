@@ -2335,6 +2335,11 @@ int rehash(aClient *cptr, aClient *sptr, int sig)
 
     if (sig == SIGHUP) 
     {
+#ifdef USE_SSL
+		/* Rehash SSL so we can automate certificate renewals and updates externally, i.e. from a cron job --xPsycho */
+		sendto_ops("Got signal SIGHUP, rehashing SSL");
+		ssl_rehash();
+#endif
         sendto_ops("Got signal SIGHUP, reloading ircd conf. file");
         remove_userbans_match_flags(UBAN_NETWORK, 0);
         /* remove all but kill {} blocks from conf */

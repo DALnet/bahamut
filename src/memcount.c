@@ -58,7 +58,7 @@ int mc_dlinks(DLink *lp)
 void report_memory_usage(aClient *cptr, int detail)
 {
     /* ":me.name RPL_STATSDEBUG cptr->name :" */
-    char pfxbuf[1+HOSTLEN+1+3+1+NICKLEN+1+1+1];
+    char pfxbuf[1+HOSTLEN+1+3+1+HOSTLEN+1+1+1];
 
     /* per file counters */
     MCblalloc       mc_blalloc = {0};

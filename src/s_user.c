@@ -1467,7 +1467,7 @@ is_silenced(aClient *sptr, aClient *acptr)
 {
     Link *lp;
     anUser *user;
-    char sender[HOSTLEN+NICKLEN+USERLEN+5];
+    char sender[HOSTLEN+1+USERLEN+1+HOSTLEN+1];
 
     if (!(acptr->user)||!(lp=acptr->user->silence)||!(user=sptr->user))
         return 0;
