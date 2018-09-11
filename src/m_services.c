@@ -808,6 +808,7 @@ struct FlagList xflags_list[] =
   { "NO_CTCP",           XFLAG_NO_CTCP           },
   { "NO_PART_MSG",       XFLAG_NO_PART_MSG       },
   { "NO_QUIT_MSG",       XFLAG_NO_QUIT_MSG       },
+  { "SJR",               XFLAG_SJR               },
   { "EXEMPT_OPPED",      XFLAG_EXEMPT_OPPED      },
   { "EXEMPT_VOICED",     XFLAG_EXEMPT_VOICED     },
   { "EXEMPT_IDENTD",     XFLAG_EXEMPT_IDENTD     },
@@ -836,6 +837,7 @@ struct FlagList xflags_list[] =
  *   NO_CTCP           - no ctcps can be sent to the channel (on/off)
  *   NO_PART_MSG       - no /part messages (on/off)
  *   NO_QUIT_MSG       - no /quit messages (on/off)
+ *   SJR               - enable services join request for this channel (must also be enabled globally)
  *   EXEMPT_OPPED      - exempt opped users (on/off)
  *   EXEMPT_VOICED     - exempt voiced users (on/off)
  *   EXEMPT_IDENTD     - exempt users with identd (on/off)

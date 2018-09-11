@@ -1355,6 +1355,7 @@ struct Channel
 #define XFLAG_EXEMPT_INVITES    0x0080
 #define XFLAG_EXEMPT_OPPED      0x0100
 #define XFLAG_EXEMPT_VOICED     0x0200
+#define XFLAG_SJR               0x0400 /* Services join request */
 
 struct FlagList
 {

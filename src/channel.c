@@ -2943,8 +2943,8 @@ int send_sjr_to_services(aClient *sptr, char *chname, char *key)
 
     if(chptr)
     {
-        if(!(chptr->mode.mode & MODE_REGISTERED) && services_jr!=2) return 1; /* Channel isn't +r, let the local server handle the request
-                                                                                 (unless sjr is enabled for all channels [services_jr==2]) */
+        if(!(chptr->xflags & XFLAG_SJR) && services_jr!=2) return 1; /* Channel isn't xflagged, let the local server handle the request
+                                                                        (unless sjr is enabled for all channels [services_jr==2]) */
         for(lp = sptr->user->invited; lp; lp = lp->next)
         {
             if(lp->value.chptr == chptr)
@@ -2954,7 +2954,7 @@ int send_sjr_to_services(aClient *sptr, char *chname, char *key)
             }
         }
     }
-    else if(services_jr!=2) return 1; /* Channel doesn't exist (so it can't be +r) */
+    else if(services_jr!=2) return 1; /* Channel doesn't exist (so it can't be xflagged) */
 
     if(!aliastab[AII_NS].client)
         return 1; /* Services are off-line, let the local server handle the request */
