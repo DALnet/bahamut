@@ -2365,6 +2365,20 @@ m_quit(aClient *cptr, aClient *sptr, int parc, char *parv[])
                 }
             }
         }
+        else
+        {
+            for(lp = sptr->user->channel; lp; lp = lpn)
+            {
+                lpn = lp->next;
+                chptr = lp->value.chptr;
+                if((chptr->xflags & XFLAG_NO_QUIT_MSG) && !is_xflags_exempted(sptr,chptr))
+                {
+                    sendto_serv_butone(cptr, ":%s PART %s", parv[0], chptr->chname);
+                    sendto_channel_butserv(chptr, sptr, ":%s PART %s", parv[0], chptr->chname);
+                    remove_user_from_channel(sptr, chptr);
+                }
+            }
+        }
 #endif
 
         return exit_client(cptr, sptr, sptr, comment);
@@ -2953,20 +2967,6 @@ int m_oper(aClient *cptr, aClient *sptr, int parc, char *parv[])
             sendto_ops_lev(ADMIN_LEV, "Failed OPER attempt by %s (%s@%s) [svsnoop is enabled]",
                            parv[0], sptr->user->username, sptr->user->host);
             return 0;
-        }
-        else
-        {
-            for(lp = sptr->user->channel; lp; lp = lpn)
-            {
-                lpn = lp->next;
-                chptr = lp->value.chptr;
-                if((chptr->xflags & XFLAG_NO_QUIT_MSG) && !is_xflags_exempted(sptr,chptr))
-                {
-                    sendto_serv_butone(cptr, ":%s PART %s", parv[0], chptr->chname);
-                    sendto_channel_butserv(chptr, sptr, ":%s PART %s", parv[0], chptr->chname);
-                    remove_user_from_channel(sptr, chptr);
-                }
-            }
         }
 
         /* attach our conf */
