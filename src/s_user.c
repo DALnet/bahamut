@@ -979,6 +979,10 @@ register_user(aClient *cptr, aClient *sptr, char *nick, char *username,
                     memset(&sptr->ip, 0, sizeof(sptr->ip));
                     strcpy(sptr->hostip, "0.0.0.0");
                     strncpy(sptr->sockhost, Staff_Address, HOSTLEN + 1);
+#ifdef USER_HOSTMASKING
+                    strncpyzt(sptr->user->mhost, mask_host(Staff_Address,0), HOSTLEN + 1);
+                    if(uhm_type > 0) sptr->umode &= ~UMODE_H; /* It's already masked anyway */
+#endif
                 }
 
                 if(tmpptr)
