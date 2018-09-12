@@ -1,10 +1,12 @@
 Changes for 2.1.0:
 ------------------
-Kobi Shmueli (9):
+Kobi Shmueli (11):
       Fixed m_message() to compile with old gcc 2.x (i.e. for FreeBSD 4.x).
       Let server admins (and u:lined servers) see more info with /info: OS, socket engine type, maxconnections, etc.
       Changed STATS o/c/i output to be in human-readable format (#35).
       Added user host-masking feature. When enabled, users' hostnames are masked by default and users can use umode -H to unmask themselves.
+      Added module hook for WHOIS.
+      Updated version.c.SH (Kobi --> Kobi_S & added RuneB & skill).
       Added spamfilter feature (https://www.dal.net/kb/view.php?kb=411).
       Added extended channel flags (https://www.dal.net/kb/view.php?kb=414) (#41).
       Automatically build & install modules if they exist (#40).
