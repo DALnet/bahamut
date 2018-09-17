@@ -2910,6 +2910,10 @@ int m_oper(aClient *cptr, aClient *sptr, int parc, char *parv[])
         sptr->umode |= UMODE_I;
         sendto_serv_butone(cptr, ":%s MODE %s :+I", parv[0], parv[0]);
 #endif
+#if defined(SPAMFILTER) && defined(DEFAULT_OPER_SPAMFILTER_DISABLED)
+        sptr->umode |= UMODE_P;
+        sendto_serv_butone(cptr, ":%s MODE %s :+P", parv[0], parv[0]);
+#endif
         Count.oper++;
         if (IsMe(cptr))
             sendto_one(sptr, rpl_str(RPL_YOUREOPER), me.name, parv[0]);
@@ -2985,8 +2989,11 @@ int m_oper(aClient *cptr, aClient *sptr, int parc, char *parv[])
             SetOper(sptr);
 #ifdef DEFAULT_HELP_MODE                        
         sptr->umode|=(UMODE_s|UMODE_g|UMODE_w|UMODE_n|UMODE_h);
-#else                   
+#else
         sptr->umode|=(UMODE_s|UMODE_g|UMODE_w|UMODE_n);
+#endif
+#if defined(SPAMFILTER) && defined(DEFAULT_OPER_SPAMFILTER_DISABLED)
+        sptr->umode|=UMODE_P;
 #endif
         sptr->oflag = aoper->flags;
         Count.oper++;
