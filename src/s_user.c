@@ -979,6 +979,10 @@ register_user(aClient *cptr, aClient *sptr, char *nick, char *username,
                     memset(&sptr->ip, 0, sizeof(sptr->ip));
                     strcpy(sptr->hostip, "0.0.0.0");
                     strncpy(sptr->sockhost, Staff_Address, HOSTLEN + 1);
+#ifdef USER_HOSTMASKING
+                    strncpyzt(sptr->user->mhost, mask_host(Staff_Address,0), HOSTLEN + 1);
+                    if(uhm_type > 0) sptr->umode &= ~UMODE_H; /* It's already masked anyway */
+#endif
                 }
 
                 if(tmpptr)
@@ -2351,17 +2355,34 @@ m_quit(aClient *cptr, aClient *sptr, int parc, char *parv[])
         strncpy(comment + 6, reason, TOPICLEN - 6); 
         comment[TOPICLEN] = 0;
 #ifdef SPAMFILTER
-        if((blocked = check_sf(sptr, reason, "quit", SF_CMD_QUIT, sptr->name)))
+        if(IsPerson(sptr))
         {
-            for(lp = sptr->user->channel; lp; lp = lpn)
+            if((blocked = check_sf(sptr, reason, "quit", SF_CMD_QUIT, sptr->name)))
             {
-                lpn = lp->next;
-                chptr = lp->value.chptr;
-                if(!(chptr->mode.mode & MODE_PRIVACY))
+                for(lp = sptr->user->channel; lp; lp = lpn)
                 {
-                    sendto_serv_butone(cptr, ":%s PART %s", parv[0], chptr->chname);
-                    sendto_channel_butserv(chptr, sptr, ":%s PART %s", parv[0], chptr->chname);
-                    remove_user_from_channel(sptr, chptr);
+                    lpn = lp->next;
+                    chptr = lp->value.chptr;
+                    if(!(chptr->mode.mode & MODE_PRIVACY))
+                    {
+                        sendto_serv_butone(cptr, ":%s PART %s", parv[0], chptr->chname);
+                        sendto_channel_butserv(chptr, sptr, ":%s PART %s", parv[0], chptr->chname);
+                        remove_user_from_channel(sptr, chptr);
+                    }
+                }
+            }
+            else
+            {
+                for(lp = sptr->user->channel; lp; lp = lpn)
+                {
+                    lpn = lp->next;
+                    chptr = lp->value.chptr;
+                    if((chptr->xflags & XFLAG_NO_QUIT_MSG) && !is_xflags_exempted(sptr,chptr))
+                    {
+                        sendto_serv_butone(cptr, ":%s PART %s", parv[0], chptr->chname);
+                        sendto_channel_butserv(chptr, sptr, ":%s PART %s", parv[0], chptr->chname);
+                        remove_user_from_channel(sptr, chptr);
+                    }
                 }
             }
         }
@@ -2953,20 +2974,6 @@ int m_oper(aClient *cptr, aClient *sptr, int parc, char *parv[])
             sendto_ops_lev(ADMIN_LEV, "Failed OPER attempt by %s (%s@%s) [svsnoop is enabled]",
                            parv[0], sptr->user->username, sptr->user->host);
             return 0;
-        }
-        else
-        {
-            for(lp = sptr->user->channel; lp; lp = lpn)
-            {
-                lpn = lp->next;
-                chptr = lp->value.chptr;
-                if((chptr->xflags & XFLAG_NO_QUIT_MSG) && !is_xflags_exempted(sptr,chptr))
-                {
-                    sendto_serv_butone(cptr, ":%s PART %s", parv[0], chptr->chname);
-                    sendto_channel_butserv(chptr, sptr, ":%s PART %s", parv[0], chptr->chname);
-                    remove_user_from_channel(sptr, chptr);
-                }
-            }
         }
 
         /* attach our conf */
