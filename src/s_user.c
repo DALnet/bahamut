@@ -689,12 +689,6 @@ register_user(aClient *cptr, aClient *sptr, char *nick, char *username,
 #endif
                 
 
-        /* i really dont like the fact that we're calling m_oper from here.
-         * perhaps there is a better method...?  Will investigate later
-         * -epi */
-        if (oldstatus == STAT_MASTER && MyConnect(sptr))
-            m_oper(&me, sptr, 1, parv);
-
         /* hostile username checks begin here */
         
         {
