@@ -235,6 +235,7 @@ extern int  m_check(aClient *, aClient *, int, char **);
 extern int  m_webirc(aClient *, aClient *, int, char **);
 extern int m_spamops(aClient *, aClient *, int, char **);
 extern int m_sf(aClient *, aClient *, int, char **);
+extern int m_svsxcf(aClient *, aClient *, int, char **);
 
 /* aliastab indexes */
 #define AII_NS  0
