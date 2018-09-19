@@ -33,6 +33,7 @@ extern void fakelinkserver_update(char *, char *);
 extern void fakeserver_sendserver(aClient *);
 extern void fakelusers_sendlock(aClient *);
 extern void reset_sock_opts(int, int);
+extern void spamfilter_sendserver(aClient *acptr);
 extern int user_modes[];
 extern int uhm_type;
 
