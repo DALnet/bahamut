@@ -174,7 +174,6 @@ typedef struct SServicesTag ServicesTag;
 #define	BOOT_OPER	 16
 #define BOOT_STDERR	 64
 #define	STAT_LOG	 -6	/* logfile for -x */
-#define	STAT_MASTER	 -5	/* Local ircd master before identification */
 #define	STAT_CONNECTING	 -4
 #define	STAT_HANDSHAKE	 -3
 #define	STAT_ME		 -2
@@ -190,13 +189,11 @@ typedef struct SServicesTag ServicesTag;
 #define	IsConnecting(x)		((x)->status == STAT_CONNECTING)
 #define	IsHandshake(x)		((x)->status == STAT_HANDSHAKE)
 #define	IsMe(x)			((x)->status == STAT_ME)
-#define	IsUnknown(x)		((x)->status == STAT_UNKNOWN || \
-				 (x)->status == STAT_MASTER)
+#define	IsUnknown(x)		((x)->status == STAT_UNKNOWN)
 #define	IsServer(x)		((x)->status == STAT_SERVER)
 #define	IsClient(x)		((x)->status == STAT_CLIENT)
 #define	IsLog(x)		((x)->status == STAT_LOG)
 
-#define	SetMaster(x)		((x)->status = STAT_MASTER)
 #define	SetConnecting(x)	((x)->status = STAT_CONNECTING)
 #define	SetHandshake(x)		((x)->status = STAT_HANDSHAKE)
 #define	SetMe(x)		((x)->status = STAT_ME)

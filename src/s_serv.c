@@ -613,12 +613,10 @@ m_error(aClient *cptr, aClient *sptr, int parc, char *parv[])
      */
     if (IsPerson(cptr) || IsUnknown(cptr))
         return 0;
-    if (cptr == sptr)
-        sendto_ops("ERROR :from %s -- %s",
-                   get_client_name(cptr, HIDEME), para);
-    else
-        sendto_ops("ERROR :from %s via %s -- %s", sptr->name,
-                   get_client_name(cptr, HIDEME), para);
+
+    sendto_serv_butone_super(cptr, 0, ":%s GNOTICE :Error -- %s", parv[0], para);
+    sendto_gnotice("from %s: Error -- %s", parv[0], para);
+
     return 0;
 }
 
