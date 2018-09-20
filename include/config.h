@@ -867,6 +867,14 @@
  */
 #define SPAMFILTER
 
+/*
+ * DEFAULT_OPER_SPAMFILTER_DISABLED - default your opers to +P, which disables spamfilter checking.  This
+ * is strongly recommended so that users can report potential spam.
+ */
+#ifdef SPAMFILTER
+#define DEFAULT_OPER_SPAMFILTER_DISABLED
+#endif
+
 /* ------------------------- END CONFIGURATION SECTION -------------------- */
 #ifdef APOLLO
 #define RESTARTING_SYSTEMCALLS
