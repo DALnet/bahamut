@@ -100,8 +100,14 @@ confparse_error(char *problem, int line)
     if(!forked)
         printf("ERROR:  %s near line %d of %s\n", problem, line, current_file);
     else
+    {
         sendto_realops("Conf Error:  %s near line %d of %s", problem, line,
                         current_file);
+#ifdef USE_SYSLOG
+        syslog(LOG_ERR, "Conf Error:  %s near line %d of %s", problem, line,
+                         current_file);
+#endif
+    }
     return;
 }
 
@@ -653,7 +659,12 @@ initconf(char *filename)
     if(!(file = fopen(filename, "r")))
     {
         if(forked)
+        {
             sendto_realops("Unable to open config file %s", filename);
+#ifdef USE_SYSLOG
+            syslog(LOG_ERR, "Unable to open config file %s", filename);
+#endif
+        }
         else
             printf("Unable to open config file %s\n", filename);
         return -1;

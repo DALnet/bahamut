@@ -33,6 +33,7 @@ extern void fakelinkserver_update(char *, char *);
 extern void fakeserver_sendserver(aClient *);
 extern void fakelusers_sendlock(aClient *);
 extern void reset_sock_opts(int, int);
+extern void spamfilter_sendserver(aClient *acptr);
 extern int user_modes[];
 extern int uhm_type;
 
@@ -372,7 +373,10 @@ m_server_estab(aClient *cptr)
     {
         ircstp->is_ref++;
         sendto_one(cptr, "ERROR :Wrong link password");
-        sendto_ops("Link %s dropped, wrong password", inpath);
+        sendto_gnotice("from %s: Link %s dropped, wrong password",
+                       me.name, inpath);
+        sendto_serv_butone(cptr, ":%s GNOTICE :Link %s dropped, wrong"
+                           " password", me.name, inpath);
         return exit_client(cptr, cptr, cptr, "Bad Password");
     }
     memset(cptr->passwd, '\0', sizeof(cptr->passwd));
