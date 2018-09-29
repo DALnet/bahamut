@@ -216,10 +216,22 @@ int check_sf(aClient *cptr, char *text, char *caction, int action, char *target)
             }
             if(!reported && (p->flags & SF_ACT_REPORT))
             {
-                sendto_realops_lev(SPAM_LEV, "spamfilter %s: %s by %s to %s --> %s%s", p->text,
-                                   caction, cptr->name, target, text, (p->flags & SF_ACT_BLOCK)?" (blocked)":"");
-                sendto_serv_butone(NULL, ":%s SPAMOPS :spamfilter %s: %s by %s to %s --> %s%s",
-                                   me.name, p->text, caction, cptr->name, target, text, (p->flags & SF_ACT_BLOCK)?" (blocked)":"");
+                if(IsPerson(cptr))
+                {
+                    sendto_realops_lev(SPAM_LEV, "spamfilter %s: %s by %s!%s@%s to %s --> %s%s", p->text,
+                                       caction, cptr->name, cptr->user->username, cptr->user->host,
+                                       target, text, (p->flags & SF_ACT_BLOCK)?" (blocked)":"");
+                    sendto_serv_butone(NULL, ":%s SPAMOPS :spamfilter %s: %s by %s!%s@%s to %s --> %s%s",
+                                       me.name, p->text, caction, cptr->name, cptr->user->username,
+                                       cptr->user->host, target, text, (p->flags & SF_ACT_BLOCK)?" (blocked)":"");
+                }
+                else
+                {
+                    sendto_realops_lev(SPAM_LEV, "spamfilter %s: %s by %s to %s --> %s%s", p->text,
+                                       caction, cptr->name, target, text, (p->flags & SF_ACT_BLOCK)?" (blocked)":"");
+                    sendto_serv_butone(NULL, ":%s SPAMOPS :spamfilter %s: %s by %s to %s --> %s%s",
+                                       me.name, p->text, caction, cptr->name, target, text, (p->flags & SF_ACT_BLOCK)?" (blocked)":"");
+                }
                 reported++;
             }
             if(p->flags & SF_ACT_AKILL)
