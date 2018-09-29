@@ -1144,6 +1144,11 @@ confadd_options(cVar *vars[], int lnum)
             tmp->type = NULL;
             tswarndelta = atoi(tmp->value);
         }
+	else if(tmp->type && (tmp->type->flag & OPTF_REMREHOK))
+	{
+            tmp->type = NULL;
+            new_confopts |= FLAGS_REMREHOK;
+        }
     }
     return lnum;
 }
@@ -2383,7 +2388,11 @@ int rehash(aClient *cptr, aClient *sptr, int sig)
 
     if(initconf(configfile) == -1)
     {
-        sendto_realops("Rehash Aborted");
+        if (sptr->name == me.name)
+            sendto_realops("Rehash Aborted");
+        else
+            sendto_one(sptr, ":%s NOTICE %s :Rehash Aborted", me.name, sptr->name);
+
         clear_newconfs();
         return 1;
     }
@@ -2391,7 +2400,11 @@ int rehash(aClient *cptr, aClient *sptr, int sig)
     conferr = finishconf();
     if (conferr)
     {
-        sendto_realops("Rehash Aborted: %s", conferr);
+        if (sptr->name == me.name)
+            sendto_realops("Rehash Aborted: %s", conferr);
+        else
+            sendto_one(sptr, ":%s NOTICE %s :Rehash Aborted: %s", me.name, sptr->name, conferr);
+
         clear_newconfs();
         return 1;
     }

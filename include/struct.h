@@ -682,6 +682,8 @@ typedef struct Whowas
 #define FLAGS_WGMON     (FLAGS_WGMONURL|FLAGS_WGMONHOST)
 #define FLAGS_SHOWLINKS 0x0040
 #define FLAGS_SPLITOPOK 0x0080
+#define FLAGS_REMREHOK  0x0100
+
 
 /* flags for connects */
 
