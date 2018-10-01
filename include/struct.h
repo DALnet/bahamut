@@ -1264,6 +1264,7 @@ struct Channel
     int talk_connect_time;      /* Number of seconds the user must be online to be able to talk on the channel */
     int talk_join_time;         /* Number of seconds the user must be on the channel to be able to tlak on the channel */
     int max_bans;               /* Maximum number of bans ops can add (default: MAXBANS) */
+    int max_invites;            /* Maximum number of invites ops can add (default: MAXINVITELIST) */
     char *greetmsg;             /* Special greeting message */
     int xflags;                 /* The eXtended channel flags */
 };

@@ -823,6 +823,7 @@ struct FlagList xflags_list[] =
  *   TALK_CONNECT_TIME - Number of seconds the user must be online to be able to talk on the channel
  *   TALK_JOIN_TIME    - Number of seconds the user must be on the channel to be able to tlak on the channel
  *   MAX_BANS          - Will let us increase the ban limit for specific channels
+ *   MAX_INVITES       - Will let us increase the invite limit for specific channels
  *
  * 1/0 (on/off) options:
  *   NO_NOTICE         - no notices can be sent to the channel (on/off)
@@ -882,6 +883,7 @@ int m_svsxcf(aClient *cptr, aClient *sptr, int parc, char *parv[])
         chptr->talk_connect_time = 0;
         chptr->talk_join_time = 0;
         chptr->max_bans = MAXBANS;
+        chptr->max_invites = MAXINVITELIST;
         chptr->xflags = 0;
         if(chptr->greetmsg)
           MyFree(chptr->greetmsg);
@@ -901,6 +903,7 @@ int m_svsxcf(aClient *cptr, aClient *sptr, int parc, char *parv[])
             else if(!strcasecmp(opt,"TALK_CONNECT_TIME")) { chptr->talk_connect_time = atoi(value); chptr->xflags |= XFLAG_SET; }
             else if(!strcasecmp(opt,"TALK_JOIN_TIME")) { chptr->talk_join_time = atoi(value); chptr->xflags |= XFLAG_SET; }
             else if(!strcasecmp(opt,"MAX_BANS")) { chptr->max_bans = atoi(value); chptr->xflags |= XFLAG_SET; }
+            else if(!strcasecmp(opt,"MAX_INVITES")) { chptr->max_invites = atoi(value); chptr->xflags |= XFLAG_SET; }
             else
             {
                 for(xflag = xflags_list; xflag->option; xflag++)

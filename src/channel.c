@@ -346,7 +346,7 @@ int add_invite_id(aClient* cptr, aChannel* chptr, char* invite_id)
     {
         if (MyClient(cptr))
         {
-            if (++cnt >= MAXINVITELIST)
+            if (++cnt >= chptr->max_invites)
             {
                 sendto_one(cptr, getreply(ERR_BANLISTFULL), me.name, cptr->name,
                     chptr->chname, invite_id, "invite");
@@ -2792,6 +2792,7 @@ get_channel(aClient *cptr, char *chname, int flag, int *created)
         channel = chptr;
         chptr->channelts = timeofday;
         chptr->max_bans = MAXBANS;
+        chptr->max_invites = MAXINVITELIST;
         (void) add_to_channel_hash_table(chname, chptr);
         Count.chan++;
     }
@@ -3634,6 +3635,8 @@ void send_topic_burst(aClient *cptr)
                     sendto_one(cptr, ":%s SVSXCF %s GREETMSG :%s", me.name, chptr->chname, chptr->greetmsg);
                 else if(chptr->max_bans != MAXBANS)
                     sendto_one(cptr, ":%s SVSXCF %s MAX_BANS:%d", me.name, chptr->chname, chptr->max_bans);
+                if(chptr->max_invites != MAXINVITELIST)
+                    sendto_one(cptr, ":%s SVSXCF %s MAX_INVITES:%d", me.name, chptr->chname, chptr->max_invites);
             }
         }
 
