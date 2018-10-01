@@ -48,7 +48,7 @@ build:
 	@if [ -f modules/install.sh ] ; then \
 		echo "Building modules"; \
 		cd modules; \
-		./install.sh build; \
+		INSTALL_DIR="${INSTALL_DIR}" ./install.sh build; \
 		cd ..;\
 	fi
 	@echo "******************************************************************************"
@@ -117,7 +117,7 @@ install: all
 	@if [ -f modules/install.sh ] ; then \
 		echo "Building modules"; \
 		cd modules; \
-		./install.sh install; \
+		INSTALL_DIR="${INSTALL_DIR}" ./install.sh install; \
 		cd ..;\
 	fi
 	@echo ""
