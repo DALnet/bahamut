@@ -806,6 +806,7 @@ struct FlagList xflags_list[] =
   { "EXEMPT_IDENTD",     XFLAG_EXEMPT_IDENTD     },
   { "EXEMPT_REGISTERED", XFLAG_EXEMPT_REGISTERED },
   { "EXEMPT_INVITES",    XFLAG_EXEMPT_INVITES    },
+  { "HIDE_MODE_LISTS",   XFLAG_HIDE_MODE_LISTS   },
   { NULL,                0                       }
 };
 
@@ -830,6 +831,7 @@ struct FlagList xflags_list[] =
  *   NO_CTCP           - no ctcps can be sent to the channel (on/off)
  *   NO_PART_MSG       - no /part messages (on/off)
  *   NO_QUIT_MSG       - no /quit messages (on/off)
+ *   HIDE_MODE_LISTS   - hide /mode #channel +b/+I/+e lists from non-ops (on/off)
  *   EXEMPT_OPPED      - exempt opped users (on/off)
  *   EXEMPT_VOICED     - exempt voiced users (on/off)
  *   EXEMPT_IDENTD     - exempt users with identd (on/off)

@@ -1930,6 +1930,14 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
                 if (anylistsent) /* don't send the list if they have received one */
                     break;
 
+                if((chptr->xflags & XFLAG_HIDE_MODE_LISTS) && !IsAnOper(sptr) && !is_chan_op(sptr,chptr))
+                {
+                    sendto_one(cptr, rpl_str(RPL_ENDOFINVITELIST), me.name,
+                               cptr->name, chptr->chname);
+                    anylistsent = 1;
+                    break;
+                }
+
                 for (invite = chptr->invite_list; invite; invite = invite->next)
                     sendto_one(sptr, rpl_str(RPL_INVITELIST), me.name, cptr->name,
                                chptr->chname, invite->invstr, invite->who, invite->when);
@@ -2001,6 +2009,13 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
                 
                 if (anylistsent) /* don't send the list if they have received one */
                     break;
+                if((chptr->xflags & XFLAG_HIDE_MODE_LISTS) && !IsAnOper(sptr) && !is_chan_op(sptr,chptr))
+                {
+                    sendto_one(cptr, rpl_str(RPL_ENDOFEXEMPTLIST), me.name,
+                               cptr->name, chptr->chname);
+                    anylistsent = 1;
+                    break;
+                }
                 for (exempt = chptr->banexempt_list; exempt; exempt = exempt->next)
                     sendto_one(sptr, rpl_str(RPL_EXEMPTLIST), me.name, cptr->name,
                                chptr->chname, exempt->banstr, exempt->who, exempt->when);
@@ -2072,6 +2087,13 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
             {
                 if (anylistsent)
                     break;
+                if((chptr->xflags & XFLAG_HIDE_MODE_LISTS) && !IsAnOper(sptr) && !is_chan_op(sptr,chptr))
+                {
+                    sendto_one(cptr, rpl_str(RPL_ENDOFBANLIST), me.name,
+                               cptr->name, chptr->chname);
+                    anylistsent = 1;
+                    break;
+                }
                 for(bp=chptr->banlist;bp;bp=bp->next)
                     sendto_one(sptr, rpl_str(RPL_BANLIST), me.name, cptr->name,
                                chptr->chname, bp->banstr, bp->who, bp->when);
