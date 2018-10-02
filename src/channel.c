@@ -1263,6 +1263,43 @@ int is_xflags_exempted(aClient *sptr, aChannel *chptr)
     return 0;
 }
 
+/* A function to send a (verbose) message to the relay channel if it exists
+   (and isn't moderated)... */
+int verbose_to_relaychan(aClient *sptr, aChannel *chptr, char *cmd, char *reason)
+{
+    aChannel *relaychan_ptr;
+    char relaychan_name[CHANNELLEN + 1];
+
+    if(strlen(chptr->chname)+6 > CHANNELLEN)
+        return 0; /* Channel is too long.. we must be able to add -relay to it... */
+
+    strcpy(relaychan_name, chptr->chname);
+    strcat(relaychan_name, "-relay");
+
+    if(!(relaychan_ptr = find_channel(relaychan_name, NULL)))
+        return 0; /* Relay channel doesn't exist */
+
+    if(relaychan_ptr->mode.mode & MODE_MODERATED)
+        return 0; /* Relay channel is moderated */
+
+    if(reason)
+        sendto_channel_butone(NULL, &me, relaychan_ptr, ":%s PRIVMSG %s :Failed %s by %s!%s@%s - %s",
+                              me.name, relaychan_ptr->chname, cmd, sptr->name, sptr->user->username,
+#ifdef USER_HOSTMASKING
+                              IsUmodeH(sptr)?sptr->user->mhost:
+#endif
+                              sptr->user->host, reason);
+    else
+        sendto_channel_butone(NULL, &me, relaychan_ptr, ":%s PRIVMSG %s :Failed %s by %s!%s@%s",
+                              me.name, relaychan_ptr->chname, cmd, sptr->name, sptr->user->username,
+#ifdef USER_HOSTMASKING
+                              IsUmodeH(sptr)?sptr->user->mhost:
+#endif
+                              sptr->user->host);
+
+    return 0;
+}
+
 int can_send(aClient *cptr, aChannel *chptr, char *msg)
 {
     chanMember   *cm;
@@ -1932,6 +1969,8 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
 
                 if((chptr->xflags & XFLAG_HIDE_MODE_LISTS) && !IsAnOper(sptr) && !is_chan_op(sptr,chptr))
                 {
+                    if(chptr->xflags & XFLAG_USER_VERBOSE)
+                        verbose_to_relaychan(cptr, chptr, "mode(+I)", NULL);
                     sendto_one(cptr, rpl_str(RPL_ENDOFINVITELIST), me.name,
                                cptr->name, chptr->chname);
                     anylistsent = 1;
@@ -2011,6 +2050,8 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
                     break;
                 if((chptr->xflags & XFLAG_HIDE_MODE_LISTS) && !IsAnOper(sptr) && !is_chan_op(sptr,chptr))
                 {
+                    if(chptr->xflags & XFLAG_USER_VERBOSE)
+                        verbose_to_relaychan(cptr, chptr, "mode(+e)", NULL);
                     sendto_one(cptr, rpl_str(RPL_ENDOFEXEMPTLIST), me.name,
                                cptr->name, chptr->chname);
                     anylistsent = 1;
@@ -2089,6 +2130,8 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
                     break;
                 if((chptr->xflags & XFLAG_HIDE_MODE_LISTS) && !IsAnOper(sptr) && !is_chan_op(sptr,chptr))
                 {
+                    if(chptr->xflags & XFLAG_USER_VERBOSE)
+                        verbose_to_relaychan(cptr, chptr, "mode(+b)", NULL);
                     sendto_one(cptr, rpl_str(RPL_ENDOFBANLIST), me.name,
                                cptr->name, chptr->chname);
                     anylistsent = 1;
@@ -2643,9 +2686,15 @@ static int can_join(aClient *sptr, aChannel *chptr, char *key)
         error = ERR_NOSSL;
     }
     else if (chptr->mode.mode & MODE_REGONLY && !IsRegNick(sptr))
+    {
+        r = "+R"; /* Only needed for verbose_to_relaychan() */
         error = ERR_NEEDREGGEDNICK;
+    }
     else if (*chptr->mode.key && (BadPtr(key) || mycmp(chptr->mode.key, key)))
+    {
+        r = "+k"; /* Only needed for verbose_to_relaychan() */
         error = ERR_BADCHANNELKEY;
+    }
     else if (!joinrate_check(chptr, sptr, 1))
     {
         r = "+j";
@@ -2659,7 +2708,10 @@ static int can_join(aClient *sptr, aChannel *chptr, char *key)
 #endif
 
     if (!error && is_banned(sptr, chptr, NULL))
+    {
+        r = "+b"; /* Only needed for verbose_to_relaychan() */
         error = ERR_BANNEDFROMCHAN;
+    }
 
     if (error)
     {
@@ -2674,7 +2726,10 @@ static int can_join(aClient *sptr, aChannel *chptr, char *key)
                 error = ERR_NEEDREGGEDNICK;
             else
                 error = ERR_INVITEONLYCHAN;
+            if(chptr->xflags & XFLAG_USER_VERBOSE)
+                verbose_to_relaychan(sptr, chptr, "join", "xflag_join_connect_time");
         }
+        else if(chptr->xflags & XFLAG_USER_VERBOSE) verbose_to_relaychan(sptr, chptr, "join", r);
 
         if (error==ERR_NEEDREGGEDNICK)
             sendto_one(sptr, getreply(ERR_NEEDREGGEDNICK), me.name, sptr->name,
@@ -3432,6 +3487,8 @@ int m_part(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
         if (parc < 3 || can_send(sptr,chptr,reason) || IsSquelch(sptr) || ((chptr->xflags & XFLAG_NO_PART_MSG) && !is_xflags_exempted(sptr,chptr)))
         {
+            if(reason && (chptr->xflags & XFLAG_USER_VERBOSE))
+                verbose_to_relaychan(cptr, chptr, "part_msg", reason);
             sendto_serv_butone(cptr, PartFmt, parv[0], name);
             sendto_channel_butserv(chptr, sptr, PartFmt, parv[0], name);
         }

@@ -807,6 +807,7 @@ struct FlagList xflags_list[] =
   { "EXEMPT_REGISTERED", XFLAG_EXEMPT_REGISTERED },
   { "EXEMPT_INVITES",    XFLAG_EXEMPT_INVITES    },
   { "HIDE_MODE_LISTS",   XFLAG_HIDE_MODE_LISTS   },
+  { "USER_VERBOSE",      XFLAG_USER_VERBOSE      },
   { NULL,                0                       }
 };
 
@@ -837,6 +838,7 @@ struct FlagList xflags_list[] =
  *   EXEMPT_IDENTD     - exempt users with identd (on/off)
  *   EXEMPT_REGISTERED - exempt users with umode +r (on/off)
  *   EXEMPT_INVITES    - exempt users who are +I'ed (on/off)
+ *   USER_VERBOSE      - send failed command messages to #channel-relay (on/off)
  *
  * Special option:
  *   GREETMSG - A message that will be sent when a user joins the channel

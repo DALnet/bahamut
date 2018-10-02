@@ -58,6 +58,7 @@ extern void reset_sock_opts();
 extern int send_lusers(aClient *,aClient *,int, char **);
 #endif
 extern int is_xflags_exempted(aClient *sptr, aChannel *chptr); /* for m_message() */
+extern int verbose_to_relaychan(aClient *sptr, aChannel *chptr, char *cmd, char *reason); /* for m_message() */
 extern time_t get_user_jointime(aClient *cptr, aChannel *chptr); /* for send_msg_error() */
 extern int server_was_split;
 extern int svspanic;
@@ -1638,10 +1639,17 @@ m_message(aClient *cptr, aClient *sptr, int parc, char *parv[], int notice)
                 {
                     if (ismine && !notice)
                         send_msg_error(sptr, parv, target, ret, chptr);
+                    if(chptr->xflags & XFLAG_USER_VERBOSE)
+                        verbose_to_relaychan(sptr, chptr, notice?"notice":"message", parv[2]);
                     continue;
                 }
 
-                if (notice && (chptr->xflags & XFLAG_NO_NOTICE) && !is_xflags_exempted(sptr,chptr)) continue;
+                if (notice && (chptr->xflags & XFLAG_NO_NOTICE) && !is_xflags_exempted(sptr,chptr))
+                {
+                    if(chptr->xflags & XFLAG_USER_VERBOSE)
+                        verbose_to_relaychan(sptr, chptr, "notice", parv[2]);
+                    continue;
+                }
 
                 if((chptr->mode.mode & MODE_AUDITORIUM) && !is_chan_opvoice(sptr, chptr))
                 {
@@ -1682,7 +1690,12 @@ m_message(aClient *cptr, aClient *sptr, int parc, char *parv[], int notice)
                             if (check_for_flud(sptr, NULL, chptr, 1))
                                 return 0;
 #endif
-                            if ((chptr->xflags & XFLAG_NO_CTCP) && !is_xflags_exempted(sptr,chptr)) continue;
+                            if ((chptr->xflags & XFLAG_NO_CTCP) && !is_xflags_exempted(sptr,chptr))
+                            {
+                                if(chptr->xflags & XFLAG_USER_VERBOSE)
+                                    verbose_to_relaychan(cptr, chptr, "ctcp", "xflag_no_ctcp");
+                                continue;
+                            }
                     }
                 }
             }
@@ -2372,6 +2385,8 @@ m_quit(aClient *cptr, aClient *sptr, int parc, char *parv[])
                     chptr = lp->value.chptr;
                     if((chptr->xflags & XFLAG_NO_QUIT_MSG) && !is_xflags_exempted(sptr,chptr))
                     {
+                        if(chptr->xflags & XFLAG_USER_VERBOSE)
+                            verbose_to_relaychan(cptr, chptr, "quit_msg", comment);
                         sendto_serv_butone(cptr, ":%s PART %s", parv[0], chptr->chname);
                         sendto_channel_butserv(chptr, sptr, ":%s PART %s", parv[0], chptr->chname);
                         remove_user_from_channel(sptr, chptr);
