@@ -3479,9 +3479,10 @@ announce_fluder(aClient *fluder, aClient *cptr, aChannel *chptr, int type)
     else
         fludee = chptr->chname;
     
-    sendto_realops_lev(FLOOD_LEV, "Flooder %s [%s@%s] on %s target: %s",
-                       fluder->name, fluder->user->username, fluder->user->host,
-                       fluder->user->server, fludee);
+    if(call_hooks(CHOOK_FLOODWARN, fluder, chptr, 3, fludee, NULL) != FLUSH_BUFFER)
+        sendto_realops_lev(FLOOD_LEV, "Flooder %s [%s@%s] on %s target: %s",
+                           fluder->name, fluder->user->username, fluder->user->host,
+                           fluder->user->server, fludee);
 }
 
 /*

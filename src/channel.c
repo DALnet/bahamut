@@ -1303,6 +1303,8 @@ int verbose_to_relaychan(aClient *sptr, aChannel *chptr, char *cmd, char *reason
 /* A function to send a (verbose) message to +f opers */
 inline void verbose_to_opers(aClient *sptr, aChannel *chptr, char *cmd, char *reason)
 {
+    if(call_hooks(CHOOK_FLOODWARN, sptr, chptr, 1, cmd, reason) == FLUSH_BUFFER) return;
+
     if(reason)
         sendto_realops_lev(FLOOD_LEV, "Flood -- Failed %s by %s!%s@%s - %s",
                            cmd, sptr->name, sptr->user->username,
