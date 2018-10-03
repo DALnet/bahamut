@@ -1357,6 +1357,7 @@ struct Channel
 #define XFLAG_EXEMPT_VOICED     0x0200
 #define XFLAG_HIDE_MODE_LISTS   0x0400
 #define XFLAG_USER_VERBOSE      0x0800
+#define XFLAG_OPER_VERBOSE      0x1000
 
 struct FlagList
 {

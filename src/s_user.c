@@ -59,6 +59,7 @@ extern int send_lusers(aClient *,aClient *,int, char **);
 #endif
 extern int is_xflags_exempted(aClient *sptr, aChannel *chptr); /* for m_message() */
 extern int verbose_to_relaychan(aClient *sptr, aChannel *chptr, char *cmd, char *reason); /* for m_message() */
+extern inline void verbose_to_opers(aClient *sptr, aChannel *chptr, char *cmd, char *reason); /* for m_message() */
 extern time_t get_user_jointime(aClient *cptr, aChannel *chptr); /* for send_msg_error() */
 extern int server_was_split;
 extern int svspanic;
@@ -1641,6 +1642,8 @@ m_message(aClient *cptr, aClient *sptr, int parc, char *parv[], int notice)
                         send_msg_error(sptr, parv, target, ret, chptr);
                     if(chptr->xflags & XFLAG_USER_VERBOSE)
                         verbose_to_relaychan(sptr, chptr, notice?"notice":"message", parv[2]);
+                    if(chptr->xflags & XFLAG_OPER_VERBOSE)
+                        verbose_to_opers(sptr, chptr, notice?"notice":"message", parv[2]);
                     continue;
                 }
 
@@ -1648,6 +1651,8 @@ m_message(aClient *cptr, aClient *sptr, int parc, char *parv[], int notice)
                 {
                     if(chptr->xflags & XFLAG_USER_VERBOSE)
                         verbose_to_relaychan(sptr, chptr, "notice", parv[2]);
+                    if(chptr->xflags & XFLAG_OPER_VERBOSE)
+                        verbose_to_opers(sptr, chptr, "notice", parv[2]);
                     continue;
                 }
 
@@ -1694,6 +1699,8 @@ m_message(aClient *cptr, aClient *sptr, int parc, char *parv[], int notice)
                             {
                                 if(chptr->xflags & XFLAG_USER_VERBOSE)
                                     verbose_to_relaychan(cptr, chptr, "ctcp", "xflag_no_ctcp");
+                                if(chptr->xflags & XFLAG_OPER_VERBOSE)
+                                    verbose_to_opers(cptr, chptr, "ctcp", "xflag_no_ctcp");
                                 continue;
                             }
                     }
@@ -2387,6 +2394,8 @@ m_quit(aClient *cptr, aClient *sptr, int parc, char *parv[])
                     {
                         if(chptr->xflags & XFLAG_USER_VERBOSE)
                             verbose_to_relaychan(cptr, chptr, "quit_msg", comment);
+                        if(chptr->xflags & XFLAG_OPER_VERBOSE)
+                            verbose_to_opers(cptr, chptr, "quit_msg", comment);
                         sendto_serv_butone(cptr, ":%s PART %s", parv[0], chptr->chname);
                         sendto_channel_butserv(chptr, sptr, ":%s PART %s", parv[0], chptr->chname);
                         remove_user_from_channel(sptr, chptr);

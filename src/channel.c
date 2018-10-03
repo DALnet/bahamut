@@ -1300,6 +1300,19 @@ int verbose_to_relaychan(aClient *sptr, aChannel *chptr, char *cmd, char *reason
     return 0;
 }
 
+/* A function to send a (verbose) message to +f opers */
+inline void verbose_to_opers(aClient *sptr, aChannel *chptr, char *cmd, char *reason)
+{
+    if(reason)
+        sendto_realops_lev(FLOOD_LEV, "Flood -- Failed %s by %s!%s@%s - %s",
+                           cmd, sptr->name, sptr->user->username,
+                           sptr->user->host, reason);
+    else
+        sendto_realops_lev(FLOOD_LEV, "Flood -- Failed %s by %s!%s@%s",
+                           cmd, sptr->name, sptr->user->username,
+                           sptr->user->host);
+}
+
 int can_send(aClient *cptr, aChannel *chptr, char *msg)
 {
     chanMember   *cm;
@@ -1971,6 +1984,8 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
                 {
                     if(chptr->xflags & XFLAG_USER_VERBOSE)
                         verbose_to_relaychan(cptr, chptr, "mode(+I)", NULL);
+                    if(chptr->xflags & XFLAG_OPER_VERBOSE)
+                        verbose_to_opers(cptr, chptr, "mode(+I)", NULL);
                     sendto_one(cptr, rpl_str(RPL_ENDOFINVITELIST), me.name,
                                cptr->name, chptr->chname);
                     anylistsent = 1;
@@ -2052,6 +2067,8 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
                 {
                     if(chptr->xflags & XFLAG_USER_VERBOSE)
                         verbose_to_relaychan(cptr, chptr, "mode(+e)", NULL);
+                    if(chptr->xflags & XFLAG_OPER_VERBOSE)
+                        verbose_to_opers(cptr, chptr, "mode(+e)", NULL);
                     sendto_one(cptr, rpl_str(RPL_ENDOFEXEMPTLIST), me.name,
                                cptr->name, chptr->chname);
                     anylistsent = 1;
@@ -2132,6 +2149,8 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
                 {
                     if(chptr->xflags & XFLAG_USER_VERBOSE)
                         verbose_to_relaychan(cptr, chptr, "mode(+b)", NULL);
+                    if(chptr->xflags & XFLAG_OPER_VERBOSE)
+                        verbose_to_opers(cptr, chptr, "mode(+b)", NULL);
                     sendto_one(cptr, rpl_str(RPL_ENDOFBANLIST), me.name,
                                cptr->name, chptr->chname);
                     anylistsent = 1;
@@ -2687,12 +2706,12 @@ static int can_join(aClient *sptr, aChannel *chptr, char *key)
     }
     else if (chptr->mode.mode & MODE_REGONLY && !IsRegNick(sptr))
     {
-        r = "+R"; /* Only needed for verbose_to_relaychan() */
+        r = "+R"; /* Only needed for verbose_to_*() */
         error = ERR_NEEDREGGEDNICK;
     }
     else if (*chptr->mode.key && (BadPtr(key) || mycmp(chptr->mode.key, key)))
     {
-        r = "+k"; /* Only needed for verbose_to_relaychan() */
+        r = "+k"; /* Only needed for verbose_to_*() */
         error = ERR_BADCHANNELKEY;
     }
     else if (!joinrate_check(chptr, sptr, 1))
@@ -2709,7 +2728,7 @@ static int can_join(aClient *sptr, aChannel *chptr, char *key)
 
     if (!error && is_banned(sptr, chptr, NULL))
     {
-        r = "+b"; /* Only needed for verbose_to_relaychan() */
+        r = "+b"; /* Only needed for verbose_to_*() */
         error = ERR_BANNEDFROMCHAN;
     }
 
@@ -2728,8 +2747,14 @@ static int can_join(aClient *sptr, aChannel *chptr, char *key)
                 error = ERR_INVITEONLYCHAN;
             if(chptr->xflags & XFLAG_USER_VERBOSE)
                 verbose_to_relaychan(sptr, chptr, "join", "xflag_join_connect_time");
+            if(chptr->xflags & XFLAG_OPER_VERBOSE)
+                verbose_to_opers(sptr, chptr, "join", "xflag_join_connect_time");
         }
-        else if(chptr->xflags & XFLAG_USER_VERBOSE) verbose_to_relaychan(sptr, chptr, "join", r);
+        else
+        {
+            if(chptr->xflags & XFLAG_USER_VERBOSE) verbose_to_relaychan(sptr, chptr, "join", r);
+            if(chptr->xflags & XFLAG_OPER_VERBOSE) verbose_to_opers(sptr, chptr, "join", r);
+        }
 
         if (error==ERR_NEEDREGGEDNICK)
             sendto_one(sptr, getreply(ERR_NEEDREGGEDNICK), me.name, sptr->name,
@@ -3489,6 +3514,8 @@ int m_part(aClient *cptr, aClient *sptr, int parc, char *parv[])
         {
             if(reason && (chptr->xflags & XFLAG_USER_VERBOSE))
                 verbose_to_relaychan(cptr, chptr, "part_msg", reason);
+            if(reason && (chptr->xflags & XFLAG_OPER_VERBOSE))
+                verbose_to_opers(cptr, chptr, "part_msg", reason);
             sendto_serv_butone(cptr, PartFmt, parv[0], name);
             sendto_channel_butserv(chptr, sptr, PartFmt, parv[0], name);
         }
