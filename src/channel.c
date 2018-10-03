@@ -2755,7 +2755,7 @@ static int can_join(aClient *sptr, aChannel *chptr, char *key)
         else
         {
             if(chptr->xflags & XFLAG_USER_VERBOSE) verbose_to_relaychan(sptr, chptr, "join", r);
-            if(chptr->xflags & XFLAG_OPER_VERBOSE) verbose_to_opers(sptr, chptr, "join", r);
+            if(!jrl && (chptr->xflags & XFLAG_OPER_VERBOSE)) verbose_to_opers(sptr, chptr, "join", r);
         }
 
         if (error==ERR_NEEDREGGEDNICK)
