@@ -1596,11 +1596,12 @@ int read_packet(aClient * cptr)
 #endif
         SBufLength(&cptr->recvQ) > ((cptr->class && cptr->class->maxrecvq) ? cptr->class->maxrecvq : CLIENT_FLOOD))
         {
-            sendto_realops_lev(FLOOD_LEV, "Flood -- %s!%s@%s (%d) Exceeds %d"
-                               " RecvQ", cptr->name[0] ? cptr->name : "*",
-                               cptr->user ? cptr->user->username : "*",
-                               cptr->user ? cptr->user->host : "*",
-                               SBufLength(&cptr->recvQ), (cptr->class && cptr->class->maxrecvq) ? cptr->class->maxrecvq : CLIENT_FLOOD);
+            if(call_hooks(CHOOK_FLOODWARN, cptr, NULL, 2, NULL, NULL) != FLUSH_BUFFER)
+                sendto_realops_lev(FLOOD_LEV, "Flood -- %s!%s@%s (%d) Exceeds %d"
+                                   " RecvQ", cptr->name[0] ? cptr->name : "*",
+                                   cptr->user ? cptr->user->username : "*",
+                                   cptr->user ? cptr->user->host : "*",
+                                   SBufLength(&cptr->recvQ), (cptr->class && cptr->class->maxrecvq) ? cptr->class->maxrecvq : CLIENT_FLOOD);
             return exit_client(cptr, cptr, cptr, "Excess Flood");
         }
         return do_client_queue(cptr);

@@ -346,7 +346,7 @@ int add_invite_id(aClient* cptr, aChannel* chptr, char* invite_id)
     {
         if (MyClient(cptr))
         {
-            if (++cnt >= MAXINVITELIST)
+            if (++cnt >= chptr->max_invites)
             {
                 sendto_one(cptr, getreply(ERR_BANLISTFULL), me.name, cptr->name,
                     chptr->chname, invite_id, "invite");
@@ -1263,6 +1263,58 @@ int is_xflags_exempted(aClient *sptr, aChannel *chptr)
     return 0;
 }
 
+/* A function to send a (verbose) message to the relay channel if it exists
+   (and isn't moderated)... */
+int verbose_to_relaychan(aClient *sptr, aChannel *chptr, char *cmd, char *reason)
+{
+    aChannel *relaychan_ptr;
+    char relaychan_name[CHANNELLEN + 1];
+
+    if(strlen(chptr->chname)+6 > CHANNELLEN)
+        return 0; /* Channel is too long.. we must be able to add -relay to it... */
+
+    strcpy(relaychan_name, chptr->chname);
+    strcat(relaychan_name, "-relay");
+
+    if(!(relaychan_ptr = find_channel(relaychan_name, NULL)))
+        return 0; /* Relay channel doesn't exist */
+
+    if(relaychan_ptr->mode.mode & MODE_MODERATED)
+        return 0; /* Relay channel is moderated */
+
+    if(reason)
+        sendto_channel_butone(NULL, &me, relaychan_ptr, ":%s PRIVMSG %s :Failed %s by %s!%s@%s - %s",
+                              me.name, relaychan_ptr->chname, cmd, sptr->name, sptr->user->username,
+#ifdef USER_HOSTMASKING
+                              IsUmodeH(sptr)?sptr->user->mhost:
+#endif
+                              sptr->user->host, reason);
+    else
+        sendto_channel_butone(NULL, &me, relaychan_ptr, ":%s PRIVMSG %s :Failed %s by %s!%s@%s",
+                              me.name, relaychan_ptr->chname, cmd, sptr->name, sptr->user->username,
+#ifdef USER_HOSTMASKING
+                              IsUmodeH(sptr)?sptr->user->mhost:
+#endif
+                              sptr->user->host);
+
+    return 0;
+}
+
+/* A function to send a (verbose) message to +f opers */
+inline void verbose_to_opers(aClient *sptr, aChannel *chptr, char *cmd, char *reason)
+{
+    if(call_hooks(CHOOK_FLOODWARN, sptr, chptr, 1, cmd, reason) == FLUSH_BUFFER) return;
+
+    if(reason)
+        sendto_realops_lev(FLOOD_LEV, "Flood -- Failed %s by %s!%s@%s - %s",
+                           cmd, sptr->name, sptr->user->username,
+                           sptr->user->host, reason);
+    else
+        sendto_realops_lev(FLOOD_LEV, "Flood -- Failed %s by %s!%s@%s",
+                           cmd, sptr->name, sptr->user->username,
+                           sptr->user->host);
+}
+
 int can_send(aClient *cptr, aChannel *chptr, char *msg)
 {
     chanMember   *cm;
@@ -1930,6 +1982,18 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
                 if (anylistsent) /* don't send the list if they have received one */
                     break;
 
+                if((chptr->xflags & XFLAG_HIDE_MODE_LISTS) && !IsAnOper(sptr) && !is_chan_op(sptr,chptr))
+                {
+                    if(chptr->xflags & XFLAG_USER_VERBOSE)
+                        verbose_to_relaychan(cptr, chptr, "mode(+I)", NULL);
+                    if(chptr->xflags & XFLAG_OPER_VERBOSE)
+                        verbose_to_opers(cptr, chptr, "mode(+I)", NULL);
+                    sendto_one(cptr, rpl_str(RPL_ENDOFINVITELIST), me.name,
+                               cptr->name, chptr->chname);
+                    anylistsent = 1;
+                    break;
+                }
+
                 for (invite = chptr->invite_list; invite; invite = invite->next)
                     sendto_one(sptr, rpl_str(RPL_INVITELIST), me.name, cptr->name,
                                chptr->chname, invite->invstr, invite->who, invite->when);
@@ -2001,6 +2065,17 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
                 
                 if (anylistsent) /* don't send the list if they have received one */
                     break;
+                if((chptr->xflags & XFLAG_HIDE_MODE_LISTS) && !IsAnOper(sptr) && !is_chan_op(sptr,chptr))
+                {
+                    if(chptr->xflags & XFLAG_USER_VERBOSE)
+                        verbose_to_relaychan(cptr, chptr, "mode(+e)", NULL);
+                    if(chptr->xflags & XFLAG_OPER_VERBOSE)
+                        verbose_to_opers(cptr, chptr, "mode(+e)", NULL);
+                    sendto_one(cptr, rpl_str(RPL_ENDOFEXEMPTLIST), me.name,
+                               cptr->name, chptr->chname);
+                    anylistsent = 1;
+                    break;
+                }
                 for (exempt = chptr->banexempt_list; exempt; exempt = exempt->next)
                     sendto_one(sptr, rpl_str(RPL_EXEMPTLIST), me.name, cptr->name,
                                chptr->chname, exempt->banstr, exempt->who, exempt->when);
@@ -2072,6 +2147,17 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
             {
                 if (anylistsent)
                     break;
+                if((chptr->xflags & XFLAG_HIDE_MODE_LISTS) && !IsAnOper(sptr) && !is_chan_op(sptr,chptr))
+                {
+                    if(chptr->xflags & XFLAG_USER_VERBOSE)
+                        verbose_to_relaychan(cptr, chptr, "mode(+b)", NULL);
+                    if(chptr->xflags & XFLAG_OPER_VERBOSE)
+                        verbose_to_opers(cptr, chptr, "mode(+b)", NULL);
+                    sendto_one(cptr, rpl_str(RPL_ENDOFBANLIST), me.name,
+                               cptr->name, chptr->chname);
+                    anylistsent = 1;
+                    break;
+                }
                 for(bp=chptr->banlist;bp;bp=bp->next)
                     sendto_one(sptr, rpl_str(RPL_BANLIST), me.name, cptr->name,
                                chptr->chname, bp->banstr, bp->who, bp->when);
@@ -2621,9 +2707,15 @@ static int can_join(aClient *sptr, aChannel *chptr, char *key)
         error = ERR_NOSSL;
     }
     else if (chptr->mode.mode & MODE_REGONLY && !IsRegNick(sptr))
+    {
+        r = "+R"; /* Only needed for verbose_to_*() */
         error = ERR_NEEDREGGEDNICK;
+    }
     else if (*chptr->mode.key && (BadPtr(key) || mycmp(chptr->mode.key, key)))
+    {
+        r = "+k"; /* Only needed for verbose_to_*() */
         error = ERR_BADCHANNELKEY;
+    }
     else if (!joinrate_check(chptr, sptr, 1))
     {
         r = "+j";
@@ -2637,7 +2729,10 @@ static int can_join(aClient *sptr, aChannel *chptr, char *key)
 #endif
 
     if (!error && is_banned(sptr, chptr, NULL))
+    {
+        r = "+b"; /* Only needed for verbose_to_*() */
         error = ERR_BANNEDFROMCHAN;
+    }
 
     if (error)
     {
@@ -2652,6 +2747,15 @@ static int can_join(aClient *sptr, aChannel *chptr, char *key)
                 error = ERR_NEEDREGGEDNICK;
             else
                 error = ERR_INVITEONLYCHAN;
+            if(chptr->xflags & XFLAG_USER_VERBOSE)
+                verbose_to_relaychan(sptr, chptr, "join", "xflag_join_connect_time");
+            if(chptr->xflags & XFLAG_OPER_VERBOSE)
+                verbose_to_opers(sptr, chptr, "join", "xflag_join_connect_time");
+        }
+        else
+        {
+            if(chptr->xflags & XFLAG_USER_VERBOSE) verbose_to_relaychan(sptr, chptr, "join", r);
+            if(!jrl && (chptr->xflags & XFLAG_OPER_VERBOSE)) verbose_to_opers(sptr, chptr, "join", r);
         }
 
         if (error==ERR_NEEDREGGEDNICK)
@@ -2792,6 +2896,7 @@ get_channel(aClient *cptr, char *chname, int flag, int *created)
         channel = chptr;
         chptr->channelts = timeofday;
         chptr->max_bans = MAXBANS;
+        chptr->max_invites = MAXINVITELIST;
         (void) add_to_channel_hash_table(chname, chptr);
         Count.chan++;
     }
@@ -3409,6 +3514,10 @@ int m_part(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
         if (parc < 3 || can_send(sptr,chptr,reason) || IsSquelch(sptr) || ((chptr->xflags & XFLAG_NO_PART_MSG) && !is_xflags_exempted(sptr,chptr)))
         {
+            if(reason && (chptr->xflags & XFLAG_USER_VERBOSE))
+                verbose_to_relaychan(cptr, chptr, "part_msg", reason);
+            if(reason && (chptr->xflags & XFLAG_OPER_VERBOSE))
+                verbose_to_opers(cptr, chptr, "part_msg", reason);
             sendto_serv_butone(cptr, PartFmt, parv[0], name);
             sendto_channel_butserv(chptr, sptr, PartFmt, parv[0], name);
         }
@@ -3634,6 +3743,8 @@ void send_topic_burst(aClient *cptr)
                     sendto_one(cptr, ":%s SVSXCF %s GREETMSG :%s", me.name, chptr->chname, chptr->greetmsg);
                 else if(chptr->max_bans != MAXBANS)
                     sendto_one(cptr, ":%s SVSXCF %s MAX_BANS:%d", me.name, chptr->chname, chptr->max_bans);
+                if(chptr->max_invites != MAXINVITELIST)
+                    sendto_one(cptr, ":%s SVSXCF %s MAX_INVITES:%d", me.name, chptr->chname, chptr->max_invites);
             }
         }
 
