@@ -478,6 +478,7 @@ typedef struct module_hook
 } aHook;
 
 static DLink *preaccess_hooks = NULL;
+static DLink *onaccess_hooks = NULL;
 static DLink *postaccess_hooks = NULL;
 static DLink *postmotd_hooks = NULL;
 static DLink *msg_hooks = NULL;
@@ -511,6 +512,9 @@ get_texthooktype(enum c_hooktype hooktype)
 
         case CHOOK_PREACCESS:
             return "Pre-access";
+
+        case CHOOK_ONACCESS:
+            return "On-access";
 
         case CHOOK_POSTACCESS:
             return "Post-access";
@@ -582,6 +586,10 @@ get_hooklist(enum c_hooktype hooktype)
 
         case CHOOK_PREACCESS:
             hooklist = &preaccess_hooks;
+            break;
+
+        case CHOOK_ONACCESS:
+            hooklist = &onaccess_hooks;
             break;
 
         case CHOOK_POSTACCESS:
@@ -761,6 +769,24 @@ call_hooks(enum c_hooktype hooktype, ...)
                 {
                     int (*rfunc) (aClient *) = ((aHook *)lp->value.cp)->funcptr;
                     if((ret = (*rfunc)(acptr)) == FLUSH_BUFFER)
+                        break;
+                }
+                break;
+            }
+
+        case CHOOK_ONACCESS:
+            {
+                aClient *acptr = va_arg(vl, aClient *);
+                char *username = va_arg(vl, char *);
+                char *host = va_arg(vl, char *);
+                char *server = va_arg(vl, char *);
+                char *realname = va_arg(vl, char *);
+
+                for(lp = onaccess_hooks; lp; lp = lp->next)
+                {
+                    int (*rfunc) (aClient *, char *, char *, char *, char *) =
+                                    ((aHook *)lp->value.cp)->funcptr;
+                    if((ret = (*rfunc)(acptr, username, host, server, realname)) == FLUSH_BUFFER)
                         break;
                 }
                 break;
@@ -1099,6 +1125,7 @@ memcount_modules(MCmodules *mc)
     mc->e_dlinks += c;
 
     mc->e_dlinks += mc_dlinks(preaccess_hooks);
+    mc->e_dlinks += mc_dlinks(onaccess_hooks);
     mc->e_dlinks += mc_dlinks(postaccess_hooks);
     mc->e_dlinks += mc_dlinks(postmotd_hooks);
     mc->e_dlinks += mc_dlinks(msg_hooks);

@@ -16,6 +16,12 @@ enum c_hooktype {
                        * Params: 1: (aClient *) 
                        * Returns int
                        */
+   CHOOK_ONACCESS,    /* called during m_user 
+                       * (after CHOOK_PREACCESS and before CHOOK_POSTACCESS)
+                       * Params: 5: (aClient *, char *username, char *host,
+                       *             char *server, char *realname) 
+                       * Returns int
+                       */
    CHOOK_POSTACCESS,  /* called after access checks are done 
                        * (right before client is put on network)
                        * Params: 1: (aClient *) 

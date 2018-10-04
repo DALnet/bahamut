@@ -2239,6 +2239,7 @@ m_user(aClient *cptr, aClient *sptr, int parc, char *parv[])
         int loc = (ban->flags & SBAN_LOCAL) ? 1 : 0;
         return exit_banned_client(cptr, loc, 'G', ban->reason, 0);
     }
+    if(call_hooks(CHOOK_ONACCESS, cptr, username, host, server, realname) == FLUSH_BUFFER) return 0;
     return do_user(parv[0], cptr, sptr, username, host, server, 0,0, realname);
 }
 
