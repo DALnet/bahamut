@@ -808,12 +808,15 @@ struct FlagList xflags_list[] =
   { "NO_CTCP",           XFLAG_NO_CTCP           },
   { "NO_PART_MSG",       XFLAG_NO_PART_MSG       },
   { "NO_QUIT_MSG",       XFLAG_NO_QUIT_MSG       },
-  { "SJR",               XFLAG_SJR               },
   { "EXEMPT_OPPED",      XFLAG_EXEMPT_OPPED      },
   { "EXEMPT_VOICED",     XFLAG_EXEMPT_VOICED     },
   { "EXEMPT_IDENTD",     XFLAG_EXEMPT_IDENTD     },
   { "EXEMPT_REGISTERED", XFLAG_EXEMPT_REGISTERED },
   { "EXEMPT_INVITES",    XFLAG_EXEMPT_INVITES    },
+  { "HIDE_MODE_LISTS",   XFLAG_HIDE_MODE_LISTS   },
+  { "SJR",               XFLAG_SJR               },
+  { "USER_VERBOSE",      XFLAG_USER_VERBOSE      },
+  { "OPER_VERBOSE",      XFLAG_OPER_VERBOSE      },
   { NULL,                0                       }
 };
 
@@ -831,18 +834,22 @@ struct FlagList xflags_list[] =
  *   TALK_CONNECT_TIME - Number of seconds the user must be online to be able to talk on the channel
  *   TALK_JOIN_TIME    - Number of seconds the user must be on the channel to be able to tlak on the channel
  *   MAX_BANS          - Will let us increase the ban limit for specific channels
+ *   MAX_INVITES       - Will let us increase the invite limit for specific channels
  *
  * 1/0 (on/off) options:
  *   NO_NOTICE         - no notices can be sent to the channel (on/off)
  *   NO_CTCP           - no ctcps can be sent to the channel (on/off)
  *   NO_PART_MSG       - no /part messages (on/off)
  *   NO_QUIT_MSG       - no /quit messages (on/off)
- *   SJR               - enable services join request for this channel (must also be enabled globally)
+ *   HIDE_MODE_LISTS   - hide /mode #channel +b/+I/+e lists from non-ops (on/off)
+ *   SJR               - enable services join request for this channel (must also be enabled globally) 
  *   EXEMPT_OPPED      - exempt opped users (on/off)
  *   EXEMPT_VOICED     - exempt voiced users (on/off)
  *   EXEMPT_IDENTD     - exempt users with identd (on/off)
  *   EXEMPT_REGISTERED - exempt users with umode +r (on/off)
  *   EXEMPT_INVITES    - exempt users who are +I'ed (on/off)
+ *   USER_VERBOSE      - send failed command messages to #channel-relay (on/off)
+ *   OPER_VERBOSE      - send failed command messages to +f opers (on/off)
  *
  * Special option:
  *   GREETMSG - A message that will be sent when a user joins the channel
@@ -891,6 +898,7 @@ int m_svsxcf(aClient *cptr, aClient *sptr, int parc, char *parv[])
         chptr->talk_connect_time = 0;
         chptr->talk_join_time = 0;
         chptr->max_bans = MAXBANS;
+        chptr->max_invites = MAXINVITELIST;
         chptr->xflags = 0;
         if(chptr->greetmsg)
           MyFree(chptr->greetmsg);
@@ -910,6 +918,7 @@ int m_svsxcf(aClient *cptr, aClient *sptr, int parc, char *parv[])
             else if(!strcasecmp(opt,"TALK_CONNECT_TIME")) { chptr->talk_connect_time = atoi(value); chptr->xflags |= XFLAG_SET; }
             else if(!strcasecmp(opt,"TALK_JOIN_TIME")) { chptr->talk_join_time = atoi(value); chptr->xflags |= XFLAG_SET; }
             else if(!strcasecmp(opt,"MAX_BANS")) { chptr->max_bans = atoi(value); chptr->xflags |= XFLAG_SET; }
+            else if(!strcasecmp(opt,"MAX_INVITES")) { chptr->max_invites = atoi(value); chptr->xflags |= XFLAG_SET; }
             else
             {
                 for(xflag = xflags_list; xflag->option; xflag++)

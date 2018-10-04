@@ -174,7 +174,6 @@ typedef struct SServicesTag ServicesTag;
 #define	BOOT_OPER	 16
 #define BOOT_STDERR	 64
 #define	STAT_LOG	 -6	/* logfile for -x */
-#define	STAT_MASTER	 -5	/* Local ircd master before identification */
 #define	STAT_CONNECTING	 -4
 #define	STAT_HANDSHAKE	 -3
 #define	STAT_ME		 -2
@@ -190,13 +189,11 @@ typedef struct SServicesTag ServicesTag;
 #define	IsConnecting(x)		((x)->status == STAT_CONNECTING)
 #define	IsHandshake(x)		((x)->status == STAT_HANDSHAKE)
 #define	IsMe(x)			((x)->status == STAT_ME)
-#define	IsUnknown(x)		((x)->status == STAT_UNKNOWN || \
-				 (x)->status == STAT_MASTER)
+#define	IsUnknown(x)		((x)->status == STAT_UNKNOWN)
 #define	IsServer(x)		((x)->status == STAT_SERVER)
 #define	IsClient(x)		((x)->status == STAT_CLIENT)
 #define	IsLog(x)		((x)->status == STAT_LOG)
 
-#define	SetMaster(x)		((x)->status = STAT_MASTER)
 #define	SetConnecting(x)	((x)->status = STAT_CONNECTING)
 #define	SetHandshake(x)		((x)->status = STAT_HANDSHAKE)
 #define	SetMe(x)		((x)->status = STAT_ME)
@@ -685,6 +682,8 @@ typedef struct Whowas
 #define FLAGS_WGMON     (FLAGS_WGMONURL|FLAGS_WGMONHOST)
 #define FLAGS_SHOWLINKS 0x0040
 #define FLAGS_SPLITOPOK 0x0080
+#define FLAGS_REMREHOK  0x0100
+
 
 /* flags for connects */
 
@@ -1265,6 +1264,7 @@ struct Channel
     int talk_connect_time;      /* Number of seconds the user must be online to be able to talk on the channel */
     int talk_join_time;         /* Number of seconds the user must be on the channel to be able to tlak on the channel */
     int max_bans;               /* Maximum number of bans ops can add (default: MAXBANS) */
+    int max_invites;            /* Maximum number of invites ops can add (default: MAXINVITELIST) */
     char *greetmsg;             /* Special greeting message */
     int xflags;                 /* The eXtended channel flags */
 };
@@ -1355,7 +1355,10 @@ struct Channel
 #define XFLAG_EXEMPT_INVITES    0x0080
 #define XFLAG_EXEMPT_OPPED      0x0100
 #define XFLAG_EXEMPT_VOICED     0x0200
-#define XFLAG_SJR               0x0400 /* Services join request */
+#define XFLAG_HIDE_MODE_LISTS   0x0400
+#define XFLAG_USER_VERBOSE      0x0800
+#define XFLAG_OPER_VERBOSE      0x1000
+#define XFLAG_SJR               0x2000 /* Services join request */
 
 struct FlagList
 {

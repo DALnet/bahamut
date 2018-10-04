@@ -74,6 +74,12 @@ enum c_hooktype {
                        * Params: 3: (char *orghost, char **newhost, int type)
                        * Returns int
                        */
+   CHOOK_FLOODWARN,   /* called during flood warnings to opers
+                       * from channel.c, s_bsd.c and s_user.c
+                       * Params: 5: (aClient *source, aChannel *channel,
+                       *             int type, char *cmd, char *reason)
+                       * Returns int
+                       */
    CHOOK_SIGNOFF,     /* called on client exit (exit_client)
                        * Params: 1: (aClient *)
                        * Returns void */
@@ -84,7 +90,7 @@ enum c_hooktype {
 extern int call_hooks(enum c_hooktype hooktype, ...);
 extern int init_modules();
 
-#define MODULE_INTERFACE_VERSION 1008 /* the interface version (hooks, modules.c commands, etc) */
+#define MODULE_INTERFACE_VERSION 1010 /* the interface version (hooks, modules.c commands, etc) */
 
 #ifdef BIRCMODULE
 extern void *bircmodule_add_hook(enum c_hooktype, void *, void *);

@@ -1,8 +1,9 @@
 The following outlines features and commands available on the Bahamut server
 
-- 11/13/02 - srd (srd@dal.net)
-- 10/02/04 - Quension (quension@dal.net)
-- 08/25/18 - Visigoth (visigoth@dal.net)
+- 13-Nov-2002  - Holbrook (holbrook@dal.net)
+- 02-Oct-2004  - Quension (quension@dal.net)
+- 25-Aug-2018  - Visigoth (visigoth@dal.net)
+- 30-Sep-2018  - Holbrook (holbrook@dal.net)
 
 Original ircd-hybrid opers.txt written by ThemBones (kraemer@u.washington.edu)
 
@@ -131,9 +132,17 @@ COMMAND         - USAGE and DESCRIPTION
                   Opers can see unregistered connections on a server
                   with TRACE as well as connection class counts.
 
-  REHASH        - REHASH [option]
+  REHASH        - REHASH [server] [option]
                   When no [option] is given, ircd will re-read the
                   ircd.conf file.
+
+                  When no [server] is given, rehash will be performed
+                  on the server you issued the rehash command from,
+                  otherwise it will rehash from the specified server.
+
+                  When [server] is given, both [server] and the hub(s)
+                  in between the server you are on and given [server]
+                  must be running bahamut version 2.1.1 or later.
 
                   [option] can be one of the following:
                     DNS       - Re-read the /etc/resolv.conf file
