@@ -1264,6 +1264,7 @@ struct Channel
     int talk_connect_time;      /* Number of seconds the user must be online to be able to talk on the channel */
     int talk_join_time;         /* Number of seconds the user must be on the channel to be able to tlak on the channel */
     int max_bans;               /* Maximum number of bans ops can add (default: MAXBANS) */
+    int max_invites;            /* Maximum number of invites ops can add (default: MAXINVITELIST) */
     char *greetmsg;             /* Special greeting message */
     int xflags;                 /* The eXtended channel flags */
 };
@@ -1354,6 +1355,9 @@ struct Channel
 #define XFLAG_EXEMPT_INVITES    0x0080
 #define XFLAG_EXEMPT_OPPED      0x0100
 #define XFLAG_EXEMPT_VOICED     0x0200
+#define XFLAG_HIDE_MODE_LISTS   0x0400
+#define XFLAG_USER_VERBOSE      0x0800
+#define XFLAG_OPER_VERBOSE      0x1000
 
 struct FlagList
 {

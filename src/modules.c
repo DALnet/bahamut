@@ -491,6 +491,7 @@ static DLink *throttle_hooks = NULL;
 static DLink *forbid_hooks = NULL;
 static DLink *whois_hooks = NULL;
 static DLink *maskhost_hooks = NULL;
+static DLink *floodwarn_hooks = NULL;
 static DLink *signoff_hooks = NULL;
 static DLink *mload_hooks = NULL;
 static DLink *munload_hooks = NULL;
@@ -545,6 +546,9 @@ get_texthooktype(enum c_hooktype hooktype)
 
         case CHOOK_MASKHOST:
             return "Mask Host";
+
+        case CHOOK_FLOODWARN:
+            return "FloodWarn";
 
         case CHOOK_SIGNOFF:
             return "Signoff";
@@ -622,6 +626,10 @@ get_hooklist(enum c_hooktype hooktype)
 
         case CHOOK_MASKHOST:
             hooklist = &maskhost_hooks;
+            break;
+
+        case CHOOK_FLOODWARN:
+            hooklist = &floodwarn_hooks;
             break;
 
         case CHOOK_SIGNOFF:
@@ -938,6 +946,23 @@ call_hooks(enum c_hooktype hooktype, ...)
                 break;
             }
 
+        case CHOOK_FLOODWARN:
+            {
+                aClient *sptr = va_arg(vl, aClient *);
+                aChannel *chptr = va_arg(vl, aChannel *);
+                int type = va_arg(vl, int);
+                char *cmd = va_arg(vl, char *);
+                char *reason = va_arg(vl, char *);
+                for(lp = floodwarn_hooks; lp; lp = lp->next)
+                {
+                    int (*rfunc) (aClient *, aChannel *, int, char *, char *) = 
+                                    ((aHook *)lp->value.cp)->funcptr;
+                    if((ret = (*rfunc)(sptr, chptr, type, cmd, reason)) == FLUSH_BUFFER)
+                        break;
+                }
+                break;
+            }
+
         case CHOOK_SIGNOFF:
             {
                 aClient *acptr = va_arg(vl, aClient *);
@@ -1063,6 +1088,7 @@ memcount_modules(MCmodules *mc)
     mc->e_dlinks += mc_dlinks(forbid_hooks);
     mc->e_dlinks += mc_dlinks(whois_hooks);
     mc->e_dlinks += mc_dlinks(maskhost_hooks);
+    mc->e_dlinks += mc_dlinks(floodwarn_hooks);
     mc->e_dlinks += mc_dlinks(signoff_hooks);
     mc->e_dlinks += mc_dlinks(mload_hooks);
     mc->e_dlinks += mc_dlinks(munload_hooks);
