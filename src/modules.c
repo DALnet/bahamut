@@ -492,6 +492,7 @@ static DLink *forbid_hooks = NULL;
 static DLink *whois_hooks = NULL;
 static DLink *maskhost_hooks = NULL;
 static DLink *floodwarn_hooks = NULL;
+static DLink *spamwarn_hooks = NULL;
 static DLink *signoff_hooks = NULL;
 static DLink *mload_hooks = NULL;
 static DLink *munload_hooks = NULL;
@@ -549,6 +550,9 @@ get_texthooktype(enum c_hooktype hooktype)
 
         case CHOOK_FLOODWARN:
             return "FloodWarn";
+
+        case CHOOK_SPAMWARN:
+            return "SpamWarn";
 
         case CHOOK_SIGNOFF:
             return "Signoff";
@@ -630,6 +634,10 @@ get_hooklist(enum c_hooktype hooktype)
 
         case CHOOK_FLOODWARN:
             hooklist = &floodwarn_hooks;
+            break;
+
+        case CHOOK_SPAMWARN:
+            hooklist = &spamwarn_hooks;
             break;
 
         case CHOOK_SIGNOFF:
@@ -963,6 +971,22 @@ call_hooks(enum c_hooktype hooktype, ...)
                 break;
             }
 
+        case CHOOK_SPAMWARN:
+            {
+                aClient *sptr = va_arg(vl, aClient *);
+                int type = va_arg(vl, int);
+                int max_targets = va_arg(vl, int);
+                char *target_name = va_arg(vl, char *);
+                for(lp = spamwarn_hooks; lp; lp = lp->next)
+                {
+                    int (*rfunc) (aClient *, int, int, char *) = 
+                                    ((aHook *)lp->value.cp)->funcptr;
+                    if((ret = (*rfunc)(sptr, type, max_targets, target_name)) == FLUSH_BUFFER)
+                        break;
+                }
+                break;
+            }
+
         case CHOOK_SIGNOFF:
             {
                 aClient *acptr = va_arg(vl, aClient *);
@@ -1089,6 +1113,7 @@ memcount_modules(MCmodules *mc)
     mc->e_dlinks += mc_dlinks(whois_hooks);
     mc->e_dlinks += mc_dlinks(maskhost_hooks);
     mc->e_dlinks += mc_dlinks(floodwarn_hooks);
+    mc->e_dlinks += mc_dlinks(spamwarn_hooks);
     mc->e_dlinks += mc_dlinks(signoff_hooks);
     mc->e_dlinks += mc_dlinks(mload_hooks);
     mc->e_dlinks += mc_dlinks(munload_hooks);

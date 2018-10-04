@@ -3149,9 +3149,10 @@ int m_join(aClient *cptr, aClient *sptr, int parc, char *parv[])
             {
                 if (sptr->join_leave_count >= spam_num)
                 {
-                    sendto_realops_lev(SPAM_LEV, "User %s (%s@%s) is a "
-                                   "possible spambot", sptr->name,
-                                   sptr->user->username, sptr->user->host);
+                    if(call_hooks(CHOOK_SPAMWARN, sptr, 2, spam_num, NULL) != FLUSH_BUFFER)
+                        sendto_realops_lev(SPAM_LEV, "User %s (%s@%s) is a "
+                                       "possible spambot", sptr->name,
+                                       sptr->user->username, sptr->user->host);
                     sptr->oper_warn_count_down = OPER_SPAM_COUNTDOWN;
                 }
                 else
@@ -3240,12 +3241,13 @@ int m_join(aClient *cptr, aClient *sptr, int parc, char *parv[])
                 
                 if (sptr->oper_warn_count_down == 0)
                 {
-                    sendto_realops_lev(SPAM_LEV, "User %s (%s@%s) trying to "
-                                   "join %s is a possible spambot",
-                                   sptr->name,
-                                   sptr->user->username,
-                                   sptr->user->host,
-                                   name);
+                    if(call_hooks(CHOOK_SPAMWARN, sptr, 3, spam_num, name) != FLUSH_BUFFER)
+                        sendto_realops_lev(SPAM_LEV, "User %s (%s@%s) trying to "
+                                       "join %s is a possible spambot",
+                                       sptr->name,
+                                       sptr->user->username,
+                                       sptr->user->host,
+                                       name);
                     sptr->oper_warn_count_down = OPER_SPAM_COUNTDOWN;
                 }
 # ifndef ANTI_SPAMBOT_WARN_ONLY
@@ -3452,9 +3454,10 @@ int m_part(aClient *cptr, aClient *sptr, int parc, char *parv[])
     {
         if (sptr->join_leave_count >= spam_num)
         {
-            sendto_realops_lev(SPAM_LEV, "User %s (%s@%s) is a possible"
-                        " spambot", sptr->name, sptr->user->username, 
-                        sptr->user->host);
+            if(call_hooks(CHOOK_SPAMWARN, sptr, 4, spam_num, NULL) != FLUSH_BUFFER)
+                sendto_realops_lev(SPAM_LEV, "User %s (%s@%s) is a possible"
+                            " spambot", sptr->name, sptr->user->username, 
+                            sptr->user->host);
             sptr->oper_warn_count_down = OPER_SPAM_COUNTDOWN;
         }
         else

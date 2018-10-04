@@ -80,6 +80,11 @@ enum c_hooktype {
                        *             int type, char *cmd, char *reason)
                        * Returns int
                        */
+   CHOOK_SPAMWARN,    /* called from s_user.c and channel.c during spam warnings to opers
+                       * Params: 4: (aClient *source, int type, int max_targets,
+                       *             char *target_name)
+                       * Returns int
+                       */
    CHOOK_SIGNOFF,     /* called on client exit (exit_client)
                        * Params: 1: (aClient *)
                        * Returns void */
