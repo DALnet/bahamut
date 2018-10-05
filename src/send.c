@@ -437,7 +437,7 @@ void sendto_alias(AliasInfo *ai, aClient *from, char *pattern, ...)
 
     /* use shortforms only for non-super servers or capable super servers */
     if (!IsULine(to) || ((confopts & FLAGS_SERVHUB)
-                         && (to->serv->uflags & ULF_SFDIRECT)))
+                         && to->serv && (to->serv->uflags & ULF_SFDIRECT)))
         len = ircsprintf(sendbuf, ":%s %s :", from->name, ai->shortform);
     else
 #ifdef PASS_SERVICES_MSGS
