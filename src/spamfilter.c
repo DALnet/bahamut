@@ -246,7 +246,8 @@ int check_sf(aClient *cptr, char *text, char *caction, int action, char *target)
             if(p->flags & SF_ACT_AKILL)
             {
                 if(aliastab[AII_OS].client)
-                    sendto_one(aliastab[AII_OS].client->from, ":%s OS SFAKILL %s %ld %s", me.name, cptr->name,
+                    sendto_one(aliastab[AII_OS].client->from, ":%s OS SFAKILL %s!%s@%s %ld %s", me.name, cptr->name,
+                               cptr->user?cptr->user->username:"<none>", cptr->hostip,
                                cptr->tsinfo, p->reason?p->reason:"<none>");
             }
             if(p->flags & SF_ACT_KILL)
