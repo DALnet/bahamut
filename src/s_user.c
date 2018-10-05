@@ -1407,17 +1407,20 @@ int check_target_limit(aClient *sptr, aClient *acptr)
     {
         sendto_one(sptr, err_str(ERR_TARGETTOFAST), me.name, sptr->name,
                    acptr->name, MSG_TARGET_TIME - tmin);
-        sptr->since += 2; /* penalize them 2 seconds for this! */
-        sptr->num_target_errors++;
-
-        if(sptr->last_target_complain + 60 <= NOW)
+        if(call_hooks(CHOOK_SPAMWARN, sptr, 1, max_targets, NULL) != FLUSH_BUFFER)
         {
-            sendto_realops_lev(SPAM_LEV, "Target limited: %s (%s@%s)"
-                               " [%d failed targets]", sptr->name,
-                                sptr->user->username, sptr->user->host, 
-                                sptr->num_target_errors);
-            sptr->num_target_errors = 0;
-            sptr->last_target_complain = NOW;
+            sptr->since += 2; /* penalize them 2 seconds for this! */
+            sptr->num_target_errors++;
+
+            if(sptr->last_target_complain + 60 <= NOW)
+            {
+                sendto_realops_lev(SPAM_LEV, "Target limited: %s (%s@%s)"
+                                   " [%d failed targets]", sptr->name,
+                                    sptr->user->username, sptr->user->host, 
+                                    sptr->num_target_errors);
+                sptr->num_target_errors = 0;
+                sptr->last_target_complain = NOW;
+            }
         }
         return 1;
     }
@@ -2236,6 +2239,7 @@ m_user(aClient *cptr, aClient *sptr, int parc, char *parv[])
         int loc = (ban->flags & SBAN_LOCAL) ? 1 : 0;
         return exit_banned_client(cptr, loc, 'G', ban->reason, 0);
     }
+    if(call_hooks(CHOOK_ONACCESS, cptr, username, host, server, realname) == FLUSH_BUFFER) return 0;
     return do_user(parv[0], cptr, sptr, username, host, server, 0,0, realname);
 }
 
