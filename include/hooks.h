@@ -16,6 +16,12 @@ enum c_hooktype {
                        * Params: 1: (aClient *) 
                        * Returns int
                        */
+   CHOOK_ONACCESS,    /* called during m_user 
+                       * (after CHOOK_PREACCESS and before CHOOK_POSTACCESS)
+                       * Params: 5: (aClient *, char *username, char *host,
+                       *             char *server, char *realname) 
+                       * Returns int
+                       */
    CHOOK_POSTACCESS,  /* called after access checks are done 
                        * (right before client is put on network)
                        * Params: 1: (aClient *) 
@@ -78,6 +84,11 @@ enum c_hooktype {
                        * from channel.c, s_bsd.c and s_user.c
                        * Params: 5: (aClient *source, aChannel *channel,
                        *             int type, char *cmd, char *reason)
+                       * Returns int
+                       */
+   CHOOK_SPAMWARN,    /* called from s_user.c and channel.c during spam warnings to opers
+                       * Params: 4: (aClient *source, int type, int max_targets,
+                       *             char *target_name)
                        * Returns int
                        */
    CHOOK_SIGNOFF,     /* called on client exit (exit_client)
