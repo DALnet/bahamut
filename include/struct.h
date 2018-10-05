@@ -1358,6 +1358,7 @@ struct Channel
 #define XFLAG_HIDE_MODE_LISTS   0x0400
 #define XFLAG_USER_VERBOSE      0x0800
 #define XFLAG_OPER_VERBOSE      0x1000
+#define XFLAG_SJR               0x2000 /* Services join request */
 
 struct FlagList
 {

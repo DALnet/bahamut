@@ -35,10 +35,17 @@
 
 /* Externally defined stuffs */
 extern int user_modes[];
+extern int check_channelname(aClient *, unsigned char *); /* for m_aj */
+extern aChannel *get_channel(aClient *, char *, int, int *); /* for m_aj */
+extern Link *find_channel_link(Link *, aChannel *); /* for m_aj */
+extern void add_user_to_channel(aChannel *, aClient *, int); /* for m_aj */
+extern void read_motd(char *); /* defined in s_serv.c */
+extern void read_shortmotd(char *); /* defined in s_serv.c */
 
 int svspanic = 0; /* Services panic */
 int svsnoop = 0; /* Services disabled all o:lines (off by default) */
 int uhm_type = 0; /* User host-masking type (off by default) */
+int services_jr = 0; /* Redirect join requests to services (disabled by default) */
 
 /*
  * the services aliases. *
@@ -807,6 +814,7 @@ struct FlagList xflags_list[] =
   { "EXEMPT_REGISTERED", XFLAG_EXEMPT_REGISTERED },
   { "EXEMPT_INVITES",    XFLAG_EXEMPT_INVITES    },
   { "HIDE_MODE_LISTS",   XFLAG_HIDE_MODE_LISTS   },
+  { "SJR",               XFLAG_SJR               },
   { "USER_VERBOSE",      XFLAG_USER_VERBOSE      },
   { "OPER_VERBOSE",      XFLAG_OPER_VERBOSE      },
   { NULL,                0                       }
@@ -834,6 +842,7 @@ struct FlagList xflags_list[] =
  *   NO_PART_MSG       - no /part messages (on/off)
  *   NO_QUIT_MSG       - no /quit messages (on/off)
  *   HIDE_MODE_LISTS   - hide /mode #channel +b/+I/+e lists from non-ops (on/off)
+ *   SJR               - enable services join request for this channel (must also be enabled globally) 
  *   EXEMPT_OPPED      - exempt opped users (on/off)
  *   EXEMPT_VOICED     - exempt voiced users (on/off)
  *   EXEMPT_IDENTD     - exempt users with identd (on/off)
@@ -941,6 +950,143 @@ int m_svsxcf(aClient *cptr, aClient *sptr, int parc, char *parv[])
             chptr->xflags |= XFLAG_SET;
         }
     }
+
+    return 0;
+}
+
+/* m_aj - Approve channel join by services (mostly stolen from bahamut-irctoo)
+ * parv[1] = [@+]nick
+ * parv[2] = nick TS
+ * parv[3] = channel
+ * parv[4] = optional channel TS
+ * -Kobi_S 16/07/2005
+ */
+int m_aj(aClient *cptr, aClient *sptr, int parc, char *parv[])
+{
+    aClient *acptr;
+    aChannel *chptr;
+    Link *lp;
+    int flags = 0;
+    ts_val newts;
+    int created;
+    char *fnick;
+    char *nick;
+    ts_val nickts;
+
+    if(!IsULine(sptr))
+        return 0; /* Only to be used by u:lined servers */
+
+    if(parc < 4 || *parv[1] == 0)
+        return 0;
+
+    fnick = nick = parv[1];
+    nickts = atol(parv[2]);
+
+    while(*nick == '@' || *nick == '+')
+    {
+        switch(*nick)
+        {
+            case '@':
+                flags |= CHFL_CHANOP;
+                break;
+            case '+':
+                flags |= CHFL_VOICE;
+                break;
+        }
+        nick++;
+    }
+
+    if(!(acptr = find_client(nick, NULL)))
+        return 0; /* Can't find the target nick */
+
+    if(nickts && acptr->tsinfo != nickts)
+        return 0; /* tsinfo doesn't match */
+
+    if(*parv[2] == '0' && !atoi(parv[3]))
+    {
+        if(acptr->user->channel == NULL)
+            return 0; /* Target nick isn't on any channels */
+        while ((lp = acptr->user->channel))
+        {
+            chptr = lp->value.chptr;
+            sendto_channel_butserv(chptr, acptr, ":%s PART %s", acptr->name, chptr->chname);
+            remove_user_from_channel(acptr, chptr);
+        }
+    }
+    else
+    {
+        if(!check_channelname(acptr, (unsigned char *)parv[3]))
+            return 0; /* Invalid channel name */
+        chptr = get_channel(acptr, parv[3], CREATE, &created);
+        if(!chptr)
+            return 0; /* Shouldn't happen! */
+        if(parc>4)
+        {
+            newts = atol(parv[4]);
+            if(created || newts < chptr->channelts)
+                chptr->channelts = newts;
+        }
+        if(!IsMember(acptr, chptr))
+        {
+            add_user_to_channel(chptr, acptr, flags);
+            sendto_channel_butserv(chptr, acptr, ":%s JOIN :%s", acptr->name, parv[3]);
+            if(MyClient(acptr))
+            {
+                del_invite(acptr, chptr);
+                if(chptr->topic[0] != '\0')
+                {
+                    sendto_one(acptr, rpl_str(RPL_TOPIC), me.name, acptr->name,
+                               chptr->chname, chptr->topic);
+                    sendto_one(acptr, rpl_str(RPL_TOPICWHOTIME), me.name, acptr->name,
+                               chptr->chname, chptr->topic_nick, chptr->topic_time);
+                }
+                parv[0] = acptr->name;
+                parv[1] = chptr->chname;
+                m_names(acptr, acptr, 2, parv);
+                if(chptr->greetmsg)
+                {
+                    sendto_one(sptr, ":%s!%s@%s PRIVMSG %s :%s", Network_Name, Network_Name, DEFAULT_STAFF_ADDRESS, chptr->chname, chptr->greetmsg);
+                }
+            }
+            if(flags)
+            {
+                if(flags & CHFL_CHANOP)
+                 sendto_channel_butserv(chptr, sptr, ":%s MODE %s +o %s", sptr->name,
+                                        chptr->chname, acptr->name);
+                if(flags & CHFL_VOICE)
+                 sendto_channel_butserv(chptr, sptr, ":%s MODE %s +v %s", sptr->name,
+                                        chptr->chname, acptr->name);
+            }
+        }
+    }
+
+    /* Pass it to all the other servers... */
+    if(parc>4)
+        sendto_serv_butone(cptr, ":%s AJ %s %ld %s %ld", sptr->name, fnick, nickts, chptr->chname, chptr->channelts);
+    else
+        sendto_serv_butone(cptr, ":%s AJ %s %ld %s", sptr->name, fnick, nickts, chptr->chname);
+
+    return 0;
+}
+
+/* m_sjr - Check the join (request) with services (mostly stolen from bahamut-irctoo)
+ * -Kobi_S 16/07/2005
+ */
+int m_sjr(aClient *cptr, aClient *sptr, int parc, char *parv[], AliasInfo *ai)
+{
+    if(MyClient(sptr))
+        return 0; /* Don't let local users use it without permission */
+
+    if(parc < 3 || *parv[2] == 0)
+        return 0;
+
+    if(!ai->client || ai->client->from == sptr->from)
+        return 0; /* Check to avoid message loops when admins get stupid */
+
+    if(parc<4)
+        sendto_one(ai->client->from, ":%s SJR %s %s", sptr->name, parv[1], parv[2]);
+    else
+        sendto_one(ai->client->from, ":%s SJR %s %s :%s", sptr->name, parv[1], parv[2], parv[3]);
 
     return 0;
 }
