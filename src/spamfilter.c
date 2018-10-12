@@ -165,6 +165,7 @@ int check_sf(aClient *cptr, char *text, char *caction, int action, char *target)
     unsigned int len = 0; /* For regexp */
     int ovector[30]; /* For regexp */
     char *action_text;
+    char *textptr;
 
     if(IsAnOper(cptr))
         return 0;
@@ -181,7 +182,15 @@ int check_sf(aClient *cptr, char *text, char *caction, int action, char *target)
         if(p->flags & SF_FLAG_STRIPALL)
         {
             if(stripamsg[0]=='\0')
-                stripall(stripamsg, text);
+            {
+                textptr = text;
+                while(*textptr==' ') textptr++;
+                if(*textptr && *target && !strncasecmp(textptr,target,strlen(target)))
+                {
+                    textptr += strlen(target);
+                }
+                stripall(stripamsg, textptr);
+            }
             matched = !match(p->text,stripamsg);
         }
         else if(p->flags & SF_FLAG_STRIPCTRL)
