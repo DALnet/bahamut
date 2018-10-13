@@ -1,6 +1,24 @@
 Changes for 2.1.1:
-Kobi Shmueli:
+------------------
+Kobi Shmueli (8):
+      Improved SpamFilter's STRIPALL flag
+      Extra check to sendto_alias() function
+      New module hooks
+      Add services join requests
+      Change SFAKILL to send OperServ nick!user@IP instead of just nick
+      Add more extended channel flags (XCF)
+      Add nick!user@host to the spamfilter warnings
+      Code cleanup (STAT_MASTER)
 
+Ryan Smith (3):
+      Pass INSTALL_DIR to the modules installation script
+      Remove extraneous RSA, DSA, ECDSA, and EVP compability functions
+      Spamfilter oper flags
+      
+
+Hollbrook Bunting (1):
+      Remote /rehash
+      
 Changes for 2.1.0:
 ------------------
 Kobi Shmueli (11):
