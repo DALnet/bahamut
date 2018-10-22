@@ -2907,37 +2907,12 @@ int m_oper(aClient *cptr, aClient *sptr, int parc, char *parv[])
         return 0;
     }
 
-    /* if message arrived from server, trust it, and set to oper */
     /* an OPER message should never come from a server. complain */
 
-    if ((IsServer(cptr) || IsMe(cptr)) && !IsOper(sptr))
+    if (IsServer(cptr) || IsMe(cptr))
     {
         sendto_realops("Why is %s sending me an OPER? Contact Coders",
                         cptr->name);
-
-        /* sanity */
-        if (!IsPerson(sptr))
-            return 0;
-
-#ifdef DEFAULT_HELP_MODE
-        sptr->umode |= UMODE_o;
-        sptr->umode |= UMODE_h;
-        sendto_serv_butone(cptr, ":%s MODE %s :+oh", parv[0], parv[0]);
-#else
-        sptr->umode |= UMODE_o;
-        sendto_serv_butone(cptr, ":%s MODE %s :+o", parv[0], parv[0]);
-#endif
-#ifdef ALL_OPERS_HIDDEN
-        sptr->umode |= UMODE_I;
-        sendto_serv_butone(cptr, ":%s MODE %s :+I", parv[0], parv[0]);
-#endif
-#if defined(SPAMFILTER) && defined(DEFAULT_OPER_SPAMFILTER_DISABLED)
-        sptr->umode |= UMODE_P;
-        sendto_serv_butone(cptr, ":%s MODE %s :+P", parv[0], parv[0]);
-#endif
-        Count.oper++;
-        if (IsMe(cptr))
-            sendto_one(sptr, rpl_str(RPL_YOUREOPER), me.name, parv[0]);
         return 0;
     }
     else if (IsAnOper(sptr) && MyConnect(sptr))
