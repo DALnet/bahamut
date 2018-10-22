@@ -610,7 +610,7 @@ typedef struct Whowas
     char       *servername;
     char        realname[REALLEN + 1];
     time_t      logoff;
-    unsigned int umode;
+    long umode;
     struct Client *online;  /* Pointer to new nickname for chasing or NULL */
     
     struct Whowas *next;    /* for hash table... */
@@ -904,7 +904,11 @@ struct Client
     time_t      since;      /* last time we parsed something */
     ts_val      tsinfo;     /* TS on the nick, SVINFO on servers */
     long        flags;      /* client flags */
-    long        umode;      /* We can illeviate overflow this way */
+    long        umode;      /* We can illeviate overflow this way
+                               Note: if you change this, you need to also
+                               change struct SearchOptions,
+                               struct Whowas and struct SServicesTag -Kobi.
+                             */
     aClient    *from;       /* == self, if Local Client, *NEVER* NULL! */
     aClient    *uplink;     /* this client's uplink to the network */
     int         fd;         /* >= 0, for local clients */
@@ -1487,7 +1491,7 @@ struct ListOptions
 
 typedef struct SearchOptions 
 {
-    int umodes;
+    long umodes;
     char *nick;
     char *user;
     char *host;
