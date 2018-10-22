@@ -3913,6 +3913,9 @@ int m_topic(aClient *cptr, aClient *sptr, int parc, char *parv[])
             return 0;
     }
 
+    if(chptr->topic_time==ts && !mycmp(chptr->topic, topic) && !mycmp(chptr->topic_nick, tnick))
+        return 0; /* Don't spam the network if it's the same topic -Kobi_S */
+
     strncpyzt(chptr->topic, topic, TOPICLEN + 1);
     strcpy(chptr->topic_nick, tnick);
     chptr->topic_time = ts;
