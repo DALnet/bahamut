@@ -426,7 +426,7 @@ void stripcolors(char new[512], char *org)
 /* Strip all "special" chars */
 void stripall(char new[512], char *org)
 {
-#define fstripall(c) ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || IsDigit(c) || c == '-' || c == '/' || c == '.' || c== '$' || c == '(' || (c >= '\224' && c <= '\250')) /* to strip everything ;) */
+#define fstripall(c) ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || IsDigit(c) || c == '-' || c == '/' || c == '.' || c== '$' || c == '(') /* to strip everything ;) */
     int len = 0;
 
     for(; (*org && len<512); org++)
