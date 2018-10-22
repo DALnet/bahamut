@@ -3560,9 +3560,9 @@ int m_part(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
         if (parc < 3 || can_send(sptr,chptr,reason) || IsSquelch(sptr) || ((chptr->xflags & XFLAG_NO_PART_MSG) && !is_xflags_exempted(sptr,chptr)))
         {
-            if(reason && (chptr->xflags & XFLAG_USER_VERBOSE))
+            if(reason && *reason && (chptr->xflags & XFLAG_USER_VERBOSE))
                 verbose_to_relaychan(cptr, chptr, "part_msg", reason);
-            if(reason && (chptr->xflags & XFLAG_OPER_VERBOSE))
+            if(reason && *reason && (chptr->xflags & XFLAG_OPER_VERBOSE))
                 verbose_to_opers(cptr, chptr, "part_msg", reason);
             sendto_serv_butone(cptr, PartFmt, parv[0], name);
             sendto_channel_butserv(chptr, sptr, PartFmt, parv[0], name);
