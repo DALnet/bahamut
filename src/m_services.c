@@ -414,9 +414,21 @@ int m_svsmode(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		{
             if (what == MODE_ADD)
             {
-                /* no opering this way */
-                if (flag & (UMODE_o|UMODE_O))
-                    break;
+                if((flag & (UMODE_o|UMODE_O)) && !IsAnOper(acptr))
+                {
+                     Count.oper++;
+                     if(MyConnect(acptr))
+                         add_to_list(&oper_list, acptr);
+                }
+                if((flag & (UMODE_o|UMODE_O|UMODE_a|UMODE_A)) && optarg && MyConnect(acptr))
+                {
+                     if(*optarg == '+')
+                         acptr->oflag |= atol(optarg);
+                     else if(*optarg == '-')
+                         acptr->oflag &= ~(atol(optarg) * -1);
+                     else
+                         acptr->oflag = atol(optarg);
+                }
                 acptr->umode |= flag;
             }
             else if (acptr->umode & flag)

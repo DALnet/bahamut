@@ -3349,9 +3349,12 @@ m_umode(aClient *cptr, aClient *sptr, int parc, char *parv[])
              * Now that the user is no longer opered, let's return
              * them back to the appropriate Y:class -srd
              */
-            sptr->user->oper->opers--;
-            sptr->user->oper = NULL;
-            set_effective_class(sptr);
+            if(sptr->user->oper)
+            {
+                sptr->user->oper->opers--;
+                sptr->user->oper = NULL;
+                set_effective_class(sptr);
+            }
         }
     }
     
