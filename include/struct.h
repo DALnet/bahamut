@@ -296,7 +296,7 @@ typedef struct SServicesTag ServicesTag;
 #define UMODE_f     0x00100	/* umode +f - Server flood messages */
 #define UMODE_y     0x00200	/* umode +y - Stats/links */
 #define UMODE_d     0x00400	/* umode +d - Debug info */
-/* 0x00800 is free */
+#define UMODE_P     0x00800     /* umode +P - User wants extra privacy (no spamfilter) */
 #define UMODE_g     0x01000	/* umode +g - Globops */
 #define UMODE_b     0x02000	/* umode +b - Chatops */
 #define UMODE_a     0x04000	/* umode +a - Services Admin */
@@ -316,7 +316,8 @@ typedef struct SServicesTag ServicesTag;
 #define UMODE_S     0x10000000  /* umode +S - User is using SSL */
 #define UMODE_C     0x20000000  /* umode +C - User is only accepting private messages from users who share a common channel with them */
 #define UMODE_H     0x40000000  /* umode +H - User is host-masked */
-#define UMODE_P     0x80000000  /* umode +P - User wants extra privacy (no spamfilter) */
+/* WARNING: Do not add any values greater than 0x40000000 unless you change Client->umode to unsigned long
+            (and change everything else to support it) -Kobi & xPsycho. */
 
 /* for sendto_ops_lev */
 
