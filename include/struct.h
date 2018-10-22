@@ -296,6 +296,7 @@ typedef struct SServicesTag ServicesTag;
 #define UMODE_f     0x00100	/* umode +f - Server flood messages */
 #define UMODE_y     0x00200	/* umode +y - Stats/links */
 #define UMODE_d     0x00400	/* umode +d - Debug info */
+/* 0x00800 is free */
 #define UMODE_g     0x01000	/* umode +g - Globops */
 #define UMODE_b     0x02000	/* umode +b - Chatops */
 #define UMODE_a     0x04000	/* umode +a - Services Admin */
