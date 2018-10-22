@@ -410,14 +410,14 @@ void stripcolors(char new[512], char *org)
 
     for(; (*org && len<512); org++)
     {
-        if(*org=='\022' || *org=='\033' || *org=='\002' || *org=='\031' || *org=='\015')
-            continue;
         if(*org=='\003')
         {
             org++;
             while(IsDigit(*org) || *org==',')
                 org++;
         }
+        if(*org<32 && *org!=1)
+            continue;
         new[len++] = *org;
     }
     new[len] = '\0';
