@@ -2187,6 +2187,18 @@ m_whois(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		       acptr->webirc_username);
 	}
 
+        if(IsAdmin(sptr))
+        {
+            buf2[0]='\0';
+            send_umode(NULL, acptr, 0, ALL_UMODES, buf2);
+            if (!*buf2)
+            {
+                buf2[0] = '+';
+                buf2[1] = '\0';
+            }
+            sendto_one(sptr, rpl_str(RPL_WHOISMODES), me.name, parv[0], name, buf2);
+        }
+
         /* don't give away that this oper is on this server if they're hidden! */
         if (acptr->user && MyConnect(acptr) && ((sptr == acptr) || 
                 !IsUmodeI(acptr) || (parc > 2) || IsAnOper(sptr)))
