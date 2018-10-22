@@ -431,8 +431,6 @@ void stripall(char new[512], char *org)
 
     for(; (*org && len<512); org++)
     {
-        if(*org=='\022' || *org=='\033' || *org=='\002' || *org=='\031' || *org=='\015')
-            continue;
         if(*org=='\003')
         {
             org++;
