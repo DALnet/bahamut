@@ -153,6 +153,7 @@
 #define	RPL_ENDOFINFO        374
 #define	RPL_MOTDSTART        375
 #define	RPL_ENDOFMOTD        376
+#define RPL_WHOISMODES       379
 
 #define RPL_YOUREOPER        381
 #define RPL_REHASHING        382
