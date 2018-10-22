@@ -475,7 +475,7 @@ register_user(aClient *cptr, aClient *sptr, char *nick, char *username,
 {
     aAllow  *pwaconf = NULL;
     char       *parv[3];
-    static char ubuf[12];
+    static char ubuf[54];
     char       *p;
     anUser     *user = sptr->user;
     struct userBan    *ban;
