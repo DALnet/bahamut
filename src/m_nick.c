@@ -38,6 +38,9 @@ extern int do_user(char *, aClient *, aClient *, char *, char *, char *,
 extern int register_user(aClient *, aClient *, char *, char *, char *);
 extern int del_dccallow(aClient *, aClient *, int);
 
+extern int is_xflags_exempted(aClient *sptr, aChannel *chptr);
+extern int verbose_to_relaychan(aClient *sptr, aChannel *chptr, char *cmd, char *reason);
+extern inline void verbose_to_opers(aClient *sptr, aChannel *chptr, char *cmd, char *reason);
 
 extern int user_modes[];
 
@@ -487,6 +490,16 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	 
 		for (lp = sptr->user->channel; lp; lp = lp->next)
 		{
+                    if((lp->value.chptr->xflags & XFLAG_NO_NICK_CHANGE) && !is_xflags_exempted(sptr,lp->value.chptr))
+                    {
+                        if(lp->value.chptr->xflags & XFLAG_USER_VERBOSE)
+                            verbose_to_relaychan(sptr, lp->value.chptr, "nick_change", NULL);
+                        if(lp->value.chptr->xflags & XFLAG_OPER_VERBOSE)
+                            verbose_to_opers(sptr, lp->value.chptr, "nick_change", nick);
+			sendto_one(sptr, err_str(ERR_BANNICKCHANGE), me.name,
+				   sptr->name, lp->value.chptr->chname);
+			return 0;
+                    }
 		    if (can_send(sptr, lp->value.chptr, NULL))
 		    { 
 			sendto_one(sptr, err_str(ERR_BANNICKCHANGE), me.name,
