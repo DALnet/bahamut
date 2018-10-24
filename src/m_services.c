@@ -229,7 +229,7 @@ int m_svsnick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	oldumode = acptr->umode;
 	acptr->umode &= ~UMODE_r;
 
-        send_umode(acptr, acptr, oldumode, ALL_UMODES, mbuf);
+        send_umode(acptr, acptr, oldumode, ALL_UMODES, mbuf, sizeof(mbuf));
     }
 
     acptr->tsinfo = atoi(parv[3]);
@@ -460,7 +460,7 @@ int m_svsmode(aClient *cptr, aClient *sptr, int parc, char *parv[])
     if (MyClient(acptr) && (oldumode != acptr->umode))
     {
         char buf[BUFSIZE];
-        send_umode(acptr, acptr, oldumode, ALL_UMODES, buf);
+        send_umode(acptr, acptr, oldumode, ALL_UMODES, buf, sizeof(buf));
     }
 
     return 0;

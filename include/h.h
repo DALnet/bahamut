@@ -262,7 +262,7 @@ extern aClient 	 *next_client_double(aClient *, char *);
 
 extern int  	  m_umode(aClient *, aClient *, int, char **);
 extern int  	  m_names(aClient *, aClient *, int, char **);
-extern void 	  send_umode(aClient *, aClient *, int, int, char *);
+extern void 	  send_umode(aClient *, aClient *, long, long, char *, int);
 extern int 	  del_silence(aClient *, char *);
 
 
