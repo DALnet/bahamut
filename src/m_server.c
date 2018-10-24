@@ -47,7 +47,7 @@ static void sendnick_TS(aClient *cptr, aClient *acptr)
 
     if (IsPerson(acptr))
     {
-        send_umode(NULL, acptr, 0, SEND_UMODES, ubuf);
+        send_umode(NULL, acptr, 0, SEND_UMODES, ubuf, sizeof(ubuf));
         if (!*ubuf)     /* trivial optimization - Dianora */
         {
             ubuf[0] = '+';
