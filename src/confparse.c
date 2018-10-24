@@ -123,7 +123,7 @@ check_quote(char *cur)
     if(quote)
     {
         while((cur = strchr(cur, '*')))
-            if((*(++cur) == '/'))
+            if(*(++cur) == '/')
             {
                 cur++;
                 quote = 0;
@@ -144,7 +144,7 @@ check_quote(char *cur)
         cur += 2;
         quote = 1;
         while((cur = strchr(cur, '*')))
-            if((*(++cur) == '/'))
+            if(*(++cur) == '/')
             {
                 cur++;
                 quote = 0;
@@ -282,7 +282,7 @@ parse_block(tConf *block, char *cur, FILE *file, int *lnum)
             {
                 while(!BadPtr(cur) && (*cur != ';'))
                 {
-                    if((*cur == ' '))
+                    if(*cur == ' ')
                     {
                         *cur = '\0';
                         if(vars[vnum]->loaded == 1)

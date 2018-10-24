@@ -1720,7 +1720,7 @@ void accept_connection(aListener *lptr)
             close(newfd);
             return;
         }
-        if((lptr->aport->legal == -1))
+        if(lptr->aport->legal == -1)
         {
             ircstp->is_ref++;
             send(newfd, "ERROR :This port is closed\r\n", 29, 0);
