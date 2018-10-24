@@ -42,7 +42,7 @@ extern int uhm_type;
 static void sendnick_TS(aClient *cptr, aClient *acptr)
 {
     ServicesTag *servicestag;
-    static char ubuf[30];
+    static char ubuf[54];
     int *s, flag, i;
 
     if (IsPerson(acptr))
