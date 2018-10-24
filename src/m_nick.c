@@ -537,7 +537,7 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
 		    oldumode = sptr->umode;
 		    sptr->umode &= ~UMODE_r;
-		    send_umode(sptr, sptr, oldumode, ALL_UMODES, mbuf);
+		    send_umode(sptr, sptr, oldumode, ALL_UMODES, mbuf, sizeof(mbuf));
 		}
 
                 /* LOCAL NICKHANGE */

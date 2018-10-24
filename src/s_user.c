@@ -1099,7 +1099,7 @@ register_user(aClient *cptr, aClient *sptr, char *nick, char *username,
             }
         }
     }
-    send_umode(NULL, sptr, 0, SEND_UMODES, ubuf);
+    send_umode(NULL, sptr, 0, SEND_UMODES, ubuf, sizeof(ubuf));
     if (!*ubuf)
     {
         ubuf[0] = '+';
@@ -1129,7 +1129,7 @@ register_user(aClient *cptr, aClient *sptr, char *nick, char *username,
 
         memset(sptr->passwd, '\0', PASSWDLEN);
         
-        if (ubuf[1]) send_umode(cptr, sptr, 0, ALL_UMODES, ubuf);
+        if (ubuf[1]) send_umode(cptr, sptr, 0, ALL_UMODES, ubuf, sizeof(ubuf));
 
         if(call_hooks(CHOOK_POSTMOTD, sptr) == FLUSH_BUFFER)
             return FLUSH_BUFFER;
@@ -2190,7 +2190,7 @@ m_whois(aClient *cptr, aClient *sptr, int parc, char *parv[])
         if(IsAdmin(sptr))
         {
             buf2[0]='\0';
-            send_umode(NULL, acptr, 0, ALL_UMODES, buf2);
+            send_umode(NULL, acptr, 0, ALL_UMODES, buf2, sizeof(buf2));
             if (!*buf2)
             {
                 buf2[0] = '+';
@@ -2881,7 +2881,7 @@ send_umode_out(aClient *cptr, aClient *sptr, int old)
     aClient *acptr;
     DLink *lp;
 
-    send_umode(NULL, sptr, old, SEND_UMODES, buf);
+    send_umode(NULL, sptr, old, SEND_UMODES, buf, sizeof(buf));
 
     if(*buf)
     {
@@ -2895,7 +2895,7 @@ send_umode_out(aClient *cptr, aClient *sptr, int old)
     }
 
     if (cptr && MyClient(cptr))
-        send_umode(cptr, sptr, old, ALL_UMODES, buf);
+        send_umode(cptr, sptr, old, ALL_UMODES, buf, sizeof(buf));
 }
 
 /*
@@ -3418,10 +3418,11 @@ m_umode(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
 /* send the MODE string for user (user) to connection cptr -avalon */
 void 
-send_umode(aClient *cptr, aClient *sptr, int old, int sendmask, char *umode_buf)
+send_umode(aClient *cptr, aClient *sptr, long old, long sendmask, char *umode_buf, int bufsize)
 {
     int *s, flag, what = MODE_NULL;
     char *m;
+    int len;
 
     /*
      * build a string in umode_buf to represent the change in the user's
@@ -3429,6 +3430,8 @@ send_umode(aClient *cptr, aClient *sptr, int old, int sendmask, char *umode_buf)
      */
     m = umode_buf;
     *m = '\0';
+    len = 0;
+    bufsize--; /* To have enough space for the null termination char */
     for (s = user_modes; (flag = *s); s += 2)
     {
         if (MyClient(sptr) && !(flag & sendmask))
@@ -3436,23 +3439,35 @@ send_umode(aClient *cptr, aClient *sptr, int old, int sendmask, char *umode_buf)
         if ((flag & old) && !(sptr->umode & flag))
         {
             if (what == MODE_DEL)
+            {
+                if(len+1 > bufsize) break;
                 *m++ = *(s + 1);
+                len++;
+            }
             else
             {
+                if(len+2 > bufsize) break;
                 what = MODE_DEL;
                 *m++ = '-';
                 *m++ = *(s + 1);
+                len += 2;
             }
         }
         else if (!(flag & old) && (sptr->umode & flag))
         {
             if (what == MODE_ADD)
+            {
+                if(len+1 > bufsize) break;
                 *m++ = *(s + 1);
+                len++;
+            }
             else
             {
+                if(len+2 > bufsize) break;
                 what = MODE_ADD;
                 *m++ = '+';
                 *m++ = *(s + 1);
+                len += 2;
             }
         }
     }
