@@ -1862,7 +1862,7 @@ m_message(aClient *cptr, aClient *sptr, int parc, char *parv[], int notice)
 #endif
 
 #ifdef SPAMFILTER
-            if(!IsUmodeP(acptr) && check_sf(sptr, parv[2], notice?"notice":"msg", notice?SF_CMD_NOTICE:SF_CMD_PRIVMSG, acptr->name))
+            if(!IsUmodeP(acptr) && sptr!=acptr && check_sf(sptr, parv[2], notice?"notice":"msg", notice?SF_CMD_NOTICE:SF_CMD_PRIVMSG, acptr->name))
                 return FLUSH_BUFFER;
 #endif
         }
