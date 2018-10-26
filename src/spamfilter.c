@@ -152,6 +152,7 @@ int m_spamops(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
 /* check_sf - checks if a text matches a spamfilter pattern
               Returns: 1 = User message has been blocked.
+                       2 = User has been killed and the message has been blocked.
                        0 = User message was not blocked (but it doesn't mean we didn't have a non-block match).
  */
 int check_sf(aClient *cptr, char *text, char *caction, int action, char *target)
