@@ -36,6 +36,7 @@ struct spam_filter
     struct spam_filter *next;
     char *text;
     long flags;
+    char *target;
     char *reason;
     char *id;
     pcre *re;
@@ -83,8 +84,13 @@ int load_spamfilter()
                 tmp++;
         }
         para[parc + 1] = NULL;
-        if(parc>3 && !mycmp(para[0],"SF"))
-            new_sf(para[1], atol(para[2]), para[3]);
+        if(!mycmp(para[0],"SF"))
+        {
+            if(parc>4)
+                new_sf(para[1], atol(para[2]), para[4], para[3]);
+            else if(parc>3)
+                new_sf(para[1], atol(para[2]), para[3], NULL);
+        }
     }
     fclose(fle);
 
@@ -106,7 +112,10 @@ int save_spamfilter()
 
     for(; sf; sf = sf->next)
     {
-        fprintf(fle, "SF %s %ld :%s\n", sf->text, sf->flags, sf->reason);
+        if(sf->target)
+            fprintf(fle, "SF %s %ld %s :%s\n", sf->text, sf->flags, sf->target, sf->reason);
+        else
+            fprintf(fle, "SF %s %ld :%s\n", sf->text, sf->flags, sf->reason);
     }
 
     fclose(fle);
@@ -121,7 +130,10 @@ void spamfilter_sendserver(aClient *acptr)
 
     for(sf = spam_filters; sf; sf = sf->next)
     {
-        sendto_one(acptr, "SF %s %ld :%s", sf->text, sf->flags, sf->reason);
+        if(sf->target)
+            sendto_one(acptr, "SF %s %ld %s :%s", sf->text, sf->flags, sf->target, sf->reason);
+        else
+            sendto_one(acptr, "SF %s %ld :%s", sf->text, sf->flags, sf->reason);
     }
 }
 
@@ -180,6 +192,8 @@ int check_sf(aClient *cptr, char *text, char *caction, int action, char *target)
         if(!(p->flags & action))
             continue;
         if(IsRegNick(cptr) && !(p->flags & SF_FLAG_MATCHREG))
+            continue;
+        if(p->target && match(p->target,target))
             continue;
         if(p->flags & SF_FLAG_STRIPALL)
         {
@@ -292,7 +306,7 @@ struct spam_filter *find_sf(char *text)
     return NULL; /* Not found */
 }
 
-struct spam_filter *new_sf(char *text, long flags, char *reason)
+struct spam_filter *new_sf(char *text, long flags, char *reason, char *target)
 {
     struct spam_filter *p;
     int erroroffset;
@@ -312,6 +326,8 @@ struct spam_filter *new_sf(char *text, long flags, char *reason)
     p = find_sf(text);
     if(p)
     {
+        if(p->target)
+            MyFree(p->target);
         if(p->reason)
             MyFree(p->reason);
         if(p->id)
@@ -353,6 +369,12 @@ struct spam_filter *new_sf(char *text, long flags, char *reason)
         p->reason = NULL;
         p->id = NULL;
     }
+    if(target)
+    {
+        p->target = MyMalloc(strlen(target) + 1);
+        strcpy(p->target, target);
+    }
+    else p->target = NULL;
 
     return p;
 }
@@ -372,6 +394,8 @@ int del_sf(char *text)
                 spam_filters = p->next;
             if(p->text)
                 MyFree(p->text);
+            if(p->target)
+                MyFree(p->target);
             if(p->reason)
                 MyFree(p->reason);
             if(p->id)
@@ -389,7 +413,8 @@ int del_sf(char *text)
 /* m_sf - Spam Filter
  * parv[1] - Text
  * parv[2] - Flags (0 to delete)
- * parv[3] - Reason
+ * parv[3] - (Optional) Target
+ * parv[4] or parv[3] - Reason
  */
 int m_sf(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
@@ -411,14 +436,21 @@ int m_sf(aClient *cptr, aClient *sptr, int parc, char *parv[])
         return 0;
     }
     if(mycmp(parv[2], "0"))
-        new_sf(parv[1], atol(parv[2]), parv[3]);
+    {
+        if(parc>4)
+            new_sf(parv[1], atol(parv[2]), parv[4], parv[3]);
+        else
+            new_sf(parv[1], atol(parv[2]), parv[3], NULL);
+    }
     else
         del_sf(parv[1]);
 
-    if(parc<4)
-        sendto_serv_butone(cptr, ":%s SF %s %s", parv[0], parv[1], parv[2]);
-    else
+    if(parc>4)
+        sendto_serv_butone(cptr, ":%s SF %s %s %s :%s", parv[0], parv[1], parv[2], parv[3], parv[4]);
+    else if(parc>3)
         sendto_serv_butone(cptr, ":%s SF %s %s :%s", parv[0], parv[1], parv[2], parv[3]);
+    else
+        sendto_serv_butone(cptr, ":%s SF %s %s", parv[0], parv[1], parv[2]);
 
     if(NOW > last_spamfilter_save + 300) {
       last_spamfilter_save = NOW;
