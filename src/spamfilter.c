@@ -356,7 +356,7 @@ struct spam_filter *new_sf(char *text, long flags, char *reason, char *target)
             while(reason[len]!=']' && reason[len]!='\0')
                 len++;
         }
-        if(len > 1)
+        if(len > 1 && reason[len]==']')
         {
             p->id = MyMalloc(len);
             strncpy(p->id, &reason[1], len - 1);
