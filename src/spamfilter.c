@@ -460,6 +460,19 @@ int m_sf(aClient *cptr, aClient *sptr, int parc, char *parv[])
     return 0;
 }
 
+/* report_spamfilters - send /stats S (spamfilter list) output to opers */
+int report_spamfilters(aClient *cptr, aClient *sptr, int parc, char *parv[])
+{
+    struct spam_filter *sf = spam_filters;
+
+    for(; sf; sf = sf->next)
+    {
+        sendto_one(sptr, rpl_str(RPL_STATSSLINE), me.name,
+                   sptr->name, "S", sf->text, sf->flags,
+                   sf->target?sf->target:"<NONE>", sf->reason);
+    }
+}
+
 /* Strip colors and other control codes from a text */
 void stripcolors(char new[512], char *org)
 {
