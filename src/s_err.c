@@ -268,7 +268,7 @@ static char *replies[] =
     /* 242 RPL_STATSUPTIME */	":%s 242 %s :Server Up %d days, %d:%02d:%02d",
     /* 243 RPL_STATSOLINE */	":%s 243 %s %s %s * %s %s %s",
     /* 244 RPL_STATSHLINE */	NULL,
-    /* 245 RPL_STATSSLINE */	":%s 245 %s %s %s %ld %s :%s",
+    /* 245 RPL_STATSSLINE */	":%s 245 %s %s %s %ld %s %lu :%s",
     /* 246 RPL_STATSXLINE */	":%s 246 %s %s %s * %s %d %d",
     /* 247 */	                NULL,		/* Undernet's STATSGLINE */
     /* 248 */	                NULL,		/* Undernet's STATSULINE */
