@@ -1341,7 +1341,7 @@ struct Channel
 
 /* channel visible */
 
-#define	ShowChannel(v,c)	(PubChannel(c) || IsMember((v),(c)))
+#define	ShowChannel(v,c)	(!SecretChannel(c) || IsMember((v),(c)))
 #define	PubChannel(x)		((!x) || ((x)->mode.mode &\
                                  (MODE_PRIVATE | MODE_SECRET)) == 0)
 
