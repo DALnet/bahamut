@@ -490,7 +490,7 @@ void stripcolors(char new[512], char *org)
             while(IsDigit(*org) || *org==',')
                 org++;
         }
-        if(*org<32 && *org!=1)
+        if(*org<32)
             continue;
         new[len++] = *org;
     }
