@@ -36,7 +36,9 @@ struct spam_filter
     struct spam_filter *next;
     char *text;
     long flags;
+    char *target;
     char *reason;
+    char *id;
     pcre *re;
     unsigned int len;
 };
@@ -82,8 +84,13 @@ int load_spamfilter()
                 tmp++;
         }
         para[parc + 1] = NULL;
-        if(parc>3 && !mycmp(para[0],"SF"))
-            new_sf(para[1], atol(para[2]), para[3]);
+        if(!mycmp(para[0],"SF"))
+        {
+            if(parc>4)
+                new_sf(para[1], atol(para[2]), para[4], para[3]);
+            else if(parc>3)
+                new_sf(para[1], atol(para[2]), para[3], NULL);
+        }
     }
     fclose(fle);
 
@@ -105,7 +112,10 @@ int save_spamfilter()
 
     for(; sf; sf = sf->next)
     {
-        fprintf(fle, "SF %s %ld :%s\n", sf->text, sf->flags, sf->reason);
+        if(sf->target)
+            fprintf(fle, "SF %s %ld %s :%s\n", sf->text, sf->flags, sf->target, sf->reason);
+        else
+            fprintf(fle, "SF %s %ld :%s\n", sf->text, sf->flags, sf->reason);
     }
 
     fclose(fle);
@@ -120,7 +130,10 @@ void spamfilter_sendserver(aClient *acptr)
 
     for(sf = spam_filters; sf; sf = sf->next)
     {
-        sendto_one(acptr, "SF %s %ld :%s", sf->text, sf->flags, sf->reason);
+        if(sf->target)
+            sendto_one(acptr, "SF %s %ld %s :%s", sf->text, sf->flags, sf->target, sf->reason);
+        else
+            sendto_one(acptr, "SF %s %ld :%s", sf->text, sf->flags, sf->reason);
     }
 }
 
@@ -151,6 +164,7 @@ int m_spamops(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
 /* check_sf - checks if a text matches a spamfilter pattern
               Returns: 1 = User message has been blocked.
+                       2 = User has been killed and the message has been blocked.
                        0 = User message was not blocked (but it doesn't mean we didn't have a non-block match).
  */
 int check_sf(aClient *cptr, char *text, char *caction, int action, char *target)
@@ -178,6 +192,8 @@ int check_sf(aClient *cptr, char *text, char *caction, int action, char *target)
         if(!(p->flags & action))
             continue;
         if(IsRegNick(cptr) && !(p->flags & SF_FLAG_MATCHREG))
+            continue;
+        if(p->target && match(p->target,target))
             continue;
         if(p->flags & SF_FLAG_STRIPALL)
         {
@@ -236,19 +252,19 @@ int check_sf(aClient *cptr, char *text, char *caction, int action, char *target)
                     action_text = "";
                 if(IsPerson(cptr))
                 {
-                    sendto_realops_lev(SPAM_LEV, "spamfilter %s: %s by %s!%s@%s to %s --> %s%s", p->text,
+                    sendto_realops_lev(SPAM_LEV, "spamfilter %s: %s by %s!%s@%s to %s%s --> %s", p->id?p->id:p->text,
                                        caction, cptr->name, cptr->user->username, cptr->user->host,
-                                       target, text, action_text);
-                    sendto_serv_butone(NULL, ":%s SPAMOPS :spamfilter %s: %s by %s!%s@%s to %s --> %s%s",
-                                       me.name, p->text, caction, cptr->name, cptr->user->username,
-                                       cptr->user->host, target, text, action_text);
+                                       target, action_text, text);
+                    sendto_serv_butone(NULL, ":%s SPAMOPS :spamfilter %s: %s by %s!%s@%s to %s%s --> %s",
+                                       me.name, p->id?p->id:p->text, caction, cptr->name, cptr->user->username,
+                                       cptr->user->host, target, action_text, text);
                 }
                 else
                 {
-                    sendto_realops_lev(SPAM_LEV, "spamfilter %s: %s by %s to %s --> %s%s", p->text,
-                                       caction, cptr->name, target, text, action_text);
-                    sendto_serv_butone(NULL, ":%s SPAMOPS :spamfilter %s: %s by %s to %s --> %s%s",
-                                       me.name, p->text, caction, cptr->name, target, text, action_text);
+                    sendto_realops_lev(SPAM_LEV, "spamfilter %s: %s by %s to %s%s --> %s", p->id?p->id:p->text,
+                                       caction, cptr->name, target, action_text, text);
+                    sendto_serv_butone(NULL, ":%s SPAMOPS :spamfilter %s: %s by %s to %s%s --> %s",
+                                       me.name, p->id?p->id:p->text, caction, cptr->name, target, action_text, text);
                 }
                 reported++;
             }
@@ -290,12 +306,13 @@ struct spam_filter *find_sf(char *text)
     return NULL; /* Not found */
 }
 
-struct spam_filter *new_sf(char *text, long flags, char *reason)
+struct spam_filter *new_sf(char *text, long flags, char *reason, char *target)
 {
     struct spam_filter *p;
     int erroroffset;
     const char *error;
     pcre *re;
+    unsigned int len = 0; /* For the spamfilter id */
 
     if(flags & SF_FLAG_REGEXP)
     {
@@ -309,8 +326,12 @@ struct spam_filter *new_sf(char *text, long flags, char *reason)
     p = find_sf(text);
     if(p)
     {
+        if(p->target)
+            MyFree(p->target);
         if(p->reason)
             MyFree(p->reason);
+        if(p->id)
+            MyFree(p->id);
         if(p->re)
             pcre_free(p->re);
     }
@@ -325,11 +346,35 @@ struct spam_filter *new_sf(char *text, long flags, char *reason)
     }
     p->flags = flags;
     p->re = re;
-    if(reason) {
-      p->reason = MyMalloc(strlen(reason) + 1);
-      strcpy(p->reason, reason);
+    if(reason)
+    {
+        p->reason = MyMalloc(strlen(reason) + 1);
+        strcpy(p->reason, reason);
+        len = 1;
+        if(reason[0] == '[')
+        {
+            while(reason[len]!=']' && reason[len]!='\0')
+                len++;
+        }
+        if(len > 1)
+        {
+            p->id = MyMalloc(len);
+            strncpy(p->id, &reason[1], len - 1);
+            p->id[len] = '\0';
+        }
+        else p->id = NULL;
     }
-    else p->reason = NULL;
+    else
+    {
+        p->reason = NULL;
+        p->id = NULL;
+    }
+    if(target)
+    {
+        p->target = MyMalloc(strlen(target) + 1);
+        strcpy(p->target, target);
+    }
+    else p->target = NULL;
 
     return p;
 }
@@ -349,8 +394,12 @@ int del_sf(char *text)
                 spam_filters = p->next;
             if(p->text)
                 MyFree(p->text);
+            if(p->target)
+                MyFree(p->target);
             if(p->reason)
                 MyFree(p->reason);
+            if(p->id)
+                MyFree(p->id);
             if(p->re)
                 pcre_free(p->re);
             MyFree(p);
@@ -364,7 +413,8 @@ int del_sf(char *text)
 /* m_sf - Spam Filter
  * parv[1] - Text
  * parv[2] - Flags (0 to delete)
- * parv[3] - Reason
+ * parv[3] - (Optional) Target
+ * parv[4] or parv[3] - Reason
  */
 int m_sf(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
@@ -386,14 +436,21 @@ int m_sf(aClient *cptr, aClient *sptr, int parc, char *parv[])
         return 0;
     }
     if(mycmp(parv[2], "0"))
-        new_sf(parv[1], atol(parv[2]), parv[3]);
+    {
+        if(parc>4)
+            new_sf(parv[1], atol(parv[2]), parv[4], parv[3]);
+        else
+            new_sf(parv[1], atol(parv[2]), parv[3], NULL);
+    }
     else
         del_sf(parv[1]);
 
-    if(parc<4)
-        sendto_serv_butone(cptr, ":%s SF %s %s", parv[0], parv[1], parv[2]);
-    else
+    if(parc>4)
+        sendto_serv_butone(cptr, ":%s SF %s %s %s :%s", parv[0], parv[1], parv[2], parv[3], parv[4]);
+    else if(parc>3)
         sendto_serv_butone(cptr, ":%s SF %s %s :%s", parv[0], parv[1], parv[2], parv[3]);
+    else
+        sendto_serv_butone(cptr, ":%s SF %s %s", parv[0], parv[1], parv[2]);
 
     if(NOW > last_spamfilter_save + 300) {
       last_spamfilter_save = NOW;

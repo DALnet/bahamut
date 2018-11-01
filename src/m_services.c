@@ -827,6 +827,7 @@ struct FlagList xflags_list[] =
   { "EXEMPT_INVITES",    XFLAG_EXEMPT_INVITES    },
   { "HIDE_MODE_LISTS",   XFLAG_HIDE_MODE_LISTS   },
   { "NO_NICK_CHANGE",    XFLAG_NO_NICK_CHANGE    },
+  { "NO_UTF8",           XFLAG_NO_UTF8           },
   { "SJR",               XFLAG_SJR               },
   { "USER_VERBOSE",      XFLAG_USER_VERBOSE      },
   { "OPER_VERBOSE",      XFLAG_OPER_VERBOSE      },
