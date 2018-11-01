@@ -368,6 +368,23 @@ canonize(char *buffer)
     return cbuf;
 }
 
+/* msg_has_utf8 - check if a message has high ASCII code characters.
+                  It doesn't have to be UTF8 really, Hebrew and Arabic
+                  characters will match as well... -Kobi_S.
+ */
+int msg_has_utf8(char *text)
+{
+    if(text == NULL) return 0;
+
+    while(*text)
+    {
+        if((unsigned char)*text > 127 && *text!='<' && *text!='>') return 1;
+        text++;
+    }
+
+    return 0;
+}
+
 #if (RIDICULOUS_PARANOIA_LEVEL>=1)
 static int
 check_oper_can_mask(aClient *sptr, char *name, char *password, char **onick)
@@ -1659,6 +1676,17 @@ m_message(aClient *cptr, aClient *sptr, int parc, char *parv[], int notice)
                     continue;
                 }
 
+                if ((chptr->xflags & XFLAG_NO_UTF8) && msg_has_utf8(parv[2]) && !is_xflags_exempted(sptr,chptr))
+                {
+                    if (ismine && !notice)
+                        sendto_one(sptr, err_str(ERR_CANNOTSENDTOCHAN), me.name, parv[0], target);
+                    if(chptr->xflags & XFLAG_USER_VERBOSE)
+                        verbose_to_relaychan(sptr, chptr, notice?"utf8-notice":"utf8-message", parv[2]);
+                    if(chptr->xflags & XFLAG_OPER_VERBOSE)
+                        verbose_to_opers(sptr, chptr, notice?"utf8-notice":"utf8-message", parv[2]);
+                    continue;
+                }
+
                 if((chptr->mode.mode & MODE_AUDITORIUM) && !is_chan_opvoice(sptr, chptr))
                 {
                     /* Channel is in auditorium mode! */
@@ -1862,7 +1890,7 @@ m_message(aClient *cptr, aClient *sptr, int parc, char *parv[], int notice)
 #endif
 
 #ifdef SPAMFILTER
-            if(!IsUmodeP(acptr) && check_sf(sptr, parv[2], notice?"notice":"msg", notice?SF_CMD_NOTICE:SF_CMD_PRIVMSG, acptr->name))
+            if(!IsUmodeP(acptr) && sptr!=acptr && check_sf(sptr, parv[2], notice?"notice":"msg", notice?SF_CMD_NOTICE:SF_CMD_PRIVMSG, acptr->name))
                 return FLUSH_BUFFER;
 #endif
         }

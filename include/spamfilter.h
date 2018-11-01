@@ -25,7 +25,7 @@ extern int save_spamfilter();
 extern void stripcolors(char new[512], char *org);
 extern void stripall(char new[512], char *org);
 extern int check_sf(aClient *cptr, char *text, char *caction, int action, char *target);
-extern struct spam_filter *new_sf(char *text, long flags, char *reason);
+extern struct spam_filter *new_sf(char *text, long flags, char *reason, char *target);
 extern void spamfilter_sendserver(aClient *acptr);
 
 #define SF_FLAG_NONE      000000
