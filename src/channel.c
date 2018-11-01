@@ -4073,7 +4073,7 @@ void send_list(aClient *cptr, int numsend)
             for (chptr = (aChannel *)hash_get_chan_bucket(hashnum); 
                  chptr; chptr = chptr->hnextch)
             {
-                if (SecretChannel(chptr) && !IsAdmin(cptr)
+                if (!PubChannel(chptr) && !IsAdmin(cptr)
                     && !IsMember(cptr, chptr))
                     continue;
 #ifdef USE_CHANMODE_L
@@ -4106,7 +4106,7 @@ void send_list(aClient *cptr, int numsend)
                 {
                     char tempchname[CHANNELLEN + 2], *altchname;
 
-                    if (SecretChannel(chptr))
+                    if (!PubChannel(chptr) && !IsMember(cptr, chptr))
                     {
                         tempchname[0] = '%';
                         strcpy(&tempchname[1], chptr->chname);
@@ -4121,9 +4121,9 @@ void send_list(aClient *cptr, int numsend)
                 else 
                 {
                     sendto_one(cptr, rpl_str(RPL_LIST), me.name, cptr->name,
-                               ShowChannel(cptr, chptr) ? chptr->chname : "*",
+                               chptr->chname,
                                chptr->users,
-                               ShowChannel(cptr, chptr) ? chptr->topic : "");
+                               chptr->topic);
                 }
                 numsend--;
             }
