@@ -41,6 +41,7 @@ struct spam_filter
     char *id;
     pcre *re;
     unsigned int len;
+    unsigned long matches;
 };
 
 struct spam_filter *spam_filters = NULL;
@@ -227,6 +228,7 @@ int check_sf(aClient *cptr, char *text, char *caction, int action, char *target)
         }
         else matched = !match(p->text,text);
         if(matched) {
+            if(p->matches < ULONG_MAX) p->matches++;
             if(p->flags & SF_ACT_LAG)
                 cptr->since += 4;
             if(p->flags & SF_ACT_BLOCK)
@@ -343,6 +345,7 @@ struct spam_filter *new_sf(char *text, long flags, char *reason, char *target)
         p->len = strlen(text); /* We only need the length for REGEXP entries so we won't check it every match-check but we use it for MyMalloc anyway so I put it here -Kobi. */
         p->text = MyMalloc(p->len + 1);
         strcpy(p->text, text);
+        p->matches = 0;
     }
     p->flags = flags;
     p->re = re;
@@ -356,7 +359,7 @@ struct spam_filter *new_sf(char *text, long flags, char *reason, char *target)
             while(reason[len]!=']' && reason[len]!='\0')
                 len++;
         }
-        if(len > 1)
+        if(len > 1 && reason[len]==']')
         {
             p->id = MyMalloc(len);
             strncpy(p->id, &reason[1], len - 1);
@@ -460,6 +463,20 @@ int m_sf(aClient *cptr, aClient *sptr, int parc, char *parv[])
     return 0;
 }
 
+/* report_spamfilters - send /stats S (spamfilter list) output to opers */
+int report_spamfilters(aClient *cptr, aClient *sptr, int parc, char *parv[])
+{
+    struct spam_filter *sf = spam_filters;
+
+    for(; sf; sf = sf->next)
+    {
+        sendto_one(sptr, rpl_str(RPL_STATSSLINE), me.name,
+                   sptr->name, "S", sf->text, sf->flags,
+                   sf->target?sf->target:"<NONE>", sf->matches,
+                   sf->reason);
+    }
+}
+
 /* Strip colors and other control codes from a text */
 void stripcolors(char new[512], char *org)
 {
@@ -473,7 +490,7 @@ void stripcolors(char new[512], char *org)
             while(IsDigit(*org) || *org==',')
                 org++;
         }
-        if(*org<32 && *org!=1)
+        if(*org<32)
             continue;
         new[len++] = *org;
     }
