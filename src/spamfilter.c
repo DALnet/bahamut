@@ -475,6 +475,8 @@ int report_spamfilters(aClient *cptr, aClient *sptr, int parc, char *parv[])
                    sf->target?sf->target:"<NONE>", sf->matches,
                    sf->reason);
     }
+
+    return 0;
 }
 
 /* Strip colors and other control codes from a text */
