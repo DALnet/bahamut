@@ -660,6 +660,7 @@ exit_client(aClient *cptr, aClient *sptr, aClient *from, char *comment)
                 sendto_one(sptr, "ERROR :Closing Link: %s (%s)",
                            IsPerson(sptr) ? sptr->sockhost : "0.0.0.0", 
                            comment);
+            send_queued(sptr); /* Attempt to send the sendq list (with the error message) as fast as we can -Kobi. */
         }
         /*
          * * Currently only server connections can have * depending
