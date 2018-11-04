@@ -1,3 +1,34 @@
+Changes for 2.1.2:
+------------------
+- Increase the umode buffer on register_user() to prevent a possible
+  buffer overflow
+- Don't accept OPER commands from servers
+- Cosmetic: mention that umode 0x00800 is free.
+- Change UMODE_P to use 0x800
+- Change all the umode(s) to long
+- Let server admins see umodes with WHOIS (RPL_WHOISMODES)
+- Let services change oper flags/modes with SVSMODE
+- Don't complain about empty part messages (user/oper verbose)
+- Change stripall() function to strip Hebrew characters as well
+- Optimize stripall() function
+- Change stripcolors() function to strip ASCII CODES 2-31
+- Don't spam the network with the same channel topics
+- Add NO_NICK_CHANGE xflag (XCF)
+- Change send_umode() make sure the buffer isn't overflowed
+- Increase sendnick_TS() function's umode buffer to 54 to be
+  consistent with register_user()
+- Fix a few compile warnings
+- Don't check spamfilter if a user messages/notices themselves
+- Add support for spamfilter id and use it on warnings when possible
+- Cosmetic comment fix
+- Add target support to spamfilter
+- Add NO_UTF8 xflag (XCF)
+- spamfilter ids must end with a "]"
+- Let opers use STATS S to see the spamfilter list
+- Add counter for spamfitler matches
+- Change stripcolors() to strip ASCII CODE 1 too (CTCPs & actions)
+- Make cmode +p useful again
+
 Changes for 2.1.1:
 ------------------
 Kobi Shmueli (8):
