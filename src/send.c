@@ -594,7 +594,7 @@ void sendto_channel_butone(aClient *one, aClient *from, aChannel *chptr,
         if (acptr->from == one)
             continue; /* ...was the one I should skip */
 
-        if((confopts & FLAGS_SERVHUB) && IsULine(acptr) && (acptr->uplink->serv->uflags & ULF_NOCHANMSG))
+        if((confopts & FLAGS_SERVHUB) && IsULine(acptr) && (acptr->uplink->serv) && (acptr->uplink->serv->uflags & ULF_NOCHANMSG))
             continue; /* Don't send channel traffic to super servers */
 
         if (MyClient(acptr)) 
@@ -666,10 +666,12 @@ void sendto_channel_remote_butone(aClient *one, aClient *from, aChannel *chptr,
         if (acptr->from == one)
             continue; /* ...was the one I should skip */
 
-        if((confopts & FLAGS_SERVHUB) && IsULine(acptr) && (acptr->uplink->serv->uflags & ULF_NOCHANMSG))
+        if((confopts & FLAGS_SERVHUB) && IsULine(acptr) && (acptr->uplink->serv) && (acptr->uplink->serv->uflags & ULF_NOCHANMSG))
             continue; /* Don't send channel traffic to super servers */
 
-        i = acptr->from->fd;
+        if(acptr->fd == -2)
+            continue;
+
         if (!MyClient(acptr)) 
         {
             /*
@@ -686,6 +688,7 @@ void sendto_channel_remote_butone(aClient *one, aClient *from, aChannel *chptr,
             if(check_fake_direction(from, acptr))
                     continue;
             
+            i = acptr->from->fd;
             if (sentalong[i] != sent_serial) 
             {
                 send_message(acptr, remotebuf, didremote, share_buf);
@@ -2112,7 +2115,7 @@ void sendto_channelflags_butone(aClient *one, aClient *from, aChannel *chptr,
         if (acptr->from == one || !(cm->flags & flags))
             continue;
 
-        if((confopts & FLAGS_SERVHUB) && IsULine(acptr) && (acptr->uplink->serv->uflags & ULF_NOCHANMSG))
+        if((confopts & FLAGS_SERVHUB) && IsULine(acptr) && (acptr->uplink->serv) && (acptr->uplink->serv->uflags & ULF_NOCHANMSG))
             continue; /* Don't send channel traffic to super servers */
 
         if (MyConnect(acptr))
