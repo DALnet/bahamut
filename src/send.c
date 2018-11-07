@@ -597,7 +597,6 @@ void sendto_channel_butone(aClient *one, aClient *from, aChannel *chptr,
         if((confopts & FLAGS_SERVHUB) && IsULine(acptr) && (acptr->uplink->serv->uflags & ULF_NOCHANMSG))
             continue; /* Don't send channel traffic to super servers */
 
-        i = acptr->from->fd;
         if (MyClient(acptr)) 
         {
             if(!didlocal)
@@ -610,7 +609,6 @@ void sendto_channel_butone(aClient *one, aClient *from, aChannel *chptr,
                     continue;
             
             send_message(acptr, sendbuf, didlocal, share_bufs[0]);
-            sentalong[i] = sent_serial;
         }
         else 
         {
@@ -628,6 +626,7 @@ void sendto_channel_butone(aClient *one, aClient *from, aChannel *chptr,
             if(check_fake_direction(from, acptr))
                     continue;
             
+            i = acptr->from->fd;
             if (sentalong[i] != sent_serial) 
             {
                 send_message(acptr, remotebuf, didremote, share_bufs[1]);
@@ -1047,13 +1046,13 @@ void sendto_channel_butlocal(aClient *one, aClient *from, aChannel *chptr,
         acptr = cm->cptr;
         if (acptr->from == one)
             continue;           /* ...was the one I should skip */
-        i = acptr->from->fd;
         if (!MyFludConnect(acptr)) 
         {
             /*
              * Now check whether a message has been sent to this remote
              * link already
              */
+            i = acptr->from->fd;
             if (sentalong[i] != sent_serial) 
             {
                 vsendto_prefix_one(acptr, from, pattern, vl);
