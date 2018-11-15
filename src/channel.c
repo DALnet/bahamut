@@ -1986,11 +1986,11 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
                 if((chptr->xflags & XFLAG_HIDE_MODE_LISTS) && !IsAnOper(sptr) && !is_chan_op(sptr,chptr))
                 {
                     if(chptr->xflags & XFLAG_USER_VERBOSE)
-                        verbose_to_relaychan(cptr, chptr, "mode(+I)", NULL);
+                        verbose_to_relaychan(sptr, chptr, "mode(+I)", NULL);
                     if(chptr->xflags & XFLAG_OPER_VERBOSE)
-                        verbose_to_opers(cptr, chptr, "mode(+I)", NULL);
-                    sendto_one(cptr, rpl_str(RPL_ENDOFINVITELIST), me.name,
-                               cptr->name, chptr->chname);
+                        verbose_to_opers(sptr, chptr, "mode(+I)", NULL);
+                    sendto_one(sptr, rpl_str(RPL_ENDOFINVITELIST), me.name,
+                               sptr->name, chptr->chname);
                     anylistsent = 1;
                     break;
                 }
@@ -2069,11 +2069,11 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
                 if((chptr->xflags & XFLAG_HIDE_MODE_LISTS) && !IsAnOper(sptr) && !is_chan_op(sptr,chptr))
                 {
                     if(chptr->xflags & XFLAG_USER_VERBOSE)
-                        verbose_to_relaychan(cptr, chptr, "mode(+e)", NULL);
+                        verbose_to_relaychan(sptr, chptr, "mode(+e)", NULL);
                     if(chptr->xflags & XFLAG_OPER_VERBOSE)
-                        verbose_to_opers(cptr, chptr, "mode(+e)", NULL);
-                    sendto_one(cptr, rpl_str(RPL_ENDOFEXEMPTLIST), me.name,
-                               cptr->name, chptr->chname);
+                        verbose_to_opers(sptr, chptr, "mode(+e)", NULL);
+                    sendto_one(sptr, rpl_str(RPL_ENDOFEXEMPTLIST), me.name,
+                               sptr->name, chptr->chname);
                     anylistsent = 1;
                     break;
                 }
@@ -2151,11 +2151,11 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
                 if((chptr->xflags & XFLAG_HIDE_MODE_LISTS) && !IsAnOper(sptr) && !is_chan_op(sptr,chptr))
                 {
                     if(chptr->xflags & XFLAG_USER_VERBOSE)
-                        verbose_to_relaychan(cptr, chptr, "mode(+b)", NULL);
+                        verbose_to_relaychan(sptr, chptr, "mode(+b)", NULL);
                     if(chptr->xflags & XFLAG_OPER_VERBOSE)
-                        verbose_to_opers(cptr, chptr, "mode(+b)", NULL);
-                    sendto_one(cptr, rpl_str(RPL_ENDOFBANLIST), me.name,
-                               cptr->name, chptr->chname);
+                        verbose_to_opers(sptr, chptr, "mode(+b)", NULL);
+                    sendto_one(sptr, rpl_str(RPL_ENDOFBANLIST), me.name,
+                               sptr->name, chptr->chname);
                     anylistsent = 1;
                     break;
                 }
@@ -3561,9 +3561,9 @@ int m_part(aClient *cptr, aClient *sptr, int parc, char *parv[])
         if (parc < 3 || can_send(sptr,chptr,reason) || IsSquelch(sptr) || ((chptr->xflags & XFLAG_NO_PART_MSG) && !is_xflags_exempted(sptr,chptr)))
         {
             if(reason && *reason && (chptr->xflags & XFLAG_USER_VERBOSE))
-                verbose_to_relaychan(cptr, chptr, "part_msg", reason);
+                verbose_to_relaychan(sptr, chptr, "part_msg", reason);
             if(reason && *reason && (chptr->xflags & XFLAG_OPER_VERBOSE))
-                verbose_to_opers(cptr, chptr, "part_msg", reason);
+                verbose_to_opers(sptr, chptr, "part_msg", reason);
             sendto_serv_butone(cptr, PartFmt, parv[0], name);
             sendto_channel_butserv(chptr, sptr, PartFmt, parv[0], name);
         }
