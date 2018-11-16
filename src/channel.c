@@ -3781,6 +3781,7 @@ void send_topic_burst(aClient *cptr)
                 sendto_one(cptr, ":%s SVSXCF %s JOIN_CONNECT_TIME:%d TALK_CONNECT_TIME:%d TALK_JOIN_TIME:%d", me.name, chptr->chname, chptr->join_connect_time, chptr->talk_connect_time, chptr->talk_join_time);
                 for(xflag = xflags_list; xflag->option; xflag++)
                 {
+                    if(!strcmp(xflag->option,"USER_VERBOSE") || !strcmp(xflag->option,"OPER_VERBOSE")) continue;
                     sendto_one(cptr, ":%s SVSXCF %s %s:%d", me.name, chptr->chname, xflag->option, (chptr->xflags & xflag->flag)?1:0);
                 }
                 if(chptr->greetmsg && (chptr->max_bans != MAXBANS))

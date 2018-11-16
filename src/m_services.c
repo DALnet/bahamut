@@ -830,7 +830,9 @@ struct FlagList xflags_list[] =
   { "NO_UTF8",           XFLAG_NO_UTF8           },
   { "SJR",               XFLAG_SJR               },
   { "USER_VERBOSE",      XFLAG_USER_VERBOSE      },
+  { "USER_VERBOSEV2",    XFLAG_USER_VERBOSE      },
   { "OPER_VERBOSE",      XFLAG_OPER_VERBOSE      },
+  { "OPER_VERBOSEV2",    XFLAG_OPER_VERBOSE      },
   { NULL,                0                       }
 };
 

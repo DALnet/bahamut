@@ -3194,6 +3194,7 @@ m_check(aClient *cptr, aClient *sptr, int parc, char *parv[])
             sendto_one(sptr, "NOTICE %s :GREETMSG: %s", parv[0], chptr->greetmsg?chptr->greetmsg:"<NONE>");
             for(xflag = xflags_list; xflag->option; xflag++)
             {
+                if(!strcmp(xflag->option,"USER_VERBOSE") || !strcmp(xflag->option,"OPER_VERBOSE")) continue;
                 sendto_one(sptr, "NOTICE %s :%s: %s", parv[0], xflag->option, (chptr->xflags & xflag->flag)?"On":"Off");
             }
             sendto_one(sptr, "NOTICE %s :*** End of Check ***", parv[0]);
