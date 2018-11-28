@@ -1750,7 +1750,11 @@ int readwrite_client(aClient *cptr, int isread, int iswrite)
     if(cptr->ssl && IsSSL(cptr) && !SSL_is_init_finished(cptr->ssl))
     {
         if(IsDead(cptr) || !safe_ssl_accept(cptr, cptr->fd))
+        {
+            if(IsClient(cptr))
+                return exit_client(cptr, cptr, &me, iswrite?"Write Error: SSL Bug #7845":"Read Error: SSL Bug #7845");
             close_connection(cptr);
+        }
         return 1;
     }
 #endif

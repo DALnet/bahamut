@@ -1,3 +1,22 @@
+Changes for 2.1.4:
+------------------
+- typo fix (cptr --> sptr) that could lead to server crashes in some cases
+- Duplicate USER_VERBOSE and OPER_VERBOSE xflags into USER_VERBOSEV2 and OPER_VERBOSEV2
+  (this will make it easier for us to enable them on upgraded servers without affecting non-upgraded servers).
+- Don't accept too long hostnames from WEBIRC
+- Don't allow WEBIRC to use 0.0.0.*, 127.0.0.* or Staff_Address
+- Don't allow WEBIRC to use DEFAULT_STAFF_ADDRESS either
+- Make sure the host on WEBIRC will have at least one dot
+- Allow WEBIRC hosts to have a semicolon too (for IPv6 IP addresses)
+
+Changes for 2.1.3 (private release):
+------------------------------------
+- Optimize sendto_channel_butone() and sendto_channel_butlocal() functions
+- More sanity checks (just to be on the safe side...)
+- Fix SVSXCF calls with no channel name on send_topic_burst()
+- Cosmetic change (clarify what umode +y does)
+- Fix a security bug on readwrite_client() that could lead to server crashes by SSL users
+
 Changes for 2.1.2:
 ------------------
 - Increase the umode buffer on register_user() to prevent a possible
