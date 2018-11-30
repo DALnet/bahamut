@@ -347,7 +347,7 @@ static int fatal_ssl_error(int ssl_error, int where, aClient *sptr)
     syslog(LOG_ERR, "SSL error in %s for %s!%s@%s: %s [%s]", ssl_func,
             *sptr->name ? sptr->name : "<unknown>",
             (sptr->user && sptr->user->username) ? sptr->user->
-            username : "<unregistered>", sptr->sockhost
+            username : "<unregistered>", sptr->sockhost,
             errstr, ssl_errstr);
 #endif
 
