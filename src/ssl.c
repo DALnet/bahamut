@@ -337,6 +337,15 @@ static int fatal_ssl_error(int ssl_error, int where, aClient *sptr)
 	    ssl_errstr = "Unknown OpenSSL error (huh?)";
     }
 
+    if((ssl_error==SSL_ERROR_SYSCALL || ssl_error==SSL_ERROR_ZERO_RETURN) && errtmp==0)
+    {
+        /* Client most likely just closed the connection... -Kobi_S. */
+        errno = 0; /* Not really an error */
+        sptr->sockerr = IRCERR_SSL;
+        sptr->flags |= FLAGS_DEADSOCKET;
+        return -1;
+    }
+
     sendto_realops_lev(DEBUG_LEV, "%s to "
 		"%s!%s@%s aborted with%serror (%s). [%s]", 
 		ssl_func, *sptr->name ? sptr->name : "<unknown>",

@@ -1641,7 +1641,7 @@ void read_error_exit(aClient *cptr, int length, int err)
         }
     }
     
-    if (err)
+    if (err && !(err==IRCERR_SSL && length==-1 && errno==0))
         ircsprintf(errmsg, "Read error: %s", strerror(err));
     else
         ircsprintf(errmsg, "Client closed connection");
