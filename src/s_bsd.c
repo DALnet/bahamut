@@ -1245,6 +1245,8 @@ char *irc_get_sockerr(aClient *cptr)
             return "dbuf allocation error";
         case IRCERR_ZIP:
             return "compression general failure";
+        case IRCERR_SSL:
+            return "SSL error";
         default:
             return "Unknown error!";
     }
