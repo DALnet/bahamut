@@ -344,8 +344,11 @@ static int fatal_ssl_error(int ssl_error, int where, aClient *sptr)
 		username : "<unregistered>", sptr->sockhost,
 		(errno > 0) ? " " : " no ", errstr, ssl_errstr);
 #ifdef USE_SYSLOG
-    syslog(LOG_ERR, "SSL error in %s: %s [%s]", ssl_func, errstr,
-	    ssl_errstr);
+    syslog(LOG_ERR, "SSL error in %s for %s!%s@%s: %s [%s]", ssl_func,
+            *sptr->name ? sptr->name : "<unknown>",
+            (sptr->user && sptr->user->username) ? sptr->user->
+            username : "<unregistered>", sptr->sockhost
+            errstr, ssl_errstr);
 #endif
 
     /* if we reply() something here, we might just trigger another
