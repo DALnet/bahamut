@@ -3191,6 +3191,7 @@ m_check(aClient *cptr, aClient *sptr, int parc, char *parv[])
             sendto_one(sptr, "NOTICE %s :TALK_JOIN_TIME: %d", parv[0], chptr->talk_join_time);
             sendto_one(sptr, "NOTICE %s :MAX_BANS: %d", parv[0], chptr->max_bans);
             sendto_one(sptr, "NOTICE %s :MAX_INVITES: %d", parv[0], chptr->max_invites);
+            sendto_one(sptr, "NOTICE %s :MAX_MSG_TIME: %d:%d", parv[0], chptr->max_messages, chptr->max_messages_time);
             sendto_one(sptr, "NOTICE %s :GREETMSG: %s", parv[0], chptr->greetmsg?chptr->greetmsg:"<NONE>");
             for(xflag = xflags_list; xflag->option; xflag++)
             {
