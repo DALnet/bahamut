@@ -32,6 +32,7 @@
 #include "userban.h"
 #include "clones.h"
 #include "memcount.h"
+#include <openssl/md5.h>
 
 /* Externally defined stuffs */
 extern int user_modes[];
@@ -46,6 +47,75 @@ int svspanic = 0; /* Services panic */
 int svsnoop = 0; /* Services disabled all o:lines (off by default) */
 int uhm_type = 0; /* User host-masking type (off by default) */
 int services_jr = 0; /* Redirect join requests to services (disabled by default) */
+int line_counter = -1; /* Line counter for m_svsctrl() */
+
+/* Configuration files that can be read+edited by services */
+char *readwrite_files[] = {
+#ifdef SERVICES_CONF_IRCD
+    "ircd.conf",
+    "ircd.motd",
+    "ircd.smotd",
+    "dalnet.conf",
+#endif
+    NULL,
+};
+
+/* Configuration files that can be read by services */
+char *readonly_files[] = {
+#ifdef SERVICES_CONF_IRCD
+    "spamfilter.db",
+    "bopm.conf",
+    "hopm.conf",
+    "~/bopm/etc/bopm.conf",
+    "~/hopm/etc/hopm.conf",
+#endif
+#ifdef SERVICES_CONF_SYSTEM
+    "bgpd.conf",
+    "/etc/sysconfig/network-scripts/ifcfg-eth0",
+    "/etc/sysconfig/iptables",
+    "/etc/rc.conf",
+    "/etc/rc.firewall",
+#endif
+    NULL,
+};
+
+/* A function to return MD5 hash of the (config) file
+   Returns: Pointer to the MD5 SHA.
+ */
+char *md5file(const char *fn)
+{
+    FILE *f;
+    MD5_CTX context;
+    unsigned int cnt;
+    unsigned int len;
+    unsigned char filebuf[BUFSIZ];
+    unsigned char md5buf[MD5_DIGEST_LENGTH];
+    static char res[BUFSIZ];
+
+    f = fopen(fn, "r");
+    if(!f)
+    {
+      /* Couldn't open file for reading, shouldn't happen but... */
+      res[0] = '\0';
+      return &res[0];
+    }
+
+    MD5_Init(&context);
+
+    while((len = fread(filebuf, 1, BUFSIZ, f)))
+    {
+        MD5_Update(&context, filebuf, len);
+    }
+
+    MD5_Final(md5buf, &context);
+    fclose(f);
+    for(cnt = 0, len = 0; cnt<MD5_DIGEST_LENGTH; cnt++)
+    {
+        len += sprintf(&res[len], "%02x", md5buf[cnt]);
+    }
+
+    return &res[0];
+}
 
 /*
  * the services aliases. *
@@ -1104,6 +1174,261 @@ int m_sjr(aClient *cptr, aClient *sptr, int parc, char *parv[], AliasInfo *ai)
         sendto_one(ai->client->from, ":%s SJR %s %s", sptr->name, parv[1], parv[2]);
     else
         sendto_one(ai->client->from, ":%s SJR %s %s :%s", sptr->name, parv[1], parv[2], parv[3]);
+
+    return 0;
+}
+
+/* A function to check if services is allowed to edit/read the file or not
+   Returns:
+   1. Pointer to the file name
+   2. NULL if the read/change is not allowed
+ */
+char *is_allowed_configfile(char *filemask, int needwrite)
+{
+    int cnt;
+
+#ifdef SERVICES_CONF_READONLY
+    if(needwrite) return 0; /* Read-only mode, no write access is allowed */
+#endif
+
+    /* We always check the readwrite list */
+    for(cnt = 0; readwrite_files[cnt]; cnt++)
+    {
+        if(!strcasecmp(filemask,readwrite_files[cnt])) return readwrite_files[cnt]; /* Found the file in the readwrite list */
+    }
+
+    /* We only check the readonly list if no match was found and write access isn't needed */
+    if(!needwrite)
+    {
+        for(cnt = 0; readonly_files[cnt]; cnt++)
+        {
+            if(!strcasecmp(filemask,readonly_files[cnt])) return readonly_files[cnt]; /* Found the file in the readonly list */
+        }
+    }
+
+    return NULL; /* If we got here, we have no match so access is denied! */
+}
+
+/* m_svsctrl - Lets services control some settings like join requests and ircd.conf
+ * parv[0] - sender
+ * parv[1] - setting
+ * parv[2] - value
+ */
+int m_svsctrl(aClient *cptr, aClient *sptr, int parc, char *parv[])
+{
+    FILE *f;
+    char *tmp;
+    char line[BUFSIZE];
+    char fn[PATH_MAX]; /* file.conf */
+    char fn_bak[PATH_MAX]; /* file.conf.baksvs */
+    char fn_new[PATH_MAX]; /* file.conf.newsvs */
+    struct stat sb;
+    int cnt;
+
+    if(!IsULine(sptr) || parc<4)
+        return 0;
+
+    if(parc==4 && (hunt_server(cptr, sptr, ":%s SVSCTRL %s %s :%s", 1, parc, parv) != HUNTED_ISME))
+        return 0;
+    if(parc==5 && (hunt_server(cptr, sptr, ":%s SVSCTRL %s %s %s :%s", 1, parc, parv) != HUNTED_ISME))
+        return 0;
+    if(parc==6 && (hunt_server(cptr, sptr, ":%s SVSCTRL %s %s %s %s :%s", 1, parc, parv) != HUNTED_ISME))
+        return 0;
+    if(parc==7 && (hunt_server(cptr, sptr, ":%s SVSCTRL %s %s %s %s %s :%s", 1, parc, parv) != HUNTED_ISME))
+        return 0;
+    if(parc==8 && (hunt_server(cptr, sptr, ":%s SVSCTRL %s %s %s %s %s %s :%s", 1, parc, parv) != HUNTED_ISME))
+        return 0;
+    if(parc==9 && (hunt_server(cptr, sptr, ":%s SVSCTRL %s %s %s %s %s %s %s :%s", 1, parc, parv) != HUNTED_ISME))
+        return 0;
+    if(parc!=4 && parc!=5 && parc!=6 && parc!=7 && parc!=8 && parc!=9) return 0; /* Just in case... */
+
+    if(!mycmp(parv[2], "SJR"))
+    {
+        services_jr = atoi(parv[3]);
+        return 0;
+    }
+    else if(!mycmp(parv[2], "CONF") && parc>4)
+    {
+        if(!mycmp(parv[3], "STATUS") && !mycmp(parv[4], "*"))
+        {
+            for(cnt = 0; readwrite_files[cnt]; cnt++)
+            {
+                if(stat(readwrite_files[cnt], &sb) != -1)
+                {
+                    sendto_one(sptr, ":%s PRIVMSG %s :CONF STATUS %s %ld %ld %s", me.name, parv[0], readwrite_files[cnt], sb.st_size, sb.st_mtime, md5file(readwrite_files[cnt]));
+                }
+            }
+            for(cnt = 0; readonly_files[cnt]; cnt++)
+            {
+                if(stat(readonly_files[cnt], &sb) != -1)
+                {
+                    sendto_one(sptr, ":%s PRIVMSG %s :CONF STATUS %s %ld %ld %s", me.name, parv[0], readonly_files[cnt], sb.st_size, sb.st_mtime, md5file(readonly_files[cnt]));
+                }
+            }
+        }
+        else if(!mycmp(parv[3], "STATUS"))
+        {
+            if(!(tmp = is_allowed_configfile(parv[4], 0)))
+            {
+                sendto_realops_lev(DEBUG_LEV, "SVSCTRL CONF STATUS Error: Access denied to %s", parv[4]);
+                sendto_one(sptr, ":%s PRIVMSG %s :CONF STATUS %s ERROR :Access Denied", me.name, parv[0], parv[4]);
+                return 0;
+            }
+            strcpy(fn, tmp);
+            if(stat(fn, &sb) == -1)
+            {
+                sendto_realops_lev(DEBUG_LEV, "SVSCTRL CONF STATUS Error: Couldn't stat %s", fn);
+                sendto_one(sptr, ":%s PRIVMSG %s :CONF STATUS %s ERROR :Couldn't stat file", me.name, parv[0], fn);
+                return 0;
+            }
+            sendto_one(sptr, ":%s PRIVMSG %s :CONF STATUS %s %ld %ld %s", me.name, parv[0], fn, sb.st_size, sb.st_mtime, md5file(fn));
+        }
+        else if(!mycmp(parv[3], "READ"))
+        {
+            if(!(tmp = is_allowed_configfile(parv[4], 0)))
+            {
+                sendto_realops_lev(DEBUG_LEV, "SVSCTRL CONF READ Error: Access denied to %s", parv[4]);
+                sendto_one(sptr, ":%s PRIVMSG %s :CONF READ %s ERROR :Access Denied", me.name, parv[0], parv[4]);
+                return 0;
+            }
+            strcpy(fn, tmp);
+            strcpy(fn_bak, tmp); strcat(fn_bak, ".baksvs");
+            strcpy(fn_new, tmp); strcat(fn_new, ".newsvs");
+            f = fopen(fn, "r");
+            line_counter = 0;
+            if(!f)
+            {
+                sendto_realops_lev(DEBUG_LEV, "SVSCTRL CONF READ Error: Couldn't open %s for reading", fn);
+                sendto_one(sptr, ":%s PRIVMSG %s :CONF READ %s ERROR :Couldn't open file for reading", me.name, parv[0], fn);
+                return 0;
+            }
+            if(stat(fn, &sb) == -1)
+            {
+                sendto_realops_lev(DEBUG_LEV, "SVSCTRL CONF READ Error: Couldn't stat %s", fn);
+                sendto_one(sptr, ":%s PRIVMSG %s :CONF READ %s ERROR :Couldn't stat file", me.name, parv[0], fn);
+                return 0;
+            }
+            sendto_one(sptr, ":%s PRIVMSG %s :CONF %s SOF %ld %ld", me.name, parv[0], fn, sb.st_size, sb.st_mtime);
+            while(fgets(line, BUFSIZE, f) != NULL)
+            {
+                while((tmp = strchr(line,'\r'))) *tmp = '\0';
+                while((tmp = strchr(line,'\n'))) *tmp = '\0';
+                line_counter++;
+                sendto_one(sptr, ":%s PRIVMSG %s :CONF %s %d :%s", me.name, parv[0], fn, line_counter, line);
+            }
+            sendto_one(sptr, ":%s PRIVMSG %s :CONF %s EOF %d %ld %s", me.name, parv[0], fn, line_counter, sb.st_size, md5file(fn));
+            fclose(f);
+            line_counter = -1;
+        }
+        else if(!mycmp(parv[3], "WRITE") && parc>5)
+        {
+            if(!(tmp = is_allowed_configfile(parv[4], 1)))
+            {
+                sendto_realops_lev(DEBUG_LEV, "SVSCTRL CONF WRITE Error: Access denied to %s", parv[4]);
+                sendto_one(sptr, ":%s PRIVMSG %s :CONF WRITE %s ERROR :Access Denied", me.name, parv[0], parv[4]);
+                return 0;
+            }
+            strcpy(fn, tmp);
+            strcpy(fn_bak, tmp); strcat(fn_bak, ".baksvs");
+            strcpy(fn_new, tmp); strcat(fn_new, ".newsvs");
+
+            if(!mycmp(parv[5], "SOF"))
+            {
+                unlink(fn_new);
+                if(line_counter != -1)
+                {
+                    sendto_realops_lev(DEBUG_LEV, "SVSCTRL CONF WRITE SOF Warning: Line Counter=%d, expected -1 for %s", line_counter, fn);
+                    sendto_one(sptr, ":%s PRIVMSG %s :CONF WRITE %s SOF WARNING :Line Counter=%d, expected -1", me.name, parv[0], fn, line_counter);
+                }
+                line_counter = 0;
+            }
+            else if(!mycmp(parv[5], "EOF") && parc>7)
+            {
+                /* Check the file size & line number & md5, if everything is good, try to rename ircd.conf to ircd.conf.baksvs,
+                   and then rename ircd.conf.newsvs to ircd.conf and then rehash... if rehash fails, try to restore the files
+                   back to the previous state... -Kobi_S. */
+                if(atoi(parv[6]) != line_counter)
+                {
+                    sendto_realops_lev(DEBUG_LEV, "SVSCTRL CONF WRITE EOF Error: Lines mismatch (%s != %d) for %s", parv[6], line_counter, fn);
+                    sendto_one(sptr, ":%s PRIVMSG %s :CONF WRITE %s EOF ERROR :Lines mismatch (%s != %d)", me.name, parv[0], fn, parv[6], line_counter);
+                    return 0;
+                }
+                if(stat(fn_new, &sb) == -1)
+                {
+                    sendto_realops_lev(DEBUG_LEV, "SVSCTRL CONF WRITE EOF Error: Couldn't stat %s", fn_new);
+                    sendto_one(sptr, ":%s PRIVMSG %s :CONF WRITE %s EOF ERROR :Couldn't stat %s", me.name, parv[0], fn, fn_new);
+                    return 0;
+                }
+                if(atoi(parv[7]) != sb.st_size)
+                {
+                    sendto_realops_lev(DEBUG_LEV, "SVSCTRL CONF WRITE EOF Error: Size mismatch (%s != %ld) for %s", parv[7], sb.st_size, fn);
+                    sendto_one(sptr, ":%s PRIVMSG %s :CONF WRITE %s EOF ERROR :Size mismatch (%s != %ld)", me.name, parv[0], fn, parv[7], sb.st_size);
+                    return 0;
+                }
+                if(parc>8 && strcasecmp(parv[8], md5file(fn_new)))
+                {
+                    sendto_realops_lev(DEBUG_LEV, "SVSCTRL CONF WRITE EOF Error: MD5SHA mismatch (%s != %s) for %s", parv[8], md5file(fn_new), fn);
+                    sendto_one(sptr, ":%s PRIVMSG %s :CONF WRITE %s EOF ERROR :MD5SHA mismatch (%s != %s)", me.name, parv[0], fn, parv[8], md5file(fn_new));
+                    return 0;
+                }
+                if(rename(fn,fn_bak) != 0)
+                {
+                    sendto_realops_lev(DEBUG_LEV, "SVSCTRL CONF WRITE EOF Error: Couldn't backup %s", fn);
+                    sendto_one(sptr, ":%s PRIVMSG %s :CONF WRITE %s EOF ERROR :Couldn't backup", me.name, parv[0], fn);
+                    return 0;
+                }
+                if(rename(fn_new,fn) != 0)
+                {
+                    sendto_realops_lev(DEBUG_LEV, "SVSCTRL CONF WRITE EOF Error: Couldn't save %s", fn);
+                    sendto_one(sptr, ":%s PRIVMSG %s :CONF WRITE %s EOF ERROR :Couldn't save", me.name, parv[0], fn);
+                    rename(fn_bak,fn);
+                    return 0;
+                }
+                /* Only try to rehash if we're editing ircd.conf */
+                if(!strcasecmp(fn,"ircd.conf") && rehash(&me, &me, SIGHUP) != 0)
+                {
+                    sendto_realops_lev(DEBUG_LEV, "SVSCTRL CONF WRITE EOF Error: Rehash failed, will try to restore everything back to normal");
+                    sendto_one(sptr, ":%s PRIVMSG %s :CONF WRITE %s EOF ERROR :Rehash failed", me.name, parv[0], fn);
+                    if(rename(fn,fn_new) != 0)
+                    {
+                        sendto_realops_lev(DEBUG_LEV, "SVSCTRL CONF WRITE EOF Error: Couldn't rename %s back to %s", fn, fn_new);
+                        sendto_one(sptr, ":%s PRIVMSG %s :CONF WRITE %s EOF ERROR :Couldn't rename %s back to %s", me.name, parv[0], fn, fn, fn_new);
+                        return 0;
+                    }
+                    if(rename(fn_bak,fn) != 0)
+                    {
+                        sendto_realops_lev(DEBUG_LEV, "SVSCTRL CONF WRITE EOF Error: Couldn't rename %s back to %s", fn_bak, fn);
+                        sendto_one(sptr, ":%s PRIVMSG %s :CONF WRITE %s EOF ERROR :Couldn't rename %s back to %s", me.name, parv[0], fn, fn_bak, fn);
+                        return 0;
+                    }
+                }
+                sendto_one(sptr, ":%s PRIVMSG %s :CONF WRITE %s EOF OK", me.name, parv[0], fn);
+                line_counter = -1;
+            }
+            else
+            {
+                line_counter++;
+                if(atoi(parv[5]) != line_counter)
+                {
+                    /* We got an incorrect line number! */
+                    sendto_realops_lev(DEBUG_LEV, "SVSCTRL CONF WRITE Error: Got an incorrect line (got %s, expected %d) for %s", parv[5], line_counter, fn);
+                    sendto_one(sptr, ":%s PRIVMSG %s :CONF WRITE %s ERROR :Got an incorrect line (got %s, expected %d)", me.name, parv[0], fn, parv[5], line_counter);
+                    line_counter = -1;
+                    return 0;
+                }
+                f = fopen(fn_new, "a");
+                if(!f)
+                {
+                    sendto_realops_lev(DEBUG_LEV, "SVSCTRL CONF WRITE Error: Couldn't open %s for appending", fn_new);
+                    sendto_one(sptr, ":%s PRIVMSG %s :CONF WRITE %s ERROR :Couldn't open %s for appending", me.name, parv[0], fn, fn_new);
+                    return 0;
+                }
+                fprintf(f, "%s\n", parv[6]);
+                fclose(f);
+            }
+        }
+        return 0;
+    }
 
     return 0;
 }
