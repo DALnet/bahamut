@@ -825,6 +825,7 @@ struct FlagList xflags_list[] =
   { "EXEMPT_IDENTD",     XFLAG_EXEMPT_IDENTD     },
   { "EXEMPT_REGISTERED", XFLAG_EXEMPT_REGISTERED },
   { "EXEMPT_INVITES",    XFLAG_EXEMPT_INVITES    },
+  { "EXEMPT_WEBIRC",     XFLAG_EXEMPT_WEBIRC     },
   { "HIDE_MODE_LISTS",   XFLAG_HIDE_MODE_LISTS   },
   { "NO_NICK_CHANGE",    XFLAG_NO_NICK_CHANGE    },
   { "NO_UTF8",           XFLAG_NO_UTF8           },
@@ -865,6 +866,7 @@ struct FlagList xflags_list[] =
  *   EXEMPT_IDENTD     - exempt users with identd (on/off)
  *   EXEMPT_REGISTERED - exempt users with umode +r (on/off)
  *   EXEMPT_INVITES    - exempt users who are +I'ed (on/off)
+ *   EXEMPT_WEBIRC     - exempt webirc users (on/off)
  *   USER_VERBOSE      - send failed command messages to #channel-relay (on/off)
  *   OPER_VERBOSE      - send failed command messages to +f opers (on/off)
  *

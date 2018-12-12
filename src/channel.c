@@ -1261,6 +1261,7 @@ int is_xflags_exempted(aClient *sptr, aChannel *chptr)
     }
     if((chptr->xflags & XFLAG_EXEMPT_REGISTERED) && IsRegNick(sptr)) return 1;
     if((chptr->xflags & XFLAG_EXEMPT_IDENTD) && sptr->user && sptr->user->username[0]!='~') return 1;
+    if((chptr->xflags & XFLAG_EXEMPT_WEBIRC) && MyClient(sptr) && sptr->webirc_ip) return 1;
     return 0;
 }
 
