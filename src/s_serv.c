@@ -1814,7 +1814,7 @@ local_rehash(aClient *cptr, aClient *sptr, char *sender, char *option)
 		else
 			sendto_one(sptr, rpl_str(RPL_REHASHING), me.name, sender, configfile);
 
-		sendto_ops("%s is rehashing Server config file while whistline innocently", sender);
+		sendto_ops("%s is rehashing Server config file while whistling innocently", sender);
 
 #ifdef USE_SYSLOG
 		syslog(LOG_INFO, "REHASH from %s\n", get_client_name(sptr, FALSE));
