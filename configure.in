@@ -734,6 +734,12 @@ fi
 
 if test $prefix = NONE; then
     prefix=${HOME}/ircd
+    if test -f "${HOME}/bahamut/ircd" ; then
+        prefix=${HOME}/bahamut
+    fi
+    if test -f "${HOME}/dalnet/ircd" ; then
+        prefix=${HOME}/dalnet
+    fi
 fi
 
 INSTALL_DIR="${prefix}"
