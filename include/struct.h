@@ -1287,6 +1287,7 @@ struct Channel
 #define	CHFL_VOICE      0x0002	/* the power to speak */
 #define	CHFL_DEOPPED 	0x0004	/* deopped by us, modes need to be bounced */
 #define	CHFL_BANNED     0x0008  /* is banned */
+#define	CHFL_HALFOP     0x0010  /* channel half-op */
 
 /* ban mask types */
 

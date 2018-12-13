@@ -1202,13 +1202,47 @@ int is_chan_op(aClient *cptr, aChannel *chptr)
     return 0;
 }
 
+int is_chan_halfop(aClient *cptr, aChannel *chptr)
+{
+    chanMember   *cm;
+    
+    if (chptr)
+        if ((cm = find_user_member(chptr->members, cptr)))
+            return (cm->flags & CHFL_HALFOP);
+    
+    return 0;
+}
+
+/* A function to check if a user can use the kick command
+   Returns:
+   2 - user is an op (@)
+   1 - user is an half-op (%)
+   0 - user is not an op or half-op
+ */
+inline int is_chan_cankick(aClient *cptr, aChannel *chptr)
+{
+    chanMember   *cm;
+    
+    if (chptr)
+        if ((cm = find_user_member(chptr->members, cptr)))
+        {
+            if(cm->flags & CHFL_CHANOP)
+                return 2;
+            else if(cm->flags & CHFL_HALFOP)
+                return 1;
+            else return 0;
+        }
+    
+    return 0;
+}
+
 int is_chan_opvoice(aClient *cptr, aChannel *chptr)
 {
     chanMember   *cm;
     
     if (chptr)
         if ((cm = find_user_member(chptr->members, cptr)))
-            return ((cm->flags & CHFL_CHANOP) || (cm->flags & CHFL_VOICE));
+            return ((cm->flags & CHFL_CHANOP) || (cm->flags & CHFL_HALFOP) || (cm->flags & CHFL_VOICE));
     
     return 0;
 }
@@ -1349,7 +1383,7 @@ int can_send(aClient *cptr, aChannel *chptr, char *msg)
     else
     {
         /* ops and voices can talk through everything except NOCTRL */
-        if (!(cm->flags & (CHFL_CHANOP | CHFL_VOICE)))
+        if (!(cm->flags & (CHFL_CHANOP | CHFL_HALFOP | CHFL_VOICE)))
         {
             if (chptr->mode.mode & MODE_MODERATED)
                 return (MODE_MODERATED);
@@ -1633,6 +1667,10 @@ void send_channel_modes(aClient *cptr, aChannel *chptr)
         }
         if (l->flags & MODE_CHANOP)
             *t++ = '@';
+#ifdef USE_HALFOPS
+        if (l->flags & CHFL_HALFOP)
+            *t++ = '%';
+#endif
         if (l->flags & MODE_VOICE)
             *t++ = '+';
         strcpy(t, l->cptr->name);
@@ -1884,6 +1922,9 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
             }
             break;
         case 'o':
+#ifdef USE_HALFOPS
+        case 'h':
+#endif
         case 'v':
             if(level<1) 
             {
@@ -1924,8 +1965,15 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
             /* if we have the user, set them +/-[vo] */
             if(change=='+')
             {
-                int resend_nicklist = (chptr->mode.mode & MODE_AUDITORIUM) && MyClient(who) && !((cm->flags & CHFL_CHANOP) || (cm->flags & CHFL_VOICE));
-                cm->flags|=(*modes=='o' ? CHFL_CHANOP : CHFL_VOICE);
+                int resend_nicklist = (chptr->mode.mode & MODE_AUDITORIUM) && MyClient(who) && !((cm->flags & CHFL_CHANOP) || (cm->flags & CHFL_HALFOP) || (cm->flags & CHFL_VOICE));
+                switch(*modes)
+                {
+                    case 'o': cm->flags|= CHFL_CHANOP; break;
+#ifdef USE_HALFOPS
+                    case 'h': cm->flags|= CHFL_HALFOP; break;
+#endif
+                    case 'v': cm->flags|= CHFL_VOICE; break;
+                }
                 if (resend_nicklist)
                 {
                     char *fake_parv[3];
@@ -1952,7 +2000,14 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
             }
             else
             {
-                cm->flags&=~((*modes=='o' ? CHFL_CHANOP : CHFL_VOICE));
+                switch(*modes)
+                {
+                    case 'o': cm->flags&=~CHFL_CHANOP; break;
+#ifdef USE_HALFOPS
+                    case 'h': cm->flags&=~CHFL_HALFOP; break;
+#endif
+                    case 'v': cm->flags&=~CHFL_VOICE; break;
+                }
                 if(chptr->mode.mode & MODE_AUDITORIUM) sendto_channel_butserv_noopvoice(chptr, who, PartFmt, who->name, chptr->chname);
             }
             
@@ -3593,6 +3648,7 @@ int m_kick(aClient *cptr, aClient *sptr, int parc, char *parv[])
     int         chasing = 0;
     int         user_count;     /* count nicks being kicked, only allow 4 */
     char       *comment, *name, *p = NULL, *user, *p2 = NULL;
+    int        cankick = 0;
 
     if (parc < 3 || *parv[1] == '\0')
     {
@@ -3629,7 +3685,7 @@ int m_kick(aClient *cptr, aClient *sptr, int parc, char *parv[])
          * -Dianora
          */
 
-        if (!IsServer(sptr) && !is_chan_op(sptr, chptr) && !IsULine(sptr))
+        if (!IsServer(sptr) && !(cankick = is_chan_cankick(sptr, chptr)) && !IsULine(sptr))
         {
             /* was a user, not a server and user isn't seen as a chanop here */
 
@@ -3700,13 +3756,29 @@ int m_kick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
             if (IsMember(who, chptr))
             {
-#ifdef SPAMFILTER
                 if(MyClient(sptr))
                 {
+#ifdef SPAMFILTER
                     if(!(chptr->mode.mode & MODE_PRIVACY) && check_sf(sptr, comment, "kick", SF_CMD_KICK, chptr->chname))
                         return FLUSH_BUFFER;
-                }
 #endif
+#ifdef USE_HALFOPS
+                    if(cankick != 2)
+                    {
+                        chanMember *cm = find_user_member(chptr->members, who);
+                        if(cm)
+                        {
+                            /* Don't allow half-ops to kick ops, other half-ops or voiced users */
+                            if(cm->flags & (CHFL_CHANOP | CHFL_HALFOP | CHFL_VOICE))
+                            {
+                                sendto_one(sptr, err_str(ERR_CHANOPRIVSNEEDED),
+                                     me.name, parv[0], chptr->chname);
+                                return 0;
+                            }
+                        }
+                    }
+#endif
+                }
                 if((chptr->mode.mode & MODE_AUDITORIUM) && !is_chan_opvoice(who, chptr))
                 {
                     sendto_channelopvoice_butserv_me(chptr, sptr,
@@ -3878,7 +3950,11 @@ int m_topic(aClient *cptr, aClient *sptr, int parc, char *parv[])
             return 0;
         }
 
+#ifdef USE_HALFOPS
+        if ((chptr->mode.mode & MODE_TOPICLIMIT) && !is_chan_cankick(sptr, chptr))
+#else
         if ((chptr->mode.mode & MODE_TOPICLIMIT) && !is_chan_op(sptr, chptr))
+#endif
         {
             sendto_one(sptr, err_str(ERR_CHANOPRIVSNEEDED), me.name, parv[0],
                        chptr->chname);
@@ -4494,6 +4570,10 @@ int m_names(aClient *cptr, aClient *sptr, int parc, char *parv[])
             continue;
         if(cm->flags & CHFL_CHANOP)
             buf[idx++] = '@';
+#ifdef USE_HALFOPS
+        else if(cm->flags & CHFL_HALFOP)
+            buf[idx++] = '%';
+#endif
         else if(cm->flags & CHFL_VOICE)
             buf[idx++] = '+';
         else if((chptr->mode.mode & MODE_AUDITORIUM) && (sptr != acptr) && !is_chan_opvoice(sptr, chptr) && !IsAnOper(sptr)) continue;
@@ -5293,10 +5373,18 @@ int m_sjoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
          s = s0 = strtoken(&p, (char *) NULL, " ")) 
     {
         fl = 0;
-        if (*s == '@' || s[1] == '@')
-            fl |= MODE_CHANOP;
-        if (*s == '+' || s[1] == '+')
-            fl |= MODE_VOICE;
+        while(*s == '@' || *s == '%' || *s == '+')
+        {
+            if (*s == '@')
+                fl |= MODE_CHANOP;
+#ifdef USE_HALFOPS
+            else if (*s == '%')
+                fl |= CHFL_HALFOP;
+#endif
+            else if (*s == '+')
+                fl |= MODE_VOICE;
+            s++;
+        }
         if (!keepnewmodes) 
         {
             if (fl & MODE_CHANOP)
@@ -5304,8 +5392,6 @@ int m_sjoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
             else
                 fl = 0;
         }
-        while (*s == '@' || *s == '+')
-            s++;
         if (!(acptr = find_chasing(sptr, s, NULL)))
             continue;
         if (acptr->from != cptr)
@@ -5339,6 +5425,23 @@ int m_sjoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
                 pargs = pbpos = 0;
             }
         }
+#ifdef USE_HALFOPS
+        if (fl & CHFL_HALFOP) 
+        {
+            *mbuf++ = 'h';
+            ADD_PARA(s)
+            pargs++;
+            if (pargs >= MAXMODEPARAMS) 
+            {
+                *mbuf = '\0';
+                parabuf[pbpos] = '\0';
+                sjoin_sendit(cptr, sptr, chptr, parv[0]);
+                mbuf = modebuf;
+                *mbuf++ = '+';
+                pargs = pbpos = 0;
+            }
+        }
+#endif
         if (fl & MODE_VOICE) 
         {
             *mbuf++ = 'v';

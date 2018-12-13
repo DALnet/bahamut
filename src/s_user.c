@@ -1623,6 +1623,10 @@ m_message(aClient *cptr, aClient *sptr, int parc, char *parv[], int notice)
         {
             if (*s == '@')
                 chflags |= CHFL_CHANOP;
+#ifdef USE_HALFOPS
+            else if (*s == '%')
+                chflags |= CHFL_HALFOP;
+#endif
             else if (*s == '+')
                 chflags |= CHFL_VOICE;
             else
@@ -1743,6 +1747,10 @@ m_message(aClient *cptr, aClient *sptr, int parc, char *parv[], int notice)
                 /* don't let clients do stuff like @+@@+++@+@@@#channel */
                 if (chflags & CHFL_VOICE)
                     *--s = '+';
+#ifdef USE_HALFOPS
+                if (chflags & CHFL_HALFOP)
+                    *--s = '%';
+#endif
                 if (chflags & CHFL_CHANOP)
                     *--s = '@';
 
@@ -2137,9 +2145,17 @@ m_whois(aClient *cptr, aClient *sptr, int parc, char *parv[])
                 }
                 if(!showchan) /* if we're not really supposed to show the chan
                                * but do it anyways, mark it as such! */
+#ifdef USE_HALFOPS
+                    *(buf + len++) = '~';
+#else
                     *(buf + len++) = '%';
+#endif
                 if (is_chan_op(acptr, chptr))
                     *(buf + len++) = '@';
+#ifdef USE_HALFOPS
+                else if (is_chan_halfop(acptr, chptr))
+                    *(buf + len++) = '%';
+#endif
                 else if (has_voice(acptr, chptr))
                     *(buf + len++) = '+';
                 if (len)
