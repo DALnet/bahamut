@@ -1155,6 +1155,8 @@ void add_user_to_channel(aChannel *chptr, aClient *who, int flags)
         cm->next = chptr->members;
         cm->banserial = chptr->banserial;
         cm->when = NOW;
+        cm->last_message_number = 0;
+        cm->last_message_time = 0;
 
         chptr->members = cm;
         chptr->users++;
@@ -1242,6 +1244,17 @@ time_t get_user_jointime(aClient *cptr, aChannel *chptr)
     if (chptr)
         if ((cm = find_user_member(chptr->members, cptr)))
             return cm->when;
+
+    return 0;
+}
+
+time_t get_user_lastmsgtime(aClient *cptr, aChannel *chptr)
+{
+    chanMember   *cm;
+
+    if (chptr)
+        if ((cm = find_user_member(chptr->members, cptr)))
+            return cm->last_message_time;
 
     return 0;
 }
@@ -1366,6 +1379,20 @@ int can_send(aClient *cptr, aChannel *chptr, char *msg)
                 return (ERR_NEEDTOWAIT);
             if (chptr->talk_join_time && (cm->when + chptr->talk_join_time > NOW) && !is_xflags_exempted(cptr,chptr))
                 return (ERR_NEEDTOWAIT);
+            if (chptr->max_messages && chptr->max_messages_time && !is_xflags_exempted(cptr,chptr))
+            {
+                if ((NOW - cm->last_message_time) < chptr->max_messages_time)
+                {
+                    if (cm->last_message_number > chptr->max_messages)
+                        return (ERR_MAXMSGSENT);
+                    else
+                        cm->last_message_number++;
+                }
+                else
+                    cm->last_message_number = 1;
+
+                cm->last_message_time = NOW;
+            }
         }
     }
     
@@ -3778,7 +3805,7 @@ void send_topic_burst(aClient *cptr)
             if(chptr->xflags & XFLAG_SET)
             {
                 /* Not very optimized but we'll survive... -Kobi. */
-                sendto_one(cptr, ":%s SVSXCF %s JOIN_CONNECT_TIME:%d TALK_CONNECT_TIME:%d TALK_JOIN_TIME:%d", me.name, chptr->chname, chptr->join_connect_time, chptr->talk_connect_time, chptr->talk_join_time);
+                sendto_one(cptr, ":%s SVSXCF %s JOIN_CONNECT_TIME:%d MAX_MSG_TIME:%d:%d TALK_CONNECT_TIME:%d TALK_JOIN_TIME:%d", me.name, chptr->chname, chptr->join_connect_time, chptr->max_messages, chptr->max_messages_time, chptr->talk_connect_time, chptr->talk_join_time);
                 for(xflag = xflags_list; xflag->option; xflag++)
                 {
                     if(!strcmp(xflag->option,"USER_VERBOSE") || !strcmp(xflag->option,"OPER_VERBOSE")) continue;

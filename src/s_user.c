@@ -61,6 +61,7 @@ extern int is_xflags_exempted(aClient *sptr, aChannel *chptr); /* for m_message(
 extern int verbose_to_relaychan(aClient *sptr, aChannel *chptr, char *cmd, char *reason); /* for m_message() */
 extern inline void verbose_to_opers(aClient *sptr, aChannel *chptr, char *cmd, char *reason); /* for m_message() */
 extern time_t get_user_jointime(aClient *cptr, aChannel *chptr); /* for send_msg_error() */
+extern time_t get_user_lastmsgtime(aClient *cptr, aChannel *chptr); /* also for send_msg_error() -Holbrook */
 extern int server_was_split;
 extern int svspanic;
 extern int svsnoop;
@@ -1535,6 +1536,9 @@ send_msg_error(aClient *sptr, char *parv[], char *nick, int ret, aChannel *chptr
         sendto_one(sptr, err_str(ERR_NEEDREGGEDNICK), me.name,
                    parv[0], nick, "speak in", aliastab[AII_NS].nick,
                    aliastab[AII_NS].server, NS_Register_URL);
+    else if(ret == ERR_MAXMSGSENT)
+        sendto_one(sptr, err_str(ERR_MAXMSGSENT), me.name,
+                   parv[0], (chptr->max_messages_time + get_user_lastmsgtime(sptr, chptr) - NOW + 1), chptr->chname);
     else
         sendto_one(sptr, err_str(ERR_CANNOTSENDTOCHAN), me.name,
                    parv[0], nick);

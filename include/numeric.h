@@ -237,7 +237,7 @@
 #define ERR_NONONREG         486
 #define ERR_MSGSERVICES      487
 #define ERR_NOSSL            488
-
+#define ERR_MAXMSGSENT       490
 #define ERR_NOOPERHOST       491
 
 #define ERR_NOSHAREDCHAN     493

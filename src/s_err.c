@@ -556,7 +556,7 @@ static char *replies[] =
     /* 488 ERR_NOSSL */	        ":%s 488 %s :SSL Only channel (+S), You must connect "
                                 "using SSL to join this channel.",
     /* 489 */	                NULL,	/* In use by Undernet */
-    /* 490 */	                NULL,
+    /* 490 ERR_MAXMSGSENT */    ":%s 490 %s :You must wait %ld seconds before you can send another message to %s",
     /* 491 ERR_NOOPERHOST */	":%s 491 %s :No Oper block for your host",
     /* 492 */	                NULL,
     /* 493 ERR_NOSHAREDCHAN */	":%s 493 %s :You cannot message that person because you do not share a common channel with them.",
