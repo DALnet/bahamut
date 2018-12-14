@@ -936,6 +936,22 @@ int m_svsxcf(aClient *cptr, aClient *sptr, int parc, char *parv[])
             else if(!strcasecmp(opt,"TALK_JOIN_TIME")) { chptr->talk_join_time = atoi(value); chptr->xflags |= XFLAG_SET; }
             else if(!strcasecmp(opt,"MAX_BANS")) { chptr->max_bans = atoi(value); chptr->xflags |= XFLAG_SET; }
             else if(!strcasecmp(opt,"MAX_INVITES")) { chptr->max_invites = atoi(value); chptr->xflags |= XFLAG_SET; }
+            else if(!strcasecmp(opt,"MAX_MSG_TIME"))
+            {
+                char *mmt_value;
+                mmt_value = opt;
+
+                if ((mmt_value = strchr(value, ':')))
+                {
+                    *mmt_value = '\0';
+                    mmt_value++;
+
+                    chptr->max_messages = atoi(value);
+                    chptr->max_messages_time = atoi(mmt_value);
+                    chptr->xflags |= XFLAG_SET;
+                }
+            }
+
             else
             {
                 for(xflag = xflags_list; xflag->option; xflag++)

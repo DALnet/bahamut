@@ -1198,6 +1198,8 @@ struct ChanLink
     aClient *cptr;
     int flags;
     time_t when;
+    int last_message_number;    /* Number of messages sent to channel within max_messages_time */
+    time_t last_message_time;   /* When last message was sent to channel. -Holbrook */
     unsigned int banserial;     /* used for bquiet cache */
 };
 
@@ -1271,6 +1273,8 @@ struct Channel
     int talk_join_time;         /* Number of seconds the user must be on the channel to be able to tlak on the channel */
     int max_bans;               /* Maximum number of bans ops can add (default: MAXBANS) */
     int max_invites;            /* Maximum number of invites ops can add (default: MAXINVITELIST) */
+    int max_messages;           /* Maximum number of messages can be sent within max_messages_time */
+    int max_messages_time;      /* Number of seconds for how many messages can be sent, e.g., 5:10, 5 messages in 10 seconds */
     char *greetmsg;             /* Special greeting message */
     int xflags;                 /* The eXtended channel flags */
 };
