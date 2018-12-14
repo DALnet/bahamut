@@ -554,7 +554,11 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
         }
         else
         {
-            for (i = 0; i <= highest_fd; i++)
+            if(!(confopts & FLAGS_SHOWLINKS) && !IsAnOper(sptr))
+            {
+                sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name,  parv[0]);
+            }
+            else for (i = 0; i <= highest_fd; i++)
             {
                 if (!(acptr = local[i]))
                     continue;
@@ -897,7 +901,11 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
         case 'v':
         case 'V':
-            show_servers(sptr, parv[0]);
+            if(!(confopts & FLAGS_SHOWLINKS) && !IsAnOper(sptr))
+            {
+                sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name,  parv[0]);
+            }
+            else show_servers(sptr, parv[0]);
             break;
 
 #ifdef DEBUGMODE
@@ -939,7 +947,11 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
             break;
 
         case '?':
-            serv_info(sptr, parv[0]);
+            if(!(confopts & FLAGS_SHOWLINKS) && !IsAnOper(sptr))
+            {
+                sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name,  parv[0]);
+            }
+            else serv_info(sptr, parv[0]);
             break;
 
         default:
