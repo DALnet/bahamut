@@ -23,5 +23,25 @@ HOW TO BUILD:
     You may override these options by specifying a config file using:
     ./ircd -f path/to/ircd.conf
 
+
+REQUIRED PACKAGES:
+------------------
+If ./configure script fails, make sure you have the required package install.
+
+For CentOS:
+1.  Run the following command to install the development tools:
+	sudo yum groupinstall "Development Tools"
+
+2.  Run the following command to install the required packages:
+	sudo yum install zlib-devel openssl-devel
+
+For Ubuntu:
+1.  Run the following command to update your package list:
+	sudo apt-get update
+
+2.  Run the following command to install the required packages:
+	sudo apt-get install build-essential zlib1g-dev libssl-dev
+
+
 Best of luck!
 -The Bahamut Team
