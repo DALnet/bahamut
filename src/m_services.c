@@ -852,6 +852,7 @@ struct FlagList xflags_list[] =
  *   TALK_JOIN_TIME    - Number of seconds the user must be on the channel to be able to tlak on the channel
  *   MAX_BANS          - Will let us increase the ban limit for specific channels
  *   MAX_INVITES       - Will let us increase the invite limit for specific channels
+ *   MAX_MSG_TIME      - Maximum number of messages that can be sent in x seconds, msgs:time
  *
  * 1/0 (on/off) options:
  *   NO_NOTICE         - no notices can be sent to the channel (on/off)
@@ -918,6 +919,8 @@ int m_svsxcf(aClient *cptr, aClient *sptr, int parc, char *parv[])
         chptr->talk_join_time = 0;
         chptr->max_bans = MAXBANS;
         chptr->max_invites = MAXINVITELIST;
+        chptr->max_messages = 0;
+        chptr->max_messages_time = 0;
         chptr->xflags = 0;
         if(chptr->greetmsg)
           MyFree(chptr->greetmsg);
