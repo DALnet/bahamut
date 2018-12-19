@@ -65,6 +65,7 @@ extern int server_was_split;
 extern int svspanic;
 extern int svsnoop;
 extern int uhm_type;
+extern int uhm_umodeh;
 
 static char buf[BUFSIZE], buf2[BUFSIZE];
 int  user_modes[] =
@@ -2329,7 +2330,7 @@ do_user(char *nick, aClient *cptr, aClient *sptr, char *username, char *host,
 #endif
         strncpyzt(user->host, host, sizeof(user->host));
 #ifdef USER_HOSTMASKING
-        if(uhm_type > 0) sptr->umode |= UMODE_H;
+        if((uhm_type > 0) && (uhm_umodeh == 1)) sptr->umode |= UMODE_H;
         else sptr->umode &= ~UMODE_H;
 #endif
         user->server = me.name;
@@ -3323,7 +3324,7 @@ m_umode(aClient *cptr, aClient *sptr, int parc, char *parv[])
                 case 'S':
                     break; /* users can't set themselves +r,+x,+X or +S! */
                 case 'H':
-                    if ((uhm_type > 0) && (what == MODE_ADD))
+                    if ((uhm_type > 0) && (uhm_umodeh > 0) && (what == MODE_ADD))
                         sptr->umode |= UMODE_H;
                     else
                         sptr->umode &= ~UMODE_H;
