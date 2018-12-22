@@ -36,6 +36,7 @@ extern void reset_sock_opts(int, int);
 extern void spamfilter_sendserver(aClient *acptr);
 extern int user_modes[];
 extern int uhm_type;
+extern int uhm_umodeh;
 
 /* internal functions */
 
@@ -266,7 +267,7 @@ do_server_estab(aClient *cptr)
 
     /* Send UHM (user host-masking) type */
     if(confopts & FLAGS_HUB)
-        sendto_one(cptr, "SVSUHM %d", uhm_type);
+        sendto_one(cptr, "SVSUHM %d %d", uhm_type, uhm_umodeh);
 
     /* send clone list */
     clones_send(cptr);
