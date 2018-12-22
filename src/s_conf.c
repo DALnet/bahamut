@@ -2418,7 +2418,7 @@ int rehash(aClient *cptr, aClient *sptr, int sig)
 
     rehashed = 1;
 
-    return 1;
+    return 0; /* Success */
 }
 
 /*

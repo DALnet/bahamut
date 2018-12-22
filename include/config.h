@@ -875,6 +875,28 @@
 #define DEFAULT_OPER_SPAMFILTER_DISABLED
 #endif
 
+/*
+ * SERVICES_CONF_IRCD is used to define if services can read+write ircd configuration files (ircd.conf, ircd.motd, etc)
+ * 1 - Read+Write access (default)
+ * 0 - Disabled
+ */
+#define SERVICES_CONF_IRCD
+
+/*
+ * SERVICES_CONF_SYSTEM is used to define if services can read system configuration files (iptables, rc.local, etc)
+ * 1 - Read access (default)
+ * 0 - Disabled
+ */
+#define SERVICES_CONF_SYSTEM
+
+/*
+ * SERVICES_CONF_READONLY is used define if services is restricted to read-only access or not
+ * 1 - Read-only access
+ * 0 - Read-write access (default)
+ */
+#undef SERVICES_CONF_READONLY
+
+
 /* ------------------------- END CONFIGURATION SECTION -------------------- */
 #ifdef APOLLO
 #define RESTARTING_SYSTEMCALLS
