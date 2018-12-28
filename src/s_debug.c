@@ -71,7 +71,12 @@ void build_rplcache(void)
     /* put MAXBANS and MAXCHANNELS first so better tokens override them */
     ircsprintf(scratchbuf,"NETWORK=%s SAFELIST MAXBANS=%i MAXCHANNELS=%i "
                "CHANNELLEN=%i KICKLEN=%i NICKLEN=%i TOPICLEN=%i MODES=%i "
-               "CHANTYPES=# CHANLIMIT=#:%i PREFIX=(ov)@+ STATUSMSG=@+",
+               "CHANTYPES=# CHANLIMIT=#:%i "
+#ifdef USE_HALFOPS
+               "PREFIX=(ohv)@%%%%+ STATUSMSG=@%%%%+",
+#else
+               "PREFIX=(ohv)@+ STATUSMSG=@+",
+#endif
                Network_Name, MAXBANS, maxchannelsperuser, CHANNELLEN,
                TOPICLEN, NICKLEN, TOPICLEN, MAXMODEPARAMSUSER,
                maxchannelsperuser);
