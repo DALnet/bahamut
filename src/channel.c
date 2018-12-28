@@ -1990,6 +1990,16 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
                 break;
             }
             
+#ifdef NO_LOCAL_CMODE_h
+            if(*modes=='h' && MyClient(sptr))
+            {
+                sendto_one(sptr,":%s NOTICE %s :*** Notice -- Half-ops are not fully supported yet.",
+                           me.name, sptr->name);
+                args++;
+                break;
+            }
+#endif
+
             /* if we have the user, set them +/-[vo] */
             if(change=='+')
             {
