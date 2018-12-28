@@ -1027,13 +1027,18 @@ int m_aj(aClient *cptr, aClient *sptr, int parc, char *parv[])
     fnick = nick = parv[1];
     nickts = atol(parv[2]);
 
-    while(*nick == '@' || *nick == '+')
+    while(*nick == '@' || *nick == '%' || *nick == '+')
     {
         switch(*nick)
         {
             case '@':
                 flags |= CHFL_CHANOP;
                 break;
+#ifdef USE_HALFOPS
+            case '%':
+                flags |= CHFL_HALFOP;
+                break;
+#endif
             case '+':
                 flags |= CHFL_VOICE;
                 break;
@@ -1098,6 +1103,11 @@ int m_aj(aClient *cptr, aClient *sptr, int parc, char *parv[])
                 if(flags & CHFL_CHANOP)
                  sendto_channel_butserv(chptr, sptr, ":%s MODE %s +o %s", sptr->name,
                                         chptr->chname, acptr->name);
+#ifdef USE_HALFOPS
+                if(flags & CHFL_HALFOP)
+                 sendto_channel_butserv(chptr, sptr, ":%s MODE %s +h %s", sptr->name,
+                                        chptr->chname, acptr->name);
+#endif
                 if(flags & CHFL_VOICE)
                  sendto_channel_butserv(chptr, sptr, ":%s MODE %s +v %s", sptr->name,
                                         chptr->chname, acptr->name);
