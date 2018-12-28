@@ -45,6 +45,7 @@ extern void read_shortmotd(char *); /* defined in s_serv.c */
 int svspanic = 0; /* Services panic */
 int svsnoop = 0; /* Services disabled all o:lines (off by default) */
 int uhm_type = 0; /* User host-masking type (off by default) */
+int uhm_umodeh = 0; /* Let users set umode +H (off by default) */
 int services_jr = 0; /* Redirect join requests to services (disabled by default) */
 
 /*
@@ -795,6 +796,7 @@ int m_svstag(aClient *cptr, aClient *sptr, int parc, char *parv[])
  *   Define the running user host-masking type
  * parv[0] - sender
  * parv[1] - host-masking type (number)
+ * parv[2] - optional umode +H status (0=disabled,1=enabled with auto +H on connect,2=enabled with no auto +H)
  */
 int m_svsuhm(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
@@ -809,7 +811,12 @@ int m_svsuhm(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
     uhm_type = atoi(parv[1]);
 
-    sendto_serv_butone(cptr, ":%s SVSUHM %s", sptr->name, parv[1]);
+    if(parc > 2)
+    {
+        uhm_umodeh = atoi(parv[2]);
+        sendto_serv_butone(cptr, ":%s SVSUHM %s %s", sptr->name, parv[1], parv[2]);
+    }
+    else sendto_serv_butone(cptr, ":%s SVSUHM %s", sptr->name, parv[1]);
 
     return 0;
 }
@@ -825,6 +832,7 @@ struct FlagList xflags_list[] =
   { "EXEMPT_IDENTD",     XFLAG_EXEMPT_IDENTD     },
   { "EXEMPT_REGISTERED", XFLAG_EXEMPT_REGISTERED },
   { "EXEMPT_INVITES",    XFLAG_EXEMPT_INVITES    },
+  { "EXEMPT_WEBIRC",     XFLAG_EXEMPT_WEBIRC     },
   { "HIDE_MODE_LISTS",   XFLAG_HIDE_MODE_LISTS   },
   { "NO_NICK_CHANGE",    XFLAG_NO_NICK_CHANGE    },
   { "NO_UTF8",           XFLAG_NO_UTF8           },
@@ -851,6 +859,7 @@ struct FlagList xflags_list[] =
  *   TALK_JOIN_TIME    - Number of seconds the user must be on the channel to be able to tlak on the channel
  *   MAX_BANS          - Will let us increase the ban limit for specific channels
  *   MAX_INVITES       - Will let us increase the invite limit for specific channels
+ *   MAX_MSG_TIME      - Maximum number of messages that can be sent in x seconds, msgs:time
  *
  * 1/0 (on/off) options:
  *   NO_NOTICE         - no notices can be sent to the channel (on/off)
@@ -865,6 +874,7 @@ struct FlagList xflags_list[] =
  *   EXEMPT_IDENTD     - exempt users with identd (on/off)
  *   EXEMPT_REGISTERED - exempt users with umode +r (on/off)
  *   EXEMPT_INVITES    - exempt users who are +I'ed (on/off)
+ *   EXEMPT_WEBIRC     - exempt webirc users (on/off)
  *   USER_VERBOSE      - send failed command messages to #channel-relay (on/off)
  *   OPER_VERBOSE      - send failed command messages to +f opers (on/off)
  *
@@ -916,6 +926,8 @@ int m_svsxcf(aClient *cptr, aClient *sptr, int parc, char *parv[])
         chptr->talk_join_time = 0;
         chptr->max_bans = MAXBANS;
         chptr->max_invites = MAXINVITELIST;
+        chptr->max_messages = 0;
+        chptr->max_messages_time = 0;
         chptr->xflags = 0;
         if(chptr->greetmsg)
           MyFree(chptr->greetmsg);

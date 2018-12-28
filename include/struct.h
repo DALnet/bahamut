@@ -1372,6 +1372,7 @@ struct Channel
 #define XFLAG_SJR               0x2000 /* Services join request */
 #define XFLAG_NO_NICK_CHANGE    0x4000
 #define XFLAG_NO_UTF8           0x8000
+#define XFLAG_EXEMPT_WEBIRC     0x10000
 
 struct FlagList
 {
