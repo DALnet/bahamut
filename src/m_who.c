@@ -621,9 +621,26 @@ int chk_who(aClient *ac, aClient *sptr, int showall)
 	    return 0;
     
     if(wsopts.host!=NULL)
+    {
+#ifdef USER_HOSTMASKING
+        if(IsAnOper(sptr))
+        {
+	    if((wsopts.host_plus && hchkfn(wsopts.host, ac->user->host) && hchkfn(wsopts.host, ac->user->mhost)) ||
+	       (!wsopts.host_plus && (!hchkfn(wsopts.host, ac->user->host) || !hchkfn(wsopts.host, ac->user->mhost))))
+	        return 0;
+        }
+        else
+        {
+	    if((wsopts.host_plus && hchkfn(wsopts.host, IsUmodeH(ac)?ac->user->mhost:ac->user->host)) ||
+	       (!wsopts.host_plus && !hchkfn(wsopts.host, IsUmodeH(ac)?ac->user->mhost:ac->user->host)))
+	        return 0;
+        }
+#else
 	if((wsopts.host_plus && hchkfn(wsopts.host, ac->user->host)) ||
 	   (!wsopts.host_plus && !hchkfn(wsopts.host, ac->user->host)))
 	    return 0;
+#endif
+    }
 
     if(wsopts.cidr_plus)
 	if(ac->ip_family != wsopts.cidr_family ||
