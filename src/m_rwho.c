@@ -81,11 +81,13 @@ extern Link *find_channel_link(Link *, aChannel *);
 #define RWO_MATCHES 0x2000
 #define RWO_CHANNEL 0x4000
 #define RWO_PROB    0x8000
+#define RWO_MHOST   0x10000
 
 /* miscellaneous flags */
 #define RWC_SHOWIP  0x0001  /* WHO compatibility */
 #define RWC_CHANNEL 0x0002  /* WHO compatibility */
 #define RWC_TIME    0x0004  /* show timing stats */
+#define RWC_MHOST   0x0008  /* Show masked host in the /rwho reply */
 
 static const char *rwho_help[] = {
     "RWHO <[+|-]matchflags>[/<outputflags>[:<cookie>]] <args>",
@@ -110,6 +112,9 @@ static const char *rwho_help[] = {
     "  T <type>      - user is (not) type <type> as set by services",
     "  C             - for compatibility with WHO",
     "  I             - for compatibility with WHO",
+#ifdef USER_HOSTMASKING
+    "  M             - show the masked host in the reply",
+#endif
     "The following match flags are compiled into a single regular expression",
     "in the order you specify, so later flags can use backreferences to",
     "submatches in the flags prior:",
@@ -123,7 +128,10 @@ static const char *rwho_help[] = {
     "  :<cookie>     - supplied cookie (useful for scripts)",
     "  n             - user's nick",
     "  u             - user's username",
-    "  h             - user's host",
+    "  h             - user's real host",
+#ifdef USER_HOSTMASKING
+    "  H             - user's masked host",
+#endif
     "  i             - user's IP",
     "  s             - user's server",
     "  f             - standard WHO flags (GH*%@+)",
@@ -519,6 +527,12 @@ static int rwho_parseopts(aClient *sptr, int parc, char *parv[])
                 arg++;
                 break;
 
+#ifdef USER_HOSTMASKING
+            case 'M':
+                rwho_opts.misc |= RWC_MHOST;
+                break;
+#endif
+
 #ifdef RWHO_PROBABILITY
             case 'p':
                 if (!parv[arg])
@@ -766,6 +780,9 @@ static int rwho_parseopts(aClient *sptr, int parc, char *parv[])
             case 'n': rwho_opts.rplfields |= RWO_NICK; sfl++; break;
             case 'u': rwho_opts.rplfields |= RWO_USER; sfl++; break;
             case 'h': rwho_opts.rplfields |= RWO_HOST; sfl++; break;
+#ifdef USER_HOSTMASKING
+            case 'H': rwho_opts.rplfields |= RWO_MHOST; sfl++; break;
+#endif
             case 'i': rwho_opts.rplfields |= RWO_IP; sfl++; break;
             case 's': rwho_opts.rplfields |= RWO_SERVER; sfl++; break;
             case 'f': rwho_opts.rplfields |= RWO_FLAGS; sfl++; break;
@@ -972,11 +989,11 @@ static int rwho_match(aClient *cptr, int *failcode, aClient **failclient)
     }
 
     if ((rwho_opts.check[0] & RWM_HOST) &&
-        rwho_opts.host_func[0](rwho_opts.host_pat[0], cptr->user->host))
+        rwho_opts.host_func[0](rwho_opts.host_pat[0], cptr->user->host) && rwho_opts.host_func[0](rwho_opts.host_pat[0], cptr->user->mhost))
         return 0;
 
     if ((rwho_opts.check[1] & RWM_HOST) &&
-        !rwho_opts.host_func[1](rwho_opts.host_pat[1], cptr->user->host))
+        !rwho_opts.host_func[1](rwho_opts.host_pat[1], cptr->user->host) && !rwho_opts.host_func[1](rwho_opts.host_pat[1], cptr->user->mhost))
         return 0;
 
 #ifdef RWHO_PROBABILITY
@@ -1123,6 +1140,10 @@ static void rwho_reply(aClient *cptr, aClient *ac, char *buf, chanMember *cm)
 
         if (rwho_opts.misc & RWC_SHOWIP)
             src = ac->hostip;
+#ifdef USER_HOSTMASKING
+        else if (rwho_opts.misc & RWC_MHOST)
+            src = ac->user->mhost;
+#endif
         else
             src = ac->user->host;
 
@@ -1156,6 +1177,16 @@ static void rwho_reply(aClient *cptr, aClient *ac, char *buf, chanMember *cm)
         while (*src)
             *dst++ = *src++;
     }
+
+#ifdef USER_HOSTMASKING
+    if (rwho_opts.rplfields & RWO_MHOST)
+    {
+        src = ac->user->mhost;
+        *dst++ = ' ';
+        while (*src)
+            *dst++ = *src++;
+    }
+#endif
 
     if (rwho_opts.rplfields & RWO_IP)
     {
