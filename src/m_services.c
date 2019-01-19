@@ -1052,7 +1052,7 @@ int m_aj(aClient *cptr, aClient *sptr, int parc, char *parv[])
     if(nickts && acptr->tsinfo != nickts)
         return 0; /* tsinfo doesn't match */
 
-    if(*parv[2] == '0' && !atoi(parv[3]))
+    if(*parv[3] == '0' && !atoi(parv[3]))
     {
         if(acptr->user->channel == NULL)
             return 0; /* Target nick isn't on any channels */
