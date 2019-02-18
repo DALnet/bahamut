@@ -153,6 +153,7 @@
 #define	RPL_ENDOFINFO        374
 #define	RPL_MOTDSTART        375
 #define	RPL_ENDOFMOTD        376
+#define RPL_WHOISMODES       379
 
 #define RPL_YOUREOPER        381
 #define RPL_REHASHING        382
@@ -236,7 +237,7 @@
 #define ERR_NONONREG         486
 #define ERR_MSGSERVICES      487
 #define ERR_NOSSL            488
-
+#define ERR_MAXMSGSENT       490
 #define ERR_NOOPERHOST       491
 
 #define ERR_NOSHAREDCHAN     493

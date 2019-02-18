@@ -867,6 +867,26 @@
  */
 #define SPAMFILTER
 
+/*
+ * DEFAULT_OPER_SPAMFILTER_DISABLED - default your opers to +P, which disables spamfilter checking.  This
+ * is strongly recommended so that users can report potential spam.
+ */
+#ifdef SPAMFILTER
+#define DEFAULT_OPER_SPAMFILTER_DISABLED
+#endif
+
+/*
+ * USE_HALFOPS is used to enable half-ops support
+ * If you are connected to the main DALnet network, you should
+ * have this enabled.
+ */
+#define USE_HALFOPS
+
+/*
+ * Don't allow local clients to use +h/-h until all servers and services are upgraded.
+ */
+#define NO_LOCAL_CMODE_h
+
 /* ------------------------- END CONFIGURATION SECTION -------------------- */
 #ifdef APOLLO
 #define RESTARTING_SYSTEMCALLS

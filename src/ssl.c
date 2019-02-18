@@ -337,6 +337,15 @@ static int fatal_ssl_error(int ssl_error, int where, aClient *sptr)
 	    ssl_errstr = "Unknown OpenSSL error (huh?)";
     }
 
+    if((ssl_error==SSL_ERROR_SYSCALL || ssl_error==SSL_ERROR_ZERO_RETURN) && errtmp==0)
+    {
+        /* Client most likely just closed the connection... -Kobi_S. */
+        errno = 0; /* Not really an error */
+        sptr->sockerr = IRCERR_SSL;
+        sptr->flags |= FLAGS_DEADSOCKET;
+        return -1;
+    }
+
     sendto_realops_lev(DEBUG_LEV, "%s to "
 		"%s!%s@%s aborted with%serror (%s). [%s]", 
 		ssl_func, *sptr->name ? sptr->name : "<unknown>",
@@ -344,8 +353,11 @@ static int fatal_ssl_error(int ssl_error, int where, aClient *sptr)
 		username : "<unregistered>", sptr->sockhost,
 		(errno > 0) ? " " : " no ", errstr, ssl_errstr);
 #ifdef USE_SYSLOG
-    syslog(LOG_ERR, "SSL error in %s: %s [%s]", ssl_func, errstr,
-	    ssl_errstr);
+    syslog(LOG_ERR, "SSL error in %s for %s!%s@%s: %s [%s]", ssl_func,
+            *sptr->name ? sptr->name : "<unknown>",
+            (sptr->user && sptr->user->username) ? sptr->user->
+            username : "<unregistered>", sptr->sockhost,
+            errstr, ssl_errstr);
 #endif
 
     /* if we reply() something here, we might just trigger another

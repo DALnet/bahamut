@@ -174,7 +174,6 @@ typedef struct SServicesTag ServicesTag;
 #define	BOOT_OPER	 16
 #define BOOT_STDERR	 64
 #define	STAT_LOG	 -6	/* logfile for -x */
-#define	STAT_MASTER	 -5	/* Local ircd master before identification */
 #define	STAT_CONNECTING	 -4
 #define	STAT_HANDSHAKE	 -3
 #define	STAT_ME		 -2
@@ -190,13 +189,11 @@ typedef struct SServicesTag ServicesTag;
 #define	IsConnecting(x)		((x)->status == STAT_CONNECTING)
 #define	IsHandshake(x)		((x)->status == STAT_HANDSHAKE)
 #define	IsMe(x)			((x)->status == STAT_ME)
-#define	IsUnknown(x)		((x)->status == STAT_UNKNOWN || \
-				 (x)->status == STAT_MASTER)
+#define	IsUnknown(x)		((x)->status == STAT_UNKNOWN)
 #define	IsServer(x)		((x)->status == STAT_SERVER)
 #define	IsClient(x)		((x)->status == STAT_CLIENT)
 #define	IsLog(x)		((x)->status == STAT_LOG)
 
-#define	SetMaster(x)		((x)->status = STAT_MASTER)
 #define	SetConnecting(x)	((x)->status = STAT_CONNECTING)
 #define	SetHandshake(x)		((x)->status = STAT_HANDSHAKE)
 #define	SetMe(x)		((x)->status = STAT_ME)
@@ -299,6 +296,7 @@ typedef struct SServicesTag ServicesTag;
 #define UMODE_f     0x00100	/* umode +f - Server flood messages */
 #define UMODE_y     0x00200	/* umode +y - Stats/links */
 #define UMODE_d     0x00400	/* umode +d - Debug info */
+#define UMODE_P     0x00800     /* umode +P - User wants extra privacy (no spamfilter) */
 #define UMODE_g     0x01000	/* umode +g - Globops */
 #define UMODE_b     0x02000	/* umode +b - Chatops */
 #define UMODE_a     0x04000	/* umode +a - Services Admin */
@@ -318,7 +316,8 @@ typedef struct SServicesTag ServicesTag;
 #define UMODE_S     0x10000000  /* umode +S - User is using SSL */
 #define UMODE_C     0x20000000  /* umode +C - User is only accepting private messages from users who share a common channel with them */
 #define UMODE_H     0x40000000  /* umode +H - User is host-masked */
-#define UMODE_P     0x80000000  /* umode +P - User wants extra privacy (no spamfilter) */
+/* WARNING: Do not add any values greater than 0x40000000 unless you change Client->umode to unsigned long
+            (and change everything else to support it) -Kobi & xPsycho. */
 
 /* for sendto_ops_lev */
 
@@ -611,7 +610,7 @@ typedef struct Whowas
     char       *servername;
     char        realname[REALLEN + 1];
     time_t      logoff;
-    unsigned int umode;
+    long umode;
     struct Client *online;  /* Pointer to new nickname for chasing or NULL */
     
     struct Whowas *next;    /* for hash table... */
@@ -685,6 +684,8 @@ typedef struct Whowas
 #define FLAGS_WGMON     (FLAGS_WGMONURL|FLAGS_WGMONHOST)
 #define FLAGS_SHOWLINKS 0x0040
 #define FLAGS_SPLITOPOK 0x0080
+#define FLAGS_REMREHOK  0x0100
+
 
 /* flags for connects */
 
@@ -903,7 +904,11 @@ struct Client
     time_t      since;      /* last time we parsed something */
     ts_val      tsinfo;     /* TS on the nick, SVINFO on servers */
     long        flags;      /* client flags */
-    long        umode;      /* We can illeviate overflow this way */
+    long        umode;      /* We can illeviate overflow this way
+                               Note: if you change this, you need to also
+                               change struct SearchOptions,
+                               struct Whowas and struct SServicesTag -Kobi.
+                             */
     aClient    *from;       /* == self, if Local Client, *NEVER* NULL! */
     aClient    *uplink;     /* this client's uplink to the network */
     int         fd;         /* >= 0, for local clients */
@@ -1193,6 +1198,8 @@ struct ChanLink
     aClient *cptr;
     int flags;
     time_t when;
+    int last_message_number;    /* Number of messages sent to channel within max_messages_time */
+    time_t last_message_time;   /* When last message was sent to channel. -Holbrook */
     unsigned int banserial;     /* used for bquiet cache */
 };
 
@@ -1265,6 +1272,9 @@ struct Channel
     int talk_connect_time;      /* Number of seconds the user must be online to be able to talk on the channel */
     int talk_join_time;         /* Number of seconds the user must be on the channel to be able to tlak on the channel */
     int max_bans;               /* Maximum number of bans ops can add (default: MAXBANS) */
+    int max_invites;            /* Maximum number of invites ops can add (default: MAXINVITELIST) */
+    int max_messages;           /* Maximum number of messages can be sent within max_messages_time */
+    int max_messages_time;      /* Number of seconds for how many messages can be sent, e.g., 5:10, 5 messages in 10 seconds */
     char *greetmsg;             /* Special greeting message */
     int xflags;                 /* The eXtended channel flags */
 };
@@ -1281,6 +1291,7 @@ struct Channel
 #define	CHFL_VOICE      0x0002	/* the power to speak */
 #define	CHFL_DEOPPED 	0x0004	/* deopped by us, modes need to be bounced */
 #define	CHFL_BANNED     0x0008  /* is banned */
+#define	CHFL_HALFOP     0x0010  /* channel half-op */
 
 /* ban mask types */
 
@@ -1335,7 +1346,7 @@ struct Channel
 
 /* channel visible */
 
-#define	ShowChannel(v,c)	(PubChannel(c) || IsMember((v),(c)))
+#define	ShowChannel(v,c)	(!SecretChannel(c) || IsMember((v),(c)))
 #define	PubChannel(x)		((!x) || ((x)->mode.mode &\
                                  (MODE_PRIVATE | MODE_SECRET)) == 0)
 
@@ -1355,6 +1366,13 @@ struct Channel
 #define XFLAG_EXEMPT_INVITES    0x0080
 #define XFLAG_EXEMPT_OPPED      0x0100
 #define XFLAG_EXEMPT_VOICED     0x0200
+#define XFLAG_HIDE_MODE_LISTS   0x0400
+#define XFLAG_USER_VERBOSE      0x0800
+#define XFLAG_OPER_VERBOSE      0x1000
+#define XFLAG_SJR               0x2000 /* Services join request */
+#define XFLAG_NO_NICK_CHANGE    0x4000
+#define XFLAG_NO_UTF8           0x8000
+#define XFLAG_EXEMPT_WEBIRC     0x10000
 
 struct FlagList
 {
@@ -1481,7 +1499,7 @@ struct ListOptions
 
 typedef struct SearchOptions 
 {
-    int umodes;
+    long umodes;
     char *nick;
     char *user;
     char *host;

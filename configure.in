@@ -427,7 +427,7 @@ if test "X$cf_enable_openssl" != "Xno" ; then
      cf_openssl_basedir="${cf_enable_openssl}"
   else
     dnl Do the auto-probe here.  Check some common directory paths.
-    for dirs in /usr/local/ssl /usr/pkg /usr/local /usr/lib /usr/lib/ssl\
+    for dirs in $HOME/openssl /usr/local/ssl /usr/pkg /usr/local /usr/lib /usr/lib/ssl\
                 /opt /opt/openssl /usr/local/openssl ; do
       if test -f "${dirs}/include/openssl/opensslv.h" ; then
         cf_openssl_basedir="${dirs}"
@@ -441,6 +441,9 @@ if test "X$cf_enable_openssl" != "Xno" ; then
     if test -f "${cf_openssl_basedir}/include/openssl/opensslv.h" ; then
       SSL_INCLUDES="-I${cf_openssl_basedir}/include"
       SSL_LDFLAGS="-L${cf_openssl_basedir}/lib"
+      if test "$cf_openssl_basedir" = "$HOME/openssl"; then
+        SSL_LDFLAGS="-L${cf_openssl_basedir}/lib -Wl,-rpath,${cf_openssl_basedir}/lib"
+      fi
     else
       dnl OpenSSL wasn't found in the directory specified.  Naughty
       dnl administrator...
@@ -731,6 +734,12 @@ fi
 
 if test $prefix = NONE; then
     prefix=${HOME}/ircd
+    if test -f "${HOME}/bahamut/ircd" ; then
+        prefix=${HOME}/bahamut
+    fi
+    if test -f "${HOME}/dalnet/ircd" ; then
+        prefix=${HOME}/dalnet
+    fi
 fi
 
 INSTALL_DIR="${prefix}"

@@ -99,6 +99,16 @@ int m_webirc(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	return 0;
     }
 
+    /* Don't allow WEBIRC to use 0.0.0.*, 127.0.0.* or Staff_Address -Kobi_S. */
+    if(!strncmp(parv[3],"0.0.0.",6) || !strncmp(parv[3],"127.0.0.",8) || !strcasecmp(parv[3],Staff_Address) || !strcasecmp(parv[3],DEFAULT_STAFF_ADDRESS) || (!strchr(parv[3],'.') && !strchr(parv[3],':')) || !strncmp(parv[4],"0.0.0.",6) || !strncmp(parv[4],"127.",4))
+    {
+        sendto_realops_lev(SPY_LEV, "WEBIRC: %s@%s tried to spoof %s (%s)",
+                           oldusername, sptr->sockhost,
+                           parv[3], parv[4]);
+	sendto_one(sptr, "NOTICE * :Invalid IP");
+	return 0;
+    }
+
     if (cptr->flags & FLAGS_GOTID)
     {
 	cptr->webirc_username = MyMalloc(strlen(cptr->username) + 1);
@@ -112,7 +122,10 @@ int m_webirc(aClient *cptr, aClient *sptr, int parc, char *parv[])
     cptr->webirc_ip = MyMalloc(strlen(cptr->sockhost) + 1);
     strcpy(cptr->webirc_ip, cptr->sockhost);
 
-    get_sockhost(cptr, parv[3]);
+    if(strlen(parv[3]) > HOSTLEN)
+        get_sockhost(cptr, parv[4]); /* IP (because host is too long) */
+    else
+        get_sockhost(cptr, parv[3]); /* host */
     cptr->hostp = NULL;
 
     /*

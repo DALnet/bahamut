@@ -58,11 +58,15 @@ extern void reset_sock_opts();
 extern int send_lusers(aClient *,aClient *,int, char **);
 #endif
 extern int is_xflags_exempted(aClient *sptr, aChannel *chptr); /* for m_message() */
+extern int verbose_to_relaychan(aClient *sptr, aChannel *chptr, char *cmd, char *reason); /* for m_message() */
+extern inline void verbose_to_opers(aClient *sptr, aChannel *chptr, char *cmd, char *reason); /* for m_message() */
 extern time_t get_user_jointime(aClient *cptr, aChannel *chptr); /* for send_msg_error() */
+extern time_t get_user_lastmsgtime(aClient *cptr, aChannel *chptr); /* also for send_msg_error() -Holbrook */
 extern int server_was_split;
 extern int svspanic;
 extern int svsnoop;
 extern int uhm_type;
+extern int uhm_umodeh;
 
 static char buf[BUFSIZE], buf2[BUFSIZE];
 int  user_modes[] =
@@ -366,6 +370,23 @@ canonize(char *buffer)
     return cbuf;
 }
 
+/* msg_has_utf8 - check if a message has high ASCII code characters.
+                  It doesn't have to be UTF8 really, Hebrew and Arabic
+                  characters will match as well... -Kobi_S.
+ */
+int msg_has_utf8(char *text)
+{
+    if(text == NULL) return 0;
+
+    while(*text)
+    {
+        if((unsigned char)*text > 127 && *text!='<' && *text!='>') return 1;
+        text++;
+    }
+
+    return 0;
+}
+
 #if (RIDICULOUS_PARANOIA_LEVEL>=1)
 static int
 check_oper_can_mask(aClient *sptr, char *name, char *password, char **onick)
@@ -473,9 +494,8 @@ register_user(aClient *cptr, aClient *sptr, char *nick, char *username,
 {
     aAllow  *pwaconf = NULL;
     char       *parv[3];
-    static char ubuf[12];
+    static char ubuf[54];
     char       *p;
-    short       oldstatus = sptr->status;
     anUser     *user = sptr->user;
     struct userBan    *ban;
     aMotd      *smotd;
@@ -688,12 +708,6 @@ register_user(aClient *cptr, aClient *sptr, char *nick, char *username,
         }
 #endif
                 
-
-        /* i really dont like the fact that we're calling m_oper from here.
-         * perhaps there is a better method...?  Will investigate later
-         * -epi */
-        if (oldstatus == STAT_MASTER && MyConnect(sptr))
-            m_oper(&me, sptr, 1, parv);
 
         /* hostile username checks begin here */
         
@@ -1104,7 +1118,7 @@ register_user(aClient *cptr, aClient *sptr, char *nick, char *username,
             }
         }
     }
-    send_umode(NULL, sptr, 0, SEND_UMODES, ubuf);
+    send_umode(NULL, sptr, 0, SEND_UMODES, ubuf, sizeof(ubuf));
     if (!*ubuf)
     {
         ubuf[0] = '+';
@@ -1134,7 +1148,7 @@ register_user(aClient *cptr, aClient *sptr, char *nick, char *username,
 
         memset(sptr->passwd, '\0', PASSWDLEN);
         
-        if (ubuf[1]) send_umode(cptr, sptr, 0, ALL_UMODES, ubuf);
+        if (ubuf[1]) send_umode(cptr, sptr, 0, ALL_UMODES, ubuf, sizeof(ubuf));
 
         if(call_hooks(CHOOK_POSTMOTD, sptr) == FLUSH_BUFFER)
             return FLUSH_BUFFER;
@@ -1412,17 +1426,20 @@ int check_target_limit(aClient *sptr, aClient *acptr)
     {
         sendto_one(sptr, err_str(ERR_TARGETTOFAST), me.name, sptr->name,
                    acptr->name, MSG_TARGET_TIME - tmin);
-        sptr->since += 2; /* penalize them 2 seconds for this! */
-        sptr->num_target_errors++;
-
-        if(sptr->last_target_complain + 60 <= NOW)
+        if(call_hooks(CHOOK_SPAMWARN, sptr, 1, max_targets, NULL) != FLUSH_BUFFER)
         {
-            sendto_realops_lev(SPAM_LEV, "Target limited: %s (%s@%s)"
-                               " [%d failed targets]", sptr->name,
-                                sptr->user->username, sptr->user->host, 
-                                sptr->num_target_errors);
-            sptr->num_target_errors = 0;
-            sptr->last_target_complain = NOW;
+            sptr->since += 2; /* penalize them 2 seconds for this! */
+            sptr->num_target_errors++;
+
+            if(sptr->last_target_complain + 60 <= NOW)
+            {
+                sendto_realops_lev(SPAM_LEV, "Target limited: %s (%s@%s)"
+                                   " [%d failed targets]", sptr->name,
+                                    sptr->user->username, sptr->user->host, 
+                                    sptr->num_target_errors);
+                sptr->num_target_errors = 0;
+                sptr->last_target_complain = NOW;
+            }
         }
         return 1;
     }
@@ -1520,6 +1537,9 @@ send_msg_error(aClient *sptr, char *parv[], char *nick, int ret, aChannel *chptr
         sendto_one(sptr, err_str(ERR_NEEDREGGEDNICK), me.name,
                    parv[0], nick, "speak in", aliastab[AII_NS].nick,
                    aliastab[AII_NS].server, NS_Register_URL);
+    else if(ret == ERR_MAXMSGSENT)
+        sendto_one(sptr, err_str(ERR_MAXMSGSENT), me.name,
+                   parv[0], (chptr->max_messages_time + get_user_lastmsgtime(sptr, chptr) - NOW + 1), chptr->chname);
     else
         sendto_one(sptr, err_str(ERR_CANNOTSENDTOCHAN), me.name,
                    parv[0], nick);
@@ -1608,6 +1628,10 @@ m_message(aClient *cptr, aClient *sptr, int parc, char *parv[], int notice)
         {
             if (*s == '@')
                 chflags |= CHFL_CHANOP;
+#ifdef USE_HALFOPS
+            else if (*s == '%')
+                chflags |= CHFL_HALFOP;
+#endif
             else if (*s == '+')
                 chflags |= CHFL_VOICE;
             else
@@ -1645,10 +1669,32 @@ m_message(aClient *cptr, aClient *sptr, int parc, char *parv[], int notice)
                 {
                     if (ismine && !notice)
                         send_msg_error(sptr, parv, target, ret, chptr);
+                    if(chptr->xflags & XFLAG_USER_VERBOSE)
+                        verbose_to_relaychan(sptr, chptr, notice?"notice":"message", parv[2]);
+                    if(chptr->xflags & XFLAG_OPER_VERBOSE)
+                        verbose_to_opers(sptr, chptr, notice?"notice":"message", parv[2]);
                     continue;
                 }
 
-                if (notice && (chptr->xflags & XFLAG_NO_NOTICE) && !is_xflags_exempted(sptr,chptr)) continue;
+                if (notice && (chptr->xflags & XFLAG_NO_NOTICE) && !is_xflags_exempted(sptr,chptr))
+                {
+                    if(chptr->xflags & XFLAG_USER_VERBOSE)
+                        verbose_to_relaychan(sptr, chptr, "notice", parv[2]);
+                    if(chptr->xflags & XFLAG_OPER_VERBOSE)
+                        verbose_to_opers(sptr, chptr, "notice", parv[2]);
+                    continue;
+                }
+
+                if ((chptr->xflags & XFLAG_NO_UTF8) && msg_has_utf8(parv[2]) && !is_xflags_exempted(sptr,chptr))
+                {
+                    if (ismine && !notice)
+                        sendto_one(sptr, err_str(ERR_CANNOTSENDTOCHAN), me.name, parv[0], target);
+                    if(chptr->xflags & XFLAG_USER_VERBOSE)
+                        verbose_to_relaychan(sptr, chptr, notice?"utf8-notice":"utf8-message", parv[2]);
+                    if(chptr->xflags & XFLAG_OPER_VERBOSE)
+                        verbose_to_opers(sptr, chptr, notice?"utf8-notice":"utf8-message", parv[2]);
+                    continue;
+                }
 
                 if((chptr->mode.mode & MODE_AUDITORIUM) && !is_chan_opvoice(sptr, chptr))
                 {
@@ -1689,7 +1735,14 @@ m_message(aClient *cptr, aClient *sptr, int parc, char *parv[], int notice)
                             if (check_for_flud(sptr, NULL, chptr, 1))
                                 return 0;
 #endif
-                            if ((chptr->xflags & XFLAG_NO_CTCP) && !is_xflags_exempted(sptr,chptr)) continue;
+                            if ((chptr->xflags & XFLAG_NO_CTCP) && !is_xflags_exempted(sptr,chptr))
+                            {
+                                if(chptr->xflags & XFLAG_USER_VERBOSE)
+                                    verbose_to_relaychan(cptr, chptr, "ctcp", "xflag_no_ctcp");
+                                if(chptr->xflags & XFLAG_OPER_VERBOSE)
+                                    verbose_to_opers(cptr, chptr, "ctcp", "xflag_no_ctcp");
+                                continue;
+                            }
                     }
                 }
             }
@@ -1699,6 +1752,10 @@ m_message(aClient *cptr, aClient *sptr, int parc, char *parv[], int notice)
                 /* don't let clients do stuff like @+@@+++@+@@@#channel */
                 if (chflags & CHFL_VOICE)
                     *--s = '+';
+#ifdef USE_HALFOPS
+                if (chflags & CHFL_HALFOP)
+                    *--s = '%';
+#endif
                 if (chflags & CHFL_CHANOP)
                     *--s = '@';
 
@@ -1846,7 +1903,7 @@ m_message(aClient *cptr, aClient *sptr, int parc, char *parv[], int notice)
 #endif
 
 #ifdef SPAMFILTER
-            if(!IsUmodeP(acptr) && check_sf(sptr, parv[2], notice?"notice":"msg", notice?SF_CMD_NOTICE:SF_CMD_PRIVMSG, acptr->name))
+            if(!IsUmodeP(acptr) && sptr!=acptr && check_sf(sptr, parv[2], notice?"notice":"msg", notice?SF_CMD_NOTICE:SF_CMD_PRIVMSG, acptr->name))
                 return FLUSH_BUFFER;
 #endif
         }
@@ -2093,9 +2150,17 @@ m_whois(aClient *cptr, aClient *sptr, int parc, char *parv[])
                 }
                 if(!showchan) /* if we're not really supposed to show the chan
                                * but do it anyways, mark it as such! */
+#ifdef USE_HALFOPS
+                    *(buf + len++) = '~';
+#else
                     *(buf + len++) = '%';
+#endif
                 if (is_chan_op(acptr, chptr))
                     *(buf + len++) = '@';
+#ifdef USE_HALFOPS
+                else if (is_chan_halfop(acptr, chptr))
+                    *(buf + len++) = '%';
+#endif
                 else if (has_voice(acptr, chptr))
                     *(buf + len++) = '+';
                 if (len)
@@ -2171,6 +2236,18 @@ m_whois(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		       acptr->webirc_username);
 	}
 
+        if(IsAdmin(sptr))
+        {
+            buf2[0]='\0';
+            send_umode(NULL, acptr, 0, ALL_UMODES, buf2, sizeof(buf2));
+            if (!*buf2)
+            {
+                buf2[0] = '+';
+                buf2[1] = '\0';
+            }
+            sendto_one(sptr, rpl_str(RPL_WHOISMODES), me.name, parv[0], name, buf2);
+        }
+
         /* don't give away that this oper is on this server if they're hidden! */
         if (acptr->user && MyConnect(acptr) && ((sptr == acptr) || 
                 !IsUmodeI(acptr) || (parc > 2) || IsAnOper(sptr)))
@@ -2223,6 +2300,7 @@ m_user(aClient *cptr, aClient *sptr, int parc, char *parv[])
         int loc = (ban->flags & SBAN_LOCAL) ? 1 : 0;
         return exit_banned_client(cptr, loc, 'G', ban->reason, 0);
     }
+    if(call_hooks(CHOOK_ONACCESS, cptr, username, host, server, realname) == FLUSH_BUFFER) return 0;
     return do_user(parv[0], cptr, sptr, username, host, server, 0,0, realname);
 }
 
@@ -2272,7 +2350,7 @@ do_user(char *nick, aClient *cptr, aClient *sptr, char *username, char *host,
 #endif
         strncpyzt(user->host, host, sizeof(user->host));
 #ifdef USER_HOSTMASKING
-        if(uhm_type > 0) sptr->umode |= UMODE_H;
+        if((uhm_type > 0) && (uhm_umodeh == 1)) sptr->umode |= UMODE_H;
         else sptr->umode &= ~UMODE_H;
 #endif
         user->server = me.name;
@@ -2379,6 +2457,10 @@ m_quit(aClient *cptr, aClient *sptr, int parc, char *parv[])
                     chptr = lp->value.chptr;
                     if((chptr->xflags & XFLAG_NO_QUIT_MSG) && !is_xflags_exempted(sptr,chptr))
                     {
+                        if(chptr->xflags & XFLAG_USER_VERBOSE)
+                            verbose_to_relaychan(cptr, chptr, "quit_msg", comment);
+                        if(chptr->xflags & XFLAG_OPER_VERBOSE)
+                            verbose_to_opers(cptr, chptr, "quit_msg", comment);
                         sendto_serv_butone(cptr, ":%s PART %s", parv[0], chptr->chname);
                         sendto_channel_butserv(chptr, sptr, ":%s PART %s", parv[0], chptr->chname);
                         remove_user_from_channel(sptr, chptr);
@@ -2848,7 +2930,7 @@ send_umode_out(aClient *cptr, aClient *sptr, int old)
     aClient *acptr;
     DLink *lp;
 
-    send_umode(NULL, sptr, old, SEND_UMODES, buf);
+    send_umode(NULL, sptr, old, SEND_UMODES, buf, sizeof(buf));
 
     if(*buf)
     {
@@ -2862,7 +2944,7 @@ send_umode_out(aClient *cptr, aClient *sptr, int old)
     }
 
     if (cptr && MyClient(cptr))
-        send_umode(cptr, sptr, old, ALL_UMODES, buf);
+        send_umode(cptr, sptr, old, ALL_UMODES, buf, sizeof(buf));
 }
 
 /*
@@ -2886,33 +2968,12 @@ int m_oper(aClient *cptr, aClient *sptr, int parc, char *parv[])
         return 0;
     }
 
-    /* if message arrived from server, trust it, and set to oper */
     /* an OPER message should never come from a server. complain */
 
-    if ((IsServer(cptr) || IsMe(cptr)) && !IsOper(sptr))
+    if (IsServer(cptr) || IsMe(cptr))
     {
         sendto_realops("Why is %s sending me an OPER? Contact Coders",
                         cptr->name);
-
-        /* sanity */
-        if (!IsPerson(sptr))
-            return 0;
-
-#ifdef DEFAULT_HELP_MODE
-        sptr->umode |= UMODE_o;
-        sptr->umode |= UMODE_h;
-        sendto_serv_butone(cptr, ":%s MODE %s :+oh", parv[0], parv[0]);
-#else
-        sptr->umode |= UMODE_o;
-        sendto_serv_butone(cptr, ":%s MODE %s :+o", parv[0], parv[0]);
-#endif
-#ifdef ALL_OPERS_HIDDEN
-        sptr->umode |= UMODE_I;
-        sendto_serv_butone(cptr, ":%s MODE %s :+I", parv[0], parv[0]);
-#endif
-        Count.oper++;
-        if (IsMe(cptr))
-            sendto_one(sptr, rpl_str(RPL_YOUREOPER), me.name, parv[0]);
         return 0;
     }
     else if (IsAnOper(sptr) && MyConnect(sptr))
@@ -2985,8 +3046,11 @@ int m_oper(aClient *cptr, aClient *sptr, int parc, char *parv[])
             SetOper(sptr);
 #ifdef DEFAULT_HELP_MODE                        
         sptr->umode|=(UMODE_s|UMODE_g|UMODE_w|UMODE_n|UMODE_h);
-#else                   
+#else
         sptr->umode|=(UMODE_s|UMODE_g|UMODE_w|UMODE_n);
+#endif
+#if defined(SPAMFILTER) && defined(DEFAULT_OPER_SPAMFILTER_DISABLED)
+        sptr->umode|=UMODE_P;
 #endif
         sptr->oflag = aoper->flags;
         Count.oper++;
@@ -3280,7 +3344,7 @@ m_umode(aClient *cptr, aClient *sptr, int parc, char *parv[])
                 case 'S':
                     break; /* users can't set themselves +r,+x,+X or +S! */
                 case 'H':
-                    if ((uhm_type > 0) && (what == MODE_ADD))
+                    if ((uhm_type > 0) && (uhm_umodeh > 0) && (what == MODE_ADD))
                         sptr->umode |= UMODE_H;
                     else
                         sptr->umode &= ~UMODE_H;
@@ -3334,9 +3398,12 @@ m_umode(aClient *cptr, aClient *sptr, int parc, char *parv[])
              * Now that the user is no longer opered, let's return
              * them back to the appropriate Y:class -srd
              */
-            sptr->user->oper->opers--;
-            sptr->user->oper = NULL;
-            set_effective_class(sptr);
+            if(sptr->user->oper)
+            {
+                sptr->user->oper->opers--;
+                sptr->user->oper = NULL;
+                set_effective_class(sptr);
+            }
         }
     }
     
@@ -3400,10 +3467,11 @@ m_umode(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
 /* send the MODE string for user (user) to connection cptr -avalon */
 void 
-send_umode(aClient *cptr, aClient *sptr, int old, int sendmask, char *umode_buf)
+send_umode(aClient *cptr, aClient *sptr, long old, long sendmask, char *umode_buf, int bufsize)
 {
     int *s, flag, what = MODE_NULL;
     char *m;
+    int len;
 
     /*
      * build a string in umode_buf to represent the change in the user's
@@ -3411,6 +3479,8 @@ send_umode(aClient *cptr, aClient *sptr, int old, int sendmask, char *umode_buf)
      */
     m = umode_buf;
     *m = '\0';
+    len = 0;
+    bufsize--; /* To have enough space for the null termination char */
     for (s = user_modes; (flag = *s); s += 2)
     {
         if (MyClient(sptr) && !(flag & sendmask))
@@ -3418,23 +3488,35 @@ send_umode(aClient *cptr, aClient *sptr, int old, int sendmask, char *umode_buf)
         if ((flag & old) && !(sptr->umode & flag))
         {
             if (what == MODE_DEL)
+            {
+                if(len+1 > bufsize) break;
                 *m++ = *(s + 1);
+                len++;
+            }
             else
             {
+                if(len+2 > bufsize) break;
                 what = MODE_DEL;
                 *m++ = '-';
                 *m++ = *(s + 1);
+                len += 2;
             }
         }
         else if (!(flag & old) && (sptr->umode & flag))
         {
             if (what == MODE_ADD)
+            {
+                if(len+1 > bufsize) break;
                 *m++ = *(s + 1);
+                len++;
+            }
             else
             {
+                if(len+2 > bufsize) break;
                 what = MODE_ADD;
                 *m++ = '+';
                 *m++ = *(s + 1);
+                len += 2;
             }
         }
     }
@@ -3455,9 +3537,10 @@ announce_fluder(aClient *fluder, aClient *cptr, aChannel *chptr, int type)
     else
         fludee = chptr->chname;
     
-    sendto_realops_lev(FLOOD_LEV, "Flooder %s [%s@%s] on %s target: %s",
-                       fluder->name, fluder->user->username, fluder->user->host,
-                       fluder->user->server, fludee);
+    if(call_hooks(CHOOK_FLOODWARN, fluder, chptr, 3, fludee, NULL) != FLUSH_BUFFER)
+        sendto_realops_lev(FLOOD_LEV, "Flooder %s [%s@%s] on %s target: %s",
+                           fluder->name, fluder->user->username, fluder->user->host,
+                           fluder->user->server, fludee);
 }
 
 /*
