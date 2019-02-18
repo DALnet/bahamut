@@ -106,6 +106,7 @@ extern void 	 del_invite(aClient *, aChannel *);
 extern void 	 send_user_joins(aClient *, aClient *);
 extern int  	 can_send(aClient *, aChannel *, char *);
 extern int   	 is_chan_op(aClient *, aChannel *);
+extern int       is_chan_halfop(aClient *, aChannel *);
 extern int   	 is_chan_opvoice(aClient *, aChannel *);
 extern int  	 has_voice(aClient *, aChannel *);
 extern int  	 count_channels(aClient *);
@@ -262,7 +263,7 @@ extern aClient 	 *next_client_double(aClient *, char *);
 
 extern int  	  m_umode(aClient *, aClient *, int, char **);
 extern int  	  m_names(aClient *, aClient *, int, char **);
-extern void 	  send_umode(aClient *, aClient *, int, int, char *);
+extern void 	  send_umode(aClient *, aClient *, long, long, char *, int);
 extern int 	  del_silence(aClient *, char *);
 
 

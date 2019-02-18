@@ -16,6 +16,12 @@ enum c_hooktype {
                        * Params: 1: (aClient *) 
                        * Returns int
                        */
+   CHOOK_ONACCESS,    /* called during m_user 
+                       * (after CHOOK_PREACCESS and before CHOOK_POSTACCESS)
+                       * Params: 5: (aClient *, char *username, char *host,
+                       *             char *server, char *realname) 
+                       * Returns int
+                       */
    CHOOK_POSTACCESS,  /* called after access checks are done 
                        * (right before client is put on network)
                        * Params: 1: (aClient *) 
@@ -74,6 +80,17 @@ enum c_hooktype {
                        * Params: 3: (char *orghost, char **newhost, int type)
                        * Returns int
                        */
+   CHOOK_FLOODWARN,   /* called during flood warnings to opers
+                       * from channel.c, s_bsd.c and s_user.c
+                       * Params: 5: (aClient *source, aChannel *channel,
+                       *             int type, char *cmd, char *reason)
+                       * Returns int
+                       */
+   CHOOK_SPAMWARN,    /* called from s_user.c and channel.c during spam warnings to opers
+                       * Params: 4: (aClient *source, int type, int max_targets,
+                       *             char *target_name)
+                       * Returns int
+                       */
    CHOOK_SIGNOFF,     /* called on client exit (exit_client)
                        * Params: 1: (aClient *)
                        * Returns void */
@@ -84,7 +101,7 @@ enum c_hooktype {
 extern int call_hooks(enum c_hooktype hooktype, ...);
 extern int init_modules();
 
-#define MODULE_INTERFACE_VERSION 1009 /* the interface version (hooks, modules.c commands, etc) */
+#define MODULE_INTERFACE_VERSION 1010 /* the interface version (hooks, modules.c commands, etc) */
 
 #ifdef BIRCMODULE
 extern void *bircmodule_add_hook(enum c_hooktype, void *, void *);

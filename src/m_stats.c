@@ -52,6 +52,7 @@ extern void report_fds(aClient *);
 extern char *oflagtotext(int oflags); /* For stats o */
 extern char *cflagtotext(int cflags, int uflags); /* For stats c */
 extern char *iflagtotext(int iflags); /* For stats i */
+extern int report_spamfilters(aClient *cptr, aClient *sptr, int parc, char *parv[]); /* For stats S */
 
 /* internal function defines */
 
@@ -553,7 +554,11 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
         }
         else
         {
-            for (i = 0; i <= highest_fd; i++)
+            if(!(confopts & FLAGS_SHOWLINKS) && !IsAnOper(sptr))
+            {
+                sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name,  parv[0]);
+            }
+            else for (i = 0; i <= highest_fd; i++)
             {
                 if (!(acptr = local[i]))
                     continue;
@@ -843,6 +848,12 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
             break;
 
         case 'S':
+            if (IsAnOper(sptr))
+                report_spamfilters(cptr, sptr, parc, parv);
+            else
+                sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name,  parv[0]);
+            break;
+
         case 's':
             if (IsAnOper(sptr))
                 list_scache(cptr, sptr, parc, parv);
@@ -890,7 +901,11 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
         case 'v':
         case 'V':
-            show_servers(sptr, parv[0]);
+            if(!(confopts & FLAGS_SHOWLINKS) && !IsAnOper(sptr))
+            {
+                sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name,  parv[0]);
+            }
+            else show_servers(sptr, parv[0]);
             break;
 
 #ifdef DEBUGMODE
@@ -932,7 +947,11 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
             break;
 
         case '?':
-            serv_info(sptr, parv[0]);
+            if(!(confopts & FLAGS_SHOWLINKS) && !IsAnOper(sptr))
+            {
+                sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name,  parv[0]);
+            }
+            else serv_info(sptr, parv[0]);
             break;
 
         default:

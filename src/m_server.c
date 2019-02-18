@@ -33,20 +33,22 @@ extern void fakelinkserver_update(char *, char *);
 extern void fakeserver_sendserver(aClient *);
 extern void fakelusers_sendlock(aClient *);
 extern void reset_sock_opts(int, int);
+extern void spamfilter_sendserver(aClient *acptr);
 extern int user_modes[];
 extern int uhm_type;
+extern int uhm_umodeh;
 
 /* internal functions */
 
 static void sendnick_TS(aClient *cptr, aClient *acptr)
 {
     ServicesTag *servicestag;
-    static char ubuf[30];
+    static char ubuf[54];
     int *s, flag, i;
 
     if (IsPerson(acptr))
     {
-        send_umode(NULL, acptr, 0, SEND_UMODES, ubuf);
+        send_umode(NULL, acptr, 0, SEND_UMODES, ubuf, sizeof(ubuf));
         if (!*ubuf)     /* trivial optimization - Dianora */
         {
             ubuf[0] = '+';
@@ -265,7 +267,7 @@ do_server_estab(aClient *cptr)
 
     /* Send UHM (user host-masking) type */
     if(confopts & FLAGS_HUB)
-        sendto_one(cptr, "SVSUHM %d", uhm_type);
+        sendto_one(cptr, "SVSUHM %d %d", uhm_type, uhm_umodeh);
 
     /* send clone list */
     clones_send(cptr);
@@ -372,7 +374,10 @@ m_server_estab(aClient *cptr)
     {
         ircstp->is_ref++;
         sendto_one(cptr, "ERROR :Wrong link password");
-        sendto_ops("Link %s dropped, wrong password", inpath);
+        sendto_gnotice("from %s: Link %s dropped, wrong password",
+                       me.name, inpath);
+        sendto_serv_butone(cptr, ":%s GNOTICE :Link %s dropped, wrong"
+                           " password", me.name, inpath);
         return exit_client(cptr, cptr, cptr, "Bad Password");
     }
     memset(cptr->passwd, '\0', sizeof(cptr->passwd));

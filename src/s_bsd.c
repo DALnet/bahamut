@@ -1245,6 +1245,8 @@ char *irc_get_sockerr(aClient *cptr)
             return "dbuf allocation error";
         case IRCERR_ZIP:
             return "compression general failure";
+        case IRCERR_SSL:
+            return "SSL error";
         default:
             return "Unknown error!";
     }
@@ -1596,11 +1598,12 @@ int read_packet(aClient * cptr)
 #endif
         SBufLength(&cptr->recvQ) > ((cptr->class && cptr->class->maxrecvq) ? cptr->class->maxrecvq : CLIENT_FLOOD))
         {
-            sendto_realops_lev(FLOOD_LEV, "Flood -- %s!%s@%s (%d) Exceeds %d"
-                               " RecvQ", cptr->name[0] ? cptr->name : "*",
-                               cptr->user ? cptr->user->username : "*",
-                               cptr->user ? cptr->user->host : "*",
-                               SBufLength(&cptr->recvQ), (cptr->class && cptr->class->maxrecvq) ? cptr->class->maxrecvq : CLIENT_FLOOD);
+            if(call_hooks(CHOOK_FLOODWARN, cptr, NULL, 2, NULL, NULL) != FLUSH_BUFFER)
+                sendto_realops_lev(FLOOD_LEV, "Flood -- %s!%s@%s (%d) Exceeds %d"
+                                   " RecvQ", cptr->name[0] ? cptr->name : "*",
+                                   cptr->user ? cptr->user->username : "*",
+                                   cptr->user ? cptr->user->host : "*",
+                                   SBufLength(&cptr->recvQ), (cptr->class && cptr->class->maxrecvq) ? cptr->class->maxrecvq : CLIENT_FLOOD);
             return exit_client(cptr, cptr, cptr, "Excess Flood");
         }
         return do_client_queue(cptr);
@@ -1638,7 +1641,7 @@ void read_error_exit(aClient *cptr, int length, int err)
         }
     }
     
-    if (err)
+    if (err && !(err==IRCERR_SSL && length==-1 && errno==0))
         ircsprintf(errmsg, "Read error: %s", strerror(err));
     else
         ircsprintf(errmsg, "Client closed connection");
@@ -1719,7 +1722,7 @@ void accept_connection(aListener *lptr)
             close(newfd);
             return;
         }
-        if((lptr->aport->legal == -1))
+        if(lptr->aport->legal == -1)
         {
             ircstp->is_ref++;
             send(newfd, "ERROR :This port is closed\r\n", 29, 0);
@@ -1749,7 +1752,11 @@ int readwrite_client(aClient *cptr, int isread, int iswrite)
     if(cptr->ssl && IsSSL(cptr) && !SSL_is_init_finished(cptr->ssl))
     {
         if(IsDead(cptr) || !safe_ssl_accept(cptr, cptr->fd))
+        {
+            if(IsClient(cptr))
+                return exit_client(cptr, cptr, &me, iswrite?"Write Error: SSL Bug #7845":"Read Error: SSL Bug #7845");
             close_connection(cptr);
+        }
         return 1;
     }
 #endif

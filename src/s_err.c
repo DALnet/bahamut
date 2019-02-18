@@ -268,7 +268,7 @@ static char *replies[] =
     /* 242 RPL_STATSUPTIME */	":%s 242 %s :Server Up %d days, %d:%02d:%02d",
     /* 243 RPL_STATSOLINE */	":%s 243 %s %s %s * %s %s %s",
     /* 244 RPL_STATSHLINE */	NULL,
-    /* 245 RPL_STATSSLINE */	NULL,
+    /* 245 RPL_STATSSLINE */	":%s 245 %s %s %s %ld %s %lu :%s",
     /* 246 RPL_STATSXLINE */	":%s 246 %s %s %s * %s %d %d",
     /* 247 */	                NULL,		/* Undernet's STATSGLINE */
     /* 248 */	                NULL,		/* Undernet's STATSULINE */
@@ -418,7 +418,7 @@ static char *replies[] =
     /* 376 RPL_ENDOFMOTD */	":%s 376 %s :End of /MOTD command.",
     /* 377 */	                NULL,
     /* 378 */	                NULL,
-    /* 379 */	                NULL,
+    /* 379 RPL_WHOISMODES */	":%s 379 %s %s :has the modes: %s",
     /* 380 */	                NULL,
     /* 381 RPL_YOUREOPER */	":%s 381 %s :You are now an IRC Operator",
     /* 382 RPL_REHASHING */	":%s 382 %s %s :Rehashing",
@@ -556,7 +556,7 @@ static char *replies[] =
     /* 488 ERR_NOSSL */	        ":%s 488 %s :SSL Only channel (+S), You must connect "
                                 "using SSL to join this channel.",
     /* 489 */	                NULL,	/* In use by Undernet */
-    /* 490 */	                NULL,
+    /* 490 ERR_MAXMSGSENT */    ":%s 490 %s :You must wait %ld seconds before you can send another message to %s",
     /* 491 ERR_NOOPERHOST */	":%s 491 %s :No Oper block for your host",
     /* 492 */	                NULL,
     /* 493 ERR_NOSHAREDCHAN */	":%s 493 %s :You cannot message that person because you do not share a common channel with them.",
