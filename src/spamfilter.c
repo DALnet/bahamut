@@ -246,10 +246,14 @@ int check_sf(aClient *cptr, char *text, char *caction, int action, char *target)
             {
                 if((p->flags & SF_ACT_BLOCK) && (p->flags & SF_ACT_AKILL))
                     action_text = " (blocked+akilled)";
+                else if(action!=SF_CMD_QUIT && (p->flags & SF_ACT_BLOCK) && (p->flags & SF_ACT_KILL))
+                    action_text = " (blocked+killed)";
                 else if(p->flags & SF_ACT_BLOCK)
                     action_text = " (blocked)";
                 else if(p->flags & SF_ACT_AKILL)
                     action_text = " (akilled)";
+                else if(action!=SF_CMD_QUIT && p->flags & SF_ACT_KILL)
+                    action_text = " (killed)";
                 else
                     action_text = "";
                 if(IsPerson(cptr))
