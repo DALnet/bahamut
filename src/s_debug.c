@@ -107,7 +107,7 @@ void build_rplcache(void)
 #ifdef USE_CHANMODE_L
     *s++ = 'L';
 #endif
-    s += ircsprintf(s, "mMnOprRsSt MAXLIST=b:%i", MAXBANS);
+    s += ircsprintf(s, "AmMnOprRsSt MAXLIST=b:%i", MAXBANS);
 #ifdef EXEMPT_LISTS
     s += ircsprintf(s, ",e:%i", MAXEXEMPTLIST);
 #endif
