@@ -2621,14 +2621,14 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
             if (MyClient(sptr) && (seenalready & MODE_AUDITORIUM))
                 break;
             seenalready |= MODE_AUDITORIUM;
-            if (MyClient(sptr))
+/*            if (MyClient(sptr))
             {
                 sendto_one(sptr, err_str(ERR_ONLYSERVERSCANCHANGE),
                            me.name, cptr->name, chptr->chname);
                 break;
             }
             else
-            {       
+            {       */
                 if((prelen + (mbuf - morig) + pidx + 1) > REALMODEBUFLEN)
                     break;
              
@@ -2636,7 +2636,7 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
                     chptr->mode.mode|=MODE_AUDITORIUM;
                 else
                     chptr->mode.mode&=~MODE_AUDITORIUM;
-            }
+//            }
             *mbuf++='A';
             nmodes++;
             break;

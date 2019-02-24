@@ -126,7 +126,7 @@
  */
 #define HIDEULINEDSERVS 1
 
-#define THROTTLE_ENABLE /* enable throttling, see below */
+#undef THROTTLE_ENABLE /* enable throttling, see below */
 
 /*
  * RWHO_PROBABILITY
@@ -496,7 +496,7 @@
  * If not defined, everything below in the oper hiding section must be 
  * undefined.
  */
-#undef ALLOW_HIDDEN_OPERS
+#define ALLOW_HIDDEN_OPERS
 
 /*
  * DEFAULT_MASKED_HIDDEN
@@ -504,7 +504,7 @@
  * Makes all your opers that hostmasked +I (hidden) by default
  * ALLOW_HIDDEN_OPERS must be defined with this enabled.
  */
-#undef DEFAULT_MASKED_HIDDEN
+#define DEFAULT_MASKED_HIDDEN
 
 /*
  * ALL_OPERS_HIDDEN
@@ -513,7 +513,7 @@
  * ALLOW_HIDDEN_OPERS must be defined with this enabled.
  * DEFAULT_MASKED_HIDDEN is reccommended with this enabled.
  */
-#undef ALL_OPERS_HIDDEN
+#define ALL_OPERS_HIDDEN
 
 /*
  * FORCE_OPERS_HIDDEN
@@ -533,7 +533,7 @@
  * Every other hidden option in the oper hiding section must be 
  * defined as well.
  */
-#undef FORCE_EVERYONE_HIDDEN
+#define FORCE_EVERYONE_HIDDEN
 
 /* 
  * Show these for hidden opers, self explanatory
