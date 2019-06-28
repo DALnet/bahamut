@@ -3058,7 +3058,7 @@ int m_oper(aClient *cptr, aClient *sptr, int parc, char *parv[])
         throttle_remove(oper_ip);
         sendto_ops("%s (%s!%s@%s) is now operator (%c)", aoper->nick,
                    sptr->name, sptr->user->username, sptr->sockhost,
-                   IsOper(sptr) ? 'O' : 'o');
+                   IsOper(sptr) ? 'o' : 'O');
         send_umode_out(cptr, sptr, old);
         send_rplisupportoper(sptr);
         sendto_one(sptr, rpl_str(RPL_YOUREOPER), me.name, parv[0]);
