@@ -2432,43 +2432,36 @@ m_quit(aClient *cptr, aClient *sptr, int parc, char *parv[])
         strcpy(comment, "Quit: ");
         strncpy(comment + 6, reason, TOPICLEN - 6); 
         comment[TOPICLEN] = 0;
-#ifdef SPAMFILTER
         if(IsPerson(sptr))
         {
-            if((blocked = check_sf(sptr, reason, "quit", SF_CMD_QUIT, sptr->name)))
+#ifdef SPAMFILTER
+            blocked = check_sf(sptr, reason, "quit", SF_CMD_QUIT, sptr->name);
+#endif
+            for(lp = sptr->user->channel; lp; lp = lpn)
             {
-                for(lp = sptr->user->channel; lp; lp = lpn)
+                lpn = lp->next;
+                chptr = lp->value.chptr;
+#ifdef SPAMFILTER
+                if(blocked && !(chptr->mode.mode & MODE_PRIVACY))
                 {
-                    lpn = lp->next;
-                    chptr = lp->value.chptr;
-                    if(!(chptr->mode.mode & MODE_PRIVACY))
-                    {
-                        sendto_serv_butone(cptr, ":%s PART %s", parv[0], chptr->chname);
-                        sendto_channel_butserv(chptr, sptr, ":%s PART %s", parv[0], chptr->chname);
-                        remove_user_from_channel(sptr, chptr);
-                    }
+                    sendto_serv_butone(cptr, ":%s PART %s", parv[0], chptr->chname);
+                    sendto_channel_butserv(chptr, sptr, ":%s PART %s", parv[0], chptr->chname);
+                    remove_user_from_channel(sptr, chptr);
+                    continue; /* If we already parted, there is no need to check the xflags... -Kobi. */
                 }
-            }
-            else
-            {
-                for(lp = sptr->user->channel; lp; lp = lpn)
+#endif
+                if((chptr->xflags & XFLAG_NO_QUIT_MSG) && !is_xflags_exempted(sptr,chptr))
                 {
-                    lpn = lp->next;
-                    chptr = lp->value.chptr;
-                    if((chptr->xflags & XFLAG_NO_QUIT_MSG) && !is_xflags_exempted(sptr,chptr))
-                    {
-                        if(chptr->xflags & XFLAG_USER_VERBOSE)
-                            verbose_to_relaychan(cptr, chptr, "quit_msg", comment);
-                        if(chptr->xflags & XFLAG_OPER_VERBOSE)
-                            verbose_to_opers(cptr, chptr, "quit_msg", comment);
-                        sendto_serv_butone(cptr, ":%s PART %s", parv[0], chptr->chname);
-                        sendto_channel_butserv(chptr, sptr, ":%s PART %s", parv[0], chptr->chname);
-                        remove_user_from_channel(sptr, chptr);
-                    }
+                    if(chptr->xflags & XFLAG_USER_VERBOSE)
+                        verbose_to_relaychan(cptr, chptr, "quit_msg", comment);
+                    if(chptr->xflags & XFLAG_OPER_VERBOSE)
+                        verbose_to_opers(cptr, chptr, "quit_msg", comment);
+                    sendto_serv_butone(cptr, ":%s PART %s", parv[0], chptr->chname);
+                    sendto_channel_butserv(chptr, sptr, ":%s PART %s", parv[0], chptr->chname);
+                    remove_user_from_channel(sptr, chptr);
                 }
             }
         }
-#endif
 
         return exit_client(cptr, sptr, sptr, comment);
     }
