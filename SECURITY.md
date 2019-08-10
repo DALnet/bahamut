@@ -12,4 +12,4 @@ currently being supported with security updates.
 
 ## Reporting a Vulnerability
 
-Please report all security concerns or vulnerabilities to dalnet-src@dal.net
+Please report all security concerns or vulnerabilities to coders@dal.net
