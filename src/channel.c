@@ -126,9 +126,9 @@ msg_has_ctrls(char *msg)
         if (*c == 1)
             continue;
 
-		/* tab */
-		if (*c == 9)
-			continue;
+        /* tab */
+        if (*c == 9)
+            continue;
 
         /* escape */
         if (*c == 27)
