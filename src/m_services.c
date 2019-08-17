@@ -1117,9 +1117,9 @@ int m_aj(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
     /* Pass it to all the other servers... */
     if(parc>4)
-        sendto_serv_butone(cptr, ":%s AJ %s %ld %s %ld", sptr->name, fnick, nickts, chptr->chname, chptr->channelts);
+        sendto_serv_butone(cptr, ":%s AJ %s %ld %s %s", sptr->name, fnick, nickts, parv[3], parv[4]);
     else
-        sendto_serv_butone(cptr, ":%s AJ %s %ld %s", sptr->name, fnick, nickts, chptr->chname);
+        sendto_serv_butone(cptr, ":%s AJ %s %ld %s", sptr->name, fnick, nickts, parv[3]);
 
     return 0;
 }
