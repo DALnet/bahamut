@@ -4010,7 +4010,11 @@ int m_topic(aClient *cptr, aClient *sptr, int parc, char *parv[])
             return 0;
         }
 
+#ifdef USER_HOSTMASKING
+        tnick = make_nick_user_host(sptr->name, sptr->user->username, sptr->user->mhost);
+#else
         tnick = make_nick_user_host(sptr->name, sptr->user->username, sptr->user->host);
+#endif
     }
     else
     {
