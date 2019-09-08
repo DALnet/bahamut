@@ -494,17 +494,17 @@ void stripcolors(char new[512], char *org)
         {
             // Color codes: 1-2 digits, then optionally followed by a comma and an additional 1-2 digits
             org++;
-            if(*org && IsDigit(*org))
+            if(IsDigit(*org))
             {
                 org++;
-                if(*org && IsDigit(*org))
+                if(IsDigit(*org))
                 {
                     org++;
                 }
                 if(*org && *org == ',' && IsDigit(*(org + 1)))
                 {
                     org = org + 2;
-                    if(*org && IsDigit(*org))
+                    if(IsDigit(*org))
                     {
                         org++;
                     }
@@ -532,17 +532,17 @@ void stripall(char new[512], char *org)
         {
             // Color codes: 1-2 digits, then optionally followed by a comma and an additional 1-2 digits
             org++;
-            if(*org && IsDigit(*org))
+            if(IsDigit(*org))
             {
                 org++;
-                if(*org && IsDigit(*org))
+                if(IsDigit(*org))
                 {
                     org++;
                 }
                 if(*org && *org == ',' && IsDigit(*(org + 1)))
                 {
                     org = org + 2;
-                    if(*org && IsDigit(*org))
+                    if(IsDigit(*org))
                     {
                         org++;
                     }
