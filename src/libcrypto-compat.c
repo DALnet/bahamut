@@ -7,6 +7,8 @@
  * https://www.openssl.org/source/license.html
  */
 
+#ifdef USE_SSL
+
 #include "struct.h"
 
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
@@ -87,3 +89,5 @@ int DH_set_length(DH *dh, long length)
 }
 
 #endif /* OPENSSL_VERSION_NUMBER */
+
+#endif /* USE_SSL */
