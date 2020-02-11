@@ -1,6 +1,8 @@
 #ifndef LIBCRYPTO_COMPAT_H
 #define LIBCRYPTO_COMPAT_H
 
+#ifdef USE_SSL
+
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
 
 #include <openssl/dh.h>
@@ -12,5 +14,7 @@ int DH_set0_key(DH *dh, BIGNUM *pub_key, BIGNUM *priv_key);
 int DH_set_length(DH *dh, long length);
 
 #endif /* OPENSSL_VERSION_NUMBER */
+
+#endif /* USE_SSL */
 
 #endif /* LIBCRYPTO_COMPAT_H */
