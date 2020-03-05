@@ -494,27 +494,21 @@ void stripcolors(char new[512], char *org)
         {
             // Color codes: 1-2 digits, then optionally followed by a comma and an additional 1-2 digits
             org++;
-            if(IsDigit(*org))
+            if(*org && IsDigit(*org))
             {
                 org++;
-                if(IsDigit(*org))
-                {
+                if(*org && IsDigit(*org))
                     org++;
-                }
                 if(*org && *org == ',' && IsDigit(*(org + 1)))
                 {
                     org = org + 2;
-                    if(IsDigit(*org))
-                    {
+                    if(*org && IsDigit(*org))
                         org++;
-                    }
                 }
             }
         }
         if(*org < 32)
-        {
             continue;
-        }
         new[len++] = *org;
     }
     new[len] = '\0';
@@ -532,20 +526,16 @@ void stripall(char new[512], char *org)
         {
             // Color codes: 1-2 digits, then optionally followed by a comma and an additional 1-2 digits
             org++;
-            if(IsDigit(*org))
+            if(*org && IsDigit(*org))
             {
                 org++;
-                if(IsDigit(*org))
-                {
+                if(*org && IsDigit(*org))
                     org++;
-                }
                 if(*org && *org == ',' && IsDigit(*(org + 1)))
                 {
                     org = org + 2;
-                    if(IsDigit(*org))
-                    {
+                    if(*org && IsDigit(*org))
                         org++;
-                    }
                 }
             }
         }
