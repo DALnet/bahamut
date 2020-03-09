@@ -75,7 +75,7 @@ void build_rplcache(void)
 #ifdef USE_HALFOPS
                "PREFIX=(ohv)@%%%%+ STATUSMSG=@%%%%+",
 #else
-               "PREFIX=(ohv)@+ STATUSMSG=@+",
+               "PREFIX=(ov)@+ STATUSMSG=@+",
 #endif
                Network_Name, MAXBANS, maxchannelsperuser, CHANNELLEN,
                TOPICLEN, NICKLEN, TOPICLEN, MAXMODEPARAMSUSER,
