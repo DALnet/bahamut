@@ -16,7 +16,7 @@ jobs:
     - name: install dependencies
       run: sudo apt-get install autoconf automake libtool check libssl-dev shtool
     - name: autotools
-      run: automake --add-missing -f; autoreconf -vfi; exit 0" > autogen.sh && chmod +x autogen.sh
+      run: automake --add-missing -f; autoreconf -vfi; exit 0 > autogen.sh && chmod +x autogen.sh
     - name: autogen
       run: ./autogen.sh
     - name: configure
