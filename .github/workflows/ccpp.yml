@@ -1,0 +1,25 @@
+name: C/C++ CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: install dependencies
+      run: sudo apt-get install autoconf automake libtool check libssl-dev shtool
+    - name: autotools
+      run: automake --add-missing -f; autoreconf -vfi; exit 0" > autogen.sh && chmod +x autogen.sh
+    - name: autogen
+      run: ./autogen.sh
+    - name: configure
+      run: ./configure
+    - name: make
+      run: make
