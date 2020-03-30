@@ -15,10 +15,10 @@ jobs:
     - uses: actions/checkout@v2
     - name: install dependencies
       run: sudo apt-get install autoconf automake libtool check libssl-dev shtool
-    - name: autotools
-      run: automake --add-missing -f; autoreconf -vfi; exit 0 > autogen.sh && chmod +x autogen.sh
-    - name: autogen
-      run: ./autogen.sh
+    - name: automake
+      run: automake --add-missing -f; 
+    - name: autoreconf
+      run: autoreconf -vfi
     - name: configure
       run: ./configure
     - name: make
