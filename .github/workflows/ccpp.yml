@@ -15,6 +15,14 @@ jobs:
     - uses: actions/checkout@v2
     - name: install dependencies
       run: sudo apt-get install autoconf automake libtool check libssl-dev shtool
+    - name: libtoolize
+      run: libtoolize --force
+    - name: aclocal
+      run: aclocal
+    - name: autoheader
+      run: autoheader
+    - name: automake
+      run: automake --force-missing --add-missing
     - name: autoreconf
       run: autoreconf -vfi
     - name: configure
