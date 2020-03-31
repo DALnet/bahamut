@@ -2134,7 +2134,7 @@ m_whois(aClient *cptr, aClient *sptr, int parc, char *parv[])
                        user->real_oper_ip);
 #endif
 #endif
-        mlen = strlen(me.name) + strlen(parv[0]) + 8 + strlen(name);
+        mlen = strlen(me.name) + strlen(parv[0]) + 9 + strlen(name);
         for (len = 0, *buf = '\0', lp = user->channel; lp; lp = lp->next)
         {
             chptr = lp->value.chptr;
