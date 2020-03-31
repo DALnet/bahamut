@@ -1607,13 +1607,12 @@ m_message(aClient *cptr, aClient *sptr, int parc, char *parv[], int notice)
 
     if (ismine)
     {
-        /* if squelched or spamming, allow only messages to self */
-        /* if warn squelched, allow messages to the services and stats addresses */
+        /* if squelched or spamming, allow only messages to self or to the services and stats addresses */
         if ((IsSquelch(sptr)
 #if defined(ANTI_SPAMBOT) && !defined(ANTI_SPAMBOT_WARN_ONLY)
             || (sptr->join_leave_count >= MAX_JOIN_LEAVE_COUNT)
 #endif
-            ) && mycmp(parv[0], parv[1]) && ((IsWSquelch(sptr) && !is_aliastab_recipient(parv[1])) || !IsWSquelch(sptr)))
+            ) && mycmp(parv[0], parv[1]) && !is_aliastab_recipient(parv[1]))
         {
             if (IsWSquelch(sptr) && !notice)
                 sendto_one(sptr, ":%s NOTICE %s :You are currently squelched."
