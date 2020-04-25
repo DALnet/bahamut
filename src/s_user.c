@@ -1546,6 +1546,24 @@ send_msg_error(aClient *sptr, char *parv[], char *nick, int ret, aChannel *chptr
 }
 
 /*
+ * Check if the recipient we are sending to is one of the services or stats addresses.
+ */
+static int is_aliastab_recipient(char *recipient)
+{
+    AliasInfo *ai;
+    char full_target[NICKLEN + HOSTLEN + 2];
+
+    for(ai = aliastab; ai->nick; ai++)
+    {
+        ircsprintf(full_target, "%s@%s", ai->nick, ai->server);
+        if(!mycmp(recipient, full_target))
+            return 1;
+    }
+
+    return 0;
+}
+
+/*
  * m_message (used in m_private() and m_notice()) the general
  * function to deliver MSG's between users/channels
  * 
@@ -1589,12 +1607,12 @@ m_message(aClient *cptr, aClient *sptr, int parc, char *parv[], int notice)
 
     if (ismine)
     {
-        /* if squelched or spamming, allow only messages to self */
+        /* if squelched or spamming, allow only messages to self or to the services and stats addresses */
         if ((IsSquelch(sptr)
 #if defined(ANTI_SPAMBOT) && !defined(ANTI_SPAMBOT_WARN_ONLY)
             || (sptr->join_leave_count >= MAX_JOIN_LEAVE_COUNT)
 #endif
-            ) && mycmp(parv[0], parv[1]))
+            ) && mycmp(parv[0], parv[1]) && !is_aliastab_recipient(parv[1]))
         {
             if (IsWSquelch(sptr) && !notice)
                 sendto_one(sptr, ":%s NOTICE %s :You are currently squelched."
