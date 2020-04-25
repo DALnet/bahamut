@@ -23,7 +23,7 @@ Hollbrook Bunting (2):
     Added MAX_MSG_TIME XFLAG, sets a maximum amount of messages that can be sent to a channel in x seconds (PR 92)
     Add in MAX_MSG_TIME to DEFAULT for m_svsxcf (PR 101)
 
-Ryan Smith (6):
+Ryan Smith (10):
     Notify opers if the KILL flag was used on a spamfilter (PR 106)
     Hide user's real host during topic changes if hostmasked (PR 117)
     Fix our incorrect handling of IRC color code sequences (PR 118)
