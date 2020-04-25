@@ -1,3 +1,49 @@
+Changes for 2.1.5:
+------------------
+Kobi Shmueli (17):
+    Check for local openssl installation first & rpath it too (PR 90)
+    USE_SYSLOG: Include nick!user@host in SSL errors (PR 91)
+    Add IRCERR_SSL to irc_get_sockerr() function (PR 91)
+    Treat normal connection closes by SSL users as such (PR 91)
+    Added new EXEMPT_WEBIRC XFLAG to exempt webirc users (PR 96)
+    Add half-ops support (PR 97)
+    Small fix to spamfilter's IDs (PR 98)
+    Check for default install directories in the configure script (PR 99)
+    Don't show servers to non-opers if show_links isn't enabled (PR 100)
+    Add the list of required packages to INSTALL (PR 102)
+    Add missing names to doc/Bahamut-team (PR 102)
+    Change SVSUHM to support optional parameter to control umode +H (PR 95)
+    Add NO_LOCAL_CMODE_h define to disable local cmode +h/-h (PR 97)
+    Small fix to m_aj() for JOIN 0 (PR 104)
+    Fix for a potential bug on AJ where 0 (partall) argument is used (PR 112)
+    Fix a bug on QUIT where xflags weren't always checked (PR 113)
+    Improve user host-masking support for WHO & RWHO (PR 122)
+    
+Hollbrook Bunting (2):    
+    Added MAX_MSG_TIME XFLAG, sets a maximum amount of messages that can be sent to a channel in x seconds (PR 92)
+    Add in MAX_MSG_TIME to DEFAULT for m_svsxcf (PR 101)
+
+Ryan Smith (6):
+    Notify opers if the KILL flag was used on a spamfilter (PR 106)
+    Hide user's real host during topic changes if hostmasked (PR 117)
+    Fix our incorrect handling of IRC color code sequences (PR 118)
+    Update bahamut development credits with current team members (PR 119)
+    Fix SSL regression bug; only use libcrypto-compat code if SSL is enabled (thanks Colby Ross) (PR 120)
+    Add documentation for connect block "uflags" token (PR 121)
+    Add missing "P" to CHANMODES list (thanks, RuneB) (PR 125)
+    Fix /whois channel name truncation (thanks, brandon) (PR 126)
+    Allow squelched users to send messages to the services and stats addresses (PR 127)
+    Specify which channel the user cannot join (+R) or speak in (+M) (PR 128)
+    
+Emilio Escobar (1):    
+    Create SECURITY.md
+    
+Dimitri Pappas (1):
+    Add AUDITORIUM flag to CHANMODES to comply with RFC (PR 108)
+
+fidsah (1):
+    Spelling correction to rehash notification (PR 93)
+	
 Changes for 2.1.4:
 ------------------
 - typo fix (cptr --> sptr) that could lead to server crashes in some cases
