@@ -534,8 +534,8 @@ static char *replies[] =
     /* 475 ERR_BADCHANNELKEY */	":%s 475 %s %s :Cannot join channel (+k)",
     /* 476 ERR_BADCHANMASK */	":%s 476 %s %s :Bad Channel Mask",
     /* 477 ERR_NEEDREGGEDNICK */       ":%s 477 %s %s :You need to identify "
-                                       "to a registered nick to %s that "
-                                       "channel. For help with registering "
+                                       "to a registered nick to %s "
+                                       "%s. For help with registering "
                                        "your nickname, type \"/msg %s@%s help "
                                        "register\" or see %s",
     /* 478 ERR_BANLISTFULL */	":%s 478 %s %s %s :Channel %s list is full",

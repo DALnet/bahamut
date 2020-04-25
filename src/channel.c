@@ -2854,7 +2854,7 @@ static int can_join(aClient *sptr, aChannel *chptr, char *key)
 
         if (error==ERR_NEEDREGGEDNICK)
             sendto_one(sptr, getreply(ERR_NEEDREGGEDNICK), me.name, sptr->name,
-                       chptr->chname, "join", aliastab[AII_NS].nick,
+                       chptr->chname, "join", chptr->chname, aliastab[AII_NS].nick,
                        aliastab[AII_NS].server, NS_Register_URL);
         else
             sendto_one(sptr, getreply(error), me.name, sptr->name,

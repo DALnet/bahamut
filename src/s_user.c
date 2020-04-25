@@ -1535,7 +1535,7 @@ send_msg_error(aClient *sptr, char *parv[], char *nick, int ret, aChannel *chptr
     }
     else if(ret == ERR_NEEDREGGEDNICK)
         sendto_one(sptr, err_str(ERR_NEEDREGGEDNICK), me.name,
-                   parv[0], nick, "speak in", aliastab[AII_NS].nick,
+                   parv[0], nick, "speak in", chptr->chname, aliastab[AII_NS].nick,
                    aliastab[AII_NS].server, NS_Register_URL);
     else if(ret == ERR_MAXMSGSENT)
         sendto_one(sptr, err_str(ERR_MAXMSGSENT), me.name,
