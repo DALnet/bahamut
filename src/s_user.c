@@ -2151,8 +2151,8 @@ m_whois(aClient *cptr, aClient *sptr, int parc, char *parv[])
                        name, user->real_oper_username, user->real_oper_host,
                        user->real_oper_ip);
 #endif
-#endif          
-        mlen = strlen(me.name) + strlen(parv[0]) + 6 + strlen(name);
+#endif
+        mlen = strlen(me.name) + strlen(parv[0]) + 9 + strlen(name);
         for (len = 0, *buf = '\0', lp = user->channel; lp; lp = lp->next)
         {
             chptr = lp->value.chptr;
@@ -2161,8 +2161,7 @@ m_whois(aClient *cptr, aClient *sptr, int parc, char *parv[])
             {
                 if (len + strlen(chptr->chname) > (size_t) BUFSIZE - 4 - mlen)
                 {
-                    sendto_one(sptr, ":%s %d %s %s :%s", me.name, 
-                               RPL_WHOISCHANNELS, parv[0], name, buf);
+                    sendto_one(sptr, rpl_str(RPL_WHOISCHANNELS), me.name, parv[0], name, buf);
                     *buf = '\0';
                     len = 0;
                 }
