@@ -1551,7 +1551,7 @@ send_msg_error(aClient *sptr, char *parv[], char *nick, int ret, aChannel *chptr
 static int is_aliastab_recipient(char *recipient)
 {
     AliasInfo *ai;
-    char full_target[USERLEN + HOSTLEN + 2];
+    char full_target[NICKLEN + HOSTLEN + 2];
 
     for(ai = aliastab; ai->nick; ai++)
     {
