@@ -488,15 +488,26 @@ void stripcolors(char new[512], char *org)
 {
     int len = 0;
 
-    for(; (*org && len<512); org++)
+    for(; (*org && len < 512); org++)
     {
-        if(*org=='\003')
+        if(*org == '\003')
         {
+            // Color codes: 1-2 digits, then optionally followed by a comma and an additional 1-2 digits
             org++;
-            while(IsDigit(*org) || *org==',')
+            if(*org && IsDigit(*org))
+            {
                 org++;
+                if(*org && IsDigit(*org))
+                    org++;
+                if(*org && *org == ',' && IsDigit(*(org + 1)))
+                {
+                    org = org + 2;
+                    if(*org && IsDigit(*org))
+                        org++;
+                }
+            }
         }
-        if(*org<32)
+        if(*org < 32)
             continue;
         new[len++] = *org;
     }
@@ -511,11 +522,22 @@ void stripall(char new[512], char *org)
 
     for(; (*org && len<512); org++)
     {
-        if(*org=='\003')
+        if(*org == '\003')
         {
+            // Color codes: 1-2 digits, then optionally followed by a comma and an additional 1-2 digits
             org++;
-            while(IsDigit(*org) || *org==',')
+            if(*org && IsDigit(*org))
+            {
                 org++;
+                if(*org && IsDigit(*org))
+                    org++;
+                if(*org && *org == ',' && IsDigit(*(org + 1)))
+                {
+                    org = org + 2;
+                    if(*org && IsDigit(*org))
+                        org++;
+                }
+            }
         }
         if(!fstripall(*org))
             continue;

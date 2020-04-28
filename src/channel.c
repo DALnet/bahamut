@@ -34,9 +34,9 @@ int         server_was_split = YES;
 aChannel   *channel = NullChn;
 
 #ifdef USER_HOSTMASKING
-#define GET_USER_HOST IsUmodeH(cptr)?cptr->user->mhost:cptr->user->host
+#define GET_USER_HOST(cptr) IsUmodeH(cptr)?cptr->user->mhost:cptr->user->host
 #else
-#define GET_USER_HOST cptr->user->host
+#define GET_USER_HOST(cptr) cptr->user->host
 #endif
 
 #ifdef INVITE_LISTS
@@ -283,9 +283,9 @@ int add_exempt_id(aClient* cptr, aChannel* chptr, char* exempt_id)
     {
         exempt->who = (char *) MyMalloc(strlen(cptr->name) +
                                      strlen(cptr->user->username) +
-                                     strlen(GET_USER_HOST) + 3);
+                                     strlen(GET_USER_HOST(cptr)) + 3);
         (void) ircsprintf(exempt->who, "%s!%s@%s",
-                          cptr->name, cptr->user->username, GET_USER_HOST);
+                          cptr->name, cptr->user->username, GET_USER_HOST(cptr));
     }
     else
     {
@@ -371,9 +371,9 @@ int add_invite_id(aClient* cptr, aChannel* chptr, char* invite_id)
     {
         invite->who = (char *) MyMalloc(strlen(cptr->name) +
                                      strlen(cptr->user->username) +
-                                     strlen(GET_USER_HOST) + 3);
+                                     strlen(GET_USER_HOST(cptr)) + 3);
         (void) ircsprintf(invite->who, "%s!%s@%s",
-                          cptr->name, cptr->user->username, GET_USER_HOST);
+                          cptr->name, cptr->user->username, GET_USER_HOST(cptr));
     }
     else
     {
@@ -477,9 +477,9 @@ static int add_banid(aClient *cptr, aChannel *chptr, char *banid)
     {
         ban->who = (char *) MyMalloc(strlen(cptr->name) +
                                      strlen(cptr->user->username) +
-                                     strlen(GET_USER_HOST) + 3);
+                                     strlen(GET_USER_HOST(cptr)) + 3);
         (void) ircsprintf(ban->who, "%s!%s@%s",
-                          cptr->name, cptr->user->username, GET_USER_HOST);
+                          cptr->name, cptr->user->username, GET_USER_HOST(cptr));
     }
     else
     {
@@ -2854,7 +2854,7 @@ static int can_join(aClient *sptr, aChannel *chptr, char *key)
 
         if (error==ERR_NEEDREGGEDNICK)
             sendto_one(sptr, getreply(ERR_NEEDREGGEDNICK), me.name, sptr->name,
-                       chptr->chname, "join", aliastab[AII_NS].nick,
+                       chptr->chname, "join", chptr->chname, aliastab[AII_NS].nick,
                        aliastab[AII_NS].server, NS_Register_URL);
         else
             sendto_one(sptr, getreply(error), me.name, sptr->name,
@@ -4010,7 +4010,7 @@ int m_topic(aClient *cptr, aClient *sptr, int parc, char *parv[])
             return 0;
         }
 
-        tnick = make_nick_user_host(sptr->name, sptr->user->username, sptr->user->host);
+        tnick = make_nick_user_host(sptr->name, sptr->user->username, GET_USER_HOST(sptr));
     }
     else
     {

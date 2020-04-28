@@ -75,7 +75,7 @@ void build_rplcache(void)
 #ifdef USE_HALFOPS
                "PREFIX=(ohv)@%%%%+ STATUSMSG=@%%%%+",
 #else
-               "PREFIX=(ohv)@+ STATUSMSG=@+",
+               "PREFIX=(ov)@+ STATUSMSG=@+",
 #endif
                Network_Name, MAXBANS, maxchannelsperuser, CHANNELLEN,
                TOPICLEN, NICKLEN, TOPICLEN, MAXMODEPARAMSUSER,
@@ -106,6 +106,9 @@ void build_rplcache(void)
     s += ircsprintf(s, ",k,jl,ci");
 #ifdef USE_CHANMODE_L
     *s++ = 'L';
+#endif
+#ifdef SPAMFILTER
+    *s++ = 'P';
 #endif
     s += ircsprintf(s, "AmMnOprRsSt MAXLIST=b:%i", MAXBANS);
 #ifdef EXEMPT_LISTS

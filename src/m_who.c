@@ -45,7 +45,11 @@ int build_searchopts(aClient *sptr, int parc, char *parv[])
 {
   static char *who_oper_help[] =
   {
-      "/WHO [+|-][acghilmnstuCM] [args]",
+#ifdef USER_HOSTMASKING
+      "/WHO [+|-][acghilmnstuCHIMR] [args]",
+#else
+      "/WHO [+|-][acghilmnstuCIM] [args]",
+#endif
       "Flags are specified like channel modes,",
       "The flags cghimnsu all have arguments",
       "Flags are set to a positive check by +, a negative check by -",
@@ -74,6 +78,7 @@ int build_searchopts(aClient *sptr, int parc, char *parv[])
       "Flag M: check for user in channels I am a member of",
       "Flag I: always show IPs instead of hosts",
 #ifdef USER_HOSTMASKING
+      "Flag H: show the masked host even if the user's host is not masked (umode -H)",
       "Flag R: show the real host even if the user's host is masked (umode +H)",
 #endif
       NULL
@@ -350,6 +355,14 @@ int build_searchopts(aClient *sptr, int parc, char *parv[])
           wsopts.ip_show = change;
           break; 
 #ifdef USER_HOSTMASKING
+      case 'H':
+          if(!IsAnOper(sptr))
+          {
+              sendto_one(sptr, getreply(ERR_NOPRIVILEGES), me.name, parv[0]);
+              return 0;
+          }
+          wsopts.maskhost_show = change;
+          break;
       case 'R':
           if(!IsAnOper(sptr))
           {
@@ -615,10 +628,27 @@ int chk_who(aClient *ac, aClient *sptr, int showall)
 	   (!wsopts.user_plus && !uchkfn(wsopts.user, ac->user->username)))
 	    return 0;
 
-    if(wsopts.nick!=NULL)
-	if((wsopts.nick_plus && nchkfn(wsopts.nick, ac->name)) ||
-	   (!wsopts.nick_plus && !nchkfn(wsopts.nick, ac->name)))
-	    return 0;
+    if(wsopts.host!=NULL)
+    {
+#ifdef USER_HOSTMASKING
+        if(IsAnOper(sptr))
+        {
+	    if((wsopts.host_plus && hchkfn(wsopts.host, ac->user->host) && hchkfn(wsopts.host, ac->user->mhost)) ||
+	       (!wsopts.host_plus && (!hchkfn(wsopts.host, ac->user->host) || !hchkfn(wsopts.host, ac->user->mhost))))
+	        return 0;
+        }
+        else
+        {
+	    if((wsopts.host_plus && hchkfn(wsopts.host, IsUmodeH(ac)?ac->user->mhost:ac->user->host)) ||
+	       (!wsopts.host_plus && !hchkfn(wsopts.host, IsUmodeH(ac)?ac->user->mhost:ac->user->host)))
+	        return 0;
+        }
+#else
+        if((wsopts.host_plus && hchkfn(wsopts.host, ac->user->host)) ||
+           (!wsopts.host_plus && !hchkfn(wsopts.host, ac->user->host)))
+            return 0;
+#endif
+    }
     
     if(wsopts.host!=NULL)
 	if((wsopts.host_plus && hchkfn(wsopts.host, ac->user->host)) ||
@@ -642,7 +672,7 @@ int chk_who(aClient *ac, aClient *sptr, int showall)
     /*
      * For the below options, a value of two means '+', 
      * a value of 1 means '-', and a value of 0 means
-     * not speficied. 
+     * not specified.
      */
 
     if(wsopts.ts_value == 2 && /* +t */
@@ -697,7 +727,7 @@ inline char *first_visible_channel(aClient *cptr, aClient *sptr)
 #define WHO_HOPCOUNT(s, a) ( ( (IsULine((a)) || IsUmodeI((a))) && !IsAnOper((s)) ) ? 0 : a->hopcount)
 #define WHO_SERVER(s ,a) ((IsUmodeI((a)) && !IsAnOper((s))) ? HIDDEN_SERVER_NAME : a->user->server)
 #ifdef USER_HOSTMASKING
-#define WHO_HOST(s, a) ((wsopts.ip_show) ? (a)->hostip : (IsUmodeH((a)) && !wsopts.realhost_show) ? (a)->user->mhost : (a)->user->host)
+#define WHO_HOST(s, a) ((wsopts.ip_show) ? (a)->hostip : ((IsUmodeH((a)) && !wsopts.realhost_show) || wsopts.maskhost_show) ? (a)->user->mhost : (a)->user->host)
 #else
 #define WHO_HOST(s, a) ((wsopts.ip_show) ? (a)->hostip : (a)->user->host)
 #endif
