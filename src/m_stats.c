@@ -778,13 +778,13 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
         case 'N':
         case 'n':
             sendto_one(sptr, rpl_str(RPL_STATSCOUNT), me.name, parv[0],
-                        "User Connects Today: ", Count.today);
+                        "User Connects Today:", Count.today);
             sendto_one(sptr, rpl_str(RPL_STATSCOUNT), me.name, parv[0],
-                        "User Connects past week: ", Count.weekly);
+                        "User Connects past week:", Count.weekly);
             sendto_one(sptr, rpl_str(RPL_STATSCOUNT), me.name, parv[0],
-                        "User Connects past month: ", Count.monthly);
+                        "User Connects past month:", Count.monthly);
             sendto_one(sptr, rpl_str(RPL_STATSCOUNT), me.name, parv[0],
-                        "User Connects past year: ", Count.yearly);
+                        "User Connects past year:", Count.yearly);
             break;
         case 'o':
         case 'O':
