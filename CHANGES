@@ -1,6 +1,6 @@
 Changes for 2.1.5:
 ------------------
-Kobi Shmueli (17):
+Kobi Shmueli (18):
     Check for local openssl installation first & rpath it too (PR 90)
     USE_SYSLOG: Include nick!user@host in SSL errors (PR 91)
     Add IRCERR_SSL to irc_get_sockerr() function (PR 91)
