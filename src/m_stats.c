@@ -849,7 +849,7 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
             show_opers(sptr, parv[0]);
             break;
         case 'P':
-            if(IsAnOper(sptr))
+            if(IsAnOper(sptr) || IsULine(sptr))
                 show_ports(sptr, parv[0]);
             else
                 sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name,  parv[0]);
