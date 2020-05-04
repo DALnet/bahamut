@@ -226,7 +226,7 @@ show_ports(aClient *cptr, char *name)
                        name, tmp->address?tmp->address:"*", tmp->allow?tmp->allow:"*",
                        tmp->port, pflagtotext(tmp->flags), tmp->lstn->clients);
             else
-                sendto_one(cptr,":%s %d %s :- - %i %s %i", me.name, RPL_STATSDEBUG,
+                sendto_one(cptr,":%s %d %s :<masked> <masked> %i %s %i", me.name, RPL_STATSDEBUG,
                        name, tmp->port, pflagtotext(tmp->flags), tmp->lstn->clients);
             j++;
         }
