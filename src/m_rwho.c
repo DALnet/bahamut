@@ -63,6 +63,7 @@ extern Link *find_channel_link(Link *, aChannel *);
 #define RWM_NPROB   0x0800
 #define RWM_UPROB   0x1000
 #define RWM_GPROB   0x2000
+#define RWM_WEBIRC  0x4000
 
 /* output options */
 #define RWO_NICK    0x0001
@@ -753,6 +754,15 @@ static int rwho_parseopts(aClient *sptr, int parc, char *parv[])
                 rwho_opts.spat[spatidx++] = RWHO_USER;
                 arg++;
                 break;
+
+            case 'w':
+                if (rwho_opts.check[!neg] & RWM_WEBIRC)
+                {
+                    rwho_synerr(sptr, "cannot use both +w and -w in match");
+                    return 0;
+                }
+                rwho_opts.check[neg] |= RWM_WEBIRC;
+                break;
                 
             default:
                 ircsprintf(scratch, "unknown match flag %c", *sfl);
@@ -971,6 +981,11 @@ static int rwho_match(aClient *cptr, int *failcode, aClient **failclient)
 	else
 	    return 0;
     }
+
+    if ((rwho_opts.check[0] & RWM_WEBIRC) && !cptr->webirc_ip)
+        return 0;
+    else if ((rwho_opts.check[1] & RWM_WEBIRC) && cptr->webirc_ip)
+        return 0;
 
     if (rwho_opts.check[1] & RWM_IP)
     {
