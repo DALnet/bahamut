@@ -117,6 +117,7 @@ static const char *rwho_help[] = {
     "  s <server>    - user is (not) on server <server>",
     "  t <seconds>   - nick has been in use for N or more (less) seconds",
     "  T <type>      - user is (not) type <type> as set by services",
+    "  w             - user is (not) a webirc client",
     "  C             - for compatibility with WHO",
     "  I             - for compatibility with WHO",
     "The following match flags are compiled into a single regular expression",
