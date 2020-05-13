@@ -1,0 +1,13 @@
+name: Greetings
+
+on: [pull_request, issues]
+
+jobs:
+  greeting:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/first-interaction@v1
+      with:
+        repo-token: ${{ secrets.GITHUB_TOKEN }}
+        issue-message: 'Welcome to the DALnet coders team! Please label the issue appropriately. If there are no projects (new releases) available please ping us directly in #coders'' first issue'
+        pr-message: 'Thanks for submiting your first pull request! Please make sure to ask for at least 2 reviewers to approve your proposed changes and that your PR is tagged to an issue that has a release associated with it'' first pr'
