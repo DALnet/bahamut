@@ -1,6 +1,7 @@
 #ifndef LIBCRYPTO_COMPAT_H
 #define LIBCRYPTO_COMPAT_H
 
+#include <struct.h>
 #ifdef USE_SSL
 
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
