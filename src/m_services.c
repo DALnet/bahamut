@@ -1146,6 +1146,39 @@ int m_sjr(aClient *cptr, aClient *sptr, int parc, char *parv[], AliasInfo *ai)
     return 0;
 }
 
+/* m_svsctrl - Lets services control join requests (will be extended to support other settings in the future)
+ * parv[0] - sender
+ * parv[1] - setting
+ * parv[2] - value
+ */
+int m_svsctrl(aClient *cptr, aClient *sptr, int parc, char *parv[])
+{
+    if(!IsULine(sptr) || parc<4)
+        return 0;
+
+    if(parc==4 && (hunt_server(cptr, sptr, ":%s SVSCTRL %s %s :%s", 1, parc, parv) != HUNTED_ISME))
+        return 0;
+    if(parc==5 && (hunt_server(cptr, sptr, ":%s SVSCTRL %s %s %s :%s", 1, parc, parv) != HUNTED_ISME))
+        return 0;
+    if(parc==6 && (hunt_server(cptr, sptr, ":%s SVSCTRL %s %s %s %s :%s", 1, parc, parv) != HUNTED_ISME))
+        return 0;
+    if(parc==7 && (hunt_server(cptr, sptr, ":%s SVSCTRL %s %s %s %s %s :%s", 1, parc, parv) != HUNTED_ISME))
+        return 0;
+    if(parc==8 && (hunt_server(cptr, sptr, ":%s SVSCTRL %s %s %s %s %s %s :%s", 1, parc, parv) != HUNTED_ISME))
+        return 0;
+    if(parc==9 && (hunt_server(cptr, sptr, ":%s SVSCTRL %s %s %s %s %s %s %s :%s", 1, parc, parv) != HUNTED_ISME))
+        return 0;
+    if(parc!=4 && parc!=5 && parc!=6 && parc!=7 && parc!=8 && parc!=9) return 0; /* Just in case... */
+
+    if(!mycmp(parv[2], "SJR"))
+    {
+        services_jr = atoi(parv[3]);
+        return 0;
+    }
+
+    return 0;
+}
+
 u_long
 memcount_m_services(MCm_services *mc)
 {

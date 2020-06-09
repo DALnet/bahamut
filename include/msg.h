@@ -238,6 +238,7 @@ extern int m_sf(aClient *, aClient *, int, char **);
 extern int m_aj(aClient *, aClient *, int, char **);
 extern int m_sjr(aClient *, aClient *, int, char **, AliasInfo *);
 extern int m_svsxcf(aClient *, aClient *, int, char **);
+extern int m_svsctrl(aClient *, aClient *, int, char **);
 
 /* aliastab indexes */
 #define AII_NS  0
@@ -374,6 +375,7 @@ struct Message msgtab[] =
     {"SPAMOPS",    m_spamops,  MAXPARA, 0,        0},
     {"SF",         m_sf,       MAXPARA, 0,        0},
     {"SVSXCF",     m_svsxcf,   MAXPARA, 0,        0},
+    {"SVSCTRL",    m_svsctrl,  MAXPARA, 0,        0},
     {"AJ",         m_aj,       MAXPARA, 0,        0},
     {"SJR",        m_sjr,      MAXPARA, MF_ALIAS, AII_NS},
     {MSG_WEBIRC,   m_webirc,   MAXPARA, MF_UNREG, 0},
