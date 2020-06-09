@@ -1,5 +1,6 @@
-Welcome to Bahamut!
+#Welcome to Bahamut!
 -------------------
+![Build status](https://github.com/DALnet/bahamut/workflows/C/C++%20CI/badge.svg)
 
 Please refer to the INSTALL file for help instructions on building and
 installing ircd.  The doc/ directory may also be of interest.
