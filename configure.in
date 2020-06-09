@@ -470,7 +470,7 @@ if test "X$cf_enable_openssl" != "Xno" ; then
     cf_enable_openssl="yes"
     encryption="enabled"
     AC_DEFINE(HAVE_ENCRYPTION_ON)
-    ENCRYPT_SRC="rc4.c dh.c"
+    ENCRYPT_SRC="rc4.c dh.c libcrypto-compat.c"
     AC_SUBST(ENCRYPT_SRC)
   else
     AC_MSG_RESULT(not found.  Please check your path.)

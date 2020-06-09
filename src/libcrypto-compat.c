@@ -7,9 +7,8 @@
  * https://www.openssl.org/source/license.html
  */
 
-#ifdef USE_SSL
-
 #include "struct.h"
+#ifdef USE_SSL
 
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
 
