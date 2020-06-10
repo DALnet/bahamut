@@ -102,7 +102,7 @@ do_server_estab(aClient *cptr)
     char *inpath = get_client_name(cptr, HIDEME);
 
     /*
-     * Incomming connections will have unknown status,
+     * Incoming connections have unknown status,
      * outbound connections have status of connecting
      */
     if (IsUnknown(cptr)) Count.unknown--;
