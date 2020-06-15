@@ -210,7 +210,7 @@ int build_searchopts(aClient *sptr, int parc, char *parv[])
       else
       {
 	  /* The argument could be either a hostname or a nickname. */
-	  if (strchr(parv[0], '.'))
+	  if (strchr(parv[0], '.') || strchr(parv[0], ':'))
 	  {
 	      wsopts.host_plus = 1;
 	      wsopts.host = parv[0];
