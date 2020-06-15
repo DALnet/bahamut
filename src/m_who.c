@@ -628,6 +628,11 @@ int chk_who(aClient *ac, aClient *sptr, int showall)
 	   (!wsopts.user_plus && !uchkfn(wsopts.user, ac->user->username)))
 	    return 0;
 
+    if(wsopts.nick!=NULL)
+        if((wsopts.nick_plus && nchkfn(wsopts.nick, ac->name)) ||
+           (!wsopts.nick_plus && !nchkfn(wsopts.nick, ac->name)))
+            return 0;
+
     if(wsopts.host!=NULL)
     {
 #ifdef USER_HOSTMASKING
