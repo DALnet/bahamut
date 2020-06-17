@@ -4,7 +4,7 @@ Ryan Smith (4):
      Fix broken /who +n due to bug introduced in 2.1.5 (PR #166)
      Increase default key size for SSL setup script (PR #159)
      Fix /stats n formatting (PR #132)
-     Fix spamfilter URL typo on reference.conf (PR #157)
+     Fix spamfilter URL typo on template.conf (PR #157)
 
 rasengan (3):
     Allow local operators to UMODE +F (PR #149)
