@@ -210,7 +210,7 @@ int build_searchopts(aClient *sptr, int parc, char *parv[])
       else
       {
 	  /* The argument could be either a hostname or a nickname. */
-	  if (strchr(parv[0], '.'))
+	  if (strchr(parv[0], '.') || strchr(parv[0], ':'))
 	  {
 	      wsopts.host_plus = 1;
 	      wsopts.host = parv[0];
@@ -627,6 +627,11 @@ int chk_who(aClient *ac, aClient *sptr, int showall)
 	if((wsopts.user_plus && uchkfn(wsopts.user, ac->user->username)) ||
 	   (!wsopts.user_plus && !uchkfn(wsopts.user, ac->user->username)))
 	    return 0;
+
+    if(wsopts.nick!=NULL)
+        if((wsopts.nick_plus && nchkfn(wsopts.nick, ac->name)) ||
+           (!wsopts.nick_plus && !nchkfn(wsopts.nick, ac->name)))
+            return 0;
 
     if(wsopts.host!=NULL)
     {
