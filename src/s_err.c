@@ -249,7 +249,7 @@ static char *replies[] =
     /* 223 */			":%s 223 %s %c %s * %s %d %d",
     /* 224 */			":%s 224 %s %c %s * %s %d %d",
     /* 225 RPL_STATSCLONE */	":%s 225 %s D %s %d %d %d",
-    /* 226 RPL_STATSCOUNT */	":%s 226 %s %s %l",
+    /* 226 RPL_STATSCOUNT */	":%s 226 %s %s %lu",
     /* 227 RPL_STATSGLINE */	":%s 227 %s %s * * %s %d :%s",
     /* 228 */	                NULL,
     /* 229 */	                NULL,

@@ -1,3 +1,16 @@
+Changes for 2.1.6:
+------------------
+Ryan Smith (4):
+     Fix broken /who +n due to bug introduced in 2.1.5 (PR #166)
+     Increase default key size for SSL setup script (PR #159)
+     Fix /stats n formatting (PR #132)
+     Fix spamfilter URL typo on template.conf (PR #157)
+
+rasengan (3):
+    Allow local operators to UMODE +F (PR #149)
+    Add WEBIRC information to reference.conf (PR #140)
+    Update reference.conf for local oper UMODE F (PR #163)
+
 Changes for 2.1.5:
 ------------------
 Kobi Shmueli (18):
@@ -19,8 +32,8 @@ Kobi Shmueli (18):
     Fix a bug on QUIT where xflags weren't always checked (PR 113)
     Improve user host-masking support for WHO & RWHO (PR 122)
     Add SVSCTRL command to let services control services join requests (PR 130)
-    
-Hollbrook Bunting (2):    
+
+Hollbrook Bunting (2):
     Added MAX_MSG_TIME XFLAG, sets a maximum amount of messages that can be sent to a channel in x seconds (PR 92)
     Add in MAX_MSG_TIME to DEFAULT for m_svsxcf (PR 101)
 
@@ -36,16 +49,16 @@ Ryan Smith (11):
     Allow squelched users to send messages to the services and stats addresses (PR 127)
     Specify which channel the user cannot join (+R) or speak in (+M) (PR 128)
     Fix compilation issues with OpenSSL version < 1.1.0 (PR 153)
-    
-Emilio Escobar (1):    
+
+Emilio Escobar (1):
     Create SECURITY.md
-    
+
 Dimitri Pappas (1):
     Add AUDITORIUM flag to CHANMODES to comply with RFC (PR 108)
 
 fidsah (1):
     Spelling correction to rehash notification (PR 93)
-	
+
 Changes for 2.1.4:
 ------------------
 - typo fix (cptr --> sptr) that could lead to server crashes in some cases
@@ -112,11 +125,11 @@ Ryan Smith (3):
       Pass INSTALL_DIR to the modules installation script
       Remove extraneous RSA, DSA, ECDSA, and EVP compability functions
       Spamfilter oper flags
-      
+
 
 Hollbrook Bunting (1):
       Remote /rehash
-      
+
 Changes for 2.1.0:
 ------------------
 Kobi Shmueli (11):
@@ -499,10 +512,10 @@ Changes for 1.8.3
 Changes for 1.8.2
 -----------------
 
-- fixed entropy generation on OpenBSD and cleaned up status messages 
+- fixed entropy generation on OpenBSD and cleaned up status messages
   (from Mark19960)
 - fixed cosmetic error in /stats C reply
-- fixed autoconnect blast when connect->port was specified but not 
+- fixed autoconnect blast when connect->port was specified but not
   class->connfreq (from Mark19960)
 - fixed crash on /stats request from a server (from Mark19960)
 - fixed invite exceptions not working at all (from wshs)
@@ -540,13 +553,13 @@ Changes for 1.8.2
 - Cleaned up related channel ban code
 - CHOOK_10SEC is now called when it should be (from wshs)
 - Unbroke modules command handling (from wshs)
-- Fixed modules load crash when there was no Modules block in ircd.conf 
+- Fixed modules load crash when there was no Modules block in ircd.conf
   (from wshs)
 - Fixed SVSKILL crash on no parameters (from Zeke Gomez)
 - Compile fixes for DNS_DEBUG and DEBUGMODE (but don't use DEBUGMODE)
 - Compile fix for missing LINE_MAX
 - Spellcheck: virii -> viruses (from The List)
-- HIDE_LINKS functionality inverted and attached to show_links token in 
+- HIDE_LINKS functionality inverted and attached to show_links token in
   Options block
 - NO_CHANOPS_WHEN_SPLIT functionality inverted and attached to allow_split_ops
   token in Options block
