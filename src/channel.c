@@ -2088,6 +2088,10 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
                     break;
                 }
 
+                /* Let IRCops know if they're getting information not visible to normal users */
+                if((chptr->xflags & XFLAG_HIDE_MODE_LISTS) && IsAnOper(sptr))
+                    sendto_one(sptr, rpl_str(RPL_OPERONLY), me.name, cptr->name, chptr->chname, "+I");
+
                 for (invite = chptr->invite_list; invite; invite = invite->next)
                     sendto_one(sptr, rpl_str(RPL_INVITELIST), me.name, cptr->name,
                                chptr->chname, invite->invstr, invite->who, invite->when);
@@ -2170,6 +2174,11 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
                     anylistsent = 1;
                     break;
                 }
+
+                /* Let IRCops know if they're getting information not visible to normal users */
+                if((chptr->xflags & XFLAG_HIDE_MODE_LISTS) && IsAnOper(sptr))
+                    sendto_one(sptr, rpl_str(RPL_OPERONLY), me.name, cptr->name, chptr->chname, "+e");
+
                 for (exempt = chptr->banexempt_list; exempt; exempt = exempt->next)
                     sendto_one(sptr, rpl_str(RPL_EXEMPTLIST), me.name, cptr->name,
                                chptr->chname, exempt->banstr, exempt->who, exempt->when);
@@ -2252,6 +2261,11 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
                     anylistsent = 1;
                     break;
                 }
+
+                /* Let IRCops know if they're getting information not visible to normal users */
+                if((chptr->xflags & XFLAG_HIDE_MODE_LISTS) && IsAnOper(sptr))
+                    sendto_one(sptr, rpl_str(RPL_OPERONLY), me.name, cptr->name, chptr->chname, "+b");
+
                 for(bp=chptr->banlist;bp;bp=bp->next)
                     sendto_one(sptr, rpl_str(RPL_BANLIST), me.name, cptr->name,
                                chptr->chname, bp->banstr, bp->who, bp->when);
