@@ -452,13 +452,18 @@ reject_proxy(aClient *cptr, char *cmd, char *args)
 /* mask_host - Gets a normal host or ip and return them masked.
  * -Kobi_S 19/12/2015
  */
-char *mask_host(char *orghost, int type)
+char *mask_host(char *orghost, char *ip, int type)
 {
     static char newhost[HOSTLEN + 1];
 
     if(!type) type = uhm_type;
 
     if (call_hooks(CHOOK_MASKHOST, orghost, &newhost, type) == UHM_SUCCESS) return newhost;
+
+#ifdef USER_HOSTMASKING_FALLBACK_TO_IP
+    // If the initial call fails, the user has a short hostname that we couldn't mask, so retry masking with the IP.
+    if (call_hooks(CHOOK_MASKHOST, ip, &newhost, type) == UHM_SUCCESS) return newhost;
+#endif
 
     return orghost; /* I guess the user won't be host-masked after all... :( */
 }
@@ -610,7 +615,7 @@ register_user(aClient *cptr, aClient *sptr, char *nick, char *username,
         }
 
 #ifdef USER_HOSTMASKING
-        strncpyzt(user->mhost, mask_host(user->host,0), HOSTLEN + 1);
+        strncpyzt(user->mhost, mask_host(user->host, sptr->hostip, 0), HOSTLEN + 1);
 #endif
         
         pwaconf = sptr->user->allow;
@@ -994,7 +999,7 @@ register_user(aClient *cptr, aClient *sptr, char *nick, char *username,
                     strcpy(sptr->hostip, "0.0.0.0");
                     strncpy(sptr->sockhost, Staff_Address, HOSTLEN + 1);
 #ifdef USER_HOSTMASKING
-                    strncpyzt(sptr->user->mhost, mask_host(Staff_Address,0), HOSTLEN + 1);
+                    strncpyzt(sptr->user->mhost, Staff_Address, HOSTLEN + 1);
                     if(uhm_type > 0) sptr->umode &= ~UMODE_H; /* It's already masked anyway */
 #endif
                 }
@@ -2340,7 +2345,7 @@ do_user(char *nick, aClient *cptr, aClient *sptr, char *username, char *host,
         user->server = find_or_add(server);
         strncpyzt(user->host, host, sizeof(user->host));
 #ifdef USER_HOSTMASKING
-        strncpyzt(user->mhost, mask_host(host,0), HOSTLEN + 1);
+        strncpyzt(user->mhost, mask_host(host, ip, 0), HOSTLEN + 1);
 #endif
     } 
     else
@@ -3354,10 +3359,29 @@ m_umode(aClient *cptr, aClient *sptr, int parc, char *parv[])
                 case 'S':
                     break; /* users can't set themselves +r,+x,+X or +S! */
                 case 'H':
-                    if ((uhm_type > 0) && (uhm_umodeh > 0) && (what == MODE_ADD))
+                    // Do not allow opers who are already oper hostmasked to set +H.
+                    if ((uhm_type > 0) && (uhm_umodeh > 0) && (strcasecmp(sptr->sockhost, Staff_Address) != 0) && (what == MODE_ADD))
+                    {
+                        if(!(setflags & UMODE_H))
+                        {
+                            hash_check_watch(sptr, RPL_LOGOFF);
+                        }
                         sptr->umode |= UMODE_H;
-                    else
+                        if(!(setflags & UMODE_H))
+                        {
+                            hash_check_watch(sptr, RPL_LOGON);
+                        }
+                    } else {
+                        if((setflags & UMODE_H))
+                        {
+                            hash_check_watch(sptr, RPL_LOGOFF);
+                        }
                         sptr->umode &= ~UMODE_H;
+                        if((setflags & UMODE_H))
+                        {
+                            hash_check_watch(sptr, RPL_LOGON);
+                        }
+                    }
                     break;
                 case 'A':
                     /* set auto +a if user is setting +A */
