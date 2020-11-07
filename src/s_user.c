@@ -3361,34 +3361,37 @@ m_umode(aClient *cptr, aClient *sptr, int parc, char *parv[])
                 case 'H':
                     // Ensure hostmasking settings are enabled to allow setting the mode.
                     // Do not allow opers who are already oper hostmasked to set the mode.
-                    if(((uhm_type > 0) && (uhm_umodeh > 0) && (strcasecmp(sptr->sockhost, Staff_Address) != 0) && !(setflags & UMODE_H) && (what == MODE_ADD))
-                            || ((setflags & UMODE_H) && (what == MODE_DEL)))
+                    if(((uhm_type > 0) && (uhm_umodeh > 0) && (strcasecmp(sptr->sockhost, Staff_Address) != 0) && (what == MODE_ADD))
+                            || (what == MODE_DEL))
                     {
-                        // Do not allow the mode change if the user is in any channels.  This is to prevent potential client-side
-                        // weirdness from happening if a user's host changes while they're already in one or more channels.
-                        if(sptr->user->channel != NULL)
+                        if(MyClient(sptr))
                         {
-                            sendto_one(sptr, ":%s NOTICE %s :*** Notice -- You cannot change user mode H while joined to any channels.",
-                                       me.name, sptr->name);
-                            break;
-                        }
+                            // Do not allow the mode change if the user is in any channels.  This is to prevent potential client-side
+                            // weirdness from happening if a user's host changes while they're already in one or more channels.
+                            if(sptr->user->channel != NULL)
+                            {
+                                sendto_one(sptr, ":%s NOTICE %s :*** Notice -- You cannot change user mode H while joined to any channels.",
+                                           me.name, sptr->name);
+                                break;
+                            }
 
 #ifdef NO_UMODE_H_FLOOD
-                        // Do not allow too many mode changes, as this can result in a WATCH flood.
-                        if ((sptr->last_umodeh_change + MAX_UMODE_H_TIME) < NOW)
-                        {
-                            sptr->number_of_umodeh_changes = 0;
-                        }
-                        sptr->last_umodeh_change = NOW;
-                        sptr->number_of_umodeh_changes++;
+                            // Do not allow too many mode changes, as this can result in a WATCH flood.
+                            if ((sptr->last_umodeh_change + MAX_UMODE_H_TIME) < NOW)
+                            {
+                                sptr->number_of_umodeh_changes = 0;
+                            }
+                            sptr->last_umodeh_change = NOW;
+                            sptr->number_of_umodeh_changes++;
 
-                        if (sptr->number_of_umodeh_changes > MAX_UMODE_H_COUNT && !IsAnOper(sptr))
-                        {
-                            sendto_one(sptr, ":%s NOTICE %s :*** Notice -- Too many user mode H changes. Wait %d seconds before trying again.",
-                                   me.name, sptr->name, MAX_UMODE_H_TIME);
-                            break;
-                        }
+                            if (sptr->number_of_umodeh_changes > MAX_UMODE_H_COUNT && !IsAnOper(sptr))
+                            {
+                                sendto_one(sptr, ":%s NOTICE %s :*** Notice -- Too many user mode H changes. Wait %d seconds before trying again.",
+                                       me.name, sptr->name, MAX_UMODE_H_TIME);
+                                break;
+                            }
 #endif
+                        }
 
                         if(what == MODE_ADD)
                         {
