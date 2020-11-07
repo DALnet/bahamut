@@ -356,6 +356,21 @@ int ac_acount(aClient *cptr)
 }
 
 #endif
+#ifdef NO_UMODE_H_FLOOD
+time_t ac_last_umodeh_change(aClient *cptr)
+{
+        if(cptr->fd == -1)
+                abort();
+        return cptr->last_umodeh_change;
+}
+
+int ac_number_of_umodeh_changes(aClient *cptr)
+{
+        if(cptr->fd == -1)
+                abort();
+        return cptr->number_of_umodeh_changes;
+}
+#endif
 
 char *ac_sockhost(aClient *cptr)
 {

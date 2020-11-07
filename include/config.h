@@ -385,6 +385,18 @@
 # define MAX_AWAY_COUNT 5
 #endif
 
+/* NO_UMODE_H_FLOOD
+ * Prevent users from setting and unsetting user mode H for hostmasking
+ * too often, as this could result in a WATCH flood. Default setting
+ * allows 2 mode changes in 5 minutes.
+ */
+#define NO_UMODE_H_FLOOD
+
+#ifdef NO_UMODE_H_FLOOD
+#define MAX_UMODE_H_TIME 300  /* time in seconds */
+#define MAX_UMODE_H_COUNT 2
+#endif
+
 /*
  * WARN_NO_NLINE Define this if you want ops to get noticed about
  * "things" trying to connect as servers that don't have N: lines.
