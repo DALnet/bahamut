@@ -3364,6 +3364,15 @@ m_umode(aClient *cptr, aClient *sptr, int parc, char *parv[])
                     if(((uhm_type > 0) && (uhm_umodeh > 0) && (strcasecmp(sptr->sockhost, Staff_Address) != 0) && !(setflags & UMODE_H) && (what == MODE_ADD))
                             || ((setflags & UMODE_H) && (what == MODE_DEL)))
                     {
+                        // Do not allow the mode change if the user is in any channels.  This is to prevent potential client-side
+                        // weirdness from happening if a user's host changes while they're already in one or more channels.
+                        if(sptr->user->channel != NULL)
+                        {
+                            sendto_one(sptr, ":%s NOTICE %s :*** Notice -- You cannot change user mode H while joined to any channels.",
+                                       me.name, sptr->name);
+                            break;
+                        }
+
 #ifdef NO_UMODE_H_FLOOD
                         // Do not allow too many mode changes, as this can result in a WATCH flood.
                         if ((sptr->last_umodeh_change + MAX_UMODE_H_TIME) < NOW)
@@ -3380,15 +3389,6 @@ m_umode(aClient *cptr, aClient *sptr, int parc, char *parv[])
                             break;
                         }
 #endif
-
-                        // Do not allow the mode change if the user is in any channels.  This is to prevent potential client-side
-                        // weirdness from happening if a user's host changes while they're already in one or more channels.
-                        if(sptr->user->channel != NULL)
-                        {
-                            sendto_one(sptr, ":%s NOTICE %s :*** Notice -- You cannot change user mode H while joined to any channels.",
-                                       me.name, sptr->name);
-                            break;
-                        }
 
                         if(what == MODE_ADD)
                         {
