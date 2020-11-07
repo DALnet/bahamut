@@ -490,28 +490,28 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	 
 		for (lp = sptr->user->channel; lp; lp = lp->next)
 		{
-                if((lp->value.chptr->xflags & XFLAG_NO_NICK_CHANGE) && !is_xflags_exempted(sptr,lp->value.chptr))
-                {
-                    if(lp->value.chptr->xflags & XFLAG_USER_VERBOSE)
-                        verbose_to_relaychan(sptr, lp->value.chptr, "nick_change", NULL);
-                    if(lp->value.chptr->xflags & XFLAG_OPER_VERBOSE)
-                        verbose_to_opers(sptr, lp->value.chptr, "nick_change", nick);
-                            sendto_one(sptr, err_str(ERR_BANNICKCHANGE), me.name,
-                            sptr->name, lp->value.chptr->chname);
-                    return 0;
-                }
-                if (can_send(sptr, lp->value.chptr, NULL))
-                {
-                    sendto_one(sptr, err_str(ERR_BANNICKCHANGE), me.name,
-                        sptr->name, lp->value.chptr->chname);
-                    return 0;
-                }
-                if (nick_is_banned(lp->value.chptr, nick, sptr) != NULL)
-                {
-                    sendto_one(sptr, err_str(ERR_BANONCHAN), me.name,
-                        sptr->name, nick, lp->value.chptr->chname);
-                    return 0;
-                }
+                    if((lp->value.chptr->xflags & XFLAG_NO_NICK_CHANGE) && !is_xflags_exempted(sptr,lp->value.chptr))
+                    {
+                        if(lp->value.chptr->xflags & XFLAG_USER_VERBOSE)
+                            verbose_to_relaychan(sptr, lp->value.chptr, "nick_change", NULL);
+                        if(lp->value.chptr->xflags & XFLAG_OPER_VERBOSE)
+                            verbose_to_opers(sptr, lp->value.chptr, "nick_change", nick);
+			sendto_one(sptr, err_str(ERR_BANNICKCHANGE), me.name,
+				   sptr->name, lp->value.chptr->chname);
+			return 0;
+                    }
+		    if (can_send(sptr, lp->value.chptr, NULL))
+		    { 
+			sendto_one(sptr, err_str(ERR_BANNICKCHANGE), me.name,
+				   sptr->name, lp->value.chptr->chname);
+			return 0;
+		    }
+		    if (nick_is_banned(lp->value.chptr, nick, sptr) != NULL)
+		    {
+			sendto_one(sptr, err_str(ERR_BANONCHAN), me.name,
+				   sptr->name, nick, lp->value.chptr->chname);
+			return 0;
+		    }
 		}
 #ifdef ANTI_NICK_FLOOD
 		if ((sptr->last_nick_change + MAX_NICK_TIME) < NOW)
