@@ -3358,14 +3358,20 @@ m_umode(aClient *cptr, aClient *sptr, int parc, char *parv[])
                 case 'X':
                 case 'S':
                     break; /* users can't set themselves +r,+x,+X or +S! */
+#ifdef USER_HOSTMASKING
                 case 'H':
                     // Ensure hostmasking settings are enabled to allow setting the mode.
-                    // Do not allow opers who are already oper hostmasked to set the mode.
-                    if(((uhm_type > 0) && (uhm_umodeh > 0) && (strcasecmp(sptr->sockhost, Staff_Address) != 0) && (what == MODE_ADD))
-                            || (what == MODE_DEL))
+                    if(((uhm_type > 0) && (uhm_umodeh > 0) && (what == MODE_ADD)) || (what == MODE_DEL))
                     {
                         if(MyClient(sptr))
                         {
+                            // Do not allow opers who are already oper hostmasked to set the mode.
+                            if(strcasecmp(sptr->user->mhost, Staff_Address) == 0) {
+                                sendto_one(sptr, ":%s NOTICE %s :*** Notice -- You cannot set user mode H since you are already oper hostmasked.",
+                                           me.name, sptr->name);
+                                break;
+                            }
+
                             // Do not allow the mode change if the user is in any channels.  This is to prevent potential client-side
                             // weirdness from happening if a user's host changes while they're already in one or more channels.
                             if(sptr->user->channel != NULL)
@@ -3407,6 +3413,7 @@ m_umode(aClient *cptr, aClient *sptr, int parc, char *parv[])
                         }
                     }
                     break;
+#endif
                 case 'A':
                     /* set auto +a if user is setting +A */
                     if (MyClient(sptr) && (what == MODE_ADD))
