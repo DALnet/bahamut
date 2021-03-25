@@ -460,6 +460,11 @@ char *mask_host(char *orghost, char *orgip, int type)
 
     if (call_hooks(CHOOK_MASKHOST, orghost, orgip, &newhost, type) == UHM_SUCCESS) return newhost;
 
+#ifdef USER_HOSTMASKING_FALLBACK_TO_IP
+    // If the initial call fails, the user has a short hostname that we couldn't mask, so retry masking with the IP.
+    if (call_hooks(CHOOK_MASKHOST, orgip, &newhost, type) == UHM_SUCCESS) return newhost;
+#endif
+
     return orghost; /* I guess the user won't be host-masked after all... :( */
 }
 
@@ -994,7 +999,7 @@ register_user(aClient *cptr, aClient *sptr, char *nick, char *username,
                     strcpy(sptr->hostip, "0.0.0.0");
                     strncpy(sptr->sockhost, Staff_Address, HOSTLEN + 1);
 #ifdef USER_HOSTMASKING
-                    strncpyzt(sptr->user->mhost, mask_host(Staff_Address,sptr->hostip,0), HOSTLEN + 1);
+                    strncpyzt(sptr->user->mhost, Staff_Address, HOSTLEN + 1);
                     if(uhm_type > 0) sptr->umode &= ~UMODE_H; /* It's already masked anyway */
 #endif
                 }
@@ -3353,12 +3358,62 @@ m_umode(aClient *cptr, aClient *sptr, int parc, char *parv[])
                 case 'X':
                 case 'S':
                     break; /* users can't set themselves +r,+x,+X or +S! */
+#ifdef USER_HOSTMASKING
                 case 'H':
-                    if ((uhm_type > 0) && (uhm_umodeh > 0) && (what == MODE_ADD))
-                        sptr->umode |= UMODE_H;
-                    else
-                        sptr->umode &= ~UMODE_H;
+                    // Ensure hostmasking settings are enabled to allow setting the mode.
+                    if(((uhm_type > 0) && (uhm_umodeh > 0) && (what == MODE_ADD)) || (what == MODE_DEL))
+                    {
+                        if(MyClient(sptr))
+                        {
+                            // Do not allow opers who are already oper hostmasked to set the mode.
+                            if(strcasecmp(sptr->user->mhost, Staff_Address) == 0) {
+                                sendto_one(sptr, ":%s NOTICE %s :*** Notice -- You cannot set user mode H since you are already oper hostmasked.",
+                                           me.name, sptr->name);
+                                break;
+                            }
+
+                            // Do not allow the mode change if the user is in any channels.  This is to prevent potential client-side
+                            // weirdness from happening if a user's host changes while they're already in one or more channels.
+                            if(sptr->user->channel != NULL)
+                            {
+                                sendto_one(sptr, ":%s NOTICE %s :*** Notice -- You cannot change user mode H while joined to any channels.",
+                                           me.name, sptr->name);
+                                break;
+                            }
+
+#ifdef NO_UMODE_H_FLOOD
+                            // Do not allow too many mode changes, as this can result in a WATCH flood.
+                            if ((sptr->last_umodeh_change + MAX_UMODE_H_TIME) < NOW)
+                            {
+                                sptr->number_of_umodeh_changes = 0;
+                            }
+                            sptr->last_umodeh_change = NOW;
+                            sptr->number_of_umodeh_changes++;
+
+                            if (sptr->number_of_umodeh_changes > MAX_UMODE_H_COUNT && !IsAnOper(sptr))
+                            {
+                                sendto_one(sptr, ":%s NOTICE %s :*** Notice -- Too many user mode H changes. Wait %d seconds before trying again.",
+                                       me.name, sptr->name, MAX_UMODE_H_TIME);
+                                break;
+                            }
+#endif
+                        }
+
+                        if(what == MODE_ADD)
+                        {
+                            hash_check_watch(sptr, RPL_LOGOFF);
+                            sptr->umode |= UMODE_H;
+                            hash_check_watch(sptr, RPL_LOGON);
+                        }
+                        else
+                        {
+                            hash_check_watch(sptr, RPL_LOGOFF);
+                            sptr->umode &= ~UMODE_H;
+                            hash_check_watch(sptr, RPL_LOGON);
+                        }
+                    }
                     break;
+#endif
                 case 'A':
                     /* set auto +a if user is setting +A */
                     if (MyClient(sptr) && (what == MODE_ADD))
