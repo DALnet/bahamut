@@ -77,7 +77,7 @@ enum c_hooktype {
                        */
    CHOOK_MASKHOST,    /* called from s_user.c when in order to
                        * mask a user host/IP
-                       * Params: 3: (char *orghost, char **newhost, int type)
+                       * Params: 4: (char *orghost, char *orgip, char **newhost, int type)
                        * Returns int
                        */
    CHOOK_FLOODWARN,   /* called during flood warnings to opers
@@ -101,7 +101,7 @@ enum c_hooktype {
 extern int call_hooks(enum c_hooktype hooktype, ...);
 extern int init_modules();
 
-#define MODULE_INTERFACE_VERSION 1010 /* the interface version (hooks, modules.c commands, etc) */
+#define MODULE_INTERFACE_VERSION 1011 /* the interface version (hooks, modules.c commands, etc) */
 
 #ifdef BIRCMODULE
 extern void *bircmodule_add_hook(enum c_hooktype, void *, void *);
