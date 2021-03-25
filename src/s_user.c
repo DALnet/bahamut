@@ -452,13 +452,13 @@ reject_proxy(aClient *cptr, char *cmd, char *args)
 /* mask_host - Gets a normal host or ip and return them masked.
  * -Kobi_S 19/12/2015
  */
-char *mask_host(char *orghost, int type)
+char *mask_host(char *orghost, char *orgip, int type)
 {
     static char newhost[HOSTLEN + 1];
 
     if(!type) type = uhm_type;
 
-    if (call_hooks(CHOOK_MASKHOST, orghost, &newhost, type) == UHM_SUCCESS) return newhost;
+    if (call_hooks(CHOOK_MASKHOST, orghost, orgip, &newhost, type) == UHM_SUCCESS) return newhost;
 
     return orghost; /* I guess the user won't be host-masked after all... :( */
 }
@@ -610,7 +610,7 @@ register_user(aClient *cptr, aClient *sptr, char *nick, char *username,
         }
 
 #ifdef USER_HOSTMASKING
-        strncpyzt(user->mhost, mask_host(user->host,0), HOSTLEN + 1);
+        strncpyzt(user->mhost, mask_host(user->host,sptr->hostip,0), HOSTLEN + 1);
 #endif
         
         pwaconf = sptr->user->allow;
@@ -994,7 +994,7 @@ register_user(aClient *cptr, aClient *sptr, char *nick, char *username,
                     strcpy(sptr->hostip, "0.0.0.0");
                     strncpy(sptr->sockhost, Staff_Address, HOSTLEN + 1);
 #ifdef USER_HOSTMASKING
-                    strncpyzt(sptr->user->mhost, mask_host(Staff_Address,0), HOSTLEN + 1);
+                    strncpyzt(sptr->user->mhost, mask_host(Staff_Address,sptr->hostip,0), HOSTLEN + 1);
                     if(uhm_type > 0) sptr->umode &= ~UMODE_H; /* It's already masked anyway */
 #endif
                 }
@@ -2340,7 +2340,7 @@ do_user(char *nick, aClient *cptr, aClient *sptr, char *username, char *host,
         user->server = find_or_add(server);
         strncpyzt(user->host, host, sizeof(user->host));
 #ifdef USER_HOSTMASKING
-        strncpyzt(user->mhost, mask_host(host,0), HOSTLEN + 1);
+        strncpyzt(user->mhost, mask_host(host,ip,0), HOSTLEN + 1);
 #endif
     } 
     else
