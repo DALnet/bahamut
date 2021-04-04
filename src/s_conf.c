@@ -383,7 +383,6 @@ find_oper(char *name, char *username, char *sockhost, char *hostip)
     char userhost[USERLEN + HOSTLEN + 3];
     char userip[USERLEN + HOSTLEN + 3];
     int i;
-    int nickmatch=0;
 
     /* sockhost OR hostip must match our host field */
 
@@ -395,15 +394,13 @@ find_oper(char *name, char *username, char *sockhost, char *hostip)
     {
         if (aoper->legal == -1)
             continue;
-        if(!mycmp(name, aoper->nick))
-            nickmatch=1;
-        else
+        if(mycmp(name, aoper->nick))
             continue;
 
         for(i = 0; aoper->hosts[i]; i++)
         {
-            if(nickmatch && (!match(aoper->hosts[i], userhost)
-                    || !match(aoper->hosts[i], userip)))
+            if(!match(aoper->hosts[i], userhost)
+                    || !match(aoper->hosts[i], userip))
                 return aoper;
             if(strchr(aoper->hosts[i], '/'))
             {
@@ -431,7 +428,7 @@ find_oper(char *name, char *username, char *sockhost, char *hostip)
                 {
                     /* Check the wildcards in the rest of the string. */
                     ircsprintf(cidrbuf, "%s@%s", username, s);
-                    if (!match(aoper->hosts[i], cidrbuf) && nickmatch)
+                    if (!match(aoper->hosts[i], cidrbuf))
                         return aoper;
                 }
             }
