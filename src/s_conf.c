@@ -392,10 +392,7 @@ find_oper(char *name, char *username, char *sockhost, char *hostip)
 
     for(aoper = opers; aoper; aoper = aoper->next)
     {
-        if (aoper->legal == -1)
-            continue;
-
-        if(mycmp(name, aoper->nick))
+        if (aoper->legal == -1 || mycmp(name, aoper->nick))
             continue;
 
         for(i = 0; aoper->hosts[i]; i++)
