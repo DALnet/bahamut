@@ -394,6 +394,7 @@ find_oper(char *name, char *username, char *sockhost, char *hostip)
     {
         if (aoper->legal == -1)
             continue;
+
         if(mycmp(name, aoper->nick))
             continue;
 
@@ -402,36 +403,36 @@ find_oper(char *name, char *username, char *sockhost, char *hostip)
             if(!match(aoper->hosts[i], userhost)
                     || !match(aoper->hosts[i], userip))
                 return aoper;
-            if(strchr(aoper->hosts[i], '/'))
-            {
-                char cidrbuf[USERLEN + HOSTLEN + 3];
-                char ipbuf1[16], ipbuf2[16];
-                char *s;
-                int bits;
-                int family;
+	    if(strchr(aoper->hosts[i], '/'))
+	    {
+		char cidrbuf[USERLEN + HOSTLEN + 3];
+		char ipbuf1[16], ipbuf2[16];
+		char *s;
+		int bits;
+		int family;
 
-                s = strchr(aoper->hosts[i], '@');
-                if (s)
-                    s++;
-                else
-                    s = aoper->hosts[i];
+		s = strchr(aoper->hosts[i], '@');
+		if (s)
+		    s++;
+		else
+		    s = aoper->hosts[i];
 
-                if (inet_pton(AF_INET, hostip, ipbuf1) == 1)
-                    family = AF_INET;
-                else if (inet_pton(AF_INET6, hostip, ipbuf1) == 1)
-                    family = AF_INET6;
-                else
-                    family = 0;
+		if (inet_pton(AF_INET, hostip, ipbuf1) == 1)
+		    family = AF_INET;
+		else if (inet_pton(AF_INET6, hostip, ipbuf1) == 1)
+		    family = AF_INET6;
+		else
+		    family = 0;
 
-                bits = inet_parse_cidr(family, s, ipbuf2, sizeof(ipbuf2));
-                if (bits > 0 && bitncmp(ipbuf1, ipbuf2, bits) == 0)
-                {
-                    /* Check the wildcards in the rest of the string. */
-                    ircsprintf(cidrbuf, "%s@%s", username, s);
-                    if (!match(aoper->hosts[i], cidrbuf))
-                        return aoper;
-                }
-            }
+		bits = inet_parse_cidr(family, s, ipbuf2, sizeof(ipbuf2));
+		if (bits > 0 && bitncmp(ipbuf1, ipbuf2, bits) == 0)
+		{
+		    /* Check the wildcards in the rest of the string. */
+		    ircsprintf(cidrbuf, "%s@%s", username, s);
+		    if (match(aoper->hosts[i], cidrbuf) == 0)
+			return aoper;
+		}
+	    }
         }
     }
     return NULL;
@@ -560,44 +561,44 @@ attach_Iline(aClient *cptr, struct hostent *hp, char *sockhost)
             {
                 if (!match(allow->ipmask, useriphost))
                     return (attach_iline(cptr, allow, iphost, 1));
-  else if (strchr(allow->ipmask, '/'))
-  {
-      char cidrbuf[USERLEN + 1 + HOSTLEN + 1];
-      char ipbuf[16];
-      char *s;
-      int bits;
+		else if (strchr(allow->ipmask, '/'))
+		{
+		    char cidrbuf[USERLEN + 1 + HOSTLEN + 1];
+		    char ipbuf[16];
+		    char *s;
+		    int bits;
 
-      s = strchr(allow->ipmask, '@');
-      if (s)
-  s++;
-      else
-  continue;
+		    s = strchr(allow->ipmask, '@');
+		    if (s)
+			s++;
+		    else
+			continue;
 
-      bits = inet_parse_cidr(cptr->ip_family, s,
-     ipbuf, sizeof(ipbuf));
-      if (bits > 0 && bitncmp(&cptr->ip, ipbuf, bits) == 0)
-      {
-  /* Check the wildcards in the rest of the string. */
-  ircsprintf(cidrbuf, "%s@%s", cptr->username, s);
-  if (match(allow->ipmask, cidrbuf) == 0)
-      return (attach_iline(cptr, allow, iphost, 1));
-      }
-  }
+		    bits = inet_parse_cidr(cptr->ip_family, s,
+					   ipbuf, sizeof(ipbuf));
+		    if (bits > 0 && bitncmp(&cptr->ip, ipbuf, bits) == 0)
+		    {
+			/* Check the wildcards in the rest of the string. */
+			ircsprintf(cidrbuf, "%s@%s", cptr->username, s);
+			if (match(allow->ipmask, cidrbuf) == 0)
+			    return (attach_iline(cptr, allow, iphost, 1));
+		    }
+		}
             }
             else
             {
                 if (!match(allow->ipmask, iphost))
                     return (attach_iline(cptr, allow, iphost, 0));
-  else if (strchr(allow->ipmask, '/'))
-  {
-      char ipbuf[16];
-      int bits;
+		else if (strchr(allow->ipmask, '/'))
+		{
+		    char ipbuf[16];
+		    int bits;
 
-      bits = inet_parse_cidr(cptr->ip_family, allow->ipmask,
-     ipbuf, sizeof(ipbuf));
-      if (bits > 0 && bitncmp(&cptr->ip, ipbuf, bits) == 0)
-  return (attach_iline(cptr, allow, iphost, 1));
-  }
+		    bits = inet_parse_cidr(cptr->ip_family, allow->ipmask,
+					   ipbuf, sizeof(ipbuf));
+		    if (bits > 0 && bitncmp(&cptr->ip, ipbuf, bits) == 0)
+			return (attach_iline(cptr, allow, iphost, 1));
+		}
             }
         }
     }
@@ -955,45 +956,45 @@ confadd_connect(cVar *vars[], int lnum)
 
     if(x->source)
     {
-  union
-  {
-      struct sockaddr_in ip4;
-      struct sockaddr_in6 ip6;
-  } tmp_addr;
-  int host_family, source_family;
-  const char *s;
+	union
+	{
+	    struct sockaddr_in ip4;
+	    struct sockaddr_in6 ip6;
+	} tmp_addr;
+	int host_family, source_family;
+	const char *s;
 
-  s = strchr(x->host, '@');
-  if (s)
-      s++;
-  else
-      s = x->host;
+	s = strchr(x->host, '@');
+	if (s)
+	    s++;
+	else
+	    s = x->host;
 
-  if (inet_pton(AF_INET, s, &tmp_addr.ip4) == 1)
-      host_family = AF_INET;
-  else if (inet_pton(AF_INET6, s, &tmp_addr.ip6) == 1)
-      host_family = AF_INET6;
-  else
-      host_family = 0;
+	if (inet_pton(AF_INET, s, &tmp_addr.ip4) == 1)
+	    host_family = AF_INET;
+	else if (inet_pton(AF_INET6, s, &tmp_addr.ip6) == 1)
+	    host_family = AF_INET6;
+	else
+	    host_family = 0;
 
-  if (inet_pton(AF_INET, x->source, &tmp_addr.ip4) == 1)
-      source_family = AF_INET;
-  else if (inet_pton(AF_INET6, x->source, &tmp_addr.ip6) == 1)
-      source_family = AF_INET6;
-  else
-  {
-      confparse_error("Invalid source address in connect block", lnum);
-      free_connect(x);
-      return -1;
-  }
+	if (inet_pton(AF_INET, x->source, &tmp_addr.ip4) == 1)
+	    source_family = AF_INET;
+	else if (inet_pton(AF_INET6, x->source, &tmp_addr.ip6) == 1)
+	    source_family = AF_INET6;
+	else
+	{
+	    confparse_error("Invalid source address in connect block", lnum);
+	    free_connect(x);
+	    return -1;
+	}
 
-  if (host_family != 0 && host_family != source_family)
-  {
-      confparse_error("Address family of host does not match "
-      "address family of source in connect block", lnum);
-      free_connect(x);
-      return -1;
-  }
+	if (host_family != 0 && host_family != source_family)
+	{
+	    confparse_error("Address family of host does not match "
+			    "address family of source in connect block", lnum);
+	    free_connect(x);
+	    return -1;
+	}
     }
     x->next = new_connects;
     new_connects = x;
@@ -1146,8 +1147,8 @@ confadd_options(cVar *vars[], int lnum)
             tmp->type = NULL;
             tswarndelta = atoi(tmp->value);
         }
-  else if(tmp->type && (tmp->type->flag & OPTF_REMREHOK))
-  {
+	else if(tmp->type && (tmp->type->flag & OPTF_REMREHOK))
+	{
             tmp->type = NULL;
             new_confopts |= FLAGS_REMREHOK;
         }
@@ -2350,15 +2351,15 @@ int rehash(aClient *cptr, aClient *sptr, int sig)
     if (sig == SIGHUP)
     {
 #ifdef USE_SSL
-  /* Rehash SSL so we can automate certificate renewals and updates externally, i.e. from a cron job --xPsycho */
-  sendto_ops("Got signal SIGHUP, rehashing SSL");
-  ssl_rehash();
+		/* Rehash SSL so we can automate certificate renewals and updates externally, i.e. from a cron job --xPsycho */
+		sendto_ops("Got signal SIGHUP, rehashing SSL");
+		ssl_rehash();
 #endif
         sendto_ops("Got signal SIGHUP, reloading ircd conf. file");
         remove_userbans_match_flags(UBAN_NETWORK, 0);
         /* remove all but kill {} blocks from conf */
         remove_userbans_match_flags(UBAN_LOCAL, UBAN_CONF);
-  remove_simbans_match_flags(SBAN_NICK|SBAN_LOCAL|SBAN_TEMPORARY, SBAN_SVSHOLD);
+	remove_simbans_match_flags(SBAN_NICK|SBAN_LOCAL|SBAN_TEMPORARY, SBAN_SVSHOLD);
         remove_simbans_match_flags(SBAN_CHAN|SBAN_LOCAL|SBAN_TEMPORARY, 0);
         remove_simbans_match_flags(SBAN_GCOS|SBAN_LOCAL|SBAN_TEMPORARY, 0);
         throttle_rehash();
@@ -2442,51 +2443,51 @@ static int lookup_confhost(aConnect *aconn)
      */
     if (!BadPtr(aconn->host) && !BadPtr(aconn->name))
     {
-  if ((s = strchr(aconn->host, '@')))
-      s++;
-  else
-      s = aconn->host;
+	if ((s = strchr(aconn->host, '@')))
+	    s++;
+	else
+	    s = aconn->host;
 
-  /*
-   * Prepare structure in case we have to wait for a reply which
-   * we get later and store away.
-   */
-  ln.value.aconn = aconn;
-  ln.flags = ASYNC_CONF;
+	/*
+	 * Prepare structure in case we have to wait for a reply which
+	 * we get later and store away.
+	 */
+	ln.value.aconn = aconn;
+	ln.flags = ASYNC_CONF;
 
-  if (inet_pton(AF_INET, s, &aconn->ipnum.ip4) == 1)
-      aconn->ipnum_family = AF_INET;
-  else if (inet_pton(AF_INET6, s, &aconn->ipnum.ip6) == 1)
-      aconn->ipnum_family = AF_INET6;
-  else if (IsAlpha(*s))
-  {
-      union
-      {
-  struct sockaddr_in ip4;
-  struct sockaddr_in6 ip6;
-      } tmp_addr;
-      int family;
+	if (inet_pton(AF_INET, s, &aconn->ipnum.ip4) == 1)
+	    aconn->ipnum_family = AF_INET;
+	else if (inet_pton(AF_INET6, s, &aconn->ipnum.ip6) == 1)
+	    aconn->ipnum_family = AF_INET6;
+	else if (IsAlpha(*s))
+	{
+	    union
+	    {
+		struct sockaddr_in ip4;
+		struct sockaddr_in6 ip6;
+	    } tmp_addr;
+	    int family;
 
-      /* Try to use the same address family as what we bind to. */
-      if (aconn->source &&
-  inet_pton(AF_INET, aconn->source, &tmp_addr.ip4) == 1)
-  family = AF_INET;
-      else if (aconn->source &&
-       inet_pton(AF_INET6, aconn->source, &tmp_addr.ip6) == 1)
-  family = AF_INET6;
-      else
-  family = AF_INET;
+	    /* Try to use the same address family as what we bind to. */
+	    if (aconn->source &&
+		inet_pton(AF_INET, aconn->source, &tmp_addr.ip4) == 1)
+		family = AF_INET;
+	    else if (aconn->source &&
+		     inet_pton(AF_INET6, aconn->source, &tmp_addr.ip6) == 1)
+		family = AF_INET6;
+	    else
+		family = AF_INET;
 
-      if ((hp = gethost_byname(s, &ln, family)))
-      {
-  aconn->ipnum_family = hp->h_addrtype;
-  memcpy((char *) &aconn->ipnum, hp->h_addr, hp->h_length);
-      }
-  }
+	    if ((hp = gethost_byname(s, &ln, family)))
+	    {
+		aconn->ipnum_family = hp->h_addrtype;
+		memcpy((char *) &aconn->ipnum, hp->h_addr, hp->h_length);
+	    }
+	}
     }
 
     Debug((DEBUG_ERROR, "Host/server name error: (%s) (%s)",
-     aconn->host, aconn->name));
+	   aconn->host, aconn->name));
     return -1;
 }
 
