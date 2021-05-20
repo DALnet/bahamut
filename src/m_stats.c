@@ -52,11 +52,13 @@ extern void report_fds(aClient *);
 extern char *oflagtotext(int oflags); /* For stats o */
 extern char *cflagtotext(int cflags, int uflags); /* For stats c */
 extern char *iflagtotext(int iflags); /* For stats i */
+extern char *pflagtotext(int pflags); /* For stats P */
 extern int report_spamfilters(aClient *cptr, aClient *sptr, int parc, char *parv[]); /* For stats S */
 
 /* internal function defines */
 
 static void show_opers(aClient *, char *);
+static void show_ports(aClient *, char *);
 static void show_servers(aClient *, char *);
 #ifdef DEBUGMODE
 static void send_usage(aClient *, char *);
@@ -65,10 +67,6 @@ static void serv_info(aClient *, char *);
 static void tstats(aClient *, char *);
 
 /* support functions */
-/* show_opers
- * replies to stats p requests
- */
-
 
 #ifdef DEBUGMODE
 static void
@@ -166,7 +164,9 @@ send_usage(aClient *cptr, char *nick)
 }
 #endif  /* DEBUGMODE */
 
-
+/* show_opers
+ * replies to stats P requests
+ */
 static void 
 show_opers(aClient *cptr, char *name) 
 {
@@ -203,6 +203,35 @@ show_opers(aClient *cptr, char *name)
     }
     }
     sendto_one(cptr, ":%s %d %s :%d OPER%s", me.name, RPL_STATSDEBUG,
+           name, j, (j == 1) ? "" : "s");
+}
+
+/* show_ports
+ * replies to stats p requets
+ */
+static void
+show_ports(aClient *cptr, char *name)
+{
+    aPort *tmp;
+    int j = 0;
+
+    if(!ports)
+        sendto_realops("Lost all port configurations!");
+    for(tmp = ports; tmp; tmp = tmp->next)
+    {
+        if(tmp->lstn)
+        {
+            if(IsULine(cptr) || (MyClient(cptr) && IsAdmin(cptr)))
+                sendto_one(cptr,":%s %d %s :%s %s %i %s %i", me.name, RPL_STATSDEBUG,
+                       name, tmp->address?tmp->address:"*", tmp->allow?tmp->allow:"*",
+                       tmp->port, pflagtotext(tmp->flags), tmp->lstn->clients);
+            else
+                sendto_one(cptr,":%s %d %s :<masked> <masked> %i %s %i", me.name, RPL_STATSDEBUG,
+                       name, tmp->port, pflagtotext(tmp->flags), tmp->lstn->clients);
+            j++;
+        }
+    }
+    sendto_one(cptr, ":%s %d %s :%d PORT%s", me.name, RPL_STATSDEBUG,
            name, j, (j == 1) ? "" : "s");
 }
 
@@ -817,8 +846,13 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
         }
 
         case 'p':
-        case 'P':
             show_opers(sptr, parv[0]);
+            break;
+        case 'P':
+            if(IsAnOper(sptr) || IsULine(sptr))
+                show_ports(sptr, parv[0]);
+            else
+                sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name,  parv[0]);
             break;
 
         case 'Q':
