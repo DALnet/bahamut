@@ -79,6 +79,7 @@ COMMAND         - USAGE and DESCRIPTION
                     n - Shows user connection counters
                     o - Shows oper blocks
                     p - Shows opers connected and their idle times
+                    P - Shows listening ports and flags
                   * Q - Shows local nick/chan restrictions
                   * q - Shows network nick/chan restrictions (sqlines)
                     r - Shows resource usage by ircd (only in DEBUGMODE)
