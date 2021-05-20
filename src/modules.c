@@ -963,18 +963,19 @@ call_hooks(enum c_hooktype hooktype, ...)
         case CHOOK_MASKHOST:
             {
                 char *orghost = va_arg(vl, char *);
+                char *orgip = va_arg(vl, char *);
                 char *newhost = va_arg(vl, char *);
                 int type = va_arg(vl, int);
                 for(lp = maskhost_hooks; lp; lp = lp->next)
                 {
-                    int (*rfunc) (char *, char **, int) = 
+                    int (*rfunc) (char *, char *, char **, int) = 
                                     ((aHook *)lp->value.cp)->funcptr;
                     /* Possible results by the module:
                        1 (UHM_SUCCESS)                      = Success, the host has been masked (so don't try other modules).
                        0 (UHM_SOFT_FAILURE)                 = Failure, the host wasn't masked but try other modules (maybe they will mask the host).
                        -2 (UHM_HARD_FAILURE / FLUSH_BUFFER) = Failure, the host wasn't masked but *don't* try other modules.
                      */
-                    if((ret = (*rfunc)(orghost, &newhost, type)) != UHM_SOFT_FAILURE)
+                    if((ret = (*rfunc)(orghost, orgip, &newhost, type)) != UHM_SOFT_FAILURE)
                         break; /* We stop trying other modules if we get UHM_SUCCESS or UHM_HARD_FAILURE */
                 }
                 break;
