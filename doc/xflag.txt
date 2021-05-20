@@ -1,0 +1,169 @@
+This document details the eXtended Channel Flag (XCF or XFLAG) system introduced
+in Bahamut 2.1.1.
+
+The information in this document is current as of Bahamut 2.1.5.
+
+---
+Overview
+
+XCF extends the standard mode-based configurations that can be set on an IRC
+channel. Currently, XCF requires IRC services be running on the network in order
+to function.
+
+XFLAGs can only be modified from U:lined servers (i.e., services) using the
+SVSXCF command.
+
+IRCops may use the CHECK command to view the XFLAGs set for a channel:
+    
+    CHECK CHANNEL #channel
+
+Regular users must interact with services in order to view the XFLAGs set on a channel.
+
+--- SVSXCF Command ---
+
+Syntax: SVSXCF #channel [DEFAULT|setting:value [setting:value] [...]]
+
+Sending the SVSXCF command with no flags, or with DEFAULT specified, will
+reset all flags to default values.
+
+Flags that are not specified in the SVSXCF command will not have their values
+changed.
+
+---
+Available Flags
+
+Flags are listed as they would be passed to SVSXCF, in the format
+NAME:PARAMETERS.
+
+JOIN_CONNECT_TIME:N
+- Parameter values:
+-- N: Number of seconds.
+- This flag configures how long a user must have been connected to
+the network before being allowed to join the channel.
+
+TALK_CONNECT_TIME:N
+- Parameter values:
+-- N: Number of seconds.
+- This flag configures how long a user must have been connected to
+the network before being allowed to talk in the channel.
+
+TALK_JOIN_TIME:N
+- Parameter values:
+-- N: Number of seconds.
+- This flag configures how long a user must wait after joining the channel
+before being allowed to talk.
+
+MAX_BANS:N
+- Parameter values:
+-- N: Number of bans.
+- This flag allows the channel to have a maximum ban list length that differs
+from the server's MAXLIST:b setting.
+
+MAX_INVITES:N
+- Parameter values:
+-- N: Number of invites.
+- This flag allows the channel to have a maximum invites list length that
+differs from the server's MAXLIST:I setting.
+
+MAX_MSG_TIME:M:S
+- Parameter values:
+-- M: Number of messages.
+-- S: Number of seconds.
+- This flag configures the maximum number of messages (M) which can be sent to
+the channel in S seconds.
+
+NO_NOTICE:B
+- Parameter values:
+-- B: Integer representing ON/OFF (1=ON, 0=OFF)
+- Enabling this flag will prevent channel-wide notices can be sent to the
+channel.
+
+NO_CTCP:B
+- Parameter values:
+-- B: Integer representing ON/OFF (1=ON, 0=OFF)
+- Enabling this flag will prevent channel-wide CTCPs can be sent to the channel.
+
+NO_PART_MSG:B
+- Parameter values:
+-- B: Integer representing ON/OFF (1=ON, 0=OFF)
+- Enabling this flag will prevent part messages from being displayed in the
+channel.
+
+NO_QUIT_MSG:B
+- Parameter values:
+-- B: Integer representing ON/OFF (1=ON, 0=OFF)
+- Enabling this flag will prevent quit messages from being displayed in the
+channel.
+
+HIDE_MODE_LISTS:B
+- Parameter values:
+-- B: Integer representing ON/OFF (1=ON, 0=OFF)
+- Enabling this flag will prevent the channel's ban/invite/except (+b/+I/+e)
+lists from being displayed to non-operators.
+
+SJR:B
+- Parameter values:
+-- B: Integer representing ON/OFF (1=ON, 0=OFF)
+- Enabling this flag will send Services Join Requests for this channel. (This
+must be supported/enabled in services.)
+
+NO_NICK_CHANGE:B
+- Parameter values:
+-- B: Integer representing ON/OFF (1=ON, 0=OFF)
+- Enabling this flag will prevent users from changing their nick while in this
+channel.
+
+EXEMPT_OPPED:B
+- Parameter values:
+-- B: Integer representing ON/OFF (1=ON, 0=OFF)
+- Enabling this flag will exempt channel operators from XFLAG restrictions.
+
+EXEMPT_VOICED:B
+- Parameter values:
+-- B: Integer representing ON/OFF (1=ON, 0=OFF)
+- Enabling this flag will exempt voiced users from XFLAG restrictions.
+
+EXEMPT_IDENTD:B
+- Parameter values:
+-- B: Integer representing ON/OFF (1=ON, 0=OFF)
+- Enabling this flag will exempt users who have IDENTD enabled from XFLAG
+restrictions.
+
+EXEMPT_REGISTERED:B
+- Parameter values:
+-- B: Integer representing ON/OFF (1=ON,0=OFF)
+- Enabling this flag will exempt registered users (usermode +r set)
+from XFLAG restrictions.
+
+EXEMPT_INVITES:B
+- Parameter values:
+-- B: Integer representing ON/OFF (1=ON,0=OFF)
+- Enabling this flag will exempt invited users (users who match a channel +I entry) from XFLAG restrictions.
+
+EXEMPT_WEBIRC:B
+- Parameter values:
+-- B: Integer representing ON/OFF (1=ON,0=OFF)
+- Enabling this flag will exempt WebIRC users from XFLAG restrictions.
+
+USER_VERBOSE:B
+- Parameter values:
+-- B: Integer representing ON/OFF (1=ON,0=OFF)
+- Enabling this flag will send failed command messages to #CHANNELNAME-relay.
+
+OPER_VERBOSE:B
+- Parameter values:
+-- B: Integer representing ON/OFF (1=ON,0=OFF)
+- Enabling this flag will send failed command messages to IRCops who have
+usermode +f set.
+
+GREETMESSAGE:MSG
+- Parameter values:
+-- MSG: Message to be displayed.
+- Setting this flag will send a greeting message to users on join. (This must be
+sent as the last flag in the SVSXCF command, because anything after the :
+becomes part of the greeting message.)
+
+--- Technical Details ---
+
+Internally, XFLAGs are maintained in the `int xflags` member of the Channel
+struct.
