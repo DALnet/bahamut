@@ -2571,6 +2571,30 @@ char *iflagtotext(int iflags)
     return res;
 }
 
+/* pflagtotext()
+ * Return the pflags in human readable format.
+ * May 20 - rasengan
+ */
+char *pflagtotext(int pflags)
+{
+    static char res[BUFSIZE + 1];
+    int len = 0;
+
+    if(pflags & CONF_FLAGS_P_SSL)
+        res[len++] = 'S';
+    if(pflags & CONF_FLAGS_P_NODNS)
+        res[len++] = 'n';
+    if(pflags & CONF_FLAGS_P_NOIDENT)
+        res[len++] = 'i';
+
+    if(!len)
+        res[len++] = '-';
+
+    res[len++] = 0;
+
+    return res;
+}
+
 u_long
 memcount_s_conf(MCs_conf *mc)
 {
