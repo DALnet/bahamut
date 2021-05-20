@@ -138,7 +138,7 @@ report_gclone(aClient *cptr, CloneEnt *ce, int l, int is24, char *t)
     sendto_realops_lev(REJ_LEV, "clone %s!%s@%s (%s %d/%d global %s)",
                        cptr->name, cptr->user->username, cptr->user->host,
                        ce->ent, ce->gcount, l, t);
-    
+
     if (is24)
         clones_stat.rgs++;
     else
@@ -158,7 +158,7 @@ clones_check(aClient *cptr)
 {
     CloneEnt *ceip;
     CloneEnt *ce24;
-    int       limit;
+    int       limit, svsclonelimit;
     int       lpri = 0;
     int       gpri = 0;
 
@@ -184,14 +184,20 @@ clones_check(aClient *cptr)
         else if ((limit = cptr->user->allow->class->connfreq))
         {
             lpri = 2;
+            /* Allow svsclone to override local limits */
+            if ((svsclonelimit = ceip->limit) && limit < svsclonelimit)
+                limit = svsclonelimit;
             if (ceip->lcount >= limit)
                 return report_lclone(cptr, ceip, limit, 0, "class",
-                                     cptr->user->allow->class->name);
+                                    cptr->user->allow->class->name);
         }
         else
         {
             lpri = 1;
             limit = local_ip_limit;
+            /* Allow svsclone to override local limits */
+            if ((svsclonelimit = ceip->limit) && limit < svsclonelimit)
+                limit = svsclonelimit;
             if (ceip->lcount >= limit)
                 return report_lclone(cptr, ceip, limit, 0, "default", NULL);
         }
@@ -236,13 +242,18 @@ clones_check(aClient *cptr)
         }
         else if (lpri <= 2 && (limit = cptr->user->allow->class->ip24clones))
         {
+            if ((svsclonelimit = ce24->limit) && limit < svsclonelimit)
+                limit = svsclonelimit;
             if (ce24->lcount >= limit)
                 return report_lclone(cptr, ce24, limit, 1, "class",
-                                     cptr->user->allow->class->name);
+                                    cptr->user->allow->class->name);
         }
         else if (lpri <= 1)
         {
             limit = local_ip24_limit;
+            if ((svsclonelimit = ce24->limit) && limit < svsclonelimit)
+                limit = svsclonelimit;
+
             if (ce24->lcount >= limit)
                 return report_lclone(cptr, ce24, limit, 1, "default", NULL);
         }
@@ -267,7 +278,7 @@ clones_check(aClient *cptr)
                 return report_gclone(cptr, ce24, limit, 1, "default");
         }
     }
-    
+
     return 0;
 }
 
@@ -460,4 +471,3 @@ memcount_clones(MCclones *mc)
 
     return 0;
 }
-
