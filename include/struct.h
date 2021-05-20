@@ -1029,7 +1029,11 @@ struct Client
     time_t	    alas;	/* last time of away set */
     int	    acount;	        /* count of away settings */
 #endif
-    
+#ifdef NO_UMODE_H_FLOOD
+    time_t  last_umodeh_change;         /* last time of umode H change */
+    int	    number_of_umodeh_changes;	/* count of umode H changes */
+#endif
+
     char        sockhost[HOSTLEN + 1];	/* This is the host name from
 					 * the socket and after which the 
 					 * connection was accepted. */
