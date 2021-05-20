@@ -906,7 +906,7 @@
 /*
  * Don't allow local clients to use +h/-h until all servers and services are upgraded.
  */
-#define NO_LOCAL_CMODE_h
+#undef NO_LOCAL_CMODE_h
 
 /* ------------------------- END CONFIGURATION SECTION -------------------- */
 #ifdef APOLLO
