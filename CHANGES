@@ -8,10 +8,11 @@ Ryan Smith(2):
      Override clone limits with SVSCLONE (PR #148)
      Updates to user hostmasking (PR #175)
 
-Emilio Escobar(3):
+Emilio Escobar(4):
      Fixed oper block corruption when two opers share the same IP (PR #181)
      Override softlimits with SVSCLONE (PR #162)
      Decrease unknown count if cptr is in unknown state (PR #160)
+     Enable channel half ops (PR #184)
 
 Kobi Shmueli(1):
      Change user hostmask to send user's IP (PR #179)
