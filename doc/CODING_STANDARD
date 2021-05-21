@@ -4,7 +4,7 @@ The following are the Coding Standards for Bahamut.
 2)  All indentations shall be 4 characters long - no tab characters '\t'
 3)  All variable names shall begin with a lowercase letter.
 4)  All variables defined as macros shall be in all Upper Case
-5)  All preprocessor directive shall be at char posistion 0 with no
+5)  All preprocessor directive shall be at char position 0 with no
     spaces after the #.
 6)  all conditional/loop statements shall have the brace on a line
     by themselves
