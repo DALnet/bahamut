@@ -59,7 +59,7 @@ extern int send_lusers(aClient *,aClient *,int, char **);
 #endif
 extern int is_xflags_exempted(aClient *sptr, aChannel *chptr); /* for m_message() */
 extern int verbose_to_relaychan(aClient *sptr, aChannel *chptr, char *cmd, char *reason); /* for m_message() */
-extern inline void verbose_to_opers(aClient *sptr, aChannel *chptr, char *cmd, char *reason); /* for m_message() */
+extern void verbose_to_opers(aClient *sptr, aChannel *chptr, char *cmd, char *reason); /* for m_message() */
 extern time_t get_user_jointime(aClient *cptr, aChannel *chptr); /* for send_msg_error() */
 extern time_t get_user_lastmsgtime(aClient *cptr, aChannel *chptr); /* also for send_msg_error() -Holbrook */
 extern int server_was_split;
