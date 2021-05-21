@@ -1,26 +1,33 @@
 Changes for 2.2.0:
 ------------------
-rasengan(2):
+rasengan (2):
      Search for WEBIRC users using /rwho (PR #139)
      Added /stats P to show listening ports (PR #134)
 
-Ryan Smith(2):
+Ryan Smith (6):
      Override clone limits with SVSCLONE (PR #148)
      Updates to user hostmasking (PR #175)
+     Added new config.h option: USER_HOSTMASKING_FALLBACK_TO_IP. This is used to hostmask using the user's IP address if we are unable to hostmask using their hostname. This usually happens if they're using a domain name without a lot of labels: somehost.com or company.co.uk or similar. (PR #175)
+     Do not attempt to mask the Staff_Address for opers. (PR #175)
+     Do not allow opers who are already hostmasked to set +H as this results in weird /whois results. (PR #175)
+     Added new config.h option: NO_UMODE_H_FLOOD. Do not allow the user to change user mode H too often, to prevent WATCH flooding. (PR #175)
+     Do not allow user mode H to be changed if the user is in any channels. This is to prevent potential client-side weirdness from happening if a user's host changes while they're already in one or more channels. (PR #175)
+     Send out WATCH notifications if the hostname changes due to a mode H change. (PR #175)
+     Minor typo fixes.
 
-Emilio Escobar(4):
+Emilio Escobar (4):
      Fixed oper block corruption when two opers share the same IP (PR #181)
      Override softlimits with SVSCLONE (PR #162)
      Decrease unknown count if cptr is in unknown state (PR #160)
      Enable channel half ops (PR #184)
 
-Kobi Shmueli(1):
+Kobi Shmueli (1):
      Change user hostmask to send user's IP (PR #179)
 
-Ned T. Crigler(1):
+Ned T. Crigler (1):
      Make configure test support for extra compiler flags (PR #167)
 
-jeian(1):
+jeian (1):
      Add XFLAG documentation (PR #155)
 
 Changes for 2.1.6:
