@@ -32,7 +32,7 @@
 #include "userban.h"
 #include "hooks.h"
 
-extern int do_user(char *, aClient *, aClient *, char *, char *, char *,
+extern inline int do_user(char *, aClient *, aClient *, char *, char *, char *,
 		   unsigned long, char *, char *);
 
 extern int register_user(aClient *, aClient *, char *, char *, char *);
@@ -40,7 +40,6 @@ extern int del_dccallow(aClient *, aClient *, int);
 
 extern int is_xflags_exempted(aClient *sptr, aChannel *chptr);
 extern int verbose_to_relaychan(aClient *sptr, aChannel *chptr, char *cmd, char *reason);
-extern void verbose_to_opers(aClient *sptr, aChannel *chptr, char *cmd, char *reason);
 
 extern int user_modes[];
 

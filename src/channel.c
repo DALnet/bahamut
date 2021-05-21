@@ -1350,7 +1350,7 @@ int verbose_to_relaychan(aClient *sptr, aChannel *chptr, char *cmd, char *reason
 }
 
 /* A function to send a (verbose) message to +f opers */
-void verbose_to_opers(aClient *sptr, aChannel *chptr, char *cmd, char *reason)
+inline void verbose_to_opers(aClient *sptr, aChannel *chptr, char *cmd, char *reason)
 {
     if(call_hooks(CHOOK_FLOODWARN, sptr, chptr, 1, cmd, reason) == FLUSH_BUFFER) return;
 
