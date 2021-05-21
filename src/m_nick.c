@@ -32,7 +32,7 @@
 #include "userban.h"
 #include "hooks.h"
 
-extern inline int do_user(char *, aClient *, aClient *, char *, char *, char *,
+extern int do_user(char *, aClient *, aClient *, char *, char *, char *,
 		   unsigned long, char *, char *);
 
 extern int register_user(aClient *, aClient *, char *, char *, char *);
