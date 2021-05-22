@@ -3413,7 +3413,7 @@ m_umode(aClient *cptr, aClient *sptr, int parc, char *parv[])
                     }
                     else
                     {
-                        sendto_one(sptr, ":%s NOTICE %s :*** Notice -- Server has not received hostmaskt type, please contact SRA.",
+                        sendto_one(sptr, ":%s NOTICE %s :*** Notice -- Server has not received hostmask type, please contact SRA.",
                                me.name, sptr->name);
                     }
                     break;
