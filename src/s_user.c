@@ -3411,6 +3411,11 @@ m_umode(aClient *cptr, aClient *sptr, int parc, char *parv[])
                             hash_check_watch(sptr, RPL_LOGON);
                         }
                     }
+                    else
+                    {
+                        sendto_one(sptr, ":%s NOTICE %s :*** Notice -- Server has not received hostmaskt type, please contact SRA.",
+                               me.name, sptr->name);
+                    }
                     break;
 #endif
                 case 'A':
