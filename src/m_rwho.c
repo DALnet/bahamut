@@ -983,9 +983,9 @@ static int rwho_match(aClient *cptr, int *failcode, aClient **failclient)
 	    return 0;
     }
 
-    if ((rwho_opts.check[0] & RWM_WEBIRC) && !cptr->webirc_ip)
+    if ((rwho_opts.check[0] & RWM_WEBIRC) && !IsWebIRC(cptr))
         return 0;
-    else if ((rwho_opts.check[1] & RWM_WEBIRC) && cptr->webirc_ip)
+    else if ((rwho_opts.check[1] & RWM_WEBIRC) && IsWebIRC(cptr))
         return 0;
 
     if (rwho_opts.check[1] & RWM_IP)
