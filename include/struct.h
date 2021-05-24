@@ -341,7 +341,7 @@ typedef struct SServicesTag ServicesTag;
  *  that mode will be 'silent.'
  */
 
-#define SEND_UMODES (UMODE_a|UMODE_i|UMODE_o|UMODE_r|UMODE_A|UMODE_I|UMODE_R|UMODE_S|UMODE_C|UMODE_H|UMODE_P)
+#define SEND_UMODES (UMODE_a|UMODE_i|UMODE_o|UMODE_r|UMODE_A|UMODE_I|UMODE_R|UMODE_S|UMODE_C|UMODE_H|UMODE_P|UMODE_W)
 #define ALL_UMODES (SEND_UMODES|UMODE_b|UMODE_c|UMODE_d|UMODE_e|UMODE_f|\
                     UMODE_g|UMODE_h|UMODE_j|UMODE_k|UMODE_m|UMODE_n|UMODE_s|\
                     UMODE_w|UMODE_y|UMODE_F|UMODE_K|UMODE_O)
