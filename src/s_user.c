@@ -103,6 +103,7 @@ int  user_modes[] =
     UMODE_S, 'S',
     UMODE_K, 'K',
     UMODE_I, 'I',
+    UMODE_W, 'W',
 #ifdef SPAMFILTER
     UMODE_P, 'P',
 #endif
@@ -2374,6 +2375,11 @@ do_user(char *nick, aClient *cptr, aClient *sptr, char *username, char *host,
         if((uhm_type > 0) && (uhm_umodeh == 1)) sptr->umode |= UMODE_H;
         else sptr->umode &= ~UMODE_H;
 #endif
+        if (cptr->webirc_ip)
+           sptr->umode |= UMODE_W;
+        else
+           sptr->umode &= ~UMODE_W;
+           
         user->server = me.name;
     }
     strncpyzt(sptr->info, realname, sizeof(sptr->info));
