@@ -3361,6 +3361,7 @@ m_umode(aClient *cptr, aClient *sptr, int parc, char *parv[])
                 case 'r':
                 case 'x':
                 case 'X':
+                case 'W':
                 case 'S':
                     break; /* users can't set themselves +r,+x,+X or +S! */
 #ifdef USER_HOSTMASKING
