@@ -4,7 +4,7 @@ rasengan (2):
      Search for WEBIRC users using /rwho (PR #139)
      Added /stats P to show listening ports (PR #134)
 
-Ryan Smith (6):
+Ryan Smith (8):
      Override clone limits with SVSCLONE (PR #148)
      Updates to user hostmasking (PR #175)
      Do not attempt to mask the Staff_Address for opers. (PR #175)
