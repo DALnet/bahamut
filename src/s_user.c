@@ -460,11 +460,6 @@ char *mask_host(char *orghost, char *orgip, int type)
 
     if (call_hooks(CHOOK_MASKHOST, orghost, orgip, &newhost, type) == UHM_SUCCESS) return newhost;
 
-#ifdef USER_HOSTMASKING_FALLBACK_TO_IP
-    // If the initial call fails, the user has a short hostname that we couldn't mask, so retry masking with the IP.
-    if (call_hooks(CHOOK_MASKHOST, orgip, &newhost, type) == UHM_SUCCESS) return newhost;
-#endif
-
     return orghost; /* I guess the user won't be host-masked after all... :( */
 }
 
