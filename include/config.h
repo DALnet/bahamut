@@ -873,15 +873,6 @@
  */
 #define USER_HOSTMASKING
 
-/* USER_HOSTMASKING_FALLBACK_TO_IP is used to hostmask using the user's IP
- * address if we are unable to hostmask using their hostname. This usually
- * happens if they're using a domain name without a lot of labels:
- * somehost.com or company.co.uk or similar.
- */
-#ifdef USER_HOSTMASKING
-#define USER_HOSTMASKING_FALLBACK_TO_IP
-#endif
-
 /* SPAMFILTER is used to enable spam filtering on the network.
  * If you are connected to the main DALnet network, you should
  * have this enabled.
@@ -906,7 +897,7 @@
 /*
  * Don't allow local clients to use +h/-h until all servers and services are upgraded.
  */
-#define NO_LOCAL_CMODE_h
+#undef NO_LOCAL_CMODE_h
 
 /* ------------------------- END CONFIGURATION SECTION -------------------- */
 #ifdef APOLLO

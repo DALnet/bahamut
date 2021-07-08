@@ -260,6 +260,7 @@ extern int  	  do_numeric(int, aClient *, aClient *, int, char **);
 extern int  	  hunt_server(aClient *, aClient *, char *, int, int, char **);
 extern aClient 	 *next_client(aClient *, char *);
 extern aClient 	 *next_client_double(aClient *, char *);
+extern inline void verbose_to_opers(aClient *sptr, aChannel *chptr, char *cmd, char *reason); /* for m_message() */
 
 extern int  	  m_umode(aClient *, aClient *, int, char **);
 extern int  	  m_names(aClient *, aClient *, int, char **);
