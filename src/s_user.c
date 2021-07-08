@@ -59,7 +59,6 @@ extern int send_lusers(aClient *,aClient *,int, char **);
 #endif
 extern int is_xflags_exempted(aClient *sptr, aChannel *chptr); /* for m_message() */
 extern int verbose_to_relaychan(aClient *sptr, aChannel *chptr, char *cmd, char *reason); /* for m_message() */
-extern inline void verbose_to_opers(aClient *sptr, aChannel *chptr, char *cmd, char *reason); /* for m_message() */
 extern time_t get_user_jointime(aClient *cptr, aChannel *chptr); /* for send_msg_error() */
 extern time_t get_user_lastmsgtime(aClient *cptr, aChannel *chptr); /* also for send_msg_error() -Holbrook */
 extern int server_was_split;
@@ -104,6 +103,7 @@ int  user_modes[] =
     UMODE_S, 'S',
     UMODE_K, 'K',
     UMODE_I, 'I',
+    UMODE_W, 'W',
 #ifdef SPAMFILTER
     UMODE_P, 'P',
 #endif
@@ -459,11 +459,6 @@ char *mask_host(char *orghost, char *orgip, int type)
     if(!type) type = uhm_type;
 
     if (call_hooks(CHOOK_MASKHOST, orghost, orgip, &newhost, type) == UHM_SUCCESS) return newhost;
-
-#ifdef USER_HOSTMASKING_FALLBACK_TO_IP
-    // If the initial call fails, the user has a short hostname that we couldn't mask, so retry masking with the IP.
-    if (call_hooks(CHOOK_MASKHOST, orgip, &newhost, type) == UHM_SUCCESS) return newhost;
-#endif
 
     return orghost; /* I guess the user won't be host-masked after all... :( */
 }
@@ -2375,6 +2370,11 @@ do_user(char *nick, aClient *cptr, aClient *sptr, char *username, char *host,
         if((uhm_type > 0) && (uhm_umodeh == 1)) sptr->umode |= UMODE_H;
         else sptr->umode &= ~UMODE_H;
 #endif
+        if (cptr->webirc_ip)
+           sptr->umode |= UMODE_W;
+        else
+           sptr->umode &= ~UMODE_W;
+           
         user->server = me.name;
     }
     strncpyzt(sptr->info, realname, sizeof(sptr->info));
@@ -3356,6 +3356,7 @@ m_umode(aClient *cptr, aClient *sptr, int parc, char *parv[])
                 case 'r':
                 case 'x':
                 case 'X':
+                case 'W':
                 case 'S':
                     break; /* users can't set themselves +r,+x,+X or +S! */
 #ifdef USER_HOSTMASKING
@@ -3411,6 +3412,11 @@ m_umode(aClient *cptr, aClient *sptr, int parc, char *parv[])
                             sptr->umode &= ~UMODE_H;
                             hash_check_watch(sptr, RPL_LOGON);
                         }
+                    }
+                    else
+                    {
+                        sendto_one(sptr, ":%s NOTICE %s :*** Notice -- Server has not received hostmask type, please contact %s staff.",
+                               me.name, sptr->name, Network_Name);
                     }
                     break;
 #endif
