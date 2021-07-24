@@ -59,7 +59,6 @@ extern int send_lusers(aClient *,aClient *,int, char **);
 #endif
 extern int is_xflags_exempted(aClient *sptr, aChannel *chptr); /* for m_message() */
 extern int verbose_to_relaychan(aClient *sptr, aChannel *chptr, char *cmd, char *reason); /* for m_message() */
-extern inline void verbose_to_opers(aClient *sptr, aChannel *chptr, char *cmd, char *reason); /* for m_message() */
 extern time_t get_user_jointime(aClient *cptr, aChannel *chptr); /* for send_msg_error() */
 extern time_t get_user_lastmsgtime(aClient *cptr, aChannel *chptr); /* also for send_msg_error() -Holbrook */
 extern int server_was_split;
@@ -104,6 +103,7 @@ int  user_modes[] =
     UMODE_S, 'S',
     UMODE_K, 'K',
     UMODE_I, 'I',
+    UMODE_W, 'W',
 #ifdef SPAMFILTER
     UMODE_P, 'P',
 #endif
@@ -994,7 +994,7 @@ register_user(aClient *cptr, aClient *sptr, char *nick, char *username,
                     strcpy(sptr->hostip, "0.0.0.0");
                     strncpy(sptr->sockhost, Staff_Address, HOSTLEN + 1);
 #ifdef USER_HOSTMASKING
-                    strncpyzt(sptr->user->mhost, mask_host(Staff_Address,sptr->hostip,0), HOSTLEN + 1);
+                    strncpyzt(sptr->user->mhost, Staff_Address, HOSTLEN + 1);
                     if(uhm_type > 0) sptr->umode &= ~UMODE_H; /* It's already masked anyway */
 #endif
                 }
@@ -2370,6 +2370,11 @@ do_user(char *nick, aClient *cptr, aClient *sptr, char *username, char *host,
         if((uhm_type > 0) && (uhm_umodeh == 1)) sptr->umode |= UMODE_H;
         else sptr->umode &= ~UMODE_H;
 #endif
+        if (cptr->webirc_ip)
+           sptr->umode |= UMODE_W;
+        else
+           sptr->umode &= ~UMODE_W;
+           
         user->server = me.name;
     }
     strncpyzt(sptr->info, realname, sizeof(sptr->info));
@@ -3351,14 +3356,70 @@ m_umode(aClient *cptr, aClient *sptr, int parc, char *parv[])
                 case 'r':
                 case 'x':
                 case 'X':
+                case 'W':
                 case 'S':
                     break; /* users can't set themselves +r,+x,+X or +S! */
+#ifdef USER_HOSTMASKING
                 case 'H':
-                    if ((uhm_type > 0) && (uhm_umodeh > 0) && (what == MODE_ADD))
-                        sptr->umode |= UMODE_H;
+                    // Ensure hostmasking settings are enabled to allow setting the mode.
+                    if(((uhm_type > 0) && (uhm_umodeh > 0) && (what == MODE_ADD)) || (what == MODE_DEL))
+                    {
+                        if(MyClient(sptr))
+                        {
+                            // Do not allow opers who are already oper hostmasked to set the mode.
+                            if(strcasecmp(sptr->user->mhost, Staff_Address) == 0) {
+                                sendto_one(sptr, ":%s NOTICE %s :*** Notice -- You cannot set user mode H since you are already oper hostmasked.",
+                                           me.name, sptr->name);
+                                break;
+                            }
+
+                            // Do not allow the mode change if the user is in any channels.  This is to prevent potential client-side
+                            // weirdness from happening if a user's host changes while they're already in one or more channels.
+                            if(sptr->user->channel != NULL)
+                            {
+                                sendto_one(sptr, ":%s NOTICE %s :*** Notice -- You cannot change user mode H while joined to any channels.",
+                                           me.name, sptr->name);
+                                break;
+                            }
+
+#ifdef NO_UMODE_H_FLOOD
+                            // Do not allow too many mode changes, as this can result in a WATCH flood.
+                            if ((sptr->last_umodeh_change + MAX_UMODE_H_TIME) < NOW)
+                            {
+                                sptr->number_of_umodeh_changes = 0;
+                            }
+                            sptr->last_umodeh_change = NOW;
+                            sptr->number_of_umodeh_changes++;
+
+                            if (sptr->number_of_umodeh_changes > MAX_UMODE_H_COUNT && !IsAnOper(sptr))
+                            {
+                                sendto_one(sptr, ":%s NOTICE %s :*** Notice -- Too many user mode H changes. Wait %d seconds before trying again.",
+                                       me.name, sptr->name, MAX_UMODE_H_TIME);
+                                break;
+                            }
+#endif
+                        }
+
+                        if(what == MODE_ADD)
+                        {
+                            hash_check_watch(sptr, RPL_LOGOFF);
+                            sptr->umode |= UMODE_H;
+                            hash_check_watch(sptr, RPL_LOGON);
+                        }
+                        else
+                        {
+                            hash_check_watch(sptr, RPL_LOGOFF);
+                            sptr->umode &= ~UMODE_H;
+                            hash_check_watch(sptr, RPL_LOGON);
+                        }
+                    }
                     else
-                        sptr->umode &= ~UMODE_H;
+                    {
+                        sendto_one(sptr, ":%s NOTICE %s :*** Notice -- Server has not received hostmask type, please contact %s staff.",
+                               me.name, sptr->name, Network_Name);
+                    }
                     break;
+#endif
                 case 'A':
                     /* set auto +a if user is setting +A */
                     if (MyClient(sptr) && (what == MODE_ADD))

@@ -392,13 +392,13 @@ find_oper(char *name, char *username, char *sockhost, char *hostip)
 
     for(aoper = opers; aoper; aoper = aoper->next)
     {
-        if (aoper->legal == -1)
+        if (aoper->legal == -1 || mycmp(name, aoper->nick))
             continue;
 
         for(i = 0; aoper->hosts[i]; i++)
         {
-            if(!mycmp(name, aoper->nick) && (!match(aoper->hosts[i], userhost)
-                    || !match(aoper->hosts[i], userip)))
+            if(!match(aoper->hosts[i], userhost)
+                    || !match(aoper->hosts[i], userip))
                 return aoper;
 	    if(strchr(aoper->hosts[i], '/'))
 	    {
@@ -490,7 +490,7 @@ set_effective_class(aClient *cptr)
     cptr->class->links++;
     return;
 }
-    
+
 
 /* find the first (best) I line to attach.
  * rewritten in feb04 for the overdue death of aConfItem
@@ -498,7 +498,7 @@ set_effective_class(aClient *cptr)
  * Rewritten again in Mar04 to optimize and get rid of deceptive logic.
  * Whoever wrote this originally must have been drunk...  -Quension
  */
-int 
+int
 attach_Iline(aClient *cptr, struct hostent *hp, char *sockhost)
 {
     aAllow *allow;
@@ -522,7 +522,7 @@ attach_Iline(aClient *cptr, struct hostent *hp, char *sockhost)
         add_local_domain(namehost, len - strlen(namehost));
     }
 
-    for (allow = allows; allow; allow = allow->next) 
+    for (allow = allows; allow; allow = allow->next)
     {
         if(allow->legal == -1)
             continue;
@@ -606,7 +606,7 @@ attach_Iline(aClient *cptr, struct hostent *hp, char *sockhost)
  * rewrote to remove the "ONE" lamity *BLEH* I agree with comstud on
  * this one. - Dianora
  */
-static int 
+static int
 attach_iline(aClient *cptr, aAllow *allow, char *uhost, int doid)
 {
     if(allow->class->links >= allow->class->maxlinks)
@@ -615,7 +615,7 @@ attach_iline(aClient *cptr, aAllow *allow, char *uhost, int doid)
     if (doid)
         cptr->flags |= FLAGS_DOID;
     get_sockhost(cptr, uhost);
-    
+
     cptr->user->allow = allow;
     allow->clients++;
 
@@ -1814,7 +1814,7 @@ confadd_modules(cVar *vars[], int lnum)
     }
     return lnum;
 }
-    
+
 
 /* set_classes
  * after loading the config into temporary lists, we must
@@ -1845,7 +1845,7 @@ set_classes(void)
      * You may be wondering why we're doing this here and appearently
      * again in our merge routines!  well, this is for sanity.  if
      * for whatever reason we dont have a class for each definition here,
-     * back out of the conf load immediately and we wont have distroyed 
+     * back out of the conf load immediately and we wont have distroyed
      * or overwritten any of our active data.
      * After we run our merge_classes() routine at the start of our
      * merge, then some of these classes will update currently active
@@ -2062,7 +2062,7 @@ merge_allows()
     }
     return;     /* this one is easy */
 }
-    
+
 static void
 merge_opers()
 {
@@ -2135,7 +2135,7 @@ static void
 merge_ports()
 {
     aPort *aport, *old_port, *ptrn;
-    
+
     if(forked)
         close_listeners();      /* marks ports for deletion */
 
@@ -2334,7 +2334,7 @@ clear_newconfs()
 
 /*
  * rehash
- * 
+ *
  * Actual REHASH service routine. Called with sig == 0 if it has been
  * called as a result of an operator issuing this command, else assume
  * it has been called as a result of the server receiving a HUP signal.
@@ -2345,7 +2345,7 @@ int rehash(aClient *cptr, aClient *sptr, int sig)
     int         i;
     char       *conferr;
 
-    if (sig == SIGHUP) 
+    if (sig == SIGHUP)
     {
 #ifdef USE_SSL
 		/* Rehash SSL so we can automate certificate renewals and updates externally, i.e. from a cron job --xPsycho */
@@ -2363,7 +2363,7 @@ int rehash(aClient *cptr, aClient *sptr, int sig)
     }
 
     for (i = 0; i <= highest_fd; i++)
-        if ((acptr = local[i]) && !IsMe(acptr)) 
+        if ((acptr = local[i]) && !IsMe(acptr))
         {
             /*
              * Nullify any references from client structures to this host
@@ -2408,7 +2408,7 @@ int rehash(aClient *cptr, aClient *sptr, int sig)
         clear_newconfs();
         return 1;
     }
-    
+
     merge_confs();
     build_rplcache();
     nextconnect = 1;    /* reset autoconnects */
@@ -2571,6 +2571,30 @@ char *iflagtotext(int iflags)
     return res;
 }
 
+/* pflagtotext()
+ * Return the pflags in human readable format.
+ * May 20 - rasengan
+ */
+char *pflagtotext(int pflags)
+{
+    static char res[BUFSIZE + 1];
+    int len = 0;
+
+    if(pflags & CONF_FLAGS_P_SSL)
+        res[len++] = 'S';
+    if(pflags & CONF_FLAGS_P_NODNS)
+        res[len++] = 'n';
+    if(pflags & CONF_FLAGS_P_NOIDENT)
+        res[len++] = 'i';
+
+    if(!len)
+        res[len++] = '-';
+
+    res[len++] = 0;
+
+    return res;
+}
+
 u_long
 memcount_s_conf(MCs_conf *mc)
 {
@@ -2703,4 +2727,3 @@ memcount_s_conf(MCs_conf *mc)
 
     return mc->total.m;
 }
-

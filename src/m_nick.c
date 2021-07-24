@@ -40,7 +40,6 @@ extern int del_dccallow(aClient *, aClient *, int);
 
 extern int is_xflags_exempted(aClient *sptr, aChannel *chptr);
 extern int verbose_to_relaychan(aClient *sptr, aChannel *chptr, char *cmd, char *reason);
-extern inline void verbose_to_opers(aClient *sptr, aChannel *chptr, char *cmd, char *reason);
 
 extern int user_modes[];
 

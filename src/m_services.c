@@ -62,7 +62,7 @@ int services_jr = 0; /* Redirect join requests to services (disabled by default)
  * least 32 bit
  */
 
-static unsigned long 
+static unsigned long
 my_rand()
 {
     static unsigned long s = 0, t = 0, k = 12345678;
@@ -140,7 +140,7 @@ int m_services(aClient *cptr, aClient *sptr, int parc, char *parv[])
     if ((tmps = (char *) strchr(parv[1], ' ')))
     {
 	for(; *tmps == ' '; tmps++); /* er.. before this for loop, the next
-				      * comparison would always compare '#' 
+				      * comparison would always compare '#'
 				      * with ' '.. oops. - lucas
 				      */
 	if (*tmps == '#')
@@ -187,7 +187,7 @@ int m_svsnick(aClient *cptr, aClient *sptr, int parc, char *parv[])
     aClient *acptr, *ocptr;
     char newnick[NICKLEN + 1];
 
-    if (!IsULine(sptr)||parc < 4||(strlen(parv[2]) > NICKLEN)) 
+    if (!IsULine(sptr)||parc < 4||(strlen(parv[2]) > NICKLEN))
 	return 0;
 
     if(hunt_server(cptr, sptr, ":%s SVSNICK %s %s :%s", 1, parc, parv) != HUNTED_ISME)
@@ -205,7 +205,7 @@ int m_svsnick(aClient *cptr, aClient *sptr, int parc, char *parv[])
     {
         int tries = 0, nprefix;
 
-        do 
+        do
         {
 	    nprefix = my_rand() % 99999;
   	    ircsnprintf(newnick, NICKLEN, "%s-%d", parv[2], nprefix);
@@ -241,7 +241,7 @@ int m_svsnick(aClient *cptr, aClient *sptr, int parc, char *parv[])
     add_history(acptr, 1);
     sendto_serv_butone(NULL, ":%s NICK %s :%ld", parv[1], newnick,
 		       (long)acptr->tsinfo);
-    if(acptr->name[0]) 
+    if(acptr->name[0])
     {
         del_from_client_hash_table(acptr->name, acptr);
         hash_check_watch(acptr, RPL_LOGOFF);
@@ -338,7 +338,7 @@ int channel_svsmode(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	sendto_serv_butone(cptr, ":%s SVSMODE %s %s %s %ld", parv[0], parv[1],
 			   parv[2], nick, acptr->tsinfo);
     else
-	sendto_serv_butone(cptr, ":%s SVSMODE %s %s", parv[0], parv[1], 
+	sendto_serv_butone(cptr, ":%s SVSMODE %s %s", parv[0], parv[1],
 			   parv[2]);
 
     return 0;
@@ -498,7 +498,7 @@ int m_svshold(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	return 0;
     }
     ban->reason = NULL;
-    
+
     if((oban = find_simban_exact(ban)) != NULL)
     {
 	simban_free(ban);
@@ -558,6 +558,9 @@ m_svsclone(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
     d = atoi(parv[2]);
     clones_set(parv[1], CLIM_HARD_GLOBAL, d);
+
+    /* Override soft local limits */
+    clones_set(parv[1], CLIM_SOFT_LOCAL, d);
     sendto_serv_butone(cptr, ":%s SVSCLONE %s %s", parv[0], parv[1], parv[2]);
 
     return 0;
@@ -867,7 +870,7 @@ struct FlagList xflags_list[] =
  *   NO_PART_MSG       - no /part messages (on/off)
  *   NO_QUIT_MSG       - no /quit messages (on/off)
  *   HIDE_MODE_LISTS   - hide /mode #channel +b/+I/+e lists from non-ops (on/off)
- *   SJR               - enable services join request for this channel (must also be enabled globally) 
+ *   SJR               - enable services join request for this channel (must also be enabled globally)
  *   NO_NICK_CHANGE    - no nick changes allowed on this channel (on/off)
  *   EXEMPT_OPPED      - exempt opped users (on/off)
  *   EXEMPT_VOICED     - exempt voiced users (on/off)
@@ -1186,4 +1189,3 @@ memcount_m_services(MCm_services *mc)
 
     return 0;
 }
-
