@@ -944,8 +944,8 @@ m_connect(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
     if (!(aconn = find_aConnect(parv[1])))
     {
-        sendto_one(sptr, "NOTICE %s :Connect: No Connect block found for %s.",
-                   parv[0], parv[1]);
+        sendto_one(sptr, ":%s NOTICE %s :Connect: No Connect block found for %s.",
+                   me.name, parv[0], parv[1]);
         return 0;
     }
     /*
