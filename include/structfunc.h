@@ -84,6 +84,10 @@ extern int ac_number_of_nick_changes(aClient *);
 extern time_t ac_alas(aClient *);
 extern int ac_acount(aClient *);
 #endif
+#ifdef NO_UMODE_H_FLOOD
+extern time_t ac_last_umodeh_change(aClient *);
+extern int ac_number_of_umodeh_changes(aClient *);
+#endif
 extern char *ac_sockhost(aClient *);
 extern char *ac_passwd(aClient *);
 extern int ac_oflag(aClient *);

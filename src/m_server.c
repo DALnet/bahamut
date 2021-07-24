@@ -101,9 +101,14 @@ do_server_estab(aClient *cptr)
     /* "refresh" inpath with host  */
     char *inpath = get_client_name(cptr, HIDEME);
 
+    /*
+     * Incoming connections have unknown status,
+     * outbound connections have status of connecting
+     */
+    if (IsUnknown(cptr)) Count.unknown--;
+
     SetServer(cptr);
 
-    Count.unknown--;
     Count.server++;
     Count.myserver++;
 
@@ -435,7 +440,7 @@ m_server_estab(aClient *cptr)
                    my_name_for_link(me.name, aconn),
                    (me.info[0]) ? (me.info) : "IRCers United");
     }
-    else 
+    else
     {
         s = (char *) strchr(aconn->host, '@');
         *s = '\0';      /* should never be NULL -- wanna bet? -Dianora */
@@ -648,7 +653,7 @@ int m_server(aClient *cptr, aClient *sptr, int parc, char *parv[])
                 return exit_client(cptr, cptr, cptr, "No Connect block");
         }
     }
-    
+
     /* already linked server */
     if (!IsServer(cptr))
         return 0;
@@ -808,7 +813,7 @@ int m_server(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
 /* m_dkey
  * lucas's code, i assume.
- * moved here from s_serv.c due to its integration in the encrypted 
+ * moved here from s_serv.c due to its integration in the encrypted
  * server negotiation stuffs. -epi
  */
 
@@ -928,4 +933,3 @@ int m_dkey(aClient *cptr, aClient *sptr, int parc, char *parv[])
 #endif
     return 0;
 }
-

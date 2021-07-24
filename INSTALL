@@ -16,7 +16,7 @@ HOW TO BUILD:
 4.  "make install" will install the ircd, config converter, and documents
     to the directory set by ./configure
 
-5.  Edit example.conf in your install directory, and move it to "ircd.conf".
+5.  Edit template.conf in your install directory, and move it to "ircd.conf".
 
 6.  Run the binary!  ircd will look in the directory you are executing from
     for an ircd.conf first, then it will look to the directory local to itself.
