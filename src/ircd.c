@@ -104,6 +104,9 @@ extern void     read_help(char *);          /* defined in s_serv.c */
 extern void     init_globals();
 extern int      klinestore_init(int);    /* defined in klines.c */
 
+extern int uhm_type;
+extern int uhm_umodeh;
+
 char        **myargv;
 char        configfile[PATH_MAX] = {0};     /* Server configuration file */
 
@@ -872,6 +875,8 @@ main(int argc, char *argv[])
         }
     }
 
+    load_settings();
+
     /* init the modules, load default modules! */
     init_modules();
 
@@ -1334,3 +1339,77 @@ memcount_ircd(MCircd *mc)
     return 0;
 }
 
+/* load_settings - Load the persistent settings
+ *                   Returns: 1 = Success
+ *                            0 = Failure
+ */
+int load_settings()
+{
+    FILE *fp;
+    char tmp[PATH_MAX];
+    char line[1024];
+    char *para[MAXPARA + 1];
+    int parc;
+
+    ircsprintf(tmp, "%s/settings.txt", dpath);
+    if(!(fp = fopen(tmp, "r")))
+        return 0; /* Can't open file! */
+
+    while(fgets(line, sizeof(line), fp))
+    {
+        char *tmp = strchr(line, '\n');
+        if(!tmp)
+            break;
+        *tmp = '\0';
+        tmp = line;
+        parc = 0;
+        while(*tmp)
+        {
+            while(*tmp==' ')
+                *tmp++ = '\0';
+
+            if(*tmp==':')
+            {
+                para[parc++] = tmp + 1;
+                break;
+            }
+            para[parc++] = tmp;
+            while(*tmp && *tmp!=' ')
+                tmp++;
+        }
+        para[parc + 1] = NULL;
+        if(!mycmp(para[0], "uhm_type") && parc > 1)
+        {
+            uhm_type = atoi(para[1]);
+        }
+        if(!mycmp(para[0], "uhm_umodeh") && parc > 1)
+        {
+            uhm_umodeh = atoi(para[1]);
+        }
+    }
+    fclose(fp);
+
+    return 1;
+}
+
+/* save_settings - Save the persistent settings file
+ *                   Returns: 1 = Success
+ *                            0 = Failure
+ */
+int save_settings()
+{
+    char tmp[PATH_MAX];
+    FILE *fp;
+
+    ircsprintf(tmp, "%s/settings.txt", dpath);
+    fp = fopen(tmp, "w");
+    if(!fp)
+        return 0;
+
+    fprintf(fp, "uhm_type %d\n", uhm_type);
+    fprintf(fp, "uhm_umodeh %d\n", uhm_umodeh);
+
+    fclose(fp);
+
+    return 1;
+}

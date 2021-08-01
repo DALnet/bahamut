@@ -238,6 +238,9 @@ extern void 	  terminate(void), write_pidfile(void);
 extern int  	  match(char *, char *);
 extern char  	 *collapse(char *);
 
+extern int        load_settings();
+extern int        save_settings();
+
 extern int  	  writecalls, writeb[];
 #ifdef WRITEV_IOV
 extern int        deliver_it(aClient *, struct iovec *, int);
