@@ -311,10 +311,10 @@ typedef struct SServicesTag ServicesTag;
 #define UMODE_F     0x1000000   /* umode +F - no cptr->since message rate throttle */
 #define UMODE_j	    0x2000000   /* umode +j - client rejection notices */
 #define UMODE_K     0x4000000   /* umode +K - U: lined server kill messages */
+#define UMODE_W     0x6000000 /* umode +W - User is connected from WEBIRC */
 #define UMODE_I     0x8000000   /* umode +I - invisible oper (masked) */
 #define UMODE_S     0x10000000  /* umode +S - User is using SSL */
 #define UMODE_C     0x20000000  /* umode +C - User is only accepting private messages from users who share a common channel with them */
-#define UMODE_W     0x30000000 /* umode +W - User is connected from WEBIRC */
 #define UMODE_H     0x40000000  /* umode +H - User is host-masked */
 
 /* WARNING: Do not add any values greater than 0x40000000 unless you change Client->umode to unsigned long
