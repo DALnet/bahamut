@@ -1,7 +1,6 @@
 Changes for 2.2.0:
 ------------------
 rasengan (2):
-     Search for WEBIRC users using /rwho (PR #139)
      Added /stats P to show listening ports (PR #134)
 
 Ryan Smith (8):
