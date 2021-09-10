@@ -3,7 +3,8 @@ Changes for 2.2.0:
 rasengan (2):
      Added /stats P to show listening ports (PR #134)
 
-Ryan Smith (9):
+Ryan Smith (10):
+=======
      Override clone limits with SVSCLONE (PR #148)
      Updates to user hostmasking (PR #175)
      Do not attempt to mask the Staff_Address for opers. (PR #175)
@@ -13,6 +14,7 @@ Ryan Smith (9):
      Send out WATCH notifications if the hostname changes due to a mode H change. (PR #175)
      Minor typo fixes.
      Show UHM variables in /INFO.
+     Persist the uhm_type and uhm_uhmode values to disk to handle restarts properly.
 
 Emilio Escobar (4):
      Fixed oper block corruption when two opers share the same IP (PR #181)
