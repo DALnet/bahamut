@@ -3,7 +3,7 @@ Changes for 2.2.0:
 rasengan (2):
      Added /stats P to show listening ports (PR #134)
 
-Ryan Smith (8):
+Ryan Smith (9):
      Override clone limits with SVSCLONE (PR #148)
      Updates to user hostmasking (PR #175)
      Do not attempt to mask the Staff_Address for opers. (PR #175)
@@ -12,6 +12,7 @@ Ryan Smith (8):
      Do not allow user mode H to be changed if the user is in any channels. This is to prevent potential client-side weirdness from happening if a user's host changes while they're already in one or more channels. (PR #175)
      Send out WATCH notifications if the hostname changes due to a mode H change. (PR #175)
      Minor typo fixes.
+     Show UHM variables in /INFO.
 
 Emilio Escobar (4):
      Fixed oper block corruption when two opers share the same IP (PR #181)
