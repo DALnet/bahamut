@@ -1,7 +1,6 @@
 Changes for 2.2.0:
 ------------------
 rasengan (2):
-     Search for WEBIRC users using /rwho (PR #139)
      Added /stats P to show listening ports (PR #134)
 
 Ryan Smith (9):
@@ -22,6 +21,7 @@ Emilio Escobar (4):
      Enable channel half ops (PR #184)
 
 Kobi Shmueli (1):
+     Fix a small bug where the "Connect: No connet block found" notice has no prefix (PR #191)
      Change user hostmask to send user's IP (PR #179)
 
 Ned T. Crigler (1):
