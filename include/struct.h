@@ -314,7 +314,6 @@ typedef struct SServicesTag ServicesTag;
 #define UMODE_I     0x8000000   /* umode +I - invisible oper (masked) */
 #define UMODE_S     0x10000000  /* umode +S - User is using SSL */
 #define UMODE_C     0x20000000  /* umode +C - User is only accepting private messages from users who share a common channel with them */
-#define UMODE_W     0x30000000 /* umode +W - User is connected from WEBIRC */
 #define UMODE_H     0x40000000  /* umode +H - User is host-masked */
 
 /* WARNING: Do not add any values greater than 0x40000000 unless you change Client->umode to unsigned long
@@ -341,7 +340,7 @@ typedef struct SServicesTag ServicesTag;
  *  that mode will be 'silent.'
  */
 
-#define SEND_UMODES (UMODE_a|UMODE_i|UMODE_o|UMODE_r|UMODE_A|UMODE_I|UMODE_R|UMODE_S|UMODE_C|UMODE_H|UMODE_P|UMODE_W)
+#define SEND_UMODES (UMODE_a|UMODE_i|UMODE_o|UMODE_r|UMODE_A|UMODE_I|UMODE_R|UMODE_S|UMODE_C|UMODE_H|UMODE_P)
 #define ALL_UMODES (SEND_UMODES|UMODE_b|UMODE_c|UMODE_d|UMODE_e|UMODE_f|\
                     UMODE_g|UMODE_h|UMODE_j|UMODE_k|UMODE_m|UMODE_n|UMODE_s|\
                     UMODE_w|UMODE_y|UMODE_F|UMODE_K|UMODE_O)
@@ -358,7 +357,6 @@ typedef struct SServicesTag ServicesTag;
 
 #define	IsOper(x)		((x)->umode & UMODE_o)
 #define	IsLocOp(x)		((x)->umode & UMODE_O)
-#define IsWebIRC(x)     ((x)->umode & UMODE_W)
 #define	IsInvisible(x)		((x)->umode & UMODE_i)
 #define	IsAnOper(x)		((x)->umode & (UMODE_o|UMODE_O))
 #define	CanBeOper(x)		((x)->umode & (UMODE_o|UMODE_O|UMODE_I))
