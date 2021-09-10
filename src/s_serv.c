@@ -57,6 +57,8 @@
 static char buf[BUFSIZE];
 extern int  rehashed;
 extern int  forked;
+extern int uhm_type;
+extern int uhm_umodeh;
 
 /* external variables */
 
@@ -448,14 +450,14 @@ m_info(aClient *cptr, aClient *sptr, int parc, char *parv[])
             sendto_one(sptr, ":%s %d %s :zlib version: %s", me.name,
                        RPL_INFO, parv[0], ZLIB_VERSION);
             sendto_one(sptr, ":%s %d %s :FD_SETSIZE=%d WRITEV_IOV=%d "
-                       "MAXCONNECTIONS=%d MAX_BUFFER=%d MAXCLIENTS=%d",
+                             "MAXCONNECTIONS=%d MAX_BUFFER=%d MAXCLIENTS=%d uhm_type=%d uhm_umodeh=%d",
                        me.name, RPL_INFO, parv[0], FD_SETSIZE,
 #ifdef WRITEV_IOV
                        WRITEV_IOV,
 #else
                        0,
 #endif
-                       MAXCONNECTIONS, MAX_BUFFER, MAXCLIENTS);
+                       MAXCONNECTIONS, MAX_BUFFER, MAXCLIENTS, uhm_type, uhm_umodeh);
         }
 
         sendto_one(sptr, rpl_str(RPL_INFO), me.name, parv[0], "");
