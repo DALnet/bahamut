@@ -821,6 +821,8 @@ int m_svsuhm(aClient *cptr, aClient *sptr, int parc, char *parv[])
     }
     else sendto_serv_butone(cptr, ":%s SVSUHM %s", sptr->name, parv[1]);
 
+    save_settings();
+
     return 0;
 }
 
