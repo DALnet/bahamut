@@ -4631,7 +4631,7 @@ int m_names(aClient *cptr, aClient *sptr, int parc, char *parv[])
     if (flag) 
         sendto_one(sptr, rpl_str(RPL_NAMREPLY), me.name, parv[0], buf);
     
-    sendto_one(sptr, rpl_str(RPL_ENDOFNAMES), me.name, parv[0], para);
+    sendto_one(sptr, rpl_str(RPL_ENDOFNAMES), me.name, parv[0], buf);
     
     return 0;
 }
