@@ -994,7 +994,7 @@ static int rwho_match(aClient *cptr, int *failcode, aClient **failclient)
         return 0;
 
     if ((rwho_opts.check[1] & RWM_HOST) &&
-        !rwho_opts.host_func[1](rwho_opts.host_pat[1], cptr->user->host) && !rwho_opts.host_func[1](rwho_opts.host_pat[1], cptr->user->mhost))
+        !rwho_opts.host_func[1](rwho_opts.host_pat[1], cptr->user->host) || !rwho_opts.host_func[1](rwho_opts.host_pat[1], cptr->user->mhost))
         return 0;
 
 #ifdef RWHO_PROBABILITY
