@@ -655,11 +655,6 @@ int chk_who(aClient *ac, aClient *sptr, int showall)
 #endif
     }
     
-    if(wsopts.host!=NULL)
-	if((wsopts.host_plus && hchkfn(wsopts.host, ac->user->host)) ||
-	   (!wsopts.host_plus && !hchkfn(wsopts.host, ac->user->host)))
-	    return 0;
-
     if(wsopts.cidr_plus)
 	if(ac->ip_family != wsopts.cidr_family ||
 	   bitncmp(&ac->ip, &wsopts.cidr_ip, wsopts.cidr_bits) != 0)
