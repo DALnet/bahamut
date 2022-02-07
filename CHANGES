@@ -1,6 +1,6 @@
 Changes for 2.2.1:
 ------------------
-Ryan Smith (1):
+Ryan Smith (3):
      Remove old /who matching logic that breaks hostname searches
      Fix bug with /rwho -h not hiding hostmasked clients properly
      Wrap /rwho host checking logic in #ifdef USER_HOSTMASKING
