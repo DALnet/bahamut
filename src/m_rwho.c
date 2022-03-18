@@ -1135,6 +1135,8 @@ static void rwho_reply(aClient *cptr, aClient *ac, char *buf, chanMember *cm)
         {
             if (cm->flags & CHFL_CHANOP)
                 *dst++ = '@';
+			else if (cm->flags & CHFL_HALFOP)
+				*dst++ = '%';
             else if (cm->flags & CHFL_VOICE)
                 *dst++ = '+';
         }
@@ -1241,7 +1243,9 @@ static void rwho_reply(aClient *cptr, aClient *ac, char *buf, chanMember *cm)
         {
             if (cm->flags & CHFL_CHANOP)
                 *dst++ = '@';
-            if (cm->flags & CHFL_VOICE)
+			else if (cm->flags & CHFL_HALFOP)
+				*dst++ = '%';
+            else if (cm->flags & CHFL_VOICE)
                 *dst++ = '+';
         }
     }
