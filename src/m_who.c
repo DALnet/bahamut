@@ -256,18 +256,28 @@ int build_searchopts(aClient *sptr, int parc, char *parv[])
 	  }
 	  if (*parv[args] == '@' || *parv[args] == '%' || *parv[args] == '+')
 	  {
-	      char *cname = parv[args] + 1;
-
-		  if (*cname == '@')
-			  wsopts.channelflags = CHFL_CHANOP;
-		  else if (*cname == '%')
-			  wsopts.channelflags = CHFL_HALFOP;
-		  else
-			  wsopts.channelflags = CHFL_VOICE;
-
-		  cname++;
-
-	      wsopts.channel=find_channel(cname, NullChn);
+		  char *cname = parv[args];
+		  
+		  while (*cname == '@' || *cname == '%' || *cname == '+')
+		  {
+			  if (wsopts.channelflags)
+			  {
+				  if (*cname == '@') wsopts.channelflags |= CHFL_CHANOP;
+				  else if (*cname == '%') wsopts.channelflags |= CHFL_HALFOP;
+				  else if (*cname == '+') wsopts.channelflags |= CHFL_VOICE;
+			  }
+			  
+			  else
+			  {
+				  if (*cname == '@') wsopts.channelflags = CHFL_CHANOP;
+				  else if (*cname == '%') wsopts.channelflags = CHFL_HALFOP;
+				  else if (*cname == '+') wsopts.channelflags = CHFL_VOICE
+			  }
+			  
+			  cname++;
+		  }
+		  
+		  wsopts.channel=find_channel(cname, NullChn);
 	  }
 	  else
 	  {
