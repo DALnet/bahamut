@@ -254,23 +254,36 @@ int build_searchopts(aClient *sptr, int parc, char *parv[])
 			 sptr->name, "WHO", "who");
 	      return 0;
 	  }
+
+#ifdef USE_HALFOPS
 	  if (*parv[args] == '@' || *parv[args] == '%' || *parv[args] == '+')
+#else
+	  if (*parv[args] == '@' || parv[args] == '+')
+#endif
 	  {
 		  char *cname = parv[args];
 		  
+#ifdef USE_HALFOPS		  
 		  while (*cname == '@' || *cname == '%' || *cname == '+')
+#else
+		  while (*cname == '@' || *cname == '+')
+#endif
 		  {
 			  if (wsopts.channelflags)
 			  {
 				  if (*cname == '@') wsopts.channelflags |= CHFL_CHANOP;
+#ifdef USE_HALFOPS
 				  else if (*cname == '%') wsopts.channelflags |= CHFL_HALFOP;
+#endif
 				  else if (*cname == '+') wsopts.channelflags |= CHFL_VOICE;
 			  }
 			  
 			  else
 			  {
 				  if (*cname == '@') wsopts.channelflags = CHFL_CHANOP;
+#ifdef USE_HALFOPS
 				  else if (*cname == '%') wsopts.channelflags = CHFL_HALFOP;
+#endif
 				  else if (*cname == '+') wsopts.channelflags = CHFL_VOICE
 			  }
 			  
@@ -806,10 +819,13 @@ int m_who(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		/* wow, they passed it all, give them the reply...
 		 * IF they haven't reached the max, or they're an oper */
 		status[i++]=(ac->user->away==NULL ? 'H' : 'G');
-		status[i]=(IsAnOper(ac) ? '*' : ((IsInvisible(ac) &&
-						  IsOper(sptr)) ? '%' : 0));
+	    status[i]=(IsAnOper(ac) ? '*' :
+	               ((IsInvisible(ac) && IsOper(sptr)) ? 'I' :
+	                (!IsInvisible(ac) && IsOper(sptr)) ? 'V' : 0));
 		status[((status[i]) ? ++i : i)]=(cm->flags&CHFL_CHANOP) ? '@' :
+#ifdef USE_HALFOPS
 										(cm->flags&CHFL_HALFOP) ? '%' :
+#endif
 										(cm->flags&CHFL_VOICE) ? '+' : 0;
 		status[++i]=0;
 		sendto_one(sptr, getreply(RPL_WHOREPLY), me.name, sptr->name,
@@ -839,8 +855,9 @@ int m_who(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	    else
 	    {
 		status[0]=(ac->user->away==NULL ? 'H' : 'G');
-		status[1]=(IsAnOper(ac) ? '*' : (IsInvisible(ac) &&
-						 IsAnOper(sptr) ? '%' : 0));
+		status[1]=(IsAnOper(ac) ? '*' :
+                  ((IsInvisible(ac) && IsAnOper(sptr)) ? 'I' :
+                   (!IsInvisible(ac) && IsAnOper(sptr)) ? 'V' : 0));
 		status[2]=0;
 		sendto_one(sptr, getreply(RPL_WHOREPLY), me.name, sptr->name,
 			   wsopts.show_chan ? first_visible_channel(ac, sptr)
@@ -877,10 +894,13 @@ int m_who(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		
 		i = 0;
 		status[i++]=(ac->user->away==NULL ? 'H' : 'G');
-		status[i]=(IsAnOper(ac) ? '*' : ((IsInvisible(ac) &&
-						  IsOper(sptr)) ? '%' : 0));
+	    status[i]=(IsAnOper(ac) ? '*' :
+	               ((IsInvisible(ac) && IsOper(sptr)) ? 'I' : 
+	                (!IsInvisible(ac) && IsOper(sptr)) ? 'V' : 0));
 		status[((status[i]) ? ++i : i)]=(cm->flags&CHFL_CHANOP) ? '@' :
+#ifdef USE_HALFOPS
 										(cm->flags&CHFL_HALFOP) ? '%' :
+#endif
 										(cm->flags&CHFL_VOICE) ? '+' : 0;
 		status[++i]=0;
 		sendto_one(sptr, getreply(RPL_WHOREPLY), me.name, sptr->name,
@@ -906,8 +926,9 @@ int m_who(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		break; /* break out of loop so we can send end of who */
 	    }
 	    status[0]=(ac->user->away==NULL ? 'H' : 'G');
-	    status[1]=(IsAnOper(ac) ? '*' : (IsInvisible(ac) && 
-					     IsAnOper(sptr) ? '%' : 0));
+	    status[1]=(IsAnOper(ac) ? '*' : 
+	               ((IsInvisible(ac) && IsAnOper(sptr)) ? 'I' :
+	                (!IsInvisible(ac) && IsAnOper(sptr)) ? 'V' : 0));
 	    status[2]=0;
 	    sendto_one(sptr, getreply(RPL_WHOREPLY), me.name, sptr->name,
 		       wsopts.show_chan ? first_visible_channel(ac, sptr) :
