@@ -361,9 +361,22 @@ m_server_estab(aClient *cptr)
     aClient *acptr;
 
     char       *inpath, *host, *s, *encr;
+	struct userBan   *ban;
 
     inpath = get_client_name(cptr, HIDEME);  /* "refresh" inpath with host  */
     host = cptr->name;
+
+    ban = check_userbanned(cptr, UBAN_IP|UBAN_CIDR4|UBAN_WILDUSER, 0);
+	
+	if (ban)
+	{
+		int loc = (ban->flags & UBAN_LOCAL) ? 1 : 0;
+		
+		ircstp->is_ref++;
+		ircstp->is_ref_2++;
+		
+		return exit_banned_client(cptr, loc, loc? 'K' : 'A', ban->reason, 0);
+	}
 
     if (!(aconn = cptr->serv->aconn))
     {
