@@ -2226,7 +2226,10 @@ merge_confs()
     merge_classes();        /* this should always be done first */
     merge_me();
     merge_connects();
+
+    MyFree(allows);  // Clear then readd Allow blocks in same order as in conf -Holbrook
     merge_allows();
+
     merge_opers();
     merge_ports();
     merge_options();
