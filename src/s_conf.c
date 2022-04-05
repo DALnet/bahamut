@@ -1867,6 +1867,28 @@ set_classes(void)
 }
 
 
+void remove_allows()
+{
+    aAllow *allow, *ptr = NULL;
+
+    allow = allows;
+
+    while (allow)
+    {
+        ptr = allow->next;
+        allows = allow->next;
+
+        allow->class->refs--;
+        expire_class(allow->class);
+        free_allow(allow);
+
+        allow = ptr;
+    }
+
+    MyFree(allows);
+    return;
+}
+
 /* merge routines.  used to mirge together new lists and old lists
  * after a rehash. Feb27/04 -epi
  */
@@ -2227,7 +2249,8 @@ merge_confs()
     merge_me();
     merge_connects();
 
-    MyFree(allows);  // Clear then readd Allow blocks in same order as in conf -Holbrook
+    // Clear out current allow blocks first, then add them all back from ircd.conf -Holbrook
+    remove_allows();
     merge_allows();
 
     merge_opers();
