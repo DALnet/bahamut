@@ -1866,12 +1866,9 @@ set_classes(void)
     return NULL;
 }
 
-
 void remove_allows()
 {
-    aAllow *allow, *ptr = NULL;
-
-    allow = allows;
+    aAllow *allow = allows, *ptr = NULL;
 
     while (allow)
     {
