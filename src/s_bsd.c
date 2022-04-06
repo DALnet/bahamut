@@ -235,6 +235,32 @@ void report_listener_error(char *text, aListener *lptr)
     return;
 }
 
+void
+modify_listener_flags(aPort *aport)
+{
+    aListener *lptr = aport->lstn;
+
+#ifdef USE_SSL
+    extern int ssl_capable;
+#endif
+
+    if (lptr->flags != aport->flags)
+    {
+        lptr->flags = aport->flags;
+
+#ifdef USE_SSL
+        if (lptr->flags & CONF_FLAGS_P_SSL && ssl_capable)
+        {
+            SetSSL(lptr);
+            lptr->ssl = NULL;
+            lptr->client_cert = NULL;
+        }
+#endif
+    }
+
+    return;
+}
+
 /*
  * open_listeners()
  *
@@ -252,7 +278,11 @@ open_listeners()
     for(tmp = ports; tmp; tmp = tmp->next)
     {
         if(tmp->lstn)
+        {   // If port has connection(s), check for/make flag changes from ircd.conf during /rehash. -Holbrook
+            modify_listener_flags(tmp);
             continue;
+        }
+
         add_listener(tmp);
     }
     return;
