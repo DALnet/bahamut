@@ -106,10 +106,26 @@ extern struct state _res;
 
 extern char *p_cdname(), *p_rr(), *p_type(), *p_class(), *p_time();
 
-#if ((__GNU_LIBRARY__ == 6) && (__GLIBC__ >=2) && (__GLIBC_MINOR__ >= 2))
+#if ((__GNU_LIBRARY__ == 6) && (__GLIBC__ >=2) && (__GLIBC_MINOR__ <= 34))
 #define res_init __res_init
 #define res_mkquery __res_mkquery
 #define dn_expand __dn_expand
+#define dn_comp __dn_comp
+#define dn_skipname __dn_skipname
+#define res_dnok __res_dnok
+#define res_hnok __res_hnok
+#define res_mailok __res_mailok
+#define res_mkquery __res_mkquery
+#define res_nmkquery __res_nmkquery
+#define res_nquery __res_nquery
+#define res_nquerydomain __res_nquerydomain
+#define res_nsearch __res_nsearch
+#define res_nsend __res_nsend
+#define res_ownok __res_ownok
+#define res_query __res_query
+#define res_querydomain __res_querydomain
+#define res_search __res_search
+#define res_send __res_send
 #endif
 
 extern int  res_mkquery ();
