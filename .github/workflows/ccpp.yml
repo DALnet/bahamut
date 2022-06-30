@@ -35,7 +35,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: install dependencies
-      run: sudo apt-get install autoconf automake libtool check libssl-dev shtool
+      run: sudo apt-get install autoconf automake libtool check wget shtool
     - name: libtoolize
       run: libtoolize --force
     - name: aclocal
@@ -46,8 +46,14 @@ jobs:
       run: automake --force-missing --add-missing || exit 0
     - name: autoreconf
       run: autoreconf -vfi
+    - name: get openssl
+      run:  wget --no-check-certificate -O $HOME/openssl-1.1.1m.tar.gz https://www.openssl.org/source/openssl-1.1.1m.tar.gz
+    - name: untar openssl
+      run:  tar zxf $HOME/openssl-1.1.1m.tar.gz && cd $HOME/openssl-1.1.1m
+    - name: compile openssl
+      run: ./config --prefix=$HOME/openssl --openssldir=$HOME/openssl && make install
     - name: configure
-      run: ./configure
+      run: ./configure --enable-openssl=$HOME/openssl
     - name: make
       run: make
 
