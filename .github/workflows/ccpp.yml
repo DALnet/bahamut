@@ -46,14 +46,8 @@ jobs:
       run: automake --force-missing --add-missing || exit 0
     - name: autoreconf
       run: autoreconf -vfi
-    - name: get openssl
-      run:  wget --no-check-certificate -O openssl-1.1.1m.tar.gz https://www.openssl.org/source/openssl-1.1.1m.tar.gz
-    - name: untar openssl
-      run:  tar zxf openssl-1.1.1m.tar.gz && cd openssl-1.1.1m
-    - name: compile openssl
-      run: ls && ./config --prefix=$HOME/openssl --openssldir=$HOME/openssl && make install
     - name: configure
-      run: ./configure --enable-openssl=$HOME/openssl
+      run: ./configure
     - name: make
       run: make
     - name: is ircd there
