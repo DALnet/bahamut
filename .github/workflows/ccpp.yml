@@ -50,4 +50,6 @@ jobs:
       run: ./configure
     - name: make
       run: make
+    - name: is ircd there
+      run: ls src/ircd
 
