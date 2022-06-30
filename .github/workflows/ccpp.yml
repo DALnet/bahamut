@@ -7,7 +7,7 @@ on:
     branches: [ master ]
 
 jobs:
-  build:
+  ubuntu-20:
 
     runs-on: ubuntu-latest
 
@@ -29,3 +29,25 @@ jobs:
       run: ./configure
     - name: make
       run: make
+
+  ubuntu-22:
+    runs-on: ubuntu-22.04
+    steps:
+    - uses: actions/checkout@v2
+    - name: install dependencies
+      run: sudo apt-get install autoconf automake libtool check libssl-dev shtool
+    - name: libtoolize
+      run: libtoolize --force
+    - name: aclocal
+      run: aclocal
+    - name: autoheader
+      run: autoheader
+    - name: automake
+      run: automake --force-missing --add-missing || exit 0
+    - name: autoreconf
+      run: autoreconf -vfi
+    - name: configure
+      run: ./configure
+    - name: make
+      run: make
+

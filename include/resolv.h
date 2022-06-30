@@ -106,6 +106,8 @@ extern struct state _res;
 
 extern char *p_cdname(), *p_rr(), *p_type(), *p_class(), *p_time();
 
+#define res_init __res_init
+
 #if ((__GNU_LIBRARY__ == 6) && (__GLIBC__ >=2) && (__GLIBC_MINOR__ < 34))
 #define res_mkquery __res_mkquery
 #define dn_expand __dn_expand
