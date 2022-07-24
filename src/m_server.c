@@ -186,7 +186,11 @@ do_server_estab(aClient *cptr)
 
     sendto_gnotice("from %s: Link with %s established, states:%s%s%s%s",
                    me.name, inpath, ZipOut(cptr) ? " Output-compressed" : "",
+                   #ifdef USE_SSL
+                   IsSSL(cptr) ? " encrypted" : "",
+                   #else
                    RC4EncLink(cptr) ? " encrypted" : "",
+                   #endif
                    IsULine(cptr) ? " ULined" : "",
                    DoesTS(cptr) ? " TS" : " Non-TS");
 
@@ -498,6 +502,10 @@ m_server_estab(aClient *cptr)
     throttle_remove(cipntoa(cptr));
 
 #ifdef HAVE_ENCRYPTION_ON
+#ifdef USE_SSL
+    if (!IsSSL(cptr))
+    {
+    #endif
     if(!CanDoDKEY(cptr) || !WantDKEY(cptr))
         return do_server_estab(cptr);
     else
@@ -505,6 +513,9 @@ m_server_estab(aClient *cptr)
         SetNegoServer(cptr); /* VERY IMPORTANT THAT THIS IS HERE */
         sendto_one(cptr, "DKEY START");
     }
+    #ifdef USE_SSL
+    }
+    #endif
 #else
     return do_server_estab(cptr);
 #endif
