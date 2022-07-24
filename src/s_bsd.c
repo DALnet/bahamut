@@ -1967,6 +1967,7 @@ int connect_server(aConnect *aconn, aClient * by, struct hostent *hp)
         cptr->fd = -2;
         close(cptr->fd);
         free_client(cptr);
+        return -1;
     }
 
     /*
