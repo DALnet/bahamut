@@ -692,6 +692,7 @@ typedef struct Whowas
 #define CONN_ZIP 	0x001	/* zippable    */
 #define CONN_DKEY	0x010	/* cryptable   */
 #define CONN_HUB	0x100	/* hubbable!   */
+#define CONN_SSL    0x110   /* use SSL */
 
 /* U:line flags in Server struct */
 
