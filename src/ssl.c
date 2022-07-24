@@ -62,7 +62,7 @@ int ssl_init()
     ircdssl_ctx = SSL_CTX_new(SSLv23_server_method());
 #else
     ircdssl_ctx = SSL_CTX_new(TLS_server_method());
-	SSL_CTX_set_min_proto_version(ircdssl-ctx, TLS1_2_VERSION);
+	SSL_CTX_set_min_proto_version(ircdssl_ctx, TLS1_2_VERSION);
 #endif
 
     if(!ircdssl_ctx)
@@ -263,7 +263,7 @@ int safe_ssl_connect(aClient *cptr, int fd)
 
 		}
 	}
-	
+
 	return 1;
 }
 int safe_ssl_accept(aClient *acptr, int fd)
