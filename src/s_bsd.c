@@ -1941,6 +1941,33 @@ int connect_server(aConnect *aconn, aClient * by, struct hostent *hp)
             errno = ETIMEDOUT;
         return -1;
     }
+    #ifdef USE_SSL
+    extern SSL_CTX *ircdssl_ctx;
+    cptr->ssl = NULL;
+    if ((cptr->ssl = SSL_new(ircdssl_ctx)) == NULL)
+    {
+        sendto_realops_lev(DEBUG_LEV, "SSL creation of "
+                          "new SSL object failed [server %s]",
+                          aconn->name);
+        close(cptr->fd);
+        cptr->fd = -2;
+        free_client(cptr);
+        return -1;
+    }
+
+    SetSSL(cptr);
+    SSL_set_fd(cptr->ssl, cptr->fd);
+    if(!safe_ssl_accept(cptr, fd))
+    {
+        SSL_set_shutdown(cptr->ssl, SSL_RECEIVED_SHUTDOWN);
+        ssl_smart_shutdown(cptr->ssl);
+        SSL_free(cptr->ssl);
+        cptr->fd= -2;
+        free_client(cptr);
+        close(cptr->fd);
+
+    }
+    #endif
     
     make_server(cptr);
     cptr->serv->aconn = aconn;
