@@ -324,6 +324,9 @@ static int fatal_ssl_error(int ssl_error, int where, aClient *sptr)
 	case SAFE_SSL_ACCEPT:
 	    ssl_func = "SSL_accept()";
 	    break;
+	case SAFE_SSL_CONNECT:
+	    ssl_func = "SSL_connect()";
+		break;
 	default:
 	    ssl_func = "undefined SSL func [this is a bug] report to coders@dal.net";
     }
