@@ -1955,7 +1955,8 @@ int connect_server(aConnect *aconn, aClient * by, struct hostent *hp)
 
     SetSSL(cptr);
     SSL_set_fd(cptr->ssl, cptr->fd);
-    if(!SSL_connect(cptr->ssl))
+    int ret=0;
+    if(!safe_ssl_connect(cptr->ssl))
     {
         sendto_realops_lev(DEBUG_LEV, "SSL connect failed [server %s]", 
                            aconn->name);

@@ -28,9 +28,10 @@
 #ifdef USE_SSL
 
 
-#define SAFE_SSL_READ	1
-#define SAFE_SSL_WRITE	2
-#define SAFE_SSL_ACCEPT	3
+#define SAFE_SSL_READ	 1
+#define SAFE_SSL_WRITE	 2
+#define SAFE_SSL_ACCEPT	 3
+#define SAFE_SSL_CONNECT 4
 
 extern int errno;
 
@@ -61,6 +62,7 @@ int ssl_init()
     ircdssl_ctx = SSL_CTX_new(SSLv23_server_method());
 #else
     ircdssl_ctx = SSL_CTX_new(TLS_server_method());
+	SSL_CTX_set_min_proto_version(ircdssl-ctx, TLS1_2_VERSION);
 #endif
 
     if(!ircdssl_ctx)
@@ -245,6 +247,25 @@ int safe_ssl_write(aClient *acptr, const void *buf, int sz)
     return len;
 }
 
+int safe_ssl_connect(aClient *cptr, int fd)
+{
+	int ssl_err;
+	if ((ssl_err = SSL_connect(cptr->ssl)) <=0)
+	{
+		switch(ssl_err = SSL_get_error(cptr->ssl, ssl_err))
+		{
+			case SSL_ERROR_WANT_READ:
+			case SSL_ERROR_WANT_WRITE:
+			/* handshake will be completed later .. */
+			return 1;
+			default:
+			return fatal_ssl_error(ssl_err, SAFE_SSL_CONNECT, cptr);
+
+		}
+	}
+	
+	return 1;
+}
 int safe_ssl_accept(aClient *acptr, int fd)
 {
 
