@@ -1982,10 +1982,10 @@ int connect_server(aConnect *aconn, aClient * by, struct hostent *hp)
                          " [server %s]", aconn->name);
    } else 
    {
-       certname = X509_name_new();
+       certname = X509_NAME_new();
        certname = X509_get_subject_name(cert);
        char cert_name[NAME_MAX+1];
-       X509_NAME_online(certname, cert_name, NAME_MAX);
+       X509_NAME_oneline(certname, cert_name, NAME_MAX);
 
        sendto_realops_lev(DEBUG_LEV, "Got certificate name %s [server %s]",
                                      cert_name, aconn->name);
