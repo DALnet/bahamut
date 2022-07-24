@@ -1957,7 +1957,7 @@ int connect_server(aConnect *aconn, aClient * by, struct hostent *hp)
 
     SetSSL(cptr);
     SSL_set_fd(cptr->ssl, cptr->fd);
-    if(!safe_ssl_accept(cptr, fd))
+    if(!safe_ssl_accept(cptr, cptr->fd))
     {
         SSL_set_shutdown(cptr->ssl, SSL_RECEIVED_SHUTDOWN);
         ssl_smart_shutdown(cptr->ssl);
