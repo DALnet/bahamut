@@ -311,12 +311,12 @@ serv_info(aClient *cptr, char *name)
                     IsServer(acptr) ? (DoesTS(acptr) ? "TS" : "NoTS") : "-");
 
 
-        if(RC4EncLink(acptr))
+        if (RC4EncLink(acptr))
         {
             sendto_one(cptr, ":%s %d %s : - RC4 encrypted", me.name, 
                         RPL_STATSDEBUG, name);
         }
-        else(IsSSL(acptr))
+        else if (IsSSL(acptr))
         {
             sendto_one(cptr, ":%s %d %s : - TLS encrypted", me.name,
                         RPL_STATSDEBUG, name);
