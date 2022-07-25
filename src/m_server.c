@@ -422,8 +422,6 @@ m_server_estab(aClient *cptr)
         SetZipCapable(cptr);
     if((aconn->flags & CONN_DKEY))
     {
-        sendto_realops_lev(DEBUG_LEV, "Setting want DKEY [server %s]",
-                            aconn->name);
         SetWantDKEY(cptr);
     }
     if (IsUnknown(cptr))
@@ -434,23 +432,15 @@ m_server_estab(aClient *cptr)
         /* Pass my info to the new server */
 
 #ifdef HAVE_ENCRYPTION_ON
-        if(!WantDKEY(cptr))
+        if(!WantDKEY(cptr) || (IsSSL(cptr) && cptr->ssl))
         {
             sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURST UNCONNECT ZIP "
                        "NICKIP NICKIPSTR TSMODE");
         }
         else
         {
-            if (IsSSL(cptr) && cptr->ssl)
-            {
-                sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURST UNCONNECT "
-                        "ZIP NICKIP NICKIPSTR TSMODE");
-            }
-            else
-            {
-                sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURST UNCONNECT DKEY "
-                        "ZIP NICKIP NICKIPSTR TSMODE");
-            }
+            sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURST UNCONNECT DKEY "
+                    "ZIP NICKIP NICKIPSTR TSMODE");
         }
 #else
         sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURST UNCONNECT ZIP NICKIP NICKIPSTR TSMODE");
