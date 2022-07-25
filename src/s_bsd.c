@@ -876,7 +876,7 @@ int completed_connection(aClient * cptr)
     if(!(aconn->flags & CONN_DKEY))
         sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURST UNCONNECT ZIP"
                          " NICKIP NICKIPSTR TSMODE");
-    else if (aconn->flags CONN_SSL)
+    else if (aconn->flags & CONN_SSL)
     {
         sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURST UNCONNECT"
                          " ZIP NICKIP NICKIPSTR TSMODE");
