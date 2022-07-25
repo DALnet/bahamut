@@ -1930,6 +1930,10 @@ int connect_server(aConnect *aconn, aClient * by, struct hostent *hp)
     }
     
     signal(SIGALRM, dummy);
+
+    set_non_blocking(cptr->fd, cptr);
+    set_sock_opts(cptr->fd, cptr);
+
     if (connect(cptr->fd, svp, len) < 0 && errno != EINPROGRESS) 
     {
         errtmp = errno;     /* other system calls may eat errno */
@@ -1979,9 +1983,6 @@ int connect_server(aConnect *aconn, aClient * by, struct hostent *hp)
             free_client(cptr);
             return -1;
         }
-
-        set_non_blocking(cptr->fd, cptr);
-        set_sock_opts(cptr->fd, cptr);
 
         /*
         * Now that we've connected, let's validate cert DN against aconn->name
