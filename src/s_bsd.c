@@ -726,7 +726,7 @@ int check_server_init(aClient * cptr)
     if (!(aconn = find_aConnect(cptr->name)))
     {
         Debug((DEBUG_DNS, "No Connect block for %s", cptr->name));
-        sendto_realops_lev(DEBUG_LEV, "No Connect blockf ro %s", cptr->name)SSJOIN NOQUIT BURS;
+        sendto_realops_lev(DEBUG_LEV, "No Connect block for %s", cptr->name);
         return -1;
     }
 
