@@ -314,6 +314,9 @@ serv_info(aClient *cptr, char *name)
         if(RC4EncLink(acptr))
             sendto_one(cptr, ":%s %d %s : - RC4 encrypted", me.name, 
                         RPL_STATSDEBUG, name);
+        else(IsSSL(acptr))
+            sendto_one(cptr, ":%s %d %s : - TLS encrypted", me.name,
+                        RPL_STATSDEBUG, name);
 
         if(ZipOut(acptr))
         {
