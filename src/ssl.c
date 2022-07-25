@@ -291,10 +291,13 @@ int safe_ssl_connect(aClient *cptr, int fd)
 			return fatal_ssl_error(ssl_err, SAFE_SSL_CONNECT, cptr);
 
 		}
+		/* not reached */
+		return -1;
 	}
 
 	return 1;
 }
+
 int safe_ssl_accept(aClient *acptr, int fd)
 {
 
