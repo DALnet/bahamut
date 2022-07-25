@@ -431,11 +431,23 @@ m_server_estab(aClient *cptr)
 
 #ifdef HAVE_ENCRYPTION_ON
         if(!WantDKEY(cptr))
+        {
             sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURST UNCONNECT ZIP "
                        "NICKIP NICKIPSTR TSMODE");
+        }
         else
-            sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURST UNCONNECT DKEY "
-                       "ZIP NICKIP NICKIPSTR TSMODE");
+        {
+            if (IsSSL(cptr) && cptr->ssl)
+            {
+                sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURST UNCONNECT "
+                        "ZIP NICKIP NICKIPSTR TSMODE");
+            }
+            else
+            {
+                sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURST UNCONNECT DKEY "
+                        "ZIP NICKIP NICKIPSTR TSMODE");
+            }
+        }
 #else
         sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURST UNCONNECT ZIP NICKIP NICKIPSTR TSMODE");
 #endif

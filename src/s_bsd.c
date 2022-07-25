@@ -726,6 +726,7 @@ int check_server_init(aClient * cptr)
     if (!(aconn = find_aConnect(cptr->name)))
     {
         Debug((DEBUG_DNS, "No Connect block for %s", cptr->name));
+        sendto_realops_lev(DEBUG_LEV, "No Connect blockf ro %s", cptr->name);
         return -1;
     }
 
@@ -1940,59 +1941,63 @@ int connect_server(aConnect *aconn, aClient * by, struct hostent *hp)
         return -1;
     }
     #ifdef USE_SSL
-    extern SSL_CTX *serverssl_ctx;
-    cptr->ssl = NULL;
-    if ((cptr->ssl = SSL_new(serverssl_ctx)) == NULL)
+
+    if (aconn->flags & CONN_SSL) 
     {
-        sendto_realops_lev(DEBUG_LEV, "SSL creation of "
-                          "new SSL object failed [server %s]",
-                          aconn->name);
-        close(cptr->fd);
-        cptr->fd = -2;
-        free_client(cptr);
-        return -1;
+        extern SSL_CTX *serverssl_ctx;
+        cptr->ssl = NULL;
+        if ((cptr->ssl = SSL_new(serverssl_ctx)) == NULL)
+        {
+            sendto_realops_lev(DEBUG_LEV, "SSL creation of "
+                            "new SSL object failed [server %s]",
+                            aconn->name);
+            close(cptr->fd);
+            cptr->fd = -2;
+            free_client(cptr);
+            return -1;
+        }
+
+        SetSSL(cptr);
+        SSL_set_fd(cptr->ssl, cptr->fd);
+        int ret=0;
+        if(!safe_ssl_connect(cptr, cptr->fd))
+        {
+            sendto_realops_lev(DEBUG_LEV, "SSL connect failed [server %s]", 
+                            aconn->name);
+            SSL_set_shutdown(cptr->ssl, SSL_RECEIVED_SHUTDOWN);
+            ssl_smart_shutdown(cptr->ssl);
+            SSL_free(cptr->ssl);
+            cptr->fd = -2;
+            close(cptr->fd);
+            free_client(cptr);
+            return -1;
+        }
+
+        set_non_blocking(cptr->fd, cptr);
+        set_sock_opts(cptr->fd, cptr);
+
+        /*
+        * Now that we've connected, let's validate cert DN against aconn->name
+        */
+        X509 *cert = NULL;
+        X509_NAME *certname = NULL;
+        
+        cert = SSL_get_peer_certificate(cptr->ssl);
+        if (cert == NULL) 
+        {
+            sendto_realops_lev(DEBUG_LEV, "Could not get SSL peer certificate "
+                                " [server %s]", aconn->name);
+        } else 
+        {
+            certname = X509_NAME_new();
+            certname = X509_get_subject_name(cert);
+            char cert_name[NAME_MAX+1];
+            X509_NAME_oneline(certname, cert_name, NAME_MAX);
+
+            sendto_realops_lev(DEBUG_LEV, "Got certificate name %s [server %s]",
+                                            cert_name, aconn->name);
+        }
     }
-
-    SetSSL(cptr);
-    SSL_set_fd(cptr->ssl, cptr->fd);
-    int ret=0;
-    if(!safe_ssl_connect(cptr, cptr->fd))
-    {
-        sendto_realops_lev(DEBUG_LEV, "SSL connect failed [server %s]", 
-                           aconn->name);
-        SSL_set_shutdown(cptr->ssl, SSL_RECEIVED_SHUTDOWN);
-        ssl_smart_shutdown(cptr->ssl);
-        SSL_free(cptr->ssl);
-        cptr->fd = -2;
-        close(cptr->fd);
-        free_client(cptr);
-        return -1;
-    }
-
-    set_non_blocking(cptr->fd, cptr);
-    set_sock_opts(cptr->fd, cptr);
-
-    /*
-     * Now that we've connected, let's validate cert DN against aconn->name
-    */
-   X509 *cert = NULL;
-   X509_NAME *certname = NULL;
-   
-   cert = SSL_get_peer_certificate(cptr->ssl);
-   if (cert == NULL) 
-   {
-       sendto_realops_lev(DEBUG_LEV, "Could not get SSL peer certificate "
-                         " [server %s]", aconn->name);
-   } else 
-   {
-       certname = X509_NAME_new();
-       certname = X509_get_subject_name(cert);
-       char cert_name[NAME_MAX+1];
-       X509_NAME_oneline(certname, cert_name, NAME_MAX);
-
-       sendto_realops_lev(DEBUG_LEV, "Got certificate name %s [server %s]",
-                                     cert_name, aconn->name);
-   }
     #endif
     
     make_server(cptr);

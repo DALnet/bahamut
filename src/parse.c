@@ -71,6 +71,8 @@ int parse(aClient *cptr, char *buffer, char *bufend)
 #endif
     Debug((DEBUG_DEBUG, "Parsing %s: %s", get_client_name(cptr, TRUE),
 	   buffer));
+	sendto_realops_lev(DEBUG_LEV, "Parsing %s: %s", 
+	                           get_client_name(cptr, TRUE), buffer);
     
     if (IsDead(cptr))
 	return -1;
