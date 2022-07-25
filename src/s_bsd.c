@@ -726,7 +726,7 @@ int check_server_init(aClient * cptr)
     if (!(aconn = find_aConnect(cptr->name)))
     {
         Debug((DEBUG_DNS, "No Connect block for %s", cptr->name));
-        sendto_realops_lev(DEBUG_LEV, "No Connect blockf ro %s", cptr->name);
+        sendto_realops_lev(DEBUG_LEV, "No Connect blockf ro %s", cptr->name)SSJOIN NOQUIT BURS;
         return -1;
     }
 
@@ -876,9 +876,14 @@ int completed_connection(aClient * cptr)
     if(!(aconn->flags & CONN_DKEY))
         sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURST UNCONNECT ZIP"
                          " NICKIP NICKIPSTR TSMODE");
-    else
+    else if (aconn->flags CONN_SSL)
     {
-        sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURST UNCONNECT DKEY"
+        sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURST UNCONNECT"
+                         " ZIP NICKIP NICKIPSTR TSMODE");
+    }
+    else 
+    {
+        sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURTS UNCONNECT DKEY"
                          " ZIP NICKIP NICKIPSTR TSMODE");
         SetWantDKEY(cptr);
     }

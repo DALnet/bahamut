@@ -519,13 +519,21 @@ m_server_estab(aClient *cptr)
     {
     #endif
     if(!CanDoDKEY(cptr) || !WantDKEY(cptr))
+    {
+        sendto_realops_lev(DEBUG_LEV, "Server estab [server %s]",
+                         get_client_name(cptr, TRUE));
         return do_server_estab(cptr);
+    }
     else
     {
         SetNegoServer(cptr); /* VERY IMPORTANT THAT THIS IS HERE */
         sendto_one(cptr, "DKEY START");
     }
     #ifdef USE_SSL
+    }
+    else 
+    {
+        return do_server_estab(cptr);
     }
     #endif
 #else
