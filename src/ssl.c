@@ -152,7 +152,7 @@ int ssl_rehash()
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
     if (!(temp_serverssl_ctx = SSL_CTX_new(SSLv23_client_method())))
 #else
-    if (!(temp_serverssl-ctx = SSL_CTX_new(TLS_client_method())))
+    if (!(temp_serverssl_ctx = SSL_CTX_new(TLS_client_method())))
 #endif
     {
 		abort_ssl_rehash(1);
