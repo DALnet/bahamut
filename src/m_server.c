@@ -421,7 +421,11 @@ m_server_estab(aClient *cptr)
     if((aconn->flags & CONN_ZIP))
         SetZipCapable(cptr);
     if((aconn->flags & CONN_DKEY))
+    {
+        sendto_realops_lev(DEBUG_LEV, "Setting want DKEY [server %s]",
+                            aconn->name);
         SetWantDKEY(cptr);
+    }
     if (IsUnknown(cptr))
     {
         if (aconn->cpasswd[0])
