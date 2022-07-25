@@ -35,7 +35,9 @@
 
 extern int errno;
 
-SSL_CTX *ircdssl_ctx;
+SSL_CTX *ircdssl_ctx; /* for clients connecing in */
+SSL_CTX *serverssl_ctx; /* for connecting to servers */
+
 int ssl_capable = 0;
 
 int ssl_init()
@@ -60,9 +62,11 @@ int ssl_init()
     SSLeay_add_ssl_algorithms();
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
     ircdssl_ctx = SSL_CTX_new(SSLv23_server_method());
+	serverssl_ctx = SSL_CTX_new(SSLv23_client_method());
 #else
     ircdssl_ctx = SSL_CTX_new(TLS_server_method());
-	SSL_CTX_set_min_proto_version(ircdssl_ctx, TLS1_2_VERSION);
+	serverssl_ctx = SSL_CTX_new(TLS_client_method());
+	SSL_CTX_set_min_proto_version(serverssl_ctx, TLS1_2_VERSION);
 #endif
 
     if(!ircdssl_ctx)
@@ -70,6 +74,12 @@ int ssl_init()
 	ERR_print_errors_fp(stderr);
 	return 0;
     }
+
+	if (!serverssl_ctx)
+	{
+		ERR_print_errors_fp(stderr);
+		return 0;
+	}
 
     if(SSL_CTX_use_certificate_chain_file(ircdssl_ctx, IRCDSSL_CPATH) <= 0)
     {
@@ -119,6 +129,7 @@ int ssl_rehash()
 {
     FILE *file;
 	SSL_CTX *temp_ircdssl_ctx;
+	SSL_CTX *temp_serverssl_ctx;
 
     if(!(file = fopen(IRCDSSL_CPATH,"r")))
     {
@@ -137,6 +148,24 @@ int ssl_rehash()
         return 0;
     }
     fclose(file);
+
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+    if (!(temp_serverssl_ctx = SSL_CTX_new(SSLv23_client_method())))
+#else
+    if (!(temp_serverssl-ctx = SSL_CTX_new(TLS_client_method())))
+#endif
+    {
+		abort_ssl_rehash(1);
+
+		return 0;
+	}
+
+	if (serverssl_ctx) 
+	{
+		SSL_CTX_free(serverssl_ctx);
+	}
+
+	serverssl_ctx = temp_serverssl_ctx;
 
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
     if(!(temp_ircdssl_ctx = SSL_CTX_new(SSLv23_server_method())))

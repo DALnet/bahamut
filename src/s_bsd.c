@@ -1940,9 +1940,9 @@ int connect_server(aConnect *aconn, aClient * by, struct hostent *hp)
         return -1;
     }
     #ifdef USE_SSL
-    extern SSL_CTX *ircdssl_ctx;
+    extern SSL_CTX *serverssl_ctx;
     cptr->ssl = NULL;
-    if ((cptr->ssl = SSL_new(ircdssl_ctx)) == NULL)
+    if ((cptr->ssl = SSL_new(serverssl_ctx)) == NULL)
     {
         sendto_realops_lev(DEBUG_LEV, "SSL creation of "
                           "new SSL object failed [server %s]",
