@@ -1953,8 +1953,6 @@ int connect_server(aConnect *aconn, aClient * by, struct hostent *hp)
 
     if (aconn->flags & CONN_SSL) 
     {
-        sendto_realops_lev(DEBUG_LEV, "Creating SSL connection [server %s]", 
-                                      aconn->name);
         extern SSL_CTX *serverssl_ctx;
         cptr->ssl = NULL;
         if ((cptr->ssl = SSL_new(serverssl_ctx)) == NULL)
