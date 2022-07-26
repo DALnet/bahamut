@@ -1773,8 +1773,7 @@ int readwrite_client(aClient *cptr, int isread, int iswrite)
 #ifdef USE_SSL
     if(cptr->ssl && IsSSL(cptr) && !SSL_is_init_finished(cptr->ssl))
     {
-        if(IsDead(cptr) || (IsConnecting(cptr) && !safe_ssl_connect(cptr, cptr->fd))
-          || (IsClient(cptr) && !safe_ssl_accept(cptr, cptr->fd)))
+        if(IsDead(cptr) || !safe_ssl_accept(cptr, cptr->fd))
         {
             if(IsClient(cptr))
                 return exit_client(cptr, cptr, &me, iswrite?"Write Error: SSL Bug #7845":"Read Error: SSL Bug #7845");
