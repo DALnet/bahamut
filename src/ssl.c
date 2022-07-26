@@ -81,8 +81,8 @@ int ssl_init()
 		return 0;
 	}
 
-    SSL_CTX_set_verify(serverssl_ctx, SSL_VERIFY_PEER, NULL);
-	
+    SSL_CTX_set_verify(serverssl_ctx, SSL_VERIFY_NONE, NULL);
+
     if(SSL_CTX_use_certificate_chain_file(ircdssl_ctx, IRCDSSL_CPATH) <= 0)
     {
 	ERR_print_errors_fp(stderr);
@@ -168,6 +168,7 @@ int ssl_rehash()
 	}
 
 	serverssl_ctx = temp_serverssl_ctx;
+	SSL_CTX_set_verify(serverssl_ctx, SSL_VERIFY_PEER, NULL);
 
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
     if(!(temp_ircdssl_ctx = SSL_CTX_new(SSLv23_server_method())))
@@ -278,19 +279,22 @@ int safe_ssl_write(aClient *acptr, const void *buf, int sz)
     return len;
 }
 
-int safe_ssl_connect(aClient *cptr, int fd)
+int safe_ssl_connect(aClient *acptr, int fd)
 {
 	int ssl_err;
-	if ((ssl_err = SSL_connect(cptr->ssl)) <=0)
+	if ((ssl_err = SSL_connect(acptr->ssl)) <=0)
 	{
-		switch(ssl_err = SSL_get_error(cptr->ssl, ssl_err))
+		switch(ssl_err = SSL_get_error(acptr->ssl, ssl_err))
 		{
+			case SSL_ERROR_SYSCALL:
+			if(errno == EINTR || errno == EWOULDBLOCK 
+		      || errno == EAGAIN)
 			case SSL_ERROR_WANT_READ:
 			case SSL_ERROR_WANT_WRITE:
 			/* handshake will be completed later .. */
 			return 1;
 			default:
-			return fatal_ssl_error(ssl_err, SAFE_SSL_CONNECT, cptr);
+			return fatal_ssl_error(ssl_err, SAFE_SSL_CONNECT, acptr);
 
 		}
 		/* not reached */
