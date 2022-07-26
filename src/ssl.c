@@ -81,6 +81,8 @@ int ssl_init()
 		return 0;
 	}
 
+    SSL_CTX_set_verify(serverssl_ctx, SSL_VERIFY_PEER, NULL);
+	
     if(SSL_CTX_use_certificate_chain_file(ircdssl_ctx, IRCDSSL_CPATH) <= 0)
     {
 	ERR_print_errors_fp(stderr);
