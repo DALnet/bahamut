@@ -863,12 +863,18 @@ int completed_connection(aClient * cptr)
     if (IsSSL(cptr) && cptr->ssl)
     {
         long verify_result = 0;
-        if ((verify_result = SSL_get_verify_result(cptr->ssl)) != X509_V_OK)
+        verify_result = SSL_get_verify_result(cptr->ssl);
+
+        switch (verify_result)
         {
-            sendto_realops_lev(DEBUG_LEV, "SSL verification failed for %s %d",
-                                       cptr->name, verify_result);
-            cptr->sockerr = IRCERR_SSL;
-            return -1;
+            case X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN:
+            case X509_V_OK:
+                break;
+            default:
+                sendto_realops_lev(DEBUG_LEV, "SSL verification failed for %s %d",
+                                cptr->name, verify_result);
+                cptr->sockerr = IRCERR_SSL;
+                return -1;
         }
     }
 
