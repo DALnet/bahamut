@@ -527,7 +527,9 @@ m_server_estab(aClient *cptr)
     }
     else 
     {
-        return do_server_estab(cptr);
+        SetNegoServer(cptr); /* Now we need to negotiate TLS */
+        sendto_one(cptr, "TLS START");
+       // return do_server_estab(cptr);
     }
     #endif
 #else
@@ -836,6 +838,76 @@ int m_server(aClient *cptr, aClient *sptr, int parc, char *parv[])
     return 0;
 }
 
+/* m_tls
+ * code to validate TLS connection
+ * validation is basically:
+ * CN specified by peer's certificate
+ * compared against name sent by peer
+ * compared against name specified in connect block
+ * all must match
+ */
+
+int m_tls(aClient *cptr, aClient *sptr, int parc, char *parv[])
+{
+    if (!(IsNegoServer(sptr) && parc > 1))
+    {
+        if (IsPerson(sptr))
+            return 0;
+        return exit_client(sptr, sptr, sptr, "Not negotiating now");
+    }
+
+    #ifdef USE_SSL
+    if (mycmp(parv[1], "START") == 0)
+    {
+        if (parc != 2)
+            return exit_client(sptr, sptr, sptr, "TLS START failure");
+        
+        sendto_one(sptr, "TLS VALIDATE %s", me.name);
+
+        sendto_realops("Initiating TLS validation with %s", sptr->name);
+        return 0;
+    }
+
+    if (mycmp(parv[1], "VALIDATE") == 0)
+    {
+        if (parc < 3)
+            return exit_client(sptr, sptr, sptr, "TLS VALIDATE failure");
+        
+        X509 *cert = NULL;
+        X509_NAME *certname = NULL;
+        char subject[NAME_MAX+1];
+
+        cert = SSL_get_peer_certificate(sptr->ssl);
+
+        if (cert == NULL)
+            return exit_client(sptr, sptr, sptr, "Could not get peer certificate");
+        
+        certname = X509_NAME_new();
+        certname = X509_get_subject_name(cert);
+        
+        X509_NAME_online(certname, subject, NAME_MAX);
+        sendto_ops_lev(DEBUG_LEV, "Subject name %s [server %s]",
+                       subject, sptr->name);
+        
+        sendto_one(sptr, "TLS DONE");
+        return 0;
+    }
+
+    if (mycmp(parv[1], "DONE") == 0)
+    {
+        sendto_realops("TLS validation with %s complete", sptr->name);
+        sendto_one(sptr, "TLS EXIT");
+        return 0;
+    }
+
+    if (mycmp(parv[1], "EXIT") == 0)
+    {
+        ClearNegoServer(sptr);
+        return do_server_estab(sptr);
+    }
+    #endif
+    return 0;
+}
 /* m_dkey
  * lucas's code, i assume.
  * moved here from s_serv.c due to its integration in the encrypted
