@@ -81,7 +81,7 @@ int ssl_init()
 		return 0;
 	}
 
-    SSL_CTX_set_verify(serverssl_ctx, SSL_VERIFY_NONE, NULL);
+    SSL_CTX_set_verify(serverssl_ctx, SSL_VERIFY_PEER, NULL);
 
     if(SSL_CTX_use_certificate_chain_file(ircdssl_ctx, IRCDSSL_CPATH) <= 0)
     {
@@ -169,6 +169,7 @@ int ssl_rehash()
 
 	serverssl_ctx = temp_serverssl_ctx;
 	SSL_CTX_set_verify(serverssl_ctx, SSL_VERIFY_PEER, NULL);
+	SSL_CTX_set_min_proto_version(serverssl_ctx, TLS1_2_VERSION);
 
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
     if(!(temp_ircdssl_ctx = SSL_CTX_new(SSLv23_server_method())))
