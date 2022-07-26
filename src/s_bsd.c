@@ -1976,6 +1976,28 @@ int connect_server(aConnect *aconn, aClient * by, struct hostent *hp)
             free_client(cptr);
             return -1;
         }
+
+        /*
+        * Now that we've connected, let's validate cert DN against aconn->name
+        */
+        X509 *cert = NULL;
+        X509_NAME *certname = NULL;
+        
+        cert = SSL_get_peer_certificate(cptr->ssl);
+        if (cert == NULL) 
+        {
+            sendto_realops_lev(DEBUG_LEV, "Could not get SSL peer certificate "
+                                " [server %s]", aconn->name);
+        } else 
+        {
+            certname = X509_NAME_new();
+            certname = X509_get_subject_name(cert);
+            char cert_name[NAME_MAX+1];
+            X509_NAME_oneline(certname, cert_name, NAME_MAX);
+
+            sendto_realops_lev(DEBUG_LEV, "Got certificate name %s [server %s]",
+                                            cert_name, aconn->name);
+        }
     }
     #endif
     
