@@ -287,9 +287,6 @@ int safe_ssl_connect(aClient *acptr, int fd)
 	{
 		switch(ssl_err = SSL_get_error(acptr->ssl, ssl_err))
 		{
-			case SSL_ERROR_SYSCALL:
-			if(errno == EINTR || errno == EWOULDBLOCK 
-		      || errno == EAGAIN)
 			case SSL_ERROR_WANT_READ:
 			case SSL_ERROR_WANT_WRITE:
 			/* handshake will be completed later .. */
