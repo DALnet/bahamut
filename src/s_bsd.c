@@ -862,10 +862,11 @@ int completed_connection(aClient * cptr)
      */
     if (IsSSL(cptr) && cptr->ssl)
     {
-        if ((SSL_get_verify_result(cptr->ssl)) != X509_V_OK)
+        long verify_result = 0;
+        if ((verify_result = SSL_get_verify_result(cptr->ssl)) != X509_V_OK)
         {
-            sendto_realops_lev(DEBUG_LEV, "SSL verification failed for %s",
-                                       cptr->name);
+            sendto_realops_lev(DEBUG_LEV, "SSL verification failed for %s %d",
+                                       cptr->name, verify_result);
             cptr->sockerr = IRCERR_SSL;
             return -1;
         }
