@@ -467,7 +467,8 @@ int ssl_verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
 		sendto_realops_lev(DEBUG_LEV, "SSL: verify error:num=%d:%s:depth=%d:%s\n", err,
                 X509_verify_cert_error_string(err), depth, buf);
 		return preverify_ok;
-	} else if (depth == 0) { /* only compare CN against server cert, not rest of chain */
+	} else if (depth == 0) 
+	{ /* only compare CN against server cert, not rest of chain */
 		/*
 		 * for testing, must delete
 		 */
@@ -485,8 +486,10 @@ int ssl_verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
 			 sendto_realops_lev(DEBUG_LEV, "SSL: Subject and connection name mismatch %s : %s", buf, conn->name);
 			 return preverify_ok;
 		 }
-	 } else {
-		 return preverify_ok; /* return what's already there */
+	 } 
+	 else 
+	 {
+		 return 1; /* return what's already there */
 	 }
 }
 #endif
