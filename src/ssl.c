@@ -460,7 +460,7 @@ int ssl_verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
 	 */
     if (!preverify_ok) 
 	{
-		sendto_realops_lev(DEBUG_lev, "SSL: verify error:num=%d:%s:depth=%d:%s\n", err,
+		sendto_realops_lev(DEBUG_LEV, "SSL: verify error:num=%d:%s:depth=%d:%s\n", err,
                 X509_verify_cert_error_string(err), depth, buf);
 		return preverify_ok;
 	} else {
