@@ -467,25 +467,26 @@ int ssl_verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
 		sendto_realops_lev(DEBUG_LEV, "SSL: verify error:num=%d:%s:depth=%d:%s\n", err,
                 X509_verify_cert_error_string(err), depth, buf);
 		return preverify_ok;
-	} else {
+	} else if (depth == 0) { /* only compare CN against server cert, not rest of chain */
 		/*
 		 * for testing, must delete
 		 */
+
 		X509_NAME *subj = X509_get_subject_name(cert);
-		for (int i = 0; i < X509_NAME_entry_count(subj); i++) {
-			X509_NAME_ENTRY *e = X509_NAME_get_entry(subj, i);
-			ASN1_STRING *d = X509_NAME_ENTRY_get_data(e);
-			char *str = ASN1_STRING_data(d);
-			sendto_realops_lev(DEBUG_LEV, "SSL: Entry %d - %s", i, str);
-		}
-		 if (mycmp(buf, conn->name))
+		X509_NAME_ENTRY *e = X509_NAME_get_entry(subj, 5);
+		ASN1_STRING *d = X509_NAME_ENTRY_get_data(e);
+		char *cn = ASN1_STRING_data(d);
+
+		 if (mycmp(cn, conn->name))
 		 {
-			 sendto_realops_lev(DEBUG_LEV, "SSL: Valid certificate for %s", conn->name);
+			 sendto_realops_lev(DEBUG_LEV, "SSL: Valid certificate cn: %s, name: %s", cn, conn->name);
 			 return 1;
 		 } else {
 			 sendto_realops_lev(DEBUG_LEV, "SSL: Subject and connection name mismatch %s : %s", buf, conn->name);
 			 return preverify_ok;
 		 }
+	 } else {
+		 return 0;
 	 }
 }
 #endif
