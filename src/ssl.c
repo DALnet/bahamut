@@ -469,8 +469,8 @@ int ssl_verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
 		/*
 		 * for testing, must delete
 		 */
-		for (int i = 0; i < X509_NAME_entry_count(subj); i++) {
-			X509_NAME_ENTRY *e = X509_NAME_get_entry(subj, i);
+		for (int i = 0; i < X509_NAME_entry_count(buf); i++) {
+			X509_NAME_ENTRY *e = X509_NAME_get_entry(buf, i);
 			ASN1_STRING *d = X509_NAME_ENTRY_get_data(e);
 			char *str = ASN1_STRING_data(d);
 			sendto_realops_lev(DEBUG_LEV, "SSL: Entry %d - %s", i, str);
