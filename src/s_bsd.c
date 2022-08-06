@@ -1989,6 +1989,7 @@ int connect_server(aConnect *aconn, aClient * by, struct hostent *hp)
         int ret=0;
 
         mydata_index = SSL_get_ex_new_index(0, "mydata index", NULL, NULL, NULL);
+        sendto_realops_lev(DEBUG_LEV, "SSL: Setting verify peer and callback for %s", aconn->name);
         SSL_CTX_set_verify(serverssl_ctx, SSL_VERIFY_PEER, ssl_verify_callback);
 
         /* 

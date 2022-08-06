@@ -436,7 +436,7 @@ static int fatal_ssl_error(int ssl_error, int where, aClient *sptr)
 int ssl_verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
 {
 	char buf[256];
-	X509 *err_cert;
+	X509 *cert;
 	SSL *ssl;
 	int err, depth;
 	aConnect *conn;
@@ -449,19 +449,21 @@ int ssl_verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
 
     ssl = X509_STORE_CTX_get_ex_data(ctx, SSL_get_ex_data_X509_STORE_CTX_idx());
 	conn = SSL_get_ex_data(ssl, mydata_index);
+    cert = X509_STORE_CTX_get_current_cert(ctx);
+    err = X509_STORE_CTX_get_error(ctx);
 
-    X509_NAME_oneline(X509_get_subject_name(err_cert), buf, 256);
+    X509_NAME_oneline(X509_get_subject_name(cert), buf, 256);
 	sendto_realops_lev(DEBUG_LEV, "Got subject name: %s", buf);
 
-     /*
-      * At this point, err contains the last verification error. We can use
-      * it for something special
-      */
-     if (!preverify_ok && (err == X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT)) {
-         X509_NAME_oneline(X509_get_issuer_name(err_cert), buf, 256);
-        sendto_realops_lev(DEBUG_LEV, "SSL cert issuer %s", buf);
-		return X509_V_ERR_INVALID_CA;
-     } else {
+    /*
+	 * If initial verification failed, we fail
+	 */
+    if (!preverify_ok) 
+	{
+		sendto_realops_lev(DEBUG_lev, "SSL: verify error:num=%d:%s:depth=%d:%s\n", err,
+                X509_verify_cert_error_string(err), depth, buf);
+		return preverify_ok;
+	} else {
 		 if (mycmp(buf, conn->name))
 		 {
 			 sendto_realops_lev(DEBUG_LEV, "SSL: Valid certificate for %s", conn->name);
