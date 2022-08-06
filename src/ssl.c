@@ -469,10 +469,10 @@ int ssl_verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
 		 if (mycmp(buf, conn->name))
 		 {
 			 sendto_realops_lev(DEBUG_LEV, "SSL: Valid certificate for %s", conn->name);
-			 return X509_V_OK;
+			 return 1;
 		 } else {
 			 sendto_realops_lev(DEBUG_LEV, "SSL: Subject and connection name mismatch %s : %s", buf, conn->name);
-			 return X509_V_ERR_CERT_REJECTED;
+			 return preverify_ok;
 		 }
 	 }
 }
