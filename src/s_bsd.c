@@ -872,6 +872,7 @@ int completed_connection(aClient * cptr)
             case X509_V_OK:
                 break;
             default:
+                sendto_realops("Connection to %s failed, could not validate SSL cert", cptr->name);
                 sendto_realops_lev(DEBUG_LEV, "SSL verification failed for %s %d",
                                 cptr->name, verify_result);
                 cptr->sockerr = IRCERR_SSL;
