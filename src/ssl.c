@@ -486,7 +486,7 @@ int ssl_verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
 			 return preverify_ok;
 		 }
 	 } else {
-		 return 0;
+		 return preverify_ok; /* return what's already there */
 	 }
 }
 #endif
