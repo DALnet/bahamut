@@ -478,7 +478,7 @@ int ssl_verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
 		ASN1_STRING *d = X509_NAME_ENTRY_get_data(e);
 		char *cn = ASN1_STRING_data(d);
 
-		 if (mycmp(cn, conn->name))
+		 if (!mycmp(cn, conn->name))
 		 {
 			 sendto_realops_lev(DEBUG_LEV, "SSL: Valid certificate cn: %s, name: %s", cn, conn->name);
 			 return 1;
