@@ -433,13 +433,13 @@ static int fatal_ssl_error(int ssl_error, int where, aClient *sptr)
     return -1;
 }
 
-static int ssl_verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
+int ssl_verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
 {
 	char buf[256];
 	X509 *err_cert;
 	SSL *ssl;
 	int err, depth;
-	aConn *conn;
+	aConnect *conn;
 
     /* 
 	 * Retrieve pointer to SSL object to be able to retrieve aConn data.
