@@ -83,7 +83,7 @@ int ssl_init()
 		return 0;
 	}
 
-	SSL_CTX_set_verify(serverssl_ctx, SSL_VERIFY_PEER, ssl_verify_callback);
+	SSL_CTX_set_verify(serverssl_ctx, SSL_VERIFY_PEER | SSL_VERIFY_CLIENT_ONCE, ssl_verify_callback);
 
     if(SSL_CTX_use_certificate_chain_file(ircdssl_ctx, IRCDSSL_CPATH) <= 0)
     {
@@ -170,7 +170,7 @@ int ssl_rehash()
 	}
 
 	serverssl_ctx = temp_serverssl_ctx;
-	SSL_CTX_set_verify(serverssl_ctx, SSL_VERIFY_PEER, NULL);
+	SSL_CTX_set_verify(serverssl_ctx, SSL_VERIFY_PEER | SSL_VERIFY_CLIENT_ONCE, ssl_verify_callback);
 	SSL_CTX_set_min_proto_version(serverssl_ctx, TLS1_2_VERSION);
 
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
@@ -453,9 +453,11 @@ int ssl_verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
 	conn = SSL_get_ex_data(ssl, mydata_index);
     cert = X509_STORE_CTX_get_current_cert(ctx);
     err = X509_STORE_CTX_get_error(ctx);
+	depth = X509_STORE_CTX_get_error_depth(ctx);
 
     X509_NAME_oneline(X509_get_subject_name(cert), buf, 256);
-	sendto_realops_lev(DEBUG_LEV, "Got subject name: %s", buf);
+	sendto_realops_lev(DEBUG_LEV, "Got subject name [%d]: %s", depth, buf);
+
 
     /*
 	 * If initial verification failed, we fail
