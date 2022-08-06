@@ -83,6 +83,8 @@ int ssl_init()
 		return 0;
 	}
 
+	SSL_CTX_set_verify(serverssl_ctx, SSL_VERIFY_PEER, ssl_verify_callback);
+
     if(SSL_CTX_use_certificate_chain_file(ircdssl_ctx, IRCDSSL_CPATH) <= 0)
     {
 	ERR_print_errors_fp(stderr);
@@ -458,7 +460,7 @@ int ssl_verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
     /*
 	 * If initial verification failed, we fail
 	 */
-    if (!preverify_ok) 
+    if (!preverify_ok && preverify_ok != X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN) 
 	{
 		sendto_realops_lev(DEBUG_LEV, "SSL: verify error:num=%d:%s:depth=%d:%s\n", err,
                 X509_verify_cert_error_string(err), depth, buf);
