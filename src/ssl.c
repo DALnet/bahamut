@@ -22,6 +22,7 @@
 #include "struct.h"
 #include "common.h"
 #include "sys.h"
+#include "struct.h"
 #include <sys/types.h>
 #include "h.h"
 
