@@ -83,7 +83,7 @@ int ssl_init()
 		return 0;
 	}
 
-	SSL_CTX_set_verify(serverssl_ctx, SSL_VERIFY_PEER | SSL_VERIFY_CLIENT_ONCE, ssl_verify_callback);
+	SSL_CTX_set_verify(serverssl_ctx, SSL_VERIFY_PEER, ssl_verify_callback);
 
     if(SSL_CTX_use_certificate_chain_file(ircdssl_ctx, IRCDSSL_CPATH) <= 0)
     {
@@ -170,7 +170,7 @@ int ssl_rehash()
 	}
 
 	serverssl_ctx = temp_serverssl_ctx;
-	SSL_CTX_set_verify(serverssl_ctx, SSL_VERIFY_PEER | SSL_VERIFY_CLIENT_ONCE, ssl_verify_callback);
+	SSL_CTX_set_verify(serverssl_ctx, SSL_VERIFY_PEER, ssl_verify_callback);
 	SSL_CTX_set_min_proto_version(serverssl_ctx, TLS1_2_VERSION);
 
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
@@ -483,7 +483,7 @@ int ssl_verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
 			 sendto_realops_lev(DEBUG_LEV, "SSL: Valid certificate cn: %s, name: %s", cn, conn->name);
 			 return 1;
 		 } else {
-			 sendto_realops_lev(DEBUG_LEV, "SSL: Subject and connection name mismatch %s : %s", buf, conn->name);
+			 sendto_realops_lev(DEBUG_LEV, "SSL: Subject and connection name mismatch %s : %s", cn, conn->name);
 			 return preverify_ok;
 		 }
 	 } 
