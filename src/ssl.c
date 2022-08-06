@@ -39,6 +39,7 @@ SSL_CTX *ircdssl_ctx; /* for clients connecing in */
 SSL_CTX *serverssl_ctx; /* for connecting to servers */
 
 int ssl_capable = 0;
+int mydata_index = 0;
 
 int ssl_init()
 {
@@ -80,8 +81,6 @@ int ssl_init()
 		ERR_print_errors_fp(stderr);
 		return 0;
 	}
-
-    SSL_CTX_set_verify(serverssl_ctx, SSL_VERIFY_NONE, NULL);
 
     if(SSL_CTX_use_certificate_chain_file(ircdssl_ctx, IRCDSSL_CPATH) <= 0)
     {
@@ -431,5 +430,45 @@ static int fatal_ssl_error(int ssl_error, int where, aClient *sptr)
     sptr->sockerr = IRCERR_SSL;
     sptr->flags |= FLAGS_DEADSOCKET;
     return -1;
+}
+
+static int ssl_verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
+{
+	char buf[256];
+	X509 *err_cert;
+	SSL *ssl;
+	int err, depth;
+	aConn *conn;
+
+    /* 
+	 * Retrieve pointer to SSL object to be able to retrieve aConn data.
+	 * aConn data is passed during SSL connection to validate subject name matches
+	 * aConn->name
+	 */
+
+    ssl = X509_STORE_CTX_get_ex_data(ctx, SSL_get_ex_data_X509_STORE_CTX_idx());
+	conn = SSL_get_ex_data(ssl, mydata_index);
+
+    X509_NAME_oneline(X509_get_subject_name(err_cert), buf, 256);
+	sendto_realops_lev(DEBUG_LEV, "Got subject name: %s", buf);
+
+     /*
+      * At this point, err contains the last verification error. We can use
+      * it for something special
+      */
+     if (!preverify_ok && (err == X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT)) {
+         X509_NAME_oneline(X509_get_issuer_name(err_cert), buf, 256);
+        sendto_realops_lev(DEBUG_LEV, "SSL cert issuer %s", buf);
+		return X509_V_ERR_INVALID_CA;
+     } else {
+		 if (mycmp(buf, conn->name))
+		 {
+			 sendto_realops_lev(DEBUG_LEV, "SSL: Valid certificate for %s", conn->name);
+			 return X509_V_OK;
+		 } else {
+			 sendto_realops_lev(DEBUG_LEV, "SSL: Subject and connection name mismatch %s : %s", buf, conn->name);
+			 return X509_V_ERR_CERT_REJECTED;
+		 }
+	 }
 }
 #endif

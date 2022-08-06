@@ -1984,7 +1984,18 @@ int connect_server(aConnect *aconn, aClient * by, struct hostent *hp)
 
         SetSSL(cptr);
         SSL_set_fd(cptr->ssl, cptr->fd);
+        extern int mydata_index;
+
         int ret=0;
+
+        mydata_index = SSL_get_ex_new_index(0, "mydata index", NULL, NULL, NULL);
+        SSL_CTX_set_verify(serverssl_ctx, SSL_VERIFY_PEER, ssl_verify_callback);
+
+        /* 
+         * Set the aConn object as SSL data for the verification
+         */
+        SSL_set_ex_data(cptr->ssl, mydata_index, aconn);
+
         if(!safe_ssl_connect(cptr, cptr->fd))
         {
             sendto_realops_lev(DEBUG_LEV, "SSL connect failed [server %s]", 

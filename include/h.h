@@ -387,6 +387,7 @@ int safe_ssl_read(aClient *, void *, int);
 int safe_ssl_write(aClient *, const void *, int);
 int safe_ssl_accept(aClient *, int);
 int safe_ssl_connect(aClient *, int);
+int ssl_verify_callback(int, X509_STORE_CTX *);
 int ssl_smart_shutdown(SSL *);
 #endif
 
