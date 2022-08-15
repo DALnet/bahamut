@@ -864,7 +864,7 @@ int completed_connection(aClient * cptr)
     {
         long verify_result = 0;
         verify_result = SSL_get_verify_result(cptr->ssl);
-        sendto_realops_lev(DEBUG_LEV, "SSL verification result %d [%s]", verify_result, cptr->name);
+        sendto_realops_lev(DEBUG_LEV, "SSL verification result %ld [%s]", verify_result, cptr->name);
 
         switch (verify_result)
         {
