@@ -164,6 +164,8 @@ struct ConfVar
 #define OPTF_SPAMFILTERURL          0x200000
 #define OPTT_REMREHOK   "ALLOW_REMOTE_REHASH"
 #define OPTF_REMREHOK               0x400000
+#define OPTT_USERMASK   "USER_HOSTMASK"
+#define OPTF_USERMASK               0x800000
 
 
 /* module block definitions */
@@ -218,6 +220,7 @@ sConf confopttab[] =
     {OPTT_GCLONES, OPTF_GCLONES, VARTYPE_NAME},
     {OPTT_SPAMFILTERURL, OPTF_SPAMFILTERURL, VARTYPE_NAME},
     {OPTT_REMREHOK, OPTF_REMREHOK, VARTYPE_NONE},
+    {OPTT_USERMASK, OPTF_USERMASK, VARTYPE_NAME},
     {(char *) 0, 0, 0}
 };
 

@@ -130,6 +130,7 @@
 #define MSG_PUT      "PUT"          /* PUT */
 #define MSG_POST     "POST"         /* POST */
 #define MSG_CHECK    "CHECK"        /* CHECK */
+#define MSG_SETHOST  "SETHOST"      /* SETHOST */
 
 #define MSG_WEBIRC   "WEBIRC"       /* WEBIRC */
 
@@ -239,6 +240,7 @@ extern int m_aj(aClient *, aClient *, int, char **);
 extern int m_sjr(aClient *, aClient *, int, char **, AliasInfo *);
 extern int m_svsxcf(aClient *, aClient *, int, char **);
 extern int m_svsctrl(aClient *, aClient *, int, char **);
+extern int m_sethost(aClient *, aClient *, int, char **);
 
 /* aliastab indexes */
 #define AII_NS  0
@@ -372,6 +374,7 @@ struct Message msgtab[] =
     {MSG_CHECK,    m_check,    MAXPARA, 0,        0},
     {MSG_LUSERSLOCK, m_luserslock, MAXPARA, 0,       0},
     {MSG_LINKSCONTROL, m_linkscontrol, MAXPARA, 0,      0},
+    {MSG_SETHOST,  m_sethost,  MAXPARA, 0,        0},
     {"SPAMOPS",    m_spamops,  MAXPARA, 0,        0},
     {"SF",         m_sf,       MAXPARA, 0,        0},
     {"SVSXCF",     m_svsxcf,   MAXPARA, 0,        0},

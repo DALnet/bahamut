@@ -2514,6 +2514,10 @@ m_capab(aClient *cptr, aClient *sptr, int parc, char *parv[])
 #endif
 	else if (strcmp(parv[i], "NICKIPSTR") == 0)
 	    SetNickIPStr(cptr);
+#ifdef USER_HOSTMASKING
+    else if (strcmpn(parv[i], "HOSTMASK") == 0)
+        SetUHostmask(cptr);
+#endif
     }
 
     return 0;

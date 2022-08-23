@@ -389,6 +389,10 @@ int safe_ssl_accept(aClient *, int);
 int ssl_smart_shutdown(SSL *);
 #endif
 
+#ifdef USER_HOSTMASKING
+int user_hostmask(char *, char *, char *, char **);
+#endif
+
 
 #include "find.h"
 

@@ -427,13 +427,28 @@ m_server_estab(aClient *cptr)
 
 #ifdef HAVE_ENCRYPTION_ON
         if(!WantDKEY(cptr))
+#ifdef USER_HOSTMASKING
+            sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURST UNCONNECT ZIP "
+                       "NICKIP NICKIPSTR TSMODE HOSTMASK");
+#else
             sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURST UNCONNECT ZIP "
                        "NICKIP NICKIPSTR TSMODE");
+#endif
         else
+#ifdef USER_HOSTMASKING
+            sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURST UNCONNECT DKEY "
+                       "ZIP NICKIP NICKIPSTR TSMODE HOSTMASK");
+#else
             sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURST UNCONNECT DKEY "
                        "ZIP NICKIP NICKIPSTR TSMODE");
+#endif
+#else
+#ifdef USER_HOSTMASKING
+        sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURST UNCONNECT ZIP NICKIP NICKIPSTR TSMODE"
+                         " HOSTMASK");
 #else
         sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURST UNCONNECT ZIP NICKIP NICKIPSTR TSMODE");
+#endif
 #endif
 
         sendto_one(cptr, "SERVER %s 1 :%s",

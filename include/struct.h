@@ -110,7 +110,7 @@ typedef struct SServicesTag ServicesTag;
 
 
 
-#define	HOSTLEN		63	/* Length of hostname.  Updated to */
+#define	HOSTLEN		255	/* Length of hostname.  Sure we can handle 256 bytes now - skill */
 
 /* comply with RFC1123 */
 
@@ -253,6 +253,10 @@ typedef struct SServicesTag ServicesTag;
 #endif
 #define CAPAB_NICKIPSTR 0x0080 /* Nick IP as a string support */
 
+#ifdef USER_HOSTMASKING
+#define CAPAB_HOSTMASK  0x0100 /* User hostmask support */
+#endif
+
 
 #define SetDKEY(x)	((x)->capabilities |= CAPAB_DKEY)
 #define CanDoDKEY(x)    ((x)->capabilities & CAPAB_DKEY)
@@ -278,6 +282,11 @@ typedef struct SServicesTag ServicesTag;
 
 #define SetNickIPStr(x)	((x)->capabilities |= CAPAB_NICKIPSTR)
 #define IsNickIPStr(x)	((x)->capabilities & CAPAB_NICKIPSTR)
+
+#ifdef USER_HOSTMASKING
+#define SetUHostmask(x) ((x)->capabilities |= CAPAB_HOSTMASK)
+#define IsUHostmask(x)  ((x)->capabilities & CAPAB_HOSTMASK)
+#endif
 
 /* flag macros. */
 #define IsULine(x) ((x)->flags & FLAGS_ULINE)
@@ -685,6 +694,8 @@ typedef struct Whowas
 #define FLAGS_SHOWLINKS 0x0040
 #define FLAGS_SPLITOPOK 0x0080
 #define FLAGS_REMREHOK  0x0100
+#define FLAGS_SVCSMASK  0x0200
+#define FLAGS_LCALMASK  0x0400
 
 
 /* flags for connects */

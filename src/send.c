@@ -770,6 +770,41 @@ void sendto_non_noquit_servs_butone(aClient *one, char *pattern, ...)
 }
 #endif
 
+#ifdef USER_HOSTMASKING
+/*
+ * sendto_server_butone_uhostmask
+ *
+ * Send a message to all connected servers except the client 'one'. Also select
+ * servers that do have HOSTMASK capability.
+ */
+void sendto_serv_butone_uhostmask(aClient *one, char *pattern, ...)
+{
+    aClient *cptr;
+    int k = 0;
+    fdlist send_fdlist;
+    va_list vl;
+    DLink *lp;
+
+    va_start(vl, pattern);
+    for (lp = server_list; lp; lp = lp->next)
+    {
+        cptr = lp->value.cptr;
+        if (one && cptr == one->from)
+            continue;
+        if (!IsUHostmask(cptr))
+            continue;
+        if (IsUHostmask(cptr))
+            send_fdlist.entry[++k] = cptr->fd;
+    }
+
+    send_fdlist.last_entry = k;
+    if (k)
+        vsendto_fdlist(&send_fdlist, pattern, vl);
+    va_end(vl);
+    return;
+}
+#endif
+
 /*
  * sendto_server_butone_nickipstr
  *
