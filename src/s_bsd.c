@@ -873,16 +873,31 @@ int completed_connection(aClient * cptr)
     /* pass on our capabilities to the server we /connect'd */
 #ifdef HAVE_ENCRYPTION_ON
     if(!(aconn->flags & CONN_DKEY))
+#ifdef USER_HOSTMASKING
+        sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURST UNCONNECT ZIP"
+                         " NICKIP NICKIPSTR TSMODE HOSTMASK");
+#else
         sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURST UNCONNECT ZIP"
                          " NICKIP NICKIPSTR TSMODE");
+#endif
     else
     {
+#ifdef USER_HOSTMASKING
+        sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURST UNCONNECT DKEY"
+                         " ZIP NICKIP NICKIPSTR TSMODE HOSTMASK");
+#else
         sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURST UNCONNECT DKEY"
                          " ZIP NICKIP NICKIPSTR TSMODE");
+#endif
         SetWantDKEY(cptr);
     }
 #else
+#ifdef USER_HOSTMASKING
+    sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURST UNCONNECT ZIP NICKIP NICKIPSTR TSMODE"
+                     " HOSTMASK");
+#else
     sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURST UNCONNECT ZIP NICKIP NICKIPSTR TSMODE");
+#endif
 #endif
 
     if(aconn->flags & CONN_ZIP)

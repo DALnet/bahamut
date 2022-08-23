@@ -450,16 +450,27 @@ reject_proxy(aClient *cptr, char *cmd, char *args)
 
 /* mask_host - Gets a normal host or ip and return them masked.
  * -Kobi_S 19/12/2015
+ * check for user_hostmask type and act accordingly 
+ * - skill 22/08/2022
  */
-char *mask_host(char *orghost, char *orgip, int type)
+char *mask_host(char *nick, char *orghost, char *orgip, int type)
 {
     static char newhost[HOSTLEN + 1];
 
-    if(!type) type = uhm_type;
+    if (confopts & FLAGS_SVCSMASK)
+    {
+        if(!type) type = uhm_type;
 
-    if (call_hooks(CHOOK_MASKHOST, orghost, orgip, &newhost, type) == UHM_SUCCESS) return newhost;
+        if (call_hooks(CHOOK_MASKHOST, orghost, orgip, &newhost, type) == UHM_SUCCESS) return newhost;
 
-    return orghost; /* I guess the user won't be host-masked after all... :( */
+        return orghost; /* I guess the user won't be host-masked after all... :( */
+    } else if (confopts & FLAGS_LCALMASK)
+    {
+       if (user_hostmask(nick, orghost, orgip, &newhost)) return newhost;
+       return orghost;
+    }
+
+    return orghost; /* We shouldn't be here */
 }
 
 
@@ -609,7 +620,7 @@ register_user(aClient *cptr, aClient *sptr, char *nick, char *username,
         }
 
 #ifdef USER_HOSTMASKING
-        strncpyzt(user->mhost, mask_host(user->host,sptr->hostip,0), HOSTLEN + 1);
+        strncpyzt(user->mhost, mask_host(nick, user->host,sptr->hostip,0), HOSTLEN + 1);
 #endif
         
         pwaconf = sptr->user->allow;
@@ -994,7 +1005,7 @@ register_user(aClient *cptr, aClient *sptr, char *nick, char *username,
                     strncpy(sptr->sockhost, Staff_Address, HOSTLEN + 1);
 #ifdef USER_HOSTMASKING
                     strncpyzt(sptr->user->mhost, Staff_Address, HOSTLEN + 1);
-                    if(uhm_type > 0) sptr->umode &= ~UMODE_H; /* It's already masked anyway */
+                    if(uhm_type > 0 || confopts & FLAGS_LCALMASK) sptr->umode &= ~UMODE_H; /* It's already masked anyway */
 #endif
                 }
 
@@ -1136,6 +1147,16 @@ register_user(aClient *cptr, aClient *sptr, char *nick, char *username,
 				 sptr->user->servicestamp,
 				 (sptr->ip_family == AF_INET) ?
 				 htonl(sptr->ip.ip4.s_addr) : 1, sptr->info);
+
+    #ifdef USER_HOSTMASKING
+    /* 
+     * If we're masking user's hosts, let everyone else know about it 
+     * but only if we're dealing with hostmasking locally.
+     * - skill 22/08/2022
+     */
+    if (confopts & FLAGS_LCALMASK)
+        sendto_serv_butone_uhostmask(cptr, ":%s SETHOST %s %s", cptr->name, nick, user->mhost);
+    #endif
 
     if(MyClient(sptr))
     {
@@ -2339,7 +2360,7 @@ do_user(char *nick, aClient *cptr, aClient *sptr, char *username, char *host,
         user->server = find_or_add(server);
         strncpyzt(user->host, host, sizeof(user->host));
 #ifdef USER_HOSTMASKING
-        strncpyzt(user->mhost, mask_host(host,ip,0), HOSTLEN + 1);
+        strncpyzt(user->mhost, mask_host(nick, host,ip,0), HOSTLEN + 1);
 #endif
     } 
     else
@@ -2366,8 +2387,15 @@ do_user(char *nick, aClient *cptr, aClient *sptr, char *username, char *host,
 #endif
         strncpyzt(user->host, host, sizeof(user->host));
 #ifdef USER_HOSTMASKING
-        if((uhm_type > 0) && (uhm_umodeh == 1)) sptr->umode |= UMODE_H;
-        else sptr->umode &= ~UMODE_H;
+        if (confopts & FLAGS_SVCSMASK)
+        {
+            if((uhm_type > 0) && (uhm_umodeh == 1)) sptr->umode |= UMODE_H;
+            else sptr->umode &= ~UMODE_H;
+        }
+        else if (confopts & FLAGS_LCALMASK)
+        {
+            sptr->mode |= UMODE_H;
+        }
 #endif
            
         user->server = me.name;
@@ -3275,6 +3303,40 @@ m_ison(aClient *cptr, aClient *sptr, int parc, char *parv[])
     return 0;
 }
 
+#ifdef USER_HOSTMASKING
+/*
+ * m_sethost() added 22/08/2022 by Emilio Escobar (skill)
+ * parv[0] - sender
+ * parv[1] - username to change host for
+ * parv[2] - new masked host
+ */
+int
+m_sethost(aClient *cptr, aClient *sptr, int parc, char *parv[])
+{
+    aClient *acptr;
+
+    if (confopts & FLAGS_SVCSMASK)
+      return 0; /* if an U:lined servier is owning user hostmasking, we don't respond to this */
+
+    if (!IsServer(sptr) && parc < 3 && parv[2]==0)
+        return 0; /* not a server or not enough parameters */
+    
+    if (!(acptr = find_user(parv[1], NULL)))
+        return 0; /* target user does not exist */
+    
+    if (strlen(parv[2] > HOSTLEN))
+        return 0; /* new host is too large, ignore it */
+    
+    strcpy(acptr->user->mhost, parv[2]); /* Set the requested (masked) host */
+    acptr->flags |= FLAGS_SPOOFED;
+
+    /* Pass it to all the other servers */
+    sendto_serv_butone_uhostmask(cptr, ":%s SETHOST %s %s", parv[0], parv[1], parv[2]);
+
+    return 0;   
+}
+#endif
+
 /*
  * m_umode() added 15/10/91 By Darren Reed.
  * parv[0] - sender
@@ -3359,7 +3421,8 @@ m_umode(aClient *cptr, aClient *sptr, int parc, char *parv[])
                     if(MyClient(sptr))
                     {
                         // Ensure hostmasking settings are enabled to allow setting the mode.
-                        if(uhm_type == 0 || uhm_umodeh == 0)
+                        if((confopts & FLAGS_SVCSMASK && (uhm_type == 0 || uhm_umodeh == 0)) || 
+                                !(confopts & FLAGS_LCALMASK))
                         {
                             sendto_one(sptr, ":%s NOTICE %s :*** Notice -- User hostmasking is not enabled on this server.",
                                me.name, sptr->name);

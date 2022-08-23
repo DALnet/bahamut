@@ -1075,6 +1075,24 @@ confadd_options(cVar *vars[], int lnum)
                 return -1;
             }
         }
+        else if (tmp->type && (tmp->typ->flag & OPTF_USERMASK))
+        {
+            tmp->type = NULL;
+            if (!mycmp("SERVICES", tmp->value))
+            {
+                new_confopts |= FLAGS_SVCSMASK;
+                new_confopts &= ~FLAGS_LCALMASK;
+
+            } else if (!mycmp("LOCAL", tmp->value))
+            {
+                new_confopts |= FLAGS_LCALMASK;
+                new_confopts &= ~FLAGS_SVCSMASK;
+            } else
+            {
+                confparse_error("Unknown user_hostmask in option block", lnum);
+                return -1;
+            }
+        }
         else if(tmp->type && (tmp->type->flag & OPTF_NKLINEADDY))
         {
             tmp->type = NULL;
