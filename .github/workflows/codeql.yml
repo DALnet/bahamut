@@ -23,19 +23,22 @@ jobs:
         language: [ cpp ]
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@v2
-        with:
+    - name: harden-runner
+      uses: step-security/harden-runner@v2
+      with:
+       egress-policy: audit
+    - name: Checkout
+      uses: actions/checkout@v3
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v2
+      with:
           languages: ${{ matrix.language }}
           queries: +security-and-quality
 
-      - name: Autobuild
-        uses: github/codeql-action/autobuild@v2
+    - name: Autobuild
+      uses: github/codeql-action/autobuild@v2
 
-      - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v2
-        with:
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v2
+      with:
           category: "/language:${{ matrix.language }}"
