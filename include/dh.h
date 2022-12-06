@@ -45,6 +45,7 @@ struct session_info
 static BIGNUM *ircd_prime;
 static BIGNUM *ircd_generator;
 
+#undef hex_to_string /* Defined by OpenSSL >= 3.0 */
 static char *hex_to_string[256] =
 {
     "00", "01", "02", "03", "04", "05", "06", "07",
