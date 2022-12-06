@@ -31,3 +31,5 @@ jobs:
       run: ./configure
     - name: make
       run: make
+    - name: check src/ircd was built
+      run: ls src/ircd
