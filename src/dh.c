@@ -223,7 +223,7 @@ static void create_prime()
 
     for(i = 0; i < PRIME_BYTES; i++)
     {
-        char *x = hex_to_string[dh_prime_1024[i]];
+        char *x = dh_hex_to_string[dh_prime_1024[i]];
         while(*x)
             buf[bufpos++] = *x++;
     }
