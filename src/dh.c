@@ -36,6 +36,11 @@
 #include <openssl/dh.h>
 #include "libcrypto-compat.h"
 
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+#include <openssl/core_names.h>
+#include <openssl/param_build.h>
+#endif
+
 #include "memcount.h"
 
 #define DH_HEADER
@@ -215,7 +220,7 @@ static int init_random()
     return 0;
 }
 
-static void create_prime()
+static int create_prime()
 {
     char buf[PRIME_BYTES_HEX];
     int i;
@@ -223,7 +228,7 @@ static void create_prime()
 
     for(i = 0; i < PRIME_BYTES; i++)
     {
-        char *x = hex_to_string[dh_prime_1024[i]];
+        char *x = dh_hex_to_string[dh_prime_1024[i]];
         while(*x)
             buf[bufpos++] = *x++;
     }
@@ -233,6 +238,34 @@ static void create_prime()
     BN_hex2bn(&ircd_prime, buf);
     ircd_generator = BN_new();
     BN_set_word(ircd_generator, dh_gen_1024);
+
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+    OSSL_PARAM_BLD *paramBuild = NULL;
+    OSSL_PARAM *param = NULL;
+    EVP_PKEY_CTX *primeCtx = NULL;
+
+    if(!(paramBuild = OSSL_PARAM_BLD_new()) ||
+       !OSSL_PARAM_BLD_push_BN(paramBuild, OSSL_PKEY_PARAM_FFC_P, ircd_prime) ||
+       !OSSL_PARAM_BLD_push_BN(paramBuild, OSSL_PKEY_PARAM_FFC_G, ircd_generator) ||
+       !(param = OSSL_PARAM_BLD_to_param(paramBuild)) ||
+       !(primeCtx = EVP_PKEY_CTX_new_from_name(NULL, "DHX", NULL)) ||
+       EVP_PKEY_fromdata_init(primeCtx) <= 0 ||
+       EVP_PKEY_fromdata(primeCtx, &ircd_prime_ossl3,
+                         EVP_PKEY_KEY_PARAMETERS, param) <= 0 ||
+       1)
+    {
+        if(primeCtx)
+            EVP_PKEY_CTX_free(primeCtx);
+        if(param)
+            OSSL_PARAM_free(param);
+        if(paramBuild)
+            OSSL_PARAM_BLD_free(paramBuild);
+    }
+
+    if(!ircd_prime_ossl3)
+        return -1;
+#endif
+    return 0;
 }
 
 int dh_init()
@@ -241,8 +274,7 @@ int dh_init()
     ERR_load_crypto_strings();
 #endif
 
-    create_prime();
-    if(init_random() == -1)
+    if(create_prime() == -1 || init_random() == -1)
         return -1;
     return 0; 
 }
@@ -250,7 +282,7 @@ int dh_init()
 int dh_generate_shared(void *session, char *public_key)
 {
     BIGNUM *tmp;
-    int len;
+    size_t len;
     struct session_info *si = (struct session_info *) session;
 
     if(verify_is_hex(public_key) == 0 || !si || si->session_shared)
@@ -261,13 +293,55 @@ int dh_generate_shared(void *session, char *public_key)
     if(!tmp)
         return 0;
 
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
     si->session_shared_length = DH_size(si->dh);
     si->session_shared = (unsigned char *) malloc(DH_size(si->dh));
     len = DH_compute_key(si->session_shared, tmp, si->dh);
+#else
+    OSSL_PARAM_BLD *paramBuild = NULL;
+    OSSL_PARAM *param = NULL;
+    EVP_PKEY_CTX *peerPubKeyCtx = NULL;
+    EVP_PKEY *peerPubKey = NULL;
+    EVP_PKEY_CTX *deriveCtx = NULL;
+
+    len = -1;
+    if(!(paramBuild = OSSL_PARAM_BLD_new()) ||
+       !OSSL_PARAM_BLD_push_BN(paramBuild, OSSL_PKEY_PARAM_FFC_P, ircd_prime) ||
+       !OSSL_PARAM_BLD_push_BN(paramBuild, OSSL_PKEY_PARAM_FFC_G, ircd_generator) ||
+       !OSSL_PARAM_BLD_push_BN(paramBuild, OSSL_PKEY_PARAM_PUB_KEY, tmp) ||
+       !(param = OSSL_PARAM_BLD_to_param(paramBuild)) ||
+       !(peerPubKeyCtx = EVP_PKEY_CTX_new_from_name(NULL, "DHX", NULL)) ||
+       EVP_PKEY_fromdata_init(peerPubKeyCtx) <= 0 ||
+       EVP_PKEY_fromdata(peerPubKeyCtx, &peerPubKey,
+                         EVP_PKEY_PUBLIC_KEY, param) <= 0 ||
+       !(deriveCtx = EVP_PKEY_CTX_new(si->dh, NULL)) ||
+       EVP_PKEY_derive_init(deriveCtx) <= 0 ||
+       EVP_PKEY_derive_set_peer(deriveCtx, peerPubKey) <= 0 ||
+       EVP_PKEY_derive(deriveCtx, NULL, &len) <= 0 ||
+       !(si->session_shared = malloc(len)) ||
+       EVP_PKEY_derive(deriveCtx, si->session_shared, &len) <= 0 ||
+       1)
+    {
+        if(deriveCtx)
+            EVP_PKEY_CTX_free(deriveCtx);
+        if(peerPubKey)
+            EVP_PKEY_free(peerPubKey);
+        if(peerPubKeyCtx)
+            EVP_PKEY_CTX_free(peerPubKeyCtx);
+        if(param)
+            OSSL_PARAM_free(param);
+        if(paramBuild)
+            OSSL_PARAM_BLD_free(paramBuild);
+    }
+#endif
     BN_free(tmp);
 
-    if(len < 0)
+    if(len == -1 || !si->session_shared)
+    {
+        if(si->session_shared)
+            free(si->session_shared);
         return 0;
+    }
 
     si->session_shared_length = len;
 
@@ -284,6 +358,7 @@ void *dh_start_session()
 
     memset(si, 0, sizeof(struct session_info));
 
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
     si->dh = DH_new();
 	if(si->dh == NULL)
 		return NULL;
@@ -304,7 +379,23 @@ void *dh_start_session()
         MyFree(si);
         return NULL;
     }
+#else
+    EVP_PKEY_CTX *keyGenCtx = NULL;
 
+    if(!(keyGenCtx = EVP_PKEY_CTX_new_from_pkey(NULL, ircd_prime_ossl3, NULL)) ||
+        EVP_PKEY_keygen_init(keyGenCtx) <= 0 ||
+        EVP_PKEY_generate(keyGenCtx, &si->dh) <= 0 ||
+        1)
+    {
+        if(keyGenCtx)
+            EVP_PKEY_CTX_free(keyGenCtx);
+    }
+    if(!si->dh)
+    {
+        MyFree(si);
+        return NULL;
+    }
+#endif
     return (void *) si;
 }
 
@@ -312,6 +403,7 @@ void dh_end_session(void *session)
 {
     struct session_info *si = (struct session_info *) session;
 
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
     if(si->dh)
     {
         DH_free(si->dh);
@@ -324,6 +416,13 @@ void dh_end_session(void *session)
         free(si->session_shared);
         si->session_shared = NULL;
     }
+#else
+    if(si->dh)
+    {
+        EVP_PKEY_free(si->dh);
+        si->dh = NULL;
+    }
+#endif
 
     MyFree(si);
 }
@@ -333,6 +432,7 @@ char *dh_get_s_public(char *buf, size_t maxlen, void *session)
     struct session_info *si = (struct session_info *) session;
     char *tmp;
 
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
     if(!si || !si->dh)
 		return NULL;
 
@@ -343,6 +443,16 @@ char *dh_get_s_public(char *buf, size_t maxlen, void *session)
 		return NULL;
 
 	tmp = BN_bn2hex(pub_key);
+#else
+    BIGNUM *pub_key = NULL;
+
+    if(!si || !si->dh)
+        return NULL;
+    if(!EVP_PKEY_get_bn_param(si->dh, OSSL_PKEY_PARAM_PUB_KEY, &pub_key))
+        return NULL;
+    tmp = BN_bn2hex(pub_key);
+    BN_free(pub_key);
+#endif
     if(!tmp)
         return NULL;
 
