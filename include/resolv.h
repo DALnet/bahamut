@@ -106,9 +106,13 @@ extern struct state _res;
 
 extern char *p_cdname(), *p_rr(), *p_type(), *p_class(), *p_time();
 
-#if ((__GNU_LIBRARY__ == 6) && (__GLIBC__ >=2) && (__GLIBC_MINOR__ >= 2))
+#if !defined(HAVE_RES_INIT) && defined(HAVE___RES_INIT)
 #define res_init __res_init
+#endif
+#if !defined(HAVE_RES_MKQUERY) && defined(HAVE___RES_MKQUERY)
 #define res_mkquery __res_mkquery
+#endif
+#if !defined(HAVE_DN_EXPAND) && defined(HAVE___DN_EXPAND)
 #define dn_expand __dn_expand
 #endif
 
