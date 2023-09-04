@@ -215,11 +215,18 @@ m_squit(aClient *cptr, aClient *sptr, int parc, char *parv[])
     }
     else
     {
-        /* This is actually protocol error. But, well, closing the
-         * link is very proper answer to that...
-         */
-        server = cptr->name;
-        acptr = cptr;
+        // Return error if an oper sends '/squit' alone. -Holbrook
+        if (!IsServer(cptr))
+        {
+            sendto_one(cptr, err_str(ERR_NEEDMOREPARAMS), me.name, parv[0], "SQUIT");
+            return 0;
+        }
+		
+        else
+        {
+            server = cptr->name;
+            acptr = cptr;
+        }
     }
 
     if (!acptr)
