@@ -272,7 +272,7 @@ do_server_estab(aClient *cptr)
 
     /* Send UHM (user host-masking) type */
     if(confopts & FLAGS_HUB)
-        sendto_one(cptr, "SVSUHM %d", uhm_type);
+        sendto_one(cptr, "SVSUHM %d %d", uhm_type, uhm_umodeh);
 
     /* send clone list */
     clones_send(cptr);
