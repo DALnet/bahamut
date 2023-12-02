@@ -22,7 +22,7 @@
 #define BASENAME "bahamut"
 #define MAJOR 2
 #define MINOR 2
-#define PATCH 2
+#define PATCH 3
 
 #define PATCHES ""
 
