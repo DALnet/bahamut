@@ -1,3 +1,15 @@
+Changes for 2.2.3:
+------------------
+Emilio Escobar (1):
+     Send UHM type and mode on netburst
+
+Ned T. Crigler (1):
+     Fix compliation errors on modern versions
+
+Ryan Carsten Schmidt (2):
+     Add -I flags before user CPPFLAGS
+     Fix sys_errlist configure check in newer compilers
+     
 Changes for 2.2.2:
 ------------------
 Ryan Smith (1):
