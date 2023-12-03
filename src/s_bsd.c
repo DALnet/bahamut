@@ -121,6 +121,10 @@ static char readbuf[8192];
 #endif
 #endif
 
+#ifdef USE_SSL
+extern int mydata_index;
+#endif
+
 /*
  * add_local_domain() 
  * Add the domain to hostname, if it is missing
@@ -901,7 +905,7 @@ int completed_connection(aClient * cptr)
                          " NICKIP NICKIPSTR TSMODE");
     else 
     {
-        sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURTS UNCONNECT DKEY"
+        sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURST UNCONNECT DKEY"
                          " ZIP NICKIP NICKIPSTR TSMODE");
         SetWantDKEY(cptr);
     }
@@ -1986,11 +1990,9 @@ int connect_server(aConnect *aconn, aClient * by, struct hostent *hp)
 
         SetSSL(cptr);
         SSL_set_fd(cptr->ssl, cptr->fd);
-        extern int mydata_index;
+        
 
         int ret=0;
-
-        mydata_index = SSL_get_ex_new_index(0, "mydata index", NULL, NULL, NULL);
         /* 
          * Set the aConn object as SSL data for the verification
          */

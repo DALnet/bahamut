@@ -107,6 +107,8 @@ int ssl_init()
 	return 0;
     }
 
+	mydata_index = SSL_get_ex_new_index(0, "aConn data", NULL, NULL, NULL);
+
     return 1;
 }
 
@@ -474,9 +476,20 @@ int ssl_verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
 		 */
 
 		X509_NAME *subj = X509_get_subject_name(cert);
+
+		if (!subj) return preverify_ok;
+
 		X509_NAME_ENTRY *e = X509_NAME_get_entry(subj, 5);
+
+		if (!e) return preverify_ok;
+
 		ASN1_STRING *d = X509_NAME_ENTRY_get_data(e);
+
+		if (!d) return preverify_ok;
+
 		char *cn = ASN1_STRING_data(d);
+
+		if (!cn) return preverify_ok;
 
 		 if (!mycmp(cn, conn->name))
 		 {

@@ -187,7 +187,7 @@ do_server_estab(aClient *cptr)
     sendto_gnotice("from %s: Link with %s established, states:%s%s%s%s",
                    me.name, inpath, ZipOut(cptr) ? " Output-compressed" : "",
                    #ifdef USE_SSL
-                   IsSSL(cptr) ? " encrypted" : "",
+                   (IsSSL(cptr) || RC4EncLink(cptr))? " encrypted" : "",
                    #else
                    RC4EncLink(cptr) ? " encrypted" : "",
                    #endif
