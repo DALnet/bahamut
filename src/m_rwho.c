@@ -1130,11 +1130,17 @@ static void rwho_reply(aClient *cptr, aClient *ac, char *buf, chanMember *cm)
         if (IsAnOper(ac))
             *dst++ = '*';
         else if (IsInvisible(ac))
-            *dst++ = '%';
+            *dst++ = 'I';
+        else
+            *dst++ = 'V';
         if (cm)
         {
             if (cm->flags & CHFL_CHANOP)
                 *dst++ = '@';
+#ifdef USE_HALFOPS
+			else if (cm->flags & CHFL_HALFOP)
+				*dst++ = '%';
+#endif
             else if (cm->flags & CHFL_VOICE)
                 *dst++ = '+';
         }
@@ -1227,8 +1233,10 @@ static void rwho_reply(aClient *cptr, aClient *ac, char *buf, chanMember *cm)
             *dst++ = 'H';
         if (IsAnOper(ac))
             *dst++ = '*';
-        if (IsInvisible(ac))
-            *dst++ = '%';
+        else if (IsInvisible(ac))
+            *dst++ = 'I';
+        else
+            *dst++ = 'V';
 
         if (!cm && (rwho_opts.rplfields & RWO_CHANNEL) && chptr)
         {
@@ -1241,7 +1249,11 @@ static void rwho_reply(aClient *cptr, aClient *ac, char *buf, chanMember *cm)
         {
             if (cm->flags & CHFL_CHANOP)
                 *dst++ = '@';
-            if (cm->flags & CHFL_VOICE)
+#ifdef USE_HALFOPS
+			else if (cm->flags & CHFL_HALFOP)
+				*dst++ = '%';
+#endif
+            else if (cm->flags & CHFL_VOICE)
                 *dst++ = '+';
         }
     }
