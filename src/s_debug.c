@@ -88,7 +88,7 @@ void build_rplcache(void)
     ircsprintf(rplisupportoper, rpl_str(RPL_ISUPPORT), me.name, "%s", scratchbuf);
 
     s = scratchbuf;
-    s += ircsprintf(s, "CASEMAPPING=ascii WATCH=%i SILENCE=%i ELIST=cmntu",
+    s += ircsprintf(s, "CASEMAPPING=ascii WATCH=%i SILENCE=%i ELIST=CT",
                     MAXWATCH, MAXSILES);
 #ifdef EXEMPT_LISTS
     s += ircsprintf(s, " EXCEPTS");
