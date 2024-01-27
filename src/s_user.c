@@ -2203,8 +2203,8 @@ m_whois(aClient *cptr, aClient *sptr, int parc, char *parv[])
         
         if(IsAnOper(sptr) && IsSquelch(acptr))
             sendto_one(sptr, rpl_str(RPL_WHOISTEXT), me.name, parv[0], name, 
-                       IsWSquelch(acptr) ?  "User is squelched (warned)" :
-                       "User is squelched (silent)");
+                       IsWSquelch(acptr) ?  "User is squelched (warned) [IRCop Restricted Information]" :
+                       "User is squelched (silent) [IRCop Restricted Information]");
         
         if(IsRegNick(acptr))
             sendto_one(sptr, rpl_str(RPL_WHOISREGNICK), me.name, parv[0], name);
@@ -2231,8 +2231,16 @@ m_whois(aClient *cptr, aClient *sptr, int parc, char *parv[])
         {
             servicestag = acptr->user->servicestag;
             while(servicestag)
-            {
-                if(*servicestag->tag && (!servicestag->umode || (sptr->umode & servicestag->umode))) sendto_one(sptr, ":%s %d %s %s :%s", me.name, servicestag->raw, parv[0], name, servicestag->tag);
+            { 
+                if(*servicestag->tag)
+                {
+                    /* If servicestag->umode is unset, this is viewable by everybody. */
+                    if(!servicestag->umode)
+                        sendto_one(sptr, ":%s %d %s %s :%s", me.name, servicestag->raw, parv[0], name, servicestag->tag);
+                    /* Otherwise, it can only be viewed by users with the correct umode (usually +o or higher) */
+                    else if(sptr->umode & servicestag->umode)
+                        sendto_one(sptr, ":%s %d %s %s :%s [IRCop Restricted Information]", me.name, servicestag->raw, parv[0], name, servicestag->tag);
+                }
                 servicestag = servicestag->next;
             }
         }
