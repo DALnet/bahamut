@@ -1301,7 +1301,6 @@ aClient *add_connection(aListener *lptr, int fd)
 	struct sockaddr_in6 addr6;
     } addr;
     unsigned int len = sizeof(addr);
-    struct userBan *ban;
 
     if (getpeername(fd, &addr.sa, &len) == -1)
     {
@@ -1362,18 +1361,6 @@ aClient *add_connection(aListener *lptr, int fd)
 
     acptr->lstn = lptr;
     add_client_to_list(acptr);
-
-    ban = check_userbanned(acptr, UBAN_IP|UBAN_CIDR4|UBAN_WILDUSER, 0);
-    if(ban)
-    {
-        int loc = (ban->flags & UBAN_LOCAL) ? 1 : 0;
-        
-        ircstp->is_ref++;
-        ircstp->is_ref_1++;
-        exit_banned_client(acptr, loc, loc ? 'K' : 'A', ban->reason, 0);
-
-        return NULL;
-    }
 
     if(call_hooks(CHOOK_PREACCESS, acptr) == FLUSH_BUFFER)
         return NULL;

@@ -854,7 +854,7 @@ register_user(aClient *cptr, aClient *sptr, char *nick, char *username,
                                : "Too many connections from your site");
         }
 
-        if(!(ban = check_userbanned(sptr, UBAN_IP|UBAN_CIDR4, UBAN_WILDUSER)))
+        if(!(ban = check_userbanned(sptr, UBAN_IP|UBAN_CIDR4, 0)))
             ban = check_userbanned(sptr, UBAN_HOST, 0);
 
         if(ban)
