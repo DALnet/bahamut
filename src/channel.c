@@ -1972,6 +1972,11 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
             }
                         
             who = find_chasing(sptr, parv[args], &chasing);
+            if(who == NULL) {
+                /* swallow the arg. don't send an error, find_chasing already did */
+                args++;
+                break;
+            }
             cm = find_user_member(chptr->members, who);
             if(cm == NULL) 
             {
