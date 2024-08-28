@@ -122,7 +122,7 @@ m_capab(aClient *cptr, aClient *sptr, int parc, char *parv[])
         * but only if NICK and USER were already received. If not,
         * we will let those commands handle it - skill
         */
-        if (sptr->name[0] && stpr->user && sptr->user->username[0])
+        if (sptr->name[0] && sptr->user && sptr->user->username[0])
           return register_user(cptr, sptr, sptr->name, sptr->user->username, sptr->hostip);
       }
     } else {
