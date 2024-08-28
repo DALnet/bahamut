@@ -79,8 +79,8 @@ m_capab(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
           for (int i = 0; ircv3_capabilities[i].name; i++)
           {
-            strncat(buf, client_capabilities[i].name, sizeof(buf) - strlen(buf) - 1);
-            if (i < (sizeof(client_capabilities) / sizeof(client_capabilities[0]) - 1))
+            strncat(buf, ircv3_capabilities[i].name, sizeof(buf) - strlen(buf) - 1);
+            if (i < (sizeof(ircv3_capabilities) / sizeof(ircv3_capabilities[0]) - 1))
               strncat(buf, " ", sizeof(buf) - strlen(buf) - 1);
           }
 
@@ -123,7 +123,7 @@ m_capab(aClient *cptr, aClient *sptr, int parc, char *parv[])
         * we will let those commands handle it - skill
         */
         if (stpr->name[0] && stpr->user && stpr->user->username[0])
-          return register_user(cptr, sptr, sptr->name, stpr->user->username, sptr->hostip);
+          return register_user(cptr, sptr, sptr->name, sptr->user->username, sptr->hostip);
       }
     } else {
 #endif
