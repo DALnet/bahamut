@@ -76,7 +76,7 @@ m_capab(aClient *cptr, aClient *sptr, int parc, char *parv[])
         if (sizeof(ircv3_capabilities) > 0)
         {
           char buf[BUFSIZE];
-          snprintf(buf, sizeof(buf), ":%s CAPAB * LS :", sptr->name);
+          snprintf(buf, sizeof(buf), ":%s CAP * LS :", me.name);
 
           for (int i = 0; ircv3_capabilities[i].name; i++)
           {
@@ -95,6 +95,7 @@ m_capab(aClient *cptr, aClient *sptr, int parc, char *parv[])
       }
       else if (strcmp(parv[1], "REQ") == 0)
       {
+        char buf[BUFSIZE];
         for (i = 2; i < parc; i++)
         {
           Debug((DEBUG_DEBUG, "CAPAB REQ: %s", parv[i]));
@@ -103,10 +104,17 @@ m_capab(aClient *cptr, aClient *sptr, int parc, char *parv[])
             if (strcmp(parv[i], ircv3_capabilities[j].name) == 0)
             {
               if (ircv3_capabilities[j].set)
+              {
                 ircv3_capabilities[j].set(cptr, ircv3_capabilities.capability);
+                strncat(buf, ircv3_capabilities[j].name, sizeof(buf) - strlen(buf) - 1);
+                if (i < parc - 1)
+                  strncat(buf, " ", sizeof(buf) - strlen(buf) - 1);
+              }
               break;
             }
           }
+
+          sendto_one(sptr, ":%s CAP * ACK :%s", me.name, buf);
         }
       }
       else if (strcmp(parv[1], "END") == 0)
@@ -167,7 +175,7 @@ int capab_set(aClient *cptr, unsigned int capability)
     if (!set)
     {
       char buf[BUFSIZE];
-      snprintf(buf, sizeof(buf), ":%s CAPAB * NAK :%s", me.name, ircv3_capabilities[i].name);
+      snprintf(buf, sizeof(buf), ":%s CAP * NAK :%s", me.name, ircv3_capabilities[i].name);
       sendto_one(cptr, buf);
       return 1;
     }
