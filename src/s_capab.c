@@ -63,7 +63,7 @@ m_capab(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
     if (parc < 2)
     {
-        sendto_one(sptr, form_str(ERR_NEEDMOREPARAMS), me.name, sptr->name, "CAPAB");
+        sendto_one(sptr, err_str(ERR_NEEDMOREPARAMS), me.name, sptr->name, "CAPAB");
         return 0;
     }
 #ifdef IRCV3
@@ -122,7 +122,7 @@ m_capab(aClient *cptr, aClient *sptr, int parc, char *parv[])
         * but only if NICK and USER were already received. If not,
         * we will let those commands handle it - skill
         */
-        if (stpr->name[0] && stpr->user && stpr->user->username[0])
+        if (sptr->name[0] && stpr->user && sptr->user->username[0])
           return register_user(cptr, sptr, sptr->name, sptr->user->username, sptr->hostip);
       }
     } else {
