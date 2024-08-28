@@ -96,6 +96,7 @@ m_capab(aClient *cptr, aClient *sptr, int parc, char *parv[])
       {
         for (i = 2; i < parc; i++)
         {
+          Debug((DEBUG_DEBUG, "CAPAB REQ: %s", parv[i]));
           for (int j = 0; ircv3_capabilities[j].name; j++)
           {
             if (strcmp(parv[i], ircv3_capabilities[j].name) == 0)
