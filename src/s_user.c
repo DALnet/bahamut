@@ -2424,8 +2424,12 @@ do_user(char *nick, aClient *cptr, aClient *sptr, char *username, char *host,
      * but also check if the user has negotiated IRCv3 capabilities
      * if requested. -skill
     */
-    if (sptr->name[0] && (!sptr->wants_ircv3_caps
-    || (sptr->wants_ircv3_caps && HasCapabilities(sptr))))
+    if (sptr->name[0]
+#ifdef IRCV3
+     && (!sptr->wants_ircv3_caps
+    || (sptr->wants_ircv3_caps && HasCapabilities(sptr)))
+#endif
+    )
         return register_user(cptr, sptr, sptr->name, username, ip);
     else
         strncpyzt(sptr->user->username, username, USERLEN + 1);

@@ -90,7 +90,7 @@
 #define MSG_HELPSERV "HELPSERV" 	/* HELPSERV */
 #define MSG_SERVICES "SERVICES"		/* SERVICES */
 #define MSG_IDENTIFY "IDENTIFY"		/* IDENTIFY */
-#define MSG_CAPAB    "CAPAB"	   	/* CAPAB */ 
+#define MSG_CAPAB    "CAPAB"	   	/* CAPAB */
 #define MSG_LOCOPS   "LOCOPS"	   	/* LOCOPS */
 #define MSG_SVSNICK  "SVSNICK"   	/* SVSNICK */
 #define MSG_SVSNOOP  "SVSNOOP"   	/* SVSNOOP */
@@ -263,7 +263,7 @@ AliasInfo aliastab[] =
     { 0 }
 };
 
-struct Message msgtab[] = 
+struct Message msgtab[] =
 {
     {MSG_PRIVATE,  m_private,  MAXPARA, MF_RIDLE, 0},
     {MSG_NICK,     m_nick,     MAXPARA, MF_UNREG, 0},

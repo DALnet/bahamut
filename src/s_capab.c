@@ -65,7 +65,7 @@ m_capab(aClient *cptr, aClient *sptr, int parc, char *parv[])
         sendto_one(sptr, form_str(ERR_NEEDMOREPARAMS), me.name, sptr->name, "CAPAB");
         return 0;
     }
-
+#ifdef IRCV3
     /* Only clients will be sending us IRCv3 CAPAB subcommands */
     if (!IsServer(cptr))
     {
@@ -118,6 +118,7 @@ m_capab(aClient *cptr, aClient *sptr, int parc, char *parv[])
           return register_user(cptr, sptr, sptr->name, stpr->user->username, sptr->hostip);
       }
     } else {
+#endif
       for (i = 1; i < parc; i++)
       {
           if (strcmp(parv[i], "BURST") == 0)
@@ -135,7 +136,62 @@ m_capab(aClient *cptr, aClient *sptr, int parc, char *parv[])
     else if (strcmp(parv[i], "NICKIPSTR") == 0)
         SetNickIPStr(cptr);
       }
+#ifdef IRCV3
+    }
+#endif
+
+    return 0;
+}
+
+#ifdef IRCV3
+
+/*
+ * capab_set
+ * Set an IRCV3 capability for a client
+*/
+int capab_set(aClient *cptr, unsigned int capability)
+{
+  int set = 0;
+  if (cptr->wants_ircv3_caps)
+  {
+    for (int i = 0; ircv3_capabilities[i].name; i++)
+    {
+      if (ircv3_capabilities[i].capability == capability)
+      {
+        cptr->capabilities |= capability;
+        break;
+      }
+    }
+
+    if (!set)
+    {
+      char buf[BUFSIZE];
+      snprintf(buf, sizeof(buf), ":%s CAPAB * NAK :%s", me.name, ircv3_capabilities[i].name);
+      sendto_one(cptr, buf);
+      return 1;
     }
 
     return 0;
+  }
+/*
+  * capab_unset
+  * Unset an IRCV3 capability for a client
+*/
+int capab_unset(aClient *cptr, unsigned int capability)
+{
+  if (cptr->wants_ircv3_caps)
+  {
+    for (int i = 0; ircv3_capabilities[i].name; i++)
+    {
+      if (ircv3_capabilities[i].capability == capability)
+      {
+        cptr->capabilities &= ~capability;
+        break;
+      }
+    }
+
+    return 0;
+  }
+}
+#endif
 }
