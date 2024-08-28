@@ -282,14 +282,6 @@ struct Capabilities
 
 #define IsAwayNotify(x)  ((x)->capabilities & CAPAB_AWAYNOTIFY)
 
-#ifndef IRCV3_CAPABILITIES
-#define IRCV3_CAPABILITIES
-struct Capabilities ircv3_capabilities[] =
-{
-    { CAPAB_AWAYNOTIFY, CAPAB_AWAYNOTIFY_NAME , capab_set, capab_unset },
-    { 0, NULL }
-};
-#endif
 #endif
 
 
