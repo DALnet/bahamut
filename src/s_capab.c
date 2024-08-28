@@ -104,7 +104,7 @@ m_capab(aClient *cptr, aClient *sptr, int parc, char *parv[])
             {
               if (ircv3_capabilities[j].set)
               {
-                ircv3_capabilities[j].set(cptr, ircv3_capabilities.capability);
+                ircv3_capabilities[j].set(cptr, ircv3_capabilities[j].capability);
                 strncat(buf, ircv3_capabilities[j].name, sizeof(buf) - strlen(buf) - 1);
                 if (i < parc - 1)
                   strncat(buf, " ", sizeof(buf) - strlen(buf) - 1);
@@ -162,7 +162,8 @@ int capab_set(aClient *cptr, unsigned int capability)
   int set = 0;
   if (cptr->wants_ircv3_caps)
   {
-    for (int i = 0; ircv3_capabilities[i].name; i++)
+    int i = 0;
+    for (i = 0; ircv3_capabilities[i].name; i++)
     {
       if (ircv3_capabilities[i].capability == capability)
       {
