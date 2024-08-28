@@ -240,15 +240,7 @@ typedef struct SServicesTag ServicesTag;
 #define FLAGS_SSL          0x10000000 /* client is using SSL */
 #define FLAGS_SPOOFED      0x20000000 /* User's host was spoofed (via SVSHOST) */
 
-/* Capabilities of the ircd or clients */
-struct Capabilities
-{
-    unsigned int capability;
-    char *name;
-    void (*set)(aClient *, unsigned int capability);
-    void (*unset)(aClient *, unsigned int capability);
 
-};
 
 /* flags for capabilities */
 #define CAPAB_DKEY    0x0001 /* server supports dh-key exchange */
@@ -267,6 +259,15 @@ struct Capabilities
 
 /* IRCv3 capabilities */
 #ifdef IRCV3
+/* IRCv3 capabilities of the ircd or clients */
+struct Capabilities
+{
+    unsigned int capability;
+    char *name;
+    int (*set)(aClient *, unsigned int capability);
+    int (*unset)(aClient *, unsigned int capability);
+
+};
 #define CAPAB_AWAYNOTIFY_NAME "away-notify"
 #define CAPAB_SET(x, y)   ((x)->capabilities |= y)
 #define CAPAB_UNSET(x, y) ((x)->capabilities &= ~y)
