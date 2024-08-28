@@ -266,16 +266,29 @@ struct Capabilities
 #define CAPAB_AWAYNOTIFY 0x0100 /* away-notify support */
 
 /* IRCv3 capabilities */
+#ifdef IRCv3
 #define CAPAB_AWAYNOTIFY_NAME "away-notify"
 #define CAPAB_SET(x, y)   ((x)->capabilities |= y)
 #define CAPAB_UNSET(x, y) ((x)->capabilities &= ~y)
 #define HasCapability(x, y) ((x)->capabilities & y)
 
+/* ircv3 capabilities */
+#define WantsIRCv3(x)   ((x)->wants_ircv3_caps = 1)
+#define SetAwayNotify(x) ((x)->capabilities |= CAPAB_AWAYNOTIFY)
+
+#define HasCapabilities(x) ((x)->capabilities)
+
+
+#define IsAwayNotify(x)  ((x)->capabilities & CAPAB_AWAYNOTIFY)
+extern int capab_set(aClient *, unsigned int);
+extern int capab_unset(aClient *, unsigned int);
+
 struct Capabilities ircv3_capabilities[] =
 {
-    { CAPAB_AWAYNOTIFY, CAPAB_AWAYNOTIFY_NAME , CAPAB_SET, CAPAB_UNSET },
+    { CAPAB_AWAYNOTIFY, CAPAB_AWAYNOTIFY_NAME , capab_set, capab_unset },
     { 0, NULL }
 };
+#endif
 
 
 #define SetDKEY(x)	((x)->capabilities |= CAPAB_DKEY)
@@ -302,15 +315,6 @@ struct Capabilities ircv3_capabilities[] =
 
 #define SetNickIPStr(x)	((x)->capabilities |= CAPAB_NICKIPSTR)
 #define IsNickIPStr(x)	((x)->capabilities & CAPAB_NICKIPSTR)
-
-/* ircv3 capabilities */
-#define WantsIRCv3(x)   ((x)->wants_ircv3_caps = 1)
-#define SetAwayNotify(x) ((x)->capabilities |= CAPAB_AWAYNOTIFY)
-
-#define HasCapabilities(x) ((x)->capabilities)
-
-
-#define IsAwayNotify(x)  ((x)->capabilities & CAPAB_AWAYNOTIFY)
 
 /* flag macros. */
 #define IsULine(x) ((x)->flags & FLAGS_ULINE)

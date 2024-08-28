@@ -639,8 +639,12 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
 	strcpy(sptr->name, nick);
 	sptr->tsinfo = timeofday;
-	if (sptr->user && (!stpr->wants_ipv3_caps ||
-	(sptr->wants_ipv3_caps && sptr->capabilities)))
+	if (sptr->user
+#ifdef IRCV3
+	&& (!stpr->wants_ipv3_caps ||
+	(sptr->wants_ipv3_caps && sptr->capabilities))
+#endif
+	)
 	{
 	    /*USER already received, and now we have NICK
 			* but let's make sure client isn't waiting for CAPAB END

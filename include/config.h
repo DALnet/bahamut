@@ -201,6 +201,11 @@
 #undef NOQUIT
 
 /*
+ * define this if you want to enable IRCv3 support
+ */
+#undef IRCV3
+
+/*
  * DEFAULT_KLINE_TIME
  *
  * Define this to the default time for a kline (in minutes) for klines with
