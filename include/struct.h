@@ -69,8 +69,8 @@
 #define REPORT_REJECT_ID_  ":%s NOTICE AUTH :*** Ignoring encrypted/unusable "\
                            "Ident response"
 
-extern char REPORT_DO_DNS[256], REPORT_FIN_DNS[256], REPORT_FIN_DNSC[256], 
-    REPORT_FAIL_DNS[256], REPORT_DO_ID[256], REPORT_FIN_ID[256], 
+extern char REPORT_DO_DNS[256], REPORT_FIN_DNS[256], REPORT_FIN_DNSC[256],
+    REPORT_FAIL_DNS[256], REPORT_DO_ID[256], REPORT_FIN_ID[256],
     REPORT_FAIL_ID[256], REPORT_REJECT_ID[256];
 
 #include "hash.h"
@@ -116,11 +116,11 @@ typedef struct SServicesTag ServicesTag;
 
 #define HOSTIPLEN	45	/* Length of an IPv4 or IPv6 address */
 
-#define	NICKLEN		30	
+#define	NICKLEN		30
 
-/* Necessary to put 9 here instead of 10  if  
- * s_msg.c/m_nick has been corrected.  This 
- * preserves compatibility with old * servers --msa 
+/* Necessary to put 9 here instead of 10  if
+ * s_msg.c/m_nick has been corrected.  This
+ * preserves compatibility with old * servers --msa
  */
 
 #define MAX_DATE_STRING 32	/* maximum string length for a date string */
@@ -210,11 +210,11 @@ typedef struct SServicesTag ServicesTag;
 #define	FLAGS_LISTEN       0x000020   /* used to mark clients which we listen()
 				       * on */
 #define FLAGS_HAVERECVQ	   0x000040   /* Client has full commands in their recvq */
-#define	FLAGS_DOINGDNS	   0x000080   /* client is waiting for a DNS 
+#define	FLAGS_DOINGDNS	   0x000080   /* client is waiting for a DNS
 				       * response */
-#define	FLAGS_AUTH	   0x000100   /* client is waiting on rfc931 
+#define	FLAGS_AUTH	   0x000100   /* client is waiting on rfc931
 				       * response */
-#define	FLAGS_WRAUTH	   0x000200   /* set if we havent writen to ident 
+#define	FLAGS_WRAUTH	   0x000200   /* set if we havent writen to ident
 				       * server */
 #define	FLAGS_LOCAL	   0x000400   /* set for local clients */
 #define	FLAGS_GOTID	   0x000800   /* successful ident lookup achieved */
@@ -226,7 +226,7 @@ typedef struct SServicesTag ServicesTag;
 #define FLAGS_USERBURST	   0x040000   /* server in nick/channel netburst */
 #define FLAGS_TOPICBURST   0x080000   /* server in topic netburst */
 #define FLAGS_BURST	   (FLAGS_USERBURST | FLAGS_TOPICBURST)
-#define FLAGS_SOBSENT      0x100000   /* we've sent an SOB, just have to 
+#define FLAGS_SOBSENT      0x100000   /* we've sent an SOB, just have to
 				       * send an EOB */
 #define FLAGS_EOBRECV      0x200000   /* we're waiting on an EOB */
 #define FLAGS_BAD_DNS	   0x400000   /* spoofer-guy */
@@ -241,7 +241,27 @@ typedef struct SServicesTag ServicesTag;
 #define FLAGS_SPOOFED      0x20000000 /* User's host was spoofed (via SVSHOST) */
 
 /* Capabilities of the ircd or clients */
+struct Capabilities
+{
+    unsigned int capability;
+    char *name;
+    void (*set)(aClient *, unsigned int capability);
+    void (*unset)(aClient *, unsigned int capability);
 
+};
+
+/* IRCv3 capabilities */
+#define CAPAB_AWAYNOTIFY_NAME "away-notify"
+#define CAPAB_SET(x, y)   ((x)->capabilities |= y)
+#define CAPAB_UNSET(x, y) ((x)->capabilities &= ~y)
+
+struct Capabilities ircv3_capabilities[] =
+{
+    { CAPAB_AWAYNOTIFY, CAPAB_AWAYNOTIFY_NAME , CAPAB_SET, CAPAB_UNSET },
+    { 0, NULL }
+};
+
+/* flags for capabilities */
 #define CAPAB_DKEY    0x0001 /* server supports dh-key exchange */
 #define CAPAB_ZIP     0x0002 /* server supports gz'd links */
 #define CAPAB_DOZIP   0x0004 /* output to this link shall be gzipped */
@@ -253,17 +273,20 @@ typedef struct SServicesTag ServicesTag;
 #endif
 #define CAPAB_NICKIPSTR 0x0080 /* Nick IP as a string support */
 
+/* ircv3 capabilities */
+#define CAPAB_AWAYNOTIFY 0x0100 /* away-notify support */
+
 
 #define SetDKEY(x)	((x)->capabilities |= CAPAB_DKEY)
 #define CanDoDKEY(x)    ((x)->capabilities & CAPAB_DKEY)
 /* N: line, flag E */
 #define SetWantDKEY(x) ((x)->capabilities |= CAPAB_DODKEY)
-#define WantDKEY(x)	((x)->capabilities & CAPAB_DODKEY) 
+#define WantDKEY(x)	((x)->capabilities & CAPAB_DODKEY)
 
 #define SetZipCapable(x) ((x)->capabilities |= CAPAB_ZIP)
 #define IsZipCapable(x)	((x)->capabilities & CAPAB_ZIP)
 /* this is set in N: line, flag Z */
-#define DoZipThis(x) 	((x)->capabilities & CAPAB_DOZIP) 
+#define DoZipThis(x) 	((x)->capabilities & CAPAB_DOZIP)
 
 #define SetBurst(x)     ((x)->capabilities |= CAPAB_BURST)
 #define IsBurst(x)      ((x)->capabilities & CAPAB_BURST)
@@ -278,6 +301,15 @@ typedef struct SServicesTag ServicesTag;
 
 #define SetNickIPStr(x)	((x)->capabilities |= CAPAB_NICKIPSTR)
 #define IsNickIPStr(x)	((x)->capabilities & CAPAB_NICKIPSTR)
+
+/* ircv3 capabilities */
+#define WantsIRCv3(x)   ((x)->wants_ircv3_caps = 1)
+#define SetAwayNotify(x) ((x)->capabilities |= CAPAB_AWAYNOTIFY)
+
+#define HasCapabilities(x) ((x)->capabilities)
+
+
+#define IsAwayNotify(x)  ((x)->capabilities & CAPAB_AWAYNOTIFY)
 
 /* flag macros. */
 #define IsULine(x) ((x)->flags & FLAGS_ULINE)
@@ -336,7 +368,7 @@ typedef struct SServicesTag ServicesTag;
  *  we send these to remote servers.
  * ALL_UMODES
  *  we send these to our clients.
- *  if you don't put something in ALL_UMODES, 
+ *  if you don't put something in ALL_UMODES,
  *  that mode will be 'silent.'
  */
 
@@ -470,7 +502,7 @@ typedef struct SServicesTag ServicesTag;
 
 /* Oper flags */
 
-/* defined operator access levels */ 
+/* defined operator access levels */
 #define OFLAG_REHASH	0x00000001  /* Oper can /rehash server */
 #define OFLAG_DIE	0x00000002  /* Oper can /die the server */
 #define OFLAG_RESTART	0x00000004  /* Oper can /restart the server */
@@ -521,12 +553,12 @@ typedef struct SServicesTag ServicesTag;
 #define OPIsSAdmin(x)	        ((x)->oflag & OFLAG_SADMIN)
 #define OPCanUModec(x)	        ((x)->oflag & OFLAG_UMODEc)
 #define OPCanUModef(x)	        ((x)->oflag & OFLAG_UMODEf)
-#define OPCanUModey(x)          ((x)->oflag & OFLAG_UMODEy)     
-#define OPCanUModed(x)          ((x)->oflag & OFLAG_UMODEd)     
+#define OPCanUModey(x)          ((x)->oflag & OFLAG_UMODEy)
+#define OPCanUModed(x)          ((x)->oflag & OFLAG_UMODEd)
 #define OPCanUModeb(x)          ((x)->oflag & OFLAG_UMODEb)
 #define OPCanUModeF(x)		((x)->oflag & OFLAG_UMODEF)
 #define OPClearRehash(x)	((x)->oflag &= ~OFLAG_REHASH)
-#define OPClearDie(x)		((x)->oflag &= ~OFLAG_DIE)  
+#define OPClearDie(x)		((x)->oflag &= ~OFLAG_DIE)
 #define OPClearRestart(x)	((x)->oflag &= ~OFLAG_RESTART)
 #define OPClearHelpOp(x)	((x)->oflag &= ~OFLAG_HELPOP)
 #define OPClearGlobOps(x)	((x)->oflag &= ~OFLAG_GLOBOP)
@@ -544,8 +576,8 @@ typedef struct SServicesTag ServicesTag;
 #define OPClearSAdmin(x)	((x)->oflag &= ~OFLAG_SADMIN)
 #define OPClearUModec(x)	((x)->oflag &= ~OFLAG_UMODEc)
 #define OPClearUModef(x)	((x)->oflag &= ~OFLAG_UMODEf)
-#define OPClearUModey(x)        ((x)->oflag &= ~OFLAG_UMODEy) 
-#define OPClearUModed(x)        ((x)->oflag &= ~OFLAG_UMODEd) 
+#define OPClearUModey(x)        ((x)->oflag &= ~OFLAG_UMODEy)
+#define OPClearUModed(x)        ((x)->oflag &= ~OFLAG_UMODEd)
 #define OPClearUModeb(x)        ((x)->oflag &= ~OFLAG_UMODEb)
 #define OPClearZLine(x)		((x)->oflag &= ~OFLAG_ZLINE)
 #define OPClearUModeF(x)	((x)->oflag &= ~OFLAG_UMODEF)
@@ -566,7 +598,7 @@ typedef struct SServicesTag ServicesTag;
 #define	CURSES_TERM	1
 #define	TERMCAP_TERM	2
 
-struct Counter 
+struct Counter
 {
     int         server;      /* servers */
     int         myserver;    /* my servers */
@@ -590,14 +622,14 @@ struct Counter
     ts_val	year;	     /* when this year started (HEH!) */
 };
 
-struct MotdItem 
+struct MotdItem
 {
     char        line[MOTDLINELEN];
     struct MotdItem *next;
 };
 
 /* lets speed this up... also removed away information. *tough* Dianora */
-typedef struct Whowas 
+typedef struct Whowas
 {
     int         hashv;
     char        name[NICKLEN + 1];
@@ -612,9 +644,9 @@ typedef struct Whowas
     time_t      logoff;
     long umode;
     struct Client *online;  /* Pointer to new nickname for chasing or NULL */
-    
+
     struct Whowas *next;    /* for hash table... */
-    
+
     struct Whowas *prev;    /* for hash table... */
     struct Whowas *cnext;   /* for client struct linked list */
     struct Whowas *cprev;   /* for client struct linked list */
@@ -805,7 +837,7 @@ struct Conf_Class
 struct Listener {
         struct Listener *next;              /* next listener */
         int             fd;                 /* fd of this listener */
-        u_short         port; 
+        u_short         port;
         char            allow_string[HOSTLEN + 1];   /* allow from */
         char            vhost_string[HOSTLEN + 1];   /* bind to */
 	int allow_cidr_bits;
@@ -815,11 +847,11 @@ struct Listener {
 	} allow_ip;	/* allow from */
         time_t          lasttime;           /* last time I accepted */
         long            sendK;              /* counters, see below */
-        u_short         sendB;           
-        long            sendM;          
-        long            receiveK;      
-        u_short         receiveB;     
-        long            receiveM;    
+        u_short         sendB;
+        long            sendM;
+        long            receiveK;
+        u_short         receiveB;
+        long            receiveM;
         u_long          ccount;   /* total number of clients to connect here */
         int             clients;  /* number of clients currently on this */
         aPort           *aport;   /* link to the P: line I came from */
@@ -858,7 +890,7 @@ struct User
     AliasInfo  *alias;         /* shortform alias data for U:lined clients */
     /*
      * In a perfect world the 'server' name should not be needed, a
-     * pointer to the client describing the server is enough. 
+     * pointer to the client describing the server is enough.
      * Unfortunately, in reality, server may not yet be in links while
      * USER is introduced... --msa
      */
@@ -893,7 +925,7 @@ struct Server
     int         uflags;           /* U:lined flags */
 };
 
-struct Client 
+struct Client
 {
     struct Client *next, *prev, *hnext;
     anUser     *user;       /* ...defined, if this is a User */
@@ -917,21 +949,21 @@ struct Client
     char        nicksent;
     char        name[HOSTLEN + 1];  /* Unique name of the client, nick or
 				     * host */
-    char        info[REALLEN + 1];  /* Free form additional client 
+    char        info[REALLEN + 1];  /* Free form additional client
 				     * information */
 #ifdef FLUD
     Link       *fludees;
 #endif
-    
+
     unsigned int ip_family;
     union
     {
 	struct in_addr ip4;
 	struct in6_addr ip6;
     } ip; /* keep real ip# too */
-    char        hostip[HOSTIPLEN + 1]; /* Keep real ip as string 
+    char        hostip[HOSTIPLEN + 1]; /* Keep real ip as string
 					* too - Dianora */
-    
+
     Link *watch; /* user's watch list */
     int watches; /* how many watches this user has set */
 
@@ -941,7 +973,7 @@ struct Client
         aClient     *next;
     } clone;
 #endif
-    
+
 /*
 ####### #     # ### #     #  #####   #####
    #    #     #  #  ##    # #     # #     #
@@ -985,12 +1017,12 @@ struct Client
 
 */
     /*
-     * The following fields are allocated only for local clients 
+     * The following fields are allocated only for local clients
      * (directly connected to this server with a socket.  The first
      * of them MUST be the "count"--it is the field to which the
      * allocation is tied to! Never refer to  these fields, if (from != self).
      */
-    
+
     int         count;		/* Amount of data in buffer */
 #ifdef FLUD
     time_t      fludblock;
@@ -999,13 +1031,13 @@ struct Client
 #ifdef ANTI_SPAMBOT
     time_t      last_join_time;	 /* when this client last joined a channel */
     time_t      last_leave_time; /* when this client last left a channel */
-    int         join_leave_count;	/* count of JOIN/LEAVE in less 
+    int         join_leave_count;	/* count of JOIN/LEAVE in less
 					 * than MIN_JOIN_LEAVE_TIME seconds */
-    int         oper_warn_count_down;	/* warn opers of this possible spambot 
+    int         oper_warn_count_down;	/* warn opers of this possible spambot
 					 * every time this gets to 0 */
 #endif
     char        buffer[BUFSIZE];        /* Incoming message buffer */
-    short       lastsq;	         /* # of 2k blocks when sendqueued called 
+    short       lastsq;	         /* # of 2k blocks when sendqueued called
 				  * last */
     SBuf        sendQ;	     /* Outgoing message queue--if socket full */
     SBuf        recvQ;	     /* Hold for data incoming yet to be parsed */
@@ -1036,7 +1068,7 @@ struct Client
 #endif
 
     char        sockhost[HOSTLEN + 1];	/* This is the host name from
-					 * the socket and after which the 
+					 * the socket and after which the
 					 * connection was accepted. */
     char        passwd[PASSWDLEN + 1];
     /* try moving this down here to prevent weird problems... ? */
@@ -1044,6 +1076,8 @@ struct Client
     int sockerr;                /* what was the last error returned for
 				 * this socket? */
     int capabilities;           /* what this server/client supports */
+    /* ircv3 */
+    int         wants_ircv3_caps; /* indicates client wants IRCv3 capabilites */
     aClass  *class;             /* our current effective class */
 
 #ifdef MSG_TARGET_LIMIT
@@ -1106,7 +1140,7 @@ struct stats
 
 /* mode structure for channels */
 
-struct SMode 
+struct SMode
 {
     unsigned int mode;
     int         limit;
@@ -1143,7 +1177,7 @@ struct Message
     unsigned long    bytes;         /* number of bytes used */
 };
 
-typedef struct msg_tree 
+typedef struct msg_tree
 {
     char       *final;
     struct Message *msg;
@@ -1157,11 +1191,11 @@ typedef struct msg_tree
  * Malloc's/Free's have to be done, on the plus side bans are a smaller
  * percentage of SLink usage. Over all, the th+hybrid coding team came
  * to the conclusion it was worth the effort.
- * 
+ *
  * - Dianora
  */
 
-struct Ban 
+struct Ban
 {
     char       *banstr;
     char       *who;
@@ -1196,7 +1230,7 @@ struct Exempt
 #endif
 
 /* channel member link structure, used for chanmember chains */
-struct ChanLink 
+struct ChanLink
 {
     struct ChanLink *next;
     aClient *cptr;
@@ -1209,7 +1243,7 @@ struct ChanLink
 
 /* general link structure used for chains */
 
-struct SLink 
+struct SLink
 {
     struct SLink *next;
     union
@@ -1241,7 +1275,7 @@ struct SLinkD
 
 /* channel structure */
 
-struct Channel 
+struct Channel
 {
     struct Channel *nextch, *prevch, *hnextch;
     int         hashv;		/* raw hash value */
@@ -1468,7 +1502,7 @@ extern unsigned long tsdms;
  * chanops new channel */
 
 #ifdef FLUD
-struct fludbot 
+struct fludbot
 {
     struct Client *fluder;
     int         count;
@@ -1478,7 +1512,7 @@ struct fludbot
 
 #endif /* FLUD */
 
-struct Watch 
+struct Watch
 {
     aWatch  *hnext;
     time_t   lasttime;
@@ -1486,7 +1520,7 @@ struct Watch
     char  nick[1];
 };
 
-struct ListOptions 
+struct ListOptions
 {
     LOpts *next;
     Link  *yeslist, *nolist;
@@ -1501,7 +1535,7 @@ struct ListOptions
     time_t   topictimemax;
 };
 
-typedef struct SearchOptions 
+typedef struct SearchOptions
 {
     long umodes;
     char *nick;
