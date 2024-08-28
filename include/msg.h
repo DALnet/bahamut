@@ -91,6 +91,7 @@
 #define MSG_SERVICES "SERVICES"		/* SERVICES */
 #define MSG_IDENTIFY "IDENTIFY"		/* IDENTIFY */
 #define MSG_CAPAB    "CAPAB"	   	/* CAPAB */
+#define MSG_CAP      "CAP"          /* CAP  */
 #define MSG_LOCOPS   "LOCOPS"	   	/* LOCOPS */
 #define MSG_SVSNICK  "SVSNICK"   	/* SVSNICK */
 #define MSG_SVSNOOP  "SVSNOOP"   	/* SVSNOOP */
@@ -208,6 +209,7 @@ extern int  m_hash(aClient *, aClient *, int, char **);
 extern int  m_dns(aClient *, aClient *, int, char **);
 extern int  m_set(aClient *, aClient *, int, char **);
 extern int  m_capab(aClient *, aClient *, int, char **);
+extern int  m_cap(aClient *, aClient *, int, char **);
 extern int  m_silence(aClient *, aClient *, int, char **);
 extern int  m_watch(aClient *, aClient *, int, char **);
 extern int  m_sqline(aClient *, aClient *, int, char **);
@@ -346,6 +348,7 @@ struct Message msgtab[] =
     {MSG_SQLINE,   m_sqline,   MAXPARA, 0,        0},
     {MSG_UNSQLINE, m_unsqline, MAXPARA, 0,        0},
     {MSG_CAPAB,    m_capab,    MAXPARA, MF_UNREG, 0},
+    {MSG_CAP,      m_cap,    MAXPARA, MF_UNREG, 0},
     {MSG_BURST,    m_burst,    MAXPARA, 0,        0},
     {MSG_SGLINE,   m_sgline,   MAXPARA, 0,        0},
     {MSG_UNSGLINE, m_unsgline, MAXPARA, 0,        0},
