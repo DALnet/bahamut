@@ -209,8 +209,8 @@ int capab_unset(aClient *cptr, unsigned int capability)
         break;
       }
     }
-
-    return 0;
   }
+
+  return 0;
 }
 #endif
