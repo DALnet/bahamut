@@ -26,6 +26,7 @@
 #include "sys.h"
 #include "numeric.h"
 #include "msg.h"
+#include "h.h"
 
 #if defined( HAVE_STRING_H )
 #include <string.h>
