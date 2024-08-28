@@ -250,17 +250,6 @@ struct Capabilities
 
 };
 
-/* IRCv3 capabilities */
-#define CAPAB_AWAYNOTIFY_NAME "away-notify"
-#define CAPAB_SET(x, y)   ((x)->capabilities |= y)
-#define CAPAB_UNSET(x, y) ((x)->capabilities &= ~y)
-
-struct Capabilities ircv3_capabilities[] =
-{
-    { CAPAB_AWAYNOTIFY, CAPAB_AWAYNOTIFY_NAME , CAPAB_SET, CAPAB_UNSET },
-    { 0, NULL }
-};
-
 /* flags for capabilities */
 #define CAPAB_DKEY    0x0001 /* server supports dh-key exchange */
 #define CAPAB_ZIP     0x0002 /* server supports gz'd links */
@@ -275,6 +264,18 @@ struct Capabilities ircv3_capabilities[] =
 
 /* ircv3 capabilities */
 #define CAPAB_AWAYNOTIFY 0x0100 /* away-notify support */
+
+/* IRCv3 capabilities */
+#define CAPAB_AWAYNOTIFY_NAME "away-notify"
+#define CAPAB_SET(x, y)   ((x)->capabilities |= y)
+#define CAPAB_UNSET(x, y) ((x)->capabilities &= ~y)
+#define HasCapability(x, y) ((x)->capabilities & y)
+
+struct Capabilities ircv3_capabilities[] =
+{
+    { CAPAB_AWAYNOTIFY, CAPAB_AWAYNOTIFY_NAME , CAPAB_SET, CAPAB_UNSET },
+    { 0, NULL }
+};
 
 
 #define SetDKEY(x)	((x)->capabilities |= CAPAB_DKEY)
