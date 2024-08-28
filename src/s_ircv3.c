@@ -134,7 +134,7 @@ m_cap(aClient *cptr, aClient *sptr, int parc, char *parv[])
           return register_user(cptr, sptr, sptr->name, sptr->user->username, sptr->hostip);
       }
     } else {
-      endto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name, parv[0]);
+      sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name, parv[0]);
     }
 
     return 0;
