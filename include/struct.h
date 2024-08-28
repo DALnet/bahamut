@@ -266,7 +266,7 @@ struct Capabilities
 #define CAPAB_AWAYNOTIFY 0x0100 /* away-notify support */
 
 /* IRCv3 capabilities */
-#ifdef IRCv3
+#ifdef IRCV3
 #define CAPAB_AWAYNOTIFY_NAME "away-notify"
 #define CAPAB_SET(x, y)   ((x)->capabilities |= y)
 #define CAPAB_UNSET(x, y) ((x)->capabilities &= ~y)
