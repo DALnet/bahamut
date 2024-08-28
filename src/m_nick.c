@@ -641,8 +641,8 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	sptr->tsinfo = timeofday;
 	if (sptr->user
 #ifdef IRCV3
-	&& (!stpr->wants_ipv3_caps ||
-	(sptr->wants_ipv3_caps && sptr->capabilities))
+	&& (!sptr->wants_ircv3_caps ||
+	(sptr->wants_ircv3_caps && sptr->capabilities))
 #endif
 	)
 	{
