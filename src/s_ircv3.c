@@ -45,7 +45,7 @@ int cap_unset(aClient *, unsigned int);
 
 struct Capabilities ircv3_capabilities[] =
 {
-    { CAPAB_AWAYNOTIFY, CAPAB_AWAYNOTIFY_NAME , capab_set, capab_unset },
+    { CAPAB_AWAYNOTIFY, CAPAB_AWAYNOTIFY_NAME , cap_set, cap_unset },
     { 0, NULL }
 };
 #endif
