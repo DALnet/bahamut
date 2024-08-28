@@ -2476,49 +2476,6 @@ m_die(aClient *cptr, aClient *sptr, int parc, char *parv[])
     return 0;
 }
 
-/*
- * m_capab
- * Communicate what I can do to another server
- * This has to be able to be sent and understood while
- * the client is UNREGISTERED. Therefore, we
- * absolutely positively must not check to see if
- * this is a server or a client. It's probably an unknown!
- */
-int
-m_capab(aClient *cptr, aClient *sptr, int parc, char *parv[])
-{
-    int         i;
-
-    /* If it's not local, or it has already set capabilities,
-     * silently ignore it.
-     * Dont ignore clients where we have set some capabilities already
-     * that would suck for connecting TO servers.
-     */
-
-    if(cptr != sptr)
-        return 0;
-
-    for (i = 1; i < parc; i++)
-    {
-        if (strcmp(parv[i], "BURST") == 0)
-            SetBurst(sptr);
-        else if (strcmp(parv[i], "UNCONNECT") == 0)
-            SetUnconnect(cptr);
-        else if (strcmp(parv[i], "DKEY") == 0)
-            SetDKEY(cptr);
-        else if (strcmp(parv[i], "ZIP") == 0)
-            SetZipCapable(cptr);
-#ifdef NOQUIT
-        else if (strcmp(parv[i], "NOQUIT") == 0)
-            SetNoquit(cptr);
-#endif
-	else if (strcmp(parv[i], "NICKIPSTR") == 0)
-	    SetNickIPStr(cptr);
-    }
-
-    return 0;
-}
-
 /* m_svskill - Just about the same as outta df
  *  - Raistlin
  * parv[0] = servername
