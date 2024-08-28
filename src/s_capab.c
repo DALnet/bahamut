@@ -165,7 +165,6 @@ m_capab(aClient *cptr, aClient *sptr, int parc, char *parv[])
 }
 
 #ifdef IRCV3
-
 /*
  * capab_set
  * Set an IRCV3 capability for a client
@@ -190,6 +189,7 @@ int capab_set(aClient *cptr, unsigned int capability)
       sendto_one(cptr, ":%s CAP * NAK :%s", me.name, ircv3_capabilities[i].name);
       return 1;
     }
+  }
 
     return 0;
   }
@@ -214,4 +214,3 @@ int capab_unset(aClient *cptr, unsigned int capability)
   }
 }
 #endif
-}
