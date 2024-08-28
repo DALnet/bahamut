@@ -271,8 +271,6 @@ extern void 	  send_umode(aClient *, aClient *, long, long, char *, int);
 extern int 	  del_silence(aClient *, char *);
 
 #ifdef IRCV3
-extern int capab_set(aClient *, unsigned int);
-extern int capab_unset(aClient *, unsigned int);
 /* need this externalized so we can call it from m_capab - skill*/
 extern int register_user(aClient *, aClient *, char *, char *,char *);
 #endif

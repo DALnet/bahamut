@@ -39,6 +39,10 @@
 
 #ifndef IRCV3_CAPABILITIES
 #define IRCV3_CAPABILITIES
+
+int capab_set(aClient *, unsigned int);
+int capab_unset(aClient *, unsigned int);
+
 struct Capabilities ircv3_capabilities[] =
 {
     { CAPAB_AWAYNOTIFY, CAPAB_AWAYNOTIFY_NAME , capab_set, capab_unset },
