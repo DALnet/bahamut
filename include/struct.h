@@ -268,6 +268,7 @@ struct Capabilities
     int (*unset)(aClient *, unsigned int capability);
 
 };
+
 #define CAPAB_AWAYNOTIFY_NAME "away-notify"
 #define CAPAB_SET(x, y)   ((x)->capabilities |= y)
 #define CAPAB_UNSET(x, y) ((x)->capabilities &= ~y)
@@ -281,7 +282,6 @@ struct Capabilities
 
 
 #define IsAwayNotify(x)  ((x)->capabilities & CAPAB_AWAYNOTIFY)
-
 #endif
 
 
