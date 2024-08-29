@@ -84,11 +84,12 @@ m_cap(aClient *cptr, aClient *sptr, int parc, char *parv[])
         if (sizeof(ircv3_capabilities) > 0)
         {
           char buf[BUFSIZE];
+          memset(buf, 0, sizeof(buf));
 
           for (int i = 0; ircv3_capabilities[i].name; i++)
           {
             strncat(buf, ircv3_capabilities[i].name, sizeof(buf) - strlen(buf) - 1);
-            if (i < (sizeof(ircv3_capabilities) / sizeof(ircv3_capabilities[0]) - 1))
+            if (i < sizeof(ircv3_capabilities) - 1)
               strncat(buf, " ", sizeof(buf) - strlen(buf) - 1);
           }
 
@@ -97,12 +98,14 @@ m_cap(aClient *cptr, aClient *sptr, int parc, char *parv[])
           */
          sptr->wants_ircv3_caps = 1;
 
-          sendto_one(sptr, ":%s CAP * LS :%s", me.name, buf);
+         sendto_one(sptr, ":%s CAP * LS :%s", me.name, buf);
         }
       }
       else if (strcmp(parv[1], "REQ") == 0)
       {
         char buf[BUFSIZE];
+        memset(buf, 0, sizeof(buf));
+
         for (i = 2; i < parc; i++)
         {
           Debug((DEBUG_DEBUG, "CAP REQ: %s", parv[i]));
@@ -134,7 +137,7 @@ m_cap(aClient *cptr, aClient *sptr, int parc, char *parv[])
           return register_user(cptr, sptr, sptr->name, sptr->user->username, sptr->hostip);
       }
     } else {
-      sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name, parv[0]);
+      sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name, "CAP");
     }
 
     return 0;
