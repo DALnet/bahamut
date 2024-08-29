@@ -88,7 +88,7 @@ m_cap(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
           for (int i = 0; ircv3_capabilities[i].name; i++)
           {
-            strncat(buf, ircv3_capabilities[i].name, sizeof(ircv3_capabilities[i].name));
+            strcat(buf, ircv3_capabilities[i].name);
             if (ircv3_capabilities[i + 1].name)
               strncat(buf, " ", 1);
           }
@@ -116,7 +116,7 @@ m_cap(aClient *cptr, aClient *sptr, int parc, char *parv[])
               if (ircv3_capabilities[j].set)
               {
                 ircv3_capabilities[j].set(cptr, ircv3_capabilities[j].capability);
-                strncat(buf, ircv3_capabilities[j].name, sizeof(ircv3_capabilities[j].name));
+                strcat(buf, ircv3_capabilities[j].name);
                 if (i < parc - 1)
                   strncat(buf, " ", 1);
               }
