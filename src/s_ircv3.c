@@ -21,6 +21,7 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include "config.h"
 #include "struct.h"
 #include "common.h"
 #include "sys.h"
@@ -37,18 +38,12 @@
 #define strchr index
 #endif
 
-#ifndef IRCV3_CAPABILITIES
-#define IRCV3_CAPABILITIES
+#ifdef IRCV3
+#include "ircv3.h"
 
-int cap_set(aClient *, unsigned int);
-int cap_unset(aClient *, unsigned int);
+int cap_set(aClient *, long);
+int cap_unset(aClient *, long);
 
-struct Capabilities ircv3_capabilities[] =
-{
-    { CAPAB_AWAYNOTIFY, CAPAB_AWAYNOTIFY_NAME , cap_set, cap_unset },
-    { 0, NULL }
-};
-#endif
 
 /*
  * m_cap
@@ -86,7 +81,7 @@ m_cap(aClient *cptr, aClient *sptr, int parc, char *parv[])
           char buf[BUFSIZE];
           memset(buf, 0, sizeof(buf));
 
-          for (int i = 0; ircv3_capabilities[i].name; i++)
+          for (i = 0; ircv3_capabilities[i].name; i++)
           {
             strcat(buf, ircv3_capabilities[i].name);
             if (ircv3_capabilities[i + 1].name)
@@ -104,28 +99,51 @@ m_cap(aClient *cptr, aClient *sptr, int parc, char *parv[])
       else if (strcmp(parv[1], "REQ") == 0)
       {
         char buf[BUFSIZE];
+        char smbcmd[3] = "ACK";
+
         memset(buf, 0, sizeof(buf));
+
+
 
         for (i = 2; i < parc; i++)
         {
+          int add = 1;
+
+          if (parv[i][0] == '-')
+          {
+            add = 0;
+          }
+
           Debug((DEBUG_DEBUG, "CAP REQ: %s", parv[i]));
           for (int j = 0; ircv3_capabilities[j].name; j++)
           {
             if (strcmp(parv[i], ircv3_capabilities[j].name) == 0)
             {
-              if (ircv3_capabilities[j].set)
+              if (add)
               {
-                ircv3_capabilities[j].set(cptr, ircv3_capabilities[j].capability);
+                if (!cap_set(sptr, ircv3_capabilities[j].capability))
+                {
+                  strcat(buf, ircv3_capabilities[j].name);
+
+                } else {
+                  Debug((DEBUG_DEBUG, "CAP REQ: %s not supported", parv[i]));
+                  strcpy(smbcmd, "NAK");
+                  strcat(buf, ircv3_capabilities[j].name);
+                }
+              } else {
+                cap_unset(sptr, ircv3_capabilities[j].capability);
                 strcat(buf, ircv3_capabilities[j].name);
-                if (i < parc - 1)
-                  strncat(buf, " ", 1);
               }
+
+              if (i < parc - 1)
+                strncat(buf, " ", 1);
+
               break;
             }
           }
-
-          sendto_one(sptr, ":%s CAP * ACK :%s", me.name, buf);
         }
+
+        sendto_one(sptr, ":%s CAP * %s :%s", me.name, subcmd, buf);
       }
       else if (strcmp(parv[1], "END") == 0)
       {
@@ -158,19 +176,14 @@ int cap_set(aClient *cptr, unsigned int capability)
       if (ircv3_capabilities[i].capability == capability)
       {
         cptr->capabilities |= capability;
+        set = 1;
         break;
       }
     }
-
-    if (!set)
-    {
-      sendto_one(cptr, ":%s CAP * NAK :%s", me.name, ircv3_capabilities[i].name);
-      return 1;
-    }
   }
 
-    return 0;
-  }
+  return set;
+}
 /*
   * cap_unset
   * Unset an IRCV3 capability for a client
@@ -191,3 +204,74 @@ int cap_unset(aClient *cptr, unsigned int capability)
 
   return 0;
 }
+
+/*
+ * These methods allow the registration of different IRCv3 capabilities and the selection of what
+ * IRC messages they want to support. - skill
+*/
+
+int ircv3_hook(enum c_ircv3_hooktype hooktype, ...)
+{
+    va_list vl;
+    int ret = 0;
+
+
+    va_start(vl, hooktype);
+
+    switch(hooktype)
+    {
+        case IRCV3_HOOK_AWAYNOTIFY_AWAY:
+        case IRCV3_HOOK_AWAYNOTIFY_BACK:
+                aClient *cptr = va_arg(vl, aClient *);
+                aClient *sptr = va_arg(vl, aClient *);
+                char    *message = va_arg(vl, char *);
+
+                for (int i = 0; ircv3_capabilities[i].name; i++)
+                {
+                    if (ircv3_capabilities[i].capability == CAPAB_AWAYNOTIFY)
+                    {
+                        int (*rfunc) (aClient *, aClient *, int, char *) = ircv3_capabilities[i].func;
+                        if ((ret = (*rfunc)(cptr, sptr, 0, message)) == FLUSH_BUFFER)
+                            break;
+                    }
+                }
+                break;
+        default:
+          sendto_realops_lev(DEBUG_LEV, "Call for unknown hook type %d",
+                hooktype);
+            break;
+
+    }
+
+    va_end(vl);
+
+    return ret;
+}
+/*
+ * Below section will be to register the methods used to handle the different IRC messages
+ * we want to extend IRCv3 capabilites for
+*/
+
+/*
+ * m_awaynotify
+ * Handle the IRCv3 away-notify capability, this is used to notify clients when a user goes
+ * away or returns from away. Also, notify channel if user joins with away message set.
+ *
+ * I can't think of any other way to do this besides iterating through all the channels
+ * the user is in and notifying the members. This is ugly, while it saves on bandwidth
+ * since clients don't have to do /WHO on join, it's still noisy just like NICK/USER commands. - skill
+ * TODO: Find a better way. - skill (2024-07-28)
+ * Params:
+ *  cptr - The client that is sending the message
+ *  sptr - The client that is receiving the message
+ *  join - 1 if this is triggered by a JOIN command
+ *  away - The away message
+*/
+int m_awaynotify(aClient *cptr, aClient *sptr, int join, char *away)
+{
+  aChannel *chptr;
+
+  return 0;
+}
+
+#endif //IRCV3

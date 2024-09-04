@@ -41,6 +41,10 @@
 #include "inet.h"
 #include "spamfilter.h"
 
+#ifdef IRCV3
+#include "ircv3.h"
+#endif //IRCV3
+
 #if defined( HAVE_STRING_H)
 #include <string.h>
 #else
@@ -2770,6 +2774,8 @@ m_away(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
         if (MyConnect(sptr))
             sendto_one(sptr, rpl_str(RPL_UNAWAY), me.name, parv[0]);
+
+        ircv3_hook(IRCV3_HOOK_AWAYNOTIFY_BACK, cptr, sptr, 0, NULL);
         return 0;
     }
 
@@ -2810,6 +2816,9 @@ m_away(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
     if (MyConnect(sptr))
         sendto_one(sptr, rpl_str(RPL_NOWAWAY), me.name, parv[0]);
+
+    ircv3_hook(IRCV3_HOOK_AWAYNOTIFY_AWAY, cptr, sptr, 1, away);
+
     return 0;
 }
 
