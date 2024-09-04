@@ -243,35 +243,29 @@ typedef struct SServicesTag ServicesTag;
 
 
 /* flags for capabilities */
-#define CAPAB_DKEY    0x0001 /* server supports dh-key exchange */
-#define CAPAB_ZIP     0x0002 /* server supports gz'd links */
-#define CAPAB_DOZIP   0x0004 /* output to this link shall be gzipped */
-#define CAPAB_DODKEY  0x0008 /* do I do dkey with this link? */
-#define CAPAB_BURST   0x0010 /* server supports BURST command */
-#define CAPAB_UNCONN  0x0020 /* server supports UNCONNECT */
+#define CAPAB_DKEY    0x000001 /* server supports dh-key exchange */
+#define CAPAB_ZIP     0x000002 /* server supports gz'd links */
+#define CAPAB_DOZIP   0x000004 /* output to this link shall be gzipped */
+#define CAPAB_DODKEY  0x000008 /* do I do dkey with this link? */
+#define CAPAB_BURST   0x000010 /* server supports BURST command */
+#define CAPAB_UNCONN  0x000020 /* server supports UNCONNECT */
 #ifdef NOQUIT
-#define CAPAB_NOQUIT  0x0040 /* noquit support */
+#define CAPAB_NOQUIT  0x000040 /* noquit support */
 #endif
-#define CAPAB_NICKIPSTR 0x0080 /* Nick IP as a string support */
+#define CAPAB_NICKIPSTR 0x000080 /* Nick IP as a string support */
 
 /* ircv3 capabilities */
-#define CAPAB_AWAYNOTIFY 0x0100 /* away-notify support */
+#define CAPAB_AWAYNOTIFY 0x000100 /* away-notify support */
 
 /* IRCv3 capabilities */
 #ifdef IRCV3
 /* IRCv3 capabilities of the ircd or clients */
 struct Capabilities
 {
-    unsigned int capability;
+    long capability;
     char *name;
-    int (*set)(aClient *, unsigned int capability);
-    int (*unset)(aClient *, unsigned int capability);
-
 };
 
-#define CAPAB_AWAYNOTIFY_NAME "away-notify"
-#define CAPAB_SET(x, y)   ((x)->capabilities |= y)
-#define CAPAB_UNSET(x, y) ((x)->capabilities &= ~y)
 #define HasCapability(x, y) ((x)->capabilities & y)
 
 /* ircv3 capabilities */
@@ -1074,7 +1068,7 @@ struct Client
     int         oflag;          /* Operator Flags */
     int sockerr;                /* what was the last error returned for
 				 * this socket? */
-    int capabilities;           /* what this server/client supports */
+    long capabilities;           /* what this server/client supports */
     /* ircv3 */
     int         wants_ircv3_caps; /* indicates client wants IRCv3 capabilites */
     aClass  *class;             /* our current effective class */
