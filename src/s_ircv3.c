@@ -221,7 +221,6 @@ int ircv3_hook(enum c_ircv3_hooktype hooktype, ...)
     switch(hooktype)
     {
         case IRCV3_HOOK_AWAYNOTIFY_AWAY:
-        case IRCV3_HOOK_AWAYNOTIFY_BACK:
                 aClient *cptr = va_arg(vl, aClient *);
                 aClient *sptr = va_arg(vl, aClient *);
                 char    *message = va_arg(vl, char *);
@@ -236,6 +235,21 @@ int ircv3_hook(enum c_ircv3_hooktype hooktype, ...)
                     }
                 }
                 break;
+        case IRCV3_HOOK_AWAYNOTIFY_BACK:
+                aClient *cptr = va_arg(vl, aClient *);
+                aClient *sptr = va_arg(vl, aClient *);
+
+                for (int i = 0; ircv3_capabilities[i].name; i++)
+                {
+                    if (ircv3_capabilities[i].capability == CAPAB_AWAYNOTIFY)
+                    {
+                        int (*rfunc) (aClient *, aClient *, int, char *) = ircv3_capabilities[i].func;
+                        if ((ret = (*rfunc)(cptr, sptr, 0, NULL)) == FLUSH_BUFFER)
+                            break;
+                    }
+                }
+                break;
+
         default:
           sendto_realops_lev(DEBUG_LEV, "Call for unknown hook type %d",
                 hooktype);
@@ -269,9 +283,26 @@ int ircv3_hook(enum c_ircv3_hooktype hooktype, ...)
 */
 int m_awaynotify(aClient *cptr, aClient *sptr, int join, char *away)
 {
-  aChannel *chptr;
+    aChannel *chptr;
+    Link *lp;
 
-  return 0;
+    // Iterate through all channels the client is a member of
+    for (lp = cptr->user->channel; lp; lp = lp->next)
+    {
+        chptr = lp->value.chptr;
+
+        // Send AWAY message to all members of the channel
+        if (away)
+          sendto_channel_butone(cptr, cptr, chptr, ":%s!%s@%s AWAY :%s",
+                                cptr->name, cptr->user->username, cptr->user->host,
+                                away);
+        else
+          sendto_channel_butone(cptr, cptr, chptr, ":%s!%s@%s AWAY ",
+                                cptr->name, cptr->user->username, cptr->user->host);
+    }
+
+    return 0;
 }
+
 
 #endif //IRCV3
