@@ -261,6 +261,60 @@ int ircv3_hook(enum c_ircv3_hooktype hooktype, ...)
 
     return ret;
 }
+
+typedef struct HashEntry {
+    aClient *client;
+    struct HashEntry *next;
+    // Possibly other members...
+} HashEntry;
+
+unsigned int hash_nick(const char *name, unsigned int size)
+{
+    unsigned int hash = 0;
+
+    while (*name)
+    {
+        hash = (hash * 33) + (unsigned char)*name++;
+    }
+
+    return hash % size;
+}
+
+// ... existing code ...
+// Check if a client has been notified
+static inline int IsNotified(HashEntry *notified_clients, aClient *acptr)
+{
+    unsigned int hashv = hash_nick(acptr->name, HASHSIZE);
+    HashEntry *hptr = &notified_clients[hashv];
+
+    while (hptr)
+    {
+        if (hptr->client == acptr)
+            return 1;
+        hptr = hptr->next;
+    }
+    return 0;
+}
+
+// Mark a client as notified
+static inline void SetNotified(HashEntry *notified_clients, aClient *acptr)
+{
+    unsigned int hashv = hash_nick(acptr->name, HASHSIZE);
+    HashEntry *hptr = &notified_clients[hashv];
+
+    while (hptr->client && hptr->next)
+        hptr = hptr->next;
+
+    if (!hptr->client)
+        hptr->client = acptr;
+    else
+    {
+        hptr->next = (HashEntry *)MyMalloc(sizeof(HashEntry));
+        hptr->next->client = acptr;
+        hptr->next->next = NULL;
+    }
+}
+
 /*
  * Below section will be to register the methods used to handle the different IRC messages
  * we want to extend IRCv3 capabilites for
@@ -283,22 +337,43 @@ int ircv3_hook(enum c_ircv3_hooktype hooktype, ...)
 */
 int m_awaynotify(aClient *cptr, aClient *sptr, int join, char *away)
 {
-    aChannel *chptr;
     Link *lp;
+    aClient *acptr;
+    int fd;
+
+    // Prepare the AWAY message once
+    char away_msg[BUFSIZE];
+    if (away)
+        snprintf(away_msg, sizeof(away_msg), ":%s!%s@%s AWAY :%s",
+                 cptr->name, cptr->user->username, cptr->user->host, away);
+    else
+        snprintf(away_msg, sizeof(away_msg), ":%s!%s@%s AWAY",
+                 cptr->name, cptr->user->username, cptr->user->host);
+
+    // Create a temporary hash table to track notified clients
+    HashEntry notified_clients[HASHSIZE];
+    memset(notified_clients, 0, sizeof(notified_clients));
 
     // Iterate through all channels the client is a member of
     for (lp = cptr->user->channel; lp; lp = lp->next)
     {
-        chptr = lp->value.chptr;
+        aChannel *chptr = lp->value.chptr;
 
-        // Send AWAY message to all members of the channel
-        if (away)
-          sendto_channel_butone(cptr, cptr, chptr, ":%s!%s@%s AWAY :%s",
-                                cptr->name, cptr->user->username, cptr->user->host,
-                                away);
-        else
-          sendto_channel_butone(cptr, cptr, chptr, ":%s!%s@%s AWAY ",
-                                cptr->name, cptr->user->username, cptr->user->host);
+        // Iterate through all members of the channel
+        for (fd = 0; fd <= highest_fd; fd++)
+        {
+            if (!(acptr = local[fd]) || !IsRegistered(acptr) || acptr == cptr)
+                continue;
+
+            if (IsMember(acptr, chptr) && !IsNotified(notified_clients, acptr))
+            {
+                if (HasCapability(acptr, CAPAB_AWAYNOTIFY))
+                {
+                    sendto_one(acptr, "%s", away_msg);
+                }
+                SetNotified(notified_clients, acptr);
+            }
+        }
     }
 
     return 0;
