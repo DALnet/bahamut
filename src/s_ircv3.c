@@ -315,6 +315,25 @@ static inline void SetNotified(HashEntry *notified_clients, aClient *acptr)
     }
 }
 
+// Clear the notified clients list
+static inline void ClearNotifiedList(HashEntry *notified_clients)
+{
+    for (int i = 0; i < HASHSIZE; i++)
+    {
+        HashEntry *current = notified_clients[i].next;
+        while (current)
+        {
+            HashEntry *temp = current;
+            current = current->next;
+            MyFree(temp);
+        }
+        notified_clients[i].client = NULL;
+        notified_clients[i].next = NULL;
+    }
+}
+
+
+
 /*
  * Below section will be to register the methods used to handle the different IRC messages
  * we want to extend IRCv3 capabilites for
@@ -375,6 +394,8 @@ int m_awaynotify(aClient *cptr, aClient *sptr, int join, char *away)
             }
         }
     }
+    // Clear the notified clients list
+    ClearNotifiedList(notified_clients);
 
     return 0;
 }
