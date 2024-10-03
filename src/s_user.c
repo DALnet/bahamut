@@ -3188,7 +3188,7 @@ m_userhost(aClient *cptr, aClient *sptr, int parc, char *parv[])
                               (acptr->user->away) ? '-' : '+',
                               acptr->user->username, 
 #ifdef USER_HOSTMASKING
-                              (IsUmodeH(acptr) && sptr!=acptr && !IsAnOper(sptr))?acptr->user->mhost:
+                              (IsUmodeH(acptr) && sptr!=acptr)?acptr->user->mhost:
 #endif
                               acptr->user->host);
         }
