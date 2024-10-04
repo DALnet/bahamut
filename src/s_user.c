@@ -3223,7 +3223,7 @@ m_userip(aClient *cptr, aClient *sptr, int parc, char *parv[])
                               (acptr->user->away) ? '-' : '+',
                               acptr->user->username,
                               IsULine(acptr) ? "0.0.0.0" :
-                              IsUmodeH(acptr) ? "127.0.0.1" : acptr->hostip);
+                              (IsUmodeH(acptr) && sptr!=acptr) ? "127.0.0.1" : acptr->hostip);
         }
     sendto_one(sptr, "%s", buf);
     return 0;
