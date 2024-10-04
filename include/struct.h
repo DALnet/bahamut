@@ -254,28 +254,11 @@ typedef struct SServicesTag ServicesTag;
 #endif
 #define CAPAB_NICKIPSTR 0x000080 /* Nick IP as a string support */
 
-/* ircv3 capabilities */
-#define CAPAB_AWAYNOTIFY 0x000100 /* away-notify support */
 
 /* IRCv3 capabilities */
 #ifdef IRCV3
-/* IRCv3 capabilities of the ircd or clients */
-struct Capabilities
-{
-    long capability;
-    char *name;
-};
-
-#define HasCapability(x, y) ((x)->capabilities & y)
-
 /* ircv3 capabilities */
-#define WantsIRCv3(x)   ((x)->wants_ircv3_caps = 1)
-#define SetAwayNotify(x) ((x)->capabilities |= CAPAB_AWAYNOTIFY)
-
-#define HasCapabilities(x) ((x)->capabilities)
-
-
-#define IsAwayNotify(x)  ((x)->capabilities & CAPAB_AWAYNOTIFY)
+#define CAPAB_AWAYNOTIFY 0x000100 /* away-notify support */
 #endif
 
 
