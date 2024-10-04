@@ -3203,11 +3203,6 @@ m_userip(aClient *cptr, aClient *sptr, int parc, char *parv[])
     aClient *acptr;
     int i, len, res = 0;
 
-    if(!IsAnOper(sptr))
-    {
-        sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name, parv[0]);
-        return 0;
-    }
     ircsprintf(buf, rpl_str(RPL_USERHOST), me.name, parv[0]);
     len = strlen(buf);
 
