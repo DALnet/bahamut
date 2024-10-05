@@ -121,6 +121,10 @@ static char readbuf[8192];
 #endif
 #endif
 
+#ifdef USE_SSL
+extern int mydata_index;
+#endif
+
 /*
  * add_local_domain() 
  * Add the domain to hostname, if it is missing
@@ -726,6 +730,7 @@ int check_server_init(aClient * cptr)
     if (!(aconn = find_aConnect(cptr->name)))
     {
         Debug((DEBUG_DNS, "No Connect block for %s", cptr->name));
+        sendto_realops_lev(DEBUG_LEV, "No Connect block for %s", cptr->name);
         return -1;
     }
 
@@ -856,6 +861,29 @@ int completed_connection(aClient * cptr)
 {
     aConnect *aconn;
 
+    /* make sure that SSL verification was successful
+     * otherwise we drop the client - skill
+     */
+    if (IsSSL(cptr) && cptr->ssl)
+    {
+        long verify_result = 0;
+        verify_result = SSL_get_verify_result(cptr->ssl);
+        sendto_realops_lev(DEBUG_LEV, "SSL verification result %ld [%s]", verify_result, cptr->name);
+
+        switch (verify_result)
+        {
+            case X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN:
+            case X509_V_OK:
+                break;
+            default:
+                sendto_realops("Connection to %s failed, could not validate SSL cert", cptr->name);
+                sendto_realops_lev(DEBUG_LEV, "SSL verification failed for %s %ld",
+                                cptr->name, verify_result);
+                cptr->sockerr = IRCERR_SSL;
+                return -1;
+        }
+    }
+
     if(!(cptr->flags & FLAGS_BLOCKED))
         unset_fd_flags(cptr->fd, FDF_WANTWRITE);
     unset_fd_flags(cptr->fd, FDF_WANTREAD);
@@ -872,10 +900,10 @@ int completed_connection(aClient * cptr)
 
     /* pass on our capabilities to the server we /connect'd */
 #ifdef HAVE_ENCRYPTION_ON
-    if(!(aconn->flags & CONN_DKEY))
+    if(!(aconn->flags & CONN_DKEY) || (IsSSL(cptr) && (aconn->flags & CONN_SSL)))
         sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURST UNCONNECT ZIP"
                          " NICKIP NICKIPSTR TSMODE");
-    else
+    else 
     {
         sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURST UNCONNECT DKEY"
                          " ZIP NICKIP NICKIPSTR TSMODE");
@@ -1923,9 +1951,11 @@ int connect_server(aConnect *aconn, aClient * by, struct hostent *hp)
         return -1;
     }
     
+    signal(SIGALRM, dummy);
+
     set_non_blocking(cptr->fd, cptr);
     set_sock_opts(cptr->fd, cptr);
-    signal(SIGALRM, dummy);
+
     if (connect(cptr->fd, svp, len) < 0 && errno != EINPROGRESS) 
     {
         errtmp = errno;     /* other system calls may eat errno */
@@ -1941,6 +1971,47 @@ int connect_server(aConnect *aconn, aClient * by, struct hostent *hp)
             errno = ETIMEDOUT;
         return -1;
     }
+    #ifdef USE_SSL
+
+    if (aconn->flags & CONN_SSL) 
+    {
+        extern SSL_CTX *serverssl_ctx;
+        cptr->ssl = NULL;
+        if ((cptr->ssl = SSL_new(serverssl_ctx)) == NULL)
+        {
+            sendto_realops_lev(DEBUG_LEV, "SSL creation of "
+                            "new SSL object failed [server %s]",
+                            aconn->name);
+            close(cptr->fd);
+            cptr->fd = -2;
+            free_client(cptr);
+            return -1;
+        }
+
+        SetSSL(cptr);
+        SSL_set_fd(cptr->ssl, cptr->fd);
+        
+
+        int ret=0;
+        /* 
+         * Set the aConn object as SSL data for the verification
+         */
+        SSL_set_ex_data(cptr->ssl, mydata_index, aconn);
+
+        if(!safe_ssl_connect(cptr, cptr->fd))
+        {
+            sendto_realops_lev(DEBUG_LEV, "SSL connect failed [server %s]", 
+                            aconn->name);
+            SSL_set_shutdown(cptr->ssl, SSL_RECEIVED_SHUTDOWN);
+            ssl_smart_shutdown(cptr->ssl);
+            SSL_free(cptr->ssl);
+            cptr->fd = -2;
+            close(cptr->fd);
+            free_client(cptr);
+            return -1;
+        }
+    }
+    #endif
     
     make_server(cptr);
     cptr->serv->aconn = aconn;

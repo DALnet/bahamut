@@ -186,7 +186,11 @@ do_server_estab(aClient *cptr)
 
     sendto_gnotice("from %s: Link with %s established, states:%s%s%s%s",
                    me.name, inpath, ZipOut(cptr) ? " Output-compressed" : "",
+                   #ifdef USE_SSL
+                   (IsSSL(cptr) || RC4EncLink(cptr))? " encrypted" : "",
+                   #else
                    RC4EncLink(cptr) ? " encrypted" : "",
+                   #endif
                    IsULine(cptr) ? " ULined" : "",
                    DoesTS(cptr) ? " TS" : " Non-TS");
 
@@ -417,7 +421,9 @@ m_server_estab(aClient *cptr)
     if((aconn->flags & CONN_ZIP))
         SetZipCapable(cptr);
     if((aconn->flags & CONN_DKEY))
+    {
         SetWantDKEY(cptr);
+    }
     if (IsUnknown(cptr))
     {
         if (aconn->cpasswd[0])
@@ -426,12 +432,16 @@ m_server_estab(aClient *cptr)
         /* Pass my info to the new server */
 
 #ifdef HAVE_ENCRYPTION_ON
-        if(!WantDKEY(cptr))
+        if(!WantDKEY(cptr) || (IsSSL(cptr) && cptr->ssl))
+        {
             sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURST UNCONNECT ZIP "
                        "NICKIP NICKIPSTR TSMODE");
+        }
         else
+        {
             sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURST UNCONNECT DKEY "
-                       "ZIP NICKIP NICKIPSTR TSMODE");
+                    "ZIP NICKIP NICKIPSTR TSMODE");
+        }
 #else
         sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURST UNCONNECT ZIP NICKIP NICKIPSTR TSMODE");
 #endif
@@ -498,13 +508,28 @@ m_server_estab(aClient *cptr)
     throttle_remove(cipntoa(cptr));
 
 #ifdef HAVE_ENCRYPTION_ON
+#ifdef USE_SSL
+    if (!IsSSL(cptr))
+    {
+    #endif
     if(!CanDoDKEY(cptr) || !WantDKEY(cptr))
+    {
+        sendto_realops_lev(DEBUG_LEV, "Server estab [server %s]",
+                         get_client_name(cptr, TRUE));
         return do_server_estab(cptr);
+    }
     else
     {
         SetNegoServer(cptr); /* VERY IMPORTANT THAT THIS IS HERE */
         sendto_one(cptr, "DKEY START");
     }
+    #ifdef USE_SSL
+    }
+    else 
+    {
+        return do_server_estab(cptr);
+    }
+    #endif
 #else
     return do_server_estab(cptr);
 #endif
