@@ -229,8 +229,8 @@ int ircv3_hook(enum c_ircv3_hooktype hooktype, ...)
                 {
                     if (ircv3_capabilities[i].capability == CAPAB_AWAYNOTIFY)
                     {
-                        int (*rfunc) (aClient *, aClient *, int, char *) = ircv3_capabilities[i].func;
-                        if ((ret = (*rfunc)(cptr, sptr, 0, message)) == FLUSH_BUFFER)
+                        int (*rfunc) (aClient *, aClient *, char *) = ircv3_capabilities[i].func;
+                        if ((ret = (*rfunc)(cptr, sptr, message)) == FLUSH_BUFFER)
                             break;
                     }
                 }
@@ -243,8 +243,8 @@ int ircv3_hook(enum c_ircv3_hooktype hooktype, ...)
                 {
                     if (ircv3_capabilities[i].capability == CAPAB_AWAYNOTIFY)
                     {
-                        int (*rfunc) (aClient *, aClient *, int, char *) = ircv3_capabilities[i].func;
-                        if ((ret = (*rfunc)(cptr, sptr, 0, NULL)) == FLUSH_BUFFER)
+                        int (*rfunc) (aClient *, aClient *, char *) = ircv3_capabilities[i].func;
+                        if ((ret = (*rfunc)(cptr, sptr, NULL)) == FLUSH_BUFFER)
                             break;
                     }
                 }
@@ -351,10 +351,9 @@ static inline void ClearNotifiedList(HashEntry *notified_clients)
  * Params:
  *  cptr - The client that is sending the message
  *  sptr - The client that is receiving the message
- *  join - 1 if this is triggered by a JOIN command
  *  away - The away message
 */
-int m_awaynotify(aClient *cptr, aClient *sptr, int join, char *away)
+int m_awaynotify(aClient *cptr, aClient *sptr, char *away)
 {
     Link *lp;
     aClient *acptr;
@@ -364,24 +363,24 @@ int m_awaynotify(aClient *cptr, aClient *sptr, int join, char *away)
     char away_msg[BUFSIZE];
     if (away)
         snprintf(away_msg, sizeof(away_msg), ":%s!%s@%s AWAY :%s",
-                 cptr->name, cptr->user->username, cptr->user->host, away);
+                 sptr->name, sptr->user->username, sptr->user->host, away);
     else
         snprintf(away_msg, sizeof(away_msg), ":%s!%s@%s AWAY",
-                 cptr->name, cptr->user->username, cptr->user->host);
+                 sptr->name, sptr->user->username, sptr->user->host);
 
     // Create a temporary hash table to track notified clients
     HashEntry notified_clients[HASHSIZE];
     memset(notified_clients, 0, sizeof(notified_clients));
 
     // Iterate through all channels the client is a member of
-    for (lp = cptr->user->channel; lp; lp = lp->next)
+    for (lp = sptr->user->channel; lp; lp = lp->next)
     {
         aChannel *chptr = lp->value.chptr;
 
         // Iterate through all members of the channel
         for (fd = 0; fd <= highest_fd; fd++)
         {
-            if (!(acptr = local[fd]) || !IsRegistered(acptr) || acptr == cptr)
+            if (!(acptr = local[fd]) || !IsRegistered(acptr) || acptr == sptr)
                 continue;
 
             if (IsMember(acptr, chptr) && !IsNotified(notified_clients, acptr))
