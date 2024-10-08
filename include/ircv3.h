@@ -41,7 +41,7 @@ extern int ircv3_hook(enum c_ircv3_hooktype hooktype, ...);
  * Methods to handle the different IRCv3 capabilities
 */
 
-int m_awaynotify(aClient *cptr, aClient *sptr, int join, char *away);
+int m_awaynotify(aClient *cptr, aClient *sptr, char *away);
 
 /* IRCv3 capabilities of the ircd or clients */
 struct IRCV3Capabilities
