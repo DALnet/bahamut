@@ -3206,7 +3206,7 @@ m_userhost(aClient *cptr, aClient *sptr, int parc, char *parv[])
                               (acptr->user->away) ? '-' : '+',
                               acptr->user->username,
 #ifdef USER_HOSTMASKING
-                              (IsUmodeH(acptr) && sptr!=acptr && !IsAnOper(sptr))?acptr->user->mhost:
+                              (IsUmodeH(acptr) && sptr!=acptr)?acptr->user->mhost:
 #endif
                               acptr->user->host);
         }
@@ -3221,11 +3221,6 @@ m_userip(aClient *cptr, aClient *sptr, int parc, char *parv[])
     aClient *acptr;
     int i, len, res = 0;
 
-    if(!IsAnOper(sptr))
-    {
-        sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name, parv[0]);
-        return 0;
-    }
     ircsprintf(buf, rpl_str(RPL_USERHOST), me.name, parv[0]);
     len = strlen(buf);
 
@@ -3240,7 +3235,8 @@ m_userip(aClient *cptr, aClient *sptr, int parc, char *parv[])
                               IsAnOper(acptr) ? "*" : "",
                               (acptr->user->away) ? '-' : '+',
                               acptr->user->username,
-                              IsULine(acptr) ? "0.0.0.0" : acptr->hostip);
+                              IsULine(acptr) ? "0.0.0.0" :
+                              (IsUmodeH(acptr) && sptr!=acptr) ? "127.0.0.1" : acptr->hostip);
         }
     sendto_one(sptr, "%s", buf);
     return 0;
