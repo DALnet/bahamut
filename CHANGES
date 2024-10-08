@@ -1,3 +1,11 @@
+Changes for 2.2.4:
+------------------
+Kobi Shmueli (1):
+     Fix USERHOST not to reveal the user's real hostname to IRC Operators
+
+Emilio Escobar (1):
+     Remove oper-only restriction on userip and do not return real IP if client has hostmask on.
+
 Changes for 2.2.3:
 ------------------
 Emilio Escobar (1):
