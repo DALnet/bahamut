@@ -118,7 +118,7 @@ extern aClient 	*find_chasing(aClient *, char *, int *);
 
 extern int  	  find_restrict(aClient *);
 extern int  	  rehash(aClient *, aClient *, int);
-extern int  	  initconf(char *);
+extern int  	  initconf(char *, aClient *);
 extern inline char *finishconf(void);
 extern void       merge_confs();
 extern int  	  lock_kline_file();
