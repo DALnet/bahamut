@@ -49,6 +49,8 @@
 #include "memcount.h"
 #include "spamfilter.h"
 
+#include "multicore.h"
+
 aMotd      *motd;
 aMotd      *helpfile;           /* misnomer, aMotd could be generalized */
 aMotd      *shortmotd;          /* short motd */
@@ -402,8 +404,6 @@ static time_t check_pings(time_t currenttime)
         /*
          * Ok, so goto's are ugly and can be avoided here but this code
          * is already indented enough so I think its justified. -avalon
-         *
-         * justified by what? laziness? <g>
          * If the client pingtime is fine (ie, not larger than the client ping) 
          * skip over all the checks below. - lucas
          */
@@ -651,6 +651,79 @@ char REPORT_DO_DNS[256], REPORT_FIN_DNS[256], REPORT_FIN_DNSC[256],
 
 FILE *dumpfp=NULL;
 
+// New shared memory structures
+
+struct SharedState {
+    // Global statistics
+    struct Counter Count;
+    
+    // Client/channel hash tables
+    aClient *client_hash_table[HASHSIZE];
+    aChannel *channel_hash_table[HASHSIZE]; 
+    
+    // Synchronization primitives
+    pthread_rwlock_t client_lock;
+    pthread_rwlock_t channel_lock;
+    
+    // Worker process info
+    int num_workers;
+    pid_t worker_pids[MAX_WORKERS];
+};
+
+// Initialize shared memory
+SharedState *init_shared_state() {
+    int shmid;
+    SharedState *state;
+    
+    // Create shared memory segment
+    shmid = shmget(IPC_PRIVATE, sizeof(SharedState), IPC_CREAT | 0600);
+    if (shmid < 0) {
+        return NULL;
+    }
+    
+    // Attach shared memory
+    state = (SharedState *)shmat(shmid, NULL, 0);
+    if (state == (void *)-1) {
+        return NULL;
+    }
+    
+    // Initialize locks
+    pthread_rwlock_init(&state->client_lock, NULL);
+    pthread_rwlock_init(&state->channel_lock, NULL);
+    
+    return state;
+}
+
+// IPC message types
+enum IpcMessageType {
+    IPC_NEW_CONNECTION,
+    IPC_CLIENT_QUIT,
+    IPC_CHANNEL_JOIN,
+    IPC_CHANNEL_PART
+};
+
+struct IpcMessage {
+    enum IpcMessageType type;
+    union {
+        struct {
+            int fd;
+            struct sockaddr_in addr;
+        } new_conn;
+        struct {
+            char nick[NICKLEN+1];
+            char reason[TOPICLEN+1];
+        } quit;
+        // ... other message types
+    } data;
+};
+
+// Send IPC message between processes
+void send_ipc_message(pid_t dest_pid, struct IpcMessage *msg) {
+    // Use Unix domain sockets or message queues
+    int mqid = msgget(IPC_PRIVATE, 0600);
+    msgsnd(mqid, msg, sizeof(*msg), 0);
+}
+
 int
 main(int argc, char *argv[])
 {
@@ -722,7 +795,7 @@ main(int argc, char *argv[])
     setup_signals();
     /*
      * * All command line parameters have the syntax "-fstring"  or "-f
-     * string" (e.g. the space is optional). String may  be empty. Flag
+     * string" (e.g. the space is optional). Flag
      * characters cannot be concatenated (like "-fxyz"), it would
      * conflict with the form "-fstring".
      */
@@ -959,6 +1032,16 @@ main(int argc, char *argv[])
 #endif
     
     io_loop();
+
+    if (init_multicore_system() < 0) {
+        fprintf(stderr, "Failed to initialize multicore system\n");
+        exit(1);
+    }
+    
+    // Parent process becomes the manager
+    manage_parent_process();
+    
+    shutdown_multicore_system();
     return 0;
 }
 
@@ -1412,4 +1495,142 @@ int save_settings()
     fclose(fp);
 
     return 1;
+}
+
+// Modified accept_connection() to distribute connections
+void accept_connection(aListener *lptr) {
+    // ... existing connection acceptance code ...
+    
+    if (newfd >= 0) {
+        struct IpcMessage msg;
+        msg.type = IPC_NEW_CONNECTION;
+        msg.data.new_conn.fd = newfd;
+        memcpy(&msg.data.new_conn.addr, &addr, sizeof(struct sockaddr_in));
+        
+        // Send to selected worker
+        int worker = next_worker++ % shared_state->num_workers;
+        send_ipc_message(shared_state->worker_pids[worker], &msg);
+    }
+}
+
+// Worker process main loop
+void worker_process(int worker_id, SharedState *shared_state) {
+    while (1) {
+        // Handle events for assigned clients
+        engine_read_message(delay);
+        
+        // Process IPC messages from other workers
+        process_ipc_messages();
+        
+        // Handle timeouts
+        if (timeofday >= nextping) {
+            nextping = check_pings(timeofday);
+        }
+    }
+}
+
+// When a client joins a channel
+void join_channel_handler(aClient *cptr, char *chname) {
+    // First do local join processing
+    if (join_channel(cptr, chname) == 0) {
+        struct IpcMessage msg;
+        msg.type = IPC_CHANNEL_JOIN;
+        
+        // Add channel join info
+        struct channel_join_data *join = &msg.data.channel_join;
+        strncpy(join->channel, chname, CHANNELLEN);
+        strncpy(join->nick, cptr->name, NICKLEN);
+        
+        // Notify other workers
+        for (int i = 0; i < shared_state->num_workers; i++) {
+            if (shared_state->worker_pids[i] != getpid()) {
+                send_ipc_message(shared_state->worker_pids[i], &msg);
+            }
+        }
+    }
+}
+
+// Example of synchronized client operations 
+void update_client_status(aClient *cptr, int new_status) {
+    pthread_rwlock_wrlock(&shared_state->client_lock);
+    cptr->status = new_status;
+    pthread_rwlock_unlock(&shared_state->client_lock);
+}
+
+// When a client quits, notify all workers
+void exit_client(aClient *cptr, aClient *bcptr, aClient *from, char *comment) {
+    struct IpcMessage msg;
+    msg.type = IPC_CLIENT_QUIT;
+    strncpy(msg.data.quit.nick, cptr->name, NICKLEN);
+    strncpy(msg.data.quit.reason, comment, TOPICLEN);
+    
+    // Broadcast to all workers
+    for (int i = 0; i < shared_state->num_workers; i++) {
+        if (shared_state->worker_pids[i] != getpid()) {
+            send_ipc_message(shared_state->worker_pids[i], &msg);
+        }
+    }
+    
+    // Continue with normal quit processing
+    // ...
+}
+
+// In worker process to handle incoming IPC messages
+void process_ipc_messages(void) {
+    struct IpcMessage msg;
+    int mqid = msgget(IPC_PRIVATE, 0600);
+    
+    while (msgrcv(mqid, &msg, sizeof(msg), 0, IPC_NOWAIT) > 0) {
+        switch (msg.type) {
+            case IPC_NEW_CONNECTION:
+                handle_new_connection(&msg.data.new_conn);
+                break;
+                
+            case IPC_CLIENT_QUIT:
+                handle_remote_quit(&msg.data.quit);
+                break;
+                
+            case IPC_CHANNEL_JOIN:
+                handle_remote_join(&msg.data.channel_join);
+                break;
+                
+            case IPC_CHANNEL_PART:
+                handle_remote_part(&msg.data.channel_part);
+                break;
+        }
+    }
+}
+
+// Parent process monitoring workers
+void manage_parent_process(void) {
+    while (1) {
+        pid_t pid = wait(NULL);
+        
+        // If a worker died, notify others and restart it
+        if (pid > 0) {
+            for (int i = 0; i < shared_state->num_workers; i++) {
+                if (shared_state->worker_pids[i] == pid) {
+                    // Notify other workers about the death
+                    struct IpcMessage msg;
+                    msg.type = IPC_WORKER_DIED;
+                    msg.data.worker_died.worker_id = i;
+                    
+                    for (int j = 0; j < shared_state->num_workers; j++) {
+                        if (j != i && shared_state->worker_pids[j] != pid) {
+                            send_ipc_message(shared_state->worker_pids[j], &msg);
+                        }
+                    }
+                    
+                    // Restart the worker
+                    pid_t new_pid = fork();
+                    if (new_pid == 0) {
+                        worker_process(i, shared_state);
+                        exit(0);
+                    }
+                    shared_state->worker_pids[i] = new_pid;
+                    break;
+                }
+            }
+        }
+    }
 }
