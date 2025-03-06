@@ -1072,6 +1072,7 @@ struct Client
 
     char *webirc_username;
     char *webirc_ip;
+    SASLState sasl;
 };
 
 #define	CLIENT_LOCAL_SIZE sizeof(aClient)
@@ -1448,6 +1449,10 @@ extern char *generation, *creation;
 #define RC4_NEXT_BUFFER -3
 #define	FLUSH_BUFFER	-2
 #define	COMMA		","
+
+/* SASL related defines */
+extern int SASL_Timeout;
+extern int SASL_MaxAttempts;
 
 #ifdef ORATIMING
 /*

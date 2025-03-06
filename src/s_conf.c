@@ -126,6 +126,10 @@ void init_globals()
     local_ip24_limit = DEFAULT_LOCAL_IP24_CLONES;
     global_ip_limit = DEFAULT_GLOBAL_IP_CLONES;
     global_ip24_limit = DEFAULT_GLOBAL_IP24_CLONES;
+    SASL_Timeout = DEFAULT_SASL_TIMEOUT;
+    sasl_ratelimit_attempts = DEFAULT_SASL_RATELIMIT_ATTEMPTS;
+    sasl_ratelimit_period = DEFAULT_SASL_RATELIMIT_PERIOD;
+    SASL_Service_Name = DEFAULT_SASL_SERVICE_NAME;
 }
 
 
@@ -1003,12 +1007,6 @@ confadd_options(cVar *vars[], int lnum)
 {
     cVar *tmp;
     int c = 0;
-    char *s;
-
-    /* here, because none of the option peice are interdependent
-     * all the items are added immediately.   Makes life easier
-     * ...except the option flags, which are handled specially -Quension
-     */
 
     for(tmp = vars[c]; tmp; tmp = vars[++c])
     {
@@ -1016,6 +1014,11 @@ confadd_options(cVar *vars[], int lnum)
         {
             tmp->type = NULL;
             strncpyzt(Network_Name, tmp->value, sizeof(Network_Name));
+        }
+        else if(tmp->type && (tmp->type->flag & OPTF_SASLSERVICE))
+        {
+            tmp->type = NULL;
+            strncpyzt(SASL_Service_Name, tmp->value, sizeof(SASL_Service_Name));
         }
         else if(tmp->type && (tmp->type->flag & OPTF_SERVNAME))
         {
@@ -1148,6 +1151,26 @@ confadd_options(cVar *vars[], int lnum)
 	{
             tmp->type = NULL;
             new_confopts |= FLAGS_REMREHOK;
+        }
+        else if(tmp->type && (tmp->type->flag & OPTF_SASLTIMEOUT))
+        {
+            tmp->type = NULL;
+            SASL_Timeout = atoi(tmp->value);
+            if(SASL_Timeout < 30)
+                SASL_Timeout = 30;  // Enforce minimum timeout
+        }
+        else if(tmp->type && (tmp->type->flag & OPTF_SASLRATELIMIT))
+        {
+            tmp->type = NULL;
+            sasl_ratelimit_attempts = strtol(tmp->value, &s, 10);
+            if (*s == ':')
+                sasl_ratelimit_period = atoi(s+1);
+            if (sasl_ratelimit_attempts < 1)
+                sasl_ratelimit_attempts = DEFAULT_SASL_RATELIMIT_ATTEMPTS;
+            if (sasl_ratelimit_period < 1)
+                sasl_ratelimit_period = DEFAULT_SASL_RATELIMIT_PERIOD;
+
+           
         }
     }
     return lnum;

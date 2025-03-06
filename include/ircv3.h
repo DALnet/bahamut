@@ -55,6 +55,7 @@ struct IRCV3Capabilities
 struct IRCV3Capabilities ircv3_capabilities[] =
 {
     { CAPAB_AWAYNOTIFY, CAPAB_AWAYNOTIFY_NAME, m_awaynotify },
+    { CAPAB_SASL, "sasl", NULL },
     { 0, NULL }
 };
 
@@ -75,6 +76,15 @@ enum c_ircv3_hooktype
 
 
 #define IsAwayNotify(x)  ((x)->capabilities & CAPAB_AWAYNOTIFY)
+
+// Add SASL state tracking to client structure
+typedef struct {
+    char *mechanism;
+    unsigned int state;
+    time_t timeout;
+} SASLState;
+
+#define AII_SASL 7  /* Add after AII_HS which is 6 */
 
 #endif //IRCV3
 #endif //__ircv3_include__

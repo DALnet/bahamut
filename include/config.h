@@ -116,6 +116,13 @@
 #define DEFAULT_GLOBAL_IP_CLONES   25
 #define DEFAULT_GLOBAL_IP24_CLONES 150
 
+/* SASL related defaults */
+#define DEFAULT_SASL_TIMEOUT 120
+#define DEFAULT_SASL_MAX_ATTEMPTS 3
+#define DEFAULT_SASL_RATELIMIT_PERIOD 60
+#define DEFAULT_SASL_RATELIMIT_ATTEMPTS 3
+#define DEFAULT_SASL_SERVICE_NAME "SaslServ"
+
 /* 
  * HIDEULINEDSERVS 
  * Define this if you want to hide the location of U:lined servers (and 
@@ -954,4 +961,6 @@ extern void debug(int level, char *pattern, ...);
 #endif
 
 #define CONFIG_H_LEVEL_184
+
+
 #endif				/* __config_include__ */

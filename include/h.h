@@ -400,4 +400,7 @@ int ssl_smart_shutdown(SSL *);
 int bitncmp(const void *l, const void *r, size_t n);
 int inet_parse_cidr(int af, const char *src, void *dst, size_t size);
 
+/* s_ircv3.c */
+extern void update_sasl_service(aClient *acptr, int connecting);
+
 #endif  /* H_H */
