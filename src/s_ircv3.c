@@ -28,6 +28,9 @@
 #include "numeric.h"
 #include "msg.h"
 #include "h.h"
+#include <openssl/bio.h>
+#include <openssl/evp.h>
+#include <openssl/buffer.h>
 
 #if defined( HAVE_STRING_H )
 #include <string.h>
@@ -41,9 +44,78 @@
 #ifdef IRCV3
 #include "ircv3.h"
 
+
 int cap_set(aClient *, long);
 int cap_unset(aClient *, long);
 
+
+// Add this structure to track rate limits
+typedef struct {
+    char ip[HOSTIPLEN + 1];
+    time_t first_attempt;
+    int attempts;
+} SASLRateLimit;
+
+// Add this hash table for rate limiting
+static SASLRateLimit sasl_ratelimit[HASHSIZE];
+
+// Add these helper functions
+static void init_sasl_ratelimit(void)
+{
+    memset(sasl_ratelimit, 0, sizeof(sasl_ratelimit));
+}
+
+static SASLRateLimit *find_sasl_ratelimit(const char *ip)
+{
+    unsigned int hashv = hash_ip(ip);
+    return &sasl_ratelimit[hashv % HASHSIZE];
+}
+
+static void check_sasl_ratelimit_expiry(SASLRateLimit *rl, int period)
+{
+    if (rl->first_attempt && (NOW - rl->first_attempt) >= period) {
+        // Reset if period has expired
+        rl->first_attempt = 0;
+        rl->attempts = 0;
+    }
+}
+
+static int is_sasl_rate_limited(aClient *cptr)
+{
+    int max_attempts = sasl_ratelimit_attempts;
+    int period = sasl_ratelimit_period;
+    
+    // Parse rate limit from config
+    if (rate_str) {
+        char *p = strchr(rate_str, ':');
+        if (p) {
+            *p = '\0';
+            max_attempts = atoi(rate_str);
+            period = atoi(p + 1);
+            *p = ':';
+        }
+    }
+
+    SASLRateLimit *rl = find_sasl_ratelimit(cptr->hostip);
+    check_sasl_ratelimit_expiry(rl, period);
+
+    // If this is first attempt in current period
+    if (rl->attempts == 0) {
+        rl->first_attempt = NOW;
+        strncpy(rl->ip, cptr->hostip, HOSTIPLEN);
+        rl->ip[HOSTIPLEN] = '\0';
+    }
+
+    rl->attempts++;
+
+    if (rl->attempts > max_attempts) {
+        // Use the existing throttle mechanism
+        throttle_force(cptr->hostip);
+        return 1;
+    }
+
+    return 0;
+}
 
 /*
  * m_cap
@@ -76,7 +148,7 @@ m_cap(aClient *cptr, aClient *sptr, int parc, char *parv[])
       if (strcmp(parv[1], "LS") == 0)
       {
         /* If we currently support no IRCv3 capabilities, return nothing */
-        if (sizeof(ircv3_capabilities) > 0)
+        if (ircv3_capabilities && ircv3_capabilities[0].name)
         {
           char buf[BUFSIZE];
           memset(buf, 0, sizeof(buf));
@@ -87,6 +159,7 @@ m_cap(aClient *cptr, aClient *sptr, int parc, char *parv[])
             if (ircv3_capabilities[i + 1].name)
               strncat(buf, " ", 1);
           }
+          strcat(buf, " sasl");
 
           /* We identify the client as wanting IRCv3 capabilities
            * so that we only call register_user after CAPAB END is received
@@ -103,7 +176,11 @@ m_cap(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
         memset(buf, 0, sizeof(buf));
 
-
+        if (strstr(parv[2], "sasl")) {
+            sptr->sasl.state = 1;
+            sptr->sasl.timeout = NOW + SASL_Timeout;
+            sptr->sasl.mechanism = NULL;
+        }
 
         for (i = 2; i < parc; i++)
         {
@@ -143,7 +220,7 @@ m_cap(aClient *cptr, aClient *sptr, int parc, char *parv[])
           }
         }
 
-        sendto_one(sptr, ":%s CAP * %s :%s", me.name, subcmd, buf);
+        sendto_one(sptr, ":%s CAP * %s :%s", me.name, smbcmd, buf);
       }
       else if (strcmp(parv[1], "END") == 0)
       {
@@ -399,5 +476,173 @@ int m_awaynotify(aClient *cptr, aClient *sptr, char *away)
     return 0;
 }
 
+// Modify m_authenticate to include rate limiting
+int m_authenticate(aClient *cptr, aClient *sptr, int parc, char *parv[])
+{
+    // Check rate limit first
+    if (is_sasl_rate_limited(cptr)) {
+        sendto_one(sptr, ":%s FAIL AUTHENTICATE SASL :Too many authentication attempts", me.name);
+        abort_sasl(sptr);
+        return 0;
+    }
+
+    if (!sptr->sasl.state) {
+        sendto_one(sptr, ":%s FAIL AUTHENTICATE SASL :SASL authentication failed (not started)", me.name);
+        return 0;
+    }
+
+    if (NOW > sptr->sasl.timeout) {
+        abort_sasl(sptr);
+        sendto_one(sptr, ":%s FAIL AUTHENTICATE SASL :SASL authentication failed (timed out)", me.name);
+        return 0;
+    }
+
+    if (parc < 2) {
+        sendto_one(sptr, err_str(ERR_NEEDMOREPARAMS), me.name, sptr->name, "AUTHENTICATE");
+        abort_sasl(sptr);
+        return 0;
+    }
+
+    // If client sends "*", abort authentication
+    if (strcmp(parv[1], "*") == 0) {
+        abort_sasl(sptr);
+        sendto_one(sptr, ":%s FAIL AUTHENTICATE SASL :SASL authentication aborted", me.name);
+        return 0;
+    }
+
+    // Check if SASL service is available
+    if (!aliastab[AII_SL].client) {
+        sendto_one(sptr, ":%s FAIL AUTHENTICATE SASL :SASL service unavailable", me.name);
+        abort_sasl(sptr);
+        return 0;
+    }
+
+    // First AUTHENTICATE command should be the mechanism
+    if (!sptr->sasl.mechanism) {
+        if (strcmp(parv[1], "PLAIN") != 0) {
+            sendto_one(sptr, ":%s FAIL AUTHENTICATE SASL :PLAIN is the only supported mechanism", me.name);
+            abort_sasl(sptr);
+            return 0;
+        }
+        sptr->sasl.mechanism = strdup("PLAIN");
+        sendto_one(sptr, "AUTHENTICATE +");
+        return 0;
+    }
+
+    // Forward authentication data to service using sendto_alias
+    sendto_alias(&aliastab[AII_SL], sptr, "AUTHENTICATE %s %s :%s",
+        sptr->uid,  // Unique identifier for the authenticating client
+        sptr->sasl.mechanism,
+        parv[1]
+    );
+
+    return 0;
+}
+
+// Modify m_sasl to handle rate limit failures
+int m_sasl(aClient *cptr, aClient *sptr, int parc, char *parv[])
+{
+    aClient *target;
+    
+    // Only allow SASL messages from U-lined clients
+    if (!IsULine(sptr))
+        return 0;
+        
+    if (parc < 4)
+        return 0;
+        
+    target = find_uid(parv[2]);
+    if (!target)
+        return 0;
+        
+    if (!strcmp(parv[3], "SUCCESS")) {
+        // On success, clear rate limit
+        SASLRateLimit *rl = find_sasl_ratelimit(target->hostip);
+        rl->attempts = 0;
+        rl->first_attempt = 0;
+        
+        sendto_one(target, ":%s SASL %s * S SUCCESS", me.name, target->name);
+        target->sasl.state = 0;
+    }
+    else if (!strcmp(parv[3], "FAILED")) {
+        // Failed auth counts against rate limit
+        if (is_sasl_rate_limited(target)) {
+            sendto_one(target, ":%s FAIL AUTHENTICATE SASL :Too many authentication attempts", me.name);
+        } else {
+            sendto_one(target, ":%s FAIL AUTHENTICATE SASL :Authentication failed", me.name);
+        }
+        abort_sasl(target);
+    }
+    else if (!strcmp(parv[3], "MECH")) {
+        // Service is telling us what mechanisms it supports
+        // We only support PLAIN for now
+        if (strstr(parv[4], "PLAIN")) {
+            sendto_one(target, "AUTHENTICATE +");
+        } else {
+            sendto_one(target, ":%s FAIL AUTHENTICATE SASL :Mechanism not supported", me.name);
+            abort_sasl(target);
+        }
+    }
+    
+    return 0;
+}
+
+void init_sasl()
+{
+    init_sasl_ratelimit();
+}
+
+// Add SASL abort helper
+void abort_sasl(aClient *cptr)
+{
+    if (cptr->sasl.mechanism) {
+        MyFree(cptr->sasl.mechanism);
+        cptr->sasl.mechanism = NULL;
+    }
+    cptr->sasl.state = 0;
+}
+
+// Add base64 encoding/decoding functions
+static int base64_decode(const char *in, char *out, int maxlen)
+{
+    BIO *b64, *bmem;
+    int len;
+
+    b64 = BIO_new(BIO_f_base64());
+    BIO_set_flags(b64, BIO_FLAGS_BASE64_NO_NL);
+    bmem = BIO_new_mem_buf((void *)in, strlen(in));
+    bmem = BIO_push(b64, bmem);
+
+    len = BIO_read(bmem, out, maxlen);
+    BIO_free_all(bmem);
+
+    return len;
+}
+
+static int base64_encode(const unsigned char *in, int len, char *out, int maxlen)
+{
+    BIO *b64, *bmem;
+    BUF_MEM *bptr;
+
+    b64 = BIO_new(BIO_f_base64());
+    BIO_set_flags(b64, BIO_FLAGS_BASE64_NO_NL);
+    bmem = BIO_new(BIO_s_mem());
+    b64 = BIO_push(b64, bmem);
+
+    BIO_write(b64, in, len);
+    BIO_flush(b64);
+    BIO_get_mem_ptr(b64, &bptr);
+
+    if (bptr->length > maxlen - 1) {
+        BIO_free_all(b64);
+        return -1;
+    }
+
+    memcpy(out, bptr->data, bptr->length);
+    out[bptr->length] = '\0';
+    BIO_free_all(b64);
+
+    return bptr->length;
+}
 
 #endif //IRCV3

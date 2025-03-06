@@ -3248,3 +3248,15 @@ memcount_s_serv(MCs_serv *mc)
 
     return mc->total.m;
 }
+
+int exit_client(aClient *cptr, aClient *sptr, aClient *from, char *comment) {
+    // Add near start of function after variable declarations:
+    /*
+    * If we just lost Services_Name, update the SASL service name.
+    */
+    if (IsServer(sptr) && !strcmp(sptr->name, Services_Name)) {
+        update_sasl_service(sptr, 0);
+    }
+
+    // Rest of existing function continues
+}

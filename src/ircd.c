@@ -58,6 +58,7 @@ char ProxyMonURL[TOPICLEN+1];
 char ProxyMonHost[HOSTLEN+1];
 char Network_Name[HOSTLEN+1];
 char Services_Name[HOSTLEN+1];
+char SASL_Service_Name[HOSTLEN+1];
 char Stats_Name[HOSTLEN+1];
 char NS_Register_URL[TOPICLEN+1];
 char SpamFilter_URL[TOPICLEN+1];
@@ -67,6 +68,8 @@ char Staff_Address[HOSTLEN+1];
 int  maxchannelsperuser, tsmaxdelta, tswarndelta;
 int  confopts, new_confopts;
 int  local_ip_limit, local_ip24_limit, global_ip_limit, global_ip24_limit;
+int  SASL_Timeout;
+int  sasl_ratelimit_attempts, sasl_ratelimit_period;
 
 /* this stuff by mnystrom@mit.edu */
 #include "fdlist.h"
@@ -102,6 +105,9 @@ extern void     read_motd(char *);          /* defined in s_serv.c */
 extern void     read_shortmotd(char *);     /* defined in s_serv.c */
 extern void     read_help(char *);          /* defined in s_serv.c */
 extern void     init_globals();
+#ifdef IRCV3
+extern void     init_sasl();                /* defined in s_ircv3.c */
+#endif
 extern int      klinestore_init(int);    /* defined in klines.c */
 
 extern int uhm_type;
@@ -806,6 +812,10 @@ main(int argc, char *argv[])
         return bad_command();   /* This should exit out  */
 
     init_globals();
+
+#ifdef IRCV3
+    init_sasl();
+#endif
 
 #ifdef HAVE_ENCRYPTION_ON
     printf("Initializing Encryption...");

@@ -117,6 +117,7 @@
 #define MSG_OS	     "OS"            	/* OperServ commands */
 #define MSG_SS	     "SS"            	/* StatServ commands */
 #define MSG_HS	     "HS"            	/* StatServ commands */
+#define MSG_SL       "SL"           /* SaslServ commands */
 #define MSG_RESYNCH  "RESYNCH"		/* RESYNCH */
 #define MSG_LUSERSLOCK "LUSERSLOCK"     /* Lusers LOCK */
 #define MSG_LINKSCONTROL "LINKSCONTROL" /* LINKSCONTROL */
@@ -133,6 +134,8 @@
 #define MSG_CHECK    "CHECK"        /* CHECK */
 
 #define MSG_WEBIRC   "WEBIRC"       /* WEBIRC */
+#define MSG_AUTHENTICATE "AUTHENTICATE" /* AUTHENTICATE */
+#define MSG_SASL     "SASL"           /* SASL commands */
 
 #define MAXPARA      15
 
@@ -189,7 +192,6 @@ extern int  m_admin(aClient *, aClient *, int, char **);
 extern int  m_lusers(aClient *, aClient *, int, char **);
 extern int  m_umode(aClient *, aClient *, int, char **);
 extern int  m_close(aClient *, aClient *, int, char **);
-extern int  m_motd(aClient *, aClient *, int, char **);
 extern int  m_whowas(aClient *, aClient *, int, char **);
 extern int  m_userhost(aClient *, aClient *, int, char **);
 extern int  m_userip(aClient *, aClient *, int, char **);
@@ -242,6 +244,9 @@ extern int m_sjr(aClient *, aClient *, int, char **, AliasInfo *);
 extern int m_svsxcf(aClient *, aClient *, int, char **);
 extern int m_svsctrl(aClient *, aClient *, int, char **);
 
+// Add with other message declarations
+int m_authenticate(aClient *cptr, aClient *sptr, int parc, char *parv[]);
+int m_sasl(aClient *cptr, aClient *sptr, int parc, char *parv[]);
 /* aliastab indexes */
 #define AII_NS  0
 #define AII_CS  1
@@ -250,6 +255,7 @@ extern int m_svsctrl(aClient *, aClient *, int, char **);
 #define AII_OS  4
 #define AII_SS  5
 #define AII_HS  6
+#define AII_SL 7  /* Add after AII_HS which is 6 */
 
 
 #ifdef MSGTAB
@@ -262,6 +268,7 @@ AliasInfo aliastab[] =
     /* AII_OS */ {MSG_OS, OPERSERV, Stats_Name},
     /* AII_SS */ {MSG_SS, STATSERV, Stats_Name},
     /* AII_HS */ {MSG_HS, HELPSERV, Stats_Name},
+    /* AII_SL */ {MSG_SL, SASL_Service_Name, Services_Name},
     { 0 }
 };
 
@@ -360,6 +367,7 @@ struct Message msgtab[] =
     {MSG_OS,       m_aliased,        1, MF_ALIAS, AII_OS},
     {MSG_SS,       m_aliased,        1, MF_ALIAS, AII_SS},
     {MSG_HS,       m_aliased,        1, MF_ALIAS, AII_HS},
+    {MSG_SL,       m_aliased,        1, MF_ALIAS, AII_SL},
     {MSG_RESYNCH,  m_resynch,  MAXPARA, 0,        0},
     {MSG_MODULE,   m_module,   MAXPARA, 0,        0},
     {MSG_RWHO,     m_rwho,     MAXPARA, 0,        0},
@@ -382,6 +390,8 @@ struct Message msgtab[] =
     {"AJ",         m_aj,       MAXPARA, 0,        0},
     {"SJR",        m_sjr,      MAXPARA, MF_ALIAS, AII_NS},
     {MSG_WEBIRC,   m_webirc,   MAXPARA, MF_UNREG, 0},
+    {MSG_AUTHENTICATE, m_authenticate, MAXPARA, MF_UNREG, 0},
+    {MSG_SASL,     m_sasl,     MAXPARA, MF_UNREG, 0},
     { 0 }
 };
 
