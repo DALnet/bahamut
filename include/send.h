@@ -93,6 +93,11 @@ extern void vsendto_prefix_one(aClient *to, aClient *from,
 			       char *pattern, va_list vl);
 extern void vsendto_realops(char *pattern, va_list vl);
 
+#ifdef IRCV3
+extern void send_to_channel_butone_caps(aClient *one, aClient *from, aChannel *chptr, int caps, char *pattern, ...);
+extern void send_to_channels_butone_caps(aClient *one, aClient *from, int caps, char *pattern, ...);
+#endif
+
 extern void flush_connections();
 extern void dump_connections();
 #endif

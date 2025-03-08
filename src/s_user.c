@@ -2775,7 +2775,9 @@ m_away(aClient *cptr, aClient *sptr, int parc, char *parv[])
         if (MyConnect(sptr))
             sendto_one(sptr, rpl_str(RPL_UNAWAY), me.name, parv[0]);
 
-        ircv3_hook(IRCV3_HOOK_AWAYNOTIFY_BACK, cptr, sptr, 0, NULL);
+#ifdef IRCV3
+        send_to_channels_butone_caps(cptr, sptr, CAPAB_AWAYNOTIFY, ":%s AWAY :%s", parv[0], parv[1]);
+#endif
         return 0;
     }
 
@@ -2817,7 +2819,9 @@ m_away(aClient *cptr, aClient *sptr, int parc, char *parv[])
     if (MyConnect(sptr))
         sendto_one(sptr, rpl_str(RPL_NOWAWAY), me.name, parv[0]);
 
-    ircv3_hook(IRCV3_HOOK_AWAYNOTIFY_AWAY, cptr, sptr, away);
+#ifdef IRCV3
+    send_to_channels_butone_caps(cptr, sptr, CAPAB_AWAYNOTIFY, ":%s AWAY :%s", parv[0], parv[1]);
+#endif
 
     return 0;
 }
