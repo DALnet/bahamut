@@ -34,37 +34,23 @@
 
 
 #define CAPAB_AWAYNOTIFY_NAME "away-notify"
-
-extern int ircv3_hook(enum c_ircv3_hooktype hooktype, ...);
-
-/*
- * Methods to handle the different IRCv3 capabilities
-*/
-
-int m_awaynotify(aClient *cptr, aClient *sptr, char *away);
+#define CAPAB_SASL_NAME "sasl"
 
 /* IRCv3 capabilities of the ircd or clients */
 struct IRCV3Capabilities
 {
     long capability;
     char *name;
-    int (*func)();
 
 };
 
 struct IRCV3Capabilities ircv3_capabilities[] =
 {
-    { CAPAB_AWAYNOTIFY, CAPAB_AWAYNOTIFY_NAME, m_awaynotify },
-    { CAPAB_SASL, "sasl", NULL },
+    { CAPAB_AWAYNOTIFY, CAPAB_AWAYNOTIFY_NAME },
+    { CAPAB_SASL, CAPAB_SASL_NAME },
     { 0, NULL }
 };
 
-enum c_ircv3_hooktype
-{
-    IRCV3_HOOK_AWAYNOTIFY_AWAY,
-    IRCV3_HOOK_AWAYNOTIFY_BACK,
-    IRCV3_HOOK_AWAYNOTIFY_JOIN,
-};
 
 #define HasCapability(x, y) ((x)->capabilities & y)
 
@@ -77,14 +63,24 @@ enum c_ircv3_hooktype
 
 #define IsAwayNotify(x)  ((x)->capabilities & CAPAB_AWAYNOTIFY)
 
+//SASL section
+typedef struct {
+    char ip[HOSTIPLEN + 1];
+    time_t first_attempt;
+    int attempts;
+} SASLRateLimit;
+
 // Add SASL state tracking to client structure
+#define SASL_STATE_INIT 0
+#define SASL_STATE_STARTED 1
+#define SASL_STATE_AUTHENTICATED 2
+#define SASL_STATE_FAILED 3
+
 typedef struct {
     char *mechanism;
     unsigned int state;
     time_t timeout;
 } SASLState;
-
-#define AII_SASL 7  /* Add after AII_HS which is 6 */
 
 #endif //IRCV3
 #endif //__ircv3_include__

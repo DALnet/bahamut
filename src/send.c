@@ -571,7 +571,88 @@ static inline int check_fake_direction(aClient *from, aClient *to)
     return 0;
 }
 
+#ifdef IRCV3
+void send_to_channels_butone_caps(aClient *one, aClient *from, int caps, char *pattern, ...     )
+{
+    aChannel *chptr;
+    va_list vl;
 
+    if (!from->user)
+        return;
+
+    va_start(vl, pattern);
+
+    INC_SERIAL
+    for (chptr = from->user->channel; chptr; chptr = chptr->next)
+    {
+        send_to_channel_butone_caps(one, from, chptr, caps, pattern, vl);
+    }
+
+    va_end(vl);
+}
+
+void send_to_channel_butone_caps(aClient *one, aClient *from, aChannel *chptr, int caps, char *pattern, ...)
+{
+    chanMember *cm;
+    aClient *acptr;
+    int i;
+    int didlocal = 0, didremote = 0;
+    va_list vl;
+    char *pfix;
+    void *share_bufs[2] = { 0, 0 };
+
+    va_start(vl, pattern);
+
+
+    INC_SERIAL
+    for (cm = chptr->members; cm; cm = cm->next) 
+    {
+        acptr = cm->cptr;
+        if (acptr->from == one)
+            continue; /* ...was the one I should skip */
+
+        if ((confopts & FLAGS_SERVHUB) && IsULine(acptr) && (acptr->uplink->serv) && (acptr->uplink->serv->uflags & ULF_NOCHANMSG))
+            continue; /* Don't send channel traffic to super servers */
+
+        if (HasCapability(acptr, caps))
+        {
+            if (MyClient(acptr))
+            {
+                if (!didlocal)
+                {
+                    didlocal = prefix_buffer(0, from, pfix, sendbuf, pattern, vl);
+                    sbuf_begin_share(sendbuf, didlocal, &share_bufs[0]);
+                }
+                if (check_fake_direction(from, acptr))
+                    continue;
+
+                send_message(acptr, sendbuf, didlocal, share_bufs[0]);
+            }
+            else
+            {
+                if (!didremote)
+                {
+                    didremote = prefix_buffer(1, from, pfix, remotebuf, pattern, vl);
+                    sbuf_begin_share(remotebuf, didremote, &share_bufs[1]);
+                }
+                if (check_fake_direction(from, acptr))
+                    continue;
+
+                i = acptr->from->fd;
+                if (sentalong[i] != sent_serial)
+                {
+                    send_message(acptr, remotebuf, didremote, share_bufs[1]);
+                    sentalong[i] = sent_serial;
+                }
+            }
+        }
+    }
+
+    sbuf_end_share(share_bufs, 2);    
+    va_end(vl);
+    return;
+}
+#endif
 void sendto_channel_butone(aClient *one, aClient *from, aChannel *chptr,
                            char *pattern, ...) 
 {
