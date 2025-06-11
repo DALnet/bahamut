@@ -386,6 +386,75 @@ int msg_has_utf8(char *text)
     return 0;
 }
 
+/*
+ * m_opme
+ * parv[0] = sender prefix
+ * parv[1] = channel name
+ * Allows an IRC operator to grant themselves channel operator status on a channel.
+ */
+int
+m_opme(aClient *cptr, aClient *sptr, int parc, char *parv[])
+{
+    aChannel *chptr;
+    aChanMember *cmptr;
+    char *channel_name;
+
+    /* Check if the sender is an IRC operator */
+    if (!IsAnOper(sptr))
+    {
+        sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name, sptr->name);
+        return 0;
+    }
+
+    /* Check for correct number of parameters */
+    if (parc < 2 || BadPtr(parv[1]))
+    {
+        sendto_one(sptr, err_str(ERR_NEEDMOREPARAMS), me.name, sptr->name, "OPME");
+        return 0;
+    }
+
+    channel_name = parv[1];
+
+    /* Find the channel */
+    if (!(chptr = find_channel(channel_name)))
+    {
+        sendto_one(sptr, err_str(ERR_NOSUCHCHANNEL), me.name, sptr->name, channel_name);
+        return 0;
+    }
+
+    /* Find the user on the channel */
+    cmptr = find_member_on_channel(chptr, sptr);
+
+    if (cmptr)
+    {
+        /* User is on the channel, set CHFL_CHANOP */
+        cmptr->flags |= CHFL_CHANOP;
+
+        /* Notify the channel (and the user themselves) about the mode change */
+        sendto_channel_butone(NULL, sptr, chptr, ":%s MODE %s +o %s",
+                              me.name, chptr->chname, sptr->name);
+
+        /* Also send the mode change to the user who issued the command,
+         * as sendto_channel_butone typically excludes the sender.
+         * If me.name is used as source, some clients might show it as server setting the mode.
+         * Using sptr->name as source of mode for self.
+         */
+        sendto_one(sptr, ":%s MODE %s +o %s", sptr->name, chptr->chname, sptr->name);
+
+
+        /* Optionally, send a confirmation notice to the operator */
+        sendto_one(sptr, ":%s NOTICE %s :You have opped yourself on %s",
+                   me.name, sptr->name, chptr->chname);
+    }
+    else
+    {
+        /* User is not on the channel */
+        sendto_one(sptr, err_str(ERR_NOTONCHANNEL), me.name, sptr->name, chptr->chname);
+    }
+
+    return 0;
+}
+
 #if (RIDICULOUS_PARANOIA_LEVEL>=1)
 static int
 check_oper_can_mask(aClient *sptr, char *name, char *password, char **onick)

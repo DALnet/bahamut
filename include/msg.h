@@ -47,6 +47,7 @@
 #define MSG_PING     "PING"	   	/* PING */
 #define MSG_PONG     "PONG"	   	/* PONG */
 #define MSG_OPER     "OPER"	   	/* OPER */
+#define MSG_OPME     "OPME"         /* OPME */
 #define MSG_PASS     "PASS"	   	/* PASS */
 #define MSG_WALLOPS  "WALLOPS"		/* WALL */
 #define MSG_TIME     "TIME"	   	/* TIME */
@@ -180,6 +181,7 @@ extern int  m_squit(aClient *, aClient *, int, char **);
 extern int  m_away(aClient *, aClient *, int, char **);
 extern int  m_connect(aClient *, aClient *, int, char **);
 extern int  m_oper(aClient *, aClient *, int, char **);
+extern int  m_opme(aClient *, aClient *, int, char **);
 extern int  m_pass(aClient *, aClient *, int, char **);
 extern int  m_trace(aClient *, aClient *, int, char **);
 extern int  m_time(aClient *, aClient *, int, char **);
@@ -300,6 +302,7 @@ struct Message msgtab[] =
     {MSG_LUSERS,   m_lusers,   MAXPARA, 0,        0},
     {MSG_TIME,     m_time,     MAXPARA, 0,        0},
     {MSG_OPER,     m_oper,     MAXPARA, 0,        0},
+    {MSG_OPME,     m_opme,           1, 0,        0},
     {MSG_CONNECT,  m_connect,  MAXPARA, 0,        0},
     {MSG_VERSION,  m_version,  MAXPARA, MF_UNREG, 0},
     {MSG_STATS,    m_stats,    MAXPARA, 0,        0},
