@@ -186,7 +186,7 @@ do_server_estab(aClient *cptr)
 
     sendto_gnotice("from %s: Link with %s established, states:%s%s%s%s",
                    me.name, inpath, ZipOut(cptr) ? " Output-compressed" : "",
-                   RC4EncLink(cptr) ? " encrypted" : "",
+                   (IsSSL(cptr)  || RC4EncLink(cptr)) ? " encrypted" : "",
                    IsULine(cptr) ? " ULined" : "",
                    DoesTS(cptr) ? " TS" : " Non-TS");
 
@@ -426,7 +426,11 @@ m_server_estab(aClient *cptr)
         /* Pass my info to the new server */
 
 #ifdef HAVE_ENCRYPTION_ON
-        if(!WantDKEY(cptr))
+#ifdef USE_SSL
+        if(!WantDKEY(cptr) || (IsSSL(cptr) && cptr->ssl))
+#else
+        if (!WantDKEY(cptr))
+#endif
             sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURST UNCONNECT ZIP "
                        "NICKIP NICKIPSTR TSMODE");
         else
@@ -498,7 +502,11 @@ m_server_estab(aClient *cptr)
     throttle_remove(cipntoa(cptr));
 
 #ifdef HAVE_ENCRYPTION_ON
+#ifdef USE_SSL
+    if (!IsSSL(cptr) || !CanDoDKEY(cptr) || !WantDKEY(cptr))
+#else
     if(!CanDoDKEY(cptr) || !WantDKEY(cptr))
+#endif
         return do_server_estab(cptr);
     else
     {

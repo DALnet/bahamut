@@ -995,8 +995,12 @@ m_connect(aClient *cptr, aClient *sptr, int parc, char *parv[])
     switch (retval = connect_server(aconn, sptr, NULL))
     {
         case 0:
-            sendto_one(sptr, ":%s NOTICE %s :*** Connecting to %s.",
-                       me.name, parv[0], aconn->name);
+            if (aconn->flags & CONN_SSL) 
+                sendto_one(sptr, ":%s NOTICE %s :*** Connecting to %s (TLS).",
+                           me.name, parv[0], aconn->name);
+            else
+                sendto_one(sptr, ":%s NOTICE %s :*** Connecting to %s.",
+                           me.name, parv[0], aconn->name);
             break;
         case -1:
             sendto_one(sptr, ":%s NOTICE %s :*** Couldn't connect to %s.",
