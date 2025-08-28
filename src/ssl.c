@@ -35,7 +35,9 @@
 extern int errno;
 
 SSL_CTX *ircdssl_ctx;
+SSL_CTX *server_ssl_ctx;
 int ssl_capable = 0;
+int mydata_index = 0;
 
 int ssl_init()
 {
@@ -59,8 +61,11 @@ int ssl_init()
     SSLeay_add_ssl_algorithms();
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
     ircdssl_ctx = SSL_CTX_new(SSLv23_server_method());
+	server_ssl_ctx = SSL_CTX_new(SSLv23_client_method());
 #else
     ircdssl_ctx = SSL_CTX_new(TLS_server_method());
+	server_ssl_ctx = SSL_CTX_new(TLS_client_method());
+	SSL_CTX_set_min_proto_version(server_ssl_ctx, TLS1_2_VERSION);
 #endif
 
     if(!ircdssl_ctx)
@@ -68,6 +73,14 @@ int ssl_init()
 	ERR_print_errors_fp(stderr);
 	return 0;
     }
+
+    if(!server_ssl_ctx)
+    {
+        ERR_print_errors_fp(stderr);
+        return 0;
+    }
+
+	SSL_CTX_set_verify(serverssl_ctx, SSL_VERIFY_PEER, ssl_verify_callback);
 
     if(SSL_CTX_use_certificate_chain_file(ircdssl_ctx, IRCDSSL_CPATH) <= 0)
     {
@@ -90,6 +103,8 @@ int ssl_init()
 	SSL_CTX_free(ircdssl_ctx);
 	return 0;
     }
+
+	mydata_index = SSL_get_ex_new_index(0, "aConnn data", NULL, NULL, NULL);
 
     return 1;
 }
@@ -117,6 +132,7 @@ int ssl_rehash()
 {
     FILE *file;
 	SSL_CTX *temp_ircdssl_ctx;
+	SSL_CTX *temp_server_ssl_ctx;
 
     if(!(file = fopen(IRCDSSL_CPATH,"r")))
     {
@@ -138,8 +154,10 @@ int ssl_rehash()
 
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
     if(!(temp_ircdssl_ctx = SSL_CTX_new(SSLv23_server_method())))
+	if (!(temp_server_ssl_ctx = SSL_CTX_new(SSLv23_client_method())))
 #else
     if(!(temp_ircdssl_ctx = SSL_CTX_new(TLS_server_method())))
+	if (!(temp_server_ssl_ctx = SSL_CTX_new(TLS_client_method())))
 #endif
     {
 		abort_ssl_rehash(1);
@@ -185,10 +203,38 @@ int ssl_rehash()
 
 	ircdssl_ctx = temp_ircdssl_ctx;
 
+	if (server_ssl_ctx)
+	{
+		SSL_CTX_free(server_ssl_ctx);
+	}
+	server_ssl_ctx = temp_server_ssl_ctx;
+	SSL_CTX_set_min_proto_version(server_ssl_ctx, TLS1_2_VERSION);
+	SSL_CTX_set_verify(server_ssl_ctx, SSL_VERIFY_PEER, ssl_verify_callback);
+
     return 1;
 }
 
 static int fatal_ssl_error(int, int, aClient *);
+
+int safe_ssl_connect(aClient *acptr, int fd)
+{
+	int ssl_err;
+	if ((ssl_err = SSL_connect(acptr->ssl)) <= 0)
+	{
+		switch (ssl_err = SSL_get_error(acptr->ssl, ssl_err))
+		{
+			case SSL_ERROR_WANT_READ:
+			case SSL_ERROR_WANT_WRITE:
+				return 1;
+			default:
+			 return fatal_ssl_error(ssl_err, SAFE_SSL_CONNECT, acptr);
+		}
+
+		return -1; // not reached
+	}
+
+	return 1;
+}
 
 int safe_ssl_read(aClient *acptr, void *buf, int sz)
 {
@@ -303,6 +349,9 @@ static int fatal_ssl_error(int ssl_error, int where, aClient *sptr)
 	case SAFE_SSL_ACCEPT:
 	    ssl_func = "SSL_accept()";
 	    break;
+	case SAFE_SSL_CONNECT:
+	    ssl_func = "SSL_connect()";
+	    break;
 	default:
 	    ssl_func = "undefined SSL func [this is a bug] report to coders@dal.net";
     }
@@ -371,5 +420,54 @@ static int fatal_ssl_error(int ssl_error, int where, aClient *sptr)
     sptr->sockerr = IRCERR_SSL;
     sptr->flags |= FLAGS_DEADSOCKET;
     return -1;
+}
+
+int ssl_verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
+{
+	char buf[256];
+	X509 *cert;
+	SSL *ssl;
+	int err, depth;
+	aConnect *conn;
+
+	ssl = X509_STORE_CTX_get_ex_data(ctx, SSL_get_ex_data_X509_STORE_CTX_idx());
+	conn = SSL_get_ex_data(ssl, mydata_index);
+	cert = X509_STORE_CTX_get_current_cert(ctx);
+	err = X509_STORE_CTX_get_error(ctx);
+	depth = X509_STORE_CTX_get_error_depth(ctx);
+
+	X509_NAME_oneline(X509_get_subject_name(cert), buf, 256);
+	sendto_realops_lev(DEBUG_LEV, "Got subject name [%d]: %s", depth, buf);
+
+	if (!preverify_ok && err != X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN)
+	{
+		sendto_realops_lev(DEBUG_LEV, "SSL: verify error:num=%d:%s:depth=%d:%s\n", err,
+			X509_verify_cert_error_string(err), depth, buf);
+			return preverify_ok;
+	} else if (depth == 0) {
+		X509_NAME *subj = X509_get_subject_name(cert);
+		if (!subj) return preverify_ok;
+		X509_NAME_ENTRY *e = X509_NAME_get_entry(subj, 5);
+		if (!e) return preverify_ok;
+		ASN1_STRING *d = X509_NAME_ENTRY_get_data(e);
+		if (!d) return preverify_ok;
+		char *cn = ASN1_STRING_data(d);
+		if (!cn) return preverify_ok;
+
+		if (!mycmp(cn, conn->name))
+		{
+			sendto_realops_lev(DEBUG_LEV, "SSL: Valid certificate cn: %s, name: %s", cn, conn->name);
+			 return 1; 
+		}
+		else 
+		{
+			sendto_realops_lev(DEBUG_LEV, "SSL: Subject and connection name mismatch %s : %s", cn, conn->name);
+			return preverify_ok;
+		}
+	}
+	else
+	{
+		return 1;
+	}
 }
 #endif
