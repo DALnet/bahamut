@@ -995,7 +995,7 @@ m_connect(aClient *cptr, aClient *sptr, int parc, char *parv[])
     switch (retval = connect_server(aconn, sptr, NULL))
     {
         case 0:
-            if (aconn->flags & CONN_SSL) 
+            if (aconn->flags & CONN_TLS) 
                 sendto_one(sptr, ":%s NOTICE %s :*** Connecting to %s (TLS).",
                            me.name, parv[0], aconn->name);
             else

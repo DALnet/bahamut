@@ -1966,7 +1966,7 @@ int connect_server(aConnect *aconn, aClient * by, struct hostent *hp)
     }
     
 #ifdef USE_SSL
-    if (aconn->flags & CONN_SSL)
+    if (aconn->flags & CONN_TLS)
     {
         extern SSL_CTX *server_ssl_ctx;
         cptr->ssl = NULL;
