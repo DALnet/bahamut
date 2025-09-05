@@ -869,7 +869,7 @@ int completed_connection(aClient * cptr)
         
         switch (verify_result)
         {
-            case X509_V_SELF_SIGNED_CERT_IN_CHAIN:
+            case X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN:
             case X509_V_OK:
                 break;
             default:

@@ -28,9 +28,10 @@
 #ifdef USE_SSL
 
 
-#define SAFE_SSL_READ	1
-#define SAFE_SSL_WRITE	2
-#define SAFE_SSL_ACCEPT	3
+#define SAFE_SSL_READ	 1
+#define SAFE_SSL_WRITE	 2
+#define SAFE_SSL_ACCEPT	 3
+#define SAFE_SSL_CONNECT 4
 
 extern int errno;
 
@@ -80,7 +81,7 @@ int ssl_init()
         return 0;
     }
 
-	SSL_CTX_set_verify(serverssl_ctx, SSL_VERIFY_PEER, ssl_verify_callback);
+	SSL_CTX_set_verify(server_ssl_ctx, SSL_VERIFY_PEER, ssl_verify_callback);
 
     if(SSL_CTX_use_certificate_chain_file(ircdssl_ctx, IRCDSSL_CPATH) <= 0)
     {
