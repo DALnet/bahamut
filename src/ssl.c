@@ -424,7 +424,6 @@ static int fatal_ssl_error(int ssl_error, int where, aClient *sptr)
 
 int ssl_verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
 {
-	char buf[256];
 	X509 *cert;
 	SSL *ssl;
 	int err, depth;
@@ -436,9 +435,6 @@ int ssl_verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
 	err = X509_STORE_CTX_get_error(ctx);
 	depth = X509_STORE_CTX_get_error_depth(ctx);
 
-	X509_NAME_oneline(X509_get_subject_name(cert), buf, 256);
-	sendto_realops_lev(DEBUG_LEV, "Got subject name [%d]: %s", depth, buf);
-
 	if (!preverify_ok && err != X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN)
 	{
 		sendto_realops_lev(DEBUG_LEV, "SSL: verify error:num=%d:%s:depth=%d:%s\n", err,
@@ -446,7 +442,8 @@ int ssl_verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
 			return preverify_ok;
 	} else if (depth == 0) {
 		int lastpos = -1;
-		while ((lastpos = X509_NAME_get_index_by_NID(subj, NID_commonName, lastpos)) >= 0) 
+		X509_NAME *subject_name = X509_get_subject_name(cert);
+		while ((lastpos = X509_NAME_get_index_by_NID(subject_name, NID_commonName, lastpos)) >= 0) 
 		{
 			X509_NAME_ENTRY *cn_entry = X509_NAME_get_entry(subject_name, lastpos);
 			if (cn_entry)
@@ -471,10 +468,12 @@ int ssl_verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
 				}
 			}
 		}
+		sendto_realops_lev(DEBUG_LEV, "SSL: No common name found in certificate");
+		return preverify_ok;
 	}
 	else
 	{
-		return 1;
+		return preverify_ok;
 	}
 }
 #endif
