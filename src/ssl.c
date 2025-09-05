@@ -231,7 +231,6 @@ int safe_ssl_connect(aClient *acptr, int fd)
 			 return fatal_ssl_error(ssl_err, SAFE_SSL_CONNECT, acptr);
 		}
 
-		return -1; // not reached
 	}
 
 	return 1;
