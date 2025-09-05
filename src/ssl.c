@@ -445,24 +445,31 @@ int ssl_verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
 			X509_verify_cert_error_string(err), depth, buf);
 			return preverify_ok;
 	} else if (depth == 0) {
-		X509_NAME *subj = X509_get_subject_name(cert);
-		if (!subj) return preverify_ok;
-		X509_NAME_ENTRY *e = X509_NAME_get_entry(subj, 5);
-		if (!e) return preverify_ok;
-		ASN1_STRING *d = X509_NAME_ENTRY_get_data(e);
-		if (!d) return preverify_ok;
-		const unsigned char *cn = ASN1_STRING_get0_data(d);
-		if (!cn) return preverify_ok;
+		int lastpos = -1;
+		while ((lastpos = X509_NAME_get_index_by_NID(subj, NID_commonName, lastpos)) >= 0) 
+		{
+			X509_NAME_ENTRY *cn_entry = X509_NAME_get_entry(subject_name, lastpos);
+			if (cn_entry)
+			{
+				ASN1_STRING *cn_data = X509_NAME_ENTRY_get_data(cn_entry);
+				if (cn_data)
+				{
+					const char *common_name_str = (const char *)ASN1_STRING_data(cn_data);
 
-		if (!mycmp((const char *)cn, conn->name))
-		{
-			sendto_realops_lev(DEBUG_LEV, "SSL: Valid certificate cn: %s, name: %s", cn, conn->name);
-			return 1; 
-		}
-		else 
-		{
-			sendto_realops_lev(DEBUG_LEV, "SSL: Subject and connection name mismatch %s : %s", cn, conn->name);
-			return preverify_ok;
+					if (!common_name_str) return preverify_ok;
+
+					if (!mycmp(common_name_str, conn->name))
+					{
+						sendto_realops_lev(DEBUG_LEV, "SSL: Valid certificate cn: %s, name: %s", common_name_str, conn->name);
+						return 1;
+					}
+					else
+					{
+						sendto_realops_lev(DEBUG_LEV, "SSL: Subject and connection name mismatch %s : %s", common_name_str, conn->name);
+						return preverify_ok;
+					}
+				}
+			}
 		}
 	}
 	else
