@@ -437,9 +437,10 @@ int ssl_verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
 
 	if (!preverify_ok && err != X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN)
 	{
+		char buf[256];
 		sendto_realops_lev(DEBUG_LEV, "SSL: verify error:num=%d:%s:depth=%d:%s\n", err,
-			X509_verify_cert_error_string(err), depth, buf);
-			return preverify_ok;
+		X509_verify_cert_error_string(err), depth, buf);
+		return preverify_ok;
 	} else if (depth == 0) {
 		int lastpos = -1;
 		X509_NAME *subject_name = X509_get_subject_name(cert);
@@ -451,7 +452,7 @@ int ssl_verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
 				ASN1_STRING *cn_data = X509_NAME_ENTRY_get_data(cn_entry);
 				if (cn_data)
 				{
-					const char *common_name_str = (const char *)ASN1_STRING_data(cn_data);
+					const char *common_name_str = (const char *)ASN1_STRING_get0_data(cn_data);
 
 					if (!common_name_str) return preverify_ok;
 
