@@ -62,11 +62,11 @@ int ssl_init()
     SSLeay_add_ssl_algorithms();
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
     ircdssl_ctx = SSL_CTX_new(SSLv23_server_method());
-	server_ssl_ctx = SSL_CTX_new(SSLv23_client_method());
+    server_ssl_ctx = SSL_CTX_new(SSLv23_client_method());
 #else
     ircdssl_ctx = SSL_CTX_new(TLS_server_method());
-	server_ssl_ctx = SSL_CTX_new(TLS_client_method());
-	SSL_CTX_set_min_proto_version(server_ssl_ctx, TLS1_2_VERSION);
+    server_ssl_ctx = SSL_CTX_new(TLS_client_method());
+    SSL_CTX_set_min_proto_version(server_ssl_ctx, TLS1_2_VERSION);
 #endif
 
     if(!ircdssl_ctx)
@@ -81,7 +81,7 @@ int ssl_init()
         return 0;
     }
 
-	SSL_CTX_set_verify(server_ssl_ctx, SSL_VERIFY_PEER, ssl_verify_callback);
+    SSL_CTX_set_verify(server_ssl_ctx, SSL_VERIFY_PEER, ssl_verify_callback);
 
     if(SSL_CTX_use_certificate_chain_file(ircdssl_ctx, IRCDSSL_CPATH) <= 0)
     {
@@ -105,7 +105,7 @@ int ssl_init()
 	return 0;
     }
 
-	mydata_index = SSL_get_ex_new_index(0, "aConn data", NULL, NULL, NULL);
+    mydata_index = SSL_get_ex_new_index(0, "aConn data", NULL, NULL, NULL);
 
     return 1;
 }
@@ -457,7 +457,7 @@ int ssl_verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
 		if (!mycmp((const char *)cn, conn->name))
 		{
 			sendto_realops_lev(DEBUG_LEV, "SSL: Valid certificate cn: %s, name: %s", cn, conn->name);
-			 return 1; 
+			return 1; 
 		}
 		else 
 		{
