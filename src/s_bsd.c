@@ -1982,7 +1982,6 @@ int connect_server(aConnect *aconn, aClient * by, struct hostent *hp)
 
         SetSSL(cptr);
         SSL_set_fd(cptr->ssl, cptr->fd);
-        int ret = 0;
 
         SSL_set_ex_data(cptr->ssl, mydata_index, aconn);
 
