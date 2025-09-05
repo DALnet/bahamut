@@ -154,11 +154,11 @@ int ssl_rehash()
     fclose(file);
 
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
-    if(!(temp_ircdssl_ctx = SSL_CTX_new(SSLv23_server_method())))
-	if (!(temp_server_ssl_ctx = SSL_CTX_new(SSLv23_client_method())))
+    if(!(temp_ircdssl_ctx = SSL_CTX_new(SSLv23_server_method())) ||
+       !(temp_server_ssl_ctx = SSL_CTX_new(SSLv23_client_method())))
 #else
-    if(!(temp_ircdssl_ctx = SSL_CTX_new(TLS_server_method())))
-	if (!(temp_server_ssl_ctx = SSL_CTX_new(TLS_client_method())))
+    if(!(temp_ircdssl_ctx = SSL_CTX_new(TLS_server_method())) ||
+       !(temp_server_ssl_ctx = SSL_CTX_new(TLS_client_method())))
 #endif
     {
 		abort_ssl_rehash(1);
@@ -451,10 +451,10 @@ int ssl_verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
 		if (!e) return preverify_ok;
 		ASN1_STRING *d = X509_NAME_ENTRY_get_data(e);
 		if (!d) return preverify_ok;
-		char *cn = ASN1_STRING_data(d);
+		const unsigned char *cn = ASN1_STRING_get0_data(d);
 		if (!cn) return preverify_ok;
 
-		if (!mycmp(cn, conn->name))
+		if (!mycmp((const char *)cn, conn->name))
 		{
 			sendto_realops_lev(DEBUG_LEV, "SSL: Valid certificate cn: %s, name: %s", cn, conn->name);
 			 return 1; 
