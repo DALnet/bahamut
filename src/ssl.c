@@ -105,7 +105,7 @@ int ssl_init()
 	return 0;
     }
 
-	mydata_index = SSL_get_ex_new_index(0, "aConnn data", NULL, NULL, NULL);
+	mydata_index = SSL_get_ex_new_index(0, "aConn data", NULL, NULL, NULL);
 
     return 1;
 }
