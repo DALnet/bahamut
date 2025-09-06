@@ -159,8 +159,10 @@ int ssl_rehash()
 #else
     if(!(temp_ircdssl_ctx = SSL_CTX_new(TLS_server_method())) ||
        !(temp_server_ssl_ctx = SSL_CTX_new(TLS_client_method())))
-	   SSL_CTX_set_min_proto_version(temp_server_ssl_ctx, TLS1_2_VERSION);
-	   SSL_CTX_set_verify(temp_server_ssl_ctx, SSL_VERIFY_PEER, ssl_verify_callback);
+    {
+        SSL_CTX_set_min_proto_version(temp_server_ssl_ctx, TLS1_2_VERSION);
+        SSL_CTX_set_verify(temp_server_ssl_ctx, SSL_VERIFY_PEER, ssl_verify_callback);
+    }
 #endif
     {
 		abort_ssl_rehash(1);
