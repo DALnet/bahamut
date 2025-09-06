@@ -865,7 +865,6 @@ int completed_connection(aClient * cptr)
     if (IsSSL(cptr) && cptr->ssl)
     {
         long verify_result = SSL_get_verify_result(cptr->ssl);
-        sendto_realops_lev(DEBUG_LEV, "SSL verification result: %ld [%s]", verify_result, cptr->name);
         
         switch (verify_result)
         {
