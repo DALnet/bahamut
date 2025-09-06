@@ -165,6 +165,7 @@ int ssl_rehash()
 		SSL_CTX_set_verify(temp_server_ssl_ctx, SSL_VERIFY_PEER, ssl_verify_callback);
 	}
 #endif
+    if (!temp_ircdssl_ctx || !temp_server_ssl_ctx)
     {
 		abort_ssl_rehash(1);
 
