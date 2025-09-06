@@ -440,9 +440,8 @@ int ssl_verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
 	if (!preverify_ok && err != X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN)
 	{
 		char buf[256];
-		X509_verify_cert_error_string(err), depth, buf);
-		sendto_realops_lev(DEBUG_LEV, "SSL: verify error:num=%d:%s:depth=%d:%s\n", err,
-		
+		sendto_realops_lev(DEBUG_LEV, "SSL: verify error:num=%d:%s:depth=%d\n", err,
+			X509_verify_cert_error_string(err), depth);
 		return preverify_ok;
 	} else if (depth == 0) {
 		int lastpos = -1;
