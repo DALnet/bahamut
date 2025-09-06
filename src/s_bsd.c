@@ -1985,7 +1985,7 @@ int connect_server(aConnect *aconn, aClient * by, struct hostent *hp)
 
         SSL_set_ex_data(cptr->ssl, mydata_index, aconn);
 
-        if (!safe_ssl_connect(cptr, cptr->fd))
+        if (!safe_ssl_connect(cptr))
         {
             sendto_realops_lev(DEBUG_LEV, "SSL_connect failed for %s", cptr->name);
             SSL_set_shutdown(cptr->ssl, SSL_RECEIVED_SHUTDOWN);
