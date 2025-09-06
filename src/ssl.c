@@ -154,15 +154,16 @@ int ssl_rehash()
     fclose(file);
 
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
-    if(!(temp_ircdssl_ctx = SSL_CTX_new(SSLv23_server_method())) ||
-       !(temp_server_ssl_ctx = SSL_CTX_new(SSLv23_client_method())))
+    temp_ircdssl_ctx = SSL_CTX_new(SSLv23_server_method());
+    temp_server_ssl_ctx = SSL_CTX_new(SSLv23_client_method());
 #else
-    if(!(temp_ircdssl_ctx = SSL_CTX_new(TLS_server_method())) ||
-       !(temp_server_ssl_ctx = SSL_CTX_new(TLS_client_method())))
-    {
-        SSL_CTX_set_min_proto_version(temp_server_ssl_ctx, TLS1_2_VERSION);
-        SSL_CTX_set_verify(temp_server_ssl_ctx, SSL_VERIFY_PEER, ssl_verify_callback);
-    }
+    temp_ircdssl_ctx = SSL_CTX_new(TLS_server_method());
+    temp_server_ssl_ctx = SSL_CTX_new(TLS_client_method());
+	if (temp_server_ssl_ctx)
+	{
+		SSL_CTX_set_min_proto_version(temp_server_ssl_ctx, TLS1_2_VERSION);
+		SSL_CTX_set_verify(temp_server_ssl_ctx, SSL_VERIFY_PEER, ssl_verify_callback);
+	}
 #endif
     {
 		abort_ssl_rehash(1);
@@ -439,7 +440,6 @@ int ssl_verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
 
 	if (!preverify_ok && err != X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN)
 	{
-		char buf[256];
 		sendto_realops_lev(DEBUG_LEV, "SSL: verify error:num=%d:%s:depth=%d\n", err,
 			X509_verify_cert_error_string(err), depth);
 		return preverify_ok;
