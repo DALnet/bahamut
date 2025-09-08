@@ -439,10 +439,12 @@ int ssl_verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
 	err = X509_STORE_CTX_get_error(ctx);
 	depth = X509_STORE_CTX_get_error_depth(ctx);
 
-	if (!preverify_ok && err != X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN)
+	if (!preverify_ok && (err != X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN
+	    || err != X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT))
 	{
 		sendto_realops_lev(DEBUG_LEV, "SSL: verify error:num=%d:%s:depth=%d\n", err,
 			X509_verify_cert_error_string(err), depth);
+		sendto_realops("Could not connect to %s using TLS: %s", conn->name, X509_verify_cert_error_string(err));
 		return preverify_ok;
 	} else if (depth == 0) {
 		int lastpos = -1;
@@ -466,12 +468,14 @@ int ssl_verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
 					}
 					else
 					{
+						sendto_realops("Could not connect to %s using TLS: Subject and connection name mismatch", conn->name);
 						sendto_realops_lev(DEBUG_LEV, "SSL: Subject and connection name mismatch %s : %s", common_name_str, conn->name);
 						return preverify_ok;
 					}
 				}
 			}
 		}
+		sendto_realops("Could not connect to %s using TLS: No common name found in certificate", conn->name);
 		sendto_realops_lev(DEBUG_LEV, "SSL: No common name found in certificate");
 		return preverify_ok;
 	}
