@@ -440,7 +440,7 @@ int ssl_verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
 	depth = X509_STORE_CTX_get_error_depth(ctx);
 
 	if (!preverify_ok && (err != X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN
-	    || err != X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT))
+	    && err != X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT))
 	{
 		sendto_realops_lev(DEBUG_LEV, "SSL: verify error:num=%d:%s:depth=%d\n", err,
 			X509_verify_cert_error_string(err), depth);
@@ -464,7 +464,7 @@ int ssl_verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
 					if (!mycmp(common_name_str, conn->name))
 					{
 						sendto_realops_lev(DEBUG_LEV, "SSL: Valid certificate cn: %s, name: %s", common_name_str, conn->name);
-						return 1;
+						return X509_V_OK;
 					}
 					else
 					{
