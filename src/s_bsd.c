@@ -1463,6 +1463,7 @@ aClient *add_connection(aListener *lptr, int fd)
             SSL_set_shutdown(acptr->ssl, SSL_RECEIVED_SHUTDOWN);
             ssl_smart_shutdown(acptr->ssl);
             SSL_free(acptr->ssl);
+            acptr->ssl = NULL;
             ircstp->is_ref++;
             acptr->fd = -2;
             free_client(acptr);
@@ -1991,6 +1992,7 @@ int connect_server(aConnect *aconn, aClient * by, struct hostent *hp)
             SSL_set_shutdown(cptr->ssl, SSL_RECEIVED_SHUTDOWN);
             ssl_smart_shutdown(cptr->ssl);
             SSL_free(cptr->ssl);
+            cptr->ssl = NULL;
             close(cptr->fd);
             cptr->fd = -2;
             free_client(cptr);
