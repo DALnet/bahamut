@@ -1990,6 +1990,7 @@ int connect_server(aConnect *aconn, aClient * by, struct hostent *hp)
             sendto_realops_lev(DEBUG_LEV, "SSL_connect failed for %s", cptr->name);
             SSL_set_shutdown(cptr->ssl, SSL_RECEIVED_SHUTDOWN);
             ssl_smart_shutdown(cptr->ssl);
+            SSL_free(cptr->ssl);
             close(cptr->fd);
             cptr->fd = -2;
             free_client(cptr);
