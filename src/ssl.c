@@ -464,7 +464,7 @@ int ssl_verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
 					if (!mycmp(common_name_str, conn->name))
 					{
 						sendto_realops_lev(DEBUG_LEV, "SSL: Valid certificate cn: %s, name: %s", common_name_str, conn->name);
-						return X509_V_OK;
+						return 1;
 					}
 					else
 					{
@@ -477,11 +477,8 @@ int ssl_verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
 		}
 		sendto_realops("Could not connect to %s using TLS: No common name found in certificate", conn->name);
 		sendto_realops_lev(DEBUG_LEV, "SSL: No common name found in certificate");
-		return preverify_ok;
 	}
-	else
-	{
-		return preverify_ok;
-	}
+
+	return preverify_ok;
 }
 #endif
