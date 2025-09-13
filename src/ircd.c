@@ -846,7 +846,7 @@ main(int argc, char *argv[])
 
     initclass();
 
-    if(initconf(configfile) == -1)
+    if(initconf(configfile, NULL) == -1)
     {
         printf("Server not started\n");
         exit(-1);

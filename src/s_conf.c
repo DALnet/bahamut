@@ -2396,7 +2396,7 @@ int rehash(aClient *cptr, aClient *sptr, int sig)
     initclass();
     new_confopts = 0;
 
-    if(initconf(configfile) == -1)
+    if(initconf(configfile, sptr) == -1)
     {
         if (sptr->name == me.name)
             sendto_realops("Rehash Aborted");

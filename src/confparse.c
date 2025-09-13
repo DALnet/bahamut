@@ -95,14 +95,17 @@ free_vars(cVar *vars[])
 static char *current_file = "unknown";
 
 void
-confparse_error(char *problem, int line)
+confparse_error(char *problem, int line, aClient *sptr)
 {
     if(!forked)
         printf("ERROR:  %s near line %d of %s\n", problem, line, current_file);
     else
     {
-        sendto_realops("Conf Error:  %s near line %d of %s", problem, line,
-                        current_file);
+		if (sptr->name == me.name)
+			sendto_realops("Conf Error:  %s near line %d of %s", problem, line, current_file);
+		else
+			sendto_one(sptr, ":%s NOTICE %s :Conf Error:  %s near line %d of %s", me.name, sptr->name, problem, line, current_file);
+
 #ifdef USE_SYSLOG
         syslog(LOG_ERR, "Conf Error:  %s near line %d of %s", problem, line,
                          current_file);
@@ -161,7 +164,7 @@ check_quote(char *cur)
 #define MAX_VALUES 128  /* maximum values per block */
 
 static char *
-parse_block(tConf *block, char *cur, FILE *file, int *lnum)
+parse_block(tConf *block, char *cur, FILE *file, int *lnum, aClient *sptr)
 {
     char *tok, *var, *var2;
     char line[LINE_MAX];
@@ -187,7 +190,7 @@ parse_block(tConf *block, char *cur, FILE *file, int *lnum)
             {
                 if(*cur != ';')
                 {
-                    confparse_error("Missing semicolon", *lnum);
+                    confparse_error("Missing semicolon", *lnum, sptr);
                     free_vars(vars);
                     return NULL;
                 }
@@ -202,7 +205,7 @@ parse_block(tConf *block, char *cur, FILE *file, int *lnum)
             {
                 if(*cur != ';')
                 {
-                    confparse_error("Missing block end semicolon", *lnum);
+                    confparse_error("Missing block end semicolon", *lnum, sptr);
                     free_vars(vars);
                     return NULL;
                 }
@@ -233,7 +236,7 @@ parse_block(tConf *block, char *cur, FILE *file, int *lnum)
                     continue;
                 if(*cur != ';')
                 {
-                    confparse_error("Missing block end semicolon", *lnum);
+                    confparse_error("Missing block end semicolon", *lnum, sptr);
                     free_vars(vars);
                     return NULL;
                 }
@@ -269,7 +272,7 @@ parse_block(tConf *block, char *cur, FILE *file, int *lnum)
                     cur++;
                 if(BadPtr(cur))
                 {
-                    confparse_error("Cant find closequote", *lnum);
+                    confparse_error("Cant find closequote", *lnum, sptr);
                     free_vars(vars);
                     return NULL;
                 }
@@ -293,7 +296,7 @@ parse_block(tConf *block, char *cur, FILE *file, int *lnum)
                     }
                     else if(vars[vnum]->loaded == 2)
                     {
-                        confparse_error("Junk after value", *lnum);
+                        confparse_error("Junk after value", *lnum, sptr);
                         free_vars(vars);
                         return NULL;
                     }
@@ -313,7 +316,7 @@ parse_block(tConf *block, char *cur, FILE *file, int *lnum)
             vars[vnum]->loaded = 3;
             vnum++;
         }
-        confparse_error("Unexpected EOF: Syntax Error", tlnum);
+        confparse_error("Unexpected EOF: Syntax Error", tlnum, sptr);
         free_vars(vars);
         return NULL;
     }
@@ -331,7 +334,7 @@ parse_block(tConf *block, char *cur, FILE *file, int *lnum)
              */
             if(*cur != ';')
             {
-                confparse_error("Missing semicolon ", *lnum);
+                confparse_error("Missing semicolon ", *lnum, sptr);
                 free_vars(vars);
                 return NULL;
             }
@@ -356,7 +359,7 @@ parse_block(tConf *block, char *cur, FILE *file, int *lnum)
              */
             if(*cur != ';')
             {
-                confparse_error("Missing block end semicolon", *lnum);
+                confparse_error("Missing block end semicolon", *lnum, sptr);
                 free_vars(vars);
                 return NULL;
             }
@@ -383,13 +386,13 @@ parse_block(tConf *block, char *cur, FILE *file, int *lnum)
              */
             if(*cur != '{')
             {
-                confparse_error("Junk after nested block token", *lnum);
+                confparse_error("Junk after nested block token", *lnum, sptr);
                 free_vars(vars);
                 return NULL;
             }
             cur++;
             cur = check_quote(cur);
-            cur = parse_block(b2, cur, file, lnum);
+            cur = parse_block(b2, cur, file, lnum, sptr);
             b2 = NULL;
             continue;
         }
@@ -415,7 +418,7 @@ parse_block(tConf *block, char *cur, FILE *file, int *lnum)
                     continue;
                 if(*cur != ';')
                 {
-                    confparse_error("Missing block end semicolon", *lnum);
+                    confparse_error("Missing block end semicolon", *lnum, sptr);
                     free_vars(vars);
                     return NULL;
                 }
@@ -441,7 +444,7 @@ parse_block(tConf *block, char *cur, FILE *file, int *lnum)
                 cur++;
             if(BadPtr(cur))
             {
-                confparse_error("Unterminated token", *lnum);
+                confparse_error("Unterminated token", *lnum, sptr);
                 free_vars(vars);
                 return NULL;
             }
@@ -470,13 +473,13 @@ parse_block(tConf *block, char *cur, FILE *file, int *lnum)
                         continue;
                     if(*cur != '{')
                     {
-                        confparse_error("Junk after nested block name", *lnum);
+                        confparse_error("Junk after nested block name", *lnum, sptr);
                         free_vars(vars);
                         return NULL;
                     }
                     cur++;
                     cur = check_quote(cur);
-                    cur = parse_block(b2, cur, file, lnum);
+                    cur = parse_block(b2, cur, file, lnum, sptr);
                     if(!cur)
                     {
                         free_vars(vars);
@@ -492,7 +495,7 @@ parse_block(tConf *block, char *cur, FILE *file, int *lnum)
                     break;
             if(!item->tok)
             {
-                confparse_error("Unknown token", *lnum);
+                confparse_error("Unknown token", *lnum, sptr);
                 free_vars(vars);
                 return NULL;
             }
@@ -543,7 +546,7 @@ parse_block(tConf *block, char *cur, FILE *file, int *lnum)
                 cur++;
             if(BadPtr(cur))
             {
-                confparse_error("Unterminated quote", *lnum);
+                confparse_error("Unterminated quote", *lnum, sptr);
                 free_vars(vars);
                 return NULL;
             }
@@ -587,7 +590,7 @@ parse_block(tConf *block, char *cur, FILE *file, int *lnum)
                     var++;
                 else
                 {
-                    confparse_error("Expecting integer value", *lnum);
+                    confparse_error("Expecting integer value", *lnum, sptr);
                     free_vars(vars);
                     return NULL;
                 }
@@ -634,17 +637,17 @@ parse_block(tConf *block, char *cur, FILE *file, int *lnum)
             item = NULL;
             continue;
         }
-        confparse_error("Unexpected EOF:  Syntax Error", tlnum);
+        confparse_error("Unexpected EOF:  Syntax Error", tlnum, sptr);
         free_vars(vars);
         return NULL;
     }
-    confparse_error("Unexpected EOF:  Syntax Error", tlnum);
+    confparse_error("Unexpected EOF:  Syntax Error", tlnum, sptr);
     free_vars(vars);
     return NULL;
 }
             
 int
-initconf(char *filename)
+initconf(char *filename, aClient *sptr)
 {
     int lnum = 0, blnum = 0, clear = 0;
     char line[LINE_MAX];
@@ -696,16 +699,16 @@ jmp_including:
 
                 if (!*tok)
                 {
-                    confparse_error("Bad include filename", lnum);
+                    confparse_error("Bad include filename", lnum, sptr);
                     fclose(file);
                     return -1;
                 }
 
                 /* parse new file */
-                if(initconf(tok) == -1)
+                if(initconf(tok, sptr) == -1)
                 {
                     current_file = filename;
-                    confparse_error("while processing include directive",lnum);
+                    confparse_error("while processing include directive",lnum, sptr);
                     fclose(file);
                     return -1;
                 }
@@ -721,7 +724,7 @@ jmp_including:
             {
                 if (*cur != ';')
                 {
-                    confparse_error("Missing semicolon", lnum);
+                    confparse_error("Missing semicolon", lnum, sptr);
                     fclose(file);
                     return -1;
                 }
@@ -748,7 +751,7 @@ jmp_including:
             {
                 if(clear)
                 {
-                    confparse_error("Unexpected opening bracket", lnum);
+                    confparse_error("Unexpected opening bracket", lnum, sptr);
                     fclose(file);
                     return -1;
                 }
@@ -764,7 +767,7 @@ jmp_including:
                     break;
             if(!block->tok)
             {
-                confparse_error("Unknown block type", lnum);
+                confparse_error("Unknown block type", lnum, sptr);
                 fclose(file);
                 return -1;
             }
@@ -777,11 +780,11 @@ jmp_including:
             cur++;
         else
         {
-            confparse_error("Junk after block name", lnum);
+            confparse_error("Junk after block name", lnum, sptr);
             fclose(file);
             return -1;
         }
-        if((cur = parse_block(block, cur, file, &lnum)) == NULL)
+        if((cur = parse_block(block, cur, file, &lnum, sptr)) == NULL)
         {
             fclose(file);
             return -1;
@@ -792,7 +795,7 @@ jmp_including:
     }
     if(clear)
     {
-        confparse_error("Unexpected EOF:  Syntax error", blnum);
+        confparse_error("Unexpected EOF:  Syntax error", blnum, sptr);
         fclose(file);
         return -1;
     }
