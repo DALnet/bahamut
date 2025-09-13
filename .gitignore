@@ -19,6 +19,7 @@
 #
 !.gitignore
 Makefile
+ltmain.sh
 config.log
 config.guess
 config.sub
