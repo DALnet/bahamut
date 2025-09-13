@@ -253,7 +253,7 @@ typedef struct SServicesTag ServicesTag;
 #define CAPAB_NOQUIT  0x0040 /* noquit support */
 #endif
 #define CAPAB_NICKIPSTR 0x0080 /* Nick IP as a string support */
-#define CAPAB_DOTLS     0x0100 /* server supports TL encryption */
+#define CAPAB_DOTLS     0x0100 /* server supports TLS encryption */
 
 
 #define SetDKEY(x)	((x)->capabilities |= CAPAB_DKEY)
