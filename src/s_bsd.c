@@ -895,9 +895,15 @@ int completed_connection(aClient * cptr)
 
     /* pass on our capabilities to the server we /connect'd */
 #ifdef HAVE_ENCRYPTION_ON
-    if(!(aconn->flags & CONN_DKEY) || (IsSSL(cptr) && cptr->ssl))
+    if(!(aconn->flags & CONN_DKEY) && !(aconn->flags & CONN_TLS))
+    {
         sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURST UNCONNECT ZIP"
                          " NICKIP NICKIPSTR TSMODE");
+    } else if (aconn->flags & CONN_TLS)
+    {
+        sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURST UNCONNECT TLS"
+                         " ZIP NICKIP NICKIPSTR TSMODE");
+    }
     else
     {
         sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURST UNCONNECT DKEY"

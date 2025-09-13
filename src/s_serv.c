@@ -2510,6 +2510,8 @@ m_capab(aClient *cptr, aClient *sptr, int parc, char *parv[])
             SetUnconnect(cptr);
         else if (strcmp(parv[i], "DKEY") == 0)
             SetDKEY(cptr);
+        else if (strcmp(parv[i], "TLS") == 0)
+            SetTLS(cptr);
         else if (strcmp(parv[i], "ZIP") == 0)
             SetZipCapable(cptr);
 #ifdef NOQUIT
