@@ -418,6 +418,8 @@ m_server_estab(aClient *cptr)
         SetZipCapable(cptr);
     if((aconn->flags & CONN_DKEY))
         SetWantDKEY(cptr);
+    if((aconn->flags & CONN_TLS))
+        SetWantTLS(cptr);
     if (IsUnknown(cptr))
     {
         if (aconn->cpasswd[0])
@@ -426,19 +428,23 @@ m_server_estab(aClient *cptr)
         /* Pass my info to the new server */
 
 #ifdef HAVE_ENCRYPTION_ON
-#ifdef USE_SSL
-        if(!WantDKEY(cptr) || (IsSSL(cptr) && cptr->ssl))
-#else
-        if (!WantDKEY(cptr))
-#endif
-            sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURST UNCONNECT ZIP "
-                       "NICKIP NICKIPSTR TSMODE");
-        else
+        if(WantDKEY(cptr))
+        {
             sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURST UNCONNECT DKEY "
                        "ZIP NICKIP NICKIPSTR TSMODE");
+        } else if (WantTLS(cptr))
+        {
+            sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURST UNCONNECT TLS "
+                       "ZIP NICKIP NICKIPSTR TSMODE");
+        }
+        else 
+        {
+            sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURST UNCONNECT ZIP NICKIP NICKIPSTR TSMODE");
+        }
 #else
         sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURST UNCONNECT ZIP NICKIP NICKIPSTR TSMODE");
 #endif
+
 
         sendto_one(cptr, "SERVER %s 1 :%s",
                    my_name_for_link(me.name, aconn),
@@ -502,11 +508,7 @@ m_server_estab(aClient *cptr)
     throttle_remove(cipntoa(cptr));
 
 #ifdef HAVE_ENCRYPTION_ON
-#ifdef USE_SSL
-    if (!IsSSL(cptr) || !CanDoDKEY(cptr) || !WantDKEY(cptr))
-#else
     if(!CanDoDKEY(cptr) || !WantDKEY(cptr))
-#endif
         return do_server_estab(cptr);
     else
     {
