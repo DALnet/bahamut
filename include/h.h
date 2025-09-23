@@ -119,7 +119,7 @@ extern aClient 	*find_chasing(aClient *, char *, int *);
 extern int  	  find_restrict(aClient *);
 extern int  	  rehash(aClient *, aClient *, int);
 extern int  	  initconf(char *);
-extern inline char *finishconf(void);
+extern char *finishconf(void);
 extern void       merge_confs(void);
 extern int  	  lock_kline_file(void);
 
@@ -218,7 +218,7 @@ extern int 	do_client_queue(aClient *);
 extern void 	read_error_exit(aClient *, int, int);
 extern int 	readwrite_client(aClient *, int, int);
 
-extern inline char *get_listener_name(aListener *);
+extern char *get_listener_name(aListener *);
 extern int        attach_Iline(aClient *, struct hostent *, char *);
 extern aConnect  *find_aConnect(char *);
 extern aOper     *find_oper(char *, char *, char *, char *);
@@ -263,7 +263,7 @@ extern int  	  do_numeric(int, aClient *, aClient *, int, char **);
 extern int  	  hunt_server(aClient *, aClient *, char *, int, int, char **);
 extern aClient 	 *next_client(aClient *, char *);
 extern aClient 	 *next_client_double(aClient *, char *);
-extern inline void verbose_to_opers(aClient *sptr, aChannel *chptr, char *cmd, char *reason); /* for m_message() */
+extern void verbose_to_opers(aClient *sptr, aChannel *chptr, char *cmd, char *reason); /* for m_message() */
 
 extern int  	  m_umode(aClient *, aClient *, int, char **);
 extern int  	  m_names(aClient *, aClient *, int, char **);

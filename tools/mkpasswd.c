@@ -5,6 +5,7 @@
 
 #include "sys.h"
 #include <time.h>
+#include <stdlib.h>
 
 extern char *getpass();
 extern char *crypt();

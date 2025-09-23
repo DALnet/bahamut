@@ -26,6 +26,8 @@
 #include <signal.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/wait.h>
+#include <unistd.h>
 
 extern int  errno;  /* ...seems that errno.h doesn't define this everywhere */
 #ifndef SYS_ERRLIST_DECLARED
