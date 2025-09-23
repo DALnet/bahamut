@@ -26,14 +26,21 @@
 #include "nameser.h"
 #include "resolv.h"
 
+/* Helper functions */
+static void putshort(u_short s, char *cp)
+{
+    *cp++ = (s >> 8) & 0xff;
+    *cp = s & 0xff;
+}
+
 /* Form all types of queries. Returns the size of the result or -1. */
 int res_mkquery(int op, char *dname, int class, int type, char *data,
-		int datalen, struct rrec *newrr, char *buf, int buflen)
+		int datalen, char *newrr, char *buf, int buflen)
 {
     HEADER *hp;
     char *cp;
     int n;
-    char       *dnptrs[10], **dpp, **lastdnptr;
+    char       *dnptrs[10], **lastdnptr;
     
 #ifdef DEBUG
     if (_res.options & RES_DEBUG)
@@ -48,151 +55,51 @@ int res_mkquery(int op, char *dname, int class, int type, char *data,
     hp->id = htons(++_res.id);
     hp->opcode = op;
     hp->pr = (_res.options & RES_PRIMARY) != 0;
-    hp->rd = (_res.options & RES_RECURSE) != 0;
     hp->rcode = NOERROR;
+    hp->rd = (_res.options & RES_RECURSE) != 0;
+    hp->ra = 0;
+    hp->tc = 0;
+    hp->aa = 0;
+    hp->qr = 0;
+
+    /* Make sure the name we're querying for is valid. */
+    if (dname == NULL || *dname == '\0') {
+	hp->rcode = FORMERR;
+	return (-1);
+    }
+    /* Initialize work pointers. */
     cp = buf + sizeof(HEADER);
     buflen -= sizeof(HEADER);
-    
-    dpp = dnptrs;
-    *dpp++ = buf;
-    *dpp++ = NULL;
-    lastdnptr = dnptrs + sizeof(dnptrs) / sizeof(dnptrs[0]);
-    /* perform opcode specific processing */
-    switch (op) 
-    {
-    case QUERY:
-	if ((buflen -= QFIXEDSZ) < 0)
+
+    /* Expand name and check length. */
+    if ((n = dn_comp(dname, cp, buflen, dnptrs, lastdnptr)) < 0)
+	return (-1);
+    cp += n;
+    buflen -= n;
+
+    /* Add query type and class. */
+    if (buflen < sizeof(u_short) * 2)
+	return (-1);
+    putshort(type, cp);
+    cp += sizeof(u_short);
+    putshort(class, cp);
+    cp += sizeof(u_short);
+    buflen -= sizeof(u_short) * 2;
+
+    /* Add additional data if present. */
+    if (data != NULL && datalen > 0) {
+	if (buflen < datalen)
 	    return (-1);
-	if ((n = dn_comp(dname, cp, buflen, dnptrs, lastdnptr)) < 0)
-	    return (-1);
-	cp += n;
-	buflen -= n;
-	putshort(type, cp);
-	cp += sizeof(u_short);
-	
-	putshort(class, cp);
-	cp += sizeof(u_short);
-
-	hp->qdcount = htons(1);
-	if (op == QUERY || data == NULL)
-	    break;
-	/* Make an additional record for completion domain. */
-	buflen -= RRFIXEDSZ;
-	if ((n = dn_comp(data, cp, buflen, dnptrs, lastdnptr)) < 0)
-	    return (-1);
-	cp += n;
-	buflen -= n;
-	putshort(T_NULL, cp);
-	cp += sizeof(u_short);
-	
-	putshort(class, cp);
-	cp += sizeof(u_short);
-
-	putlong(0, cp);
-	cp += sizeof(u_long);
-
-	putshort(0, cp);
-	cp += sizeof(u_short);
-
-	hp->arcount = htons(1);
-	break;
-
-    case IQUERY:
-	/* Initialize answer section */
-	if (buflen < 1 + RRFIXEDSZ + datalen)
-	    return (-1);
-	*cp++ = '\0';		/* no domain name */
-	putshort(type, cp);
-	cp += sizeof(u_short);
-	
-	putshort(class, cp);
-	cp += sizeof(u_short);
-
-	putlong(0, cp);
-	cp += sizeof(u_long);
-
-	putshort(datalen, cp);
-	cp += sizeof(u_short);
-
-	if (datalen)
-	{
-	    memcpy(cp, data, datalen);
-	    cp += datalen;
-	}
-	hp->ancount = htons(1);
-	break;
-	
-#ifdef ALLOW_UPDATES
-	/*
-	 * For UPDATEM/UPDATEMA, do UPDATED/UPDATEDA followed by
-	 * UPDATEA (Record to be modified is followed by its
-	 * replacement in msg.)
-	 */
-    case UPDATEM:
-    case UPDATEMA:
-
-    case UPDATED:
-	/*
-	 * The res code for UPDATED and UPDATEDA is the same;
-	 * user calls them differently: specifies data for
-	 * UPDATED; server ignores data if specified for
-	 * UPDATEDA.
-	 */
-    case UPDATEDA:
-	buflen -= RRFIXEDSZ + datalen;
-	if ((n = dn_comp(dname, cp, buflen, dnptrs, lastdnptr)) < 0)
-	    return (-1);
-	cp += n;
-	putshort(type, cp);
-	cp += sizeof(u_short);
-
-	putshort(class, cp);
-	cp += sizeof(u_short);
-
-	putlong(0, cp);
-	cp += sizeof(u_long);
-
-	putshort(datalen, cp);
-	cp += sizeof(u_short);
-
-	if (datalen)
-	{
-	    memcpy(cp, data, datalen);
-	    cp += datalen;
-	}
-	if ((op == UPDATED) || (op == UPDATEDA))
-	{
-	    hp->ancount = htons(0);
-	    break;
-	}
-	/* Else UPDATEM/UPDATEMA, so drop into code for UPDATEA */
-
-    case UPDATEA:		/* Add new resource record */
-	buflen -= RRFIXEDSZ + datalen;
-	if ((n = dn_comp(dname, cp, buflen, dnptrs, lastdnptr)) < 0)
-	    return (-1);
-	cp += n;
-	putshort(newrr->r_type, cp);
-	cp += sizeof(u_short);
-
-	putshort(newrr->r_class, cp);
-	cp += sizeof(u_short);
-
-	putlong(0, cp);
-	cp += sizeof(u_long);
-
-	putshort(newrr->r_size, cp);
-	cp += sizeof(u_short);
-
-	if (newrr->r_size)
-	{
-	    memcpy(cp, newrr->r_data, newrr->r_size);
-	    cp += newrr->r_size;
-	}
-	hp->ancount = htons(0);
-	break;
-
-#endif /* ALLOW_UPDATES */
+	memcpy(cp, data, datalen);
+	cp += datalen;
+	buflen -= datalen;
     }
+
+    /* Set question count. */
+    hp->qdcount = htons(1);
+    hp->ancount = 0;
+    hp->nscount = 0;
+    hp->arcount = 0;
+
     return (cp - buf);
 }
