@@ -18,6 +18,8 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#define _POSIX_C_SOURCE 200809L
+#define _DEFAULT_SOURCE
 #include "struct.h"
 #include "common.h"
 #include "sys.h"
