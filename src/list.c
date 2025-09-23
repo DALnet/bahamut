@@ -238,7 +238,7 @@ void free_client(aClient *cptr)
  * functions to maintain blockheap of channels.
  */
 
-aChannel *make_channel()
+aChannel *make_channel(char *name)
 {
     aChannel *chan;
     

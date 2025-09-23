@@ -360,7 +360,8 @@ dnl Checks for programs.
 AC_PROG_CC
 AX_CFLAGS_WARN_ALL
 AX_CHECK_COMPILE_FLAG([-fno-strict-aliasing], [CFLAGS="$CFLAGS -fno-strict-aliasing"])
-AX_CHECK_COMPILE_FLAG([-fgnu89-inline], [CFLAGS="$CFLAGS -fgnu89-inline"])
+# Use modern C standard instead of GNU C89 inline behavior
+AX_CHECK_COMPILE_FLAG([-std=c11], [CFLAGS="$CFLAGS -std=c11"])
 AC_CANONICAL_TARGET
 AC_SEARCH_LIBS([strerror],[cposix])
 AC_PROG_MAKE_SET

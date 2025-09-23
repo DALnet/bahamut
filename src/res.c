@@ -58,11 +58,10 @@
 
 #define RES_HOSTLEN 127 /* big enough to handle addresses in in6.arpa */
 
-extern int  dn_expand(char *, char *, char *, char *, int);
-extern int  dn_skipname(char *, char *);
-extern int
-res_mkquery(int, char *, int, int, char *, int,
-	    struct rrec *, char *, int);
+/* Use local implementations */
+extern int  dn_expand(unsigned char *, unsigned char *, unsigned char *, char *, int);
+extern int  res_mkquery(int, char *, int, int, char *, int, char *, char *, int);
+extern int  res_init(void);
 
 #ifndef AIX
 extern int  errno, h_errno;
@@ -867,7 +866,7 @@ static int proc_answer(ResRQ * rptr, HEADER *hptr, char *buf, char *eob)
      * is a the right question.
      */
 
-    if((n = dn_expand(buf, eob, cp, hostbuf, sizeof(hostbuf))) <= 0)
+    if((n = dn_expand((unsigned char *)buf, (unsigned char *)eob, (unsigned char *)cp, hostbuf, sizeof(hostbuf))) <= 0)
     {
 	/* broken dns packet, toss it out */
 	return -1;
@@ -965,7 +964,7 @@ static int proc_answer(ResRQ * rptr, HEADER *hptr, char *buf, char *eob)
     /* proccess each answer sent to us blech. */
     while (hptr->ancount-- > 0 && cp && cp < eob) 
     {
-	n = dn_expand(buf, eob, cp, hostbuf, sizeof(hostbuf)-1);
+	n = dn_expand((unsigned char *)buf, (unsigned char *)eob, (unsigned char *)cp, hostbuf, sizeof(hostbuf)-1);
 	hostbuf[RES_HOSTLEN] = '\0';
 	
 	if (n <= 0)
@@ -1135,7 +1134,7 @@ static int proc_answer(ResRQ * rptr, HEADER *hptr, char *buf, char *eob)
 				   "DNS_PTR from an acceptable (%s)", acc);
 #endif
 	    
-	    if ((n = dn_expand(buf, eob, cp, hostbuf,
+	    if ((n = dn_expand((unsigned char *)buf, (unsigned char *)eob, (unsigned char *)cp, hostbuf,
 			       sizeof(hostbuf)-1)) < 0) 
 	    {
 		cp = NULL;
@@ -1267,7 +1266,7 @@ static int proc_answer(ResRQ * rptr, HEADER *hptr, char *buf, char *eob)
 	    ans++;
 	    rptr->type = type;
 	    
-	    if ((n = dn_expand(buf, eob, cp, hostbuf, sizeof(hostbuf)-1)) < 0)
+	    if ((n = dn_expand((unsigned char *)buf, (unsigned char *)eob, (unsigned char *)cp, hostbuf, sizeof(hostbuf)-1)) < 0)
 	    {
 		cp = NULL;
 		break;

@@ -24,6 +24,10 @@
 #include "memcount.h"
 #include "numeric.h"
 
+/* Suppress sbrk deprecation warning - used for memory debugging */
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+
 
 int mc_links(Link *lp)
 {
@@ -1444,4 +1448,6 @@ void report_memory_usage(aClient *cptr, int detail)
     sendto_one(cptr, "%ssbrk(0)-etext: %lu", pfxbuf,
                (u_long) sbrk((size_t) 0) - (u_long) sbrk0);
 }
+
+#pragma clang diagnostic pop
 

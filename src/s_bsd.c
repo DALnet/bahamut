@@ -179,7 +179,7 @@ void report_error(char *text, aClient * cptr)
     char *host;
     int err;
     unsigned int len = sizeof(err);
-    extern char *strerror();
+    extern char *strerror(int);
 
     host = (cptr) ? get_client_name(cptr, (IsServer(cptr) ? HIDEME : FALSE)) 
                   : "";
@@ -215,7 +215,7 @@ void report_listener_error(char *text, aListener *lptr)
     char *host;
     int err;
     unsigned int len = sizeof(err);
-    extern char *strerror();
+    extern char *strerror(int);
 
     host = get_listener_name(lptr);
 
@@ -860,6 +860,7 @@ int completed_connection(aClient * cptr)
 {
     aConnect *aconn;
 
+#ifdef USE_SSL
     /* make sure SSL verification was successful, 
     otherwise we drop the client - skill */
     if (IsSSL(cptr) && cptr->ssl)
@@ -878,6 +879,7 @@ int completed_connection(aClient * cptr)
                 return -1;
         }
     }
+#endif /* USE_SSL */
 
     if(!(cptr->flags & FLAGS_BLOCKED))
         unset_fd_flags(cptr->fd, FDF_WANTWRITE);

@@ -24,6 +24,10 @@
 #include "numeric.h"
 #include "msg.h"
 #include "sbuf.h"
+
+/* Suppress sbrk deprecation warning - used for memory debugging */
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 #include <sys/file.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -1413,3 +1417,5 @@ int save_settings()
 
     return 1;
 }
+
+#pragma clang diagnostic pop
