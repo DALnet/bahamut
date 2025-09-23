@@ -53,6 +53,7 @@
 #include <openssl/rsa.h>       /* OpenSSL stuff */
 #include <openssl/crypto.h>
 #include <openssl/x509.h>
+#include <openssl/objects.h>
 #include <openssl/pem.h>
 #include <openssl/ssl.h>
 #include <openssl/err.h>
@@ -255,11 +256,7 @@ typedef struct SServicesTag ServicesTag;
 #define CAPAB_NICKIPSTR 0x000080 /* Nick IP as a string support */
 
 
-/* IRCv3 capabilities */
-#ifdef IRCV3
-/* ircv3 capabilities */
-#define CAPAB_AWAYNOTIFY 0x000100 /* away-notify support */
-#endif
+#define CAPAB_DOTLS     0x000400 /* server supports TLS encryption */
 
 
 #define SetDKEY(x)	((x)->capabilities |= CAPAB_DKEY)
@@ -267,6 +264,12 @@ typedef struct SServicesTag ServicesTag;
 /* N: line, flag E */
 #define SetWantDKEY(x) ((x)->capabilities |= CAPAB_DODKEY)
 #define WantDKEY(x)	((x)->capabilities & CAPAB_DODKEY)
+
+/* N: line, flag S */
+#define SetTLS(x)    ((x)->capabilities |= CAPAB_DOTLS)
+#define CanDoTLS(x)  ((x)->capabilities & CAPAB_DOTLS)
+#define SetWantTLS(x) ((x)->capabilities |= CAPAB_DOTLS)
+#define WantTLS(x)    ((x)->capabilities & CAPAB_DOTLS)
 
 #define SetZipCapable(x) ((x)->capabilities |= CAPAB_ZIP)
 #define IsZipCapable(x)	((x)->capabilities & CAPAB_ZIP)
@@ -700,6 +703,7 @@ typedef struct Whowas
 #define CONN_ZIP 	0x001	/* zippable    */
 #define CONN_DKEY	0x010	/* cryptable   */
 #define CONN_HUB	0x100	/* hubbable!   */
+#define CONN_TLS	0x200	/* tlsable!    */
 
 /* U:line flags in Server struct */
 

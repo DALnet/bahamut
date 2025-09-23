@@ -454,7 +454,7 @@ static char *replies[] =
     /* 408 ERR_NOCTRLSONCHAN */	":%s 408 %s %s :You cannot use control codes "
                                         "on this channel. Not sent: %s",
     /* 409 ERR_NOORIGIN */		":%s 409 %s :No origin specified",
-    /* 410 */	                NULL,
+    /* 410 ERR_INVALIDCAPCMD */	":%s 410 %s %s :Invalid CAP command",
     /* 411 ERR_NORECIPIENT */	":%s 411 %s :No recipient given (%s)",
     /* 412 ERR_NOTEXTOSEND */	":%s 412 %s :No text to send",
     /* 413 ERR_NOTOPLEVEL */	":%s 413 %s %s :No toplevel domain specified",

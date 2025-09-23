@@ -43,8 +43,8 @@ int cap_unset(aClient *, long);
 /*
  * m_cap
  * IRCv3 support for capability negotiation
- * We will only support the LS, REQ and END subcommands.
- * Plans are to fully add cap-notify capability - skill
+ * Supports LS, LIST, REQ, ACK, NAK, END, NEW, DEL subcommands
+ * Implements CAP LS 302 for multiline responses
  */
 int
 m_cap(aClient *cptr, aClient *sptr, int parc, char *parv[])
@@ -65,31 +65,83 @@ m_cap(aClient *cptr, aClient *sptr, int parc, char *parv[])
         sendto_one(sptr, err_str(ERR_NEEDMOREPARAMS), me.name, sptr->name, "CAP");
         return 0;
     }
-    /* Only clients will be sending us IRCv3 CAPAB subcommands */
+    /* Only clients will be sending us IRCv3 CAP subcommands */
     if (!IsServer(cptr))
     {
       if (strcmp(parv[1], "LS") == 0)
       {
+        /* Check for CAP LS version (302 for multiline support) */
+        int version = 0;
+        if (parc > 2 && parv[2])
+        {
+          version = atoi(parv[2]);
+        }
+
         /* If we currently support no IRCv3 capabilities, return nothing */
         if (ircv3_capabilities && ircv3_capabilities[0].name)
         {
+          /* We identify the client as wanting IRCv3 capabilities
+           * so that we only call register_user after CAP END is received
+          */
+          sptr->wants_ircv3_caps = 1;
+
+          if (version >= 302)
+          {
+            /* Send multiline CAP LS 302 response */
+            sendto_one(sptr, ":%s CAP * LS * :", me.name);
+            for (i = 0; ircv3_capabilities[i].name; i++)
+            {
+              sendto_one(sptr, ":%s CAP * LS :%s", me.name, ircv3_capabilities[i].name);
+            }
+            sendto_one(sptr, ":%s CAP * LS :", me.name);
+          }
+          else
+          {
+            /* Send single-line CAP LS response */
+            char buf[BUFSIZE];
+            memset(buf, 0, sizeof(buf));
+
+            for (i = 0; ircv3_capabilities[i].name; i++)
+            {
+              strcat(buf, ircv3_capabilities[i].name);
+              if (ircv3_capabilities[i + 1].name)
+                strncat(buf, " ", 1);
+            }
+
+            sendto_one(sptr, ":%s CAP * LS :%s", me.name, buf);
+          }
+        }
+        else
+        {
+          /* No capabilities available */
+          sendto_one(sptr, ":%s CAP * LS :", me.name);
+        }
+      }
+      else if (strcmp(parv[1], "LIST") == 0)
+      {
+        /* CAP LIST - show currently enabled capabilities */
+        if (sptr->wants_ircv3_caps)
+        {
           char buf[BUFSIZE];
           memset(buf, 0, sizeof(buf));
+          int has_caps = 0;
 
           for (i = 0; ircv3_capabilities[i].name; i++)
           {
-            strcat(buf, ircv3_capabilities[i].name);
-            if (ircv3_capabilities[i + 1].name)
-              strncat(buf, " ", 1);
+            if (sptr->capabilities & ircv3_capabilities[i].capability)
+            {
+              if (has_caps)
+                strncat(buf, " ", 1);
+              strcat(buf, ircv3_capabilities[i].name);
+              has_caps = 1;
+            }
           }
-          strcat(buf, " sasl");
 
-          /* We identify the client as wanting IRCv3 capabilities
-           * so that we only call register_user after CAPAB END is received
-          */
-         sptr->wants_ircv3_caps = 1;
-
-         sendto_one(sptr, ":%s CAP * LS :%s", me.name, buf);
+          sendto_one(sptr, ":%s CAP * LIST :%s", me.name, has_caps ? buf : "");
+        }
+        else
+        {
+          sendto_one(sptr, ":%s CAP * LIST :", me.name);
         }
       }
       else if (strcmp(parv[1], "REQ") == 0)
@@ -100,7 +152,7 @@ m_cap(aClient *cptr, aClient *sptr, int parc, char *parv[])
         memset(buf, 0, sizeof(buf));
 
         if (strstr(parv[2], "sasl")) {
-            sptr->sasl.state = 1;
+            sptr->sasl.state = SASL_STATE_STARTED;
             sptr->sasl.timeout = NOW + SASL_Timeout;
             sptr->sasl.mechanism = NULL;
         }
@@ -121,10 +173,9 @@ m_cap(aClient *cptr, aClient *sptr, int parc, char *parv[])
             {
               if (add)
               {
-                if (!cap_set(sptr, ircv3_capabilities[j].capability))
+                if (cap_set(sptr, ircv3_capabilities[j].capability))
                 {
                   strcat(buf, ircv3_capabilities[j].name);
-
                 } else {
                   Debug((DEBUG_DEBUG, "CAP REQ: %s not supported", parv[i]));
                   strcpy(smbcmd, "NAK");
@@ -154,6 +205,11 @@ m_cap(aClient *cptr, aClient *sptr, int parc, char *parv[])
         if (sptr->name[0] && sptr->user && sptr->user->username[0])
           return register_user(cptr, sptr, sptr->name, sptr->user->username, sptr->hostip);
       }
+      else
+      {
+        /* Invalid CAP subcommand */
+        sendto_one(sptr, err_str(ERR_INVALIDCAPCMD), me.name, sptr->name, parv[1]);
+      }
     } else {
       sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name, "CAP");
     }
@@ -177,6 +233,7 @@ int cap_set(aClient *cptr, unsigned int capability)
       {
         cptr->capabilities |= capability;
         set = 1;
+        Debug((DEBUG_DEBUG, "CAP: Set capability 0x%x for %s", capability, cptr->name));
         break;
       }
     }
@@ -197,10 +254,45 @@ int cap_unset(aClient *cptr, unsigned int capability)
       if (ircv3_capabilities[i].capability == capability)
       {
         cptr->capabilities &= ~capability;
+        Debug((DEBUG_DEBUG, "CAP: Unset capability 0x%x for %s", capability, cptr->name));
         break;
       }
     }
   }
 
   return 0;
+}
+
+/*
+ * cap-notify functions for dynamic capability updates
+ */
+
+/*
+ * send_cap_notify
+ * Send a CAP NOTIFY message to a client about capability changes
+ */
+void send_cap_notify(aClient *cptr, const char *cap, const char *action)
+{
+    if (IsCapNotify(cptr))
+    {
+        sendto_one(cptr, ":%s CAP %s %s :%s", me.name, cptr->name, action, cap);
+    }
+}
+
+/*
+ * send_cap_new
+ * Notify client that a new capability is available
+ */
+void send_cap_new(aClient *cptr, const char *cap)
+{
+    send_cap_notify(cptr, cap, "NEW");
+}
+
+/*
+ * send_cap_del
+ * Notify client that a capability is no longer available
+ */
+void send_cap_del(aClient *cptr, const char *cap)
+{
+    send_cap_notify(cptr, cap, "DEL");
 }

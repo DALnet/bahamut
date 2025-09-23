@@ -33,35 +33,49 @@
 #include "sys.h"
 
 
-#define CAPAB_AWAYNOTIFY_NAME "away-notify"
-#define CAPAB_SASL_NAME "sasl"
+#define IRCV3_CAP_AWAYNOTIFY_NAME "away-notify"
+#define IRCV3_CAP_SASL_NAME "sasl"
+#define IRCV3_CAP_CAPNOTIFY_NAME "cap-notify"
 
 /* IRCv3 capabilities of the ircd or clients */
 struct IRCV3Capabilities
 {
     long capability;
     char *name;
-
 };
+
+/* IRCv3 capability definitions - separate from Bahamut's CAPAB system */
+#define IRCV3_CAP_AWAYNOTIFY 0x000100 /* away-notify support */
+#define IRCV3_CAP_SASL       0x000200 /* sasl support */
+#define IRCV3_CAP_CAPNOTIFY  0x000400 /* cap-notify support */
 
 struct IRCV3Capabilities ircv3_capabilities[] =
 {
-    { CAPAB_AWAYNOTIFY, CAPAB_AWAYNOTIFY_NAME },
-    { CAPAB_SASL, CAPAB_SASL_NAME },
+    { IRCV3_CAP_AWAYNOTIFY, IRCV3_CAP_AWAYNOTIFY_NAME },
+    { IRCV3_CAP_SASL, IRCV3_CAP_SASL_NAME },
+    { IRCV3_CAP_CAPNOTIFY, IRCV3_CAP_CAPNOTIFY_NAME },
     { 0, NULL }
 };
 
 
-#define HasCapability(x, y) ((x)->capabilities & y)
+/* IRCv3 capability macros - separate from Bahamut's CAPAB system */
+#define HasIRCV3Capability(x, y) ((x)->capabilities & y)
 
 /* ircv3 capabilities */
 #define WantsIRCv3(x)   ((x)->wants_ircv3_caps = 1)
-#define SetAwayNotify(x) ((x)->capabilities |= CAPAB_AWAYNOTIFY)
+#define SetAwayNotify(x) ((x)->capabilities |= IRCV3_CAP_AWAYNOTIFY)
+#define SetSASL(x) ((x)->capabilities |= IRCV3_CAP_SASL)
 
-#define HasCapabilities(x) ((x)->capabilities)
+#define HasIRCV3Capabilities(x) ((x)->capabilities)
 
+#define IsAwayNotify(x)  ((x)->capabilities & IRCV3_CAP_AWAYNOTIFY)
+#define IsSASL(x)        ((x)->capabilities & IRCV3_CAP_SASL)
+#define IsCapNotify(x)   ((x)->capabilities & IRCV3_CAP_CAPNOTIFY)
 
-#define IsAwayNotify(x)  ((x)->capabilities & CAPAB_AWAYNOTIFY)
+/* cap-notify functions */
+void send_cap_notify(aClient *cptr, const char *cap, const char *action);
+void send_cap_new(aClient *cptr, const char *cap);
+void send_cap_del(aClient *cptr, const char *cap);
 
 //SASL section
 typedef struct {

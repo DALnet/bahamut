@@ -314,7 +314,11 @@ serv_info(aClient *cptr, char *name)
         if(RC4EncLink(acptr))
             sendto_one(cptr, ":%s %d %s : - RC4 encrypted", me.name, 
                         RPL_STATSDEBUG, name);
-
+#ifdef USE_SSL
+        if(IsSSL(acptr))
+            sendto_one(cptr, ":%s %d %s : - TLS encrypted", me.name, 
+                        RPL_STATSDEBUG, name);
+#endif
         if(ZipOut(acptr))
         {
             unsigned long ib, ob;

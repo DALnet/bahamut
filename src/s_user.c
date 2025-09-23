@@ -2776,7 +2776,7 @@ m_away(aClient *cptr, aClient *sptr, int parc, char *parv[])
             sendto_one(sptr, rpl_str(RPL_UNAWAY), me.name, parv[0]);
 
 #ifdef IRCV3
-        send_to_channels_butone_caps(cptr, sptr, CAPAB_AWAYNOTIFY, ":%s AWAY :%s", parv[0], parv[1]);
+        send_to_channels_butone_caps(cptr, sptr, IRCV3_CAP_AWAYNOTIFY, ":%s AWAY :%s", parv[0], parv[1]);
 #endif
         return 0;
     }
@@ -2820,7 +2820,7 @@ m_away(aClient *cptr, aClient *sptr, int parc, char *parv[])
         sendto_one(sptr, rpl_str(RPL_NOWAWAY), me.name, parv[0]);
 
 #ifdef IRCV3
-    send_to_channels_butone_caps(cptr, sptr, CAPAB_AWAYNOTIFY, ":%s AWAY :%s", parv[0], parv[1]);
+    send_to_channels_butone_caps(cptr, sptr, IRCV3_CAP_AWAYNOTIFY, ":%s AWAY :%s", parv[0], parv[1]);
 #endif
 
     return 0;
