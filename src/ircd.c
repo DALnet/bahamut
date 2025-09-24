@@ -545,7 +545,7 @@ void get_paths(char *argv)
 
     if(!*configfile)
     {
-        (void)getcwd(t_dpath, PATH_MAX);  /* directory we're called from */
+        { char *__attribute__((unused)) ret = getcwd(t_dpath, PATH_MAX); }  /* directory we're called from */
         if(argv[0] == '/')       /* absolute filename used to call */
             strcat(spath, argv);
         else
@@ -583,7 +583,7 @@ void get_paths(char *argv)
     }
     else
     {
-        (void)getcwd(t_dpath, PATH_MAX);  /* directory we're called from */
+        { char *__attribute__((unused)) ret = getcwd(t_dpath, PATH_MAX); }  /* directory we're called from */
         if(argv[0] == '/')       /* absolute filename used to call */
             strcat(spath, argv);
         else
@@ -754,7 +754,7 @@ main(int argc, char *argv[])
         {
 #ifdef CMDLINE_CONFIG
         case 'f':
-            (void) setuid((uid_t) uid);
+            { int __attribute__((unused)) ret = setuid((uid_t) uid); }
             strcpy(configfile, p);
             break;
 #endif
@@ -762,7 +762,7 @@ main(int argc, char *argv[])
             bootopt |= BOOT_STDERR;
             break;
         case 't':
-            (void) setuid((uid_t) uid);
+            { int __attribute__((unused)) ret = setuid((uid_t) uid); }
             bootopt |= BOOT_TTY;
             break;
         case 'v':
@@ -770,7 +770,7 @@ main(int argc, char *argv[])
             exit(0);
         case 'x':
 #ifdef  DEBUGMODE
-            (void) setuid((uid_t) uid);
+            { int __attribute__((unused)) ret = setuid((uid_t) uid); }
             debuglevel = atoi(p);
             debugmode = *p ? p : "0";
             bootopt |= BOOT_DEBUG;
@@ -798,7 +798,7 @@ main(int argc, char *argv[])
     mcsfp = fopen(tmp, "r");
     if(mcsfp != NULL)
     {
-        (void)fscanf(mcsfp, "%d %d %li %li %li %ld %ld %ld %ld", &Count.max_loc,
+        { int __attribute__((unused)) ret = fscanf(mcsfp, "%d %d %li %li %li %ld %ld %ld %ld", &Count.max_loc,
                &Count.max_tot, &Count.weekly, &Count.monthly, &Count.yearly,
                &Count.start, &Count.week, &Count.month, &Count.year);
         fclose(mcsfp);

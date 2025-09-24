@@ -551,7 +551,7 @@ void init_sys()
         {
             if ((fd = open("/dev/tty", O_RDWR)) >= 0)
             exit(0);
-                (void)write(fd, "Couldn't fork!\n", 15);  /* crude, but effective */
+                { int __attribute__((unused)) ret = write(fd, "Couldn't fork!\n", 15); }  /* crude, but effective */
         } 
         else if (pid > 0)
             exit(0);

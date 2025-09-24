@@ -346,7 +346,7 @@ ks_write(int f, char type, struct userBan *ub)
     else
         len = ircsprintf(outbuf, "%c %s@%s%s\n", type, user, host, cidr);
 
-    (void)write(f, outbuf, len);
+    { int __attribute__((unused)) ret = write(f, outbuf, len); }
 }
 
 /*

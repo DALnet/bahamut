@@ -1,7 +1,6 @@
+#define _DEFAULT_SOURCE
 /*
  *   memcount.c - Memory usage/accounting
-#include <unistd.h>
-#define _DEFAULT_SOURCE
  *   Copyright (C) 2005 Trevor Talbot and
  *                      the DALnet coding team
  *
@@ -24,6 +23,7 @@
  */
 
 #include "memcount.h"
+#include <unistd.h>
 #include "numeric.h"
 
 /* Suppress sbrk deprecation warning - used for memory debugging */
