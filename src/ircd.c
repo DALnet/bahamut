@@ -32,7 +32,15 @@
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
 #endif
+#ifndef _DEFAULT_SOURCE
+#define _DEFAULT_SOURCE
+#endif
+#include <unistd.h>
+#include <time.h>
+#include <stdint.h>
 #include <sys/file.h>
+/* Declare sbrk function explicitly for C11 compatibility */
+extern void *sbrk(intptr_t increment);
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/resource.h>
@@ -800,7 +808,7 @@ main(int argc, char *argv[])
     {
         { int __attribute__((unused)) ret = fscanf(mcsfp, "%d %d %li %li %li %ld %ld %ld %ld", &Count.max_loc,
                &Count.max_tot, &Count.weekly, &Count.monthly, &Count.yearly,
-               &Count.start, &Count.week, &Count.month, &Count.year);
+               &Count.start, &Count.week, &Count.month, &Count.year); }
         fclose(mcsfp);
     }
 
