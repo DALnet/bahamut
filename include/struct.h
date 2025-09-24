@@ -70,9 +70,9 @@
 #define REPORT_REJECT_ID_  ":%s NOTICE AUTH :*** Ignoring encrypted/unusable "\
                            "Ident response"
 
-extern char REPORT_DO_DNS[256], REPORT_FIN_DNS[256], REPORT_FIN_DNSC[256], 
-    REPORT_FAIL_DNS[256], REPORT_DO_ID[256], REPORT_FIN_ID[256], 
-    REPORT_FAIL_ID[256], REPORT_REJECT_ID[256];
+extern char REPORT_DO_DNS[HOSTLEN + 100], REPORT_FIN_DNS[HOSTLEN + 100], REPORT_FIN_DNSC[HOSTLEN + 100], 
+    REPORT_FAIL_DNS[HOSTLEN + 100], REPORT_DO_ID[HOSTLEN + 100], REPORT_FIN_ID[HOSTLEN + 100],
+    REPORT_FAIL_ID[HOSTLEN + 100], REPORT_REJECT_ID[HOSTLEN + 100];
 
 #include "hash.h"
 
@@ -129,7 +129,7 @@ typedef struct SServicesTag ServicesTag;
 #define	USERLEN		    10
 #define	REALLEN	 	    50
 #define	TOPICLEN	    307
-#define	KILLLEN	            400
+#define	KILLLEN	            (HOSTLEN * 3 + USERLEN + 10)  /* 3 hostnames + username + separators */
 #define	CHANNELLEN          32
 #define	PASSWDLEN 	    63
 #define	KEYLEN		    23

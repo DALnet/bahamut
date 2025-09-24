@@ -2689,9 +2689,9 @@ m_kill(aClient *cptr, aClient *sptr, int parc, char *parv[])
                               parv[0], acptr->name, mypath, reason);
 
         if (MyConnect(acptr) && MyConnect(sptr) && IsAnOper(sptr))
-            ircsprintf(buf2, "Local kill by %s %s", sptr->name, reason);
+            ircsnprintf(buf2, sizeof(buf2), "Local kill by %s %s", sptr->name, reason);
         else
-            ircsprintf(buf2, "Killed (%s %s)", sptr->name, reason);
+            ircsnprintf(buf2, sizeof(buf2), "Killed (%s %s)", sptr->name, reason);
 #else
         if (MyConnect(acptr))
             sendto_one(acptr, ":%s KILL %s :%s %s",
