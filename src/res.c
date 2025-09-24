@@ -16,6 +16,7 @@
 
 /* Prevent system resolver headers from overriding our HEADER definition */
 #define _ARPA_NAMESER_COMPAT_
+#define __NAMESER_H__
 
 /* Include our local resolver headers before system headers to prevent conflicts */
 #include "nameser.h"
