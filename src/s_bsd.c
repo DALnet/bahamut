@@ -573,12 +573,18 @@ void write_pidfile()
 {
 #ifdef IRCD_PIDFILE
     int fd;
-    char buff[20];
+    char buff[32];  /* Larger buffer to accommodate long PIDs */
+    pid_t pid;
+    ssize_t bytes_written;
 
-    if ((fd = open(IRCD_PIDFILE, O_CREAT | O_WRONLY, 0600)) >= 0)
+    /* Open with O_TRUNC to ensure file is truncated */
+    if ((fd = open(IRCD_PIDFILE, O_CREAT | O_WRONLY | O_TRUNC, 0600)) >= 0)
     {
-        ircsprintf(buff, "%5d\n", (int) getpid());
-        if (write(fd, buff, strlen(buff)) == -1)
+        pid = getpid();
+        /* Use proper format for pid_t and bounds-checked formatting */
+        ircsnprintf(buff, sizeof(buff), "%ld\n", (long) pid);
+        bytes_written = write(fd, buff, strlen(buff));
+        if (bytes_written == -1)
             Debug((DEBUG_NOTICE, "Error writing to pid file %s", IRCD_PIDFILE));
         close(fd);
         return;
