@@ -2688,10 +2688,14 @@ m_kill(aClient *cptr, aClient *sptr, int parc, char *parv[])
             sendto_prefix_one(acptr, sptr, ":%s KILL %s :%s %s",
                               parv[0], acptr->name, mypath, reason);
 
-        if (MyConnect(acptr) && MyConnect(sptr) && IsAnOper(sptr))
-            ircsnprintf(buf2, sizeof(buf2), "Local kill by %s %s", sptr->name, reason);
-        else
-            ircsnprintf(buf2, sizeof(buf2), "Killed (%s %s)", sptr->name, reason);
+        {
+            char kill_msg[KILLLEN + 100];  /* Larger buffer for kill messages */
+            if (MyConnect(acptr) && MyConnect(sptr) && IsAnOper(sptr))
+                ircsnprintf(kill_msg, sizeof(kill_msg), "Local kill by %s %s", sptr->name, reason);
+            else
+                ircsnprintf(kill_msg, sizeof(kill_msg), "Killed (%s %s)", sptr->name, reason);
+            strncpyzt(buf2, kill_msg, sizeof(buf2));
+        }
 #else
         if (MyConnect(acptr))
             sendto_one(acptr, ":%s KILL %s :%s %s",
