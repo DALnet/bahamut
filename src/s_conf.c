@@ -2488,7 +2488,7 @@ static int lookup_confhost(aConnect *aconn)
 	    if ((hp = gethost_byname(s, &ln, family)))
 	    {
 		aconn->ipnum_family = hp->h_addrtype;
-		memcpy((char *) &aconn->ipnum, hp->h_addr, hp->h_length);
+		memcpy((char *) &aconn->ipnum, hp->h_addr_list[0], hp->h_length);
 	    }
 	}
     }

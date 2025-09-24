@@ -769,9 +769,9 @@ int check_server_init(aClient * cptr)
 		const char *h_addr_str;
 
 		if (hp->h_addrtype == AF_INET)
-		    h_addr_str = inetntoa((char *)hp->h_addr);
+		    h_addr_str = inetntoa((char *)hp->h_addr_list[0]);
 		else if (hp->h_addrtype == AF_INET6)
-		    h_addr_str = inet6ntoa((char *)hp->h_addr);
+		    h_addr_str = inet6ntoa((char *)hp->h_addr_list[0]);
 		else
 		    h_addr_str = "invalid.address.family.invalid";
 
@@ -1936,7 +1936,7 @@ int connect_server(aConnect *aconn, aClient * by, struct hostent *hp)
                 return 0;
 
 	    aconn->ipnum_family = hp->h_addrtype;
-            memcpy((char *) &aconn->ipnum, hp->h_addr, hp->h_length);
+            memcpy((char *) &aconn->ipnum, hp->h_addr_list[0], hp->h_length);
         }
     }
     cptr = make_client(NULL, &me);
@@ -2085,7 +2085,7 @@ connect_inet(aConnect *aconn, aClient *cptr, int *lenp)
             return NULL;
         }
 	aconn->ipnum_family = hp->h_addrtype;
-        memcpy((char *) &aconn->ipnum, hp->h_addr, hp->h_length);
+        memcpy((char *) &aconn->ipnum, hp->h_addr_list[0], hp->h_length);
     }
 
     if (aconn->ipnum_family == AF_INET)
@@ -2237,7 +2237,7 @@ void get_my_name(aClient * cptr, char *name, int len)
             strncpyzt(name, hp->h_name, len);
         else
             strncpyzt(name, tmp, len);
-        memcpy((char *) &mysk.sin_addr, hp->h_addr, sizeof(struct in_addr));
+        memcpy((char *) &mysk.sin_addr, hp->h_addr_list[0], sizeof(struct in_addr));
 
         Debug((DEBUG_DEBUG, "local name is %s", get_client_name(&me, TRUE)));
     }
@@ -2290,7 +2290,7 @@ void do_dns_async()
                 if (hp && aconn)
                 {
 		    aconn->ipnum_family = hp->h_addrtype;
-                    memcpy((char *) &aconn->ipnum, hp->h_addr, hp->h_length);
+                    memcpy((char *) &aconn->ipnum, hp->h_addr_list[0], hp->h_length);
 
                     connect_server(aconn, NULL, hp);
                 }
@@ -2303,7 +2303,7 @@ void do_dns_async()
                 if (hp && aconn)
 		{
 		    aconn->ipnum_family = hp->h_addrtype;
-                    memcpy((char *) &aconn->ipnum, hp->h_addr,
+                    memcpy((char *) &aconn->ipnum, hp->h_addr_list[0],
 			   hp->h_length);
 		}
                 break;

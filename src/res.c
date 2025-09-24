@@ -2107,13 +2107,13 @@ static void rem_cache(aCache * ocp)
 	}
 #endif
     /* remove cache entry from hashed number list */
-    hashv = hash_number((u_char *) hp->h_addr, hp->h_length);
+    hashv = hash_number((u_char *) hp->h_addr_list[0], hp->h_length);
     if (hashv < 0)
 	return;
 #ifdef	DEBUG
     /* RUNE */
     Debug((DEBUG_DEBUG, "rem_cache: h_addr %s hashv %d next %#x first %#x",
-	   inetntoa(hp->h_addr), hashv, ocp->hnum_next,
+	   inetntoa(hp->h_addr_list[0]), hashv, ocp->hnum_next,
 	   hashtable[hashv].num_list));
 #endif
     for (cp = &hashtable[hashv].num_list; *cp; cp = &((*cp)->hnum_next))
