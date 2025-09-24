@@ -14,12 +14,17 @@
 #include "fds.h"
 #include "memcount.h"
 
-#include <signal.h>
-#include <sys/time.h>
-#include <sys/socket.h>
+/* Prevent system resolver headers from overriding our HEADER definition */
+#define _ARPA_NAMESER_COMPAT_
+
+/* Include our local resolver headers before system headers to prevent conflicts */
 #include "nameser.h"
 #include "resolv.h"
 #include "inet.h"
+
+#include <signal.h>
+#include <sys/time.h>
+#include <sys/socket.h>
 
 /* ALLOW_CACHE_NAMES
  *
