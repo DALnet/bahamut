@@ -991,7 +991,7 @@ register_user(aClient *cptr, aClient *sptr, char *nick, char *username,
 		    sptr->ip_family = AF_INET;
                     memset(&sptr->ip, 0, sizeof(sptr->ip));
                     strcpy(sptr->hostip, "0.0.0.0");
-                    strncpy(sptr->sockhost, Staff_Address, HOSTLEN + 1);
+                    strncpyzt(sptr->sockhost, Staff_Address, HOSTLEN + 1);
 #ifdef USER_HOSTMASKING
                     strncpyzt(sptr->user->mhost, Staff_Address, HOSTLEN + 1);
                     if(uhm_type > 0) sptr->umode &= ~UMODE_H; /* It's already masked anyway */
@@ -2579,7 +2579,7 @@ m_kill(aClient *cptr, aClient *sptr, int parc, char *parv[])
             else
                 reason = "(No reason specified)";
 
-            strncpy(myname, me.name, HOSTLEN + 1);
+            strncpyzt(myname, me.name, HOSTLEN + 1);
             if((s = strchr(myname, '.')))
                 *s = 0;
 
