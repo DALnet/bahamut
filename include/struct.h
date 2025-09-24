@@ -49,7 +49,6 @@
 #endif
 #endif
 
-#ifdef USE_SSL
 #include <openssl/rsa.h>       /* OpenSSL stuff */
 #include <openssl/crypto.h>
 #include <openssl/x509.h>
@@ -57,7 +56,6 @@
 #include <openssl/pem.h>
 #include <openssl/ssl.h>
 #include <openssl/err.h>
-#endif
 
 /* ========================================================================
  * Buffer Length Definitions - defined early for use in extern declarations
@@ -841,10 +839,8 @@ struct Listener {
         int             clients;  /* number of clients currently on this */
         aPort           *aport;   /* link to the P: line I came from */
         int             flags;    /* Flags for ssl (and nodns/noidentd in the future) */
-#ifdef USE_SSL
         SSL             *ssl;
         X509            *client_cert;
-#endif
 };
 
 struct SServicesTag
@@ -1072,10 +1068,8 @@ struct Client
     unsigned int num_target_errors;
 #endif
 
-#ifdef USE_SSL
     SSL  *ssl;
     X509 *client_cert;
-#endif
 
     char *webirc_username;
     char *webirc_ip;

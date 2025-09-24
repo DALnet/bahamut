@@ -86,18 +86,14 @@ int deliver_it(aClient *cptr, char *str, int len)
     writecalls++;
 #endif
 #ifdef WRITEV_IOV
-#ifdef USE_SSL
     if(IsSSL(cptr) && cptr->ssl)
         retval = safe_ssl_write(cptr, iov->iov_base, iov->iov_len);
     else
-#endif
         retval = writev(cptr->fd, iov, len);
 #else
-#ifdef USE_SSL
     if(IsSSL(cptr) && cptr->ssl)
         retval = safe_ssl_write(cptr, str, len);
     else
-#endif
         retval = send(cptr->fd, str, len, 0);
 #endif
     /*

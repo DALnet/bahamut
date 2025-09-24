@@ -123,9 +123,7 @@ static char readbuf[8192];
 #endif
 #endif
 
-#ifdef USE_SSL
 extern int mydata_index;
-#endif
 
 /*
  * add_local_domain() 
@@ -284,9 +282,7 @@ int add_listener(aPort *aport)
 	struct sockaddr_in6 addr6;
     } server;
     unsigned int len = sizeof(server);
-#ifdef USE_SSL
     extern int ssl_capable;
-#endif
 
     memset(&lstn, 0, sizeof(aListener));
     lstn.port = aport->port;
@@ -388,14 +384,12 @@ int add_listener(aPort *aport)
     aport->lstn = lptr;
 
     lptr->flags = aport->flags;
-#ifdef USE_SSL
     if(lptr->flags & CONF_FLAGS_P_SSL && ssl_capable)
     {
         SetSSL(lptr);
         lptr->ssl = NULL;
         lptr->client_cert = NULL;
     }
-#endif
 
     set_listener_non_blocking(lptr->fd, lptr);
     add_fd(lptr->fd, FDT_LISTENER, lptr);
@@ -868,13 +862,12 @@ int completed_connection(aClient * cptr)
 {
     aConnect *aconn;
 
-#ifdef USE_SSL
-    /* make sure SSL verification was successful, 
+    /* make sure SSL verification was successful,
     otherwise we drop the client - skill */
     if (IsSSL(cptr) && cptr->ssl)
     {
         long verify_result = SSL_get_verify_result(cptr->ssl);
-        
+
         switch (verify_result)
         {
             case X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN:
@@ -887,7 +880,6 @@ int completed_connection(aClient * cptr)
                 return -1;
         }
     }
-#endif /* USE_SSL */
 
     if(!(cptr->flags & FLAGS_BLOCKED))
         unset_fd_flags(cptr->fd, FDF_WANTWRITE);
@@ -1011,12 +1003,9 @@ void close_connection(aClient *cptr)
 
     if (cptr->fd >= 0)
     {
-#ifdef USE_SSL
         if(!IsDead(cptr))
-#endif
         dump_connections(cptr->fd);
         local[cptr->fd] = NULL;
-#ifdef USE_SSL
         if(IsSSL(cptr) && cptr->ssl)
         {
             SSL_set_shutdown(cptr->ssl, SSL_RECEIVED_SHUTDOWN);
@@ -1024,7 +1013,6 @@ void close_connection(aClient *cptr)
             SSL_free(cptr->ssl);
             cptr->ssl = NULL;
         }
-#endif
         del_fd(cptr->fd);
         close(cptr->fd);
         cptr->fd = -2;
@@ -1454,7 +1442,6 @@ aClient *add_connection(aListener *lptr, int fd)
 #endif
     check_client_fd(acptr);
 
-#ifdef USE_SSL
     if(IsSSL(lptr))
     {
         extern SSL_CTX *ircdssl_ctx;
@@ -1487,7 +1474,6 @@ aClient *add_connection(aListener *lptr, int fd)
             return NULL;
         }
     }
-#endif
 
     return acptr;
 }
@@ -1576,25 +1562,19 @@ int read_packet(aClient * cptr)
 #if defined(MAXBUFFERS)
         if (IsPerson(cptr))
         {
-#ifdef USE_SSL
             if(IsSSL(cptr) && cptr->ssl)
                 length = safe_ssl_read(cptr, readbuf, 8192 * sizeof(char));
             else
-#endif
             length = recv(cptr->fd, readbuf, 8192 * sizeof(char), 0);
         }
-#ifdef USE_SSL
         else if(IsSSL(cptr) && cptr->ssl)
             length = safe_ssl_read(cptr, readbuf, rcvbufmax * sizeof(char));
-#endif
         else
             length = recv(cptr->fd, readbuf, rcvbufmax * sizeof(char), 0);
 #else
-#ifdef USE_SSL
         if(IsSSL(cptr) && cptr->ssl)
             length = safe_ssl_read(cptr, readbuf, sizeof(readbuf));
         else
-#endif
         length = recv(cptr->fd, readbuf, sizeof(readbuf), 0);
 #endif
 
@@ -1788,7 +1768,6 @@ int readwrite_client(aClient *cptr, int isread, int iswrite)
      * - the socket is blocked
      */
 
-#ifdef USE_SSL
     if(cptr->ssl && IsSSL(cptr) && !SSL_is_init_finished(cptr->ssl))
     {
         if(IsDead(cptr) || !safe_ssl_accept(cptr, cptr->fd))
@@ -1799,7 +1778,6 @@ int readwrite_client(aClient *cptr, int isread, int iswrite)
         }
         return 1;
     }
-#endif
 
     if(iswrite)
     {
@@ -1982,13 +1960,12 @@ int connect_server(aConnect *aconn, aClient * by, struct hostent *hp)
         return -1;
     }
     
-#ifdef USE_SSL
     if (aconn->flags & CONN_TLS)
     {
         extern SSL_CTX *server_ssl_ctx;
         cptr->ssl = NULL;
 
-        if ((cptr->ssl = SSL_new(server_ssl_ctx)) == NULL) 
+        if ((cptr->ssl = SSL_new(server_ssl_ctx)) == NULL)
         {
             sendto_realops_lev(DEBUG_LEV, "SSL_new failed for %s", cptr->name);
             close(cptr->fd);
@@ -2015,7 +1992,6 @@ int connect_server(aConnect *aconn, aClient * by, struct hostent *hp)
             return -1;
         }
     }
-#endif
 
     make_server(cptr);
     cptr->serv->aconn = aconn;

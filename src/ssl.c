@@ -25,8 +25,6 @@
 #include <sys/types.h>
 #include "h.h"
 
-#ifdef USE_SSL
-
 
 #define SAFE_SSL_READ	 1
 #define SAFE_SSL_WRITE	 2
@@ -481,4 +479,3 @@ int ssl_verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
 
 	return preverify_ok;
 }
-#endif

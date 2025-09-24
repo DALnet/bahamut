@@ -380,7 +380,6 @@ int probability_loadsets(char *);
 void probability_fini(void);
 void get_probabilities(aClient *, int *, int *, int *);
 
-#ifdef USE_SSL
 int ssl_init();
 int ssl_rehash();
 int safe_ssl_read(aClient *, void *, int);
@@ -389,7 +388,6 @@ int safe_ssl_accept(aClient *, int);
 int ssl_smart_shutdown(SSL *);
 int safe_ssl_connect(aClient *);
 int ssl_verify_callback(int, X509_STORE_CTX *);
-#endif
 
 
 #include "find.h"

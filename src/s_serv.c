@@ -443,10 +443,8 @@ m_info(aClient *cptr, aClient *sptr, int parc, char *parv[])
                        uninfo.release, uninfo.machine, uninfo.version);
             sendto_one(sptr, ":%s %d %s :Socket Engine Type: %s", me.name,
                        RPL_INFO, parv[0], engine_name());
-#ifdef USE_SSL
             sendto_one(sptr, ":%s %d %s :OpenSSL Version: %s", me.name,
                        RPL_INFO, parv[0], SSLeay_version(SSLEAY_VERSION));
-#endif
             sendto_one(sptr, ":%s %d %s :zlib version: %s", me.name,
                        RPL_INFO, parv[0], ZLIB_VERSION);
             sendto_one(sptr, ":%s %d %s :FD_SETSIZE=%d WRITEV_IOV=%d "
@@ -1804,7 +1802,6 @@ local_rehash(aClient *cptr, aClient *sptr, char *sender, char *option)
 		sendto_ops("%s is rehashing temporary sqlines/sglines", sender);
 		return 0;
 	}
-#ifdef USE_SSL
 	else if (mycmp(option, "SSL") == 0)
 	{
 		ssl_rehash();
@@ -1812,7 +1809,6 @@ local_rehash(aClient *cptr, aClient *sptr, char *sender, char *option)
 		sendto_ops("%s is rehashing SSL", sender);
 		return 0;
 	}
-#endif
 	else if (mycmp(option, "CONF") == 0)
 	{
 		if (!MyClient(sptr))
