@@ -1,5 +1,6 @@
 /*
  *   memcount.c - Memory usage/accounting
+#include <unistd.h>
  *   Copyright (C) 2005 Trevor Talbot and
  *                      the DALnet coding team
  *

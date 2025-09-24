@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 /************************************************************************
  *   IRC - Internet Relay Chat, src/s_bsd.c
  *   Copyright (C) 1990 Jarkko Oikarinen and
@@ -28,6 +29,7 @@
 #include "throttle.h"
 #include "userban.h"
 #include <sys/types.h>
+#include <unistd.h>
 #include <sys/socket.h>
 #include <sys/file.h>
 #include <sys/ioctl.h>
@@ -548,8 +550,8 @@ void init_sys()
         if ((pid = fork()) < 0)
         {
             if ((fd = open("/dev/tty", O_RDWR)) >= 0)
-            write(fd, "Couldn't fork!\n", 15);  /* crude, but effective */
             exit(0);
+                (void)write(fd, "Couldn't fork!\n", 15);  /* crude, but effective */
         } 
         else if (pid > 0)
             exit(0);

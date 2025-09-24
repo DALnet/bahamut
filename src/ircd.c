@@ -543,7 +543,7 @@ void get_paths(char *argv)
 
     if(!*configfile)
     {
-        getcwd(t_dpath, PATH_MAX);  /* directory we're called from */
+        (void)getcwd(t_dpath, PATH_MAX);  /* directory we're called from */
         if(argv[0] == '/')       /* absolute filename used to call */
             strcat(spath, argv);
         else
@@ -581,7 +581,7 @@ void get_paths(char *argv)
     }
     else
     {
-        getcwd(t_dpath, PATH_MAX);  /* directory we're called from */
+        (void)getcwd(t_dpath, PATH_MAX);  /* directory we're called from */
         if(argv[0] == '/')       /* absolute filename used to call */
             strcat(spath, argv);
         else
@@ -796,7 +796,7 @@ main(int argc, char *argv[])
     mcsfp = fopen(tmp, "r");
     if(mcsfp != NULL)
     {
-        fscanf(mcsfp, "%d %d %li %li %li %ld %ld %ld %ld", &Count.max_loc,
+        (void)fscanf(mcsfp, "%d %d %li %li %li %ld %ld %ld %ld", &Count.max_loc,
                &Count.max_tot, &Count.weekly, &Count.monthly, &Count.yearly,
                &Count.start, &Count.week, &Count.month, &Count.year);
         fclose(mcsfp);

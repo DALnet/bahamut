@@ -461,7 +461,7 @@ int ssl_verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
 
 					if (!common_name_str) return preverify_ok;
 
-					if (!mycmp(common_name_str, conn->name))
+					if (!mycmp((char *)common_name_str, conn->name))
 					{
 						sendto_realops_lev(DEBUG_LEV, "SSL: Valid certificate cn: %s, name: %s", common_name_str, conn->name);
 						return 1;

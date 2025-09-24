@@ -4,6 +4,7 @@
  */
 
 #include "sys.h"
+#define _DEFAULT_SOURCE
 #include <time.h>
 #include <stdlib.h>
 
