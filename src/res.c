@@ -58,7 +58,7 @@
 #define TTL_SIZE   4
 #define DLEN_SIZE  2
 
-#define RES_HOSTLEN 127 /* big enough to handle addresses in in6.arpa */
+#define RES_HOSTLEN 255 /* RFC compliant max hostname length */
 
 /* Use local implementations */
 extern int  dn_expand(unsigned char *, unsigned char *, unsigned char *, char *, int);
@@ -531,7 +531,12 @@ static int do_query_name(Link *lp, char *name, ResRQ * rptr, int family)
 	    (void) strncat(hname, ".", sizeof(hname) - len - 1);
 	    len++;
 	    if ((sizeof(hname) - len - 1) >= 1)
-		(void) strncat(hname, _res.defdname, sizeof(hname) - len - 1);
+	    {
+		size_t remaining = sizeof(hname) - len - 1;
+		(void) strncat(hname, _res.defdname, remaining);
+		/* Ensure null termination */
+		hname[sizeof(hname) - 1] = '\0';
+	    }
 	}
     }
     /*
@@ -988,9 +993,8 @@ static int proc_answer(ResRQ * rptr, HEADER *hptr, char *buf, char *eob)
 	    len++;
 	    if ((len + 2) < sizeof(hostbuf))
 	    {
-		strncpy(hostbuf, _res.defdname,
-			sizeof(hostbuf) - 1 - len);
-		hostbuf[RES_HOSTLEN] = '\0';
+		strncat(hostbuf, _res.defdname, sizeof(hostbuf) - len - 1);
+		hostbuf[sizeof(hostbuf) - 1] = '\0';
 		len = MIN(len + strlen(_res.defdname),
 			  sizeof(hostbuf)) - 1;
 	    }

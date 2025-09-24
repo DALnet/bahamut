@@ -69,7 +69,7 @@ extern int  local_ip_limit, local_ip24_limit, global_ip_limit,
             global_ip24_limit;
 
 #ifndef PATH_MAX
-#define PATH_MAX 4096
+#define PATH_MAX 4120  /* 4096 + space for appended filenames like "/settings.txt", "/.klines_c" */
 #endif
 extern char dpath[PATH_MAX], spath[PATH_MAX];
 

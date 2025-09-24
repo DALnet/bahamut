@@ -111,9 +111,9 @@ typedef struct SServicesTag ServicesTag;
 
 
 
-#define	HOSTLEN		63	/* Length of hostname.  Updated to */
+#define	HOSTLEN		255	/* Length of hostname.  Updated to */
 
-/* comply with RFC1123 */
+/* comply with RFC1123 - maximum FQDN length is 255 */
 
 #define HOSTIPLEN	45	/* Length of an IPv4 or IPv6 address */
 

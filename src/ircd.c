@@ -194,7 +194,7 @@ static void build_version(void)
         sprintf(version, "%s-%d.%d.%d", BASENAME, MAJOR, MINOR, PATCH);
 }
 
-void s_die() 
+void s_die()
 {
     FILE *fp;
     char tmp[PATH_MAX];
@@ -202,7 +202,7 @@ void s_die()
 #ifdef  USE_SYSLOG
     (void) syslog(LOG_CRIT, "Server killed By SIGTERM");
 #endif
-    ircsprintf(tmp, "%s/.maxclients", dpath);
+    ircsnprintf(tmp, sizeof(tmp), "%s/.maxclients", dpath);
     fp=fopen(tmp, "w");
     if(fp!=NULL) 
     {
@@ -802,7 +802,7 @@ main(int argc, char *argv[])
         exit(0);
     }
 
-    ircsprintf(tmp, "%s/.maxclients", dpath);
+    ircsnprintf(tmp, sizeof(tmp), "%s/.maxclients", dpath);
     mcsfp = fopen(tmp, "r");
     if(mcsfp != NULL)
     {
@@ -1367,7 +1367,7 @@ int load_settings()
     char *para[MAXPARA + 1];
     int parc;
 
-    ircsprintf(tmp, "%s/settings.txt", dpath);
+    ircsnprintf(tmp, sizeof(tmp), "%s/settings.txt", dpath);
     if(!(fp = fopen(tmp, "r")))
         return 0; /* Can't open file! */
 
@@ -1417,7 +1417,7 @@ int save_settings()
     char tmp[PATH_MAX];
     FILE *fp;
 
-    ircsprintf(tmp, "%s/settings.txt", dpath);
+    ircsnprintf(tmp, sizeof(tmp), "%s/settings.txt", dpath);
     fp = fopen(tmp, "w");
     if(!fp)
         return 0;
