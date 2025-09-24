@@ -124,7 +124,7 @@ typedef struct SServicesTag ServicesTag;
  * preserves compatibility with old * servers --msa 
  */
 
-#define MAX_DATE_STRING 32	/* maximum string length for a date string */
+#define MAX_DATE_STRING 64	/* maximum string length for a date string */
 
 #define	USERLEN		    10
 #define	REALLEN	 	    50

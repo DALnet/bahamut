@@ -263,8 +263,10 @@ AliasInfo aliastab[] =
     { 0 }
 };
 
+#ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wincompatible-function-pointer-types"
+#endif
 struct Message msgtab[] = 
 {
     {MSG_PRIVATE,  m_private,  MAXPARA, MF_RIDLE, 0},
@@ -383,7 +385,9 @@ struct Message msgtab[] =
     {MSG_WEBIRC,   m_webirc,   MAXPARA, MF_UNREG, 0},
     { 0 }
 };
+#ifdef __clang__
 #pragma clang diagnostic pop
+#endif
 
 MESSAGE_TREE *msg_tree_root;
 #else
