@@ -49,7 +49,6 @@
 #endif
 #endif
 
-#ifdef USE_SSL
 #include <openssl/rsa.h>       /* OpenSSL stuff */
 #include <openssl/crypto.h>
 #include <openssl/x509.h>
@@ -57,7 +56,39 @@
 #include <openssl/pem.h>
 #include <openssl/ssl.h>
 #include <openssl/err.h>
-#endif
+
+/* ========================================================================
+ * Buffer Length Definitions - defined early for use in extern declarations
+ * ======================================================================== */
+
+/* Core IRC protocol lengths */
+#define	HOSTLEN		    255	/* Length of hostname. RFC1123 compliant - maximum FQDN length is 255 */
+#define HOSTIPLEN	    45	/* Length of an IPv4 or IPv6 address */
+#define	NICKLEN		    30	/* Maximum nickname length */
+#define	USERLEN		    10	/* Maximum username length */
+#define	CHANNELLEN          32	/* Maximum channel name length */
+#define	KEYLEN		    23	/* Maximum channel key length */
+
+/* Message and content lengths */
+#define	REALLEN	 	    50	/* Maximum real name length */
+#define	TOPICLEN	    307	/* Maximum topic length */
+#define	PASSWDLEN 	    63	/* Maximum password length */
+#define MOTDLINELEN	    90	/* Maximum MOTD line length */
+#define MAX_DATE_STRING     64	/* Maximum string length for a date string */
+#define MAXSILELENGTH       128	/* Maximum silence mask length */
+
+/* Calculated lengths */
+#define	KILLLEN	            (HOSTLEN * 3 + USERLEN + 10)  /* 3 hostnames + username + separators */
+#define	USERHOST_REPLYLEN	(NICKLEN+HOSTLEN+USERLEN+5)   /* nick!user@host format */
+
+/* System buffer sizes */
+#define	BUFSIZE		    512	/* WARNING: *DONT* CHANGE THIS!!!! */
+
+/* Protocol limits */
+#define	MAXRECIPIENTS       20	/* Maximum recipients per message */
+#define	MAXBANS	 	    200	/* Maximum bans per channel */
+#define MAXINVITELIST       100	/* Maximum invite list entries */
+#define MAXEXEMPTLIST       100	/* Maximum exempt list entries */
 
 #define REPORT_DO_DNS_	   ":%s NOTICE AUTH :*** Looking up your hostname..."
 #define REPORT_FIN_DNS_	   ":%s NOTICE AUTH :*** Found your hostname"
@@ -70,9 +101,9 @@
 #define REPORT_REJECT_ID_  ":%s NOTICE AUTH :*** Ignoring encrypted/unusable "\
                            "Ident response"
 
-extern char REPORT_DO_DNS[256], REPORT_FIN_DNS[256], REPORT_FIN_DNSC[256], 
-    REPORT_FAIL_DNS[256], REPORT_DO_ID[256], REPORT_FIN_ID[256], 
-    REPORT_FAIL_ID[256], REPORT_REJECT_ID[256];
+extern char REPORT_DO_DNS[HOSTLEN + 100], REPORT_FIN_DNS[HOSTLEN + 100], REPORT_FIN_DNSC[HOSTLEN + 100], 
+    REPORT_FAIL_DNS[HOSTLEN + 100], REPORT_DO_ID[HOSTLEN + 100], REPORT_FIN_ID[HOSTLEN + 100],
+    REPORT_FAIL_ID[HOSTLEN + 100], REPORT_REJECT_ID[HOSTLEN + 100];
 
 #include "hash.h"
 
@@ -111,46 +142,21 @@ typedef struct SServicesTag ServicesTag;
 
 
 
-#define	HOSTLEN		63	/* Length of hostname.  Updated to */
 
-/* comply with RFC1123 */
-
-#define HOSTIPLEN	45	/* Length of an IPv4 or IPv6 address */
-
-#define	NICKLEN		30	
 
 /* Necessary to put 9 here instead of 10  if  
  * s_msg.c/m_nick has been corrected.  This 
  * preserves compatibility with old * servers --msa 
  */
 
-#define MAX_DATE_STRING 32	/* maximum string length for a date string */
-
-#define	USERLEN		    10
-#define	REALLEN	 	    50
-#define	TOPICLEN	    307
-#define	KILLLEN	            400
-#define	CHANNELLEN          32
-#define	PASSWDLEN 	    63
-#define	KEYLEN		    23
-#define	BUFSIZE		    512	/* WARNING: *DONT* CHANGE THIS!!!! */
-#define	MAXRECIPIENTS       20
-#define	MAXBANS	 	    200
-#define MAXINVITELIST       100
-#define MAXEXEMPTLIST       100
-
-#define MOTDLINELEN	    90
 
 #define        MAXSILES        10
-#define        MAXSILELENGTH   128
 
 #define MAXDCCALLOW 5
 #define DCC_LINK_ME	0x01	/* This is my dcc allow */
 #define DCC_LINK_REMOTE 0x02    /* I need to remove these dcc allows from
 				 * these clients when I die
 				 */
-
-#define	USERHOST_REPLYLEN	(NICKLEN+HOSTLEN+USERLEN+5)
 
 /*
  * 'offsetof' is defined in ANSI-C. The following definition * is not
@@ -833,10 +839,8 @@ struct Listener {
         int             clients;  /* number of clients currently on this */
         aPort           *aport;   /* link to the P: line I came from */
         int             flags;    /* Flags for ssl (and nodns/noidentd in the future) */
-#ifdef USE_SSL
         SSL             *ssl;
         X509            *client_cert;
-#endif
 };
 
 struct SServicesTag
@@ -1064,10 +1068,8 @@ struct Client
     unsigned int num_target_errors;
 #endif
 
-#ifdef USE_SSL
     SSL  *ssl;
     X509 *client_cert;
-#endif
 
     char *webirc_username;
     char *webirc_ip;

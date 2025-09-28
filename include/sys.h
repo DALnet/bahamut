@@ -75,13 +75,18 @@
 
 extern void dummy();
 
-#ifdef	NO_U_TYPES
-
+/* Always define these types for compatibility */
+#ifndef u_char
 typedef unsigned char u_char;
+#endif
+#ifndef u_short
 typedef unsigned short u_short;
+#endif
+#ifndef u_long
 typedef unsigned long u_long;
+#endif
+#ifndef u_int
 typedef unsigned int u_int;
-
 #endif
 
 #endif /* __sys_include__ */

@@ -69,7 +69,7 @@ extern int  local_ip_limit, local_ip24_limit, global_ip_limit,
             global_ip24_limit;
 
 #ifndef PATH_MAX
-#define PATH_MAX 4096
+#define PATH_MAX 4120  /* 4096 + reasonable space for appended filenames and null terminators */
 #endif
 extern char dpath[PATH_MAX], spath[PATH_MAX];
 
@@ -90,7 +90,7 @@ extern struct    stats *ircstp;
 extern int  	 bootopt;
 
 extern char 	*canonize(char *);
-extern void 	 check_fdlists();
+extern void 	 check_fdlists(void);
 extern aChannel *find_channel(char *, aChannel *);
 extern void	flush_user_banserial(aClient *);
 extern aBan 	*nick_is_banned(aChannel *, char *, aClient *);
@@ -119,9 +119,9 @@ extern aClient 	*find_chasing(aClient *, char *, int *);
 extern int  	  find_restrict(aClient *);
 extern int  	  rehash(aClient *, aClient *, int);
 extern int  	  initconf(char *);
-extern inline char *finishconf(void);
-extern void       merge_confs();
-extern int  	  lock_kline_file();
+extern char *finishconf(void);
+extern void       merge_confs(void);
+extern int  	  lock_kline_file(void);
 
 extern void 	  clear_scache_hash_table(void);
 extern char 	 *find_or_add(char *);
@@ -195,13 +195,13 @@ extern void 	  add_local_domain(char *, int);
 extern int  	  check_client(aClient *);
 extern int  	  check_server_init(aClient *);
 extern void 	  close_connection(aClient *);
-extern void 	  close_listeners();
-extern void       open_listeners();
+extern void 	  close_listeners(void);
+extern void       open_listeners(void);
 extern int   	  connect_server(aConnect *, aClient *, struct hostent *);
 extern void 	  get_my_name(aClient *, char *, int);
 extern int  	  get_sockerr(aClient *);
 extern int  	  inetport(aClient *, char *, int, u_long);
-extern void 	  init_sys();
+extern void 	  init_sys(void);
 extern int  	  read_message(time_t, fdlist *);
 extern void 	  report_error(char *, aClient *);
 extern void 	  set_non_blocking(int, aClient *);
@@ -218,7 +218,7 @@ extern int 	do_client_queue(aClient *);
 extern void 	read_error_exit(aClient *, int, int);
 extern int 	readwrite_client(aClient *, int, int);
 
-extern inline char *get_listener_name(aListener *);
+extern char *get_listener_name(aListener *);
 extern int        attach_Iline(aClient *, struct hostent *, char *);
 extern aConnect  *find_aConnect(char *);
 extern aOper     *find_oper(char *, char *, char *, char *);
@@ -238,8 +238,8 @@ extern void 	  terminate(void), write_pidfile(void);
 extern int  	  match(char *, char *);
 extern char  	 *collapse(char *);
 
-extern int        load_settings();
-extern int        save_settings();
+extern int        load_settings(void);
+extern int        save_settings(void);
 
 extern int  	  writecalls, writeb[];
 #ifdef WRITEV_IOV
@@ -263,7 +263,7 @@ extern int  	  do_numeric(int, aClient *, aClient *, int, char **);
 extern int  	  hunt_server(aClient *, aClient *, char *, int, int, char **);
 extern aClient 	 *next_client(aClient *, char *);
 extern aClient 	 *next_client_double(aClient *, char *);
-extern inline void verbose_to_opers(aClient *sptr, aChannel *chptr, char *cmd, char *reason); /* for m_message() */
+extern void verbose_to_opers(aClient *sptr, aChannel *chptr, char *cmd, char *reason); /* for m_message() */
 
 extern int  	  m_umode(aClient *, aClient *, int, char **);
 extern int  	  m_names(aClient *, aClient *, int, char **);
@@ -278,7 +278,7 @@ extern void 	  free_chanmember(chanMember *);
 extern void 	  free_class(aClass *);
 extern void 	  free_user(anUser *, aClient *);
 extern void 	  free_channel(aChannel *);
-extern aChannel  *make_channel();
+extern aChannel  *make_channel(char *name);
 extern Link 	 *make_link(void);
 extern DLink 	 *make_dlink(void);
 extern chanMember *make_chanmember(void);
@@ -297,7 +297,7 @@ extern void 	  block_garbage_collect(void);	/* list.c */
 extern void       block_destroy(void);	        /* list.c */
 
 extern void     set_effective_class(aClient *);
-extern void     initclass();
+extern void     initclass(void);
 
 extern struct hostent *get_res(char *);
 extern struct hostent *gethost_byaddr(char *, Link *, int);
@@ -348,9 +348,9 @@ extern FILE 	 *dumpfp;
 #endif
 
 #ifdef FLUD
-int         	  check_for_flood();
-void        	  free_fluders();
-void        	  free_fludees();
+int         	  check_for_flood(aClient *cptr, char *text);
+void        	  free_fluders(aClient *cptr, aChannel *chptr);
+void        	  free_fludees(aClient *cptr);
 #define MyFludConnect(x)	(((x)->fd >= 0) || ((x)->fd == -2))
 
 #endif /* FLUD */
@@ -380,7 +380,6 @@ int probability_loadsets(char *);
 void probability_fini(void);
 void get_probabilities(aClient *, int *, int *, int *);
 
-#ifdef USE_SSL
 int ssl_init();
 int ssl_rehash();
 int safe_ssl_read(aClient *, void *, int);
@@ -389,7 +388,6 @@ int safe_ssl_accept(aClient *, int);
 int ssl_smart_shutdown(SSL *);
 int safe_ssl_connect(aClient *);
 int ssl_verify_callback(int, X509_STORE_CTX *);
-#endif
 
 
 #include "find.h"

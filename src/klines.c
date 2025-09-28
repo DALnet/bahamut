@@ -48,7 +48,7 @@
 #include "memcount.h"
 
 static int journal = -1;
-static char journalfilename[512];
+static char journalfilename[PATH_MAX];
 static int journalcount;
 
 void klinestore_add(struct userBan *);
@@ -346,7 +346,7 @@ ks_write(int f, char type, struct userBan *ub)
     else
         len = ircsprintf(outbuf, "%c %s@%s%s\n", type, user, host, cidr);
 
-    write(f, outbuf, len);
+    { int __attribute__((unused)) ret = write(f, outbuf, len); }
 }
 
 /*
@@ -465,7 +465,7 @@ ks_read(char *s)
 int
 klinestore_compact(void)
 {
-    char buf1[512];
+    char buf1[PATH_MAX];
     int newfile;
 
     /* userban.c */

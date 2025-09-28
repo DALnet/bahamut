@@ -25,8 +25,6 @@
 #include <sys/types.h>
 #include "h.h"
 
-#ifdef USE_SSL
-
 
 #define SAFE_SSL_READ	 1
 #define SAFE_SSL_WRITE	 2
@@ -461,7 +459,7 @@ int ssl_verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
 
 					if (!common_name_str) return preverify_ok;
 
-					if (!mycmp(common_name_str, conn->name))
+					if (!mycmp((char *)common_name_str, conn->name))
 					{
 						sendto_realops_lev(DEBUG_LEV, "SSL: Valid certificate cn: %s, name: %s", common_name_str, conn->name);
 						return 1;
@@ -481,4 +479,3 @@ int ssl_verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
 
 	return preverify_ok;
 }
-#endif

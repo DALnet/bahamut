@@ -991,7 +991,7 @@ register_user(aClient *cptr, aClient *sptr, char *nick, char *username,
 		    sptr->ip_family = AF_INET;
                     memset(&sptr->ip, 0, sizeof(sptr->ip));
                     strcpy(sptr->hostip, "0.0.0.0");
-                    strncpy(sptr->sockhost, Staff_Address, HOSTLEN + 1);
+                    strncpyzt(sptr->sockhost, Staff_Address, HOSTLEN + 1);
 #ifdef USER_HOSTMASKING
                     strncpyzt(sptr->user->mhost, Staff_Address, HOSTLEN + 1);
                     if(uhm_type > 0) sptr->umode &= ~UMODE_H; /* It's already masked anyway */
@@ -2354,10 +2354,8 @@ do_user(char *nick, aClient *cptr, aClient *sptr, char *username, char *host,
 #ifndef NO_DEFAULT_INVISIBLE
         sptr->umode |= UMODE_i;
 #endif
-#ifdef USE_SSL
         if(IsSSL(sptr))
             sptr->umode |= UMODE_S;
-#endif
 #ifdef NO_USER_SERVERKILLS
         sptr->umode &= ~UMODE_k;
 #endif
@@ -2579,7 +2577,7 @@ m_kill(aClient *cptr, aClient *sptr, int parc, char *parv[])
             else
                 reason = "(No reason specified)";
 
-            strncpy(myname, me.name, HOSTLEN + 1);
+            strncpyzt(myname, me.name, HOSTLEN + 1);
             if((s = strchr(myname, '.')))
                 *s = 0;
 
@@ -2688,10 +2686,14 @@ m_kill(aClient *cptr, aClient *sptr, int parc, char *parv[])
             sendto_prefix_one(acptr, sptr, ":%s KILL %s :%s %s",
                               parv[0], acptr->name, mypath, reason);
 
-        if (MyConnect(acptr) && MyConnect(sptr) && IsAnOper(sptr))
-            ircsprintf(buf2, "Local kill by %s %s", sptr->name, reason);
-        else
-            ircsprintf(buf2, "Killed (%s %s)", sptr->name, reason);
+        {
+            char kill_msg[KILLLEN + 100];  /* Larger buffer for kill messages */
+            if (MyConnect(acptr) && MyConnect(sptr) && IsAnOper(sptr))
+                ircsnprintf(kill_msg, sizeof(kill_msg), "Local kill by %s %s", sptr->name, reason);
+            else
+                ircsnprintf(kill_msg, sizeof(kill_msg), "Killed (%s %s)", sptr->name, reason);
+            strncpyzt(buf2, kill_msg, sizeof(buf2));
+        }
 #else
         if (MyConnect(acptr))
             sendto_one(acptr, ":%s KILL %s :%s %s",

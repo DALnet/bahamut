@@ -14,12 +14,14 @@
 #include "fds.h"
 #include "memcount.h"
 
-#include <signal.h>
-#include <sys/time.h>
-#include <sys/socket.h>
+/* Include our local resolver headers before system headers to prevent conflicts */
 #include "nameser.h"
 #include "resolv.h"
 #include "inet.h"
+
+#include <signal.h>
+#include <sys/time.h>
+#include <sys/socket.h>
 
 /* ALLOW_CACHE_NAMES
  *
@@ -56,13 +58,12 @@
 #define TTL_SIZE   4
 #define DLEN_SIZE  2
 
-#define RES_HOSTLEN 127 /* big enough to handle addresses in in6.arpa */
+#define RES_HOSTLEN 255 /* RFC compliant max hostname length */
 
-extern int  dn_expand(char *, char *, char *, char *, int);
-extern int  dn_skipname(char *, char *);
-extern int
-res_mkquery(int, char *, int, int, char *, int,
-	    struct rrec *, char *, int);
+/* Use local implementations */
+extern int  dn_expand(unsigned char *, unsigned char *, unsigned char *, char *, int);
+extern int  res_mkquery(int, char *, int, int, char *, int, char *, char *, int);
+extern int  res_init(void);
 
 #ifndef AIX
 extern int  errno, h_errno;
@@ -530,7 +531,12 @@ static int do_query_name(Link *lp, char *name, ResRQ * rptr, int family)
 	    (void) strncat(hname, ".", sizeof(hname) - len - 1);
 	    len++;
 	    if ((sizeof(hname) - len - 1) >= 1)
-		(void) strncat(hname, _res.defdname, sizeof(hname) - len - 1);
+	    {
+		size_t remaining = sizeof(hname) - len - 1;
+		(void) strncat(hname, _res.defdname, remaining);
+		/* Ensure null termination */
+		hname[sizeof(hname) - 1] = '\0';
+	    }
 	}
     }
     /*
@@ -867,7 +873,7 @@ static int proc_answer(ResRQ * rptr, HEADER *hptr, char *buf, char *eob)
      * is a the right question.
      */
 
-    if((n = dn_expand(buf, eob, cp, hostbuf, sizeof(hostbuf))) <= 0)
+    if((n = dn_expand((unsigned char *)buf, (unsigned char *)eob, (unsigned char *)cp, hostbuf, sizeof(hostbuf))) <= 0)
     {
 	/* broken dns packet, toss it out */
 	return -1;
@@ -965,7 +971,7 @@ static int proc_answer(ResRQ * rptr, HEADER *hptr, char *buf, char *eob)
     /* proccess each answer sent to us blech. */
     while (hptr->ancount-- > 0 && cp && cp < eob) 
     {
-	n = dn_expand(buf, eob, cp, hostbuf, sizeof(hostbuf)-1);
+	n = dn_expand((unsigned char *)buf, (unsigned char *)eob, (unsigned char *)cp, hostbuf, sizeof(hostbuf)-1);
 	hostbuf[RES_HOSTLEN] = '\0';
 	
 	if (n <= 0)
@@ -987,9 +993,8 @@ static int proc_answer(ResRQ * rptr, HEADER *hptr, char *buf, char *eob)
 	    len++;
 	    if ((len + 2) < sizeof(hostbuf))
 	    {
-		strncpy(hostbuf, _res.defdname,
-			sizeof(hostbuf) - 1 - len);
-		hostbuf[RES_HOSTLEN] = '\0';
+		strncat(hostbuf, _res.defdname, sizeof(hostbuf) - len - 1);
+		hostbuf[sizeof(hostbuf) - 1] = '\0';
 		len = MIN(len + strlen(_res.defdname),
 			  sizeof(hostbuf)) - 1;
 	    }
@@ -1135,7 +1140,7 @@ static int proc_answer(ResRQ * rptr, HEADER *hptr, char *buf, char *eob)
 				   "DNS_PTR from an acceptable (%s)", acc);
 #endif
 	    
-	    if ((n = dn_expand(buf, eob, cp, hostbuf,
+	    if ((n = dn_expand((unsigned char *)buf, (unsigned char *)eob, (unsigned char *)cp, hostbuf,
 			       sizeof(hostbuf)-1)) < 0) 
 	    {
 		cp = NULL;
@@ -1267,7 +1272,7 @@ static int proc_answer(ResRQ * rptr, HEADER *hptr, char *buf, char *eob)
 	    ans++;
 	    rptr->type = type;
 	    
-	    if ((n = dn_expand(buf, eob, cp, hostbuf, sizeof(hostbuf)-1)) < 0)
+	    if ((n = dn_expand((unsigned char *)buf, (unsigned char *)eob, (unsigned char *)cp, hostbuf, sizeof(hostbuf)-1)) < 0)
 	    {
 		cp = NULL;
 		break;
@@ -2106,13 +2111,13 @@ static void rem_cache(aCache * ocp)
 	}
 #endif
     /* remove cache entry from hashed number list */
-    hashv = hash_number((u_char *) hp->h_addr, hp->h_length);
+    hashv = hash_number((u_char *) hp->h_addr_list[0], hp->h_length);
     if (hashv < 0)
 	return;
 #ifdef	DEBUG
     /* RUNE */
     Debug((DEBUG_DEBUG, "rem_cache: h_addr %s hashv %d next %#x first %#x",
-	   inetntoa(hp->h_addr), hashv, ocp->hnum_next,
+	   inetntoa(hp->h_addr_list[0]), hashv, ocp->hnum_next,
 	   hashtable[hashv].num_list));
 #endif
     for (cp = &hashtable[hashv].num_list; *cp; cp = &((*cp)->hnum_next))
