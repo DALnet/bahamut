@@ -1,3 +1,4 @@
+#define _DEFAULT_SOURCE
 /************************************************************************
  *   IRC - Internet Relay Chat, src/dh.c
  *   Copyright (C) 2000 Lucas Madar

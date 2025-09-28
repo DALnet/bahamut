@@ -207,7 +207,8 @@ zcontinue:
 int client_dopacket(aClient *cptr, char *buffer, int length)
 {
     
-    strncpy(cptr->buffer, buffer, BUFSIZE);
+    strncpy(cptr->buffer, buffer, BUFSIZE - 1);
+    cptr->buffer[BUFSIZE - 1] = '\0';
     length = strlen(cptr->buffer);
     
     /* Update messages received */

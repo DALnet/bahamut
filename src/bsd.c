@@ -18,6 +18,8 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#define _POSIX_C_SOURCE 200809L
+#define _DEFAULT_SOURCE
 #include "struct.h"
 #include "common.h"
 #include "sys.h"
@@ -26,6 +28,8 @@
 #include <signal.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/wait.h>
+#include <unistd.h>
 
 extern int  errno;  /* ...seems that errno.h doesn't define this everywhere */
 #ifndef SYS_ERRLIST_DECLARED
@@ -82,18 +86,14 @@ int deliver_it(aClient *cptr, char *str, int len)
     writecalls++;
 #endif
 #ifdef WRITEV_IOV
-#ifdef USE_SSL
     if(IsSSL(cptr) && cptr->ssl)
         retval = safe_ssl_write(cptr, iov->iov_base, iov->iov_len);
     else
-#endif
         retval = writev(cptr->fd, iov, len);
 #else
-#ifdef USE_SSL
     if(IsSSL(cptr) && cptr->ssl)
         retval = safe_ssl_write(cptr, str, len);
     else
-#endif
         retval = send(cptr->fd, str, len, 0);
 #endif
     /*

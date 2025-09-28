@@ -299,9 +299,25 @@ int parse(aClient *cptr, char *buffer, char *bufend)
 	from->user->last = timeofday;
 
     if (mptr->flags & MF_ALIAS)
+    {
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-non-prototype"
+#endif
          return mptr->func(cptr, from, i, para, &aliastab[mptr->aliasidx]);
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
+    }
 
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-non-prototype"
+#endif
     return (*mptr->func) (cptr, from, i, para);
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 }
 
 /*
