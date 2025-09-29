@@ -31,7 +31,7 @@ extern int  send_queued(aClient *);
 #include <stdarg.h>
 #include "fdlist.h"
 
-extern void init_send();
+extern void init_send(void);
 
 #ifndef ATTRIBUTE_PRINTF
 #if defined(__GNUC__) && __GNUC__ >= 4
@@ -93,6 +93,8 @@ extern void vsendto_prefix_one(aClient *to, aClient *from,
 			       char *pattern, va_list vl);
 extern void vsendto_realops(char *pattern, va_list vl);
 
-extern void flush_connections();
-extern void dump_connections();
+extern void flush_connections(int fd);
+extern void dump_connections(int fd);
+extern void free_fluders(aClient *cptr, aChannel *chptr);
+extern void free_fludees(aClient *cptr);
 #endif
