@@ -4,12 +4,14 @@
  */
 
 #include "sys.h"
+#define _DEFAULT_SOURCE
 #include <time.h>
+#include <stdlib.h>
 
 extern char *getpass();
 extern char *crypt();
-/* extern long random(); */
-/* extern int srandom(unsigned); */
+extern long random();
+extern int srandom(unsigned);
 
 int main(argc, argv)
 int argc;

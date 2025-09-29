@@ -199,7 +199,7 @@ int
 load_module(aClient *sptr, char *modname)
 {
     aModule tmpmod, *themod;
-    char mnamebuf[512], *ver, *desc;
+    char mnamebuf[PATH_MAX], *ver, *desc;
     int acsz = -1, ret;
 
     if((themod = find_module(modname)))
@@ -215,9 +215,9 @@ load_module(aClient *sptr, char *modname)
     }
 
     if(modules && modules->module_path)
-        ircsnprintf(mnamebuf, 512, "%s/%s.so", modules->module_path, modname);
+        ircsnprintf(mnamebuf, sizeof(mnamebuf), "%s/%s.so", modules->module_path, modname);
     else
-        ircsnprintf(mnamebuf, 512, "%s/modules/%s.so", dpath, modname);
+        ircsnprintf(mnamebuf, sizeof(mnamebuf), "%s/modules/%s.so", dpath, modname);
 
     tmpmod.handle = dlopen(mnamebuf, RTLD_NOW);
     if(tmpmod.handle == NULL)
