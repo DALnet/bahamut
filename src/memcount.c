@@ -1,3 +1,4 @@
+#define _DEFAULT_SOURCE
 /*
  *   memcount.c - Memory usage/accounting
  *   Copyright (C) 2005 Trevor Talbot and
@@ -22,7 +23,14 @@
  */
 
 #include "memcount.h"
+#include <unistd.h>
 #include "numeric.h"
+
+/* Suppress sbrk deprecation warning - used for memory debugging */
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#endif
 
 
 int mc_links(Link *lp)
@@ -1444,4 +1452,8 @@ void report_memory_usage(aClient *cptr, int detail)
     sendto_one(cptr, "%ssbrk(0)-etext: %lu", pfxbuf,
                (u_long) sbrk((size_t) 0) - (u_long) sbrk0);
 }
+
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 

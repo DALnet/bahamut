@@ -685,7 +685,7 @@ int chk_who(aClient *ac, aClient *sptr, int showall)
     return 1;
 }
 
-inline char *first_visible_channel(aClient *cptr, aClient *sptr)
+static inline char *first_visible_channel(aClient *cptr, aClient *sptr)
 {
     Link *lp;
     int secret = 0;

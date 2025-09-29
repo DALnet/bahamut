@@ -17,7 +17,7 @@ struct TopConf
     unsigned int   flag;    /* our token flag               */
     unsigned int   nest;    /* tokens we allow to nest here */
     sConf       *subtok;  /* sub-tokens allowed in here   */
-    int         (*func) (); /* function to call to add this */
+    int         (*func) (cVar **, int); /* function to call to add this */
 };
 
 /* sub-token options */

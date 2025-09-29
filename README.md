@@ -1,7 +1,6 @@
 #Welcome to Bahamut!
 -------------------
 ![Build status](https://github.com/DALnet/bahamut/workflows/C/C++%20CI/badge.svg)
-[![Language grade: C/C++](https://img.shields.io/lgtm/grade/cpp/g/DALnet/bahamut.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/DALnet/bahamut/context:cpp)
 
 Please refer to the INSTALL file for help instructions on building and
 installing ircd.  The doc/ directory may also be of interest.
