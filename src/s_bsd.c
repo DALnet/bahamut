@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 /************************************************************************
  *   IRC - Internet Relay Chat, src/s_bsd.c
  *   Copyright (C) 1990 Jarkko Oikarinen and
@@ -28,6 +29,7 @@
 #include "throttle.h"
 #include "userban.h"
 #include <sys/types.h>
+#include <unistd.h>
 #include <sys/socket.h>
 #include <sys/file.h>
 #include <sys/ioctl.h>
@@ -121,6 +123,8 @@ static char readbuf[8192];
 #endif
 #endif
 
+extern int mydata_index;
+
 /*
  * add_local_domain() 
  * Add the domain to hostname, if it is missing
@@ -175,7 +179,7 @@ void report_error(char *text, aClient * cptr)
     char *host;
     int err;
     unsigned int len = sizeof(err);
-    extern char *strerror();
+    extern char *strerror(int);
 
     host = (cptr) ? get_client_name(cptr, (IsServer(cptr) ? HIDEME : FALSE)) 
                   : "";
@@ -211,7 +215,7 @@ void report_listener_error(char *text, aListener *lptr)
     char *host;
     int err;
     unsigned int len = sizeof(err);
-    extern char *strerror();
+    extern char *strerror(int);
 
     host = get_listener_name(lptr);
 
@@ -278,9 +282,7 @@ int add_listener(aPort *aport)
 	struct sockaddr_in6 addr6;
     } server;
     unsigned int len = sizeof(server);
-#ifdef USE_SSL
     extern int ssl_capable;
-#endif
 
     memset(&lstn, 0, sizeof(aListener));
     lstn.port = aport->port;
@@ -382,14 +384,12 @@ int add_listener(aPort *aport)
     aport->lstn = lptr;
 
     lptr->flags = aport->flags;
-#ifdef USE_SSL
     if(lptr->flags & CONF_FLAGS_P_SSL && ssl_capable)
     {
         SetSSL(lptr);
         lptr->ssl = NULL;
         lptr->client_cert = NULL;
     }
-#endif
 
     set_listener_non_blocking(lptr->fd, lptr);
     add_fd(lptr->fd, FDT_LISTENER, lptr);
@@ -544,7 +544,7 @@ void init_sys()
         if ((pid = fork()) < 0)
         {
             if ((fd = open("/dev/tty", O_RDWR)) >= 0)
-            write(fd, "Couldn't fork!\n", 15);  /* crude, but effective */
+                { int __attribute__((unused)) ret = write(fd, "Couldn't fork!\n", 15); }  /* crude, but effective */
             exit(0);
         } 
         else if (pid > 0)
@@ -567,12 +567,18 @@ void write_pidfile()
 {
 #ifdef IRCD_PIDFILE
     int fd;
-    char buff[20];
+    char buff[32];  /* Larger buffer to accommodate long PIDs */
+    pid_t pid;
+    ssize_t bytes_written;
 
-    if ((fd = open(IRCD_PIDFILE, O_CREAT | O_WRONLY, 0600)) >= 0)
+    /* Open with O_TRUNC to ensure file is truncated */
+    if ((fd = open(IRCD_PIDFILE, O_CREAT | O_WRONLY | O_TRUNC, 0600)) >= 0)
     {
-        ircsprintf(buff, "%5d\n", (int) getpid());
-        if (write(fd, buff, strlen(buff)) == -1)
+        pid = getpid();
+        /* Use proper format for pid_t and bounds-checked formatting */
+        ircsnprintf(buff, sizeof(buff), "%ld\n", (long) pid);
+        bytes_written = write(fd, buff, strlen(buff));
+        if (bytes_written == -1)
             Debug((DEBUG_NOTICE, "Error writing to pid file %s", IRCD_PIDFILE));
         close(fd);
         return;
@@ -765,9 +771,9 @@ int check_server_init(aClient * cptr)
 		const char *h_addr_str;
 
 		if (hp->h_addrtype == AF_INET)
-		    h_addr_str = inetntoa((char *)hp->h_addr);
+		    h_addr_str = inetntoa((char *)hp->h_addr_list[0]);
 		else if (hp->h_addrtype == AF_INET6)
-		    h_addr_str = inet6ntoa((char *)hp->h_addr);
+		    h_addr_str = inet6ntoa((char *)hp->h_addr_list[0]);
 		else
 		    h_addr_str = "invalid.address.family.invalid";
 
@@ -856,6 +862,25 @@ int completed_connection(aClient * cptr)
 {
     aConnect *aconn;
 
+    /* make sure SSL verification was successful,
+    otherwise we drop the client - skill */
+    if (IsSSL(cptr) && cptr->ssl)
+    {
+        long verify_result = SSL_get_verify_result(cptr->ssl);
+
+        switch (verify_result)
+        {
+            case X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN:
+            case X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT:
+            case X509_V_OK:
+                break;
+            default:
+                sendto_realops("Connection to %s failed, could not validate SSL certificate", cptr->name);
+                sendto_realops_lev(DEBUG_LEV, "SSL verification result: %ld [%s]", verify_result, cptr->name);
+                return -1;
+        }
+    }
+
     if(!(cptr->flags & FLAGS_BLOCKED))
         unset_fd_flags(cptr->fd, FDF_WANTWRITE);
     unset_fd_flags(cptr->fd, FDF_WANTREAD);
@@ -872,9 +897,15 @@ int completed_connection(aClient * cptr)
 
     /* pass on our capabilities to the server we /connect'd */
 #ifdef HAVE_ENCRYPTION_ON
-    if(!(aconn->flags & CONN_DKEY))
+    if(!(aconn->flags & CONN_DKEY) && !(aconn->flags & CONN_TLS))
+    {
         sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURST UNCONNECT ZIP"
                          " NICKIP NICKIPSTR TSMODE");
+    } else if (aconn->flags & CONN_TLS)
+    {
+        sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURST UNCONNECT TLS"
+                         " ZIP NICKIP NICKIPSTR TSMODE");
+    }
     else
     {
         sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURST UNCONNECT DKEY"
@@ -972,12 +1003,9 @@ void close_connection(aClient *cptr)
 
     if (cptr->fd >= 0)
     {
-#ifdef USE_SSL
         if(!IsDead(cptr))
-#endif
         dump_connections(cptr->fd);
         local[cptr->fd] = NULL;
-#ifdef USE_SSL
         if(IsSSL(cptr) && cptr->ssl)
         {
             SSL_set_shutdown(cptr->ssl, SSL_RECEIVED_SHUTDOWN);
@@ -985,7 +1013,6 @@ void close_connection(aClient *cptr)
             SSL_free(cptr->ssl);
             cptr->ssl = NULL;
         }
-#endif
         del_fd(cptr->fd);
         close(cptr->fd);
         cptr->fd = -2;
@@ -1415,7 +1442,6 @@ aClient *add_connection(aListener *lptr, int fd)
 #endif
     check_client_fd(acptr);
 
-#ifdef USE_SSL
     if(IsSSL(lptr))
     {
         extern SSL_CTX *ircdssl_ctx;
@@ -1440,6 +1466,7 @@ aClient *add_connection(aListener *lptr, int fd)
             SSL_set_shutdown(acptr->ssl, SSL_RECEIVED_SHUTDOWN);
             ssl_smart_shutdown(acptr->ssl);
             SSL_free(acptr->ssl);
+            acptr->ssl = NULL;
             ircstp->is_ref++;
             acptr->fd = -2;
             free_client(acptr);
@@ -1447,7 +1474,6 @@ aClient *add_connection(aListener *lptr, int fd)
             return NULL;
         }
     }
-#endif
 
     return acptr;
 }
@@ -1536,25 +1562,19 @@ int read_packet(aClient * cptr)
 #if defined(MAXBUFFERS)
         if (IsPerson(cptr))
         {
-#ifdef USE_SSL
             if(IsSSL(cptr) && cptr->ssl)
                 length = safe_ssl_read(cptr, readbuf, 8192 * sizeof(char));
             else
-#endif
             length = recv(cptr->fd, readbuf, 8192 * sizeof(char), 0);
         }
-#ifdef USE_SSL
         else if(IsSSL(cptr) && cptr->ssl)
             length = safe_ssl_read(cptr, readbuf, rcvbufmax * sizeof(char));
-#endif
         else
             length = recv(cptr->fd, readbuf, rcvbufmax * sizeof(char), 0);
 #else
-#ifdef USE_SSL
         if(IsSSL(cptr) && cptr->ssl)
             length = safe_ssl_read(cptr, readbuf, sizeof(readbuf));
         else
-#endif
         length = recv(cptr->fd, readbuf, sizeof(readbuf), 0);
 #endif
 
@@ -1748,7 +1768,6 @@ int readwrite_client(aClient *cptr, int isread, int iswrite)
      * - the socket is blocked
      */
 
-#ifdef USE_SSL
     if(cptr->ssl && IsSSL(cptr) && !SSL_is_init_finished(cptr->ssl))
     {
         if(IsDead(cptr) || !safe_ssl_accept(cptr, cptr->fd))
@@ -1759,7 +1778,6 @@ int readwrite_client(aClient *cptr, int isread, int iswrite)
         }
         return 1;
     }
-#endif
 
     if(iswrite)
     {
@@ -1904,7 +1922,7 @@ int connect_server(aConnect *aconn, aClient * by, struct hostent *hp)
                 return 0;
 
 	    aconn->ipnum_family = hp->h_addrtype;
-            memcpy((char *) &aconn->ipnum, hp->h_addr, hp->h_length);
+            memcpy((char *) &aconn->ipnum, hp->h_addr_list[0], hp->h_length);
         }
     }
     cptr = make_client(NULL, &me);
@@ -1942,6 +1960,39 @@ int connect_server(aConnect *aconn, aClient * by, struct hostent *hp)
         return -1;
     }
     
+    if (aconn->flags & CONN_TLS)
+    {
+        extern SSL_CTX *server_ssl_ctx;
+        cptr->ssl = NULL;
+
+        if ((cptr->ssl = SSL_new(server_ssl_ctx)) == NULL)
+        {
+            sendto_realops_lev(DEBUG_LEV, "SSL_new failed for %s", cptr->name);
+            close(cptr->fd);
+            cptr->fd = -2;
+            free_client(cptr);
+            return -1;
+        }
+
+        SetSSL(cptr);
+        SSL_set_fd(cptr->ssl, cptr->fd);
+
+        SSL_set_ex_data(cptr->ssl, mydata_index, aconn);
+
+        if (!safe_ssl_connect(cptr))
+        {
+            sendto_realops_lev(DEBUG_LEV, "SSL_connect failed for %s", cptr->name);
+            SSL_set_shutdown(cptr->ssl, SSL_RECEIVED_SHUTDOWN);
+            ssl_smart_shutdown(cptr->ssl);
+            SSL_free(cptr->ssl);
+            cptr->ssl = NULL;
+            close(cptr->fd);
+            cptr->fd = -2;
+            free_client(cptr);
+            return -1;
+        }
+    }
+
     make_server(cptr);
     cptr->serv->aconn = aconn;
     
@@ -2018,7 +2069,7 @@ connect_inet(aConnect *aconn, aClient *cptr, int *lenp)
             return NULL;
         }
 	aconn->ipnum_family = hp->h_addrtype;
-        memcpy((char *) &aconn->ipnum, hp->h_addr, hp->h_length);
+        memcpy((char *) &aconn->ipnum, hp->h_addr_list[0], hp->h_length);
     }
 
     if (aconn->ipnum_family == AF_INET)
@@ -2170,7 +2221,7 @@ void get_my_name(aClient * cptr, char *name, int len)
             strncpyzt(name, hp->h_name, len);
         else
             strncpyzt(name, tmp, len);
-        memcpy((char *) &mysk.sin_addr, hp->h_addr, sizeof(struct in_addr));
+        memcpy((char *) &mysk.sin_addr, hp->h_addr_list[0], sizeof(struct in_addr));
 
         Debug((DEBUG_DEBUG, "local name is %s", get_client_name(&me, TRUE)));
     }
@@ -2223,7 +2274,7 @@ void do_dns_async()
                 if (hp && aconn)
                 {
 		    aconn->ipnum_family = hp->h_addrtype;
-                    memcpy((char *) &aconn->ipnum, hp->h_addr, hp->h_length);
+                    memcpy((char *) &aconn->ipnum, hp->h_addr_list[0], hp->h_length);
 
                     connect_server(aconn, NULL, hp);
                 }
@@ -2236,7 +2287,7 @@ void do_dns_async()
                 if (hp && aconn)
 		{
 		    aconn->ipnum_family = hp->h_addrtype;
-                    memcpy((char *) &aconn->ipnum, hp->h_addr,
+                    memcpy((char *) &aconn->ipnum, hp->h_addr_list[0],
 			   hp->h_length);
 		}
                 break;

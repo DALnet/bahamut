@@ -104,7 +104,11 @@ struct state {
 extern struct state _res;
 #endif
 
-extern char *p_cdname(), *p_rr(), *p_type(), *p_class(), *p_time();
+extern char *p_cdname(char *, char *, char **);
+extern char *p_rr(char *, char *, char **);
+extern char *p_type(int);
+extern char *p_class(int);
+extern char *p_time(u_int32_t);
 
 #if !defined(HAVE_RES_INIT) && defined(HAVE___RES_INIT)
 #define res_init __res_init
@@ -116,7 +120,7 @@ extern char *p_cdname(), *p_rr(), *p_type(), *p_class(), *p_time();
 #define dn_expand __dn_expand
 #endif
 
-extern int  res_mkquery ();
-extern int  dn_expand ();
-extern int  res_init();
+extern int  res_mkquery(int, char *, int, int, char *, int, char *, char *, int);
+extern int  dn_expand(unsigned char *, unsigned char *, unsigned char *, char *, int);
+extern int  res_init(void);
 #endif

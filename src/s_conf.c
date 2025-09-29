@@ -773,6 +773,7 @@ static int server_info[] =
     CONN_ZIP, 'Z',
     CONN_DKEY, 'E',
     CONN_HUB, 'H',
+    CONN_TLS, 'S',
     0, 0
 };
 
@@ -926,6 +927,15 @@ confadd_connect(cVar *vars[], int lnum)
             DupString(x->class_name, tmp->value);
         }
     }
+    
+    /* Check for conflicting encryption flags */
+    if((x->flags & CONN_DKEY) && (x->flags & CONN_TLS))
+    {
+        confparse_error("Conflicting encryption flags: E (Diffie-Hellman) and S (TLS) cannot be used together", lnum);
+        free_connect(x);
+        return -1;
+    }
+    
     if(!x->name)
     {
         confparse_error("Lacking name in connect block", lnum);
@@ -2370,11 +2380,9 @@ int rehash(aClient *cptr, aClient *sptr, int sig)
 
     if (sig == SIGHUP)
     {
-#ifdef USE_SSL
 		/* Rehash SSL so we can automate certificate renewals and updates externally, i.e. from a cron job --xPsycho */
 		sendto_ops("Got signal SIGHUP, rehashing SSL");
 		ssl_rehash();
-#endif
         sendto_ops("Got signal SIGHUP, reloading ircd conf. file");
         remove_userbans_match_flags(UBAN_NETWORK, 0);
         /* remove all but kill {} blocks from conf */
@@ -2501,7 +2509,7 @@ static int lookup_confhost(aConnect *aconn)
 	    if ((hp = gethost_byname(s, &ln, family)))
 	    {
 		aconn->ipnum_family = hp->h_addrtype;
-		memcpy((char *) &aconn->ipnum, hp->h_addr, hp->h_length);
+		memcpy((char *) &aconn->ipnum, hp->h_addr_list[0], hp->h_length);
 	    }
 	}
     }

@@ -177,7 +177,7 @@ static struct {
     aClient  *server;           /* server */
     aChannel *chptr;            /* search in channel */
     char     *host_pat[2];      /* wildcard host pattern */
-    int      (*host_func[2])(); /* host match function */
+    int      (*host_func[2])(char *, char *); /* host match function */
     int       umodes[2];        /* usermodes */
     unsigned  stype;            /* services type */
     unsigned  ip_family[2];	/* CIDR family to match */
