@@ -186,7 +186,7 @@ do_server_estab(aClient *cptr)
 
     sendto_gnotice("from %s: Link with %s established, states:%s%s%s%s",
                    me.name, inpath, ZipOut(cptr) ? " Output-compressed" : "",
-                   RC4EncLink(cptr) ? " encrypted" : "",
+                   (IsSSL(cptr)  || RC4EncLink(cptr)) ? " encrypted" : "",
                    IsULine(cptr) ? " ULined" : "",
                    DoesTS(cptr) ? " TS" : " Non-TS");
 
@@ -272,7 +272,7 @@ do_server_estab(aClient *cptr)
 
     /* Send UHM (user host-masking) type */
     if(confopts & FLAGS_HUB)
-        sendto_one(cptr, "SVSUHM %d", uhm_type);
+        sendto_one(cptr, "SVSUHM %d %d", uhm_type, uhm_umodeh);
 
     /* send clone list */
     clones_send(cptr);
@@ -431,6 +431,8 @@ m_server_estab(aClient *cptr)
         SetZipCapable(cptr);
     if((aconn->flags & CONN_DKEY))
         SetWantDKEY(cptr);
+    if((aconn->flags & CONN_TLS))
+        SetWantTLS(cptr);
     if (IsUnknown(cptr))
     {
         if (aconn->cpasswd[0])
@@ -439,15 +441,23 @@ m_server_estab(aClient *cptr)
         /* Pass my info to the new server */
 
 #ifdef HAVE_ENCRYPTION_ON
-        if(!WantDKEY(cptr))
-            sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURST UNCONNECT ZIP "
-                       "NICKIP NICKIPSTR TSMODE");
-        else
+        if(WantDKEY(cptr))
+        {
             sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURST UNCONNECT DKEY "
                        "ZIP NICKIP NICKIPSTR TSMODE");
+        } else if (WantTLS(cptr))
+        {
+            sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURST UNCONNECT TLS "
+                       "ZIP NICKIP NICKIPSTR TSMODE");
+        }
+        else 
+        {
+            sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURST UNCONNECT ZIP NICKIP NICKIPSTR TSMODE");
+        }
 #else
         sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURST UNCONNECT ZIP NICKIP NICKIPSTR TSMODE");
 #endif
+
 
         sendto_one(cptr, "SERVER %s 1 :%s",
                    my_name_for_link(me.name, aconn),

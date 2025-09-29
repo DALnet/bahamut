@@ -443,10 +443,8 @@ m_info(aClient *cptr, aClient *sptr, int parc, char *parv[])
                        uninfo.release, uninfo.machine, uninfo.version);
             sendto_one(sptr, ":%s %d %s :Socket Engine Type: %s", me.name,
                        RPL_INFO, parv[0], engine_name());
-#ifdef USE_SSL
             sendto_one(sptr, ":%s %d %s :OpenSSL Version: %s", me.name,
                        RPL_INFO, parv[0], SSLeay_version(SSLEAY_VERSION));
-#endif
             sendto_one(sptr, ":%s %d %s :zlib version: %s", me.name,
                        RPL_INFO, parv[0], ZLIB_VERSION);
             sendto_one(sptr, ":%s %d %s :FD_SETSIZE=%d WRITEV_IOV=%d "
@@ -842,7 +840,7 @@ int send_lusers(aClient *cptr, aClient *sptr, int parc, char *parv[])
         char tmp[PATH_MAX];
 
         last_stat_save = timeofday;
-        ircsprintf(tmp, "%s/.maxclients", dpath);
+        ircsnprintf(tmp, sizeof(tmp), "%s/.maxclients", dpath);
         fp = fopen(tmp, "w");
         if (fp != NULL)
         {
@@ -995,8 +993,12 @@ m_connect(aClient *cptr, aClient *sptr, int parc, char *parv[])
     switch (retval = connect_server(aconn, sptr, NULL))
     {
         case 0:
-            sendto_one(sptr, ":%s NOTICE %s :*** Connecting to %s.",
-                       me.name, parv[0], aconn->name);
+            if (aconn->flags & CONN_TLS) 
+                sendto_one(sptr, ":%s NOTICE %s :*** Connecting to %s (TLS).",
+                           me.name, parv[0], aconn->name);
+            else
+                sendto_one(sptr, ":%s NOTICE %s :*** Connecting to %s.",
+                           me.name, parv[0], aconn->name);
             break;
         case -1:
             sendto_one(sptr, ":%s NOTICE %s :*** Couldn't connect to %s.",
@@ -1800,7 +1802,6 @@ local_rehash(aClient *cptr, aClient *sptr, char *sender, char *option)
 		sendto_ops("%s is rehashing temporary sqlines/sglines", sender);
 		return 0;
 	}
-#ifdef USE_SSL
 	else if (mycmp(option, "SSL") == 0)
 	{
 		ssl_rehash();
@@ -1808,7 +1809,6 @@ local_rehash(aClient *cptr, aClient *sptr, char *sender, char *option)
 		sendto_ops("%s is rehashing SSL", sender);
 		return 0;
 	}
-#endif
 	else if (mycmp(option, "CONF") == 0)
 	{
 		if (!MyClient(sptr))
@@ -2506,6 +2506,8 @@ m_capab(aClient *cptr, aClient *sptr, int parc, char *parv[])
             SetUnconnect(cptr);
         else if (strcmp(parv[i], "DKEY") == 0)
             SetDKEY(cptr);
+        else if (strcmp(parv[i], "TLS") == 0)
+            SetTLS(cptr);
         else if (strcmp(parv[i], "ZIP") == 0)
             SetZipCapable(cptr);
 #ifdef NOQUIT

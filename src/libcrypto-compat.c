@@ -8,7 +8,6 @@
  */
 
 #include "struct.h"
-#ifdef USE_SSL
 
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
 
@@ -88,5 +87,3 @@ int DH_set_length(DH *dh, long length)
 }
 
 #endif /* OPENSSL_VERSION_NUMBER */
-
-#endif /* USE_SSL */

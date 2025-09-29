@@ -2977,7 +2977,7 @@ get_channel(aClient *cptr, char *chname, int flag, int *created)
         return (chptr);
     if (flag == CREATE)
     {
-        chptr = make_channel();
+        chptr = make_channel(chname);
 
         if(created)
             *created = 1;
@@ -4946,6 +4946,7 @@ int m_sjoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
     int         args = 0, haveops = 0, keepourmodes = 1, keepnewmodes = 1,
                 what = 0, pargs = 0, fl, people = 0,
                 isnew, clientjoin = 0, pbpos, sjbufpos, created = 0;
+    (void)haveops; /* Suppress unused variable warning - used conditionally */
     char        *s, *s0, *para;
     static char numeric[16], sjbuf[BUFSIZE];
     char        keep_modebuf[REALMODEBUFLEN], keep_parabuf[REALMODEBUFLEN];

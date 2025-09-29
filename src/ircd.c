@@ -18,13 +18,29 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#define _POSIX_C_SOURCE 200809L
+#define _DEFAULT_SOURCE
 #include "struct.h"
 #include "common.h"
 #include "sys.h"
 #include "numeric.h"
 #include "msg.h"
 #include "sbuf.h"
+
+/* Suppress sbrk deprecation warning - used for memory debugging */
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#endif
+#ifndef _DEFAULT_SOURCE
+#define _DEFAULT_SOURCE
+#endif
+#include <unistd.h>
+#include <time.h>
+#include <stdint.h>
 #include <sys/file.h>
+/* Declare sbrk function explicitly for C11 compatibility */
+extern void *sbrk(intptr_t increment);
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/resource.h>
@@ -178,7 +194,7 @@ static void build_version(void)
         sprintf(version, "%s-%d.%d.%d", BASENAME, MAJOR, MINOR, PATCH);
 }
 
-void s_die() 
+void s_die()
 {
     FILE *fp;
     char tmp[PATH_MAX];
@@ -186,7 +202,7 @@ void s_die()
 #ifdef  USE_SYSLOG
     (void) syslog(LOG_CRIT, "Server killed By SIGTERM");
 #endif
-    ircsprintf(tmp, "%s/.maxclients", dpath);
+    ircsnprintf(tmp, sizeof(tmp), "%s/.maxclients", dpath);
     fp=fopen(tmp, "w");
     if(fp!=NULL) 
     {
@@ -537,7 +553,7 @@ void get_paths(char *argv)
 
     if(!*configfile)
     {
-        getcwd(t_dpath, PATH_MAX);  /* directory we're called from */
+        { char *__attribute__((unused)) ret = getcwd(t_dpath, PATH_MAX); }  /* directory we're called from */
         if(argv[0] == '/')       /* absolute filename used to call */
             strcat(spath, argv);
         else
@@ -575,7 +591,7 @@ void get_paths(char *argv)
     }
     else
     {
-        getcwd(t_dpath, PATH_MAX);  /* directory we're called from */
+        { char *__attribute__((unused)) ret = getcwd(t_dpath, PATH_MAX); }  /* directory we're called from */
         if(argv[0] == '/')       /* absolute filename used to call */
             strcat(spath, argv);
         else
@@ -645,9 +661,9 @@ setup_corefile()
 #endif
 }
 
-char REPORT_DO_DNS[256], REPORT_FIN_DNS[256], REPORT_FIN_DNSC[256], 
-    REPORT_FAIL_DNS[256], REPORT_DO_ID[256], REPORT_FIN_ID[256], 
-    REPORT_FAIL_ID[256], REPORT_REJECT_ID[256];
+char REPORT_DO_DNS[HOSTLEN + 100], REPORT_FIN_DNS[HOSTLEN + 100], REPORT_FIN_DNSC[HOSTLEN + 100],
+    REPORT_FAIL_DNS[HOSTLEN + 100], REPORT_DO_ID[HOSTLEN + 100], REPORT_FIN_ID[HOSTLEN + 100],
+    REPORT_FAIL_ID[HOSTLEN + 100], REPORT_REJECT_ID[HOSTLEN + 100];
 
 FILE *dumpfp=NULL;
 
@@ -658,9 +674,7 @@ main(int argc, char *argv[])
     char        tmp[PATH_MAX];
     FILE        *mcsfp;
     char        *conferr;
-#ifdef USE_SSL
     extern int  ssl_capable;
-#endif
         
     if ((timeofday = time(NULL)) == -1) 
     {
@@ -746,7 +760,7 @@ main(int argc, char *argv[])
         {
 #ifdef CMDLINE_CONFIG
         case 'f':
-            (void) setuid((uid_t) uid);
+            { int __attribute__((unused)) ret = setuid((uid_t) uid); }
             strcpy(configfile, p);
             break;
 #endif
@@ -754,7 +768,7 @@ main(int argc, char *argv[])
             bootopt |= BOOT_STDERR;
             break;
         case 't':
-            (void) setuid((uid_t) uid);
+            { int __attribute__((unused)) ret = setuid((uid_t) uid); }
             bootopt |= BOOT_TTY;
             break;
         case 'v':
@@ -762,7 +776,7 @@ main(int argc, char *argv[])
             exit(0);
         case 'x':
 #ifdef  DEBUGMODE
-            (void) setuid((uid_t) uid);
+            { int __attribute__((unused)) ret = setuid((uid_t) uid); }
             debuglevel = atoi(p);
             debugmode = *p ? p : "0";
             bootopt |= BOOT_DEBUG;
@@ -786,13 +800,13 @@ main(int argc, char *argv[])
         exit(0);
     }
 
-    ircsprintf(tmp, "%s/.maxclients", dpath);
+    ircsnprintf(tmp, sizeof(tmp), "%s/.maxclients", dpath);
     mcsfp = fopen(tmp, "r");
     if(mcsfp != NULL)
     {
-        fscanf(mcsfp, "%d %d %li %li %li %ld %ld %ld %ld", &Count.max_loc,
+        { int __attribute__((unused)) ret = fscanf(mcsfp, "%d %d %li %li %li %ld %ld %ld %ld", &Count.max_loc,
                &Count.max_tot, &Count.weekly, &Count.monthly, &Count.yearly,
-               &Count.start, &Count.week, &Count.month, &Count.year);
+               &Count.start, &Count.week, &Count.month, &Count.year); }
         fclose(mcsfp);
     }
 
@@ -907,7 +921,6 @@ main(int argc, char *argv[])
     load_spamfilter();
 #endif
 
-#ifdef USE_SSL
     printf("Trying to initialize ssl...\n");
     if(!(ssl_capable = ssl_init()))
     {
@@ -915,7 +928,6 @@ main(int argc, char *argv[])
         exit(-1);
     }
     printf("ssl has been loaded.\n");
-#endif
 
     init_sys();
     forked = 1;
@@ -1351,7 +1363,7 @@ int load_settings()
     char *para[MAXPARA + 1];
     int parc;
 
-    ircsprintf(tmp, "%s/settings.txt", dpath);
+    ircsnprintf(tmp, sizeof(tmp), "%s/settings.txt", dpath);
     if(!(fp = fopen(tmp, "r")))
         return 0; /* Can't open file! */
 
@@ -1401,7 +1413,7 @@ int save_settings()
     char tmp[PATH_MAX];
     FILE *fp;
 
-    ircsprintf(tmp, "%s/settings.txt", dpath);
+    ircsnprintf(tmp, sizeof(tmp), "%s/settings.txt", dpath);
     fp = fopen(tmp, "w");
     if(!fp)
         return 0;
@@ -1413,3 +1425,7 @@ int save_settings()
 
     return 1;
 }
+
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif

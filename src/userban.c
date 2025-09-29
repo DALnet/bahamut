@@ -178,12 +178,20 @@ int user_match_ban(aClient *cptr, struct userBan *ban)
    {
       if(ban->flags & UBAN_WILD)
       {
-         if((ban->flags & UBAN_WILDHOST) || match(ban->h, cptr->user->host) == 0)
+         if((ban->flags & UBAN_WILDHOST) || match(ban->h, cptr->user->host) == 0
+#ifdef USER_HOSTMASKING
+              || match(ban->h, cptr->user->mhost) == 0
+#endif
+         )
             return 1;
       }
       else
       {
-         if(mycmp(ban->h, cptr->user->host) == 0)
+         if(mycmp(ban->h, cptr->user->host) == 0
+#ifdef USER_HOSTMASKING
+            || mycmp(ban->h, cptr->user->mhost) == 0
+#endif
+         )
             return 1;
       }
       return 0;
@@ -313,7 +321,11 @@ struct userBan *check_userbanned(aClient *cptr, unsigned int yflags, unsigned in
          if((!(bl->ban->flags & UBAN_WILDUSER)) && match(bl->ban->u, cptr->user->username)) 
             continue;
 
-         if(mycmp(bl->ban->h, cptr->user->host) == 0)
+         if(mycmp(bl->ban->h, cptr->user->host) == 0
+#ifdef USER_HOSTMASKING
+              || mycmp(bl->ban->h, cptr->user->mhost) == 0
+#endif
+         )
             return bl->ban;
       }
 
@@ -329,7 +341,11 @@ struct userBan *check_userbanned(aClient *cptr, unsigned int yflags, unsigned in
          if((!(bl->ban->flags & UBAN_WILDUSER)) && match(bl->ban->u, cptr->user->username)) 
             continue;
 
-         if((bl->ban->flags & UBAN_WILDHOST) || match(bl->ban->h, cptr->user->host) == 0)
+         if((bl->ban->flags & UBAN_WILDHOST) || match(bl->ban->h, cptr->user->host) == 0
+#ifdef USER_HOSTMASKING
+              || match(bl->ban->h, cptr->user->mhost) == 0
+#endif
+         )
             return bl->ban;
       }
    }
