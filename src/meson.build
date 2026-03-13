@@ -48,14 +48,7 @@ ircd_cargs = [
   # TODO: audit inline functions in ircsprintf.c and channel.c and convert
   # to static inline so this GNU89-ism can be dropped.
   '-fgnu89-inline',
-  '-DHAVE_ENCRYPTION_ON=1',
 ]
-
-if get_option('hookmodules')
-  ircd_cargs += '-DUSE_HOOKMODULES=1'
-endif
-
-ircd_cargs += '-DMAXCONNECTIONS=@0@'.format(get_option('maxconnections'))
 
 # ---------------------------------------------------------------------------
 # Source files

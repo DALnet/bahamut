@@ -23,6 +23,7 @@ ltmain.sh
 config.log
 config.guess
 config.sub
+configure
 install-sh
 autom4te.cache
 config.status
