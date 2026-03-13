@@ -27,6 +27,8 @@ configure
 install-sh
 autom4te.cache
 config.status
+include/setup.h
+include/setup.h.in
 zlib/zconf.h
 
 src/ircd
