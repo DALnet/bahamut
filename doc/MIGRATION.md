@@ -30,7 +30,6 @@ dependency installation on various platforms.
 | `ssl {}` | TLS certificate and key paths |
 | `gossip {}` | Gossip protocol tuning (fanout, sync_window) |
 | `gopeer {}` | Gossip peer definitions (replaces connect{} for new deployments) |
-| `sra {}` | Root server administrator account bootstrap |
 
 ### Port block: new flags
 
@@ -47,16 +46,16 @@ dependency installation on various platforms.
 The `E` flag (Diffie-Hellman key exchange / RC4 encryption) has been removed.
 Use the `S` flag (TLS) instead for encrypted server links.
 
-### Options block: native services
+### Options block
 
-The `services_name` and `stats_name` tokens are no longer needed for most
-deployments, since Bahamut 3.0 includes built-in services.  Only set them if
-you use external services packages (Anope, Atheme, etc.).
+The `services_name` and `stats_name` tokens configure which server names are
+recognized as U:lined services/stats servers.  Set these to match your external
+services package (e.g. DALnet services, Anope, Atheme).
 
-### Super block: external services only
+### Super block
 
-The `super {}` block is only needed when linking external services servers.
-Built-in services do not require U-line privileges.
+The `super {}` block grants U:line privileges to external services servers,
+allowing them to issue network management commands (SVSNICK, AKILL, etc.).
 
 ### Modules block: enhanced
 
@@ -64,50 +63,6 @@ The module system now supports:
 - `optload` token (like `autoload` but silently skips missing modules)
 - Core modules auto-loaded from `<dpath>/modules/core/` — no config needed
 - Runtime management: `MODULE LOAD/UNLOAD/RELOAD/LIST/INFO`
-
----
-
-## Native Services
-
-Bahamut 3.0 replaces external services (Anope, Atheme, etc.) with built-in
-pseudoclients.  Account and channel data is stored in journal files on disk
-and replicated across the cluster via the gossip protocol.
-
-### Service pseudoclients
-
-| Service | Alias | Purpose |
-|---------|-------|---------|
-| NickServ | `/NS` | Account registration, login, nick enforcement, cert fingerprints |
-| ChanServ | `/CS` | Channel registration, access lists, mode locks |
-| MemoServ | `/MS` | User-to-user and channel memos |
-| RootServ | `/RS` | Root administrator management |
-| OperServ | `/OS` | GLOBAL, JUPE, MASSDEOP, MASSKICK, SILENCE |
-| StatServ | `/SS` | Network stats, server map, user/channel info |
-
-### Data storage
-
-Services data is stored as append-only journal files in the server's working
-directory:
-
-| File | Contents |
-|------|----------|
-| `accounts.journal` | NickServ accounts (passwords, emails, flags, certfps) |
-| `channels.journal` | ChanServ registrations (access lists, settings) |
-| `memos.journal` | MemoServ memos |
-
-Journals are human-readable text.  They are compacted automatically when the
-ratio of mutations to live records exceeds a threshold.
-
-### Migration from external services
-
-1. Remove `super {}`, services `connect {}`, and services `class {}` blocks
-2. Remove `services_name` and `stats_name` from `options {}`
-3. Users will need to re-register their accounts with `/NS REGISTER`
-4. Channel registrations will need to be re-created with `/CS REGISTER`
-5. Add `sra {}` blocks for root administrator accounts
-
-There is no automated data import from Anope/Atheme databases.  For large
-networks, consider running both systems in parallel during transition.
 
 ---
 
@@ -121,13 +76,13 @@ protocol for state synchronization.
 ### New model (Gossip)
 
 Bahamut 3.0 introduces a gossip-based protocol where servers form a mesh
-cluster.  Each event (nick change, channel join, services update, etc.) is
-assigned a unique ID and replicated to peers.
+cluster.  Each event (nick change, channel join, etc.) is assigned a unique ID and
+replicated to peers.
 
 **Advantages:**
 - No single point of failure (mesh topology vs. hub/leaf)
+- No cascading netsplits — gossip peers disconnect cleanly
 - Automatic reconnection and state resynchronization
-- Per-record versioning prevents conflicts in services data
 - Simpler configuration (no hub/leaf roles)
 
 ### Configuration
@@ -194,16 +149,8 @@ when STARTTLS is available.
 ### Client certificate fingerprints
 
 The server automatically extracts SHA-256 fingerprints from client TLS
-certificates.  Users can associate fingerprints with their NickServ account:
-
-```
-/NS SET CERTFP ADD
-```
-
-### SASL EXTERNAL
-
-Clients with a TLS certificate whose fingerprint matches a registered account
-can authenticate without a password using `SASL EXTERNAL`.
+certificates.  Fingerprints are visible in WHOIS (numeric 276) and can be
+used by external services for certificate-based authentication.
 
 ### Gossip peer TLS
 
@@ -228,9 +175,7 @@ hot-reload (serialize/deserialize callbacks, ABI versioning).
 
 ### Core modules (auto-loaded)
 
-`m_privmsg`, `m_away`, `m_wallops`, `m_who`, `m_gossip`, `m_legacy_bridge`,
-`m_nickserv`, `m_chanserv`, `m_memoserv`, `m_rootserv`, `m_operserv`,
-`m_statserv`
+`m_privmsg`, `m_away`, `m_wallops`, `m_who`, `m_gossip`, `m_legacy_bridge`
 
 ### Runtime management
 
@@ -270,7 +215,6 @@ All IRCv3 features are implemented as loadable modules.  Enable them by adding
 | `monitor` | m_monitor | Online status monitoring (MONITOR command) |
 | `msgid` | m_msgid | Unique message identifiers |
 | `multi-prefix` | built-in | Multiple status prefixes in NAMES/WHO |
-| `sasl` | m_sasl | SASL PLAIN and EXTERNAL authentication |
 | `server-time` | m_server_time | Server-side timestamps on messages |
 | `setname` | m_setname | Change realname without reconnecting |
 | `tls` | m_starttls | STARTTLS + TLS connection tag |

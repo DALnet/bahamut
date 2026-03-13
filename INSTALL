@@ -80,7 +80,7 @@ RUNNING
 
 TESTING
 -------
-    # Run the full integration test suite (73 tests)
+    # Run the full integration test suite (51 tests)
     python3 -m pytest tests/ -v
 
     # Run a specific suite
@@ -92,7 +92,6 @@ UPGRADING FROM BAHAMUT 2.x
 See doc/MIGRATION.md for a comprehensive migration guide covering:
   - Build system (autotools -> Meson)
   - Configuration changes (new blocks, removed options)
-  - Native services (replaces external Anope/Atheme)
   - Server linking (TS5 connect{} -> gossip gopeer{})
   - TLS and IRCv3 features
 
