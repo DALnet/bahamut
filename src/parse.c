@@ -26,6 +26,9 @@
 #define MSGTAB
 #include "msg.h"
 #undef MSGTAB
+#include "mapi.h"
+#include "cmds.h"
+#include "hooks.h"
 #include "memcount.h"
 
 #if defined( HAVE_STRING_H )
@@ -40,8 +43,6 @@ static int  cancel_clients(aClient *, aClient *, char *);
 static void remove_unknown(aClient *, char *, char *);
 
 static char sender[HOSTLEN + 1];
-static int  cancel_clients(aClient *, aClient *, char *);
-static void remove_unknown(aClient *, char *, char *);
 
 static struct Message *do_msg_tree(MESSAGE_TREE *, char *, struct Message *);
 static struct Message *tree_parse(char *);
@@ -49,9 +50,186 @@ static struct Message *tree_parse(char *);
 int num_msg_trees = 0;
 
 /*
+ * current_alias_info — set by parse() immediately before calling an alias
+ * handler.  m_aliased() and m_sjr() read this to get their AliasInfo*.
+ * Only valid during an alias handler call; NULL at all other times.
+ */
+AliasInfo *current_alias_info = NULL;
+
+/*
+ * dispatch_serial — incremented before each handler call.
+ * Tag generators (server_time_tag, msgid_tag, etc.) use this to cache
+ * a single value per message so all recipients of one dispatch get the
+ * same tag value.
+ */
+int  dispatch_serial = 0;
+
+/*
+ * lr_echo_sent — set to 1 by m_echo_message when it sends an echo that
+ * carries the @label= tag.  Cleared by parse() before each dispatch so
+ * that m_labeled_response's CHOOK_POSTDISPATCH hook can decide whether
+ * to send an empty BATCH ACK.
+ */
+int  lr_echo_sent = 0;
+
+/*
+ * current_dispatch_label — the value of the @label= IRCv3 tag from the
+ * current incoming message, or "" if none.  Used by labeled-response.
+ * Cleared after each handler returns.
+ */
+char current_dispatch_label[256] = "";
+
+/*
+ * current_dispatch_source — the source (sptr/from) of the current dispatch.
+ * Used by outbound tag generators (e.g. account-tag) that need to know who
+ * is sending.  Set before handler call, cleared after.
+ */
+aClient *current_dispatch_source = NULL;
+
+/* ---------------------------------------------------------------------------
+ * Generic sentinel handlers
+ *
+ * These are placed in mapi_cmd_av2 / msgtab handler slots to provide
+ * uniform error responses without boilerplate in every module.
+ * ---------------------------------------------------------------------------
+ */
+
+/* mg_ignore — silently drop the message */
+int
+mg_ignore(struct MsgBuf *mb, aClient *cptr, aClient *sptr, int parc, char *parv[])
+{
+    (void)mb; (void)cptr; (void)sptr; (void)parc; (void)parv;
+    return 0;
+}
+
+/* mg_unreg — send ERR_NOTREGISTERED */
+int
+mg_unreg(struct MsgBuf *mb, aClient *cptr, aClient *sptr, int parc, char *parv[])
+{
+    (void)mb; (void)cptr; (void)parc;
+    sendto_one(sptr, err_str(ERR_NOTREGISTERED), me.name,
+               parv[0][0] ? parv[0] : "*");
+    return -1;
+}
+
+/* mg_reg — send ERR_ALREADYREGISTRED */
+int
+mg_reg(struct MsgBuf *mb, aClient *cptr, aClient *sptr, int parc, char *parv[])
+{
+    (void)mb; (void)cptr; (void)parc;
+    sendto_one(sptr, err_str(ERR_ALREADYREGISTRED), me.name, parv[0]);
+    return 0;
+}
+
+/* mg_not_oper — send ERR_NOPRIVILEGES */
+int
+mg_not_oper(struct MsgBuf *mb, aClient *cptr, aClient *sptr, int parc, char *parv[])
+{
+    (void)mb; (void)cptr; (void)parc;
+    sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name, parv[0]);
+    return 0;
+}
+
+/* ---------------------------------------------------------------------------
+ * Dynamic command registry
+ *
+ * A small open-addressing hash table that maps command names to Message
+ * structs.  parse() checks this table whenever the static trie misses,
+ * allowing loadable modules to register new IRC commands at runtime.
+ * ---------------------------------------------------------------------------
+ */
+
+#define CMD_HASH_SIZE 64  /* power-of-two keeps the modulo cheap */
+
+typedef struct dyn_cmd {
+    char          name[32];  /* uppercase command name (key)        */
+    struct Message msg;      /* embedded Message (no extra alloc)   */
+    struct dyn_cmd *next;    /* chaining for collisions             */
+} dyn_cmd_t;
+
+static dyn_cmd_t *cmd_table[CMD_HASH_SIZE];
+
+static unsigned int cmd_hash(const char *s)
+{
+    unsigned int h = 0;
+    while (*s)
+        h = h * 31u + (unsigned char)(*s++ & 0xdf);  /* fold to uppercase */
+    return h % CMD_HASH_SIZE;
+}
+
+/* cmd_find_dynamic - called from parse() as trie fallback */
+struct Message *cmd_find_dynamic(const char *cmd)
+{
+    unsigned int h = cmd_hash(cmd);
+    dyn_cmd_t *e;
+    for (e = cmd_table[h]; e; e = e->next)
+        if (mycmp(e->name, cmd) == 0)
+            return &e->msg;
+    return NULL;
+}
+
+int cmd_add(const struct mapi_cmd_av2 *av2)
+{
+    char upper[32];
+    unsigned int h;
+    int i;
+    dyn_cmd_t *e;
+
+    if (!av2 || !av2->cmd)
+        return -1;
+
+    /* Convert to uppercase */
+    for (i = 0; av2->cmd[i] && i < 31; i++)
+        upper[i] = av2->cmd[i] & 0xdf;
+    upper[i] = '\0';
+
+    /* Refuse to shadow a static command */
+    if (tree_parse(upper))
+        return -1;
+
+    /* Refuse duplicate dynamic registration */
+    if (cmd_find_dynamic(upper))
+        return -1;
+
+    h = cmd_hash(upper);
+    e = (dyn_cmd_t *) MyMalloc(sizeof(dyn_cmd_t));
+    memset(e, 0, sizeof(*e));
+    strncpy(e->name, upper, 31);
+    e->msg.cmd        = e->name;
+    e->msg.reset_idle = av2->reset_idle;
+    e->msg.aliasidx   = -1;  /* modules never declare alias entries */
+    memcpy(e->msg.handlers, av2->handlers, sizeof(av2->handlers));
+    e->next           = cmd_table[h];
+    cmd_table[h]      = e;
+    return 0;
+}
+
+void cmd_del(const char *cmd)
+{
+    char upper[32];
+    unsigned int h;
+    int i;
+    dyn_cmd_t *e, **prev;
+
+    for (i = 0; cmd[i] && i < 31; i++)
+        upper[i] = cmd[i] & 0xdf;
+    upper[i] = '\0';
+
+    h = cmd_hash(upper);
+    prev = &cmd_table[h];
+    for (e = cmd_table[h]; e; prev = &e->next, e = e->next) {
+        if (mycmp(e->name, upper) == 0) {
+            *prev = e->next;
+            MyFree(e);
+            return;
+        }
+    }
+}
+
+/*
  * parse a buffer.
- * 
- * NOTE: parse() should not be called recusively by any other functions!
+ *
+ * NOTE: parse() should not be called recursively by any other functions!
  */
 
 int parse(aClient *cptr, char *buffer, char *bufend)
@@ -60,9 +238,13 @@ int parse(aClient *cptr, char *buffer, char *bufend)
     char *ch, *s;
     int i, numeric = 0, paramcount;
     struct Message *mptr;
+    struct MsgBuf msgbuf;
+    HandlerType ht;
+    MessageEntry *slot;
+    mapi_cmd_fn fn;
 
 #ifdef DUMP_DEBUG
-    if(dumpfp!=NULL) 
+    if(dumpfp!=NULL)
     {
 	fprintf(dumpfp, "<- %s: %s\n", (cptr->name ? cptr->name : "*"),
 		buffer);
@@ -71,61 +253,58 @@ int parse(aClient *cptr, char *buffer, char *bufend)
 #endif
     Debug((DEBUG_DEBUG, "Parsing %s: %s", get_client_name(cptr, TRUE),
 	   buffer));
-    
+
     if (IsDead(cptr))
 	return -1;
-    
+
     s = sender;
     *s = '\0';
-    
-    for (ch = buffer; *ch == ' '; ch++);	/* skip spaces */
-    
+
+    /* Initialize MsgBuf; tags will be filled if the line starts with '@' */
+    memset(&msgbuf, 0, sizeof(msgbuf));
+
+    for (ch = buffer; *ch == ' '; ch++);	/* skip leading spaces */
+
+    /* --- IRCv3 message tags --- */
+    if (*ch == '@')
+    {
+        ch = parse_msgbuf(&msgbuf, ch + 1);
+        /* parse_msgbuf advances past the tag block and trailing spaces */
+        while (*ch == ' ')
+            ch++;
+    }
+
+    /* Extract @label= for labeled-response support */
+    {
+        const char *lv = msgbuf_get_tag(&msgbuf, "label");
+        if (lv)
+            strncpy(current_dispatch_label, lv, sizeof(current_dispatch_label) - 1);
+        else
+            current_dispatch_label[0] = '\0';
+    }
+
     para[0] = from->name;
-    if (*ch == ':') 
+    if (*ch == ':')
     {
 	/*
 	 * Copy the prefix to 'sender' assuming it terminates with
 	 * SPACE (or NULL, which is an error, though).
 	 */
-	
+
 	for (++ch; *ch && *ch != ' '; ++ch)
 	    if (s < (sender + HOSTLEN))
-		*s++ = *ch;		
+		*s++ = *ch;
 	*s = '\0';
-	
+
 	/*
 	 * Actually, only messages coming from servers can have the
 	 * prefix--prefix silently ignored, if coming from a user
 	 * client...
-	 * 
-	 * ...sigh, the current release "v2.2PL1" generates also null
-	 * prefixes, at least to NOTIFY messages (e.g. it puts
-	 * "sptr->nickname" as prefix from server structures where it's
-	 * null--the following will handle this case as "no prefix" at
-	 * all --msa  (": NOTICE nick ...")
 	 */
-	
-	if (*sender && IsServer(cptr)) 
+
+	if (*sender && IsServer(cptr))
 	{
 	    from = find_client(sender, (aClient *) NULL);
-
-	    /*
-	     * okay, this doesn't seem to do much here.
-	     * from->name _MUST_ be equal to sender. 
-	     * That's what find_client does.
-	     * find_client will find servers too, and since we don't use server
-	     * masking, the find server call is useless (and very wasteful).
-	     * now, there HAS to be a from and from->name and
-	     * sender have to be the same
-	     * for us to get to the next if. but the next if
-	     * starts out with if(!from)
-	     * so this is UNREACHABLE CODE! AGH! - lucas
-	     *
-	     *  if (!from || mycmp(from->name, sender))
-	     *     from = find_server(sender, (aClient *) NULL);
-	     *  else if (!from && strchr(sender, '@'))
-	     *     from = find_nickserv(sender, (aClient *) NULL);
-	     */
 
 	    para[0] = sender;
 	    /*
@@ -134,23 +313,23 @@ int parse(aClient *cptr, char *buffer, char *bufend)
 	     * message (old IRC just let it through as if the prefix just
 	     * wasn't there...) --msa
 	     */
-	    if (!from) 
+	    if (!from)
 	    {
 		Debug((DEBUG_ERROR, "Unknown prefix (%s)(%s) from (%s)",
 		       sender, buffer, cptr->name));
 
 		ircstp->is_unpf++;
 		remove_unknown(cptr, sender, buffer);
-		 
+
 		return -1;
 	    }
 
-	    if (from->from != cptr) 
+	    if (from->from != cptr)
 	    {
 		ircstp->is_wrdi++;
 		Debug((DEBUG_ERROR, "Message (%s) coming from (%s)",
 		       buffer, cptr->name));
-		
+
 		return cancel_clients(cptr, from, buffer);
 	    }
 	}
@@ -158,26 +337,17 @@ int parse(aClient *cptr, char *buffer, char *bufend)
 	    ch++;
     }
 
-    if (*ch == '\0') 
+    if (*ch == '\0')
     {
 	ircstp->is_empt++;
 	Debug((DEBUG_NOTICE, "Empty message from host %s:%s",
 	       cptr->name, from->name));
 	return (-1);
     }
-    /*
-     * Extract the command code from the packet.  Point s to the end
-     * of the command code and calculate the length using pointer
-     * arithmetic.  Note: only need length for numerics and *all*
-     * numerics must have parameters and thus a space after the command
-     * code. -avalon
-     * 
-     * ummm???? - Dianora
-     */
 
     /* check for numeric */
     if (*(ch + 3) == ' ' && IsDigit(*ch) && IsDigit(*(ch + 1)) &&
-	IsDigit(*(ch + 2))) 
+	IsDigit(*(ch + 2)))
     {
 	mptr = (struct Message *) NULL;
 	numeric = (*ch - '0') * 100 + (*(ch + 1) - '0') *
@@ -187,49 +357,40 @@ int parse(aClient *cptr, char *buffer, char *bufend)
 	s = ch + 3;
 	*s++ = '\0';
     }
-    else 
+    else
     {
 	s = strchr(ch, ' ');
-	
+
 	if (s)
 	    *s++ = '\0';
-	
+
 	mptr = tree_parse(ch);
-	
-	if (!mptr || !mptr->cmd) 
+
+	if (!mptr || !mptr->cmd)
+	    mptr = cmd_find_dynamic(ch);
+
+	if (!mptr || !mptr->cmd)
 	{
-	    /*
-	     * only send error messages to things that actually sent
-	     * buffers to us and only people, too.
-	     */
-	    if (buffer[0] != '\0') 
-	    {
-		if (IsPerson(from))
-		    sendto_one(from, ":%s %d %s %s :Unknown command",
-			       me.name, ERR_UNKNOWNCOMMAND, from->name, ch);
-		Debug((DEBUG_ERROR, "Unknown (%s) from %s",
-		       ch, get_client_name(cptr, TRUE)));
-	    }
+	    sendto_realops_lev(DEBUG_LEV,
+		"Unknown command '%s' from %s[%s]", ch,
+		from->name, get_client_name(cptr, FALSE));
 	    ircstp->is_unco++;
 	    return -1;
 	}
-	
-	paramcount = mptr->parameters;
+
+	paramcount = MAXPARA;
 	i = bufend - ((s) ? s : ch);
 	mptr->bytes += i;
 	/*
 	 * Allow only 1 msg per 2 seconds (on average) to prevent
-	 * dumping. to keep the response rate up, bursts of up to 5 msgs
-	 * are allowed -SRB Opers can send 1 msg per second, burst of ~20
-	 * -Taner
+	 * dumping.
 	 */
-	if (!IsServer(cptr)) 
+	if (!IsServer(cptr))
 	{
         if (!NoMsgThrottle(cptr))
         {
 #ifdef NO_OPER_FLOOD
             if (IsAnOper(cptr))
-                /* "randomly" (weighted) increase the since */
                 cptr->since += (cptr->receiveM % 10) ? 1 : 0;
             else
 #endif
@@ -238,29 +399,23 @@ int parse(aClient *cptr, char *buffer, char *bufend)
     }
     }
     /*
-     * Must the following loop really be so devious? On surface it
-     * splits the message to parameters from blank spaces. But, if
-     * paramcount has been reached, the rest of the message goes into
-     * this last parameter (about same effect as ":" has...) --msa
+     * Split the message into parameters.
      */
 
-    /* Note initially true: s==NULL || *(s-1) == '\0' !! */
-    
     i = 1;
-    if (s) 
+    if (s)
     {
 	if (paramcount > MAXPARA)
 	    paramcount = MAXPARA;
-	for (;;) 
+	for (;;)
 	{
 	    while (*s == ' ')
 		*s++ = '\0';
-	    
+
 	    if (*s == '\0')
 		break;
-	    if (*s == ':') 
+	    if (*s == ':')
 	    {
-		/* The rest is a single parameter */
 		para[i++] = s + 1;
 		break;
 	    }
@@ -275,59 +430,77 @@ int parse(aClient *cptr, char *buffer, char *bufend)
                 }
 		break;
             }
-	    
+
 	    while(*s && *s != ' ')
 		s++;
 	}
     }
-    
+
     para[i] = NULL;
     if (mptr == (struct Message *) NULL)
 	return (do_numeric(numeric, cptr, from, i, para));
-    
+
     mptr->count++;
-    
-    /* patch to avoid server flooding from unregistered connects */
-    
-    if (!IsRegistered(cptr) && !(mptr->flags & MF_UNREG)) {
-        sendto_one(from, err_str(ERR_NOTREGISTERED), me.name,
-                   *para[0] ? para[0] : "*", ch);
-        return -1;
-    }
-    
-    if (IsRegisteredUser(cptr) && (mptr->flags & MF_RIDLE))
-	from->user->last = timeofday;
 
-    if (mptr->flags & MF_ALIAS)
+    /* ---------------------------------------------------------------
+     * Per-HandlerType dispatch
+     * --------------------------------------------------------------- */
+
+    /* Determine the handler type from the connection state */
+    if      (!IsRegistered(cptr))    ht = HANDLER_UNREG;
+    else if (IsServer(cptr) ||
+             IsGoPeer(cptr))         ht = HANDLER_SERVER;
+    else if (!MyConnect(cptr))       ht = HANDLER_REMOTE;
+    else if (IsAnOper(cptr))         ht = HANDLER_OPER;
+    else                             ht = HANDLER_CLIENT;
+
+    /* For alias commands, set current_alias_info before dispatch */
+    if (mptr->aliasidx >= 0)
+        current_alias_info = &aliastab[mptr->aliasidx];
+    else
+        current_alias_info = NULL;
+
+    slot = &mptr->handlers[ht];
+    fn   = slot->handler ? slot->handler : mg_ignore;
+
+    if (fn == mg_ignore)
     {
-#ifdef __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-non-prototype"
-#endif
-         return mptr->func(cptr, from, i, para, &aliastab[mptr->aliasidx]);
-#ifdef __clang__
-#pragma clang diagnostic pop
-#endif
+        current_alias_info = NULL;
+        return 0;
     }
 
-#ifdef __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-non-prototype"
-#endif
-    return (*mptr->func) (cptr, from, i, para);
-#ifdef __clang__
-#pragma clang diagnostic pop
-#endif
+    /* Minimum parameter count check */
+    if (slot->min_para && i < slot->min_para)
+    {
+        sendto_one(from, err_str(ERR_NEEDMOREPARAMS), me.name,
+                   para[0], mptr->cmd);
+        current_alias_info = NULL;
+        return 0;
+    }
+
+    /* Update idle timestamp for CLIENT and OPER if requested */
+    if (mptr->reset_idle && (ht == HANDLER_CLIENT || ht == HANDLER_OPER)
+        && from->user)
+        from->user->last = timeofday;
+
+    lr_echo_sent = 0;
+    current_dispatch_source = from;
+    dispatch_serial++;
+    i = fn(&msgbuf, cptr, from, i, para);
+    current_alias_info = NULL;
+    if (current_dispatch_label[0])
+        call_hooks(CHOOK_POSTDISPATCH, from);
+    current_dispatch_label[0] = '\0';
+    current_dispatch_source = NULL;
+    return i;
 }
 
 /*
  * init_tree_parse()
- * 
- * inputs               - pointer to msg_table defined in msg.h output
- *  NONE side effects   - MUST MUST be called at startup ONCE before
+ *
+ * inputs               - pointer to msg_table defined in msg.h
+ * side effects         - MUST be called at startup ONCE before
  * any other keyword hash routine is used.
- * 
- * -Dianora, orabidoo
  */
 
 /* for qsort'ing the msgtab in place -orabidoo */
@@ -341,12 +514,12 @@ void init_tree_parse(struct Message *mptr)
 {
     int i;
     struct Message *mpt = mptr;
-    
+
     for (i = 0; mpt->cmd; mpt++)
 	i++;
     qsort((void *) mptr, i, sizeof(struct Message),
 	  (int (*)(const void *, const void *)) mcmp);
-    
+
     msg_tree_root = (MESSAGE_TREE *) MyMalloc(sizeof(MESSAGE_TREE));
     num_msg_trees++;
     mpt = do_msg_tree(msg_tree_root, "", mptr);
@@ -368,7 +541,7 @@ static struct Message *do_msg_tree(MESSAGE_TREE * mtree, char *prefix,
     char newpref[64];	/* must be longer than any command */
     int c, c2, lp;
     MESSAGE_TREE *mtree1;
-    
+
     lp = strlen(prefix);
     if (!lp || !strncmp(mptr->cmd, prefix, lp))
     {
@@ -383,7 +556,7 @@ static struct Message *do_msg_tree(MESSAGE_TREE * mtree, char *prefix,
 	}
 	else
 	{
-	    /* ambigous, make new entries for each of the letters that match */
+	    /* ambiguous, make new entries for each of the letters that match */
 	    if (!mycmp(mptr->cmd, prefix))
 	    {
 		mtree->final = (void *) 1;
@@ -392,7 +565,7 @@ static struct Message *do_msg_tree(MESSAGE_TREE * mtree, char *prefix,
 	    }
 	    else
 		mtree->final = NULL;
-	    
+
 	    for (c = 'A'; c <= 'Z'; c++)
 	    {
 		if (mptr->cmd[lp] == c)
@@ -429,25 +602,15 @@ static struct Message *do_msg_tree(MESSAGE_TREE * mtree, char *prefix,
 
 /*
  * tree_parse()
- * 
- * inputs               
- * - pointer to command in upper case output NULL pointer if not found 
- * struct Message pointer to command entry if found 
- * side effects        - NONE
- * 
- * -Dianora, orabidoo
  */
 static struct Message *tree_parse(char *cmd)
 {
     char    r;
     MESSAGE_TREE *mtree = msg_tree_root;
-    
+
     while ((r = *cmd++))
     {
-	r &= 0xdf;		/*
-				 * some touppers have trouble w/ 
-				 * lowercase, says Dianora 
-				 */
+	r &= 0xdf;
 	if (r < 'A' || r > 'Z')
 	    return NULL;
 	mtree = mtree->pointers[r - 'A'];
@@ -472,10 +635,10 @@ char *getfield(char *newline)
 
     if (newline)
 	line = newline;
-    
+
     if (line == (char *) NULL)
 	return ((char *) NULL);
-    
+
     field = line;
     if ((end = strchr(line, ':')) == NULL)
     {
@@ -491,34 +654,11 @@ char *getfield(char *newline)
 
 static int cancel_clients(aClient *cptr, aClient *sptr, char *cmd)
 {
-    /*
-     * kill all possible points that are causing confusion here, I'm not
-     * sure I've got this all right... - avalon
-     * 
-     * knowing avalon, probably not.
-     */
-    /*
-     * with TS, fake prefixes are a common thing, during the connect
-     * burst when there's a nick collision, and they must be ignored
-     * rather than killed because one of the two is surviving.. so we
-     * don't bother sending them to all ops everytime, as this could
-     * send 'private' stuff from lagged clients. we do send the ones
-     * that cause servers to be dropped though, as well as the ones
-     * from * non-TS servers -orabidoo
-     */
-    /*
-     * Incorrect prefix for a server from some connection.  If it is a
-     * client trying to be annoying, just QUIT them, if it is a server
-     * then the same deal.
-    */
     if (IsServer(sptr) || IsMe(sptr))
     {
-	/* Sorry, but at the moment this is just too much for even opers 
-	   to see. -Rak */
-	/* or we could just take out the message. <EG>  -wd */
 	sendto_realops_lev(DEBUG_LEV, "Message for %s[%s] from %s",
 			   sptr->name, sptr->from->name,
-			   get_client_name(cptr, 
+			   get_client_name(cptr,
 					   (IsServer(cptr) ? HIDEME : FALSE)));
 	if (IsServer(cptr))
 	{
@@ -527,27 +667,17 @@ static int cancel_clients(aClient *cptr, aClient *sptr, char *cmd)
 			       "Fake Direction", cptr->name, sptr->name);
 	    return -1;
 	}
-	
+
 	if (IsClient(cptr))
 	    sendto_realops_lev(DEBUG_LEV,
 			       "Would have dropped client %s (%s@%s) "
-			       "[%s from %s]", cptr->name, 
+			       "[%s from %s]", cptr->name,
 			       cptr->user->username, cptr->user->host,
 			       cptr->user->server, cptr->from->name);
 	return -1;
     }
-    /*
-     * Ok, someone is trying to impose as a client and things are
-     * confused.  If we got the wrong prefix from a server, send out a
-     * kill, else just exit the lame client.
-     */
     if (IsServer(cptr))
     {
-	/*
-	 * If the fake prefix is coming from a TS server, discard it
-	 * silently -orabidoo
-	 * also drop it if we're gonna kill services by not doing so }:/
-	 */
 	if (DoesTS(cptr))
 	{
 	    if (sptr->user)
@@ -600,21 +730,15 @@ static void remove_unknown(aClient *cptr, char *sender, char *buffer)
 			   get_client_name(cptr, FALSE), sender);
 	return;
     }
-    /* Not from a server so don't need to worry about it. */
     if (!IsServer(cptr))
 	return;
-    /*
-     * Do kill if it came from a server because it means there is a
-     * ghost user on the other server which needs to be removed. -avalon
-     * Tell opers about this. -Taner
-     */
     if (!strchr(sender, '.'))
 	sendto_one(cptr, ":%s KILL %s :%s (%s(?) <- %s)",
 		   me.name, sender, me.name, sender,
 		   get_client_name(cptr, HIDEME));
     else
     {
-	sendto_realops_lev(DEBUG_LEV, 
+	sendto_realops_lev(DEBUG_LEV,
 			   "Unknown prefix (%s) from %s, Squitting %s",
 			   buffer, get_client_name(cptr, HIDEME), sender);
 	sendto_one(cptr, ":%s SQUIT %s :(Unknown prefix (%s) from %s)",
@@ -657,4 +781,3 @@ memcount_parse(MCparse *mc)
 
     return mc->total.m;
 }
-

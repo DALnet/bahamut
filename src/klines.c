@@ -71,7 +71,7 @@ extern char *smalldate(time_t);
  *    parv[3] = reason (optional)
  */
 int
-m_kline(aClient *cptr, aClient *sptr, int parc, char *parv[])
+m_kline(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     char rbuf[512];
     char hostbuf[HOSTIPLEN+3+1];
@@ -230,7 +230,7 @@ m_kline(aClient *cptr, aClient *sptr, int parc, char *parv[])
  *     parv[0] = sender
  *     parv[1] = user@host mask
  */
-int m_unkline(aClient *cptr, aClient *sptr, int parc, char *parv[])
+int m_unkline(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     char hbuf[512];
     char *user;

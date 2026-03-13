@@ -42,6 +42,7 @@
 #include "h.h"
 #include "fdlist.h"
 #include "throttle.h"
+#include "gossip_peer.h"
 
 extern float curSendK, curRecvK;
 
@@ -522,14 +523,23 @@ void exit_server(aClient *lcptr, aClient *cptr, aClient *from, char *comment)
  *      FLUSH_BUFFER    if (cptr == sptr) 
  *      0 if (cptr != sptr)
  */
-int 
+int
 exit_client(aClient *cptr, aClient *sptr, aClient *from, char *comment)
 {
 #ifdef  FNAME_USERLOG
     time_t on_for;
 #endif
-    
-    if (MyConnect(sptr)) 
+
+    /* Phase S2: gossip peer disconnect — clean up link, do NOT cascade QUITs.
+     * Users reachable via gossip peers are maintained in the event log, not
+     * the spanning tree, so dropping a link does not QUIT their users. */
+    if (IsGoPeer(sptr))
+    {
+        gopeer_handle_disconnect(sptr);
+        return (cptr == sptr) ? FLUSH_BUFFER : 0;
+    }
+
+    if (MyConnect(sptr))
     {
         call_hooks(CHOOK_SIGNOFF, sptr);
 
@@ -546,9 +556,6 @@ exit_client(aClient *cptr, aClient *sptr, aClient *from, char *comment)
         }
         if (IsClient(sptr))
             Count.local--;
-        if (IsNegoServer(sptr))
-            sendto_realops("Lost server %s during negotiation: %s", 
-                           sptr->name, comment);
         
         if (IsServer(sptr)) 
         {

@@ -4,6 +4,9 @@
  *
  */
 
+#ifndef HOOKS_H
+#define HOOKS_H
+
 enum c_hooktype {
    CHOOK_10SEC,       /* Called every 10 seconds or so -- 
                        * not guaranteed to be 10 seconds *
@@ -95,7 +98,73 @@ enum c_hooktype {
                        * Params: 1: (aClient *)
                        * Returns void */
    MHOOK_LOAD,        /* Called for modules loading and unloading */
-   MHOOK_UNLOAD       /* Params: 2: (char *modulename, void *moduleopaque) */
+   MHOOK_UNLOAD,      /* Params: 2: (char *modulename, void *moduleopaque) */
+   CHOOK_POSTREGISTER, /* called at the end of register_user(), after the
+                       * client is fully on the network.
+                       * Params: 1: (aClient *sptr)
+                       * Returns int */
+   CHOOK_AWAY,        /* called when a client sets or clears AWAY.
+                       * Params: 3: (aClient *sptr, int setting, char *message)
+                       * setting = 1: going away (message = away text)
+                       * setting = 0: returning (message = NULL)
+                       * Returns void */
+   CHOOK_POSTDISPATCH, /* called after a command handler returns, before
+                       * current_dispatch_label is cleared.
+                       * Only fired when current_dispatch_label[0] != '\0'.
+                       * Params: 1: (aClient *sptr) — originating client
+                       * Returns int */
+   CHOOK_INVITE,      /* called after a successful INVITE
+                       * Params: 3: (aClient *inviter, aClient *target,
+                       *             aChannel *chptr)
+                       * Returns void */
+   CHOOK_SETNAME,     /* called when a client changes realname via SETNAME
+                       * Params: 2: (aClient *sptr, const char *newname)
+                       * Returns void */
+   CHOOK_TAGMSG,      /* called for every TAGMSG delivery
+                       * Params: 4: (aClient *src, void *target,
+                       *             int is_chan, const char *tags)
+                       * Returns void */
+
+   /* Phase S1: gossip event hooks */
+   CHOOK_NICK,        /* called after a successful nick change
+                       * Params: 3: (aClient *sptr, const char *oldnick,
+                       *             const char *newnick)
+                       * Returns void */
+   CHOOK_PART,        /* called when a user parts a channel (after send,
+                       * before remove_user_from_channel)
+                       * Params: 3: (aClient *sptr, aChannel *chptr,
+                       *             const char *reason)  — reason may be NULL
+                       * Returns void */
+   CHOOK_CHANMODE,    /* called after a channel mode change is propagated
+                       * Params: 4: (aClient *sptr, aChannel *chptr,
+                       *             const char *modebuf, const char *parabuf)
+                       * Returns void */
+   CHOOK_TOPIC,       /* called after a channel topic is set
+                       * Params: 3: (aClient *sptr, aChannel *chptr,
+                       *             const char *topic)
+                       * Returns void */
+   CHOOK_UMODE,       /* called after a user mode change is propagated
+                       * Params: 2: (aClient *sptr, unsigned long old_umode)
+                       * Returns void */
+
+   /* Phase 8A: account system hooks */
+   CHOOK_ACCOUNT_LOGIN, /* called after successful IDENTIFY
+                       * Params: 1: (aClient *sptr)
+                       * Returns void */
+   CHOOK_ACCOUNT_LOGOUT, /* called on disconnect or explicit logout
+                       * Params: 1: (aClient *sptr)
+                       * Returns void */
+
+   /* Phase 8B: channel registration */
+   CHOOK_POSTJOIN,    /* called after join completes (add_user_to_channel
+                       * + sendto_channel_join done)
+                       * Params: 2: (aClient *sptr, aChannel *chptr)
+                       * Returns void */
+
+   CHOOK_CHGHOST      /* called when a user's visible host changes (SVSHOST)
+                       * Params: 3: (aClient *sptr, const char *old_user,
+                       *             const char *old_host)
+                       * Returns void */
 };
 
 extern int call_hooks(enum c_hooktype hooktype, ...);
@@ -113,3 +182,5 @@ extern void bircmodule_free(void *);
 #define UHM_SUCCESS      1
 #define UHM_SOFT_FAILURE 0
 #define UHM_HARD_FAILURE FLUSH_BUFFER
+
+#endif /* HOOKS_H */

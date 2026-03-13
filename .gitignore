@@ -35,3 +35,9 @@ src/ircd
 src/version.c.last
 tools/convert_conf
 tools/mkpasswd
+
+# Python
+__pycache__/
+
+# Meson build
+/build/

@@ -31,6 +31,7 @@
 #include "h.h"
 #include "userban.h"
 #include "hooks.h"
+#include "session.h"
 
 extern int do_user(char *, aClient *, aClient *, char *, char *, char *,
 		   unsigned long, char *, char *);
@@ -91,12 +92,13 @@ static int do_nick_name(char *nick) {
  * parv[10] = ircname
  * -- endif
  */
-int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
+int m_nick(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     struct simBan *ban;
     aClient    *acptr, *uplink;
     Link       *lp, *lp2;
     char        nick[NICKLEN + 2];
+    char        oldnick[NICKLEN + 1];
     ts_val      newts = 0;
     int         sameuser = 0, samenick = 0;
   
@@ -210,8 +212,17 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	}
 	
 	if (!(acptr = find_client(nick, NULL)))
+	{
+	    /* Phase S4: block nicks held by a session (unless caller IS resuming) */
+	    if (MyConnect(sptr) && session_find_by_nick(nick))
+	    {
+	        sendto_one(sptr, err_str(ERR_NICKNAMEINUSE),
+	                   me.name, BadPtr(parv[0]) ? "*" : parv[0], nick);
+	        return 0;
+	    }
 	    break;
-     
+	}
+
 	/*
 	 * If acptr == sptr, then we have a client doing a nick change
 	 * between *equivalent* nicknames as far as server is concerned
@@ -642,14 +653,19 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	if (sptr->user)
 	{
 	    /* USER already received, now we have NICK */
-       
-	    if (register_user(cptr, sptr, nick, sptr->user->username, NULL)
-		== FLUSH_BUFFER)
-		return FLUSH_BUFFER;
+	    if (!sptr->cap_neg)
+	    {
+	        if (register_user(cptr, sptr, nick, sptr->user->username, NULL)
+		    == FLUSH_BUFFER)
+		    return FLUSH_BUFFER;
+	    }
+	    /* else: CAP negotiation in progress; cap_cmd_end() will complete it */
 	}
     }
 
     /* Finally set new nick name. */
+    strncpy(oldnick, sptr->name, NICKLEN);
+    oldnick[NICKLEN] = '\0';
     if (sptr->name[0])
     {
         del_from_client_hash_table(sptr->name, sptr);
@@ -666,6 +682,9 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
     strcpy(sptr->name, nick);
     add_to_client_hash_table(nick, sptr);
     if (IsPerson(sptr) && !samenick)
-	hash_check_watch(sptr, RPL_LOGON);
+    {
+        hash_check_watch(sptr, RPL_LOGON);
+        call_hooks(CHOOK_NICK, sptr, oldnick, nick);
+    }
     return 0;
 }

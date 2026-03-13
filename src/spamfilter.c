@@ -141,7 +141,7 @@ void spamfilter_sendserver(aClient *acptr)
 /* m_spamops - Send a SPAM_LEV notice to all local opers and propgate it to other servers
    parv[1] = message
  */
-int m_spamops(aClient *cptr, aClient *sptr, int parc, char *parv[])
+int m_spamops(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     char       *message = parc > 1 ? parv[1] : NULL;
 
@@ -423,7 +423,7 @@ int del_sf(char *text)
  * parv[3] - (Optional) Target
  * parv[4] or parv[3] - Reason
  */
-int m_sf(aClient *cptr, aClient *sptr, int parc, char *parv[])
+int m_sf(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     AliasInfo *ai = &aliastab[AII_OS];
 
@@ -468,7 +468,7 @@ int m_sf(aClient *cptr, aClient *sptr, int parc, char *parv[])
 }
 
 /* report_spamfilters - send /stats S (spamfilter list) output to opers */
-int report_spamfilters(aClient *cptr, aClient *sptr, int parc, char *parv[])
+int report_spamfilters(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     struct spam_filter *sf = spam_filters;
 

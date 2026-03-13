@@ -44,6 +44,7 @@
 #include <fcntl.h>
 #include <sys/resource.h>
 #include "hooks.h"
+#include "websocket.h"
 
 #ifdef  AIX
 #include <time.h>
@@ -60,6 +61,7 @@
 #include "h.h"
 #include "fdlist.h"
 #include "fds.h"
+#include "gossip_peer.h"
 
 extern void      engine_init();
 extern fdlist default_fdlist;
@@ -885,6 +887,21 @@ int completed_connection(aClient * cptr)
         unset_fd_flags(cptr->fd, FDF_WANTWRITE);
     unset_fd_flags(cptr->fd, FDF_WANTREAD);
 
+    /* Check if this is an outbound gossip peer connection */
+    if (gopeer_find_conf(cptr->name))
+    {
+        /* Outbound gopeer — send GHELLO to initiate gossip handshake.
+         * Set status to STAT_UNKNOWN so IsConnecting() is false and
+         * the HANDLER_UNREG dispatch slot processes the reply GHELLO. */
+        SetUnknown(cptr);
+        set_fd_flags(cptr->fd, FDF_WANTREAD);
+        sendto_one(cptr, "GHELLO %s %u 1",
+                   me.name, (unsigned)g_event_log.my_id);
+        sendto_realops("Gossip: sent GHELLO to %s (outbound)",
+                       cptr->name);
+        return 0;
+    }
+
     SetHandshake(cptr);
 
     if (!(aconn = find_aConnect(cptr->name)))
@@ -895,31 +912,10 @@ int completed_connection(aClient * cptr)
     if (!BadPtr(aconn->cpasswd))
         sendto_one(cptr, "PASS %s :TS", aconn->cpasswd);
 
-    /* pass on our capabilities to the server we /connect'd */
-#ifdef HAVE_ENCRYPTION_ON
-    if(!(aconn->flags & CONN_DKEY) && !(aconn->flags & CONN_TLS))
-    {
-        sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURST UNCONNECT ZIP"
-                         " NICKIP NICKIPSTR TSMODE");
-    } else if (aconn->flags & CONN_TLS)
-    {
-        sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURST UNCONNECT TLS"
-                         " ZIP NICKIP NICKIPSTR TSMODE");
-    }
-    else
-    {
-        sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURST UNCONNECT DKEY"
-                         " ZIP NICKIP NICKIPSTR TSMODE");
-        SetWantDKEY(cptr);
-    }
-#else
-    sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURST UNCONNECT ZIP NICKIP NICKIPSTR TSMODE");
-#endif
-
     if(aconn->flags & CONN_ZIP)
         cptr->capabilities |= CAPAB_DOZIP;
 
-    sendto_one(cptr, "SERVER %s 1 :%s", my_name_for_link(me.name, aconn), 
+    sendto_one(cptr, "SERVER %s 1 :%s", my_name_for_link(me.name, aconn),
                                         me.info);
 #ifdef DO_IDENTD
     /* Is this the right place to do this?  dunno... -Taner */
@@ -1012,6 +1008,11 @@ void close_connection(aClient *cptr)
             ssl_smart_shutdown(cptr->ssl);
             SSL_free(cptr->ssl);
             cptr->ssl = NULL;
+        }
+        if (cptr->ws_state)
+        {
+            ws_state_free((WSState *)cptr->ws_state);
+            cptr->ws_state = NULL;
         }
         del_fd(cptr->fd);
         close(cptr->fd);
@@ -1144,7 +1145,7 @@ static void set_sock_opts(int fd, aClient * cptr)
         opt = (rcvbufmax * sizeof(char)) / 8;
 #else
         char *s = readbuf, *t = readbuf + sizeof(readbuf) / 2;
-    
+
         opt = sizeof(readbuf) / 8;
 #endif
         if (getsockopt(fd, IPPROTO_IP, IP_OPTIONS, t, &opt) < 0)
@@ -1160,6 +1161,16 @@ static void set_sock_opts(int fd, aClient * cptr)
         if (setsockopt(fd, IPPROTO_IP, IP_OPTIONS, (char *) NULL, 0) < 0)
             silent_report_error("setsockopt(IP_OPTIONS) %s:%s", cptr);
     }
+#endif
+    /* Reduce latency for interactive IRC traffic */
+#ifdef TCP_NODELAY
+    opt = 1;
+    setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, (char *) &opt, sizeof(opt));
+#endif
+    /* Keep idle connections alive at the TCP level */
+#ifdef SO_KEEPALIVE
+    opt = 1;
+    setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, (char *) &opt, sizeof(opt));
 #endif
 }
 
@@ -1405,6 +1416,13 @@ aClient *add_connection(aListener *lptr, int fd)
     if(call_hooks(CHOOK_PREACCESS, acptr) == FLUSH_BUFFER)
         return NULL;
 
+    /* WebSocket port: set up WS handshake, auto-skip ident */
+    if (lptr->flags & CONF_FLAGS_P_WEBSOCKET)
+    {
+        SetPendWS(acptr);
+        acptr->ws_state = ws_state_alloc();
+    }
+
     /* do the dns check, if we're thusly configured */
     if(!(lptr->flags & CONF_FLAGS_P_NODNS))
     {
@@ -1437,7 +1455,7 @@ aClient *add_connection(aListener *lptr, int fd)
     }
     
 #ifdef DO_IDENTD
-    if(!(lptr->flags & CONF_FLAGS_P_NOIDENT))
+    if(!(lptr->flags & CONF_FLAGS_P_NOIDENT) && !IsPendWS(acptr))
         start_auth(acptr);
 #endif
     check_client_fd(acptr);
@@ -1484,11 +1502,10 @@ int do_client_queue(aClient *cptr)
     int dolen = 0, done;
     
     while (SBufLength(&cptr->recvQ) && !NoNewLine(cptr) &&
-       ((cptr->status < STAT_UNKNOWN) || (cptr->since - timeofday < 10) ||
-        IsNegoServer(cptr))) 
+       ((cptr->status < STAT_UNKNOWN) || (cptr->since - timeofday < 10)))
     {
         /* If it's become registered as a server, just parse the whole block */
-        if (IsServer(cptr) || IsNegoServer(cptr)) 
+        if (IsServer(cptr))
         {
 #if defined(MAXBUFFERS)
             dolen = sbuf_get(&cptr->recvQ, readbuf, rcvbufmax * sizeof(char));
@@ -1596,20 +1613,30 @@ int read_packet(aClient * cptr)
      * For server connections, we process as many as we can without
      * worrying about the time of day or anything :)
      */
-    if (IsServer(cptr) || IsConnecting(cptr) || IsHandshake(cptr) ||
-        IsNegoServer(cptr)) 
+    if (IsServer(cptr) || IsConnecting(cptr) || IsHandshake(cptr))
     {
         if (length > 0)
             if ((done = dopacket(cptr, readbuf, length)))
                 return done;
     } 
-    else 
+    else
     {
-        /* 
-         * Before we even think of parsing what we just read, stick 
+        /*
+         * Before we even think of parsing what we just read, stick
          * it on the end of the receive queue and do it when its turn
          * comes around. */
-        if (sbuf_put(&cptr->recvQ, readbuf, length) < 0)
+        if (IsPendWS(cptr) || IsWebSocket(cptr))
+        {
+            if (length > 0)
+            {
+                int wsret = ws_process_recv(cptr, readbuf, length);
+                if (wsret < 0)
+                    return exit_client(cptr, cptr, cptr, "WebSocket error");
+                if (wsret == 0)
+                    return exit_client(cptr, cptr, cptr, "WebSocket closed");
+            }
+        }
+        else if (sbuf_put(&cptr->recvQ, readbuf, length) < 0)
             return exit_client(cptr, cptr, cptr, "sbuf_put fail");
     
         if (IsPerson(cptr) &&
@@ -1724,8 +1751,11 @@ void accept_connection(aListener *lptr)
 	    return;
 	}
 
-        /* if they are throttled, drop them silently. */
-        if (throttle_check(host, newfd, NOW) == 0)
+        /* if they are throttled, drop them silently.
+         * Exempt IPs that match configured gopeer hosts (gossip peers
+         * connect to the IRC port and should not be throttled). */
+        if (!gopeer_is_configured_host(host) &&
+            throttle_check(host, newfd, NOW) == 0)
         {
             ircstp->is_ref++;
             ircstp->is_throt++;
@@ -1768,6 +1798,23 @@ int readwrite_client(aClient *cptr, int isread, int iswrite)
      * - the socket is blocked
      */
 
+    /* STARTTLS: initiate TLS handshake on a plaintext connection */
+    if(cptr->flags & FLAGS_PENDTLS)
+    {
+        extern SSL_CTX *ircdssl_ctx;
+        cptr->flags &= ~FLAGS_PENDTLS;
+        cptr->ssl = SSL_new(ircdssl_ctx);
+        if(!cptr->ssl)
+        {
+            close_connection(cptr);
+            return 1;
+        }
+        SSL_set_fd(cptr->ssl, cptr->fd);
+        SetSSL(cptr);
+        safe_ssl_accept(cptr, cptr->fd);
+        return 1;
+    }
+
     if(cptr->ssl && IsSSL(cptr) && !SSL_is_init_finished(cptr->ssl))
     {
         if(IsDead(cptr) || !safe_ssl_accept(cptr, cptr->fd))
@@ -1776,6 +1823,9 @@ int readwrite_client(aClient *cptr, int isread, int iswrite)
                 return exit_client(cptr, cptr, &me, iswrite?"Write Error: SSL Bug #7845":"Read Error: SSL Bug #7845");
             close_connection(cptr);
         }
+        /* Extract client cert fingerprint once handshake completes */
+        if(cptr->ssl && SSL_is_init_finished(cptr->ssl) && !cptr->certfp[0])
+            ssl_extract_certfp(cptr);
         return 1;
     }
 

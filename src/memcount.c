@@ -97,10 +97,6 @@ void report_memory_usage(aClient *cptr, int detail)
     MCuserban       mc_userban = {0};
     MCwhowas        mc_whowas = {0};
     MCzlink         mc_zlink = {0};
-#ifdef HAVE_ENCRYPTION_ON
-    MCdh            mc_dh = {0};
-    MCrc4           mc_rc4 = {0};
-#endif
 
     /* per block heap counters */
     MCBlockHeap     mcbh_clones = {0};
@@ -156,10 +152,6 @@ void report_memory_usage(aClient *cptr, int detail)
     TracedCount     tc_throttle = {0};
     TracedCount     tc_userban = {0};
     TracedCount     tc_zlink = {0};
-#ifdef HAVE_ENCRYPTION_ON
-    TracedCount     tc_dh = {0};
-    TracedCount     tc_rc4 = {0};
-#endif
     TracedCount     tc_unverified = {0};
 
     /* general trace counters */
@@ -200,10 +192,6 @@ void report_memory_usage(aClient *cptr, int detail)
     alloc_total += memcount_userban(&mc_userban);
     alloc_total += memcount_whowas(&mc_whowas);
     alloc_total += memcount_zlink(&mc_zlink);
-#ifdef HAVE_ENCRYPTION_ON
-    alloc_total += memcount_dh(&mc_dh);
-    alloc_total += memcount_rc4(&mc_rc4);
-#endif
 
     use_total = alloc_total;
 
@@ -265,10 +253,6 @@ void report_memory_usage(aClient *cptr, int detail)
     alloc_total += use_hash;
 
     /* oddballs */
-#ifdef HAVE_ENCRYPTION_ON
-    alloc_total += mc_s_user.e_dh_sessions * mc_dh.m_dhsession_size;
-    alloc_total += mc_s_user.e_rc4states * mc_rc4.m_rc4state_size;
-#endif
     alloc_total += mc_s_user.e_zipin_sessions * mc_zlink.m_insession_size;
     alloc_total += mc_s_user.e_zipout_sessions * mc_zlink.m_outsession_size;
 
@@ -421,18 +405,6 @@ void report_memory_usage(aClient *cptr, int detail)
                    mc_clientlist.e_server_dlinks,
                    mc_clientlist.e_server_dlinks * mcbh_dlinks.objsize);
     subtotal += mc_clientlist.e_server_dlinks * mcbh_dlinks.objsize;
-#ifdef HAVE_ENCRYPTION_ON
-    if (detail && mc_s_user.e_dh_sessions)
-        sendto_one(cptr, "%s    DH sessions: %d (%lu bytes)", pfxbuf,
-                   mc_s_user.e_dh_sessions,
-                   mc_s_user.e_dh_sessions * mc_dh.m_dhsession_size);
-    subtotal += mc_s_user.e_dh_sessions * mc_dh.m_dhsession_size;
-    if (detail && mc_s_user.e_rc4states)
-        sendto_one(cptr, "%s    RC4 states: %d (%lu bytes)", pfxbuf,
-                   mc_s_user.e_rc4states,
-                   mc_s_user.e_rc4states * mc_rc4.m_rc4state_size);
-    subtotal += mc_s_user.e_rc4states * mc_rc4.m_rc4state_size;
-#endif
     if (detail && mc_s_user.e_zipin_sessions)
         sendto_one(cptr, "%s    zip input sessions: %d (%lu bytes)", pfxbuf,
                    mc_s_user.e_zipin_sessions,
@@ -1342,29 +1314,6 @@ void report_memory_usage(aClient *cptr, int detail)
             memtrace_report(cptr, mc_zlink.file);
     }
 
-#ifdef HAVE_ENCRYPTION_ON
-    /* dh.c */
-    traced_total += memtrace_count(&tc_dh, mc_dh.file);
-    subtotal = mc_s_user.e_dh_sessions * mc_dh.m_dhsession_size;
-    if (subtotal != tc_dh.allocated.m)
-    {
-        sendto_one(cptr, "%sLEAK: %ld bytes from DH sessions", pfxbuf,
-                   tc_dh.allocated.m - subtotal);
-        if (detail)
-            memtrace_report(cptr, mc_dh.file);
-    }
-
-    /* rc4.c */
-    traced_total += memtrace_count(&tc_rc4, mc_rc4.file);
-    subtotal = mc_s_user.e_rc4states * mc_rc4.m_rc4state_size;
-    if (subtotal != tc_rc4.allocated.m)
-    {
-        sendto_one(cptr, "%sLEAK: %ld bytes from RC4 states", pfxbuf,
-                   tc_rc4.allocated.m - subtotal);
-        if (detail)
-            memtrace_report(cptr, mc_rc4.file);
-    }
-#endif
 
     /* grouped: klines.c m_services.c s_conf.c s_serv.c userban.c */
     /* yeah, this is screwy... */
@@ -1436,10 +1385,6 @@ void report_memory_usage(aClient *cptr, int detail)
     subtotal += tc_throttle.management.m;
     subtotal += tc_userban.management.m;
     subtotal += tc_zlink.management.m;
-#ifdef HAVE_ENCRYPTION_ON
-    subtotal += tc_dh.management.m;
-    subtotal += tc_rc4.management.m;
-#endif
     subtotal += tc_unverified.management.m;
 
     sendto_one(cptr, "%sTraced %lu bytes (%ld leaked)", pfxbuf,

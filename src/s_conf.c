@@ -28,6 +28,9 @@
 #include "userban.h"
 #include "confparse.h"
 #include "throttle.h"
+#include "gossip_peer.h"
+#include "gossip.h"
+#include "eventlog.h"
 #include "memcount.h"
 
 /* This entire file has basically been rewritten from scratch with the
@@ -39,6 +42,10 @@ extern int  rehashed;
 extern int  forked;
 extern tConf tconftab[];
 extern sConf sconftab[];
+
+/* Phase 12: configurable TLS cert/key paths */
+char ssl_cert_path[256] = "ircd.crt";
+char ssl_key_path[256]  = "ircd.key";
 
 /* internally defined functions  */
 
@@ -771,7 +778,6 @@ confadd_oper(cVar *vars[], int lnum)
 static int server_info[] =
 {
     CONN_ZIP, 'Z',
-    CONN_DKEY, 'E',
     CONN_HUB, 'H',
     CONN_TLS, 'S',
     0, 0
@@ -926,14 +932,6 @@ confadd_connect(cVar *vars[], int lnum)
             tmp->type = NULL;
             DupString(x->class_name, tmp->value);
         }
-    }
-    
-    /* Check for conflicting encryption flags */
-    if((x->flags & CONN_DKEY) && (x->flags & CONN_TLS))
-    {
-        confparse_error("Conflicting encryption flags: E (Diffie-Hellman) and S (TLS) cannot be used together", lnum);
-        free_connect(x);
-        return -1;
     }
     
     if(!x->name)
@@ -1339,6 +1337,7 @@ confadd_port(cVar *vars[], int lnum)
                 switch (*s++)
                 {
                     case 'S': x->flags |= CONF_FLAGS_P_SSL; break;
+                    case 'W': x->flags |= CONF_FLAGS_P_WEBSOCKET; break;
                     case 'n': x->flags |= CONF_FLAGS_P_NODNS; break;
                     case 'i': x->flags |= CONF_FLAGS_P_NOIDENT; break;
                     default:
@@ -2262,6 +2261,7 @@ merge_confs()
     }
     modules = new_modules;
     new_modules = NULL;
+
     return;
 }
 
@@ -2734,4 +2734,154 @@ memcount_s_conf(MCs_conf *mc)
     mc->total.m += mc->me.m;
 
     return mc->total.m;
+}
+
+/* -------------------------------------------------------------------------
+ * Phase S2: confadd_gopeer() — parse a gopeer {} config block
+ *
+ * gopeer {
+ *     host      = "irc2.example.net";
+ *     port      = 6697;
+ *     passwd    = "secret";
+ *     name      = "irc2.example.net";   # optional friendly name
+ *     server_id = 1;                    # mandatory explicit ServerId (0-63)
+ *     tls;                              # optional TLS flag
+ * };
+ * ---------------------------------------------------------------------- */
+int
+confadd_gopeer(cVar *vars[], int lnum)
+{
+    cVar        *tmp;
+    int          c = 0;
+    aGoPeerConf *gp;
+
+    gp = (aGoPeerConf *) MyMalloc(sizeof(aGoPeerConf));
+    memset(gp, 0, sizeof(*gp));
+    gp->port = 6667;   /* default port */
+
+    for (tmp = vars[c]; tmp; tmp = vars[++c])
+    {
+        if (!tmp->type)
+            continue;
+
+        if (tmp->type->flag & SCONFF_HOST)
+        {
+            DupString(gp->host, tmp->value);
+        }
+        else if (tmp->type->flag & SCONFF_PORT)
+        {
+            gp->port = atoi(tmp->value);
+        }
+        else if (tmp->type->flag & SCONFF_PASSWD)
+        {
+            DupString(gp->password, tmp->value);
+        }
+        else if (tmp->type->flag & SCONFF_NAME)
+        {
+            DupString(gp->name, tmp->value);
+        }
+        else if (tmp->type->flag & SCONFF_SERVER_ID)
+        {
+            gp->server_id = (unsigned char) atoi(tmp->value);
+        }
+        else if (tmp->type->flag & SCONFF_TLS)
+        {
+            gp->tls = 1;
+        }
+    }
+
+    if (!gp->host || !gp->host[0])
+    {
+        confparse_error("gopeer block missing host", lnum);
+        if (gp->host) MyFree(gp->host);
+        if (gp->name) MyFree(gp->name);
+        if (gp->password) MyFree(gp->password);
+        MyFree(gp);
+        return -1;
+    }
+
+    /* Default name to host if not set */
+    if (!gp->name)
+        DupString(gp->name, gp->host);
+
+    /* Prepend to gopeer_conf_list */
+    gp->next        = gopeer_conf_list;
+    gopeer_conf_list = gp;
+
+    return 0;
+}
+
+/* -------------------------------------------------------------------------
+ * Phase S2: confadd_gossip() — parse a gossip {} config block
+ *
+ * gossip {
+ *     fanout      = 3;    # number of peers to forward each event to
+ *     sync_window = 30;   # seconds to look back during burst
+ * };
+ * ---------------------------------------------------------------------- */
+int
+confadd_gossip(cVar *vars[], int lnum)
+{
+    cVar *tmp;
+    int   c = 0;
+
+    for (tmp = vars[c]; tmp; tmp = vars[++c])
+    {
+        if (!tmp->type)
+            continue;
+
+        if (tmp->type->flag & SCONFF_FANOUT)
+        {
+            gossip_fanout = atoi(tmp->value);
+            if (gossip_fanout < 1)
+                gossip_fanout = 1;
+        }
+        else if (tmp->type->flag & SCONFF_SYNC_WINDOW)
+        {
+            gossip_sync_window = atoi(tmp->value);
+            if (gossip_sync_window < 0)
+                gossip_sync_window = 0;
+        }
+    }
+
+    return 0;
+}
+
+/* -------------------------------------------------------------------------
+ * Phase 10A: confadd_sra() — parse an sra {} config block
+ *
+ * sra {
+ *     account <name>;
+ * };
+ * ---------------------------------------------------------------------- */
+/* -------------------------------------------------------------------------
+ * Phase 12: confadd_ssl() — parse an ssl {} config block
+ *
+ * ssl {
+ *     certificate = "ircd.crt";
+ *     key         = "ircd.key";
+ * };
+ * ---------------------------------------------------------------------- */
+int
+confadd_ssl(cVar *vars[], int lnum)
+{
+    cVar *tmp;
+    int   c = 0;
+
+    for (tmp = vars[c]; tmp; tmp = vars[++c])
+    {
+        if (!tmp->type)
+            continue;
+
+        if (tmp->type->flag & SCONFF_CERTIFICATE)
+        {
+            strncpyzt(ssl_cert_path, tmp->value, sizeof(ssl_cert_path));
+        }
+        else if (tmp->type->flag & SCONFF_KEY)
+        {
+            strncpyzt(ssl_key_path, tmp->value, sizeof(ssl_key_path));
+        }
+    }
+
+    return 0;
 }

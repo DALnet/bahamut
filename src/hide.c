@@ -120,7 +120,7 @@ void fakelinkserver_update(char *name, char *desc)
    strcpy(ls->description, desc);
 }
 
-int m_linkscontrol(aClient *cptr, aClient *sptr, int parc, char *parv[])
+int m_linkscontrol(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
    if (!(parc > 1 && (IsServer(sptr) || IsULine(sptr))))
       return 0;
@@ -282,7 +282,7 @@ void send_fake_lusers(aClient *sptr)
                fakelusers.m_total, fakelusers.m_totalmax);
 }
 
-int m_luserslock(aClient *cptr, aClient *sptr, int parc, char *parv[]) 
+int m_luserslock(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[]) 
 {
    char pbuf[512];
 

@@ -24,10 +24,10 @@
 #include "h.h"
 #include <stdio.h>
 #include "numeric.h"
-#include "dh.h"
 #include "zlink.h"
 #include "fds.h"
 #include "memcount.h"
+#include "websocket.h"
 
 /*
  * STOP_SENDING_ON_SHORT_SEND:
@@ -46,18 +46,74 @@ static char remotebuf[2048];
 static char selfbuf[256];
 static int  send_message(aClient *, char *, int, void*);
 
-#ifdef HAVE_ENCRYPTION_ON
-/*
- * WARNING:
- * Please be aware that if you are using both encryption
- * and ziplinks, rc4buf in send.c MUST be the same size
- * as zipOutBuf in zlink.c!
- */
-static char rc4buf[16384];
-#endif
 
-static int  sentalong[MAXCONNECTIONS];
-static int  sent_serial;
+int  sentalong[MAXCONNECTIONS];
+int  sent_serial;
+
+/* ---------------------------------------------------------------------------
+ * Outbound tag generator registry
+ * Modules register (fn, cap_bit) pairs via register_outbound_tag().
+ * build_outbound_tags() calls all registered generators and returns a
+ * semicolon-separated "key=val;key2=val2" string (or "" if none active).
+ * tag_delivery_caps is the OR of all registered cap bits; used to decide
+ * whether any recipient in a channel needs tagged delivery.
+ * ---------------------------------------------------------------------------
+ */
+#define MAX_OUTBOUND_TAG_FNS 8
+typedef struct { outbound_tag_fn fn; unsigned long cap_bit; } TagEntry;
+static TagEntry    tag_registry[MAX_OUTBOUND_TAG_FNS];
+static int         n_tag_fns = 0;
+unsigned long      tag_delivery_caps = 0;
+
+/* chantagbuf: static buffer for "@tags plain-message" in channel tagged delivery */
+static char chantagbuf[2304];
+
+void register_outbound_tag(outbound_tag_fn fn, unsigned long cap_bit)
+{
+    if (n_tag_fns < MAX_OUTBOUND_TAG_FNS)
+    {
+        tag_registry[n_tag_fns].fn      = fn;
+        tag_registry[n_tag_fns].cap_bit = cap_bit;
+        n_tag_fns++;
+        tag_delivery_caps |= cap_bit;
+    }
+}
+
+void unregister_outbound_tag(outbound_tag_fn fn, unsigned long cap_bit)
+{
+    int i;
+    (void)cap_bit;
+    for (i = 0; i < n_tag_fns; i++)
+    {
+        if (tag_registry[i].fn == fn)
+        {
+            tag_registry[i] = tag_registry[--n_tag_fns];
+            break;
+        }
+    }
+    tag_delivery_caps = 0;
+    for (i = 0; i < n_tag_fns; i++)
+        tag_delivery_caps |= tag_registry[i].cap_bit;
+}
+
+const char *build_outbound_tags(void)
+{
+    static char tagbuf[512];
+    int pos = 0, i;
+    for (i = 0; i < n_tag_fns; i++)
+    {
+        const char *tag = tag_registry[i].fn();
+        int         len;
+        if (!tag || !*tag) continue;
+        len = (int)strlen(tag);
+        if (pos + len + 1 >= (int)sizeof(tagbuf)) break;
+        if (pos > 0) tagbuf[pos++] = ';';
+        memcpy(tagbuf + pos, tag, len);
+        pos += len;
+    }
+    tagbuf[pos] = '\0';
+    return tagbuf;
+}
 
 void init_send()
 {
@@ -65,18 +121,7 @@ void init_send()
    sent_serial = 0;
 }
 
-/* This routine increments our serial number so it will
- * be unique from anything in sentalong, no need for a memset
- * except for every MAXINT calls - lucas
- */
-
-/* This should work on any OS where an int is 32 bit, I hope.. */
-
-#define HIGHEST_SERIAL INT_MAX
-
-#define INC_SERIAL if(sent_serial == HIGHEST_SERIAL) \
-   { memset(sentalong, 0, sizeof(sentalong)); sent_serial = 0; } \
-   sent_serial++;
+/* INC_SERIAL is defined in send.h and used by both send.c and external modules */
 
 
 /*
@@ -135,11 +180,45 @@ static int send_message(aClient *to, char *msg, int len, void* sbuf)
     if (to->from)
         to = to->from;
 
-    flag = (!sbuf || ZipOut(to) || IsRC4OUT(to)) ? 1 : 0;
+    /* WebSocket clients: frame the IRC message without \r\n */
+    if (IsWebSocket(to))
+    {
+        static char ws_outbuf[2048 + 14];
+        int ws_len;
+
+        if (IsMe(to) || IsDead(to))
+            return 0;
+        if (to->class && (SBufLength(&to->sendQ) > to->class->maxsendq))
+        {
+            to->flags |= FLAGS_SENDQEX;
+            return dead_link(to, "Max Sendq exceeded for %s, closing link", 0);
+        }
+
+        ws_len = ws_frame_message(msg, len, ws_outbuf);
+
+        to->sendM++;
+        me.sendM++;
+        if (to->lstn)
+            to->lstn->sendM++;
+
+        if (sbuf_put(&to->sendQ, ws_outbuf, ws_len) < 0)
+            return dead_link(to, "Buffer allocation error for %s,"
+                                 " closing link", IRCERR_BUFALLOC);
+
+        if (!(to->flags & FLAGS_BLOCKED))
+        {
+            SQinK = SBufLength(&to->sendQ) >> 10;
+            if (SQinK > (to->lastsq + 4))
+                send_queued(to);
+        }
+        return 0;
+    }
+
+    flag = (!sbuf || ZipOut(to)) ? 1 : 0;
 
     if (flag == 1)
     {
-        if(IsServer(to) || IsNegoServer(to))
+        if(IsServer(to))
         {
             if(len>510) 
             {
@@ -222,15 +301,6 @@ static int send_message(aClient *to, char *msg, int len, void* sbuf)
         if(len == 0)
             return 0;
     }
-
-#ifdef HAVE_ENCRYPTION_ON
-    if(IsRC4OUT(to))
-    {
-        /* don't destroy the data in 'msg' */
-        rc4_process_stream_to_buf(to->serv->rc4_out, msg, rc4buf, len);
-        msg = rc4buf;
-    }
-#endif
 
     if (!sbuf || flag)
     {
@@ -329,17 +399,13 @@ int send_queued(aClient *to)
                 return dead_link(to, "Zip output error for %s", IRCERR_ZIP);
             }
 
-#ifdef HAVE_ENCRYPTION_ON
-            if(IsRC4OUT(to))
-                rc4_process_stream(to->serv->rc4_out, msg, len);
-#endif
             /* silently stick this on the sendq... */
             if (!sbuf_put(&to->sendQ, msg, len))
                 return dead_link(to, "Buffer allocation error for %s",
                                  IRCERR_BUFALLOC);
         }
     }
-   
+
     while (SBufLength(&to->sendQ) > 0) 
     {
 #ifdef WRITEV_IOV
@@ -381,14 +447,10 @@ int send_queued(aClient *to)
                 return dead_link(to, "Zip output error for %s", IRCERR_ZIP);
             }
             
-#ifdef HAVE_ENCRYPTION_ON
-            if(IsRC4OUT(to))
-                rc4_process_stream(to->serv->rc4_out, msg, len);
-#endif
             /* silently stick this on the sendq... */
             if (!sbuf_put(&to->sendQ, msg, len))
                 return dead_link(to, "Buffer allocation error for %s",
-                                 IRCERR_BUFALLOC);        
+                                 IRCERR_BUFALLOC);
         }
     }
     
@@ -641,6 +703,89 @@ void sendto_channel_butone(aClient *one, aClient *from, aChannel *chptr,
 }
 
 /*
+ * sendto_channel_butone_tags
+ *
+ * Like sendto_channel_butone, but tag-capable local clients receive a
+ * prefixed "@tags plain-message" form; all others use the shared plain buf.
+ * Remote clients always get the plain shared buf (no tags on S2S links).
+ *
+ * tags: semicolon-separated "key=val;key2=val2" string (from build_outbound_tags).
+ *       Pass NULL or "" to fall back to plain sendto_channel_butone behaviour.
+ */
+void sendto_channel_butone_tags(aClient *one, aClient *from, aChannel *chptr,
+                                const char *tags, char *pattern, ...)
+{
+    chanMember *cm;
+    aClient    *acptr;
+    int         i, didlocal = 0, didremote = 0, didtagged = 0;
+    va_list     vl;
+    char       *pfix;
+    void       *share_bufs[2] = {0, 0};
+
+    va_start(vl, pattern);
+    pfix = va_arg(vl, char *);
+    INC_SERIAL
+
+    for (cm = chptr->members; cm; cm = cm->next)
+    {
+        acptr = cm->cptr;
+        if (acptr->from == one)
+            continue;
+
+        if ((confopts & FLAGS_SERVHUB) && IsULine(acptr) &&
+            acptr->uplink->serv && (acptr->uplink->serv->uflags & ULF_NOCHANMSG))
+            continue;
+
+        if (MyClient(acptr))
+        {
+            if (!didlocal)
+            {
+                didlocal = prefix_buffer(0, from, pfix, sendbuf, pattern, vl);
+                sbuf_begin_share(sendbuf, didlocal, &share_bufs[0]);
+            }
+            if (check_fake_direction(from, acptr))
+                continue;
+
+            if (tags && *tags && (acptr->cap_bits & tag_delivery_caps))
+            {
+                /* Build "@tags plain-message" in chantagbuf (once per message) */
+                if (!didtagged)
+                {
+                    int tlen = snprintf(chantagbuf, sizeof(chantagbuf), "@%s ", tags);
+                    int mlen = didlocal;
+                    if (tlen + mlen >= (int)sizeof(chantagbuf))
+                        mlen = (int)sizeof(chantagbuf) - tlen - 1;
+                    memcpy(chantagbuf + tlen, sendbuf, mlen);
+                    didtagged = tlen + mlen;
+                    chantagbuf[didtagged] = '\0';
+                }
+                send_message(acptr, chantagbuf, didtagged, NULL);
+            }
+            else
+                send_message(acptr, sendbuf, didlocal, share_bufs[0]);
+        }
+        else
+        {
+            if (!didremote)
+            {
+                didremote = prefix_buffer(1, from, pfix, remotebuf, pattern, vl);
+                sbuf_begin_share(remotebuf, didremote, &share_bufs[1]);
+            }
+            if (check_fake_direction(from, acptr))
+                continue;
+            i = acptr->from->fd;
+            if (sentalong[i] != sent_serial)
+            {
+                send_message(acptr, remotebuf, didremote, share_bufs[1]);
+                sentalong[i] = sent_serial;
+            }
+        }
+    }
+    sbuf_end_share(share_bufs, 2);
+    va_end(vl);
+}
+
+/*
  * Like sendto_channel_butone, but sends to all servers but 'one'
  * that have clients in this channel.
  */
@@ -803,35 +948,6 @@ void sendto_serv_butone_nickipstr(aClient *one, int flag, char *pattern, ...)
     return;
 }
 
-/* sendto_capab_serv_butone - Send a message to all servers with "include" capab and without "exclude" capab */
-void sendto_capab_serv_butone(aClient *one, int include, int exclude, char *pattern, ...)
-{
-    aClient *cptr;
-    int k = 0;
-    fdlist send_fdlist;
-    va_list vl;
-    DLink *lp;
-
-    va_start(vl, pattern);
-    for(lp = server_list; lp; lp = lp->next)
-    {
-        cptr = lp->value.cptr;
-
-        if ((one==cptr) ||
-            (include && !(cptr->capabilities & include)) ||
-            (exclude && (cptr->capabilities & exclude)))
-            continue;
-
-        send_fdlist.entry[++k] = cptr->fd;
-    }
-    send_fdlist.last_entry = k;
-    if (k)
-        vsendto_fdlist(&send_fdlist, pattern, vl);
-    va_end(vl);
-
-    return;
-}
-
 /*
  * sendto_server_butone
  * 
@@ -850,6 +966,8 @@ void sendto_serv_butone(aClient *one, char *pattern, ...)
     {
         cptr = lp->value.cptr;
         if (one && cptr == one->from)
+            continue;
+        if (IsGoPeer(cptr))   /* gossip peers have their own fanout path */
             continue;
         send_fdlist.entry[++k] = cptr->fd;
     }
@@ -2149,6 +2267,74 @@ void sendto_channelflags_butone(aClient *one, aClient *from, aChannel *chptr,
 }
 
 
+/*
+ * server_time_tag
+ * Returns a static "time=YYYY-MM-DDTHH:MM:SS.sssZ" string.
+ * Cached per dispatch_serial so all recipients of one message get the
+ * same timestamp value.
+ */
+const char *
+server_time_tag(void)
+{
+    static char tsbuf[40];
+    static int  st_serial = -1;
+    struct timeval tv;
+    struct tm     *tm;
+
+    if (st_serial == dispatch_serial)
+        return tsbuf;
+    st_serial = dispatch_serial;
+
+    gettimeofday(&tv, NULL);
+    tm = gmtime(&tv.tv_sec);
+    snprintf(tsbuf, sizeof(tsbuf),
+             "time=%04d-%02d-%02dT%02d:%02d:%02d.%03dZ",
+             tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday,
+             tm->tm_hour, tm->tm_min, tm->tm_sec,
+             (int)(tv.tv_usec / 1000));
+    return tsbuf;
+}
+
+/*
+ * sendto_one_tags
+ * Tagged point-to-point send.  Prepends "@tags " to the formatted message
+ * before delivering it via send_message().
+ */
+void
+sendto_one_tags(aClient *to, const char *tags, const char *pattern, ...)
+{
+    static char tagbuf[2560];
+    va_list     args;
+    int         tlen = 0, mlen;
+
+    if (!to)
+        return;
+
+    if (to->from)
+        to = to->from;
+
+    if (IsMe(to))
+        return;
+
+    if (tags && *tags)
+    {
+        tagbuf[0] = '@';
+        strncpy(tagbuf + 1, tags, sizeof(tagbuf) - 3);
+        tagbuf[sizeof(tagbuf) - 2] = '\0';
+        tlen = strlen(tagbuf);
+        tagbuf[tlen++] = ' ';
+    }
+
+    va_start(args, pattern);
+    mlen = vsnprintf(tagbuf + tlen, sizeof(tagbuf) - tlen, pattern, args);
+    va_end(args);
+
+    if (mlen <= 0)
+        return;
+
+    send_message(to, tagbuf, tlen + mlen, NULL);
+}
+
 /*******************************************
  * Flushing functions (empty queues)
  *******************************************/
@@ -2227,10 +2413,6 @@ memcount_send(MCsend *mc)
     mc->s_bufs.m += sizeof(remotebuf);
     mc->s_bufs.c++;
     mc->s_bufs.m += sizeof(selfbuf);
-#ifdef HAVE_ENCRYPTION_ON
-    mc->s_bufs.c++;
-    mc->s_bufs.m += sizeof(rc4buf);
-#endif
 
     return 0;
 }

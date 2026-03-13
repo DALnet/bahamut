@@ -258,6 +258,13 @@ extern int        exit_banned_client(aClient *, int, char, char *, int);
 
 extern int  	  parse(aClient *, char *, char *);
 extern void 	  init_tree_parse(struct Message *);
+extern int        dispatch_serial;
+extern int        lr_echo_sent;
+extern char       current_dispatch_label[];
+extern aClient   *current_dispatch_source;
+
+/* Phase S1: gossip event log */
+#include "gossip_event.h"
 
 extern int  	  do_numeric(int, aClient *, aClient *, int, char **);
 extern int  	  hunt_server(aClient *, aClient *, char *, int, int, char **);
@@ -265,9 +272,9 @@ extern aClient 	 *next_client(aClient *, char *);
 extern aClient 	 *next_client_double(aClient *, char *);
 extern void verbose_to_opers(aClient *sptr, aChannel *chptr, char *cmd, char *reason); /* for m_message() */
 
-extern int  	  m_umode(aClient *, aClient *, int, char **);
-extern int  	  m_names(aClient *, aClient *, int, char **);
-extern void 	  send_umode(aClient *, aClient *, long, long, char *, int);
+extern int  	  m_umode(struct MsgBuf *, aClient *, aClient *, int, char **);
+extern int  	  m_names(struct MsgBuf *, aClient *, aClient *, int, char **);
+extern void 	  send_umode(aClient *, aClient *, unsigned long, unsigned long, char *, int);
 extern int 	  del_silence(aClient *, char *);
 
 
@@ -380,8 +387,13 @@ int probability_loadsets(char *);
 void probability_fini(void);
 void get_probabilities(aClient *, int *, int *, int *);
 
+/* Phase 12: configurable TLS cert/key paths */
+extern char ssl_cert_path[256];
+extern char ssl_key_path[256];
+
 int ssl_init();
 int ssl_rehash();
+void ssl_extract_certfp(aClient *);
 int safe_ssl_read(aClient *, void *, int);
 int safe_ssl_write(aClient *, const void *, int);
 int safe_ssl_accept(aClient *, int);
@@ -394,5 +406,8 @@ int ssl_verify_callback(int, X509_STORE_CTX *);
 
 int bitncmp(const void *l, const void *r, size_t n);
 int inet_parse_cidr(int af, const char *src, void *dst, size_t size);
+
+/* Phase S4: persistent session API */
+#include "session.h"
 
 #endif  /* H_H */

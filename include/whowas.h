@@ -57,6 +57,4 @@ void        off_history(aClient *);
  */
 aClient    *get_history(char *, time_t);
 
-int         m_whowas(aClient *, aClient *, int, char *[]);
-
 #endif /* __whowas_include__ */

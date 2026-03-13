@@ -29,7 +29,6 @@
 #include "channel.h"
 #include "nameser.h"
 #include "resolv.h"
-#include "dh.h"
 #include "zlink.h"
 #include "userban.h"
 
@@ -59,6 +58,7 @@ extern int  rehashed;
 extern int  forked;
 extern int uhm_type;
 extern int uhm_umodeh;
+extern AliasInfo *current_alias_info;
 
 /* external variables */
 
@@ -73,7 +73,7 @@ extern struct FlagList xflags_list[]; /* for m_check() */
 
 /* Local function prototypes */
 
-int         send_motd(aClient *, aClient *, int, char **);
+int         send_motd(struct MsgBuf *, aClient *, aClient *, int, char **);
 void        read_motd(char *);
 void        read_shortmotd(char *);
 
@@ -138,7 +138,7 @@ int local_rehash(aClient *, aClient *, char *, char *);
  *      parv[1] = remote server
  */
 int
-m_version(aClient *cptr, aClient *sptr, int parc, char *parv[])
+m_version(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
 
     if (hunt_server(cptr, sptr, ":%s VERSION :%s", 1, parc, parv) ==
@@ -169,7 +169,7 @@ m_version(aClient *cptr, aClient *sptr, int parc, char *parv[])
  *        parv[2] = comment
  */
 int
-m_squit(aClient *cptr, aClient *sptr, int parc, char *parv[])
+m_squit(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     aConnect *aconn;
     char *server;
@@ -299,7 +299,7 @@ m_squit(aClient *cptr, aClient *sptr, int parc, char *parv[])
  *       parv[3] = server is standalone or connected to non-TS only
  *       parv[4] = server's idea of UTC time
  */
-int m_svinfo(aClient *cptr, aClient *sptr, int parc, char *parv[])
+int m_svinfo(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     time_t      deltat, tmptime, theirtime;
 
@@ -365,7 +365,7 @@ int m_svinfo(aClient *cptr, aClient *sptr, int parc, char *parv[])
  *      parv[1] = SendQ if an EOB
  */
 int
-m_burst(aClient *cptr, aClient *sptr, int parc, char *parv[])
+m_burst(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
 
     if (!IsServer(sptr) || sptr != cptr || parc > 2 || !IsBurst(sptr))
@@ -402,7 +402,7 @@ m_burst(aClient *cptr, aClient *sptr, int parc, char *parv[])
  *      parv[1] = servername
  */
 int
-m_info(aClient *cptr, aClient *sptr, int parc, char *parv[])
+m_info(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     char      **text = infotext;
 
@@ -485,7 +485,7 @@ m_info(aClient *cptr, aClient *sptr, int parc, char *parv[])
  *      parv[2] = servername mask
  */
 int
-m_links(aClient *cptr, aClient *sptr, int parc, char *parv[])
+m_links(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     char       *mask;
     aClient    *acptr;
@@ -568,30 +568,6 @@ m_links(aClient *cptr, aClient *sptr, int parc, char *parv[])
 }
 
 /*
- * * m_users
- *        parv[0] = sender prefix
- *        parv[1] = servername
- */
-int
-m_users(aClient *cptr, aClient *sptr, int parc, char *parv[])
-{
-    if (hunt_server(cptr, sptr, ":%s USERS :%s", 1, parc, parv) == HUNTED_ISME)
-    {
-        if(is_luserslocked())
-        {
-            send_fake_users(sptr);
-            return 0;
-        }
-        /* No one uses this any more... so lets remap it..   -Taner */
-        sendto_one(sptr, rpl_str(RPL_LOCALUSERS), me.name, parv[0],
-                   Count.local, Count.max_loc);
-        sendto_one(sptr, rpl_str(RPL_GLOBALUSERS), me.name, parv[0],
-                   Count.total, Count.max_tot);
-    }
-    return 0;
-}
-
-/*
  * * Note: At least at protocol level ERROR has only one parameter,
  * although this is called internally from other functions  --msa
  *
@@ -599,7 +575,7 @@ m_users(aClient *cptr, aClient *sptr, int parc, char *parv[])
  *      parv[*] = parameters
  */
 int
-m_error(aClient *cptr, aClient *sptr, int parc, char *parv[])
+m_error(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     char   *para;
 
@@ -632,7 +608,7 @@ m_error(aClient *cptr, aClient *sptr, int parc, char *parv[])
  * opers.txt is not present). -srd
  */
 int
-m_help(aClient *cptr, aClient *sptr, int parc, char *parv[])
+m_help(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     int         i;
     aMotd *helpfile_ptr;
@@ -648,7 +624,8 @@ m_help(aClient *cptr, aClient *sptr, int parc, char *parv[])
                      "/%s %s", me.name, sptr->name, HELPSERV, DEF_HELP_CMD);
           return -1;
        }
-        return m_aliased(cptr, sptr, parc, parv, &aliastab[AII_HS]);
+        current_alias_info = &aliastab[AII_HS];
+        return m_aliased(NULL, cptr, sptr, parc, parv);
 
        return 0;
     }
@@ -694,9 +671,9 @@ m_help(aClient *cptr, aClient *sptr, int parc, char *parv[])
  *    -Quension [May 2005]
  */
 int
-m_lusers(aClient *cptr, aClient *sptr, int parc, char *parv[])
+m_lusers(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
-    int send_lusers(aClient *, aClient *, int, char **);
+    int send_lusers(struct MsgBuf *, aClient *, aClient *, int, char **);
 
     if (parc > 2)
     {
@@ -711,7 +688,7 @@ m_lusers(aClient *cptr, aClient *sptr, int parc, char *parv[])
        return 0;
     }
 
-    return send_lusers(cptr,sptr,parc,parv);
+    return send_lusers(NULL, cptr, sptr, parc, parv);
 }
 
 /*
@@ -720,7 +697,7 @@ m_lusers(aClient *cptr, aClient *sptr, int parc, char *parv[])
  *     parv[1] = anything but "*" to force a recount
  *     parv[2] = server to query
  */
-int send_lusers(aClient *cptr, aClient *sptr, int parc, char *parv[])
+int send_lusers(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     /* forced recount */
     if (IsAnOper(sptr) && (parc > 1) && (*parv[1] != '*'))
@@ -904,7 +881,7 @@ int send_lusers(aClient *cptr, aClient *sptr, int parc, char *parv[])
  *      parv[3] = remote server
  */
 int
-m_connect(aClient *cptr, aClient *sptr, int parc, char *parv[])
+m_connect(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     int         port, tmpport, retval;
     aConnect   *aconn;
@@ -1017,182 +994,13 @@ m_connect(aClient *cptr, aClient *sptr, int parc, char *parv[])
 }
 
 /*
- * * m_wallops (write to *all* opers currently online)
- *      parv[0] = sender prefix
- *      parv[1] = message text
- */
-int
-m_wallops(aClient *cptr, aClient *sptr, int parc, char *parv[])
-{
-    char       *message = parc > 1 ? parv[1] : NULL;
-
-    if (BadPtr(message))
-    {
-        sendto_one(sptr, err_str(ERR_NEEDMOREPARAMS),
-                   me.name, parv[0], "WALLOPS");
-        return 0;
-    }
-
-    if (!IsServer(sptr) && MyConnect(sptr) && !OPCanWallOps(sptr))
-    {
-        sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name, parv[0]);
-        return (0);
-    }
-
-    sendto_wallops_butone(IsServer(cptr) ? cptr : NULL, sptr,
-                          ":%s WALLOPS :%s", parv[0], message);
-    return 0;
-}
-
-/*
- * * m_locops (write to *all* local opers currently online)
- *      parv[0] = sender prefix
- *      parv[1] = message text
- */
-int
-m_locops(aClient *cptr, aClient *sptr, int parc, char *parv[])
-{
-    char       *message = parc > 1 ? parv[1] : NULL;
-
-    if (BadPtr(message))
-    {
-        sendto_one(sptr, err_str(ERR_NEEDMOREPARAMS),
-                   me.name, parv[0], "LOCOPS");
-        return 0;
-    }
-
-    if (!IsServer(sptr) && MyConnect(sptr) && !OPCanLocOps(sptr))
-    {
-        sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name, parv[0]);
-        return (0);
-    }
-    sendto_locops("from %s: %s", parv[0], message);
-    return (0);
-}
-
-/*
- * m_goper  (Russell) sort of like wallop, but only to ALL +o clients
- * on every server.
- *      parv[0] = sender prefix
- *      parv[1] = message text
- * Taken from df465, ported to hybrid. -mjs
- */
-int
-m_goper(aClient *cptr, aClient *sptr, int parc, char *parv[])
-{
-    char       *message = parc > 1 ? parv[1] : NULL;
-
-    if (BadPtr(message))
-    {
-        sendto_one(sptr, err_str(ERR_NEEDMOREPARAMS),
-                   me.name, parv[0], "GOPER");
-        return 0;
-    }
-    if (!IsServer(sptr) || !IsULine(sptr))
-    {
-        sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name, parv[0]);
-        return 0;
-    }
-
-    sendto_serv_butone_super(cptr, 0, ":%s GOPER :%s", parv[0], message);
-    sendto_ops("from %s: %s", parv[0], message);
-    return 0;
-}
-
-/*
- * m_gnotice  (Russell) sort of like wallop, but only to +g clients on *
- * this server.
- *      parv[0] = sender prefix
- *      parv[1] = message text
- * ported from df465 to hybrid -mjs
- *
- * This function itself doesnt need any changes for the move to +n routing
- * notices, to sendto takes care of it.  Now only sends to +n clients -epi
- */
-int
-m_gnotice(aClient *cptr, aClient *sptr, int parc, char *parv[])
-{
-
-    char       *message = parc > 1 ? parv[1] : NULL;
-
-    if (BadPtr(message))
-    {
-        sendto_one(sptr, err_str(ERR_NEEDMOREPARAMS),
-                   me.name, parv[0], "GNOTICE");
-        return 0;
-    }
-    if (!IsServer(sptr) && MyConnect(sptr))
-    {
-        sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name, parv[0]);
-        return 0;
-    }
-
-    sendto_serv_butone_super(cptr, 0, ":%s GNOTICE :%s", parv[0], message);
-    sendto_gnotice("from %s: %s", parv[0], message);
-    return 0;
-}
-
-int
-m_globops(aClient *cptr, aClient *sptr, int parc, char *parv[])
-{
-    char       *message = parc > 1 ? parv[1] : NULL;
-
-    /* a few changes, servers weren't able to globop -mjs */
-
-    if (BadPtr(message))
-    {
-        if (MyClient(sptr))
-            sendto_one(sptr, err_str(ERR_NEEDMOREPARAMS),
-                       me.name, parv[0], "GLOBOPS");
-        return 0;
-    }
-
-    if (MyClient(sptr) && !OPCanGlobOps(sptr))
-    {
-        sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name, parv[0]);
-        return 0;
-    }
-    if (strlen(message) > TOPICLEN)
-        message[TOPICLEN] = '\0';
-    sendto_serv_butone_super(cptr, ULF_NOGLOBOPS, ":%s GLOBOPS :%s", parv[0], message);
-    send_globops("from %s: %s", parv[0], message);
-    return 0;
-}
-
-int
-m_chatops(aClient *cptr, aClient *sptr, int parc, char *parv[])
-{
-    char       *message = parc > 1 ? parv[1] : NULL;
-
-    if (BadPtr(message))
-    {
-        if (MyClient(sptr))
-            sendto_one(sptr, err_str(ERR_NEEDMOREPARAMS),
-                       me.name, parv[0], "CHATOPS");
-        return 0;
-    }
-
-    if (MyClient(sptr) && (!IsAnOper(sptr) || !SendChatops(sptr)))
-    {
-        sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name, parv[0]);
-        return 0;
-    }
-
-    if (strlen(message) > TOPICLEN)
-        message[TOPICLEN] = '\0';
-    sendto_serv_butone_super(cptr, 0, ":%s CHATOPS :%s", parv[0], message);
-    send_chatops("from %s: %s", parv[0], message);
-    return 0;
-}
-
-/*
  * * m_time
  *       parv[0] = sender prefix
  *       parv[1] = servername
  */
 
 int
-m_time(aClient *cptr, aClient *sptr, int parc, char *parv[])
+m_time(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     if (hunt_server(cptr, sptr, ":%s TIME :%s", 1, parc, parv) == HUNTED_ISME)
         sendto_one(sptr, rpl_str(RPL_TIME), me.name,
@@ -1206,7 +1014,7 @@ m_time(aClient *cptr, aClient *sptr, int parc, char *parv[])
  *        parv[1] = servername
  */
 int
-m_admin(aClient *cptr, aClient *sptr, int parc, char *parv[])
+m_admin(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
 
     if (hunt_server(cptr, sptr, ":%s ADMIN :%s", 1, parc, parv) != HUNTED_ISME)
@@ -1242,7 +1050,7 @@ extern int  spam_time;
 
 /* m_set - set options while running */
 int
-m_set(aClient *cptr, aClient *sptr, int parc, char *parv[])
+m_set(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     char       *command;
 
@@ -1843,7 +1651,7 @@ local_rehash(aClient *cptr, aClient *sptr, char *sender, char *option)
  * - Holbrook
  */
 int
-m_rehash(aClient *cptr, aClient *sptr, int parc, char *parv[])
+m_rehash(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
 	char *option = "CONF";
 
@@ -1908,7 +1716,7 @@ m_rehash(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
 /* m_restart */
 int
-m_restart(aClient *cptr, aClient *sptr, int parc, char *parv[])
+m_restart(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     char       *pass = NULL;
 
@@ -1952,7 +1760,7 @@ m_restart(aClient *cptr, aClient *sptr, int parc, char *parv[])
  *        parv[1] = servername
  */
 int
-m_trace(aClient *cptr, aClient *sptr, int parc, char *parv[])
+m_trace(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     int      i;
     aClient *acptr=NULL;
@@ -2189,7 +1997,7 @@ m_trace(aClient *cptr, aClient *sptr, int parc, char *parv[])
  *       parv[1] = servername
  */
 int
-m_motd(aClient *cptr, aClient *sptr, int parc, char *parv[])
+m_motd(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     static time_t last_used = 0L;
     if (hunt_server(cptr, sptr, ":%s MOTD :%s", 1, parc, parv) != HUNTED_ISME)
@@ -2210,7 +2018,7 @@ m_motd(aClient *cptr, aClient *sptr, int parc, char *parv[])
     sendto_realops_lev(SPY_LEV, "MOTD requested by %s (%s@%s) [%s]",
                        sptr->name, sptr->user->username, sptr->user->host,
                        sptr->user->server);
-    send_motd(cptr, sptr, parc, parv);
+    send_motd(NULL, cptr, sptr, parc, parv);
     return 0;
 }
 
@@ -2224,7 +2032,7 @@ m_motd(aClient *cptr, aClient *sptr, int parc, char *parv[])
 ** -Dianora
 */
 int
-send_motd(aClient *cptr, aClient *sptr, int parc, char *parv[])
+send_motd(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     aMotd *temp;
 
@@ -2402,7 +2210,7 @@ read_help(char *filename)
 
 /* m_close - added by Darren Reed Jul 13 1992. */
 int
-m_close(aClient *cptr, aClient *sptr, int parc, char *parv[])
+m_close(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     aClient *acptr;
     int     i;
@@ -2431,7 +2239,7 @@ m_close(aClient *cptr, aClient *sptr, int parc, char *parv[])
 }
 
 int
-m_die(aClient *cptr, aClient *sptr, int parc, char *parv[])
+m_die(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     aClient *acptr;
     int     i;
@@ -2476,50 +2284,6 @@ m_die(aClient *cptr, aClient *sptr, int parc, char *parv[])
     return 0;
 }
 
-/*
- * m_capab
- * Communicate what I can do to another server
- * This has to be able to be sent and understood while
- * the client is UNREGISTERED. Therefore, we
- * absolutely positively must not check to see if
- * this is a server or a client. It's probably an unknown!
- */
-int
-m_capab(aClient *cptr, aClient *sptr, int parc, char *parv[])
-{
-    int         i;
-
-    /* If it's not local, or it has already set capabilities,
-     * silently ignore it.
-     * Dont ignore clients where we have set some capabilities already
-     * that would suck for connecting TO servers.
-     */
-
-    if(cptr != sptr)
-        return 0;
-
-    for (i = 1; i < parc; i++)
-    {
-        if (strcmp(parv[i], "BURST") == 0)
-            SetBurst(sptr);
-        else if (strcmp(parv[i], "UNCONNECT") == 0)
-            SetUnconnect(cptr);
-        else if (strcmp(parv[i], "DKEY") == 0)
-            SetDKEY(cptr);
-        else if (strcmp(parv[i], "TLS") == 0)
-            SetTLS(cptr);
-        else if (strcmp(parv[i], "ZIP") == 0)
-            SetZipCapable(cptr);
-#ifdef NOQUIT
-        else if (strcmp(parv[i], "NOQUIT") == 0)
-            SetNoquit(cptr);
-#endif
-	else if (strcmp(parv[i], "NICKIPSTR") == 0)
-	    SetNickIPStr(cptr);
-    }
-
-    return 0;
-}
 
 /* m_svskill - Just about the same as outta df
  *  - Raistlin
@@ -2530,7 +2294,7 @@ m_capab(aClient *cptr, aClient *sptr, int parc, char *parv[])
  */
 
 int
-m_svskill(aClient *cptr, aClient *sptr, int parc, char *parv[])
+m_svskill(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     aClient *acptr;
     char *comment;
@@ -2578,21 +2342,20 @@ m_svskill(aClient *cptr, aClient *sptr, int parc, char *parv[])
 }
 
 /* m_akill -
- * Parse AKILL command
- * parv[1]=host
- * parv[2]=user
- * parv[3]=length
- * parv[4]=akiller
- * parv[5]=time set
- * parv[6]=reason
+ * Parse AKILL command.
+ *
+ * Server path:
+ *   parv[1]=host  parv[2]=user  parv[3]=length  parv[4]=akiller
+ *   parv[5]=time_set  parv[6]=reason
  */
 int
-m_akill(aClient *cptr, aClient *sptr, int parc, char *parv[])
+m_akill(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     char *user, *host, *reason, *akiller, buffer[1024], *current_date;
     time_t length=0, timeset=0;
     struct userBan *ban, *oban;
 
+    /* --- Server path --- */
     if(!IsServer(sptr) || (parc < 6))
         return 0;
 
@@ -2618,8 +2381,6 @@ m_akill(aClient *cptr, aClient *sptr, int parc, char *parv[])
     /* is this an old bogus akill? */
     if(timeset + length <= NOW)
     {
-       /* Let's warn about bogus akills but also try to fix them as services will only send AKILL commands
-          when it really wants to take out the users (now)... -Kobi_S */
        sendto_realops_lev(DEBUG_LEV, "m_akill: Got bogus akill from %s with timeset=%ld when NOW=%ld for %s@%s",
                           sptr->name, (long)timeset, (long)NOW, user, host);
        timeset = NOW;
@@ -2672,15 +2433,18 @@ m_akill(aClient *cptr, aClient *sptr, int parc, char *parv[])
     return 0;
 }
 
+/* m_rakill -
+ * Server path: RAKILL <host> <user>
+ */
 int
-m_rakill(aClient *cptr, aClient *sptr, int parc, char *parv[])
+m_rakill(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     struct userBan *ban, *oban;
 
+    /* --- Server path --- */
     if(!IsServer(sptr))
         return 0;
 
-    /* just quickly find the akill and be rid of it! */
     if(parc<3)
     {
         sendto_one(sptr, err_str(ERR_NEEDMOREPARAMS), me.name, parv[0],
@@ -2728,7 +2492,7 @@ m_rakill(aClient *cptr, aClient *sptr, int parc, char *parv[])
  */
 
 int
-m_nbanreset(aClient *cptr, aClient *sptr, int parc, char *parv[])
+m_nbanreset(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     if(!IsServer(sptr))
     {
@@ -2756,229 +2520,26 @@ m_nbanreset(aClient *cptr, aClient *sptr, int parc, char *parv[])
 }
 
 
-/*
- * RPL_NOWON   - Online at the moment (Succesfully added to WATCH-list)
- * RPL_NOWOFF  - Offline at the moement (Succesfully added to WATCH-list)
- * RPL_WATCHOFF   - Succesfully removed from WATCH-list.
- * ERR_TOOMANYWATCH - Take a guess :>  Too many WATCH entries.
+/* m_sqline -
+ * Server path: SQLINE <mask> :reason (from server/uline)
  */
-static void
-show_watch(aClient *cptr, char *name, int rpl1, int rpl2)
-{
-    aClient *acptr;
-
-    if ((acptr = find_person(name, NULL)))
-        sendto_one(cptr, rpl_str(rpl1), me.name, cptr->name,
-                   acptr->name, acptr->user->username,
-#ifdef USER_HOSTMASKING
-                   IsUmodeH(acptr)?acptr->user->mhost:
-#endif
-                                                      acptr->user->host,
-                   acptr->lasttime);
-    else
-        sendto_one(cptr, rpl_str(rpl2), me.name, cptr->name,
-                   name, "*", "*", 0);
-}
-
-/* m_watch */
 int
-m_watch(aClient *cptr, aClient *sptr, int parc, char *parv[])
-{
-    aClient  *acptr;
-    char  *s, *p, *user;
-    char def[2] = "l";
-    int listreq = 0;
-    int listcount = 0;
-
-    if (parc < 2)
-    {
-        /* Default to 'l' - list who's currently online */
-        parc = 2;
-        parv[1] = def;
-    }
-
-    for (p = NULL, s = strtoken(&p, parv[1], ", "); s;
-         s = strtoken(&p, NULL, ", "))
-    {
-        if ((user = (char *)strchr(s, '!')))
-            *user++ = '\0'; /* Not used */
-
-        /*
-         * Prefix of "+", they want to add a name to their WATCH
-         * list.
-         */
-        if (*s == '+')
-        {
-            if (*(s+1))
-            {
-                if ((sptr->watches >= MAXWATCH) && !IsAnOper(sptr))
-                {
-                    sendto_one(sptr, err_str(ERR_TOOMANYWATCH),
-                               me.name, cptr->name, s+1);
-                    continue;
-                }
-                add_to_watch_hash_table(s+1, sptr);
-            }
-            show_watch(sptr, s+1, RPL_NOWON, RPL_NOWOFF);
-            listcount++;
-            continue;
-        }
-
-        /*
-         * Prefix of "-", coward wants to remove somebody from their
-         * WATCH list.  So do it. :-)
-         */
-        if (*s == '-')
-        {
-            del_from_watch_hash_table(s+1, sptr);
-            show_watch(sptr, s+1, RPL_WATCHOFF, RPL_WATCHOFF);
-            listcount++;
-            continue;
-        }
-
-        /*
-         * Fancy "C" or "c", they want to nuke their WATCH list and start
-         * over, so be it.
-         */
-        if (*s == 'C' || *s == 'c')
-        {
-            hash_del_watch_list(sptr);
-            continue;
-        }
-
-        /*
-         * Now comes the fun stuff, "S" or "s" returns a status report of
-         * their WATCH list.  I imagine this could be CPU intensive if its
-         * done alot, perhaps an auto-lag on this?
-         */
-        if (*s == 'S' || *s == 's')
-        {
-            Link *lp;
-            aWatch *anptr;
-            int  count = 0;
-
-            /* only allowed once per command */
-            if (listreq & 0x1)
-                continue;
-            listreq |= 0x1;
-
-            /*
-             * Send a list of how many users they have on their WATCH list
-             * and how many WATCH lists they are on.
-             */
-            anptr = hash_get_watch(sptr->name);
-            if (anptr)
-                for (lp = anptr->watch, count = 1; (lp = lp->next); count++);
-            sendto_one(sptr, rpl_str(RPL_WATCHSTAT), me.name, parv[0],
-                       sptr->watches, count);
-
-            /*
-             * Send a list of everybody in their WATCH list. Be careful
-             * not to buffer overflow.
-             */
-            if ((lp = sptr->watch) == NULL)
-            {
-                sendto_one(sptr, rpl_str(RPL_ENDOFWATCHLIST), me.name, parv[0],
-                           *s);
-                continue;
-            }
-            *buf = '\0';
-            strcpy(buf, lp->value.wptr->nick);
-            count = strlen(parv[0])+strlen(me.name)+10+strlen(buf);
-            while ((lp = lp->next))
-            {
-                if (count+strlen(lp->value.wptr->nick)+1 > BUFSIZE - 2)
-                {
-                    sendto_one(sptr, rpl_str(RPL_WATCHLIST), me.name,
-                               parv[0], buf);
-                    listcount++;
-                    *buf = '\0';
-                    count = strlen(parv[0])+strlen(me.name)+10;
-                }
-                strcat(buf, " ");
-                strcat(buf, lp->value.wptr->nick);
-                count += (strlen(lp->value.wptr->nick)+1);
-            }
-            sendto_one(sptr, rpl_str(RPL_WATCHLIST), me.name, parv[0], buf);
-            sendto_one(sptr, rpl_str(RPL_ENDOFWATCHLIST), me.name, parv[0],
-                       *s);
-            listcount++;
-            continue;
-        }
-
-        /*
-         * Well that was fun, NOT.  Now they want a list of everybody in
-         * their WATCH list AND if they are online or offline? Sheesh,
-         * greedy arn't we?
-         */
-        if (*s == 'L' || *s == 'l')
-        {
-            Link *lp = sptr->watch;
-
-            /* only allowed once per command */
-            if (listreq & 0x2)
-                continue;
-            listreq |= 0x2;
-
-            while (lp)
-            {
-                if ((acptr = find_person(lp->value.wptr->nick, NULL)))
-                    sendto_one(sptr, rpl_str(RPL_NOWON), me.name, parv[0],
-                               acptr->name, acptr->user->username,
-#ifdef USER_HOSTMASKING
-                               IsUmodeH(acptr)?acptr->user->mhost:
-#endif
-                                                                  acptr->user->host,
-                               acptr->tsinfo);
-                /*
-                 * But actually, only show them offline if its a capital
-                 * 'L' (full list wanted).
-                 */
-                else if (IsUpper(*s))
-                    sendto_one(sptr, rpl_str(RPL_NOWOFF), me.name, parv[0],
-                               lp->value.wptr->nick, "*", "*",
-                               lp->value.wptr->lasttime);
-                lp = lp->next;
-                listcount++;
-            }
-
-            sendto_one(sptr, rpl_str(RPL_ENDOFWATCHLIST), me.name, parv[0],
-                       *s);
-            continue;
-        }
-        /* Hmm.. unknown prefix character.. Ignore it. :-) */
-    }
-
-    /* discourage repetitive listings */
-#ifdef NO_OPER_FLOOD
-    if (!IsAnOper(sptr))
-#endif
-    if (!NoMsgThrottle(sptr))
-        sptr->since += listcount/4;
-
-    return 0;
-}
-
-int
-m_sqline(aClient *cptr, aClient *sptr, int parc, char *parv[])
+m_sqline(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     struct simBan *ban;
     unsigned int flags;
     char *reason;
 
+    /* --- Server path --- */
     if(!(IsServer(sptr) || IsULine(sptr)))
         return 0;
 
     if(parc < 2)
     {
-        /* we should not get malformed sqlines.  complain loud */
         sendto_realops("%s attempted to add sqline with insufficient params!"
                        " (ignored) Contact coders!", sptr->name);
         return 0;
     }
-
-    /* if we have any Q:lines (SQ or Q) that match
-     * this Q:line, just return (no need to waste cpu */
 
     flags = SBAN_NETWORK;
     if(parv[1][0] == '#')
@@ -3010,12 +2571,16 @@ m_sqline(aClient *cptr, aClient *sptr, int parc, char *parv[])
     return 0;
 }
 
+/* m_unsqline -
+ * Server path: UNSQLINE [matchflag] <mask>
+ */
 int
-m_unsqline(aClient *cptr, aClient *sptr, int parc, char *parv[])
+m_unsqline(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     int matchit = 0;
     char *mask;
 
+    /* --- Server path --- */
     if(!(IsServer(sptr) || IsULine(sptr)))
         return 0;
 
@@ -3053,13 +2618,17 @@ m_unsqline(aClient *cptr, aClient *sptr, int parc, char *parv[])
     return 0;
 }
 
-int m_sgline(aClient *cptr, aClient *sptr, int parc, char *parv[])
+/* m_sgline -
+ * Server path: SGLINE <len> :<mask>:<reason>
+ */
+int m_sgline(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     struct simBan *ban;
     unsigned int len;
     unsigned int flags;
     char *mask, *reason;
 
+    /* --- Server path --- */
     if(!(IsServer(sptr) || IsULine(sptr)))
         return 0;
 
@@ -3081,9 +2650,6 @@ int m_sgline(aClient *cptr, aClient *sptr, int parc, char *parv[])
     { /* Bogus */
         return 0;
     }
-
-    /* if we have any G:lines (SG or G) that match
-     * this G:line, just return (no need to waste cpu */
 
     flags = SBAN_NETWORK|SBAN_GCOS;
     ban = make_simpleban(flags, mask);
@@ -3112,12 +2678,16 @@ int m_sgline(aClient *cptr, aClient *sptr, int parc, char *parv[])
     return 0;
 }
 
+/* m_unsgline -
+ * Server path: UNSGLINE [matchflag] <mask>
+ */
 int
-m_unsgline(aClient *cptr, aClient *sptr, int parc, char *parv[])
+m_unsgline(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     int matchit=0;
     char *mask;
 
+    /* --- Server path --- */
     if(!(IsServer(sptr) || IsULine(sptr)))
         return 0;
 
@@ -3127,7 +2697,6 @@ m_unsgline(aClient *cptr, aClient *sptr, int parc, char *parv[])
                    "UNSGLINE");
         return 0;
     }
-
 
     if (parc==3)
     {
@@ -3146,76 +2715,6 @@ m_unsgline(aClient *cptr, aClient *sptr, int parc, char *parv[])
         sendto_serv_butone(cptr, ":%s UNSGLINE :%s",sptr->name,mask);
     return 0;
 }
-
-int
-m_check(aClient *cptr, aClient *sptr, int parc, char *parv[])
-{
-    struct simBan *ban;
-
-    if (!IsAnOper(sptr))
-    {
-        sendto_one(sptr, getreply(ERR_NOPRIVILEGES), me.name, parv[0]);
-        return 0;
-    }
-
-    if (parc < 3 || (mycmp(parv[1], "nick") && mycmp(parv[1], "channel")))
-    {
-        sendto_one(sptr, "NOTICE %s :Syntax: CHECK NICK <nickname>", parv[0]);
-        sendto_one(sptr, "NOTICE %s :Syntax: CHECK CHANNEL <channel>", parv[0]);
-        return 0;
-    }
-
-    if(!mycmp(parv[1], "nick"))
-    {
-        if ((ban = check_mask_simbanned(parv[2], SBAN_NICK)))
-        {
-            char *reason = ban->reason ? ban->reason : "<no reason>";
-
-            if (ban->flags & SBAN_TEMPORARY)
-                sendto_one(sptr, "NOTICE %s :CHECK NICK: %s [expires in %ldm]: %s",
-                           parv[0], ban->mask,
-                            (long)((ban->timeset + ban->duration - NOW) / 60),
-                           reason);
-             else
-                sendto_one(sptr, "NOTICE %s :CHECK NICK: %s [permanent]: %s",
-                           parv[0], ban->mask, reason);
-        }
-        else
-        {
-            sendto_one(sptr, "NOTICE %s :CHECK NICK: no match", parv[0]);
-        }
-    }
-    if(!mycmp(parv[1], "channel"))
-    {
-        aChannel *chptr;
-        struct FlagList *xflag;
-
-        if((chptr = find_channel(parv[2], NULL)))
-        {
-            sendto_one(sptr, "NOTICE %s :CHECK CHANNEL: %s", parv[0], chptr->chname);
-            sendto_one(sptr, "NOTICE %s :JOIN_CONNECT_TIME: %d", parv[0], chptr->join_connect_time);
-            sendto_one(sptr, "NOTICE %s :TALK_CONNECT_TIME: %d", parv[0], chptr->talk_connect_time);
-            sendto_one(sptr, "NOTICE %s :TALK_JOIN_TIME: %d", parv[0], chptr->talk_join_time);
-            sendto_one(sptr, "NOTICE %s :MAX_BANS: %d", parv[0], chptr->max_bans);
-            sendto_one(sptr, "NOTICE %s :MAX_INVITES: %d", parv[0], chptr->max_invites);
-            sendto_one(sptr, "NOTICE %s :MAX_MSG_TIME: %d:%d", parv[0], chptr->max_messages, chptr->max_messages_time);
-            sendto_one(sptr, "NOTICE %s :GREETMSG: %s", parv[0], chptr->greetmsg?chptr->greetmsg:"<NONE>");
-            for(xflag = xflags_list; xflag->option; xflag++)
-            {
-                if(!strcmp(xflag->option,"USER_VERBOSE") || !strcmp(xflag->option,"OPER_VERBOSE")) continue;
-                sendto_one(sptr, "NOTICE %s :%s: %s", parv[0], xflag->option, (chptr->xflags & xflag->flag)?"On":"Off");
-            }
-            sendto_one(sptr, "NOTICE %s :*** End of Check ***", parv[0]);
-        }
-        else
-        {
-            sendto_one(sptr, "NOTICE %s :CHECK CHANNEL: no match", parv[0]);
-        }
-    }
-
-    return 0;
-}
-
 
 u_long
 memcount_s_serv(MCs_serv *mc)

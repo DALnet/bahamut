@@ -90,7 +90,6 @@
 #define MSG_HELPSERV "HELPSERV" 	/* HELPSERV */
 #define MSG_SERVICES "SERVICES"		/* SERVICES */
 #define MSG_IDENTIFY "IDENTIFY"		/* IDENTIFY */
-#define MSG_CAPAB    "CAPAB"	   	/* CAPAB */ 
 #define MSG_LOCOPS   "LOCOPS"	   	/* LOCOPS */
 #define MSG_SVSNICK  "SVSNICK"   	/* SVSNICK */
 #define MSG_SVSNOOP  "SVSNOOP"   	/* SVSNOOP */
@@ -108,7 +107,6 @@
 #define MSG_DCCALLOW "DCCALLOW"		/* dccallow */
 #define MSG_SGLINE   "SGLINE"           /* sgline */
 #define MSG_UNSGLINE "UNSGLINE"         /* unsgline */
-#define MSG_DKEY     "DKEY"		/* diffie-hellman negotiation */
 #define MSG_NS	     "NS"            	/* NickServ commands */
 #define MSG_CS	     "CS"            	/* ChanServ commands */
 #define MSG_MS	     "MS"            	/* MemoServ commands */
@@ -131,114 +129,111 @@
 #define MSG_POST     "POST"         /* POST */
 #define MSG_CHECK    "CHECK"        /* CHECK */
 
-#define MSG_WEBIRC   "WEBIRC"       /* WEBIRC */
-
 #define MAXPARA      15
 
-extern int  m_kline(aClient *, aClient *, int, char **);
-extern int  m_unkline(aClient *, aClient *, int, char **);
-extern int  m_akill(aClient *, aClient *, int, char **);
-extern int  m_rakill(aClient *, aClient *, int, char **);
-extern int  m_nbanreset(aClient *, aClient *, int, char **);
-extern int  m_locops(aClient *, aClient *, int, char **);
-extern int  m_private(aClient *, aClient *, int, char **);
-extern int  m_topic(aClient *, aClient *, int, char **);
-extern int  m_join(aClient *, aClient *, int, char **);
-extern int  m_part(aClient *, aClient *, int, char **);
-extern int  m_mode(aClient *, aClient *, int, char **);
-extern int  m_ping(aClient *, aClient *, int, char **);
-extern int  m_pong(aClient *, aClient *, int, char **);
-extern int  m_wallops(aClient *, aClient *, int, char **);
-extern int  m_kick(aClient *, aClient *, int, char **);
-extern int  m_nick(aClient *, aClient *, int, char **);
-extern int  m_error(aClient *, aClient *, int, char **);
-extern int  m_notice(aClient *, aClient *, int, char **);
-extern int  m_invite(aClient *, aClient *, int, char **);
-extern int  m_quit(aClient *, aClient *, int, char **);
-extern int  m_kill(aClient *, aClient *, int, char **);
-extern int  m_motd(aClient *, aClient *, int, char **);
-extern int  m_who(aClient *, aClient *, int, char **);
-extern int  m_whois(aClient *, aClient *, int, char **);
-extern int  m_user(aClient *, aClient *, int, char **);
-extern int  m_list(aClient *, aClient *, int, char **);
-extern int  m_server(aClient *, aClient *, int, char **);
-extern int  m_info(aClient *, aClient *, int, char **);
-extern int  m_links(aClient *, aClient *, int, char **);
-extern int  m_summon(aClient *, aClient *, int, char **);
-extern int  m_stats(aClient *, aClient *, int, char **);
-extern int  m_users(aClient *, aClient *, int, char **);
-extern int  m_services(aClient *, aClient *, int, char **);
-extern int  m_identify(aClient *, aClient *, int, char **);
-extern int  m_aliased(aClient *, aClient *, int, char **, AliasInfo *);
-extern int  m_svsnick(aClient *, aClient *, int, char **);
-extern int  m_svskill(aClient *, aClient *, int, char **);
-extern int  m_svsmode(aClient *, aClient *, int, char **);
-extern int  m_svshold(aClient *, aClient *, int, char **);
-extern int  m_version(aClient *, aClient *, int, char **);
-extern int  m_help(aClient *, aClient *, int, char **);
-extern int  m_squit(aClient *, aClient *, int, char **);
-extern int  m_away(aClient *, aClient *, int, char **);
-extern int  m_connect(aClient *, aClient *, int, char **);
-extern int  m_oper(aClient *, aClient *, int, char **);
-extern int  m_pass(aClient *, aClient *, int, char **);
-extern int  m_trace(aClient *, aClient *, int, char **);
-extern int  m_time(aClient *, aClient *, int, char **);
-extern int  m_names(aClient *, aClient *, int, char **);
-extern int  m_admin(aClient *, aClient *, int, char **);
-extern int  m_lusers(aClient *, aClient *, int, char **);
-extern int  m_umode(aClient *, aClient *, int, char **);
-extern int  m_close(aClient *, aClient *, int, char **);
-extern int  m_motd(aClient *, aClient *, int, char **);
-extern int  m_whowas(aClient *, aClient *, int, char **);
-extern int  m_userhost(aClient *, aClient *, int, char **);
-extern int  m_userip(aClient *, aClient *, int, char **);
-extern int  m_ison(aClient *, aClient *, int, char **);
-extern int  m_svinfo(aClient *, aClient *, int, char **);
-extern int  m_sjoin(aClient *, aClient *, int, char **);
-extern int  m_samode(aClient *, aClient *, int, char **);
-extern int  m_sajoin(aClient *, aClient *, int, char **);
-extern int  m_globops(aClient *, aClient *, int, char **);
-extern int  m_chatops(aClient *, aClient *, int, char **);
-extern int  m_goper(aClient *, aClient *, int, char **);
-extern int  m_gnotice(aClient *, aClient *, int, char **);
-extern int  m_rehash(aClient *, aClient *, int, char **);
-extern int  m_restart(aClient *, aClient *, int, char **);
-extern int  m_die(aClient *, aClient *, int, char **);
-extern int  m_hash(aClient *, aClient *, int, char **);
-extern int  m_dns(aClient *, aClient *, int, char **);
-extern int  m_set(aClient *, aClient *, int, char **);
-extern int  m_capab(aClient *, aClient *, int, char **);
-extern int  m_silence(aClient *, aClient *, int, char **);
-extern int  m_watch(aClient *, aClient *, int, char **);
-extern int  m_sqline(aClient *, aClient *, int, char **);
-extern int  m_unsqline(aClient *, aClient *, int, char **);
-extern int  m_burst(aClient *, aClient *, int, char **);
-extern int  m_dccallow(aClient *, aClient *, int, char **);
-extern int  m_sgline(aClient *, aClient *, int, char **);
-extern int  m_unsgline(aClient *, aClient *, int, char **);
-extern int  m_dkey(aClient *, aClient *, int, char **);
-extern int  m_resynch(aClient *, aClient *, int, char **);
-extern int  m_luserslock(aClient *, aClient *, int, char **);
-extern int  m_linkscontrol(aClient *, aClient *, int, char **);
-extern int  m_module(aClient *, aClient *, int, char **);
-extern int  m_rwho(aClient *, aClient *, int, char **);
-extern int  m_svsclone(aClient *, aClient *, int, char **);
-extern int  m_svspanic(aClient *, aClient *, int, char **);
-extern int  m_chankill(aClient *, aClient *, int, char **);
-extern int  m_svshost(aClient *, aClient *, int, char **);
-extern int  m_svsnoop(aClient *, aClient *, int, char **);
-extern int  m_svstag(aClient *, aClient *, int, char **);
-extern int  m_svsuhm(aClient *, aClient *, int, char **);
-extern int  m_put(aClient *, aClient *, int, char **);
-extern int  m_post(aClient *, aClient *, int, char **);
-extern int  m_check(aClient *, aClient *, int, char **);
-extern int  m_webirc(aClient *, aClient *, int, char **);
-extern int m_spamops(aClient *, aClient *, int, char **);
-extern int m_sf(aClient *, aClient *, int, char **);
-extern int m_aj(aClient *, aClient *, int, char **);
-extern int m_sjr(aClient *, aClient *, int, char **, AliasInfo *);
-extern int m_svsxcf(aClient *, aClient *, int, char **);
-extern int m_svsctrl(aClient *, aClient *, int, char **);
+/*
+ * Generic sentinel handlers (defined in src/parse.c).
+ * Use these in mapi_cmd_av2 tables instead of NULL or real functions
+ * when a particular handler type should be handled uniformly.
+ *
+ *   mg_ignore   — silently drop the message (return 0).
+ *   mg_unreg    — send ERR_NOTREGISTERED and return -1.
+ *   mg_reg      — send ERR_ALREADYREGISTRED and return 0.
+ *   mg_not_oper — send ERR_NOPRIVILEGES and return 0.
+ */
+extern int mg_ignore  (struct MsgBuf *, aClient *, aClient *, int, char **);
+extern int mg_unreg   (struct MsgBuf *, aClient *, aClient *, int, char **);
+extern int mg_reg     (struct MsgBuf *, aClient *, aClient *, int, char **);
+extern int mg_not_oper(struct MsgBuf *, aClient *, aClient *, int, char **);
+
+/*
+ * current_alias_info — set by parse() immediately before dispatching an alias
+ * command.  m_aliased() and m_sjr() read this to get their AliasInfo*.
+ * Only valid during an alias handler call.
+ */
+extern AliasInfo *current_alias_info;
+
+/* Handler function declarations (new signature: MsgBuf* first) */
+extern int  m_cap  (struct MsgBuf *, aClient *, aClient *, int, char **);
+extern int  m_kline(struct MsgBuf *, aClient *, aClient *, int, char **);
+extern int  m_unkline(struct MsgBuf *, aClient *, aClient *, int, char **);
+extern int  m_akill(struct MsgBuf *, aClient *, aClient *, int, char **);
+extern int  m_rakill(struct MsgBuf *, aClient *, aClient *, int, char **);
+extern int  m_nbanreset(struct MsgBuf *, aClient *, aClient *, int, char **);
+extern int  m_topic(struct MsgBuf *, aClient *, aClient *, int, char **);
+extern int  m_join(struct MsgBuf *, aClient *, aClient *, int, char **);
+extern int  m_part(struct MsgBuf *, aClient *, aClient *, int, char **);
+extern int  m_mode(struct MsgBuf *, aClient *, aClient *, int, char **);
+extern int  m_ping(struct MsgBuf *, aClient *, aClient *, int, char **);
+extern int  m_pong(struct MsgBuf *, aClient *, aClient *, int, char **);
+extern int  m_kick(struct MsgBuf *, aClient *, aClient *, int, char **);
+extern int  m_nick(struct MsgBuf *, aClient *, aClient *, int, char **);
+extern int  m_error(struct MsgBuf *, aClient *, aClient *, int, char **);
+extern int  m_invite(struct MsgBuf *, aClient *, aClient *, int, char **);
+extern int  m_quit(struct MsgBuf *, aClient *, aClient *, int, char **);
+extern int  m_kill(struct MsgBuf *, aClient *, aClient *, int, char **);
+extern int  m_motd(struct MsgBuf *, aClient *, aClient *, int, char **);
+extern int  m_user(struct MsgBuf *, aClient *, aClient *, int, char **);
+extern int  m_list(struct MsgBuf *, aClient *, aClient *, int, char **);
+extern int  m_server(struct MsgBuf *, aClient *, aClient *, int, char **);
+extern int  m_info(struct MsgBuf *, aClient *, aClient *, int, char **);
+extern int  m_links(struct MsgBuf *, aClient *, aClient *, int, char **);
+extern int  m_summon(struct MsgBuf *, aClient *, aClient *, int, char **);
+extern int  m_stats(struct MsgBuf *, aClient *, aClient *, int, char **);
+extern int  m_services(struct MsgBuf *, aClient *, aClient *, int, char **);
+extern int  m_identify(struct MsgBuf *, aClient *, aClient *, int, char **);
+/* m_aliased uses current_alias_info set by parse() */
+extern int  m_aliased(struct MsgBuf *, aClient *, aClient *, int, char **);
+extern int  m_svsnick(struct MsgBuf *, aClient *, aClient *, int, char **);
+extern int  m_svskill(struct MsgBuf *, aClient *, aClient *, int, char **);
+extern int  m_svsmode(struct MsgBuf *, aClient *, aClient *, int, char **);
+extern int  m_svshold(struct MsgBuf *, aClient *, aClient *, int, char **);
+extern int  m_version(struct MsgBuf *, aClient *, aClient *, int, char **);
+extern int  m_help(struct MsgBuf *, aClient *, aClient *, int, char **);
+extern int  m_squit(struct MsgBuf *, aClient *, aClient *, int, char **);
+extern int  m_connect(struct MsgBuf *, aClient *, aClient *, int, char **);
+extern int  m_oper(struct MsgBuf *, aClient *, aClient *, int, char **);
+extern int  m_pass(struct MsgBuf *, aClient *, aClient *, int, char **);
+extern int  m_trace(struct MsgBuf *, aClient *, aClient *, int, char **);
+extern int  m_time(struct MsgBuf *, aClient *, aClient *, int, char **);
+extern int  m_names(struct MsgBuf *, aClient *, aClient *, int, char **);
+extern int  m_admin(struct MsgBuf *, aClient *, aClient *, int, char **);
+extern int  m_lusers(struct MsgBuf *, aClient *, aClient *, int, char **);
+extern int  m_umode(struct MsgBuf *, aClient *, aClient *, int, char **);
+extern int  m_close(struct MsgBuf *, aClient *, aClient *, int, char **);
+extern int  m_svinfo(struct MsgBuf *, aClient *, aClient *, int, char **);
+extern int  m_sjoin(struct MsgBuf *, aClient *, aClient *, int, char **);
+extern int  m_samode(struct MsgBuf *, aClient *, aClient *, int, char **);
+extern int  m_sajoin(struct MsgBuf *, aClient *, aClient *, int, char **);
+extern int  m_rehash(struct MsgBuf *, aClient *, aClient *, int, char **);
+extern int  m_restart(struct MsgBuf *, aClient *, aClient *, int, char **);
+extern int  m_die(struct MsgBuf *, aClient *, aClient *, int, char **);
+extern int  m_hash(struct MsgBuf *, aClient *, aClient *, int, char **);
+extern int  m_dns(struct MsgBuf *, aClient *, aClient *, int, char **);
+extern int  m_set(struct MsgBuf *, aClient *, aClient *, int, char **);
+extern int  m_sqline(struct MsgBuf *, aClient *, aClient *, int, char **);
+extern int  m_unsqline(struct MsgBuf *, aClient *, aClient *, int, char **);
+extern int  m_burst(struct MsgBuf *, aClient *, aClient *, int, char **);
+extern int  m_sgline(struct MsgBuf *, aClient *, aClient *, int, char **);
+extern int  m_unsgline(struct MsgBuf *, aClient *, aClient *, int, char **);
+extern int  m_resynch(struct MsgBuf *, aClient *, aClient *, int, char **);
+extern int  m_luserslock(struct MsgBuf *, aClient *, aClient *, int, char **);
+extern int  m_linkscontrol(struct MsgBuf *, aClient *, aClient *, int, char **);
+extern int  m_module(struct MsgBuf *, aClient *, aClient *, int, char **);
+extern int  m_svsclone(struct MsgBuf *, aClient *, aClient *, int, char **);
+extern int  m_svspanic(struct MsgBuf *, aClient *, aClient *, int, char **);
+extern int  m_chankill(struct MsgBuf *, aClient *, aClient *, int, char **);
+extern int  m_svshost(struct MsgBuf *, aClient *, aClient *, int, char **);
+extern int  m_svsnoop(struct MsgBuf *, aClient *, aClient *, int, char **);
+extern int  m_svstag(struct MsgBuf *, aClient *, aClient *, int, char **);
+extern int  m_svsuhm(struct MsgBuf *, aClient *, aClient *, int, char **);
+extern int  m_spamops(struct MsgBuf *, aClient *, aClient *, int, char **);
+extern int  m_sf(struct MsgBuf *, aClient *, aClient *, int, char **);
+extern int  m_aj(struct MsgBuf *, aClient *, aClient *, int, char **);
+/* m_sjr uses current_alias_info set by parse() */
+extern int  m_sjr(struct MsgBuf *, aClient *, aClient *, int, char **);
+extern int  m_svsxcf(struct MsgBuf *, aClient *, aClient *, int, char **);
+extern int  m_svsctrl(struct MsgBuf *, aClient *, aClient *, int, char **);
 
 /* aliastab indexes */
 #define AII_NS  0
@@ -263,131 +258,153 @@ AliasInfo aliastab[] =
     { 0 }
 };
 
-#ifdef __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wincompatible-function-pointer-types"
-#endif
-struct Message msgtab[] = 
+/*
+ * msgtab[] initialiser macros.
+ *
+ * M_UNREG  — accessible by unregistered connections; all handler slots
+ *             point to the same function.
+ * M_REG    — registered-only; HANDLER_UNREG → mg_unreg, rest → fn.
+ * M_ALIAS  — services alias; aliasidx set; CLIENT/OPER → m_aliased;
+ *             REMOTE/SERVER → mg_ignore; UNREG → mg_unreg.
+ *             parse() sets current_alias_info before dispatch.
+ * M_ALIAS_FN — like M_ALIAS but with a custom handler (for m_sjr).
+ */
+#define M_UNREG(cmd_, fn_) \
+    { (cmd_), 0, 0, 0, 0, -1, {   \
+        { (fn_), 0 },              \
+        { (fn_), 0 },              \
+        { (fn_), 0 },              \
+        { (fn_), 0 },              \
+        { (fn_), 0 },              \
+    }}
+
+#define M_REG(cmd_, fn_) \
+    { (cmd_), 0, 0, 0, 0, -1, {   \
+        { mg_unreg, 0 },           \
+        { (fn_),    0 },           \
+        { (fn_),    0 },           \
+        { (fn_),    0 },           \
+        { (fn_),    0 },           \
+    }}
+
+#define M_ALIAS(cmd_, aii_) \
+    { (cmd_), 0, 0, 0, 0, (aii_), { \
+        { mg_unreg,  0 },            \
+        { m_aliased, 0 },            \
+        { mg_ignore, 0 },            \
+        { mg_ignore, 0 },            \
+        { m_aliased, 0 },            \
+    }}
+
+#define M_ALIAS_FN(cmd_, aii_, fn_) \
+    { (cmd_), 0, 0, 0, 0, (aii_), { \
+        { mg_unreg, 0 },             \
+        { (fn_),    0 },             \
+        { mg_ignore, 0 },            \
+        { mg_ignore, 0 },            \
+        { (fn_),    0 },             \
+    }}
+
+struct Message msgtab[] =
 {
-    {MSG_PRIVATE,  m_private,  MAXPARA, MF_RIDLE, 0},
-    {MSG_NICK,     m_nick,     MAXPARA, MF_UNREG, 0},
-    {MSG_NOTICE,   m_notice,   MAXPARA, 0,        0},
-    {MSG_JOIN,     m_join,     MAXPARA, 0,        0},
-    {MSG_MODE,     m_mode,     MAXPARA, 0,        0},
-    {MSG_SAMODE,   m_samode,   MAXPARA, 0,        0},
-    {MSG_SAJOIN,   m_sajoin,   MAXPARA, 0,        0},
-    {MSG_QUIT,     m_quit,     MAXPARA, MF_UNREG, 0},
-    {MSG_PART,     m_part,     MAXPARA, 0,        0},
-    {MSG_TOPIC,    m_topic,    MAXPARA, 0,        0},
-    {MSG_INVITE,   m_invite,   MAXPARA, 0,        0},
-    {MSG_KICK,     m_kick,     MAXPARA, 0,        0},
-    {MSG_WALLOPS,  m_wallops,  MAXPARA, 0,        0},
-    {MSG_LOCOPS,   m_locops,   MAXPARA, 0,        0},
-    {MSG_PONG,     m_pong,     MAXPARA, 0,        0},
-    {MSG_PING,     m_ping,     MAXPARA, 0,        0},
-    {MSG_ERROR,    m_error,    MAXPARA, MF_UNREG, 0},
-    {MSG_KILL,     m_kill,     MAXPARA, 0,        0},
-    {MSG_USER,     m_user,     MAXPARA, MF_UNREG, 0},
-    {MSG_AWAY,     m_away,     MAXPARA, 0,        0},
-    {MSG_ISON,     m_ison,           1, 0,        0},
-    {MSG_SERVER,   m_server,   MAXPARA, MF_UNREG, 0},
-    {MSG_SQUIT,    m_squit,    MAXPARA, 0,        0},
-    {MSG_WHOIS,    m_whois,    MAXPARA, 0,        0},
-    {MSG_WHO,      m_who,      MAXPARA, 0,        0},
-    {MSG_WHOWAS,   m_whowas,   MAXPARA, 0,        0},
-    {MSG_LIST,     m_list,     MAXPARA, 0,        0},
-    {MSG_NAMES,    m_names,    MAXPARA, 0,        0},
-    {MSG_USERHOST, m_userhost,       1, 0,        0},
-    {MSG_USERIP,   m_userip,         1, 0,        0},
-    {MSG_TRACE,    m_trace,    MAXPARA, 0,        0},
-    {MSG_PASS,     m_pass,     MAXPARA, MF_UNREG, 0},
-    {MSG_LUSERS,   m_lusers,   MAXPARA, 0,        0},
-    {MSG_TIME,     m_time,     MAXPARA, 0,        0},
-    {MSG_OPER,     m_oper,     MAXPARA, 0,        0},
-    {MSG_CONNECT,  m_connect,  MAXPARA, 0,        0},
-    {MSG_VERSION,  m_version,  MAXPARA, MF_UNREG, 0},
-    {MSG_STATS,    m_stats,    MAXPARA, 0,        0},
-    {MSG_LINKS,    m_links,    MAXPARA, 0,        0},
-    {MSG_ADMIN,    m_admin,    MAXPARA, MF_UNREG, 0},
-    {MSG_USERS,    m_users,    MAXPARA, 0,        0},
-    {MSG_HELP,     m_help,     MAXPARA, 0,        0},
-    {MSG_INFO,     m_info,     MAXPARA, 0,        0},
-    {MSG_MOTD,     m_motd,     MAXPARA, 0,        0},
-    {MSG_SVINFO,   m_svinfo,   MAXPARA, MF_UNREG, 0},
-    {MSG_SJOIN,    m_sjoin,    MAXPARA, 0,        0},
-    {MSG_GLOBOPS,  m_globops,  MAXPARA, 0,        0},
-    {MSG_CHATOPS,  m_chatops,  MAXPARA, 0,        0},
-    {MSG_GOPER,    m_goper,    MAXPARA, 0,        0},
-    {MSG_GNOTICE,  m_gnotice,  MAXPARA, 0,        0},
-    {MSG_CLOSE,    m_close,    MAXPARA, 0,        0},
-    {MSG_KLINE,    m_kline,    MAXPARA, 0,        0},
-    {MSG_UNKLINE,  m_unkline,  MAXPARA, 0,        0},
-    {MSG_HASH,     m_hash,     MAXPARA, 0,        0},
-    {MSG_DNS,      m_dns,      MAXPARA, 0,        0},
-    {MSG_REHASH,   m_rehash,   MAXPARA, 0,        0},
-    {MSG_RESTART,  m_restart,  MAXPARA, 0,        0},
-    {MSG_DIE,      m_die,      MAXPARA, 0,        0},
-    {MSG_SET,      m_set,      MAXPARA, 0,        0},
-    {MSG_CHANSERV, m_aliased,        1, MF_ALIAS, AII_CS},
-    {MSG_NICKSERV, m_aliased,        1, MF_ALIAS, AII_NS},
-    {MSG_MEMOSERV, m_aliased,        1, MF_ALIAS, AII_MS},
-    {MSG_ROOTSERV, m_aliased,        1, MF_ALIAS, AII_RS},
-    {MSG_OPERSERV, m_aliased,        1, MF_ALIAS, AII_OS},
-    {MSG_STATSERV, m_aliased,        1, MF_ALIAS, AII_SS},
-    {MSG_HELPSERV, m_aliased,        1, MF_ALIAS, AII_HS},
-    {MSG_SERVICES, m_services,       1, 0,        0},
-    {MSG_IDENTIFY, m_identify,       1, 0,        0},
-    {MSG_SVSNICK,  m_svsnick,  MAXPARA, 0,        0},
-    {MSG_SVSKILL,  m_svskill,  MAXPARA, 0,        0},
-    {MSG_SVSMODE,  m_svsmode,  MAXPARA, 0,        0},
-    {MSG_SVSHOLD,  m_svshold,  MAXPARA, 0,        0},
-    {MSG_AKILL,    m_akill,    MAXPARA, 0,        0},
-    {MSG_RAKILL,   m_rakill,   MAXPARA, 0,        0},
-    {MSG_NBANRESET,m_nbanreset,      1, 0,        0},
-    {MSG_SILENCE,  m_silence,  MAXPARA, 0,        0},
-    {MSG_WATCH,    m_watch,          1, 0,        0},
-    {MSG_DCCALLOW, m_dccallow,       1, 0,        0},
-    {MSG_SQLINE,   m_sqline,   MAXPARA, 0,        0},
-    {MSG_UNSQLINE, m_unsqline, MAXPARA, 0,        0},
-    {MSG_CAPAB,    m_capab,    MAXPARA, MF_UNREG, 0},
-    {MSG_BURST,    m_burst,    MAXPARA, 0,        0},
-    {MSG_SGLINE,   m_sgline,   MAXPARA, 0,        0},
-    {MSG_UNSGLINE, m_unsgline, MAXPARA, 0,        0},
-    {MSG_DKEY,     m_dkey,     MAXPARA, MF_UNREG, 0},
-    {MSG_NS,       m_aliased,        1, MF_ALIAS, AII_NS},
-    {MSG_CS,       m_aliased,        1, MF_ALIAS, AII_CS},
-    {MSG_MS,       m_aliased,        1, MF_ALIAS, AII_MS},
-    {MSG_RS,       m_aliased,        1, MF_ALIAS, AII_RS},
-    {MSG_OS,       m_aliased,        1, MF_ALIAS, AII_OS},
-    {MSG_SS,       m_aliased,        1, MF_ALIAS, AII_SS},
-    {MSG_HS,       m_aliased,        1, MF_ALIAS, AII_HS},
-    {MSG_RESYNCH,  m_resynch,  MAXPARA, 0,        0},
-    {MSG_MODULE,   m_module,   MAXPARA, 0,        0},
-    {MSG_RWHO,     m_rwho,     MAXPARA, 0,        0},
-    {MSG_SVSCLONE, m_svsclone, MAXPARA, 0,        0},
-    {MSG_SVSPANIC, m_svspanic, MAXPARA, 0,        0},
-    {MSG_CHANKILL, m_chankill, MAXPARA, 0,        0},
-    {MSG_SVSHOST,  m_svshost,  MAXPARA, 0,        0},
-    {MSG_SVSNOOP,  m_svsnoop,  MAXPARA, 0,        0},
-    {MSG_SVSTAG,   m_svstag,   MAXPARA, 0,        0},
-    {MSG_SVSUHM,   m_svsuhm,   MAXPARA, 0,        0},
-    {MSG_PUT,      m_put,      2,       MF_UNREG, 0},
-    {MSG_POST,     m_post,     2,       MF_UNREG, 0},
-    {MSG_CHECK,    m_check,    MAXPARA, 0,        0},
-    {MSG_LUSERSLOCK, m_luserslock, MAXPARA, 0,       0},
-    {MSG_LINKSCONTROL, m_linkscontrol, MAXPARA, 0,      0},
-    {"SPAMOPS",    m_spamops,  MAXPARA, 0,        0},
-    {"SF",         m_sf,       MAXPARA, 0,        0},
-    {"SVSXCF",     m_svsxcf,   MAXPARA, 0,        0},
-    {"SVSCTRL",    m_svsctrl,  MAXPARA, 0,        0},
-    {"AJ",         m_aj,       MAXPARA, 0,        0},
-    {"SJR",        m_sjr,      MAXPARA, MF_ALIAS, AII_NS},
-    {MSG_WEBIRC,   m_webirc,   MAXPARA, MF_UNREG, 0},
-    { 0 }
+    M_UNREG(MSG_NICK,    m_nick),
+    M_REG  (MSG_JOIN,    m_join),
+    M_REG  (MSG_MODE,    m_mode),
+    M_REG  (MSG_SAMODE,  m_samode),
+    M_REG  (MSG_SAJOIN,  m_sajoin),
+    M_UNREG(MSG_QUIT,    m_quit),
+    M_REG  (MSG_PART,    m_part),
+    M_REG  (MSG_TOPIC,   m_topic),
+    M_REG  (MSG_INVITE,  m_invite),
+    M_REG  (MSG_KICK,    m_kick),
+    M_REG  (MSG_PONG,    m_pong),
+    M_REG  (MSG_PING,    m_ping),
+    M_UNREG(MSG_ERROR,   m_error),
+    M_REG  (MSG_KILL,    m_kill),
+    M_UNREG(MSG_USER,    m_user),
+    M_UNREG(MSG_SERVER,  m_server),
+    M_REG  (MSG_SQUIT,   m_squit),
+    M_REG  (MSG_LIST,    m_list),
+    M_REG  (MSG_NAMES,   m_names),
+    M_REG  (MSG_TRACE,   m_trace),
+    M_UNREG(MSG_PASS,    m_pass),
+    M_REG  (MSG_LUSERS,  m_lusers),
+    M_REG  (MSG_TIME,    m_time),
+    M_REG  (MSG_OPER,    m_oper),
+    M_REG  (MSG_CONNECT, m_connect),
+    M_UNREG(MSG_VERSION, m_version),
+    M_REG  (MSG_STATS,   m_stats),
+    M_REG  (MSG_LINKS,   m_links),
+    M_UNREG(MSG_ADMIN,   m_admin),
+    M_REG  (MSG_HELP,    m_help),
+    M_REG  (MSG_INFO,    m_info),
+    M_REG  (MSG_MOTD,    m_motd),
+    M_UNREG(MSG_SVINFO,  m_svinfo),
+    M_REG  (MSG_SJOIN,   m_sjoin),
+    M_REG  (MSG_CLOSE,   m_close),
+    M_REG  (MSG_KLINE,   m_kline),
+    M_REG  (MSG_UNKLINE, m_unkline),
+    M_REG  (MSG_HASH,    m_hash),
+    M_REG  (MSG_DNS,     m_dns),
+    M_REG  (MSG_REHASH,  m_rehash),
+    M_REG  (MSG_RESTART, m_restart),
+    M_REG  (MSG_DIE,     m_die),
+    M_REG  (MSG_SET,     m_set),
+    M_ALIAS(MSG_CHANSERV, AII_CS),
+    M_ALIAS(MSG_NICKSERV, AII_NS),
+    M_ALIAS(MSG_MEMOSERV, AII_MS),
+    M_ALIAS(MSG_ROOTSERV, AII_RS),
+    M_ALIAS(MSG_OPERSERV, AII_OS),
+    M_ALIAS(MSG_STATSERV, AII_SS),
+    M_ALIAS(MSG_HELPSERV, AII_HS),
+    M_REG  (MSG_SERVICES, m_services),
+    M_REG  (MSG_IDENTIFY, m_identify),
+    M_REG  (MSG_SVSNICK,  m_svsnick),
+    M_REG  (MSG_SVSKILL,  m_svskill),
+    M_REG  (MSG_SVSMODE,  m_svsmode),
+    M_REG  (MSG_SVSHOLD,  m_svshold),
+    M_REG  (MSG_AKILL,    m_akill),
+    M_REG  (MSG_RAKILL,   m_rakill),
+    M_REG  (MSG_NBANRESET, m_nbanreset),
+    M_REG  (MSG_SQLINE,   m_sqline),
+    M_REG  (MSG_UNSQLINE, m_unsqline),
+    M_REG  (MSG_BURST,    m_burst),
+    M_REG  (MSG_SGLINE,   m_sgline),
+    M_REG  (MSG_UNSGLINE, m_unsgline),
+    M_ALIAS(MSG_NS, AII_NS),
+    M_ALIAS(MSG_CS, AII_CS),
+    M_ALIAS(MSG_MS, AII_MS),
+    M_ALIAS(MSG_RS, AII_RS),
+    M_ALIAS(MSG_OS, AII_OS),
+    M_ALIAS(MSG_SS, AII_SS),
+    M_ALIAS(MSG_HS, AII_HS),
+    M_REG  (MSG_RESYNCH,       m_resynch),
+    M_REG  (MSG_MODULE,        m_module),
+    M_REG  (MSG_SVSCLONE,      m_svsclone),
+    M_REG  (MSG_SVSPANIC,      m_svspanic),
+    M_REG  (MSG_CHANKILL,      m_chankill),
+    M_REG  (MSG_SVSHOST,       m_svshost),
+    M_REG  (MSG_SVSNOOP,       m_svsnoop),
+    M_REG  (MSG_SVSTAG,        m_svstag),
+    M_REG  (MSG_SVSUHM,        m_svsuhm),
+    M_REG  (MSG_LUSERSLOCK,    m_luserslock),
+    M_REG  (MSG_LINKSCONTROL,  m_linkscontrol),
+    M_REG  ("SPAMOPS",         m_spamops),
+    M_REG  ("SF",              m_sf),
+    M_REG  ("SVSXCF",          m_svsxcf),
+    M_REG  ("SVSCTRL",         m_svsctrl),
+    M_REG  ("AJ",              m_aj),
+    M_ALIAS_FN("SJR", AII_NS, m_sjr),
+    /* CAP — IRCv3 capability negotiation; available pre-registration */
+    { "CAP", 0, 0, 0, 0, -1, {
+        { m_cap,    2 },  /* HANDLER_UNREG   */
+        { m_cap,    2 },  /* HANDLER_CLIENT  */
+        { mg_ignore,0 },  /* HANDLER_REMOTE  */
+        { mg_ignore,0 },  /* HANDLER_SERVER  */
+        { m_cap,    2 },  /* HANDLER_OPER    */
+    }},
+    { NULL }
 };
-#ifdef __clang__
-#pragma clang diagnostic pop
-#endif
 
 MESSAGE_TREE *msg_tree_root;
 #else
