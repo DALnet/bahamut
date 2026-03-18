@@ -626,7 +626,7 @@ static inline int check_fake_direction(aClient *from, aClient *to)
 
         if (IsPerson(from))
             sendto_one(from, err_str(ERR_GHOSTEDCLIENT), me.name, from->name,
-                       to->name, to->user->username, to->user->host, to->from);
+                       to->name);
         return -1;
     }
 
@@ -1746,8 +1746,7 @@ void sendto_prefix_one(aClient *to, aClient *from, char *pattern, ...)
             exit_client(NULL, to, &me, "Ghosted client");
             if (IsPerson(from))
                 sendto_one(from, err_str(ERR_GHOSTEDCLIENT), me.name,
-                           from->name, to->name, to->user->username,
-                           to->user->host, to->from);
+                           from->name, to->name);
             va_end(vl);
             return;
         }
@@ -1862,8 +1861,7 @@ void vsendto_prefix_one(aClient *to, aClient *from, char *pattern, va_list vl)
             exit_client(NULL, to, &me, "Ghosted client");
             if (IsPerson(from))
                 sendto_one(from, err_str(ERR_GHOSTEDCLIENT), me.name,
-                           from->name, to->name, to->user->username,
-                           to->user->host, to->from);
+                           from->name, to->name);
             return;
         }
 

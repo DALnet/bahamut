@@ -108,7 +108,7 @@ mg_unreg(struct MsgBuf *mb, aClient *cptr, aClient *sptr, int parc, char *parv[]
 {
     (void)mb; (void)cptr; (void)parc;
     sendto_one(sptr, err_str(ERR_NOTREGISTERED), me.name,
-               parv[0][0] ? parv[0] : "*");
+               parv[0][0] ? parv[0] : "*", "*");
     return -1;
 }
 
