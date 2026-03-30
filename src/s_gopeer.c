@@ -30,7 +30,11 @@
 #include "gossip_dedup.h"
 #include "gossip.h"
 #include "gossip_bridge.h"
+#include "channel.h"
 #include "fds.h"
+#include "session.h"
+
+extern Link *find_channel_link(Link *, aChannel *);
 
 /* -------------------------------------------------------------------------
  * Global state
@@ -155,6 +159,128 @@ gopeer_handle_disconnect(aClient *cptr)
      * No cascading QUITs — that is the whole point. */
 }
 
+/* Sequence counter for synthetic burst events — each needs a unique seq
+ * to pass through the receiver's dedup table. We use a high range
+ * (starting at 0x80000000) to avoid colliding with real event sequences. */
+static LocalSeq burst_seq_counter = 0x80000000UL;
+
+/* Send a synthesized event directly to a single peer (not to the ring). */
+static void
+burst_send_event(aClient *peer, NetEventType type, void *payload, size_t len)
+{
+    NetworkEvent ev;
+    memset(&ev, 0, sizeof(ev));
+    ev.type = type;
+    ev.id.server = g_event_log.my_id;
+    ev.id.seq = burst_seq_counter++;
+    ev.wall_time = timeofday;
+    memcpy(&ev.payload, payload, len);
+    gossip_send_event(peer, &ev);
+}
+
+/* S6i: Send full current state to a fresh gossip peer.
+ * Synthesizes events for all servers, users, channel memberships,
+ * topics, away statuses, and sessions. */
+static void
+gopeer_burst_full_state(aClient *peer)
+{
+    aClient  *acptr;
+    aChannel *chptr;
+
+    /* 1. Introduce our own server */
+    {
+        EvPayloadServerLink pl;
+        memset(&pl, 0, sizeof(pl));
+        strncpy(pl.name, me.name, HOSTLEN);
+        pl.id = g_event_log.my_id;
+        burst_send_event(peer, EVT_SERVER_LINK, &pl, sizeof(pl));
+    }
+
+    /* 2. Introduce all gossip-materialized servers */
+    for (acptr = client; acptr; acptr = acptr->next)
+    {
+        if (!IsServer(acptr) || !IsGossipMaterialized(acptr))
+            continue;
+        EvPayloadServerLink pl;
+        memset(&pl, 0, sizeof(pl));
+        strncpy(pl.name, acptr->name, HOSTLEN);
+        burst_send_event(peer, EVT_SERVER_LINK, &pl, sizeof(pl));
+    }
+
+    /* 3. Introduce all users (local + gossip-materialized) */
+    for (acptr = client; acptr; acptr = acptr->next)
+    {
+        Link *lp;
+        if (!IsClient(acptr) || !acptr->user)
+            continue;
+
+        /* USER_JOIN */
+        {
+            EvPayloadUserJoin pl;
+            memset(&pl, 0, sizeof(pl));
+            strncpy(pl.nick, acptr->name, NICKLEN);
+            strncpy(pl.username, acptr->user->username, USERLEN);
+            strncpy(pl.host, acptr->user->host, HOSTLEN);
+            strncpy(pl.realname, acptr->info, REALLEN);
+            if (acptr->user->server)
+                strncpy(pl.server, acptr->user->server, HOSTLEN);
+            else
+                strncpy(pl.server, me.name, HOSTLEN);
+            pl.umode = acptr->umode;
+            pl.ts = acptr->tsinfo;
+            burst_send_event(peer, EVT_USER_JOIN, &pl, sizeof(pl));
+        }
+
+        /* Channel memberships */
+        for (lp = acptr->user->channel; lp; lp = lp->next)
+        {
+            aChannel *ch = lp->value.chptr;
+            chanMember *cm;
+            int flags = 0;
+
+            for (cm = ch->members; cm; cm = cm->next)
+                if (cm->cptr == acptr) { flags = cm->flags; break; }
+
+            EvPayloadChanJoin pl;
+            memset(&pl, 0, sizeof(pl));
+            strncpy(pl.nick, acptr->name, NICKLEN);
+            strncpy(pl.channel, ch->chname, CHANNELLEN);
+            pl.flags = flags;
+            pl.ts = ch->channelts;
+            burst_send_event(peer, EVT_CHAN_JOIN, &pl, sizeof(pl));
+        }
+
+        /* Away status */
+        if (acptr->user->away)
+        {
+            EvPayloadUserAway pl;
+            memset(&pl, 0, sizeof(pl));
+            strncpy(pl.nick, acptr->name, NICKLEN);
+            pl.setting = 1;
+            strncpy(pl.message, acptr->user->away, TOPICLEN);
+            burst_send_event(peer, EVT_USER_AWAY, &pl, sizeof(pl));
+        }
+    }
+
+    /* 4. Send channel topics */
+    for (chptr = channel; chptr; chptr = chptr->nextch)
+    {
+        if (chptr->topic[0])
+        {
+            EvPayloadChanTopic pl;
+            memset(&pl, 0, sizeof(pl));
+            strncpy(pl.channel, chptr->chname, CHANNELLEN);
+            strncpy(pl.topic, chptr->topic, TOPICLEN);
+            strncpy(pl.setter, chptr->topic_nick, sizeof(pl.setter) - 1);
+            pl.ts = chptr->topic_time;
+            burst_send_event(peer, EVT_CHAN_TOPIC, &pl, sizeof(pl));
+        }
+    }
+
+    /* 5. Send active sessions */
+    session_burst_to_peer(peer);
+}
+
 void
 gopeer_start_burst(aClient *cptr)
 {
@@ -173,7 +299,17 @@ gopeer_start_burst(aClient *cptr)
                    me.name, me.name, sclock);
     }
 
-    /* Replay events the peer hasn't seen */
+    /* S6i: full-state burst for fresh peers */
+    {
+        int is_fresh = 1, slot;
+        for (slot = 0; slot < VC_SLOTS; slot++)
+            if (gp->peer_clock.slot[slot] != 0) { is_fresh = 0; break; }
+
+        if (is_fresh)
+            gopeer_burst_full_state(cptr);
+    }
+
+    /* Replay events the peer hasn't seen (catches events during burst) */
     n = get_events_since(&gp->peer_clock, buf, 256);
     for (i = 0; i < n; i++)
         gossip_send_event(cptr, buf[i]);

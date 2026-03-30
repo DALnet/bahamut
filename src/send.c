@@ -656,10 +656,13 @@ void sendto_channel_butone(aClient *one, aClient *from, aChannel *chptr,
         if (acptr->from == one)
             continue; /* ...was the one I should skip */
 
+        if (IsGossipMaterialized(acptr))
+            continue;
+
         if((confopts & FLAGS_SERVHUB) && IsULine(acptr) && (acptr->uplink->serv) && (acptr->uplink->serv->uflags & ULF_NOCHANMSG))
             continue; /* Don't send channel traffic to super servers */
 
-        if (MyClient(acptr)) 
+        if (MyClient(acptr))
         {
             if(!didlocal)
             {
@@ -730,6 +733,11 @@ void sendto_channel_butone_tags(aClient *one, aClient *from, aChannel *chptr,
     {
         acptr = cm->cptr;
         if (acptr->from == one)
+            continue;
+
+        /* Skip gossip-materialized members — delivery handled by
+         * EVT_CHANMSG gossip events, not by direct send. */
+        if (IsGossipMaterialized(acptr))
             continue;
 
         if ((confopts & FLAGS_SERVHUB) && IsULine(acptr) &&
@@ -811,13 +819,16 @@ void sendto_channel_remote_butone(aClient *one, aClient *from, aChannel *chptr,
         if (acptr->from == one)
             continue; /* ...was the one I should skip */
 
+        if (IsGossipMaterialized(acptr))
+            continue;
+
         if((confopts & FLAGS_SERVHUB) && IsULine(acptr) && (acptr->uplink->serv) && (acptr->uplink->serv->uflags & ULF_NOCHANMSG))
             continue; /* Don't send channel traffic to super servers */
 
         if(acptr->fd == -2)
             continue;
 
-        if (!MyClient(acptr)) 
+        if (!MyClient(acptr))
         {
             /*
              * Now check whether a message has been sent to this remote
@@ -1167,14 +1178,16 @@ void sendto_channel_butlocal(aClient *one, aClient *from, aChannel *chptr,
         acptr = cm->cptr;
         if (acptr->from == one)
             continue;           /* ...was the one I should skip */
-        if (!MyFludConnect(acptr)) 
+        if (IsGossipMaterialized(acptr))
+            continue;
+        if (!MyFludConnect(acptr))
         {
             /*
              * Now check whether a message has been sent to this remote
              * link already
              */
             i = acptr->from->fd;
-            if (sentalong[i] != sent_serial) 
+            if (sentalong[i] != sent_serial)
             {
                 vsendto_prefix_one(acptr, from, pattern, vl);
                 sentalong[i] = sent_serial;
@@ -2229,6 +2242,9 @@ void sendto_channelflags_butone(aClient *one, aClient *from, aChannel *chptr,
         acptr = cm->cptr;
 
         if (acptr->from == one || !(cm->flags & flags))
+            continue;
+
+        if (IsGossipMaterialized(acptr))
             continue;
 
         if((confopts & FLAGS_SERVHUB) && IsULine(acptr) && (acptr->uplink->serv) && (acptr->uplink->serv->uflags & ULF_NOCHANMSG))

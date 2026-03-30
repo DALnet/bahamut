@@ -3887,6 +3887,7 @@ int m_kick(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *
                                            name, who->name, comment);
                 sendto_serv_butone(cptr, ":%s KICK %s %s :%s", parv[0], name,
                                    who->name, comment);
+                call_hooks(CHOOK_KICK, sptr, who, chptr, comment);
                 remove_user_from_channel(who, chptr);
             }
             else

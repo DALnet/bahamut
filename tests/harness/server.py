@@ -24,6 +24,8 @@ class BahamutServer:
         extra_modules=None,
         gopeer_configs=None,
         server_id=None,
+        binary_path=None,
+        connect_configs=None,
     ):
         self.build_dir = build_dir
         self.server_name = server_name
@@ -33,6 +35,8 @@ class BahamutServer:
         self.extra_modules = extra_modules
         self.gopeer_configs = gopeer_configs
         self.server_id = server_id
+        self.binary_path = binary_path
+        self.connect_configs = connect_configs
         self.process = None
         self.tmpdir = None
         self._tmpdir_obj = None
@@ -56,9 +60,10 @@ class BahamutServer:
             extra_modules=self.extra_modules,
             gopeer_configs=self.gopeer_configs,
             server_id=self.server_id,
+            connect_configs=self.connect_configs,
         )
 
-        ircd_bin = os.path.join(self.build_dir, "src", "ircd")
+        ircd_bin = self.binary_path or os.path.join(self.build_dir, "src", "ircd")
         if not os.path.exists(ircd_bin):
             raise FileNotFoundError(f"ircd binary not found at {ircd_bin}")
 
@@ -122,7 +127,7 @@ class BahamutServer:
         self.stop(keep_data=True)
         # Re-launch ircd using the existing tmpdir (config + journals intact)
         conf_path = os.path.join(self.tmpdir, "ircd.conf")
-        ircd_bin = os.path.join(self.build_dir, "src", "ircd")
+        ircd_bin = self.binary_path or os.path.join(self.build_dir, "src", "ircd")
         self.process = subprocess.Popen(
             [ircd_bin, "-f", conf_path, "-t"],
             stdout=subprocess.PIPE,

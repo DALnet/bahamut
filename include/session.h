@@ -130,4 +130,7 @@ Session *session_apply_create(const char *key, const char *nick,
 /* Apply a gossiped EVT_SESSION_DESTROY: destroy session by token. */
 void     session_apply_destroy(const char *key);
 
+/* S6i: Send all active sessions to a gossip peer during burst. */
+void     session_burst_to_peer(aClient *peer);
+
 #endif /* SESSION_H */

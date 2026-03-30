@@ -26,6 +26,7 @@
 #include "h.h"
 #include "send.h"
 #include "eventlog.h"
+#include "gossip.h"
 #include "session.h"
 
 /* -------------------------------------------------------------------------
@@ -352,4 +353,39 @@ void
 session_unhash_nick(Session *sess)
 {
     htab_del_nick(sess);
+}
+
+/* S6i: Send all active sessions to a gossip peer during burst. */
+void
+session_burst_to_peer(aClient *peer)
+{
+    int i;
+    for (i = 0; i < SESSION_MAX; i++)
+    {
+        Session *s = &slab[i];
+        NetworkEvent ev;
+        EvPayloadSessionCreate *pl;
+
+        if (!s->in_use)
+            continue;
+
+        memset(&ev, 0, sizeof(ev));
+        ev.type = EVT_SESSION_CREATE;
+        ev.id.server = g_event_log.my_id;
+        ev.id.seq = 0;
+        ev.wall_time = timeofday;
+
+        pl = &ev.payload.session_create;
+        strncpy(pl->key, s->key, SESSION_KEY_LEN);
+        strncpy(pl->nick, s->nick, NICKLEN);
+        strncpy(pl->username, s->username, USERLEN);
+        strncpy(pl->host, s->host, HOSTLEN);
+        strncpy(pl->realname, s->realname, REALLEN);
+        pl->umode = s->umode;
+        pl->expires_at = s->expires_at;
+        if (s->away_msg[0])
+            strncpy(pl->away_msg, s->away_msg, TOPICLEN);
+
+        gossip_send_event(peer, &ev);
+    }
 }

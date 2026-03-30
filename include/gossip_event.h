@@ -75,6 +75,10 @@ typedef enum NetEventType {
     EVT_SESSION_CREATE  = 20,
     EVT_SESSION_DESTROY = 21,
 
+    /* Message routing (Phase S6) */
+    EVT_PRIVMSG  = 25,   /* user-to-user PRIVMSG or NOTICE */
+    EVT_CHANMSG  = 26,   /* channel PRIVMSG or NOTICE */
+
 } NetEventType;
 
 /* -------------------------------------------------------------------------
@@ -154,6 +158,20 @@ typedef struct EvPayloadServerLink {
     ServerId id;
 } EvPayloadServerLink;
 
+typedef struct EvPayloadPrivmsg {
+    char sender[NICKLEN + 1];
+    char target[NICKLEN + 1];
+    char text[512];
+    int  is_notice;             /* 1 = NOTICE, 0 = PRIVMSG */
+} EvPayloadPrivmsg;
+
+typedef struct EvPayloadChanmsg {
+    char sender[NICKLEN + 1];
+    char channel[CHANNELLEN + 1];
+    char text[512];
+    int  is_notice;             /* 1 = NOTICE, 0 = PRIVMSG */
+} EvPayloadChanmsg;
+
 /* Session token length (hex chars, not counting NUL). */
 #define SESSION_KEY_LEN 32
 
@@ -195,6 +213,8 @@ typedef struct NetworkEvent {
         EvPayloadServerLink     server_link;
         EvPayloadSessionCreate  session_create;
         EvPayloadSessionDestroy session_destroy;
+        EvPayloadPrivmsg        privmsg;
+        EvPayloadChanmsg        chanmsg;
     } payload;
     /* per-record version for services events (0 for non-versioned) */
     uint64_t record_version;

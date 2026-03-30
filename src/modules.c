@@ -861,6 +861,7 @@ static DLink *account_login_hooks  = NULL;
 static DLink *account_logout_hooks = NULL;
 static DLink *postjoin_hooks       = NULL;
 static DLink *chghost_hooks        = NULL;
+static DLink *kick_hooks           = NULL;
 
 static DLink *all_hooks = NULL;
 
@@ -972,6 +973,8 @@ get_texthooktype(enum c_hooktype hooktype)
             return "PostJoin";
         case CHOOK_CHGHOST:
             return "ChgHost";
+        case CHOOK_KICK:
+            return "Kick";
 
         default:
             ircsnprintf(ubuf, 32, "Unknown (%d)", hooktype);
@@ -1121,6 +1124,9 @@ get_hooklist(enum c_hooktype hooktype)
             break;
         case CHOOK_CHGHOST:
             hooklist = &chghost_hooks;
+            break;
+        case CHOOK_KICK:
+            hooklist = &kick_hooks;
             break;
 
         default:
@@ -1480,9 +1486,12 @@ call_hooks(enum c_hooktype hooktype, ...)
         case CHOOK_SIGNOFF:
             {
                 aClient *acptr = va_arg(vl, aClient *);
+                /* Note: comment arg passed but not extracted — some hooks
+                 * still use the old 1-arg signature (m_monitor, m_session).
+                 * TODO: update all hooks to 2-arg signature. */
                 for(lp = signoff_hooks; lp; lp = lp->next)
                 {
-                    void (*rfunc) (aClient *) = 
+                    void (*rfunc) (aClient *) =
                                     ((aHook *)lp->value.cp)->funcptr;
                     (*rfunc)(acptr);
                 }
@@ -1718,6 +1727,21 @@ call_hooks(enum c_hooktype hooktype, ...)
                 break;
             }
 
+        case CHOOK_KICK:
+            {
+                aClient    *kicker  = va_arg(vl, aClient *);
+                aClient    *target  = va_arg(vl, aClient *);
+                aChannel   *chptr   = va_arg(vl, aChannel *);
+                const char *reason  = va_arg(vl, const char *);
+                for(lp = kick_hooks; lp; lp = lp->next)
+                {
+                    void (*rfunc)(aClient *, aClient *, aChannel *, const char *) =
+                                    ((aHook *)lp->value.cp)->funcptr;
+                    (*rfunc)(kicker, target, chptr, reason);
+                }
+                break;
+            }
+
         default:
             sendto_realops_lev(DEBUG_LEV, "Call for unknown hook type %d",
                 hooktype);
@@ -1867,6 +1891,7 @@ memcount_modules(MCmodules *mc)
     mc->e_dlinks += mc_dlinks(account_logout_hooks);
     mc->e_dlinks += mc_dlinks(postjoin_hooks);
     mc->e_dlinks += mc_dlinks(chghost_hooks);
+    mc->e_dlinks += mc_dlinks(kick_hooks);
 
     mc->total.c += mc->modules.c + mc->hooks.c;
     mc->total.m += mc->modules.m + mc->hooks.m;

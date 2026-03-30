@@ -19,6 +19,7 @@ ALL_EXTRA_MODULES = [
     "m_chghost",
     "m_echo_message",
     "m_extended_join",
+    "m_gossip_eventlog",
     "m_invite_notify",
     "m_labeled_response",
     "m_monitor",
@@ -79,9 +80,13 @@ oper {{
     class  opers;
 }};
 
+{server_class_block}
+
 {gossip_block}
 
 {gopeer_blocks}
+
+{connect_blocks}
 
 modules {{
     path {module_path};
@@ -142,6 +147,7 @@ def generate_config(
     extra_modules=None,
     gopeer_configs=None,
     server_id=None,
+    connect_configs=None,
 ):
     """Generate an ircd.conf in tmpdir and set up module symlinks.
 
@@ -191,6 +197,37 @@ def generate_config(
             )
         gopeer_blocks_str = "\n\n".join(gopeer_parts)
 
+    # Build connect{} blocks (TS5 server links)
+    server_class_block = ""
+    connect_blocks_str = ""
+
+    if connect_configs:
+        server_class_block = (
+            "class {\n"
+            "    name     servers;\n"
+            "    pingfreq 120;\n"
+            "    connfreq 5;\n"
+            "    maxsendq 1000000;\n"
+            "    maxlinks 10;\n"
+            "};"
+        )
+        connect_parts = []
+        for cc in connect_configs:
+            flags_line = f"\n    flags       {cc['flags']};" if cc.get("flags") else ""
+            port_line = f"\n    port        {cc['port']};" if cc.get("port") else ""
+            connect_parts.append(
+                f"connect {{\n"
+                f"    name        {cc['name']};\n"
+                f"    host        {cc['host']};"
+                f"{port_line}\n"
+                f"    apasswd     {cc['apasswd']};\n"
+                f"    cpasswd     {cc['cpasswd']};"
+                f"{flags_line}\n"
+                f"    class       servers;\n"
+                f"}};"
+            )
+        connect_blocks_str = "\n\n".join(connect_parts)
+
     # Set up module directories with proper symlinks
     extra_dir = _setup_module_dirs(tmpdir, build_dir)
 
@@ -200,8 +237,102 @@ def generate_config(
         port_blocks="\n".join(port_blocks),
         module_path=extra_dir,
         autoload_lines=autoload_lines,
+        server_class_block=server_class_block,
         gossip_block=gossip_block,
         gopeer_blocks=gopeer_blocks_str,
+        connect_blocks=connect_blocks_str,
+    )
+
+    conf_path = os.path.join(tmpdir, "ircd.conf")
+    with open(conf_path, "w") as f:
+        f.write(config_content)
+
+    return conf_path
+
+
+# ---------------------------------------------------------------------------
+# Old (master-branch) bahamut config — no modules, no gossip, no ssl block
+# ---------------------------------------------------------------------------
+
+OLD_CONFIG_TEMPLATE = """\
+global {{
+    name    {server_name};
+    info    "{server_info}";
+}};
+
+options {{
+    network_name    TestNet;
+    allow_split_ops;
+    show_links;
+}};
+
+{port_blocks}
+
+class {{
+    name     users;
+    pingfreq 90;
+    maxsendq 100000;
+    maxusers 1000;
+}};
+
+class {{
+    name     opers;
+    pingfreq 90;
+    maxsendq 500000;
+}};
+
+class {{
+    name     servers;
+    pingfreq 120;
+    connfreq 5;
+    maxsendq 1000000;
+    maxlinks 10;
+}};
+
+allow {{
+    host  *@*;
+    class users;
+}};
+
+{connect_blocks}
+"""
+
+
+def generate_old_config(
+    tmpdir,
+    server_name="irc.test",
+    server_info="Test Server",
+    irc_port=6667,
+    connect_configs=None,
+):
+    """Generate an ircd.conf for old (master-branch) bahamut.
+
+    Old bahamut has no modules, no gossip, no ssl {} block.
+    TLS certs are read from the working directory by compile-time paths.
+    """
+    port_blocks = [_port_block(irc_port, "")]
+
+    connect_parts = []
+    for cc in (connect_configs or []):
+        flags_line = f"\n    flags       {cc['flags']};" if cc.get("flags") else ""
+        port_line = f"\n    port        {cc['port']};" if cc.get("port") else ""
+        connect_parts.append(
+            f"connect {{\n"
+            f"    name        {cc['name']};\n"
+            f"    host        {cc['host']};"
+            f"{port_line}\n"
+            f"    apasswd     {cc['apasswd']};\n"
+            f"    cpasswd     {cc['cpasswd']};"
+            f"{flags_line}\n"
+            f"    class       servers;\n"
+            f"}};"
+        )
+
+    config_content = OLD_CONFIG_TEMPLATE.format(
+        server_name=server_name,
+        server_info=server_info,
+        port_blocks="\n".join(port_blocks),
+        connect_blocks="\n\n".join(connect_parts),
     )
 
     conf_path = os.path.join(tmpdir, "ircd.conf")

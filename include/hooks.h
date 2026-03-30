@@ -95,7 +95,7 @@ enum c_hooktype {
                        * Returns int
                        */
    CHOOK_SIGNOFF,     /* called on client exit (exit_client)
-                       * Params: 1: (aClient *)
+                       * Params: 2: (aClient *, const char *comment)
                        * Returns void */
    MHOOK_LOAD,        /* Called for modules loading and unloading */
    MHOOK_UNLOAD,      /* Params: 2: (char *modulename, void *moduleopaque) */
@@ -161,9 +161,14 @@ enum c_hooktype {
                        * Params: 2: (aClient *sptr, aChannel *chptr)
                        * Returns void */
 
-   CHOOK_CHGHOST      /* called when a user's visible host changes (SVSHOST)
+   CHOOK_CHGHOST,     /* called when a user's visible host changes (SVSHOST)
                        * Params: 3: (aClient *sptr, const char *old_user,
                        *             const char *old_host)
+                       * Returns void */
+
+   CHOOK_KICK         /* called after a successful KICK
+                       * Params: 4: (aClient *kicker, aClient *target,
+                       *             aChannel *chptr, const char *reason)
                        * Returns void */
 };
 
