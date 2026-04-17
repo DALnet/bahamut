@@ -103,10 +103,10 @@ sendto_channel_join(aChannel *chptr, aClient *from, const char *channel_name)
     }
 }
 
-static int  add_banid(aClient *, aChannel *, char *);
+int         add_banid(aClient *, aChannel *, char *);
 static int  can_join(aClient *, aChannel *, char *);
 static void channel_modes(aClient *, char *, char *, aChannel *);
-static int  del_banid(aChannel *, char *);
+int         del_banid(aChannel *, char *);
 static int  is_banned(aClient *, aChannel *, chanMember *);
 static int  set_mode(aClient *, aClient *, aChannel *, int, 
                      int, char **, char *, char *);
@@ -493,7 +493,7 @@ anInvite* is_invited(aClient* cptr, aChannel* chptr)
 /* Ban functions to work with mode +b */
 /* add_banid - add an id to be banned to the channel  (belongs to cptr) */
 
-static int add_banid(aClient *cptr, aChannel *chptr, char *banid)
+int add_banid(aClient *cptr, aChannel *chptr, char *banid)
 {
     aBan        *ban;
     int          cnt = 0;
@@ -561,7 +561,7 @@ static int add_banid(aClient *cptr, aChannel *chptr, char *banid)
  * del_banid - delete an id belonging to cptr if banid is null,
  * deleteall banids belonging to cptr.
  */
-static int del_banid(aChannel *chptr, char *banid)
+int del_banid(aChannel *chptr, char *banid)
 {
    aBan        **ban;
    aBan         *tmp;
@@ -5094,6 +5094,9 @@ int m_sjoin(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char 
             add_user_to_channel(chptr, sptr, 0);
             joinrate_dojoin(chptr, sptr);
             sendto_channel_join(chptr, sptr, parv[2]);
+            /* Fire post-join hook so gossip eventlog emits EVT_CHAN_JOIN
+             * for remote users arriving via client-format SJOIN */
+            call_hooks(CHOOK_POSTJOIN, sptr, chptr);
         }
 
         sendto_serv_butone(cptr, CliSJOINFmt, parv[0], tstosend, parv[2]);
@@ -5506,6 +5509,9 @@ int m_sjoin(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char 
         {
             add_user_to_channel(chptr, acptr, fl);
             sendto_channel_join(chptr, acptr, parv[2]);
+            /* Fire post-join hook so gossip eventlog emits EVT_CHAN_JOIN
+             * for users arriving via TS5 server SJOIN (reverse bridge) */
+            call_hooks(CHOOK_POSTJOIN, acptr, chptr);
         }
         if (keepnewmodes)
         {

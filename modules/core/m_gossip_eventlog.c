@@ -52,6 +52,9 @@ hook_postregister(aClient *sptr)
         strncpy(p.server, sptr->user->server, HOSTLEN);
     else
         strncpy(p.server, me.name, HOSTLEN);
+    /* Include client IP for network-wide clone tracking */
+    if (sptr->hostip[0])
+        strncpy(p.ipstr, sptr->hostip, HOSTLEN);
     p.umode = sptr->umode;
     p.ts    = sptr->tsinfo;
 
@@ -79,14 +82,21 @@ static int
 hook_join(aClient *sptr, aChannel *chptr)
 {
     EvPayloadChanJoin p;
+    chanMember *cm;
+    int flags = 0;
 
     if (!sptr->user || !chptr || IsGossipMaterialized(sptr))
         return 0;
 
+    /* Look up channel member flags (op/voice) — the member has already
+     * been added to the channel by the time this hook fires. */
+    for (cm = chptr->members; cm; cm = cm->next)
+        if (cm->cptr == sptr) { flags = cm->flags; break; }
+
     memset(&p, 0, sizeof(p));
     strncpy(p.nick,    sptr->name,    NICKLEN);
     strncpy(p.channel, chptr->chname, CHANNELLEN);
-    p.flags = 0;   /* flags determined post-join via SJOIN; not available here */
+    p.flags = flags;
     p.ts    = chptr->channelts;
 
     emit_and_gossip(EVT_CHAN_JOIN, &p, sizeof(p));
@@ -212,7 +222,10 @@ hook_kick(aClient *kicker, aClient *target, aChannel *chptr, const char *reason)
 
     if (!chptr)
         return;
-    if (IsGossipMaterialized(kicker) || IsGossipMaterialized(target))
+    /* Only skip if the kick originated from gossip (kicker is materialized).
+     * If a local user kicks a gossip-materialized target, we must emit
+     * EVT_CHAN_KICK so other gossip peers learn about it. */
+    if (IsGossipMaterialized(kicker))
         return;
 
     memset(&p, 0, sizeof(p));
@@ -293,7 +306,7 @@ hook_chanmsg(aClient *source, aChannel *chptr, int is_notice, char *text)
 static const struct mapi_hook_av1 eventlog_hooks[] = {
     { CHOOK_POSTREGISTER, hook_postregister },
     { CHOOK_SIGNOFF,      hook_signoff      },
-    { CHOOK_JOIN,         hook_join         },
+    { CHOOK_POSTJOIN,     hook_join         },
     { CHOOK_AWAY,         hook_away         },
     { CHOOK_NICK,         hook_nick         },
     { CHOOK_PART,         hook_part         },
@@ -306,6 +319,6 @@ static const struct mapi_hook_av1 eventlog_hooks[] = {
     { 0, NULL }
 };
 
-DECLARE_MODULE("m_gossip_eventlog", "1.0",
-               "Phase S1/S6: gossip event log instrumentation",
-               0, NULL, eventlog_hooks);
+DECLARE_CORE_MODULE("m_gossip_eventlog", "1.0",
+                    "Gossip state propagation hooks",
+                    NULL, eventlog_hooks);

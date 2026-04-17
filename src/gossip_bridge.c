@@ -124,6 +124,8 @@ bridge_apply_event(const NetworkEvent *ev)
             char prefix[3] = {'\0', '\0', '\0'};
             if (p->flags & CHFL_CHANOP)
                 prefix[0] = '@';
+            else if (p->flags & CHFL_HALFOP)
+                prefix[0] = '%';
             else if (p->flags & CHFL_VOICE)
                 prefix[0] = '+';
             sendto_serv_butone(NULL,
@@ -167,6 +169,49 @@ bridge_apply_event(const NetworkEvent *ev)
                 (long)p->ts, p->topic);
             break;
         }
+        case EVT_AKILL:
+        {
+            const EvPayloadAkill *p = &ev->payload.akill;
+            sendto_serv_butone(NULL, ":%s AKILL %s %s %ld %s %ld :%s",
+                               me.name, p->host, p->user, (long)p->length,
+                               p->setter, (long)p->timeset, p->reason);
+            break;
+        }
+        case EVT_RAKILL:
+        {
+            const EvPayloadRakill *p = &ev->payload.rakill;
+            sendto_serv_butone(NULL, ":%s RAKILL %s %s",
+                               me.name, p->host, p->user);
+            break;
+        }
+        case EVT_SQLINE:
+        {
+            const EvPayloadSqline *p = &ev->payload.sqline;
+            sendto_serv_butone(NULL, ":%s SQLINE %s :%s",
+                               me.name, p->mask, p->reason);
+            break;
+        }
+        case EVT_UNSQLINE:
+        {
+            const EvPayloadUnsqline *p = &ev->payload.unsqline;
+            sendto_serv_butone(NULL, ":%s UNSQLINE :%s",
+                               me.name, p->mask);
+            break;
+        }
+        case EVT_SGLINE:
+        {
+            const EvPayloadSgline *p = &ev->payload.sgline;
+            sendto_serv_butone(NULL, ":%s SGLINE %d :%s:%s",
+                               me.name, p->bodylen, p->mask, p->reason);
+            break;
+        }
+        case EVT_UNSGLINE:
+        {
+            const EvPayloadUnsgline *p = &ev->payload.unsgline;
+            sendto_serv_butone(NULL, ":%s UNSGLINE :%s",
+                               me.name, p->mask);
+            break;
+        }
         default:
             break;
     }
@@ -175,266 +220,159 @@ bridge_apply_event(const NetworkEvent *ev)
 /* -------------------------------------------------------------------------
  * Burst: send current gossip state to a newly connected legacy server.
  *
- * Walks the event log once to reconstruct current state (which gossip
- * servers are up, which gossip users are online, what channels they're in).
- * Skips events from our own server (me.name) — the normal burst already
- * sent those users and channels to the new server.
- *
- * State tables are stack-allocated with fixed upper limits suited for the
- * target network size of 10–50 servers.
+ * Walks live materialized state (aClient/aChannel lists) to send gossip
+ * users and channels to the TS5 peer.  This is reliable regardless of
+ * event log ring buffer wrapping.
  * ---------------------------------------------------------------------- */
-
-/* Maximum items tracked during a bridge burst */
-#define BURST_MAX_SERVERS  64
-#define BURST_MAX_USERS    512
-#define BURST_MAX_MEMBERS  2048
-
-typedef struct {
-    char name[HOSTLEN + 1];
-    int  split;
-} BurstServer;
-
-typedef struct {
-    char   nick[NICKLEN + 1];
-    char   username[USERLEN + 1];
-    char   host[HOSTLEN + 1];
-    char   realname[REALLEN + 1];
-    char   server[HOSTLEN + 1];
-    time_t ts;
-    int    quit;
-} BurstUser;
-
-typedef struct {
-    char   nick[NICKLEN + 1];
-    char   channel[CHANNELLEN + 1];
-    time_t ts;
-    int    flags;
-    int    parted;
-} BurstMember;
-
-static int
-find_burst_server(BurstServer *servers, int n, const char *name)
-{
-    int i;
-    for (i = 0; i < n; i++)
-        if (strncmp(servers[i].name, name, HOSTLEN) == 0)
-            return i;
-    return -1;
-}
-
-static int
-find_burst_user(BurstUser *users, int n, const char *nick)
-{
-    int i;
-    for (i = 0; i < n; i++)
-        if (strncmp(users[i].nick, nick, NICKLEN) == 0)
-            return i;
-    return -1;
-}
-
-static int
-find_burst_member(BurstMember *members, int n, const char *nick, const char *chan)
-{
-    int i;
-    for (i = 0; i < n; i++)
-        if (strncmp(members[i].nick, nick, NICKLEN) == 0 &&
-            strncmp(members[i].channel, chan, CHANNELLEN) == 0)
-            return i;
-    return -1;
-}
 
 void
 bridge_burst_gossip_to_server(aClient *cptr)
 {
+    aClient  *acptr;
+    aChannel *chptr;
+    Link     *lp;
+
     /*
-     * These static arrays are safe because Bahamut is single-threaded
-     * and server bursts are serialised.  We memset them at the start of
-     * each call so state does not bleed between invocations.
+     * Walk live materialized state instead of replaying the event log.
+     * This is reliable regardless of ring buffer wrapping.
+     *
+     * Order: SERVER introductions → NICK → SJOIN → TOPIC
      */
-    static BurstServer servers[BURST_MAX_SERVERS];
-    static BurstUser   users[BURST_MAX_USERS];
-    static BurstMember members[BURST_MAX_MEMBERS];
-    int ns = 0, nu = 0, nm = 0;
-    int i, idx;
-    EventClock    zero;
-    NetworkEvent *buf[EVENT_LOG_SIZE];
-    int           n;
 
-    memset(servers, 0, sizeof(servers));
-    memset(users,   0, sizeof(users));
-    memset(members, 0, sizeof(members));
-    memset(&zero,   0, sizeof(zero));
-
-    /* Fetch all events from the log */
-    n = get_events_since(&zero, buf, EVENT_LOG_SIZE);
-
-    /* ---------------------------------------------------------------
-     * Pass 1: build current-state tables from the event log.
-     * ------------------------------------------------------------- */
-    for (i = 0; i < n; i++)
+    /* 1. Introduce all gossip-materialized servers */
+    for (acptr = client; acptr; acptr = acptr->next)
     {
-        const NetworkEvent *ev = buf[i];
+        if (!IsServer(acptr) || !IsGossipMaterialized(acptr))
+            continue;
+        sendto_one(cptr, ":%s SERVER %s 2 :Gossip peer",
+                   me.name, acptr->name);
+    }
 
-        switch (ev->type)
+    /* 2. Introduce all gossip-materialized users */
+    for (acptr = client; acptr; acptr = acptr->next)
+    {
+        if (!IsClient(acptr) || !IsGossipMaterialized(acptr) || !acptr->user)
+            continue;
+        sendto_one(cptr,
+            "NICK %s 2 %ld + %s %s %s 0 0.0.0.0 :%s",
+            acptr->name, (long)acptr->tsinfo,
+            acptr->user->username, acptr->user->host,
+            acptr->user->server ? acptr->user->server : me.name,
+            acptr->info ? acptr->info : "");
+    }
+
+    /* 3. Send channel memberships for gossip-materialized users */
+    for (acptr = client; acptr; acptr = acptr->next)
+    {
+        if (!IsClient(acptr) || !IsGossipMaterialized(acptr) || !acptr->user)
+            continue;
+
+        for (lp = acptr->user->channel; lp; lp = lp->next)
         {
-            case EVT_SERVER_LINK:
-            {
-                const EvPayloadServerLink *p = &ev->payload.server_link;
-                /* Skip self — we're already the introducing server */
-                if (strncmp(p->name, me.name, HOSTLEN) == 0)
+            chanMember *cm;
+            char prefix[2] = {'\0', '\0'};
+
+            chptr = lp->value.chptr;
+            if (!chptr)
+                continue;
+
+            /* Find this user's flags in the channel */
+            for (cm = chptr->members; cm; cm = cm->next)
+                if (cm->cptr == acptr)
+                {
+                    if (cm->flags & CHFL_CHANOP)       prefix[0] = '@';
+                    else if (cm->flags & CHFL_HALFOP) prefix[0] = '%';
+                    else if (cm->flags & CHFL_VOICE)  prefix[0] = '+';
                     break;
-                idx = find_burst_server(servers, ns, p->name);
-                if (idx < 0 && ns < BURST_MAX_SERVERS)
-                {
-                    strncpy(servers[ns].name, p->name, HOSTLEN);
-                    servers[ns].split = 0;
-                    ns++;
                 }
-                else if (idx >= 0)
-                {
-                    servers[idx].split = 0; /* re-linked */
-                }
-                break;
-            }
-            case EVT_SERVER_SPLIT:
-            {
-                const EvPayloadServerLink *p = &ev->payload.server_link;
-                idx = find_burst_server(servers, ns, p->name);
-                if (idx >= 0)
-                    servers[idx].split = 1;
-                break;
-            }
-            case EVT_USER_JOIN:
-            {
-                const EvPayloadUserJoin *p = &ev->payload.user_join;
-                /* Skip local users — normal burst already sent them */
-                if (strncmp(p->server, me.name, HOSTLEN) == 0)
-                    break;
-                idx = find_burst_user(users, nu, p->nick);
-                if (idx < 0 && nu < BURST_MAX_USERS)
-                    idx = nu++;
-                if (idx >= 0 && idx < BURST_MAX_USERS)
-                {
-                    strncpy(users[idx].nick,     p->nick,     NICKLEN);
-                    strncpy(users[idx].username, p->username, USERLEN);
-                    strncpy(users[idx].host,     p->host,     HOSTLEN);
-                    strncpy(users[idx].realname, p->realname, REALLEN);
-                    strncpy(users[idx].server,   p->server,   HOSTLEN);
-                    users[idx].ts   = p->ts;
-                    users[idx].quit = 0;
-                }
-                break;
-            }
-            case EVT_USER_QUIT:
-            {
-                const EvPayloadUserQuit *p = &ev->payload.user_quit;
-                idx = find_burst_user(users, nu, p->nick);
-                if (idx >= 0)
-                    users[idx].quit = 1;
-                break;
-            }
-            case EVT_USER_NICK:
-            {
-                const EvPayloadUserNick *p = &ev->payload.user_nick;
-                idx = find_burst_user(users, nu, p->oldnick);
-                if (idx >= 0)
-                {
-                    int j;
-                    /* Update nick in membership table too */
-                    for (j = 0; j < nm; j++)
-                        if (strncmp(members[j].nick, p->oldnick, NICKLEN) == 0)
-                            strncpy(members[j].nick, p->newnick, NICKLEN);
-                    strncpy(users[idx].nick, p->newnick, NICKLEN);
-                }
-                break;
-            }
-            case EVT_CHAN_JOIN:
-            {
-                const EvPayloadChanJoin *p = &ev->payload.chan_join;
-                /* Only track memberships for known gossip users */
-                if (find_burst_user(users, nu, p->nick) < 0)
-                    break;
-                idx = find_burst_member(members, nm, p->nick, p->channel);
-                if (idx < 0 && nm < BURST_MAX_MEMBERS)
-                    idx = nm++;
-                if (idx >= 0 && idx < BURST_MAX_MEMBERS)
-                {
-                    strncpy(members[idx].nick,    p->nick,    NICKLEN);
-                    strncpy(members[idx].channel, p->channel, CHANNELLEN);
-                    members[idx].ts     = p->ts;
-                    members[idx].flags  = p->flags;
-                    members[idx].parted = 0;
-                }
-                break;
-            }
-            case EVT_CHAN_PART:
-            {
-                const EvPayloadChanPart *p = &ev->payload.chan_part;
-                idx = find_burst_member(members, nm, p->nick, p->channel);
-                if (idx >= 0)
-                    members[idx].parted = 1;
-                break;
-            }
-            case EVT_CHAN_KICK:
-            {
-                const EvPayloadChanKick *p = &ev->payload.chan_kick;
-                idx = find_burst_member(members, nm, p->target, p->channel);
-                if (idx >= 0)
-                    members[idx].parted = 1;
-                break;
-            }
-            default:
-                break;
+
+            sendto_one(cptr,
+                ":%s SJOIN %ld %s + :%s%s",
+                me.name, (long)chptr->channelts,
+                chptr->chname, prefix, acptr->name);
         }
     }
 
-    /* ---------------------------------------------------------------
-     * Pass 2: send synthesised state to cptr.
-     *
-     * Order: SERVER introductions → NICK → SJOIN
-     * Legacy TS synchronisation will resolve any mode conflicts.
-     * ------------------------------------------------------------- */
-
-    /* Introduce all currently-up gossip servers */
-    for (i = 0; i < ns; i++)
+    /* 4. Send channel modes and bans for channels with gossip members */
+    for (chptr = channel; chptr; chptr = chptr->nextch)
     {
-        if (!servers[i].split)
-            sendto_one(cptr, ":%s SERVER %s 2 :Gossip peer",
-                       me.name, servers[i].name);
-    }
+        chanMember *cm;
+        aBan *ban;
+        int has_gossip = 0;
+        char mbuf[64], pbuf[256];
+        char *mp = mbuf, *pp = pbuf;
 
-    /* Introduce all currently-online gossip users */
-    for (i = 0; i < nu; i++)
-    {
-        if (!users[i].quit)
-            sendto_one(cptr,
-                "NICK %s 2 %ld + %s %s %s 0 0.0.0.0 :%s",
-                users[i].nick, (long)users[i].ts,
-                users[i].username, users[i].host, users[i].server,
-                users[i].realname);
-    }
+        for (cm = chptr->members; cm; cm = cm->next)
+            if (IsGossipMaterialized(cm->cptr))
+            { has_gossip = 1; break; }
 
-    /* Send channel memberships */
-    for (i = 0; i < nm; i++)
-    {
-        char prefix[3] = {'\0', '\0', '\0'};
-        int  uidx;
-
-        if (members[i].parted)
+        if (!has_gossip)
             continue;
 
-        uidx = find_burst_user(users, nu, members[i].nick);
-        if (uidx < 0 || users[uidx].quit)
+        /* Send channel modes */
+        *pp = '\0';
+        *mp++ = '+';
+        if (chptr->mode.mode & MODE_SECRET)      *mp++ = 's';
+        if (chptr->mode.mode & MODE_PRIVATE)     *mp++ = 'p';
+        if (chptr->mode.mode & MODE_MODERATED)   *mp++ = 'm';
+        if (chptr->mode.mode & MODE_TOPICLIMIT)  *mp++ = 't';
+        if (chptr->mode.mode & MODE_INVITEONLY)   *mp++ = 'i';
+        if (chptr->mode.mode & MODE_NOPRIVMSGS)  *mp++ = 'n';
+        if (chptr->mode.mode & MODE_REGONLY)     *mp++ = 'R';
+        if (chptr->mode.mode & MODE_NOCTRL)      *mp++ = 'c';
+        if (chptr->mode.mode & MODE_SSLONLY)     *mp++ = 'S';
+        if (chptr->mode.limit)
+        {
+            *mp++ = 'l';
+            ircsprintf(pp, "%d", chptr->mode.limit);
+            pp += strlen(pp);
+        }
+        if (*chptr->mode.key)
+        {
+            *mp++ = 'k';
+            if (pp != pbuf) *pp++ = ' ';
+            strncpy(pp, chptr->mode.key, sizeof(pbuf) - (pp - pbuf) - 1);
+            pp += strlen(pp);
+        }
+        *mp = '\0';
+
+        if (mbuf[1])  /* modes beyond bare '+' */
+        {
+            if (pbuf[0])
+                sendto_one(cptr, ":%s MODE %s %ld %s %s",
+                           me.name, chptr->chname,
+                           (long)chptr->channelts, mbuf, pbuf);
+            else
+                sendto_one(cptr, ":%s MODE %s %ld %s",
+                           me.name, chptr->chname,
+                           (long)chptr->channelts, mbuf);
+        }
+
+        /* Send ban list */
+        for (ban = chptr->banlist; ban; ban = ban->next)
+        {
+            sendto_one(cptr, ":%s MODE %s %ld +b %s",
+                       me.name, chptr->chname,
+                       (long)chptr->channelts, ban->banstr);
+        }
+    }
+
+    /* 5. Send topics for channels that have gossip-materialized members */
+    for (chptr = channel; chptr; chptr = chptr->nextch)
+    {
+        chanMember *cm;
+        int has_gossip = 0;
+
+        if (!chptr->topic[0])
             continue;
 
-        if (members[i].flags & CHFL_CHANOP)
-            prefix[0] = '@';
-        else if (members[i].flags & CHFL_VOICE)
-            prefix[0] = '+';
+        for (cm = chptr->members; cm; cm = cm->next)
+            if (IsGossipMaterialized(cm->cptr))
+            { has_gossip = 1; break; }
 
-        sendto_one(cptr,
-            ":%s SJOIN %ld %s + :%s%s",
-            me.name, (long)members[i].ts,
-            members[i].channel, prefix, members[i].nick);
+        if (has_gossip)
+            sendto_one(cptr, ":%s TOPIC %s %s %lu :%s",
+                       me.name, chptr->chname, chptr->topic_nick,
+                       (unsigned long)chptr->topic_time, chptr->topic);
     }
 }

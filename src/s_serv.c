@@ -31,6 +31,7 @@
 #include "resolv.h"
 #include "zlink.h"
 #include "userban.h"
+#include "gossip.h"
 
 #if defined(AIX) || defined(SVR3)
 #include <time.h>
@@ -2427,6 +2428,19 @@ m_akill(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *par
                        sptr->name, host, user, (long)length, akiller,
                        (long)timeset, reason);
 
+    /* Propagate to gossip peers */
+    {
+        EvPayloadAkill gp;
+        memset(&gp, 0, sizeof(gp));
+        strncpy(gp.host, host, HOSTLEN);
+        strncpy(gp.user, user, USERLEN);
+        strncpy(gp.setter, akiller, NICKLEN);
+        strncpy(gp.reason, reason, sizeof(gp.reason) - 1);
+        gp.length = length;
+        gp.timeset = timeset;
+        gossip_emit_event(EVT_AKILL, &gp, sizeof(gp));
+    }
+
     /* Check local users against it */
     userban_sweep(ban);
 
@@ -2484,6 +2498,16 @@ m_rakill(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *pa
     throttle_remove(parv[1]);
 
     sendto_serv_butone(cptr, ":%s RAKILL %s %s", sptr->name, parv[1], parv[2]);
+
+    /* Propagate to gossip peers */
+    {
+        EvPayloadRakill gp;
+        memset(&gp, 0, sizeof(gp));
+        strncpy(gp.host, parv[1], HOSTLEN);
+        strncpy(gp.user, parv[2], USERLEN);
+        gossip_emit_event(EVT_RAKILL, &gp, sizeof(gp));
+    }
+
     return 0;
 }
 
@@ -2568,6 +2592,16 @@ m_sqline(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *pa
 
     sendto_serv_butone(cptr, ":%s SQLINE %s :%s", sptr->name, parv[1],
                        reason);
+
+    /* Propagate to gossip peers */
+    {
+        EvPayloadSqline gp;
+        memset(&gp, 0, sizeof(gp));
+        strncpy(gp.mask, parv[1], sizeof(gp.mask) - 1);
+        strncpy(gp.reason, reason, sizeof(gp.reason) - 1);
+        gossip_emit_event(EVT_SQLINE, &gp, sizeof(gp));
+    }
+
     return 0;
 }
 
@@ -2615,6 +2649,15 @@ m_unsqline(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *
                            mask);
     else
         sendto_serv_butone(cptr, ":%s UNSQLINE :%s", sptr->name, mask);
+
+    /* Propagate to gossip peers */
+    {
+        EvPayloadUnsqline gp;
+        memset(&gp, 0, sizeof(gp));
+        strncpy(gp.mask, mask, sizeof(gp.mask) - 1);
+        gossip_emit_event(EVT_UNSQLINE, &gp, sizeof(gp));
+    }
+
     return 0;
 }
 
@@ -2675,6 +2718,17 @@ int m_sgline(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char
 
     sendto_serv_butone(cptr, ":%s SGLINE %d :%s:%s", sptr->name, len,
                        mask, reason);
+
+    /* Propagate to gossip peers */
+    {
+        EvPayloadSgline gp;
+        memset(&gp, 0, sizeof(gp));
+        strncpy(gp.mask, mask, sizeof(gp.mask) - 1);
+        strncpy(gp.reason, reason, sizeof(gp.reason) - 1);
+        gp.bodylen = len;
+        gossip_emit_event(EVT_SGLINE, &gp, sizeof(gp));
+    }
+
     return 0;
 }
 
@@ -2713,6 +2767,15 @@ m_unsgline(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *
                            mask);
     else
         sendto_serv_butone(cptr, ":%s UNSGLINE :%s",sptr->name,mask);
+
+    /* Propagate to gossip peers */
+    {
+        EvPayloadUnsgline gp;
+        memset(&gp, 0, sizeof(gp));
+        strncpy(gp.mask, mask, sizeof(gp.mask) - 1);
+        gossip_emit_event(EVT_UNSGLINE, &gp, sizeof(gp));
+    }
+
     return 0;
 }
 

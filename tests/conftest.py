@@ -231,6 +231,174 @@ def gossip_triangle(build_dir):
     srv3.stop()
 
 
+@pytest.fixture
+def gossip_dual_hub(build_dir):
+    """Four-server gossip topology: 2 leafs + 2 hubs.
+
+    Topology:
+        leaf1 ─── hub1 ─── hub2 ─── leaf2
+                    └───────┘
+
+    leaf1 connects to hub1, leaf2 connects to hub2, hubs connect to each other.
+    When hub1 dies, leaf1 loses its only link but leaf2 keeps state.
+    When hub2 dies, leaf2 loses its only link but leaf1 keeps state.
+    Returns (leaf1, hub1, hub2, leaf2).
+    """
+    ports = allocate_ports(8)
+    irc_l1, irc_h1, irc_h2, irc_l2 = ports[0], ports[1], ports[2], ports[3]
+    ws_l1, ws_h1, ws_h2, ws_l2 = ports[4], ports[5], ports[6], ports[7]
+
+    leaf1 = BahamutServer(
+        build_dir=build_dir, server_name="leaf1.test", irc_port=irc_l1, ws_port=ws_l1,
+        gopeer_configs=[{"host": "127.0.0.1", "port": irc_h1, "name": "hub1.test", "server_id": 2}],
+        server_id=1,
+    )
+    hub1 = BahamutServer(
+        build_dir=build_dir, server_name="hub1.test", irc_port=irc_h1, ws_port=ws_h1,
+        gopeer_configs=[
+            {"host": "127.0.0.1", "port": irc_l1, "name": "leaf1.test", "server_id": 1},
+            {"host": "127.0.0.1", "port": irc_h2, "name": "hub2.test", "server_id": 3},
+        ],
+        server_id=2,
+    )
+    hub2 = BahamutServer(
+        build_dir=build_dir, server_name="hub2.test", irc_port=irc_h2, ws_port=ws_h2,
+        gopeer_configs=[
+            {"host": "127.0.0.1", "port": irc_h1, "name": "hub1.test", "server_id": 2},
+            {"host": "127.0.0.1", "port": irc_l2, "name": "leaf2.test", "server_id": 4},
+        ],
+        server_id=3,
+    )
+    leaf2 = BahamutServer(
+        build_dir=build_dir, server_name="leaf2.test", irc_port=irc_l2, ws_port=ws_l2,
+        gopeer_configs=[{"host": "127.0.0.1", "port": irc_h2, "name": "hub2.test", "server_id": 3}],
+        server_id=4,
+    )
+
+    leaf1.start()
+    hub1.start()
+    hub2.start()
+    leaf2.start()
+
+    # 4-node chain needs more time — gopeer_try_connect fires on
+    # CHOOK_10SEC so links may take up to 10s each to establish
+    time.sleep(15)
+
+    yield leaf1, hub1, hub2, leaf2
+
+    for srv in [leaf1, hub1, hub2, leaf2]:
+        try:
+            srv.stop()
+        except Exception:
+            pass
+
+
+@pytest.fixture
+def gossip_cluster_tls(build_dir):
+    """Two-server gossip cluster with TLS on gossip links and SSL client ports."""
+    ports = allocate_ports(6)
+    irc1, irc2 = ports[0], ports[1]
+    ssl1, ssl2 = ports[2], ports[3]
+    ws1, ws2 = ports[4], ports[5]
+
+    srv1 = BahamutServer(
+        build_dir=build_dir,
+        server_name="irc1.test",
+        irc_port=irc1,
+        ssl_port=ssl1,
+        ws_port=ws1,
+        gopeer_configs=[{"host": "127.0.0.1", "port": ssl2, "name": "irc2.test",
+                         "server_id": 2, "tls": True}],
+        server_id=1,
+    )
+    srv2 = BahamutServer(
+        build_dir=build_dir,
+        server_name="irc2.test",
+        irc_port=irc2,
+        ssl_port=ssl2,
+        ws_port=ws2,
+        gopeer_configs=[{"host": "127.0.0.1", "port": ssl1, "name": "irc1.test",
+                         "server_id": 1, "tls": True}],
+        server_id=2,
+    )
+
+    srv1.start()
+    srv2.start()
+
+    time.sleep(4)
+
+    yield srv1, srv2
+
+    srv1.stop()
+    srv2.stop()
+
+
+@pytest.fixture
+def gossip_with_ts5_bridge(build_dir):
+    """Two gossip peers + one TS5-linked server via bridge.
+
+    Topology: srv1 (gossip) <-> srv2 (gossip+bridge) <-> srv3 (TS5 legacy)
+    Returns (srv1, srv2, srv3).
+    """
+    ports = allocate_ports(6)
+    irc1, irc2, irc3 = ports[0], ports[1], ports[2]
+    ws1, ws2, ws3 = ports[3], ports[4], ports[5]
+
+    link_passwd = "testlink"
+
+    srv1 = BahamutServer(
+        build_dir=build_dir,
+        server_name="irc1.test",
+        irc_port=irc1,
+        ws_port=ws1,
+        gopeer_configs=[{"host": "127.0.0.1", "port": irc2, "name": "irc2.test", "server_id": 2}],
+        server_id=1,
+    )
+    srv2 = BahamutServer(
+        build_dir=build_dir,
+        server_name="irc2.test",
+        irc_port=irc2,
+        ws_port=ws2,
+        gopeer_configs=[{"host": "127.0.0.1", "port": irc1, "name": "irc1.test", "server_id": 1}],
+        server_id=2,
+        connect_configs=[{
+            "name": "irc3.test",
+            "host": "127.0.0.1",
+            "port": irc3,
+            "apasswd": link_passwd,
+            "cpasswd": link_passwd,
+            "flags": "H",
+        }],
+    )
+    srv3 = BahamutServer(
+        build_dir=build_dir,
+        server_name="irc3.test",
+        irc_port=irc3,
+        ws_port=ws3,
+        connect_configs=[{
+            "name": "irc2.test",
+            "host": "127.0.0.1",
+            "port": irc2,
+            "apasswd": link_passwd,
+            "cpasswd": link_passwd,
+            "flags": "H",
+        }],
+    )
+
+    srv1.start()
+    srv2.start()
+    srv3.start()
+
+    # Wait for gossip + TS5 links
+    time.sleep(5)
+
+    yield srv1, srv2, srv3
+
+    srv1.stop()
+    srv2.stop()
+    srv3.stop()
+
+
 # Counter for unique nicks across tests
 _nick_counter = 0
 

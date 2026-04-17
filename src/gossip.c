@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <arpa/inet.h>
 
 #include "struct.h"
 #include "common.h"
@@ -26,6 +27,9 @@
 #include "gossip_dedup.h"
 #include "numeric.h"
 #include "blalloc.h"
+#include "gossip_bridge.h"
+#include "clones.h"
+#include "userban.h"
 
 /* Externs for functions not declared in headers */
 extern aChannel *make_channel(char *name);
@@ -70,9 +74,12 @@ serialise_payload(char *buf, size_t buflen, const NetworkEvent *ev)
         case EVT_USER_JOIN:
         {
             const EvPayloadUserJoin *p = &ev->payload.user_join;
-            ircsnprintf(buf, buflen, "%s %s %s %s %s %ld %lu",
-                        p->nick, p->username, p->host, p->realname,
-                        p->server, (long)p->ts, p->umode);
+            /* realname goes last (prefixed with :) since it can contain spaces */
+            ircsnprintf(buf, buflen, "%s %s %s %s %s %ld %lu :%s",
+                        p->nick, p->username, p->host,
+                        p->server, p->ipstr[0] ? p->ipstr : "0",
+                        (long)p->ts, p->umode,
+                        p->realname);
             break;
         }
         case EVT_USER_QUIT:
@@ -153,9 +160,12 @@ serialise_payload(char *buf, size_t buflen, const NetworkEvent *ev)
         case EVT_SESSION_CREATE:
         {
             const EvPayloadSessionCreate *p = &ev->payload.session_create;
-            ircsnprintf(buf, buflen, "%s %s %s %s %s %lu %ld :%s",
-                        p->key, p->nick, p->username, p->host, p->realname,
-                        p->umode, (long)p->expires_at, p->away_msg);
+            /* realname and away_msg can contain spaces; put them last
+             * separated by a tab delimiter */
+            ircsnprintf(buf, buflen, "%s %s %s %s %lu %ld :%s\t%s",
+                        p->key, p->nick, p->username, p->host,
+                        p->umode, (long)p->expires_at,
+                        p->realname, p->away_msg);
             break;
         }
         case EVT_SESSION_DESTROY:
@@ -176,6 +186,45 @@ serialise_payload(char *buf, size_t buflen, const NetworkEvent *ev)
             const EvPayloadChanmsg *p = &ev->payload.chanmsg;
             ircsnprintf(buf, buflen, "%s %s %d :%s",
                         p->sender, p->channel, p->is_notice, p->text);
+            break;
+        }
+        case EVT_AKILL:
+        {
+            const EvPayloadAkill *p = &ev->payload.akill;
+            ircsnprintf(buf, buflen, "%s %s %ld %s %ld :%s",
+                        p->host, p->user, (long)p->length,
+                        p->setter, (long)p->timeset, p->reason);
+            break;
+        }
+        case EVT_RAKILL:
+        {
+            const EvPayloadRakill *p = &ev->payload.rakill;
+            ircsnprintf(buf, buflen, "%s %s", p->host, p->user);
+            break;
+        }
+        case EVT_SQLINE:
+        {
+            const EvPayloadSqline *p = &ev->payload.sqline;
+            ircsnprintf(buf, buflen, "%s :%s", p->mask, p->reason);
+            break;
+        }
+        case EVT_UNSQLINE:
+        {
+            const EvPayloadUnsqline *p = &ev->payload.unsqline;
+            ircsnprintf(buf, buflen, "%s", p->mask);
+            break;
+        }
+        case EVT_SGLINE:
+        {
+            const EvPayloadSgline *p = &ev->payload.sgline;
+            ircsnprintf(buf, buflen, "%d %s :%s",
+                        p->bodylen, p->mask, p->reason);
+            break;
+        }
+        case EVT_UNSGLINE:
+        {
+            const EvPayloadUnsgline *p = &ev->payload.unsgline;
+            ircsnprintf(buf, buflen, "%s", p->mask);
             break;
         }
         default:
@@ -307,6 +356,7 @@ gossip_parse_event(NetworkEvent *ev, NetEventType type, const char *payload,
         case EVT_USER_JOIN:
         {
             EvPayloadUserJoin *pl = &ev->payload.user_join;
+            /* Format: nick username host server ipstr ts umode :realname */
             tok = strtoken(&p, buf, " "); if (!tok) return -1;
             strncpy(pl->nick, tok, NICKLEN);
             tok = strtoken(&p, NULL, " "); if (!tok) return -1;
@@ -314,13 +364,22 @@ gossip_parse_event(NetworkEvent *ev, NetEventType type, const char *payload,
             tok = strtoken(&p, NULL, " "); if (!tok) return -1;
             strncpy(pl->host, tok, HOSTLEN);
             tok = strtoken(&p, NULL, " "); if (!tok) return -1;
-            strncpy(pl->realname, tok, REALLEN);
-            tok = strtoken(&p, NULL, " "); if (!tok) return -1;
             strncpy(pl->server, tok, HOSTLEN);
             tok = strtoken(&p, NULL, " "); if (!tok) return -1;
+            strncpy(pl->ipstr, tok, HOSTLEN);
+            tok = strtoken(&p, NULL, " "); if (!tok) return -1;
             pl->ts = (time_t)atol(tok);
-            tok = strtoken(&p, NULL, " ");
-            if (tok) pl->umode = strtoul(tok, NULL, 10);
+            tok = strtoken(&p, NULL, " "); if (!tok) return -1;
+            pl->umode = strtoul(tok, NULL, 10);
+            /* Remainder is :realname (skip leading colon).
+             * p points past the last NUL inserted by strtoken;
+             * advance to the next non-space character. */
+            if (p)
+            {
+                while (*p == ' ') p++;
+                if (*p == ':') p++;
+                strncpy(pl->realname, p, REALLEN);
+            }
             break;
         }
         case EVT_USER_QUIT:
@@ -443,6 +502,7 @@ gossip_parse_event(NetworkEvent *ev, NetEventType type, const char *payload,
         case EVT_SESSION_CREATE:
         {
             EvPayloadSessionCreate *pl = &ev->payload.session_create;
+            /* Format: key nick username host umode expires_at :realname\taway_msg */
             tok = strtoken(&p, buf, " "); if (!tok) return -1;
             strncpy(pl->key,      tok, SESSION_KEY_LEN);
             tok = strtoken(&p, NULL, " "); if (!tok) return -1;
@@ -451,14 +511,26 @@ gossip_parse_event(NetworkEvent *ev, NetEventType type, const char *payload,
             strncpy(pl->username, tok, USERLEN);
             tok = strtoken(&p, NULL, " "); if (!tok) return -1;
             strncpy(pl->host,     tok, HOSTLEN);
-            tok = strtoken(&p, NULL, " "); if (!tok) return -1;
-            strncpy(pl->realname, tok, REALLEN);
             tok = strtoken(&p, NULL, " ");
             if (tok) pl->umode = strtoul(tok, NULL, 10);
             tok = strtoken(&p, NULL, " ");
             if (tok) pl->expires_at = (time_t)atol(tok);
-            tok = strtoken(&p, NULL, ":");
-            if (tok) strncpy(pl->away_msg, tok, TOPICLEN);
+            /* Remainder is :realname\taway_msg */
+            if (p)
+            {
+                char *tab;
+                while (*p == ' ') p++;
+                if (*p == ':') p++;
+                tab = strchr(p, '\t');
+                if (tab)
+                {
+                    *tab = '\0';
+                    strncpy(pl->realname, p, REALLEN);
+                    strncpy(pl->away_msg, tab + 1, TOPICLEN);
+                }
+                else
+                    strncpy(pl->realname, p, REALLEN);
+            }
             break;
         }
         case EVT_SESSION_DESTROY:
@@ -500,6 +572,66 @@ gossip_parse_event(NetworkEvent *ev, NetEventType type, const char *payload,
             }
             break;
         }
+        case EVT_AKILL:
+        {
+            EvPayloadAkill *pl = &ev->payload.akill;
+            tok = strtoken(&p, buf, " "); if (!tok) return -1;
+            strncpy(pl->host, tok, HOSTLEN);
+            tok = strtoken(&p, NULL, " "); if (!tok) return -1;
+            strncpy(pl->user, tok, USERLEN);
+            tok = strtoken(&p, NULL, " "); if (!tok) return -1;
+            pl->length = (time_t)atol(tok);
+            tok = strtoken(&p, NULL, " "); if (!tok) return -1;
+            strncpy(pl->setter, tok, NICKLEN);
+            tok = strtoken(&p, NULL, " "); if (!tok) return -1;
+            pl->timeset = (time_t)atol(tok);
+            if (p) { while (*p == ' ') p++; if (*p == ':') p++;
+                     strncpy(pl->reason, p, sizeof(pl->reason) - 1); }
+            break;
+        }
+        case EVT_RAKILL:
+        {
+            EvPayloadRakill *pl = &ev->payload.rakill;
+            tok = strtoken(&p, buf, " "); if (!tok) return -1;
+            strncpy(pl->host, tok, HOSTLEN);
+            tok = strtoken(&p, NULL, " "); if (!tok) return -1;
+            strncpy(pl->user, tok, USERLEN);
+            break;
+        }
+        case EVT_SQLINE:
+        {
+            EvPayloadSqline *pl = &ev->payload.sqline;
+            tok = strtoken(&p, buf, " "); if (!tok) return -1;
+            strncpy(pl->mask, tok, sizeof(pl->mask) - 1);
+            if (p) { while (*p == ' ') p++; if (*p == ':') p++;
+                     strncpy(pl->reason, p, sizeof(pl->reason) - 1); }
+            break;
+        }
+        case EVT_UNSQLINE:
+        {
+            EvPayloadUnsqline *pl = &ev->payload.unsqline;
+            tok = strtoken(&p, buf, " "); if (!tok) return -1;
+            strncpy(pl->mask, tok, sizeof(pl->mask) - 1);
+            break;
+        }
+        case EVT_SGLINE:
+        {
+            EvPayloadSgline *pl = &ev->payload.sgline;
+            tok = strtoken(&p, buf, " "); if (!tok) return -1;
+            pl->bodylen = atoi(tok);
+            tok = strtoken(&p, NULL, " "); if (!tok) return -1;
+            strncpy(pl->mask, tok, sizeof(pl->mask) - 1);
+            if (p) { while (*p == ' ') p++; if (*p == ':') p++;
+                     strncpy(pl->reason, p, sizeof(pl->reason) - 1); }
+            break;
+        }
+        case EVT_UNSGLINE:
+        {
+            EvPayloadUnsgline *pl = &ev->payload.unsgline;
+            tok = strtoken(&p, buf, " "); if (!tok) return -1;
+            strncpy(pl->mask, tok, sizeof(pl->mask) - 1);
+            break;
+        }
         default:
             break;
     }
@@ -531,6 +663,12 @@ gossip_materialize_server(const char *name, int id)
     if (acptr)
         return acptr;
 
+    /* Don't materialize servers that have a connect{} block — those are
+     * TS5 peers that should establish their own real server link.
+     * A gossip-materialized entry would block the real CONNECT. */
+    if (find_aConnect((char *)name))
+        return NULL;
+
     acptr = make_client(&me, NULL);
     make_server(acptr);
     acptr->hopcount = 1;
@@ -547,7 +685,7 @@ gossip_materialize_server(const char *name, int id)
 
 static void gossip_remove_user(aClient *acptr, const char *reason);
 
-static void
+void
 gossip_split_server(const char *name)
 {
     aClient *acptr, *next;
@@ -570,11 +708,9 @@ gossip_split_server(const char *name)
     if (acptr && IsGossipMaterialized(acptr))
     {
         del_from_client_hash_table(acptr->name, acptr);
+        /* remove_client_from_list handles Count.server--, free(serv),
+         * and free_client via the correct block heap. */
         remove_client_from_list(acptr);
-        Count.server--;
-        if (acptr->serv)
-            MyFree(acptr->serv);
-        free_client(acptr);
     }
 }
 
@@ -650,10 +786,26 @@ gossip_materialize_user(const EvPayloadUserJoin *p)
     }
     strncpyzt(acptr->info, p->realname, REALLEN + 1);
 
-    /* Gossip users get 0.0.0.0 */
-    acptr->ip_family = 0;
+    /* Set client IP from gossip event for clone tracking */
+    if (p->ipstr[0] && mycmp(p->ipstr, "0") != 0)
+    {
+        if (inet_pton(AF_INET, p->ipstr, &acptr->ip.ip4) == 1)
+            acptr->ip_family = AF_INET;
+        else if (inet_pton(AF_INET6, p->ipstr, &acptr->ip.ip6) == 1)
+            acptr->ip_family = AF_INET6;
+        else
+            acptr->ip_family = 0;
+        strncpyzt(acptr->hostip, p->ipstr, sizeof(acptr->hostip));
+    }
+    else
+        acptr->ip_family = 0;
 
     SetClient(acptr);
+
+    /* Add to clone tracking if IP is set — enables network-wide
+     * clone detection across gossip peers. */
+    if (acptr->ip_family)
+        clones_add(acptr);
 
     if (++Count.total > Count.max_tot)
         Count.max_tot = Count.total;
@@ -694,37 +846,12 @@ gossip_remove_user(aClient *acptr, const char *reason)
     if (IsRegistered(acptr))
         hash_check_watch(acptr, RPL_LOGOFF);
 
-    /* Update counts */
-    if (IsClient(acptr))
-    {
-        Count.total--;
-        if (IsInvisible(acptr))
-            Count.invisi--;
-    }
-
-    /* Unlink from client list */
-    if (acptr->prev)
-        acptr->prev->next = acptr->next;
-    else
-    {
-        client = acptr->next;
-        if (client)
-            client->prev = NULL;
-    }
-    if (acptr->next)
-        acptr->next->prev = acptr->prev;
-
-    /* Free user struct via the proper BlockHeap free */
-    if (acptr->user)
-    {
-        if (acptr->user->away)
-            MyFree(acptr->user->away);
-        BlockHeapFree(free_anUsers, acptr->user);
-        acptr->user = NULL;
-    }
-
-    /* Free client block */
-    BlockHeapFree(free_remote_aClients, acptr);
+    /* Use remove_client_from_list for proper cleanup: counter updates,
+     * WHOWAS history, free_user (servicestags, oper fields), free_client
+     * via the correct block heap. The old code did manual unlinking +
+     * BlockHeapFree which skipped WHOWAS cleanup and leaked servicestags,
+     * potentially corrupting the block heap. */
+    remove_client_from_list(acptr);
 }
 
 /* --- S6e: Channel materialization --------------------------------------- */
@@ -777,12 +904,14 @@ gossip_apply_chan_part(const EvPayloadChanPart *p)
     aChannel *chptr;
 
     acptr = find_client(p->nick, NULL);
-    if (!acptr || !IsGossipMaterialized(acptr))
+    if (!acptr)
         return;
 
     chptr = find_channel(p->channel, NullChn);
     if (!chptr)
         return;
+    if (!find_channel_link(acptr->user ? acptr->user->channel : NULL, chptr))
+        return;  /* not in channel on this server */
 
     sendto_channel_butserv(chptr, acptr, ":%s PART %s :%s",
                            acptr->name, chptr->chname,
@@ -801,8 +930,8 @@ gossip_apply_chan_kick(const EvPayloadChanKick *p)
 
     if (!target || !chptr)
         return;
-    if (!IsGossipMaterialized(target))
-        return;
+    if (!find_channel_link(target->user ? target->user->channel : NULL, chptr))
+        return;  /* target not in channel on this server */
 
     kicker = find_client(p->kicker, NULL);
 
@@ -817,8 +946,13 @@ gossip_apply_chan_kick(const EvPayloadChanKick *p)
 static void
 gossip_apply_chan_mode(const EvPayloadChanMode *p)
 {
-    aClient  *acptr;
+    aClient  *acptr, *target;
     aChannel *chptr;
+    const char *m;
+    int dir = 1; /* 1 = adding, 0 = removing */
+    char paracopy[256];
+    char *para_save = NULL, *param;
+    Link *lp;
 
     chptr = find_channel(p->channel, NullChn);
     if (!chptr)
@@ -826,6 +960,126 @@ gossip_apply_chan_mode(const EvPayloadChanMode *p)
 
     acptr = find_client(p->nick, NULL);
 
+    /* Parse params — copy so strtoken can modify */
+    strncpy(paracopy, p->parabuf, sizeof(paracopy) - 1);
+    paracopy[sizeof(paracopy) - 1] = '\0';
+    param = strtoken(&para_save, paracopy, " ");
+
+    /* Apply mode changes to channel struct */
+    for (m = p->modebuf; *m; m++)
+    {
+        switch (*m)
+        {
+            case '+': dir = 1; break;
+            case '-': dir = 0; break;
+
+            /* Simple flag modes */
+            case 's': if (dir) chptr->mode.mode |= MODE_SECRET;      else chptr->mode.mode &= ~MODE_SECRET;      break;
+            case 'p': if (dir) chptr->mode.mode |= MODE_PRIVATE;     else chptr->mode.mode &= ~MODE_PRIVATE;     break;
+            case 'm': if (dir) chptr->mode.mode |= MODE_MODERATED;   else chptr->mode.mode &= ~MODE_MODERATED;   break;
+            case 't': if (dir) chptr->mode.mode |= MODE_TOPICLIMIT;  else chptr->mode.mode &= ~MODE_TOPICLIMIT;  break;
+            case 'i': if (dir) chptr->mode.mode |= MODE_INVITEONLY;   else chptr->mode.mode &= ~MODE_INVITEONLY;   break;
+            case 'n': if (dir) chptr->mode.mode |= MODE_NOPRIVMSGS;  else chptr->mode.mode &= ~MODE_NOPRIVMSGS;  break;
+            case 'r': if (dir) chptr->mode.mode |= MODE_REGISTERED;  else chptr->mode.mode &= ~MODE_REGISTERED;  break;
+            case 'R': if (dir) chptr->mode.mode |= MODE_REGONLY;     else chptr->mode.mode &= ~MODE_REGONLY;     break;
+            case 'c': if (dir) chptr->mode.mode |= MODE_NOCTRL;      else chptr->mode.mode &= ~MODE_NOCTRL;      break;
+            case 'O': if (dir) chptr->mode.mode |= MODE_OPERONLY;    else chptr->mode.mode &= ~MODE_OPERONLY;    break;
+            case 'M': if (dir) chptr->mode.mode |= MODE_MODREG;     else chptr->mode.mode &= ~MODE_MODREG;     break;
+            case 'S': if (dir) chptr->mode.mode |= MODE_SSLONLY;     else chptr->mode.mode &= ~MODE_SSLONLY;     break;
+            case 'A': if (dir) chptr->mode.mode |= MODE_AUDITORIUM;  else chptr->mode.mode &= ~MODE_AUDITORIUM;  break;
+            case 'P': if (dir) chptr->mode.mode |= MODE_PRIVACY;     else chptr->mode.mode &= ~MODE_PRIVACY;     break;
+
+            /* Parametric modes */
+            case 'l':
+                if (dir && param)
+                {
+                    chptr->mode.limit = atoi(param);
+                    param = strtoken(&para_save, NULL, " ");
+                }
+                else if (!dir)
+                    chptr->mode.limit = 0;
+                break;
+
+            case 'k':
+                if (param)
+                {
+                    if (dir)
+                        strncpyzt(chptr->mode.key, param, sizeof(chptr->mode.key));
+                    else
+                        chptr->mode.key[0] = '\0';
+                    param = strtoken(&para_save, NULL, " ");
+                }
+                break;
+
+            case 'j':
+                if (dir && param)
+                {
+                    char *colon = strchr(param, ':');
+                    if (colon)
+                    {
+                        chptr->mode.jr_num  = atoi(param);
+                        chptr->mode.jr_time = atoi(colon + 1);
+                        chptr->mode.mode |= MODE_JOINRATE;
+                    }
+                    param = strtoken(&para_save, NULL, " ");
+                }
+                else if (!dir)
+                {
+                    chptr->mode.jr_num = 0;
+                    chptr->mode.jr_time = 0;
+                    chptr->mode.mode &= ~MODE_JOINRATE;
+                }
+                break;
+
+            /* Status modes — apply to channel members.
+             * Must update chanMember flags (channel→user), not Link flags
+             * (user→channel). is_chan_op() checks chanMember.flags. */
+            case 'o':
+            case 'h':
+            case 'v':
+                if (param)
+                {
+                    target = find_client(param, NULL);
+                    if (target)
+                    {
+                        chanMember *cm;
+                        int flag = (*m == 'o') ? CHFL_CHANOP :
+                                   (*m == 'h') ? CHFL_HALFOP : CHFL_VOICE;
+                        for (cm = chptr->members; cm; cm = cm->next)
+                        {
+                            if (cm->cptr == target)
+                            {
+                                if (dir) cm->flags |= flag;
+                                else     cm->flags &= ~flag;
+                                break;
+                            }
+                        }
+                    }
+                    param = strtoken(&para_save, NULL, " ");
+                }
+                break;
+
+            /* Ban list (+b/-b) */
+            case 'b':
+                if (param)
+                {
+                    if (dir)
+                        add_banid(acptr ? acptr : &me, chptr, param);
+                    else
+                        del_banid(chptr, param);
+                    param = strtoken(&para_save, NULL, " ");
+                }
+                break;
+
+            /* Except/invex — consume param, skip application for now */
+            case 'e': case 'I':
+                if (param)
+                    param = strtoken(&para_save, NULL, " ");
+                break;
+        }
+    }
+
+    /* Notify local channel members */
     if (p->parabuf[0])
         sendto_channel_butserv(chptr, acptr ? acptr : &me,
             ":%s MODE %s %s %s",
@@ -966,9 +1220,14 @@ gossip_apply_event(const NetworkEvent *ev)
         }
         case EVT_SERVER_SPLIT:
         {
+            /* Sable-inspired: do NOT remove materialized users here.
+             * The server and its users persist — they may reconnect,
+             * or their users may still be reachable via other mesh paths.
+             * Users are only removed via explicit EVT_USER_QUIT events.
+             * Legacy TS5 servers are notified via the bridge. */
             const EvPayloadServerLink *p = &ev->payload.server_link;
             if (mycmp(p->name, me.name) != 0)
-                gossip_split_server(p->name);
+                bridge_split_server(p->name);
             break;
         }
         case EVT_USER_JOIN:
@@ -1049,9 +1308,137 @@ gossip_apply_event(const NetworkEvent *ev)
             }
             break;
         }
+        /* Network-level bans — apply locally using the same functions
+         * that the TS5 handlers use. */
+        case EVT_AKILL:
+        {
+            const EvPayloadAkill *p = &ev->payload.akill;
+            struct userBan *ban = make_hostbased_ban((char *)p->user, (char *)p->host);
+            if (ban && !find_userban_exact(ban, 0))
+            {
+                ban->flags |= (UBAN_NETWORK|UBAN_TEMPORARY);
+                ban->reason = (char *) MyMalloc(strlen(p->reason) + 1);
+                strcpy(ban->reason, p->reason);
+                ban->timeset = p->timeset;
+                ban->duration = p->length;
+                add_hostbased_userban(ban);
+                userban_sweep(ban);
+            }
+            else if (ban)
+                userban_free(ban);
+            break;
+        }
+        case EVT_RAKILL:
+        {
+            const EvPayloadRakill *p = &ev->payload.rakill;
+            struct userBan *ban = make_hostbased_ban((char *)p->user, (char *)p->host);
+            if (ban)
+            {
+                struct userBan *oban = find_userban_exact(ban, 0);
+                if (oban)
+                    remove_userban(oban);
+                userban_free(ban);
+            }
+            break;
+        }
+        case EVT_SQLINE:
+        {
+            const EvPayloadSqline *p = &ev->payload.sqline;
+            unsigned int flags = SBAN_NETWORK;
+            struct simBan *ban;
+            if (p->mask[0] == '#') flags |= SBAN_CHAN;
+            else flags |= SBAN_NICK;
+            ban = make_simpleban(flags, (char *)p->mask);
+            if (ban && !find_simban_exact(ban))
+            {
+                ban->reason = (char *) MyMalloc(strlen(p->reason) + 1);
+                strcpy(ban->reason, p->reason);
+                ban->timeset = NOW;
+                add_simban(ban);
+            }
+            else if (ban)
+                simban_free(ban);
+            break;
+        }
+        case EVT_UNSQLINE:
+        {
+            const EvPayloadUnsqline *p = &ev->payload.unsqline;
+            unsigned int flags = SBAN_NETWORK;
+            struct simBan *ban;
+            if (p->mask[0] == '#') flags |= SBAN_CHAN;
+            else flags |= SBAN_NICK;
+            ban = make_simpleban(flags, (char *)p->mask);
+            if (ban)
+            {
+                struct simBan *oban = find_simban_exact(ban);
+                if (oban)
+                    remove_simban(oban);
+                simban_free(ban);
+            }
+            break;
+        }
+        case EVT_SGLINE:
+        {
+            const EvPayloadSgline *p = &ev->payload.sgline;
+            struct simBan *ban = make_simpleban(SBAN_NETWORK|SBAN_GCOS,
+                                                (char *)p->mask);
+            if (ban && !find_simban_exact(ban))
+            {
+                ban->reason = (char *) MyMalloc(strlen(p->reason) + 1);
+                strcpy(ban->reason, p->reason);
+                ban->timeset = NOW;
+                add_simban(ban);
+            }
+            else if (ban)
+                simban_free(ban);
+            break;
+        }
+        case EVT_UNSGLINE:
+        {
+            const EvPayloadUnsgline *p = &ev->payload.unsgline;
+            struct simBan *ban = make_simpleban(SBAN_NETWORK|SBAN_GCOS,
+                                                (char *)p->mask);
+            if (ban)
+            {
+                struct simBan *oban = find_simban_exact(ban);
+                if (oban)
+                    remove_simban(oban);
+                simban_free(ban);
+            }
+            break;
+        }
         default:
             break;
     }
+}
+
+/* -------------------------------------------------------------------------
+ * Public helpers for emitting gossip events from core code
+ * ---------------------------------------------------------------------- */
+
+void
+gossip_emit_user_quit(const char *nick, const char *reason)
+{
+    EvPayloadUserQuit p;
+    NetworkEvent *ev;
+
+    memset(&p, 0, sizeof(p));
+    strncpy(p.nick, nick, NICKLEN);
+    if (reason)
+        strncpy(p.reason, reason, sizeof(p.reason) - 1);
+
+    ev = emit_event(EVT_USER_QUIT, &p, sizeof(p));
+    if (ev)
+        gossip_event(ev, NULL);
+}
+
+/* Generic helper: emit any event type and propagate to gossip peers. */
+void
+gossip_emit_event(int type, void *payload, size_t len)
+{
+    NetworkEvent *ev = emit_event(type, payload, len);
+    if (ev)
+        gossip_event(ev, NULL);
 }
 
 /* -------------------------------------------------------------------------

@@ -79,6 +79,14 @@ typedef enum NetEventType {
     EVT_PRIVMSG  = 25,   /* user-to-user PRIVMSG or NOTICE */
     EVT_CHANMSG  = 26,   /* channel PRIVMSG or NOTICE */
 
+    /* Network-level bans */
+    EVT_AKILL    = 30,   /* AKILL (network K-line) */
+    EVT_RAKILL   = 31,   /* RAKILL (remove AKILL) */
+    EVT_SQLINE   = 32,   /* SQLINE (nick/channel quarantine) */
+    EVT_UNSQLINE = 33,   /* UNSQLINE (remove SQLINE) */
+    EVT_SGLINE   = 34,   /* SGLINE (realname ban) */
+    EVT_UNSGLINE = 35,   /* UNSGLINE (remove SGLINE) */
+
 } NetEventType;
 
 /* -------------------------------------------------------------------------
@@ -91,6 +99,7 @@ typedef struct EvPayloadUserJoin {
     char host[HOSTLEN + 1];
     char realname[REALLEN + 1];
     char server[HOSTLEN + 1];
+    char ipstr[HOSTLEN + 1];       /* Client IP string for clone tracking */
     unsigned long umode;
     time_t ts;
 } EvPayloadUserJoin;
@@ -172,6 +181,40 @@ typedef struct EvPayloadChanmsg {
     int  is_notice;             /* 1 = NOTICE, 0 = PRIVMSG */
 } EvPayloadChanmsg;
 
+/* Network ban payloads */
+typedef struct EvPayloadAkill {
+    char host[HOSTLEN + 1];
+    char user[USERLEN + 1];
+    char setter[NICKLEN + 1];
+    char reason[256];
+    time_t length;
+    time_t timeset;
+} EvPayloadAkill;
+
+typedef struct EvPayloadRakill {
+    char host[HOSTLEN + 1];
+    char user[USERLEN + 1];
+} EvPayloadRakill;
+
+typedef struct EvPayloadSqline {
+    char mask[NICKLEN + CHANNELLEN + 1];
+    char reason[256];
+} EvPayloadSqline;
+
+typedef struct EvPayloadUnsqline {
+    char mask[NICKLEN + CHANNELLEN + 1];
+} EvPayloadUnsqline;
+
+typedef struct EvPayloadSgline {
+    char mask[256];
+    char reason[256];
+    int  bodylen;
+} EvPayloadSgline;
+
+typedef struct EvPayloadUnsgline {
+    char mask[256];
+} EvPayloadUnsgline;
+
 /* Session token length (hex chars, not counting NUL). */
 #define SESSION_KEY_LEN 32
 
@@ -215,6 +258,12 @@ typedef struct NetworkEvent {
         EvPayloadSessionDestroy session_destroy;
         EvPayloadPrivmsg        privmsg;
         EvPayloadChanmsg        chanmsg;
+        EvPayloadAkill          akill;
+        EvPayloadRakill         rakill;
+        EvPayloadSqline         sqline;
+        EvPayloadUnsqline       unsqline;
+        EvPayloadSgline         sgline;
+        EvPayloadUnsgline       unsgline;
     } payload;
     /* per-record version for services events (0 for non-versioned) */
     uint64_t record_version;

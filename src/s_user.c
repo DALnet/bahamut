@@ -32,6 +32,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include "h.h"
+#include "gossip.h"
 #ifdef FLUD
 #include "blalloc.h"
 #endif /* FLUD */
@@ -1969,6 +1970,13 @@ m_kill(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv
                            me.name, acptr->name, mypath, reason);
             acptr->flags |= FLAGS_KILLED;
         }
+
+        /* For gossip-materialized targets, emit EVT_USER_QUIT so all
+         * gossip peers learn about the kill. The normal SIGNOFF hook
+         * skips gossip-materialized users (loop prevention), so we
+         * emit the event directly here. */
+        if (IsGossipMaterialized(acptr))
+            gossip_emit_user_quit(acptr->name, reason ? reason : "Killed");
         /*
          * Tell the victim she/he has been zapped, but *only* if the
          * victim is on current server--no sense in sending the

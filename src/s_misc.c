@@ -746,13 +746,19 @@ exit_one_client(aClient *cptr, aClient *sptr, aClient *from, char *comment)
          */
         ;                               /* Nothing */
     else if (sptr->name[0])
-    {   
+    {
+        /* Fire SIGNOFF hook for remote users so the gossip eventlog
+         * emits EVT_USER_QUIT (reverse bridge: TS5 → gossip).
+         * MyConnect users already fire this hook in exit_client. */
+        if (!MyConnect(sptr))
+            call_hooks(CHOOK_SIGNOFF, sptr);
+
         /* ...just clean all others with QUIT... */
         /*
          * If this exit is generated from "m_kill", then there is no
          * sense in sending the QUIT--KILL's have been sent instead.
          */
-        if ((sptr->flags & FLAGS_KILLED) == 0) 
+        if ((sptr->flags & FLAGS_KILLED) == 0)
         {
             sendto_serv_butone(cptr, ":%s QUIT :%s",
                                sptr->name, comment);
@@ -773,7 +779,8 @@ exit_one_client(aClient *cptr, aClient *sptr, aClient *from, char *comment)
 	    clones_remove(sptr);
 
 #ifdef RWHO_PROBABILITY
-            probability_remove(sptr);
+	    if (MyConnect(sptr))
+		probability_remove(sptr);
 #endif
             
             /* Clean up invitefield */

@@ -187,12 +187,13 @@ def generate_config(
         gossip_block = "gossip {\n    fanout      3;\n    sync_window 30;\n};"
         gopeer_parts = []
         for gp in gopeer_configs:
+            tls_line = "\n    tls;" if gp.get("tls") else ""
             gopeer_parts.append(
                 f"gopeer {{\n"
                 f"    host      {gp['host']};\n"
                 f"    port      {gp['port']};\n"
                 f"    name      {gp['name']};\n"
-                f"    server_id {gp['server_id']};\n"
+                f"    server_id {gp['server_id']};{tls_line}\n"
                 f"}};"
             )
         gopeer_blocks_str = "\n\n".join(gopeer_parts)

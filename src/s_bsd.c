@@ -864,6 +864,43 @@ int completed_connection(aClient * cptr)
 {
     aConnect *aconn;
 
+    /* Check if this is an outbound gossip peer connection FIRST,
+     * before SSL verification (which fails if handshake hasn't started). */
+    if (gopeer_find_conf(cptr->name))
+    {
+        /* For TLS gopeer connections, initiate the SSL handshake now
+         * that the TCP connect has completed. */
+        if (IsSSL(cptr) && cptr->ssl && !SSL_is_init_finished(cptr->ssl))
+        {
+            if (!safe_ssl_connect(cptr))
+            {
+                sendto_realops("Gossip: SSL_connect failed for %s",
+                               cptr->name);
+                return -1;
+            }
+            /* Handshake in progress — readwrite_client will continue
+             * it via the FLAGS_SSL_OUTBOUND path at line ~1818.
+             * Keep STAT_CONNECTING so completed_connection is called
+             * again once SSL finishes. */
+            set_fd_flags(cptr->fd, FDF_WANTREAD|FDF_WANTWRITE);
+            return 0;
+        }
+
+        /* TCP (and TLS if applicable) are ready — send GHELLO.
+         * Set status to STAT_UNKNOWN so IsConnecting() is false and
+         * the HANDLER_UNREG dispatch slot processes the reply GHELLO. */
+        if(!(cptr->flags & FLAGS_BLOCKED))
+            unset_fd_flags(cptr->fd, FDF_WANTWRITE);
+        unset_fd_flags(cptr->fd, FDF_WANTREAD);
+        SetUnknown(cptr);
+        set_fd_flags(cptr->fd, FDF_WANTREAD);
+        sendto_one(cptr, "GHELLO %s %u 1",
+                   me.name, (unsigned)g_event_log.my_id);
+        sendto_realops("Gossip: sent GHELLO to %s (outbound%s)",
+                       cptr->name, IsSSL(cptr) ? " TLS" : "");
+        return 0;
+    }
+
     /* make sure SSL verification was successful,
     otherwise we drop the client - skill */
     if (IsSSL(cptr) && cptr->ssl)
@@ -886,21 +923,6 @@ int completed_connection(aClient * cptr)
     if(!(cptr->flags & FLAGS_BLOCKED))
         unset_fd_flags(cptr->fd, FDF_WANTWRITE);
     unset_fd_flags(cptr->fd, FDF_WANTREAD);
-
-    /* Check if this is an outbound gossip peer connection */
-    if (gopeer_find_conf(cptr->name))
-    {
-        /* Outbound gopeer — send GHELLO to initiate gossip handshake.
-         * Set status to STAT_UNKNOWN so IsConnecting() is false and
-         * the HANDLER_UNREG dispatch slot processes the reply GHELLO. */
-        SetUnknown(cptr);
-        set_fd_flags(cptr->fd, FDF_WANTREAD);
-        sendto_one(cptr, "GHELLO %s %u 1",
-                   me.name, (unsigned)g_event_log.my_id);
-        sendto_realops("Gossip: sent GHELLO to %s (outbound)",
-                       cptr->name);
-        return 0;
-    }
 
     SetHandshake(cptr);
 
@@ -1817,15 +1839,35 @@ int readwrite_client(aClient *cptr, int isread, int iswrite)
 
     if(cptr->ssl && IsSSL(cptr) && !SSL_is_init_finished(cptr->ssl))
     {
-        if(IsDead(cptr) || !safe_ssl_accept(cptr, cptr->fd))
+        int ok;
+        if (cptr->flags & FLAGS_SSL_OUTBOUND)
+            ok = safe_ssl_connect(cptr);
+        else
+            ok = safe_ssl_accept(cptr, cptr->fd);
+        if(IsDead(cptr) || !ok)
         {
             if(IsClient(cptr))
                 return exit_client(cptr, cptr, &me, iswrite?"Write Error: SSL Bug #7845":"Read Error: SSL Bug #7845");
             close_connection(cptr);
+            return 1;
         }
         /* Extract client cert fingerprint once handshake completes */
         if(cptr->ssl && SSL_is_init_finished(cptr->ssl) && !cptr->certfp[0])
             ssl_extract_certfp(cptr);
+        /* For outbound gopeer TLS: once the handshake finishes, send
+         * GHELLO directly. We can't fall through to completed_connection
+         * because it may be a read event, not write. */
+        if (cptr->ssl && (cptr->flags & FLAGS_SSL_OUTBOUND)
+            && SSL_is_init_finished(cptr->ssl)
+            && IsConnecting(cptr) && gopeer_find_conf(cptr->name))
+        {
+            SetUnknown(cptr);
+            set_fd_flags(cptr->fd, FDF_WANTREAD);
+            sendto_one(cptr, "GHELLO %s %u 1",
+                       me.name, (unsigned)g_event_log.my_id);
+            sendto_realops("Gossip: sent GHELLO to %s (outbound TLS)",
+                           cptr->name);
+        }
         return 1;
     }
 
@@ -2025,6 +2067,7 @@ int connect_server(aConnect *aconn, aClient * by, struct hostent *hp)
         }
 
         SetSSL(cptr);
+        cptr->flags |= FLAGS_SSL_OUTBOUND;
         SSL_set_fd(cptr->ssl, cptr->fd);
 
         SSL_set_ex_data(cptr->ssl, mydata_index, aconn);

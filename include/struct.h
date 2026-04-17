@@ -251,6 +251,7 @@ typedef struct SServicesTag ServicesTag;
 #define FLAGS_SSL          0x10000000 /* client is using SSL */
 #define FLAGS_SPOOFED      0x20000000 /* User's host was spoofed (via SVSHOST) */
 #define FLAGS_GOSSIP_MAT   0x40000000 /* Materialized from a gossip event */
+#define FLAGS_SSL_OUTBOUND 0x80000000 /* Outbound SSL (use ssl_connect, not ssl_accept) */
 
 #define IsGossipMaterialized(x)  ((x)->flags & FLAGS_GOSSIP_MAT)
 #define SetGossipMaterialized(x) ((x)->flags |= FLAGS_GOSSIP_MAT)

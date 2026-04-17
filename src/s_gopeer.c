@@ -143,20 +143,23 @@ gopeer_handle_disconnect(aClient *cptr)
         emit_event(EVT_SERVER_SPLIT, &pl, sizeof(pl));
     }
 
-    /* Phase S3: notify legacy servers that this gossip peer is gone */
+    /* Phase S3: notify legacy TS5 servers that this gossip peer is gone.
+     * TS5 servers need SQUIT + QUIT storms — they don't understand gossip.
+     * This sends SQUIT to all connected TS5 links. */
     bridge_split_server(gp->name);
 
-    /* Remove from gopeer list */
+    /* Remove from gopeer list and free GossipPeer struct */
     remove_from_list(&gopeer_list, cptr, NULL);
-
-    /* Free GossipPeer */
     MyFree(gp);
     cptr->serv = NULL;
 
-    /* NOTE: We intentionally do NOT call exit_one_server() here.
-     * Users reachable through gossip peers are NOT in the spanning tree.
-     * Their presence is maintained by the event log, not link topology.
-     * No cascading QUITs — that is the whole point. */
+    /* Sable-inspired: do NOT call gossip_split_server() here.
+     * Materialized users and the server entry persist — they represent
+     * state that may still be reachable via other mesh paths or will
+     * resync when the peer reconnects.  Users are only removed when
+     * an explicit EVT_USER_QUIT event arrives through the gossip mesh.
+     * This eliminates netsplit QUIT storms on the gossip side while
+     * legacy TS5 servers still get proper SQUIT via the bridge above. */
 }
 
 /* Sequence counter for synthetic burst events — each needs a unique seq
@@ -226,6 +229,8 @@ gopeer_burst_full_state(aClient *peer)
                 strncpy(pl.server, acptr->user->server, HOSTLEN);
             else
                 strncpy(pl.server, me.name, HOSTLEN);
+            if (acptr->hostip[0])
+                strncpy(pl.ipstr, acptr->hostip, HOSTLEN);
             pl.umode = acptr->umode;
             pl.ts = acptr->tsinfo;
             burst_send_event(peer, EVT_USER_JOIN, &pl, sizeof(pl));
@@ -262,7 +267,64 @@ gopeer_burst_full_state(aClient *peer)
         }
     }
 
-    /* 4. Send channel topics */
+    /* 4. Send channel modes */
+    for (chptr = channel; chptr; chptr = chptr->nextch)
+    {
+        char mbuf[64], pbuf[256];
+        char *mp = mbuf, *pp = pbuf;
+
+        *pp = '\0';
+        *mp++ = '+';
+        if (chptr->mode.mode & MODE_SECRET)      *mp++ = 's';
+        if (chptr->mode.mode & MODE_PRIVATE)     *mp++ = 'p';
+        if (chptr->mode.mode & MODE_MODERATED)   *mp++ = 'm';
+        if (chptr->mode.mode & MODE_TOPICLIMIT)  *mp++ = 't';
+        if (chptr->mode.mode & MODE_INVITEONLY)   *mp++ = 'i';
+        if (chptr->mode.mode & MODE_NOPRIVMSGS)  *mp++ = 'n';
+        if (chptr->mode.mode & MODE_REGISTERED)  *mp++ = 'r';
+        if (chptr->mode.mode & MODE_REGONLY)     *mp++ = 'R';
+        if (chptr->mode.mode & MODE_NOCTRL)      *mp++ = 'c';
+        if (chptr->mode.mode & MODE_OPERONLY)    *mp++ = 'O';
+        if (chptr->mode.mode & MODE_MODREG)     *mp++ = 'M';
+        if (chptr->mode.mode & MODE_SSLONLY)     *mp++ = 'S';
+        if (chptr->mode.mode & MODE_AUDITORIUM)  *mp++ = 'A';
+        if (chptr->mode.mode & MODE_PRIVACY)     *mp++ = 'P';
+        if (chptr->mode.limit)
+        {
+            *mp++ = 'l';
+            ircsprintf(pp, "%d", chptr->mode.limit);
+            pp += strlen(pp);
+        }
+        if (*chptr->mode.key)
+        {
+            *mp++ = 'k';
+            if (pp != pbuf) *pp++ = ' ';
+            strncpy(pp, chptr->mode.key, sizeof(pbuf) - (pp - pbuf) - 1);
+            pp += strlen(pp);
+        }
+        if (chptr->mode.mode & MODE_JOINRATE)
+        {
+            *mp++ = 'j';
+            if (pp != pbuf) *pp++ = ' ';
+            ircsprintf(pp, "%d:%d", chptr->mode.jr_num, chptr->mode.jr_time);
+            pp += strlen(pp);
+        }
+        *mp = '\0';
+
+        /* Only emit if there are modes beyond the bare '+' */
+        if (mbuf[1])
+        {
+            EvPayloadChanMode pl;
+            memset(&pl, 0, sizeof(pl));
+            strncpy(pl.nick, me.name, NICKLEN);
+            strncpy(pl.channel, chptr->chname, CHANNELLEN);
+            strncpy(pl.modebuf, mbuf, sizeof(pl.modebuf) - 1);
+            strncpy(pl.parabuf, pbuf, sizeof(pl.parabuf) - 1);
+            burst_send_event(peer, EVT_CHAN_MODE, &pl, sizeof(pl));
+        }
+    }
+
+    /* 5. Send channel topics */
     for (chptr = channel; chptr; chptr = chptr->nextch)
     {
         if (chptr->topic[0])
@@ -440,7 +502,13 @@ gopeer_try_connect(void)
             if (cptr->ssl)
             {
                 SSL_set_fd(cptr->ssl, fd);
+                /* Don't set SSL_set_ex_data — gopeer has no aConnect.
+                 * ssl_verify_callback handles NULL ex_data gracefully
+                 * (accepts self-signed certs unconditionally). */
                 SetSSL(cptr);
+                cptr->flags |= FLAGS_SSL_OUTBOUND;
+                /* TLS handshake is initiated in completed_connection()
+                 * after the TCP connect completes (EINPROGRESS → ready). */
             }
         }
 

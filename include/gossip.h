@@ -49,6 +49,25 @@ int gossip_parse_event(NetworkEvent *ev, NetEventType type, const char *payload,
 void gossip_apply_event(const NetworkEvent *ev);
 
 /*
+ * gossip_split_server — remove all materialized users/channels for a server.
+ * Called from gopeer_handle_disconnect() when a gossip peer disconnects.
+ */
+void gossip_split_server(const char *name);
+
+/*
+ * gossip_emit_user_quit — emit EVT_USER_QUIT for a user and propagate to peers.
+ * Used when a gossip-materialized user is killed (m_kill), since the normal
+ * SIGNOFF hook skips gossip-materialized users to prevent loops.
+ */
+void gossip_emit_user_quit(const char *nick, const char *reason);
+
+/*
+ * gossip_emit_event — emit any event type and propagate to gossip peers.
+ * Generic helper for code that needs to emit events directly (e.g., AKILL).
+ */
+void gossip_emit_event(int type, void *payload, size_t len);
+
+/*
  * gossip_init — initialise gossip subsystem.
  * Called from ircd.c after eventlog_init().
  */

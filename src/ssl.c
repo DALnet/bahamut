@@ -482,6 +482,17 @@ int ssl_verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
 	err = X509_STORE_CTX_get_error(ctx);
 	depth = X509_STORE_CTX_get_error_depth(ctx);
 
+	/* Gopeer connections don't set ex_data (no aConnect struct).
+	 * Accept self-signed certs unconditionally for them. */
+	if (!conn)
+	{
+		if (err == X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN ||
+		    err == X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT ||
+		    err == X509_V_OK)
+			return 1;
+		return preverify_ok;
+	}
+
 	if (!preverify_ok && (err != X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN
 	    && err != X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT))
 	{

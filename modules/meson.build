@@ -10,7 +10,7 @@ module_cargs = ircd_cargs  # inherit compiler flags from src/
 # ---------------------------------------------------------------------------
 # Core modules — loaded automatically from <dpath>/modules/core/ at startup
 # ---------------------------------------------------------------------------
-foreach m : ['m_privmsg', 'm_away', 'm_wallops', 'm_who', 'm_gossip', 'm_legacy_bridge']
+foreach m : ['m_privmsg', 'm_away', 'm_wallops', 'm_who', 'm_gossip', 'm_gossip_eventlog', 'm_legacy_bridge']
   shared_library(m, 'core' / m + '.c',
     include_directories: inc,
     c_args: module_cargs,
@@ -28,7 +28,6 @@ foreach m : ['m_webirc', 'm_rwho', 'm_watch', 'm_silence', 'm_dcc',
              'm_msgid', 'm_batch', 'm_labeled_response',
              'm_userhost_in_names', 'm_invite_notify',
              'm_setname', 'm_tagmsg',
-             'm_gossip_eventlog',
              'm_session',
              'm_account_notify', 'm_account_tag', 'm_extended_join',
              'm_starttls', 'm_tls_tag',
