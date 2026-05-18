@@ -2006,71 +2006,118 @@ merge_connects()
     return;
 }
 
+static int
+allow_matches(aAllow *old_allow, aAllow *new_allow)
+{
+    if (old_allow->class != new_allow->class)
+        return 0;
+    if (old_allow->port != new_allow->port)
+        return 0;
+    if (old_allow->flags != new_allow->flags)
+        return 0;
+    if (mycmp(old_allow->ipmask, new_allow->ipmask))
+        return 0;
+    if (mycmp(old_allow->hostmask, new_allow->hostmask))
+        return 0;
+    if (old_allow->passwd && new_allow->passwd
+        && !mycmp(old_allow->passwd, new_allow->passwd))
+        return 1;
+    if (old_allow->passwd == new_allow->passwd)
+        return 1;
+    return 0;
+}
+
 static void
 merge_allows()
 {
-    aAllow *allow, *ptr = NULL, *ptrn;
+    aAllow *allow, *old_allow, *ptrn;
+    aAllow **old_link;
+    aAllow *new_ordered = NULL, *ordered_allows = NULL, *expired_allows = NULL;
+    aAllow **ordered_tail = &ordered_allows;
+    aAllow **expired_tail = &expired_allows;
 
     for(allow = allows; allow; allow = allow->next)
         allow->legal = -1;
-    allow = new_allows;
-    while(allow)
+
+    while(new_allows)
     {
+        allow = new_allows;
+        new_allows = allow->next;
+        allow->next = new_ordered;
+        new_ordered = allow;
+    }
+
+    while(new_ordered)
+    {
+        allow = new_ordered;
+        new_ordered = allow->next;
+        allow->next = NULL;
         allow->class = find_class(allow->class_name);
         allow->class->refs++;
-        /* we dont really have to merge anything here.. */
-        /* ..but we should avoid duplicates anyway */
-        for (ptr = allows; ptr; ptr = ptr->next)
+
+        for (old_allow = ordered_allows; old_allow;
+             old_allow = old_allow->next)
         {
-            if (ptr->class != allow->class)
-                continue;
-            if (ptr->port != allow->port)
-                continue;
-            if (ptr->flags != allow->flags)
-                continue;
-            if (mycmp(ptr->ipmask, allow->ipmask))
-                continue;
-            if (mycmp(ptr->hostmask, allow->hostmask))
-                continue;
-            /* inverted logic below */
-            if (ptr->passwd && allow->passwd
-                && !mycmp(ptr->passwd, allow->passwd))
-                break;
-            if (ptr->passwd == allow->passwd)
+            if (allow_matches(old_allow, allow))
                 break;
         }
-        /* if duplicate, mark for deletion but add anyway */
-        if (ptr)
+
+        if (old_allow)
         {
-            ptr->legal = 1;
             allow->legal = -1;
+            allow->class->refs--;
+            expire_class(allow->class);
+            free_allow(allow);
+            continue;
         }
-        ptr = allow->next;
-        allow->next = allows;
-        allows = allow;
-        allow = ptr;
+
+        for (old_link = &allows; (old_allow = *old_link);
+             old_link = &old_allow->next)
+        {
+            if (old_allow->legal == -1 && allow_matches(old_allow, allow))
+                break;
+        }
+
+        if (old_allow)
+        {
+            *old_link = old_allow->next;
+            old_allow->next = NULL;
+            old_allow->legal = 1;
+            allow->legal = -1;
+            allow->class->refs--;
+            expire_class(allow->class);
+            free_allow(allow);
+            allow = old_allow;
+        }
+        else
+            allow->legal = 1;
+
+        *ordered_tail = allow;
+        ordered_tail = &allow->next;
     }
-    new_allows = NULL;
-    ptr = NULL;
+
+    *ordered_tail = NULL;
     allow = allows;
     while(allow)
     {
         ptrn = allow->next;
         if((allow->legal == -1) && (allow->clients <= 0))
         {
-            if(ptr)
-                ptr->next = allow->next;
-            else
-                allows = allow->next;
             allow->class->refs--;
             expire_class(allow->class);
             free_allow(allow);
         }
-        else
-            ptr = allow;
+        else if(allow->legal == -1)
+        {
+            allow->next = NULL;
+            *expired_tail = allow;
+            expired_tail = &allow->next;
+        }
         allow = ptrn;
     }
-    return;     /* this one is easy */
+    *ordered_tail = expired_allows;
+    allows = ordered_allows;
+    return;
 }
 
 static void
