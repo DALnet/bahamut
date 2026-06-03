@@ -1934,19 +1934,57 @@ merge_me()
 static void
 merge_connects()
 {
-    aConnect    *aconn, *old_aconn, *ptr = NULL, *ptrn;
+    aConnect    *aconn, *old_aconn, *ptrn;
+    aConnect   **old_link;
+    aConnect    *new_ordered = NULL, *ordered_connects = NULL;
+    aConnect    *expired_connects = NULL;
+    aConnect   **ordered_tail = &ordered_connects;
+    aConnect   **expired_tail = &expired_connects;
 
     /* first merge the list, then prune the list */
 
     /* set old as deletable */
     for(old_aconn = connects; old_aconn; old_aconn = old_aconn->next)
         old_aconn->legal = -1;
-    /* update or add new */
-    for (aconn = new_connects; aconn; aconn = ptrn)
+
+    while(new_connects)
+    {
+        aconn = new_connects;
+        new_connects = aconn->next;
+        aconn->next = new_ordered;
+        new_ordered = aconn;
+    }
+
+    /* update or add new in the order they appear in the config file */
+    for (aconn = new_ordered; aconn; aconn = ptrn)
     {
         ptrn = aconn->next;
-        if ((old_aconn = find_aConnect(aconn->name)))
+        aconn->next = NULL;
+
+        for (old_aconn = ordered_connects; old_aconn;
+             old_aconn = old_aconn->next)
         {
+            if(!match(aconn->name, old_aconn->name))
+                break;
+        }
+
+        if (old_aconn)
+        {
+            free_connect(aconn);
+            continue;
+        }
+
+        for (old_link = &connects; (old_aconn = *old_link);
+             old_link = &old_aconn->next)
+        {
+            if(!match(aconn->name, old_aconn->name))
+                break;
+        }
+
+        if (old_aconn)
+        {
+            *old_link = old_aconn->next;
+            old_aconn->next = NULL;
             MyFree(old_aconn->host);
             MyFree(old_aconn->apasswd);
             MyFree(old_aconn->cpasswd);
@@ -1970,6 +2008,7 @@ merge_connects()
 
             MyFree(aconn->name);
             MyFree(aconn);
+            aconn = old_aconn;
         }
         else
         {
@@ -1977,13 +2016,13 @@ merge_connects()
             aconn->class->refs++;
             aconn->legal = 1;
             lookup_confhost(aconn);
-            aconn->next = connects;
-            connects = aconn;
         }
-    }
-    new_connects = NULL;
 
-    ptr = NULL;
+        *ordered_tail = aconn;
+        ordered_tail = &aconn->next;
+    }
+
+    *ordered_tail = NULL;
     /* and prune the active list */
     aconn = connects;
     while(aconn)
@@ -1991,18 +2030,20 @@ merge_connects()
         ptrn = aconn->next;
         if((aconn->legal == -1) && !aconn->acpt)
         {
-            if(ptr)
-                ptr->next = aconn->next;
-            else
-                connects = aconn->next;
             aconn->class->refs--;
             expire_class(aconn->class);
             free_connect(aconn);
         }
-        else
-            ptr = aconn;
+        else if(aconn->legal == -1)
+        {
+            aconn->next = NULL;
+            *expired_tail = aconn;
+            expired_tail = &aconn->next;
+        }
         aconn = ptrn;
     }
+    *ordered_tail = expired_connects;
+    connects = ordered_connects;
     return;
 }
 
