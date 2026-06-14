@@ -117,8 +117,10 @@ void build_rplcache(void)
 #ifdef INVITE_LISTS
     s += ircsprintf(s, ",I:%i", MAXINVITELIST);
 #endif
-    s += ircsprintf(s, " TARGMAX=DCCALLOW:,JOIN:,KICK:4,KILL:20,NOTICE:%i,"
-                    "PART:,PRIVMSG:%i,WHOIS:,WHOWAS:", MAXRECIPIENTS,
+    s += ircsprintf(s, " MONITOR=128"
+                    " CHATHISTORY=50 MSGREFTYPES=timestamp,msgid"
+                    " TARGMAX=DCCALLOW:,JOIN:,KICK:4,KILL:20,NOTICE:%i,"
+                    "PART:,PRIVMSG:%i,WHOIS:,WHOWAS: WHOX", MAXRECIPIENTS,
                     MAXRECIPIENTS);
 
     ircsprintf(rplisupport2, rpl_str(RPL_ISUPPORT), me.name, "%s", scratchbuf);

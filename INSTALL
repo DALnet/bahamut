@@ -1,46 +1,99 @@
-HOW TO BUILD:
-------------- 
-1.  Run the configure script.  It will setup include/setup.h and the
-    Makefiles to match your system:
-	./configure
+BAHAMUT 3.0 — INSTALLATION GUIDE
+=================================
 
-    Type ./configure --help to see different options.  Most people will not
-    need to alter these.
+DEPENDENCIES
+------------
+Bahamut requires a C11 compiler, Meson, Ninja, OpenSSL, and zlib.
 
-2.  [DISCOURAGED] Edit the the "include/config.h" file.  This allows you to 
-    change various options of how the ircd will operate. Usually the defaults
-    are OK.
+Debian / Ubuntu:
+    sudo apt-get install build-essential meson ninja-build pkg-config \
+        libssl-dev zlib1g-dev
 
-3.  "make" should build ircd.
+Fedora / RHEL:
+    sudo dnf install gcc meson ninja-build pkg-config openssl-devel zlib-devel
 
-4.  "make install" will install the ircd, config converter, and documents
-    to the directory set by ./configure
+FreeBSD:
+    pkg install meson ninja pkgconf openssl
 
-5.  Edit template.conf in your install directory, and move it to "ircd.conf".
+macOS (Homebrew):
+    brew install meson ninja pkg-config openssl
 
-6.  Run the binary!  ircd will look in the directory you are executing from
-    for an ircd.conf first, then it will look to the directory local to itself.
-    You may override these options by specifying a config file using:
-    ./ircd -f path/to/ircd.conf
+Python 3 + pytest are needed only for the integration test suite:
+    pip install pytest
 
 
-REQUIRED PACKAGES:
-------------------
-If ./configure script fails, make sure you have the required package install.
+BUILDING
+--------
+1.  Configure and build:
 
-For CentOS:
-1.  Run the following command to install the development tools:
-	sudo yum groupinstall "Development Tools"
+        meson setup build
+        ninja -C build
 
-2.  Run the following command to install the required packages:
-	sudo yum install zlib-devel openssl-devel
+    The compiled binary is at build/src/ircd.
 
-For Ubuntu:
-1.  Run the following command to update your package list:
-	sudo apt-get update
+2.  (Optional) Set build options:
 
-2.  Run the following command to install the required packages:
-	sudo apt-get install build-essential zlib1g-dev libssl-dev
+        meson setup build -Dsocketengine=epoll -Dmaxconnections=65536
+        ninja -C build
+
+    Available options:
+        socketengine    auto, epoll, kqueue, poll, select, devpoll
+        maxconnections  Maximum simultaneous connections (default: 32768)
+        hookmodules     Enable loadable modules (default: true)
+
+3.  Install to a prefix:
+
+        meson setup build --prefix=/usr/local/ircd
+        ninja -C build
+        ninja -C build install
+
+
+CONFIGURATION
+-------------
+1.  Copy the template config:
+
+        cp doc/template.conf /usr/local/ircd/ircd.conf
+
+2.  Edit ircd.conf — at minimum set the server name, admin info, and ports.
+    See doc/reference.conf for detailed documentation of every config block.
+
+3.  Generate a TLS certificate (required for SSL ports and STARTTLS):
+
+        openssl req -x509 -newkey rsa:2048 -keyout ircd.key \
+            -out ircd.crt -days 365 -nodes -subj "/CN=irc.example.com"
+
+    Place the files in the server's working directory (or use absolute paths
+    in the ssl {} config block).  For production, use a certificate from
+    Let's Encrypt or another CA.
+
+
+RUNNING
+-------
+    /usr/local/ircd/ircd
+
+    # Or with an explicit config:
+    /usr/local/ircd/ircd -f /path/to/ircd.conf
+
+    # Run in the foreground (useful for debugging):
+    /usr/local/ircd/ircd -t
+
+
+TESTING
+-------
+    # Run the full integration test suite (51 tests)
+    python3 -m pytest tests/ -v
+
+    # Run a specific suite
+    python3 -m pytest tests/suites/test_registration.py -v
+
+
+UPGRADING FROM BAHAMUT 2.x
+---------------------------
+See doc/MIGRATION.md for a comprehensive migration guide covering:
+  - Build system (autotools -> Meson)
+  - Configuration changes (new blocks, removed options)
+  - Server linking (TS5 connect{} -> gossip gopeer{})
+  - TLS and IRCv3 features
 
 
 Best of luck!

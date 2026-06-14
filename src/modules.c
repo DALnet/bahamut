@@ -18,7 +18,7 @@ extern Conf_Modules *modules;
 
 #ifndef USE_HOOKMODULES
 int 
-m_module(aClient *cptr, aClient *sptr, int parc, char *parv[])
+m_module(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     if(MyClient(sptr) && !IsAnOper(sptr))
     {
@@ -71,6 +71,12 @@ init_modules()
 #else
 
 #include <dlfcn.h>
+#include <dirent.h>
+#include <errno.h>
+#include <string.h>
+#include "mapi.h"
+#include "cmds.h"
+#include "cap.h"
 
 /* XXX hack.  check on RTLD_NOW later. */
 #ifndef RTLD_NOW
@@ -78,16 +84,23 @@ init_modules()
 #endif
 
 DLink *module_list = NULL;
+void *module_reload_state = NULL;
 
-typedef struct loaded_module 
+typedef struct loaded_module
 {
     char *name;
 
     char *version;
     char *description;
+    char *mod_path;    /* full filesystem path to the .so file */
 
     void *handle;
 
+    /* MAPI v1 fields (is_mapi == 1) */
+    int                  is_mapi;   /* 1 if this is a MAPI v1 module     */
+    struct mapi_module  *mheader;   /* points into the loaded .so memory  */
+
+    /* Old-style module symbols (is_mapi == 0) */
     void (*module_check) (int *);
     int  (*module_init) (void *);
     void (*module_shutdown) (void);
@@ -102,6 +115,7 @@ void *bircmodule_malloc(int);
 void  bircmodule_free(void *);
 void  drop_all_hooks(aModule *owner);
 void  list_hooks(aClient *sptr);
+void *bircmodule_add_hook(enum c_hooktype, void *, void *);
 
 aModule *
 find_module(char *name) 
@@ -167,7 +181,7 @@ modsym_load(aClient *sptr, char *modname, char *symbol, void *modulehandle,
     return 1;
 }
 
-void 
+void
 list_modules(aClient *sptr)
 {
     DLink *lp;
@@ -175,145 +189,340 @@ list_modules(aClient *sptr)
     for(lp = module_list; lp; lp = lp->next)
     {
         aModule *mod = (aModule *) lp->value.cp;
-        sendto_one(sptr, ":%s NOTICE %s :Module: %s    Version: %s",
-                   me.name, sptr->name, mod->name, mod->version);
+        const char *flags = "";
 
-        sendto_one(sptr, ":%s NOTICE %s :  - %s", me.name, sptr->name, 
+        if (mod->is_mapi && (mod->mheader->mod_flags & MAPI_CORE))
+            flags = "  [core]";
+
+        sendto_one(sptr, ":%s NOTICE %s :Module: %-20s ver %-8s%s",
+                   me.name, sptr->name, mod->name, mod->version, flags);
+
+        sendto_one(sptr, ":%s NOTICE %s :  - %s", me.name, sptr->name,
                    mod->description);
     }
 }
 
-void 
+void
 destroy_module(aModule *themod)
 {
-    (*themod->module_shutdown)();
+    if (themod->is_mapi)
+    {
+        /* Call mapi_unregister callback before unregistering commands */
+        if (themod->mheader->mapi_unregister)
+            themod->mheader->mapi_unregister();
+
+        /* Unregister IRCv3 capabilities before closing the .so */
+        if (themod->mheader->caps)
+        {
+            const struct mapi_cap_av1 *cap;
+            for (cap = themod->mheader->caps; cap->name; cap++)
+                cap_del(cap->name);
+        }
+
+        /* Unregister all MAPI-registered commands before closing the .so */
+        if (themod->mheader->cmds)
+        {
+            const struct mapi_cmd_av2 *c;
+            for (c = themod->mheader->cmds; c->cmd; c++)
+                cmd_del(c->cmd);
+        }
+    }
+    else
+    {
+        (*themod->module_shutdown)();
+    }
+
     dlclose(themod->handle);
+    bircmodule_free(themod->mod_path);
     bircmodule_free(themod->name);
     bircmodule_free(themod->version);
-    bircmodule_free(themod->description);   
+    bircmodule_free(themod->description);
     remove_from_list(&module_list, themod, NULL);
     bircmodule_free(themod);
 }
 
-int 
+int
 load_module(aClient *sptr, char *modname)
 {
     aModule tmpmod, *themod;
-    char mnamebuf[PATH_MAX], *ver, *desc;
+    char mnamebuf[PATH_MAX];
+    char regname[256];   /* registered module name (basename, no .so ext) */
+    struct mapi_module *mheader;
+    char *ver, *desc;
     int acsz = -1, ret;
+    const char *base;
+    char *dot;
 
-    if((themod = find_module(modname)))
+    /*
+     * Determine the full library path (mnamebuf) and the short registered
+     * name (regname) used for find_module() and module_list storage.
+     *
+     * If modname begins with '/' it is already a full path (e.g. when called
+     * by load_module_dir).  Otherwise construct the path from the module
+     * search directory.
+     */
+    if (modname[0] == '/')
     {
-        if(sptr)
+        /* Full path supplied — extract basename without .so as regname */
+        strncpy(mnamebuf, modname, sizeof(mnamebuf) - 1);
+        mnamebuf[sizeof(mnamebuf) - 1] = '\0';
+
+        base = strrchr(modname, '/');
+        base = base ? base + 1 : modname;
+        strncpy(regname, base, sizeof(regname) - 1);
+        regname[sizeof(regname) - 1] = '\0';
+        dot = strrchr(regname, '.');
+        if (dot)
+            *dot = '\0';
+    }
+    else
+    {
+        strncpy(regname, modname, sizeof(regname) - 1);
+        regname[sizeof(regname) - 1] = '\0';
+
+        if (modules && modules->module_path)
+            ircsnprintf(mnamebuf, sizeof(mnamebuf), "%s/%s.so",
+                        modules->module_path, modname);
+        else
+            ircsnprintf(mnamebuf, sizeof(mnamebuf), "%s/modules/%s.so",
+                        dpath, modname);
+    }
+
+    if ((themod = find_module(regname)))
+    {
+        if (sptr)
             sendto_one(sptr, ":%s NOTICE %s :Module %s is already loaded"
-                       " [version: %s]", me.name, sptr->name, modname, 
+                       " [version: %s]", me.name, sptr->name, regname,
                        themod->version);
         else
             fprintf(stderr, " - Module %s is already loaded [version: %s]\n",
-                    modname, themod->version);
+                    regname, themod->version);
         return 0;
     }
 
-    if(modules && modules->module_path)
-        ircsnprintf(mnamebuf, sizeof(mnamebuf), "%s/%s.so", modules->module_path, modname);
-    else
-        ircsnprintf(mnamebuf, sizeof(mnamebuf), "%s/modules/%s.so", dpath, modname);
-
+    memset(&tmpmod, 0, sizeof(tmpmod));
     tmpmod.handle = dlopen(mnamebuf, RTLD_NOW);
-    if(tmpmod.handle == NULL)
+    if (tmpmod.handle == NULL)
     {
-        if(sptr)
+        if (sptr)
             sendto_one(sptr, ":%s NOTICE %s :Module load error for %s: %s",
-                       me.name, sptr->name, modname, dlerror());
+                       me.name, sptr->name, regname, dlerror());
         else
             fprintf(stderr, " - Module load error for %s: %s\n",
-                    modname, dlerror());
+                    regname, dlerror());
         return -1;
     }
 
-    if(!modsym_load(sptr, modname, "bircmodule_check", tmpmod.handle, 
-                    (void *) &tmpmod.module_check))
-        return -1;
-    if(!modsym_load(sptr, modname, "bircmodule_init", tmpmod.handle, 
-                    (void *) &tmpmod.module_init))
-        return -1;
-    if(!modsym_load(sptr, modname, "bircmodule_shutdown", tmpmod.handle, 
-                    (void *) &tmpmod.module_shutdown))
-        return -1;
-    if(!modsym_load(sptr, modname, "bircmodule_getinfo", tmpmod.handle, 
-                    (void *) &tmpmod.module_getinfo))
-        return -1;
-    if(!modsym_load(sptr, modname, "bircmodule_command", tmpmod.handle, 
-                    (void *) &tmpmod.module_command))
-        return -1;
-    if(!modsym_load(sptr, modname, "bircmodule_globalcommand", tmpmod.handle, 
-                    (void *) &tmpmod.module_globalcommand))
-        return -1;
+    tmpmod.mod_path = bircmodule_strdup(mnamebuf);
+
+    /* ---------------------------------------------------------------
+     * Try MAPI v2/v3: look for the "_mheader" symbol.
+     * --------------------------------------------------------------- */
+    dlerror();
+    mheader = (struct mapi_module *) dlsym(tmpmod.handle, "_mheader");
+
+    if (mheader != NULL)
+    {
+        /* Accept MAPI v2 and v3 modules */
+        if (mheader->mapi_version != MAPI_VERSION_3
+            && mheader->mapi_version != MAPI_VERSION_2)
+        {
+            if (sptr)
+                sendto_one(sptr, ":%s NOTICE %s :Module load error for %s:"
+                           " Incompatible MAPI version (server: %d module: %d)",
+                           me.name, sptr->name, regname,
+                           MAPI_VERSION, mheader->mapi_version);
+            else
+                fprintf(stderr, " - Module load error for %s: Incompatible MAPI"
+                                " version (server: %d module: %d)\n",
+                        regname, MAPI_VERSION, mheader->mapi_version);
+            dlclose(tmpmod.handle);
+            bircmodule_free(tmpmod.mod_path);
+            return -1;
+        }
+
+        /* ABI version check (v3+ modules only) */
+        if (mheader->mapi_version >= MAPI_VERSION_3
+            && mheader->min_abi_version > IRCD_ABI_VERSION)
+        {
+            if (sptr)
+                sendto_one(sptr, ":%s NOTICE %s :Module load error for %s:"
+                           " Requires ABI version %d (server has %d)",
+                           me.name, sptr->name, regname,
+                           mheader->min_abi_version, IRCD_ABI_VERSION);
+            else
+                fprintf(stderr, " - Module load error for %s: Requires ABI"
+                                " version %d (server has %d)\n",
+                        regname, mheader->min_abi_version, IRCD_ABI_VERSION);
+            dlclose(tmpmod.handle);
+            bircmodule_free(tmpmod.mod_path);
+            return -1;
+        }
+
+        tmpmod.is_mapi  = 1;
+        tmpmod.mheader  = mheader;
+        tmpmod.name     = bircmodule_strdup((char *)(mheader->name
+                                ? mheader->name : regname));
+        tmpmod.version  = bircmodule_strdup((char *)(mheader->version
+                                ? mheader->version : "<unknown>"));
+        tmpmod.description = bircmodule_strdup((char *)(mheader->description
+                                ? mheader->description : ""));
+
+        themod = (aModule *) bircmodule_malloc(sizeof(aModule));
+        memcpy(themod, &tmpmod, sizeof(aModule));
+        /* Add to list before registering hooks so bircmodule_add_hook can
+         * find the owner via find_module_opaque(). */
+        add_to_list(&module_list, themod);
+
+        /* Register IRC commands (MAPI v2: mapi_cmd_av2) */
+        if (mheader->cmds)
+        {
+            const struct mapi_cmd_av2 *c;
+            for (c = mheader->cmds; c->cmd; c++)
+            {
+                if (cmd_add(c) < 0)
+                {
+                    if (sptr)
+                        sendto_one(sptr, ":%s NOTICE %s :Warning: command %s"
+                                   " from module %s already registered",
+                                   me.name, sptr->name, c->cmd, regname);
+                    else
+                        fprintf(stderr, " - Warning: command %s from module"
+                                        " %s already registered\n",
+                                c->cmd, regname);
+                }
+            }
+        }
+
+        /* Register hooks */
+        if (mheader->hooks)
+        {
+            const struct mapi_hook_av1 *h;
+            for (h = mheader->hooks; h->fn; h++)
+                bircmodule_add_hook(h->hooktype, (void *) themod, h->fn);
+        }
+
+        /* Register IRCv3 capabilities */
+        if (mheader->caps)
+        {
+            const struct mapi_cap_av1 *cap;
+            for (cap = mheader->caps; cap->name; cap++)
+                cap_add(cap);
+        }
+
+        /* Call mapi_register callback if provided */
+        if (mheader->mapi_register)
+            mheader->mapi_register();
+
+        if (sptr)
+            sendto_one(sptr, ":%s NOTICE %s :Module %s (MAPI) successfully"
+                       " loaded [version: %s]",
+                       me.name, sptr->name, regname, themod->version);
+        else
+            fprintf(stderr, " - Module %s (MAPI) successfully loaded"
+                            " [version: %s]\n", regname, themod->version);
+
+        call_hooks(MHOOK_LOAD, regname, (void *) themod);
+        return 0;
+    }
+
+    /* ---------------------------------------------------------------
+     * Old-style module (backward compatibility).
+     * --------------------------------------------------------------- */
+    /* modsym_load calls dlclose on failure, but we must free mod_path too */
+    if (!modsym_load(sptr, regname, "bircmodule_check", tmpmod.handle,
+                     (void *) &tmpmod.module_check))
+    { bircmodule_free(tmpmod.mod_path); return -1; }
+    if (!modsym_load(sptr, regname, "bircmodule_init", tmpmod.handle,
+                     (void *) &tmpmod.module_init))
+    { bircmodule_free(tmpmod.mod_path); return -1; }
+    if (!modsym_load(sptr, regname, "bircmodule_shutdown", tmpmod.handle,
+                     (void *) &tmpmod.module_shutdown))
+    { bircmodule_free(tmpmod.mod_path); return -1; }
+    if (!modsym_load(sptr, regname, "bircmodule_getinfo", tmpmod.handle,
+                     (void *) &tmpmod.module_getinfo))
+    { bircmodule_free(tmpmod.mod_path); return -1; }
+    if (!modsym_load(sptr, regname, "bircmodule_command", tmpmod.handle,
+                     (void *) &tmpmod.module_command))
+    { bircmodule_free(tmpmod.mod_path); return -1; }
+    if (!modsym_load(sptr, regname, "bircmodule_globalcommand", tmpmod.handle,
+                     (void *) &tmpmod.module_globalcommand))
+    { bircmodule_free(tmpmod.mod_path); return -1; }
 
     (*tmpmod.module_check)(&acsz);
-    if(acsz != MODULE_INTERFACE_VERSION)
+    if (acsz != MODULE_INTERFACE_VERSION)
     {
-        if(sptr)
+        if (sptr)
             sendto_one(sptr, ":%s NOTICE %s :Module load error for %s:"
-                    " Incompatible module (My interface version: %d Module"
-                    " version: %d)", me.name, sptr->name, modname, 
-                    MODULE_INTERFACE_VERSION, acsz);
+                       " Incompatible module (My interface version: %d"
+                       " Module version: %d)",
+                       me.name, sptr->name, regname,
+                       MODULE_INTERFACE_VERSION, acsz);
         else
-            fprintf(stderr, " - Module load error for %s: Incompatible module ("
-                            "My interface version: %d Module version: %d)\n",
-                    modname, MODULE_INTERFACE_VERSION, acsz);
+            fprintf(stderr, " - Module load error for %s: Incompatible module"
+                            " (My: %d Module: %d)\n",
+                    regname, MODULE_INTERFACE_VERSION, acsz);
         dlclose(tmpmod.handle);
+        bircmodule_free(tmpmod.mod_path);
         return -1;
     }
 
-    tmpmod.name = bircmodule_strdup(modname);
+    tmpmod.name = bircmodule_strdup(regname);
 
     ver = desc = NULL;
     (*tmpmod.module_getinfo)(&ver, &desc);
     tmpmod.version = bircmodule_strdup((ver != NULL) ? ver : "<no version>");
-    tmpmod.description = bircmodule_strdup((desc != NULL) ? desc : 
-                                                           "<no description>");
+    tmpmod.description = bircmodule_strdup((desc != NULL) ? desc :
+                                                            "<no description>");
     themod = (aModule *) bircmodule_malloc(sizeof(aModule));
     memcpy(themod, &tmpmod, sizeof(aModule));
     add_to_list(&module_list, themod);
 
     ret = (*themod->module_init)((void *) themod);
 
-    if(ret == 0)
+    if (ret == 0)
     {
-        if(sptr)
+        if (sptr)
             sendto_one(sptr, ":%s NOTICE %s :Module %s successfully loaded"
-                       " [version: %s]", me.name, sptr->name, modname, 
+                       " [version: %s]", me.name, sptr->name, regname,
                        themod->version);
         else
             fprintf(stderr, " - Module %s successfully loaded [version: %s]\n",
-                    modname, themod->version);
+                    regname, themod->version);
 
-        call_hooks(MHOOK_LOAD, modname, (void *) themod);
+        call_hooks(MHOOK_LOAD, regname, (void *) themod);
     }
     else
     {
         drop_all_hooks(themod);
         destroy_module(themod);
 
-        if(sptr)
+        if (sptr)
             sendto_one(sptr, ":%s NOTICE %s :Module %s load failed (module"
-                        " requested unload)", me.name, sptr->name, modname);
+                       " requested unload)", me.name, sptr->name, regname);
         else
             fprintf(stderr, " - Module %s load failed (module requested"
-                            " unload)\n", modname);
+                            " unload)\n", regname);
     }
     return 0;
 }
 
-int 
+int
 unload_module(aClient *sptr, char *modname)
 {
     aModule *themod = find_module(modname);
 
-    if(!themod)
+    if (!themod)
     {
         sendto_one(sptr, ":%s NOTICE %s :Module %s is not loaded",
+                   me.name, sptr->name, modname);
+        return 0;
+    }
+
+    /* Refuse to unload MAPI core modules */
+    if (themod->is_mapi && (themod->mheader->mod_flags & MAPI_CORE))
+    {
+        sendto_one(sptr, ":%s NOTICE %s :Cannot unload core module %s",
                    me.name, sptr->name, modname);
         return 0;
     }
@@ -328,8 +537,121 @@ unload_module(aClient *sptr, char *modname)
     return 0;
 }
 
-int 
-m_module(aClient *cptr, aClient *sptr, int parc, char *parv[])
+int
+reload_module(aClient *sptr, char *modname)
+{
+    aModule *themod = find_module(modname);
+    char saved_path[PATH_MAX];
+
+    if (!themod)
+    {
+        sendto_one(sptr, ":%s NOTICE %s :Module %s is not loaded",
+                   me.name, sptr->name, modname);
+        return 0;
+    }
+
+    /* Only MAPI modules support reload */
+    if (!themod->is_mapi)
+    {
+        sendto_one(sptr, ":%s NOTICE %s :Cannot reload non-MAPI module %s",
+                   me.name, sptr->name, modname);
+        return 0;
+    }
+
+    /* Save the path before we destroy the module */
+    strncpy(saved_path, themod->mod_path, sizeof(saved_path) - 1);
+    saved_path[sizeof(saved_path) - 1] = '\0';
+
+    /* Call serialize callback if available (v3+ only) */
+    if (themod->mheader->mapi_version >= MAPI_VERSION_3
+        && themod->mheader->mapi_serialize)
+        themod->mheader->mapi_serialize();
+
+    /* Tear down the old instance */
+    drop_all_hooks(themod);
+    call_hooks(MHOOK_UNLOAD, themod->name, (void *) themod);
+    destroy_module(themod);
+
+    /* Load the new instance from the same path */
+    if (load_module(sptr, saved_path) < 0)
+    {
+        sendto_one(sptr, ":%s NOTICE %s :Reload of %s failed — module"
+                   " is now unloaded", me.name, sptr->name, modname);
+        return -1;
+    }
+
+    /* Call deserialize callback on the freshly loaded module */
+    themod = find_module(modname);
+    if (themod && themod->is_mapi
+        && themod->mheader->mapi_version >= MAPI_VERSION_3
+        && themod->mheader->mapi_deserialize)
+        themod->mheader->mapi_deserialize();
+
+    sendto_one(sptr, ":%s NOTICE %s :Module %s successfully reloaded",
+               me.name, sptr->name, modname);
+
+    return 0;
+}
+
+void
+info_module(aClient *sptr, char *modname)
+{
+    aModule *themod = find_module(modname);
+
+    if (!themod)
+    {
+        sendto_one(sptr, ":%s NOTICE %s :Module %s is not loaded",
+                   me.name, sptr->name, modname);
+        return;
+    }
+
+    sendto_one(sptr, ":%s NOTICE %s :--- Module info for %s ---",
+               me.name, sptr->name, themod->name);
+    sendto_one(sptr, ":%s NOTICE %s :  Version:     %s",
+               me.name, sptr->name, themod->version);
+    sendto_one(sptr, ":%s NOTICE %s :  Description: %s",
+               me.name, sptr->name, themod->description);
+
+    if (themod->is_mapi)
+    {
+        int mver = themod->mheader->mapi_version;
+
+        sendto_one(sptr, ":%s NOTICE %s :  MAPI version: %d",
+                   me.name, sptr->name, mver);
+        sendto_one(sptr, ":%s NOTICE %s :  Flags:        %s",
+                   me.name, sptr->name,
+                   (themod->mheader->mod_flags & MAPI_CORE) ? "CORE" : "none");
+
+        if (mver >= MAPI_VERSION_3)
+        {
+            sendto_one(sptr, ":%s NOTICE %s :  Min ABI:      %d (server: %d)",
+                       me.name, sptr->name,
+                       themod->mheader->min_abi_version, IRCD_ABI_VERSION);
+            sendto_one(sptr, ":%s NOTICE %s :  Serialize:    %s",
+                       me.name, sptr->name,
+                       themod->mheader->mapi_serialize ? "yes" : "no");
+        }
+        else
+        {
+            sendto_one(sptr, ":%s NOTICE %s :  (MAPI v2 — no ABI/serialize info)",
+                       me.name, sptr->name);
+        }
+    }
+    else
+    {
+        sendto_one(sptr, ":%s NOTICE %s :  Type: legacy (non-MAPI)",
+                   me.name, sptr->name);
+    }
+
+    sendto_one(sptr, ":%s NOTICE %s :  Path:        %s",
+               me.name, sptr->name,
+               themod->mod_path ? themod->mod_path : "<unknown>");
+    sendto_one(sptr, ":%s NOTICE %s :--- End of module info ---",
+               me.name, sptr->name);
+}
+
+int
+m_module(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     if(!IsAnOper(sptr))
     {
@@ -400,6 +722,33 @@ m_module(aClient *cptr, aClient *sptr, int parc, char *parv[])
         list_hooks(sptr);
         sendto_one(sptr, ":%s NOTICE %s :--- End of hook list ---",
                    me.name, sptr->name);
+    }
+    else if(mycmp(parv[1], "RELOAD") == 0)
+    {
+        if(!(MyClient(sptr) && IsAdmin(sptr)))
+        {
+            sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name, parv[0]);
+            return 0;
+        }
+        if(!BadPtr(parv[2]))
+            reload_module(sptr, parv[2]);
+        else
+        {
+            sendto_one(sptr, err_str(ERR_NEEDMOREPARAMS), me.name,
+                       parv[0], "MODULE");
+            return 0;
+        }
+    }
+    else if(mycmp(parv[1], "INFO") == 0)
+    {
+        if(!BadPtr(parv[2]))
+            info_module(sptr, parv[2]);
+        else
+        {
+            sendto_one(sptr, err_str(ERR_NEEDMOREPARAMS), me.name,
+                       parv[0], "MODULE");
+            return 0;
+        }
     }
     else if(mycmp(parv[1], "CMD") == 0)
     {
@@ -497,6 +846,22 @@ static DLink *spamwarn_hooks = NULL;
 static DLink *signoff_hooks = NULL;
 static DLink *mload_hooks = NULL;
 static DLink *munload_hooks = NULL;
+static DLink *postregister_hooks = NULL;
+static DLink *away_hooks         = NULL;
+static DLink *postdispatch_hooks = NULL;
+static DLink *invite_hooks       = NULL;
+static DLink *setname_hooks      = NULL;
+static DLink *tagmsg_hooks       = NULL;
+static DLink *nick_hooks         = NULL;
+static DLink *part_hooks         = NULL;
+static DLink *chanmode_hooks     = NULL;
+static DLink *topic_hooks        = NULL;
+static DLink *umode_hooks        = NULL;
+static DLink *account_login_hooks  = NULL;
+static DLink *account_logout_hooks = NULL;
+static DLink *postjoin_hooks       = NULL;
+static DLink *chghost_hooks        = NULL;
+static DLink *kick_hooks           = NULL;
 
 static DLink *all_hooks = NULL;
 
@@ -566,6 +931,50 @@ get_texthooktype(enum c_hooktype hooktype)
 
         case MHOOK_UNLOAD:
             return "Module unload";
+
+        case CHOOK_POSTREGISTER:
+            return "Post-register";
+
+        case CHOOK_AWAY:
+            return "Away";
+
+        case CHOOK_POSTDISPATCH:
+            return "Post-dispatch";
+
+        case CHOOK_INVITE:
+            return "Invite";
+
+        case CHOOK_SETNAME:
+            return "Setname";
+
+        case CHOOK_TAGMSG:
+            return "TagMsg";
+
+        case CHOOK_NICK:
+            return "Nick";
+
+        case CHOOK_PART:
+            return "Part";
+
+        case CHOOK_CHANMODE:
+            return "ChanMode";
+
+        case CHOOK_TOPIC:
+            return "Topic";
+
+        case CHOOK_UMODE:
+            return "Umode";
+
+        case CHOOK_ACCOUNT_LOGIN:
+            return "AccountLogin";
+        case CHOOK_ACCOUNT_LOGOUT:
+            return "AccountLogout";
+        case CHOOK_POSTJOIN:
+            return "PostJoin";
+        case CHOOK_CHGHOST:
+            return "ChgHost";
+        case CHOOK_KICK:
+            return "Kick";
 
         default:
             ircsnprintf(ubuf, 32, "Unknown (%d)", hooktype);
@@ -658,6 +1067,66 @@ get_hooklist(enum c_hooktype hooktype)
 
         case MHOOK_UNLOAD:
             hooklist = &munload_hooks;
+            break;
+
+        case CHOOK_POSTREGISTER:
+            hooklist = &postregister_hooks;
+            break;
+
+        case CHOOK_AWAY:
+            hooklist = &away_hooks;
+            break;
+
+        case CHOOK_POSTDISPATCH:
+            hooklist = &postdispatch_hooks;
+            break;
+
+        case CHOOK_INVITE:
+            hooklist = &invite_hooks;
+            break;
+
+        case CHOOK_SETNAME:
+            hooklist = &setname_hooks;
+            break;
+
+        case CHOOK_TAGMSG:
+            hooklist = &tagmsg_hooks;
+            break;
+
+        case CHOOK_NICK:
+            hooklist = &nick_hooks;
+            break;
+
+        case CHOOK_PART:
+            hooklist = &part_hooks;
+            break;
+
+        case CHOOK_CHANMODE:
+            hooklist = &chanmode_hooks;
+            break;
+
+        case CHOOK_TOPIC:
+            hooklist = &topic_hooks;
+            break;
+
+        case CHOOK_UMODE:
+            hooklist = &umode_hooks;
+            break;
+
+        case CHOOK_ACCOUNT_LOGIN:
+            hooklist = &account_login_hooks;
+            break;
+        case CHOOK_ACCOUNT_LOGOUT:
+            hooklist = &account_logout_hooks;
+            break;
+        case CHOOK_POSTJOIN:
+            hooklist = &postjoin_hooks;
+            break;
+        case CHOOK_CHGHOST:
+            hooklist = &chghost_hooks;
+            break;
+        case CHOOK_KICK:
+            hooklist = &kick_hooks;
             break;
 
         default:
@@ -1017,9 +1486,12 @@ call_hooks(enum c_hooktype hooktype, ...)
         case CHOOK_SIGNOFF:
             {
                 aClient *acptr = va_arg(vl, aClient *);
+                /* Note: comment arg passed but not extracted — some hooks
+                 * still use the old 1-arg signature (m_monitor, m_session).
+                 * TODO: update all hooks to 2-arg signature. */
                 for(lp = signoff_hooks; lp; lp = lp->next)
                 {
-                    void (*rfunc) (aClient *) = 
+                    void (*rfunc) (aClient *) =
                                     ((aHook *)lp->value.cp)->funcptr;
                     (*rfunc)(acptr);
                 }
@@ -1053,11 +1525,228 @@ call_hooks(enum c_hooktype hooktype, ...)
                 break;
             }
       
+        case CHOOK_POSTREGISTER:
+            {
+                aClient *acptr = va_arg(vl, aClient *);
+                for(lp = postregister_hooks; lp; lp = lp->next)
+                {
+                    int (*rfunc)(aClient *) = ((aHook *)lp->value.cp)->funcptr;
+                    if((ret = (*rfunc)(acptr)) == FLUSH_BUFFER)
+                        break;
+                }
+                break;
+            }
+
+        case CHOOK_AWAY:
+            {
+                aClient *acptr   = va_arg(vl, aClient *);
+                int      setting = va_arg(vl, int);
+                char    *msg     = va_arg(vl, char *);
+                for(lp = away_hooks; lp; lp = lp->next)
+                {
+                    void (*rfunc)(aClient *, int, char *) =
+                                    ((aHook *)lp->value.cp)->funcptr;
+                    (*rfunc)(acptr, setting, msg);
+                }
+                break;
+            }
+
+        case CHOOK_POSTDISPATCH:
+            {
+                aClient *acptr = va_arg(vl, aClient *);
+                for(lp = postdispatch_hooks; lp; lp = lp->next)
+                {
+                    int (*rfunc)(aClient *) = ((aHook *)lp->value.cp)->funcptr;
+                    if((ret = (*rfunc)(acptr)) == FLUSH_BUFFER)
+                        break;
+                }
+                break;
+            }
+
+        case CHOOK_INVITE:
+            {
+                aClient  *inviter = va_arg(vl, aClient *);
+                aClient  *target  = va_arg(vl, aClient *);
+                aChannel *chptr   = va_arg(vl, aChannel *);
+                for(lp = invite_hooks; lp; lp = lp->next)
+                {
+                    void (*rfunc)(aClient *, aClient *, aChannel *) =
+                                    ((aHook *)lp->value.cp)->funcptr;
+                    (*rfunc)(inviter, target, chptr);
+                }
+                break;
+            }
+
+        case CHOOK_SETNAME:
+            {
+                aClient    *acptr   = va_arg(vl, aClient *);
+                const char *newname = va_arg(vl, const char *);
+                for(lp = setname_hooks; lp; lp = lp->next)
+                {
+                    void (*rfunc)(aClient *, const char *) =
+                                    ((aHook *)lp->value.cp)->funcptr;
+                    (*rfunc)(acptr, newname);
+                }
+                break;
+            }
+
+        case CHOOK_TAGMSG:
+            {
+                aClient    *acptr   = va_arg(vl, aClient *);
+                void       *target  = va_arg(vl, void *);
+                int         is_chan = va_arg(vl, int);
+                const char *tags    = va_arg(vl, const char *);
+                for(lp = tagmsg_hooks; lp; lp = lp->next)
+                {
+                    void (*rfunc)(aClient *, void *, int, const char *) =
+                                    ((aHook *)lp->value.cp)->funcptr;
+                    (*rfunc)(acptr, target, is_chan, tags);
+                }
+                break;
+            }
+
+        case CHOOK_NICK:
+            {
+                aClient    *acptr   = va_arg(vl, aClient *);
+                const char *oldnick = va_arg(vl, const char *);
+                const char *newnick = va_arg(vl, const char *);
+                for(lp = nick_hooks; lp; lp = lp->next)
+                {
+                    void (*rfunc)(aClient *, const char *, const char *) =
+                                    ((aHook *)lp->value.cp)->funcptr;
+                    (*rfunc)(acptr, oldnick, newnick);
+                }
+                break;
+            }
+
+        case CHOOK_PART:
+            {
+                aClient    *acptr  = va_arg(vl, aClient *);
+                aChannel   *chptr  = va_arg(vl, aChannel *);
+                const char *reason = va_arg(vl, const char *);
+                for(lp = part_hooks; lp; lp = lp->next)
+                {
+                    void (*rfunc)(aClient *, aChannel *, const char *) =
+                                    ((aHook *)lp->value.cp)->funcptr;
+                    (*rfunc)(acptr, chptr, reason);
+                }
+                break;
+            }
+
+        case CHOOK_CHANMODE:
+            {
+                aClient    *acptr   = va_arg(vl, aClient *);
+                aChannel   *chptr   = va_arg(vl, aChannel *);
+                const char *modebuf = va_arg(vl, const char *);
+                const char *parabuf = va_arg(vl, const char *);
+                for(lp = chanmode_hooks; lp; lp = lp->next)
+                {
+                    void (*rfunc)(aClient *, aChannel *, const char *,
+                                  const char *) =
+                                    ((aHook *)lp->value.cp)->funcptr;
+                    (*rfunc)(acptr, chptr, modebuf, parabuf);
+                }
+                break;
+            }
+
+        case CHOOK_TOPIC:
+            {
+                aClient    *acptr = va_arg(vl, aClient *);
+                aChannel   *chptr = va_arg(vl, aChannel *);
+                const char *topic = va_arg(vl, const char *);
+                for(lp = topic_hooks; lp; lp = lp->next)
+                {
+                    void (*rfunc)(aClient *, aChannel *, const char *) =
+                                    ((aHook *)lp->value.cp)->funcptr;
+                    (*rfunc)(acptr, chptr, topic);
+                }
+                break;
+            }
+
+        case CHOOK_UMODE:
+            {
+                aClient       *acptr    = va_arg(vl, aClient *);
+                unsigned long  setflags = va_arg(vl, unsigned long);
+                for(lp = umode_hooks; lp; lp = lp->next)
+                {
+                    void (*rfunc)(aClient *, unsigned long) =
+                                    ((aHook *)lp->value.cp)->funcptr;
+                    (*rfunc)(acptr, setflags);
+                }
+                break;
+            }
+
+        case CHOOK_ACCOUNT_LOGIN:
+            {
+                aClient *acptr = va_arg(vl, aClient *);
+                for(lp = account_login_hooks; lp; lp = lp->next)
+                {
+                    void (*rfunc)(aClient *) =
+                                    ((aHook *)lp->value.cp)->funcptr;
+                    (*rfunc)(acptr);
+                }
+                break;
+            }
+
+        case CHOOK_ACCOUNT_LOGOUT:
+            {
+                aClient *acptr = va_arg(vl, aClient *);
+                for(lp = account_logout_hooks; lp; lp = lp->next)
+                {
+                    void (*rfunc)(aClient *) =
+                                    ((aHook *)lp->value.cp)->funcptr;
+                    (*rfunc)(acptr);
+                }
+                break;
+            }
+
+        case CHOOK_POSTJOIN:
+            {
+                aClient *acptr = va_arg(vl, aClient *);
+                aChannel *chptr = va_arg(vl, aChannel *);
+                for(lp = postjoin_hooks; lp; lp = lp->next)
+                {
+                    void (*rfunc)(aClient *, aChannel *) =
+                                    ((aHook *)lp->value.cp)->funcptr;
+                    (*rfunc)(acptr, chptr);
+                }
+                break;
+            }
+
+        case CHOOK_CHGHOST:
+            {
+                aClient    *acptr    = va_arg(vl, aClient *);
+                const char *old_user = va_arg(vl, const char *);
+                const char *old_host = va_arg(vl, const char *);
+                for(lp = chghost_hooks; lp; lp = lp->next)
+                {
+                    void (*rfunc)(aClient *, const char *, const char *) =
+                                    ((aHook *)lp->value.cp)->funcptr;
+                    (*rfunc)(acptr, old_user, old_host);
+                }
+                break;
+            }
+
+        case CHOOK_KICK:
+            {
+                aClient    *kicker  = va_arg(vl, aClient *);
+                aClient    *target  = va_arg(vl, aClient *);
+                aChannel   *chptr   = va_arg(vl, aChannel *);
+                const char *reason  = va_arg(vl, const char *);
+                for(lp = kick_hooks; lp; lp = lp->next)
+                {
+                    void (*rfunc)(aClient *, aClient *, aChannel *, const char *) =
+                                    ((aHook *)lp->value.cp)->funcptr;
+                    (*rfunc)(kicker, target, chptr, reason);
+                }
+                break;
+            }
+
         default:
-            sendto_realops_lev(DEBUG_LEV, "Call for unknown hook type %d", 
+            sendto_realops_lev(DEBUG_LEV, "Call for unknown hook type %d",
                 hooktype);
             break;
-    }   
+    }
     va_end(vl);
     return ret;
 }
@@ -1078,14 +1767,56 @@ list_hooks(aClient *sptr)
     }
 }
 
+/*
+ * load_module_dir - load all *.so files from a directory.
+ *
+ * Called at startup (core modules directory) and optionally by config.
+ * Each file is loaded via load_module(); MAPI modules declare their own
+ * mod_flags (e.g. MAPI_CORE) inside the .so.
+ */
+void
+load_module_dir(const char *dir_path)
+{
+    DIR *dir;
+    struct dirent *ent;
+    char filepath[PATH_MAX];
+    size_t nlen;
+
+    dir = opendir(dir_path);
+    if (!dir)
+    {
+        fprintf(stderr, " - Warning: cannot open module directory %s: %s\n",
+                dir_path, strerror(errno));
+        return;
+    }
+
+    while ((ent = readdir(dir)) != NULL)
+    {
+        nlen = strlen(ent->d_name);
+        if (nlen > 3 && strcmp(ent->d_name + nlen - 3, ".so") == 0)
+        {
+            ircsnprintf(filepath, sizeof(filepath), "%s/%s", dir_path,
+                        ent->d_name);
+            load_module(NULL, filepath);
+        }
+    }
+
+    closedir(dir);
+}
+
 int init_modules()
 {
     int i;
+    char corepath[PATH_MAX];
 
-    if(!modules)
+    /* Load core modules first — they must be present before config runs */
+    ircsnprintf(corepath, sizeof(corepath), "%s/modules/core", dpath);
+    load_module_dir(corepath);
+
+    if (!modules)
         return 0;
 
-    for(i = 0; modules->autoload[i]; i++)
+    for (i = 0; modules->autoload[i]; i++)
     {
         load_module(NULL, modules->autoload[i]);
         printf("Module %s Loaded Successfully.\n", modules->autoload[i]);
@@ -1145,6 +1876,22 @@ memcount_modules(MCmodules *mc)
     mc->e_dlinks += mc_dlinks(signoff_hooks);
     mc->e_dlinks += mc_dlinks(mload_hooks);
     mc->e_dlinks += mc_dlinks(munload_hooks);
+    mc->e_dlinks += mc_dlinks(postregister_hooks);
+    mc->e_dlinks += mc_dlinks(away_hooks);
+    mc->e_dlinks += mc_dlinks(postdispatch_hooks);
+    mc->e_dlinks += mc_dlinks(invite_hooks);
+    mc->e_dlinks += mc_dlinks(setname_hooks);
+    mc->e_dlinks += mc_dlinks(tagmsg_hooks);
+    mc->e_dlinks += mc_dlinks(nick_hooks);
+    mc->e_dlinks += mc_dlinks(part_hooks);
+    mc->e_dlinks += mc_dlinks(chanmode_hooks);
+    mc->e_dlinks += mc_dlinks(topic_hooks);
+    mc->e_dlinks += mc_dlinks(umode_hooks);
+    mc->e_dlinks += mc_dlinks(account_login_hooks);
+    mc->e_dlinks += mc_dlinks(account_logout_hooks);
+    mc->e_dlinks += mc_dlinks(postjoin_hooks);
+    mc->e_dlinks += mc_dlinks(chghost_hooks);
+    mc->e_dlinks += mc_dlinks(kick_hooks);
 
     mc->total.c += mc->modules.c + mc->hooks.c;
     mc->total.m += mc->modules.m + mc->hooks.m;

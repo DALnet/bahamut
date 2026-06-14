@@ -108,6 +108,7 @@ extern char REPORT_DO_DNS[HOSTLEN + 100], REPORT_FIN_DNS[HOSTLEN + 100], REPORT_
 #include "hash.h"
 
 #include "sbuf.h"
+#include "msgbuf.h"
 
 typedef struct Client aClient;
 typedef struct Channel aChannel;
@@ -134,6 +135,8 @@ typedef struct Conf_Me Conf_Me;
 typedef struct Conf_Port aPort;
 typedef struct Conf_Class aClass;
 typedef struct Conf_Modules Conf_Modules;
+typedef struct Conf_GossipPeer aGoPeerConf;
+typedef struct Conf_GossipConf aGossipConf;
 typedef long ts_val;
 
 typedef struct MotdItem aMotd;
@@ -187,11 +190,14 @@ typedef struct SServicesTag ServicesTag;
 /* the line of truth lies here (truth == registeredness) */
 #define	STAT_SERVER	 0
 #define	STAT_CLIENT	 1
+#define STAT_GOPEER      2   /* gossip peer link (Phase S2) */
 
 /* status macros. */
 
 #define	IsRegisteredUser(x)	((x)->status == STAT_CLIENT)
 #define	IsRegistered(x)		((x)->status >= STAT_SERVER)
+#define IsGoPeer(x)		((x)->status == STAT_GOPEER)
+#define SetGoPeer(x)		((x)->status  = STAT_GOPEER)
 #define	IsConnecting(x)		((x)->status == STAT_CONNECTING)
 #define	IsHandshake(x)		((x)->status == STAT_HANDSHAKE)
 #define	IsMe(x)			((x)->status == STAT_ME)
@@ -237,22 +243,23 @@ typedef struct SServicesTag ServicesTag;
 				       * send an EOB */
 #define FLAGS_EOBRECV      0x200000   /* we're waiting on an EOB */
 #define FLAGS_BAD_DNS	   0x400000   /* spoofer-guy */
-#define FLAGS_SERV_NEGO	   0x800000  /* This is a server that has passed
-				       * connection tests, but is a stat < 0
-				       * for handshake purposes */
-#define FLAGS_RC4IN        0x1000000  /* This link is rc4 encrypted. */
-#define FLAGS_RC4OUT       0x2000000  /* This link is rc4 encrypted. */
+#define FLAGS_PENDTLS      0x800000   /* STARTTLS pending — upgrade on next I/O */
+#define FLAGS_WEBSOCKET    0x1000000  /* active WebSocket connection */
+#define FLAGS_PENDWS       0x2000000  /* WebSocket handshake pending */
 #define FLAGS_ZIPPED_IN	   0x4000000  /* This link is gzipped. */
 #define FLAGS_ZIPPED_OUT   0x8000000 /* This link is gzipped. */
 #define FLAGS_SSL          0x10000000 /* client is using SSL */
 #define FLAGS_SPOOFED      0x20000000 /* User's host was spoofed (via SVSHOST) */
+#define FLAGS_GOSSIP_MAT   0x40000000 /* Materialized from a gossip event */
+#define FLAGS_SSL_OUTBOUND 0x80000000 /* Outbound SSL (use ssl_connect, not ssl_accept) */
+
+#define IsGossipMaterialized(x)  ((x)->flags & FLAGS_GOSSIP_MAT)
+#define SetGossipMaterialized(x) ((x)->flags |= FLAGS_GOSSIP_MAT)
 
 /* Capabilities of the ircd or clients */
 
-#define CAPAB_DKEY    0x0001 /* server supports dh-key exchange */
 #define CAPAB_ZIP     0x0002 /* server supports gz'd links */
 #define CAPAB_DOZIP   0x0004 /* output to this link shall be gzipped */
-#define CAPAB_DODKEY  0x0008 /* do I do dkey with this link? */
 #define CAPAB_BURST   0x0010 /* server supports BURST command */
 #define CAPAB_UNCONN  0x0020 /* server supports UNCONNECT */
 #ifdef NOQUIT
@@ -260,15 +267,9 @@ typedef struct SServicesTag ServicesTag;
 #endif
 #define CAPAB_NICKIPSTR 0x0080 /* Nick IP as a string support */
 #define CAPAB_DOTLS     0x0100 /* server supports TLS encryption */
+#define CAPAB_GOSSIP    0x0200 /* server supports gossip S2S protocol */
 
 
-#define SetDKEY(x)	((x)->capabilities |= CAPAB_DKEY)
-#define CanDoDKEY(x)    ((x)->capabilities & CAPAB_DKEY)
-/* N: line, flag E */
-#define SetWantDKEY(x) ((x)->capabilities |= CAPAB_DODKEY)
-#define WantDKEY(x)	((x)->capabilities & CAPAB_DODKEY) 
-
-/* N: line, flag S */
 #define SetTLS(x)    ((x)->capabilities |= CAPAB_DOTLS)
 #define CanDoTLS(x)  ((x)->capabilities & CAPAB_DOTLS)
 #define SetWantTLS(x) ((x)->capabilities |= CAPAB_DOTLS)
@@ -328,10 +329,8 @@ typedef struct SServicesTag ServicesTag;
 #define UMODE_I     0x8000000   /* umode +I - invisible oper (masked) */
 #define UMODE_S     0x10000000  /* umode +S - User is using SSL */
 #define UMODE_C     0x20000000  /* umode +C - User is only accepting private messages from users who share a common channel with them */
-#define UMODE_H     0x40000000  /* umode +H - User is host-masked */
-
-/* WARNING: Do not add any values greater than 0x40000000 unless you change Client->umode to unsigned long
-            (and change everything else to support it) -Kobi & xPsycho. */
+#define UMODE_H     0x40000000UL  /* umode +H - User is host-masked */
+#define UMODE_B     0x80000000UL  /* umode +B - Bot */
 
 /* for sendto_ops_lev */
 
@@ -354,13 +353,13 @@ typedef struct SServicesTag ServicesTag;
  *  that mode will be 'silent.'
  */
 
-#define SEND_UMODES (UMODE_a|UMODE_i|UMODE_o|UMODE_r|UMODE_A|UMODE_I|UMODE_R|UMODE_S|UMODE_C|UMODE_H|UMODE_P)
+#define SEND_UMODES (UMODE_a|UMODE_i|UMODE_o|UMODE_r|UMODE_A|UMODE_I|UMODE_R|UMODE_S|UMODE_C|UMODE_H|UMODE_P|UMODE_B)
 #define ALL_UMODES (SEND_UMODES|UMODE_b|UMODE_c|UMODE_d|UMODE_e|UMODE_f|\
                     UMODE_g|UMODE_h|UMODE_j|UMODE_k|UMODE_m|UMODE_n|UMODE_s|\
                     UMODE_w|UMODE_y|UMODE_F|UMODE_K|UMODE_O)
 
 /* modes users can set themselves */
-#define USER_UMODES (UMODE_i|UMODE_k|UMODE_w|UMODE_s|UMODE_R|UMODE_C|UMODE_H|UMODE_P)
+#define USER_UMODES (UMODE_i|UMODE_k|UMODE_w|UMODE_s|UMODE_R|UMODE_C|UMODE_H|UMODE_P|UMODE_B)
 
 /* modes only opers can have */
 #define OPER_UMODES (UMODE_a|UMODE_b|UMODE_c|UMODE_d|UMODE_e|UMODE_f|UMODE_g|\
@@ -396,6 +395,7 @@ typedef struct SServicesTag ServicesTag;
 #define	IsUmodeI(x)		((x)->umode & UMODE_I)
 #define	IsUmodeH(x)		((x)->umode & UMODE_H)
 #define	IsUmodeP(x)		((x)->umode & UMODE_P)
+#define IsBot(x)		((x)->umode & UMODE_B)
 #define IsNoNonReg(x)           ((x)->umode & UMODE_R)
 #define IsWSquelch(x)           ((x)->umode & UMODE_x)
 #define IsSSquelch(x)           ((x)->umode & UMODE_X)
@@ -437,15 +437,6 @@ typedef struct SServicesTag ServicesTag;
 #define SeenDCCNotice(x)        ((x)->umode & UMODE_D)
 #define SetDCCNotice(x)         ((x)->umode |= UMODE_D)
 
-#define SetNegoServer(x)	((x)->flags |= FLAGS_SERV_NEGO)
-#define IsNegoServer(x)		((x)->flags & FLAGS_SERV_NEGO)
-#define ClearNegoServer(x)	((x)->flags &= ~FLAGS_SERV_NEGO)
-#define IsRC4OUT(x)		((x)->flags & FLAGS_RC4OUT)
-#define SetRC4OUT(x)		((x)->flags |= FLAGS_RC4OUT)
-#define IsRC4IN(x)		((x)->flags & FLAGS_RC4IN)
-#define SetRC4IN(x)		((x)->flags |= FLAGS_RC4IN)
-#define RC4EncLink(x)		(((x)->flags & (FLAGS_RC4IN|FLAGS_RC4OUT)) ==\
-                                 (FLAGS_RC4IN|FLAGS_RC4OUT))
 
 #define ZipIn(x)		((x)->flags & FLAGS_ZIPPED_IN)
 #define SetZipIn(x)		((x)->flags |= FLAGS_ZIPPED_IN)
@@ -454,6 +445,12 @@ typedef struct SServicesTag ServicesTag;
 
 #define IsSSL(x)		((x)->flags & FLAGS_SSL)
 #define SetSSL(x)		((x)->flags |= FLAGS_SSL)
+
+#define IsWebSocket(x)     ((x)->flags & FLAGS_WEBSOCKET)
+#define SetWebSocket(x)    ((x)->flags |= FLAGS_WEBSOCKET)
+#define IsPendWS(x)        ((x)->flags & FLAGS_PENDWS)
+#define SetPendWS(x)       ((x)->flags |= FLAGS_PENDWS)
+#define ClearPendWS(x)     ((x)->flags &= ~FLAGS_PENDWS)
 
 #define ClearSAdmin(x)          ((x)->umode &= ~UMODE_a)
 #define ClearAdmin(x)           ((x)->umode &= ~UMODE_A)
@@ -624,7 +621,7 @@ typedef struct Whowas
     char       *servername;
     char        realname[REALLEN + 1];
     time_t      logoff;
-    long umode;
+    unsigned long umode;
     struct Client *online;  /* Pointer to new nickname for chasing or NULL */
     
     struct Whowas *next;    /* for hash table... */
@@ -686,6 +683,7 @@ typedef struct Whowas
 #define CONF_FLAGS_P_SSL      0x01
 #define CONF_FLAGS_P_NODNS    0x02
 #define CONF_FLAGS_P_NOIDENT  0x04
+#define CONF_FLAGS_P_WEBSOCKET 0x08
 
 /* global configuration flags */
 
@@ -704,7 +702,6 @@ typedef struct Whowas
 /* flags for connects */
 
 #define CONN_ZIP 	0x001	/* zippable    */
-#define CONN_DKEY	0x010	/* cryptable   */
 #define CONN_HUB	0x100	/* hubbable!   */
 #define CONN_TLS	0x200	/* tlsable!    */
 
@@ -792,6 +789,25 @@ struct Conf_Modules
     char *optload[128];
 };
 
+/* Phase S2: gossip peer configuration block */
+struct Conf_GossipPeer
+{
+    char          *host;         /* peer hostname or IP                */
+    char          *name;         /* server name (for logging)          */
+    char          *password;     /* authentication password            */
+    int            port;         /* TCP port to connect to             */
+    int            tls;          /* 1 = require TLS, 0 = plain         */
+    unsigned char  server_id;    /* explicit ServerId (0-63; mandatory) */
+    aGoPeerConf   *next;
+};
+
+/* Phase S2: gossip protocol tuning */
+struct Conf_GossipConf
+{
+    int fanout;        /* gossip fanout factor (default 3) */
+    int sync_window;   /* burst sync window in seconds (default 30) */
+};
+
 struct Conf_Port
 {
 	char *allow;
@@ -847,7 +863,7 @@ struct SServicesTag
 {
   char *tag;
   int raw;
-  long umode;
+  unsigned long umode;
   ServicesTag *next;
 };
 
@@ -885,6 +901,10 @@ struct User
 #endif
     aOper      *oper;
     aAllow     *allow;
+
+    /* Phase 8A: account system */
+    char        account_name[NICKLEN + 1];  /* empty = not logged in */
+    time_t      account_enforce_ts;         /* 0 = not enforcing */
 };
 
 struct Server
@@ -894,13 +914,6 @@ struct Server
     char        byuser[USERLEN + 1];
     char        byhost[HOSTLEN + 1];
     aConnect   *aconn;		        /* N-line pointer for this server */
-    int         dkey_flags; 	    /* dkey flags */
-#ifdef HAVE_ENCRYPTION_ON
-    void       *sessioninfo_in;   /* pointer to opaque sessioninfo structure */
-    void       *sessioninfo_out;  /* pointer to opaque sessioninfo structure */
-    void       *rc4_in;           /* etc */
-    void       *rc4_out;          /* etc */
-#endif
     void       *zip_out;
     void       *zip_in;
     int         uflags;           /* U:lined flags */
@@ -917,11 +930,8 @@ struct Client
     time_t      since;      /* last time we parsed something */
     ts_val      tsinfo;     /* TS on the nick, SVINFO on servers */
     long        flags;      /* client flags */
-    long        umode;      /* We can illeviate overflow this way
-                               Note: if you change this, you need to also
-                               change struct SearchOptions,
-                               struct Whowas and struct SServicesTag -Kobi.
-                             */
+    unsigned long umode;    /* user mode bitmask (widened to unsigned long
+                               for UMODE_B and future modes) */
     aClient    *from;       /* == self, if Local Client, *NEVER* NULL! */
     aClient    *uplink;     /* this client's uplink to the network */
     int         fd;         /* >= 0, for local clients */
@@ -1070,9 +1080,19 @@ struct Client
 
     SSL  *ssl;
     X509 *client_cert;
+    char  certfp[65];     /* SHA-256 client cert fingerprint (hex) */
+
+    void *ws_state;             /* WebSocket framing state (NULL for non-WS) */
 
     char *webirc_username;
     char *webirc_ip;
+
+    /* IRCv3 capability negotiation (local clients only) */
+    unsigned long cap_bits;      /* enabled capability bitmask */
+    short         cap_neg;       /* 1 while CAP negotiation is in progress */
+    short         cap_ls_version; /* 0 or 302 (client advertised CAP 302) */
+
+    /* SASL authentication state (pre-registration) */
 };
 
 #define	CLIENT_LOCAL_SIZE sizeof(aClient)
@@ -1135,23 +1155,55 @@ struct SAliasInfo
     char    *nick;      /* entity nickname (NickServ) */
     char    *server;    /* entity's server (services) */
     aClient *client;    /* associated online client */
+    int    (*local_handler)(aClient *sptr, const char *text);  /* Phase 8A: native services dispatch */
 };
 
 
-#define MF_UNREG    0x0001  /* may be used by unregistered connections */
-#define MF_RIDLE    0x0002  /* reset idle time */
-#define MF_ALIAS    0x0004  /* aliastab index valid */
+/*
+ * HandlerType - connection state at dispatch time.
+ * The dispatch layer in parse() selects one slot per incoming message.
+ */
+typedef enum HandlerType {
+    HANDLER_UNREG  = 0, /* unregistered connection (pre-NICK/USER)     */
+    HANDLER_CLIENT = 1, /* local registered user                        */
+    HANDLER_REMOTE = 2, /* remote user relayed through a server link    */
+    HANDLER_SERVER = 3, /* server-to-server connection                  */
+    HANDLER_OPER   = 4, /* local IRC operator                           */
+    HANDLER_LAST        /* sentinel — size of the handlers[] array      */
+} HandlerType;
+
+/*
+ * mapi_cmd_fn — standard IRC command handler signature.
+ * msgbuf: parsed message (tags + raw line); never NULL.
+ * cptr:   connection that sent the message.
+ * sptr:   "from" client (may differ from cptr for S2S messages).
+ * parc:   parameter count.
+ * parv:   parameter array.
+ */
+typedef int (*mapi_cmd_fn)(struct MsgBuf *msgbuf,
+                           struct Client *cptr, struct Client *sptr,
+                           int parc, char *parv[]);
+
+/*
+ * MessageEntry — one slot in the per-handler dispatch table.
+ * handler:  function to call, or NULL (treated as mg_ignore).
+ * min_para: minimum parc required; 0 = no check.
+ */
+typedef struct MessageEntry {
+    mapi_cmd_fn handler;
+    int         min_para;
+} MessageEntry;
 
 /* Message table structure */
 struct Message
 {
-    char            *cmd;           /* command name */
-    int              (*func)();     /* callback function */
-    short            parameters;    /* number of parameters */
-    short            flags;         /* command flags */
-    int              aliasidx;      /* aliastab index */
-    unsigned int     count;         /* number of times used */
-    unsigned long    bytes;         /* number of bytes used */
+    char            *cmd;                       /* command name              */
+    unsigned int     count;                     /* number of times used      */
+    unsigned int     rcount;                    /* remote usage count        */
+    unsigned long    bytes;                     /* bytes processed           */
+    int              reset_idle;                /* 1 = update user->last     */
+    int              aliasidx;                  /* >=0: alias entry; -1 otherwise */
+    MessageEntry     handlers[HANDLER_LAST];    /* per-HandlerType dispatch  */
 };
 
 typedef struct msg_tree 
@@ -1446,7 +1498,6 @@ extern char *generation, *creation;
 /* misc defines */
 
 #define ZIP_NEXT_BUFFER -4
-#define RC4_NEXT_BUFFER -3
 #define	FLUSH_BUFFER	-2
 #define	COMMA		","
 
@@ -1512,9 +1563,9 @@ struct ListOptions
     time_t   topictimemax;
 };
 
-typedef struct SearchOptions 
+typedef struct SearchOptions
 {
-    long umodes;
+    unsigned long umodes;
     char *nick;
     char *user;
     char *host;

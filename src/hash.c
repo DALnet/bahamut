@@ -346,7 +346,7 @@ aChannel *hash_find_channel(char *name, aChannel *chptr)
  * 
  */
 
-int m_hash(aClient *cptr, aClient *sptr, int parc, char *parv[])
+int m_hash(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     return 0;
 }

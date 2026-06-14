@@ -20,9 +20,9 @@
 #define __patchlevel_header__
 
 #define BASENAME "bahamut"
-#define MAJOR 2
-#define MINOR 2
-#define PATCH 4
+#define MAJOR 3
+#define MINOR 0
+#define PATCH 0
 
 #define PATCHES ""
 

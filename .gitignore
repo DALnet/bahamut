@@ -28,10 +28,15 @@ install-sh
 autom4te.cache
 config.status
 include/setup.h
-include/setup.h.in
 zlib/zconf.h
 
 src/ircd
 src/version.c.last
 tools/convert_conf
 tools/mkpasswd
+
+# Python
+__pycache__/
+
+# Meson build
+/build/

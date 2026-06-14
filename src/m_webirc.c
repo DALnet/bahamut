@@ -40,7 +40,7 @@
  * parv[3] = hostname of user
  * parv[4] = IP address of user
  */
-int m_webirc(aClient *cptr, aClient *sptr, int parc, char *parv[])
+int m_webirc(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     char oldusername[USERLEN + 1];
     struct userBan *ban;

@@ -21,8 +21,8 @@
 #define SBUF_H
 
 /* Definitions */
-#define SBUF_LARGE_BUFFER			512
-#define SBUF_SMALL_BUFFER			256
+#define SBUF_LARGE_BUFFER			1024
+#define SBUF_SMALL_BUFFER			512
 
 /* Macros */
 #define IsEol(c)                    ((c) == '\r' || (c) == '\n')

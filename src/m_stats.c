@@ -53,7 +53,7 @@ extern char *oflagtotext(int oflags); /* For stats o */
 extern char *cflagtotext(int cflags, int uflags); /* For stats c */
 extern char *iflagtotext(int iflags); /* For stats i */
 extern char *pflagtotext(int pflags); /* For stats P */
-extern int report_spamfilters(aClient *cptr, aClient *sptr, int parc, char *parv[]); /* For stats S */
+extern int report_spamfilters(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[]); /* For stats S */
 
 /* internal function defines */
 
@@ -311,9 +311,6 @@ serv_info(aClient *cptr, char *name)
                     IsServer(acptr) ? (DoesTS(acptr) ? "TS" : "NoTS") : "-");
 
 
-        if(RC4EncLink(acptr))
-            sendto_one(cptr, ":%s %d %s : - RC4 encrypted", me.name, 
-                        RPL_STATSDEBUG, name);
         if(IsSSL(acptr))
             sendto_one(cptr, ":%s %d %s : - TLS encrypted", me.name,
                         RPL_STATSDEBUG, name);
@@ -477,7 +474,7 @@ tstats(aClient *cptr, char *name)
  *      parv[2] = server name (current server defaulted, if omitted)
  */
 
-int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
+int m_stats(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     static char Lformat[] = ":%s %d %s %s %u %u %u %u %u :%u %u %s";
     static char Sformat[] = ":%s %d %s Name SendQ SendM SendBytes RcveM "
@@ -885,7 +882,7 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
         case 'S':
             if (IsAnOper(sptr))
-                report_spamfilters(cptr, sptr, parc, parv);
+                report_spamfilters(NULL, cptr, sptr, parc, parv);
             else
                 sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name,  parv[0]);
             break;

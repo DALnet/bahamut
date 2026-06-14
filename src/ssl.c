@@ -38,20 +38,30 @@ SSL_CTX *server_ssl_ctx;
 int ssl_capable = 0;
 int mydata_index = 0;
 
+/* Callback for client certificate verification — always accept.
+ * We request but don't require client certs; if one is presented
+ * we'll extract the fingerprint for SASL EXTERNAL / WHOIS. */
+static int ssl_client_verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
+{
+    (void)preverify_ok;
+    (void)ctx;
+    return 1;
+}
+
 int ssl_init()
 {
     FILE *file;
 
-    if(!(file = fopen(IRCDSSL_CPATH,"r")))
+    if(!(file = fopen(ssl_cert_path,"r")))
     {
-        fprintf(stderr, "Can't open %s!\n", IRCDSSL_CPATH);
+        fprintf(stderr, "Can't open %s!\n", ssl_cert_path);
         return 0;
     }
     fclose(file);
 
-    if(!(file = fopen(IRCDSSL_KPATH,"r")))
+    if(!(file = fopen(ssl_key_path,"r")))
     {
-        fprintf(stderr, "Can't open %s!\n", IRCDSSL_KPATH);
+        fprintf(stderr, "Can't open %s!\n", ssl_key_path);
         return 0;
     }
     fclose(file);
@@ -81,7 +91,10 @@ int ssl_init()
 
     SSL_CTX_set_verify(server_ssl_ctx, SSL_VERIFY_PEER, ssl_verify_callback);
 
-    if(SSL_CTX_use_certificate_chain_file(ircdssl_ctx, IRCDSSL_CPATH) <= 0)
+    /* Request client certificates (optional — don't fail if none provided) */
+    SSL_CTX_set_verify(ircdssl_ctx, SSL_VERIFY_PEER, ssl_client_verify_callback);
+
+    if(SSL_CTX_use_certificate_chain_file(ircdssl_ctx, ssl_cert_path) <= 0)
     {
 	ERR_print_errors_fp(stderr);
 	SSL_CTX_free(ircdssl_ctx);
@@ -89,7 +102,7 @@ int ssl_init()
     }
 
     if(SSL_CTX_use_PrivateKey_file(ircdssl_ctx,
-		IRCDSSL_KPATH, SSL_FILETYPE_PEM) <= 0)
+		ssl_key_path, SSL_FILETYPE_PEM) <= 0)
     {
 	ERR_print_errors_fp(stderr);
 	SSL_CTX_free(ircdssl_ctx);
@@ -133,7 +146,7 @@ int ssl_rehash()
 	SSL_CTX *temp_ircdssl_ctx;
 	SSL_CTX *temp_server_ssl_ctx;
 
-    if(!(file = fopen(IRCDSSL_CPATH,"r")))
+    if(!(file = fopen(ssl_cert_path,"r")))
     {
 		sendto_realops("SSL ERROR: Cannot open server certificate file.");
 		abort_ssl_rehash(0);
@@ -142,7 +155,7 @@ int ssl_rehash()
     }
     fclose(file);
 
-    if(!(file = fopen(IRCDSSL_KPATH,"r")))
+    if(!(file = fopen(ssl_key_path,"r")))
     {
 		sendto_realops("SSL ERROR: Cannot open server key file.");
 		abort_ssl_rehash(0);
@@ -170,7 +183,10 @@ int ssl_rehash()
 		return 0;
     }
 
-    if(SSL_CTX_use_certificate_chain_file(temp_ircdssl_ctx, IRCDSSL_CPATH) <= 0)
+    /* Request client certs (optional) on the server context */
+    SSL_CTX_set_verify(temp_ircdssl_ctx, SSL_VERIFY_PEER, ssl_client_verify_callback);
+
+    if(SSL_CTX_use_certificate_chain_file(temp_ircdssl_ctx, ssl_cert_path) <= 0)
     {
 		abort_ssl_rehash(1);
     	if(temp_ircdssl_ctx) {
@@ -181,7 +197,7 @@ int ssl_rehash()
     }
 
     if(SSL_CTX_use_PrivateKey_file(temp_ircdssl_ctx,
-		IRCDSSL_KPATH, SSL_FILETYPE_PEM) <= 0)
+		ssl_key_path, SSL_FILETYPE_PEM) <= 0)
     {
 		abort_ssl_rehash(1);
     	if(temp_ircdssl_ctx) {
@@ -424,6 +440,35 @@ static int fatal_ssl_error(int ssl_error, int where, aClient *sptr)
     return -1;
 }
 
+void ssl_extract_certfp(aClient *cptr)
+{
+    X509          *cert;
+    unsigned char  digest[EVP_MAX_MD_SIZE];
+    unsigned int   digest_len = 0;
+    int            i;
+
+    cptr->certfp[0] = '\0';
+
+    if (!cptr->ssl)
+        return;
+
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+    cert = SSL_get1_peer_certificate(cptr->ssl);
+#else
+    cert = SSL_get_peer_certificate(cptr->ssl);
+#endif
+    if (!cert)
+        return;
+
+    if (X509_digest(cert, EVP_sha256(), digest, &digest_len) == 1)
+    {
+        for (i = 0; i < (int)digest_len; i++)
+            sprintf(cptr->certfp + i * 2, "%02x", digest[i]);
+    }
+
+    X509_free(cert);
+}
+
 int ssl_verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
 {
 	X509 *cert;
@@ -436,6 +481,17 @@ int ssl_verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
 	cert = X509_STORE_CTX_get_current_cert(ctx);
 	err = X509_STORE_CTX_get_error(ctx);
 	depth = X509_STORE_CTX_get_error_depth(ctx);
+
+	/* Gopeer connections don't set ex_data (no aConnect struct).
+	 * Accept self-signed certs unconditionally for them. */
+	if (!conn)
+	{
+		if (err == X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN ||
+		    err == X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT ||
+		    err == X509_V_OK)
+			return 1;
+		return preverify_ok;
+	}
 
 	if (!preverify_ok && (err != X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN
 	    && err != X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT))

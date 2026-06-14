@@ -126,7 +126,8 @@
 #if defined(vax) || defined(ns32000) || defined(sun386) || defined(MIPSEL) || \
     defined(BIT_ZERO_ON_RIGHT) || defined(i386) ||\
     defined(___vax__) || defined(__ns32000__) || defined(__sun386__) ||\
-    defined(__alpha) || defined(__x86_64__) || defined(__i386__) || defined(__amd64__)
+    defined(__alpha) || defined(__x86_64__) || defined(__i386__) || defined(__amd64__) || \
+    defined(__aarch64__) || defined(__arm__) || defined(__riscv)
 
 #define BYTE_ORDER	LITTLE_ENDIAN
 

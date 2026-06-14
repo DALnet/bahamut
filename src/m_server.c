@@ -21,11 +21,11 @@
 #include "sys.h"
 #include "numeric.h"
 #include "h.h"
-#include "dh.h"
 #include "userban.h"
 #include "zlink.h"
 #include "throttle.h"
 #include "clones.h"
+#include "hooks.h"
 
 /* externally defined functions */
 
@@ -109,10 +109,18 @@ do_server_estab(aClient *cptr)
 
     SetServer(cptr);
 
+    /* All modern servers support these capabilities by default */
+    SetBurst(cptr);
+    SetUnconnect(cptr);
+    SetNickIPStr(cptr);
+#ifdef NOQUIT
+    SetNoquit(cptr);
+#endif
+
     Count.server++;
     Count.myserver++;
 
-    if(IsZipCapable(cptr) && DoZipThis(cptr))
+    if(DoZipThis(cptr))
     {
         sendto_one(cptr, "SVINFO ZIP");
         SetZipOut(cptr);
@@ -186,7 +194,7 @@ do_server_estab(aClient *cptr)
 
     sendto_gnotice("from %s: Link with %s established, states:%s%s%s%s",
                    me.name, inpath, ZipOut(cptr) ? " Output-compressed" : "",
-                   (IsSSL(cptr)  || RC4EncLink(cptr)) ? " encrypted" : "",
+                   IsSSL(cptr) ? " encrypted" : "",
                    IsULine(cptr) ? " ULined" : "",
                    DoesTS(cptr) ? " TS" : " Non-TS");
 
@@ -345,6 +353,9 @@ do_server_estab(aClient *cptr)
         }
     }
 
+    /* Phase S3: allow bridge modules to append gossip state to the burst */
+    call_hooks(CHOOK_SENDBURST, cptr);
+
     /* stuff a PING at the end of this burst so we can figure out when
        the other side has finished processing it. */
     cptr->flags |= FLAGS_BURST|FLAGS_PINGSENT;
@@ -416,35 +427,10 @@ m_server_estab(aClient *cptr)
     /* no longer! this should still get better though */
     if((aconn->flags & CONN_ZIP))
         SetZipCapable(cptr);
-    if((aconn->flags & CONN_DKEY))
-        SetWantDKEY(cptr);
-    if((aconn->flags & CONN_TLS))
-        SetWantTLS(cptr);
     if (IsUnknown(cptr))
     {
         if (aconn->cpasswd[0])
             sendto_one(cptr, "PASS %s :TS", aconn->cpasswd);
-
-        /* Pass my info to the new server */
-
-#ifdef HAVE_ENCRYPTION_ON
-        if(WantDKEY(cptr))
-        {
-            sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURST UNCONNECT DKEY "
-                       "ZIP NICKIP NICKIPSTR TSMODE");
-        } else if (WantTLS(cptr))
-        {
-            sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURST UNCONNECT TLS "
-                       "ZIP NICKIP NICKIPSTR TSMODE");
-        }
-        else 
-        {
-            sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURST UNCONNECT ZIP NICKIP NICKIPSTR TSMODE");
-        }
-#else
-        sendto_one(cptr, "CAPAB SSJOIN NOQUIT BURST UNCONNECT ZIP NICKIP NICKIPSTR TSMODE");
-#endif
-
 
         sendto_one(cptr, "SERVER %s 1 :%s",
                    my_name_for_link(me.name, aconn),
@@ -506,20 +492,7 @@ m_server_estab(aClient *cptr)
     cptr->serv->aconn = aconn;
 
     throttle_remove(cipntoa(cptr));
-
-#ifdef HAVE_ENCRYPTION_ON
-    if(!CanDoDKEY(cptr) || !WantDKEY(cptr))
-        return do_server_estab(cptr);
-    else
-    {
-        SetNegoServer(cptr); /* VERY IMPORTANT THAT THIS IS HERE */
-        sendto_one(cptr, "DKEY START");
-    }
-#else
     return do_server_estab(cptr);
-#endif
-
-    return 0;
 }
 
 /*
@@ -529,7 +502,7 @@ m_server_estab(aClient *cptr)
  *       parv[2] = serverinfo/hopcount
  *       parv[3] = serverinfo
  */
-int m_server(aClient *cptr, aClient *sptr, int parc, char *parv[])
+int m_server(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     int     i;
     char        info[REALLEN + 1], *host;
@@ -821,125 +794,3 @@ int m_server(aClient *cptr, aClient *sptr, int parc, char *parv[])
     return 0;
 }
 
-/* m_dkey
- * lucas's code, i assume.
- * moved here from s_serv.c due to its integration in the encrypted
- * server negotiation stuffs. -epi
- */
-
-#define DKEY_GOTIN  0x01
-#define DKEY_GOTOUT 0x02
-
-#define DKEY_DONE(x) (((x) & (DKEY_GOTIN|DKEY_GOTOUT)) == \
-                      (DKEY_GOTIN|DKEY_GOTOUT))
-
-int m_dkey(aClient *cptr, aClient *sptr, int parc, char *parv[])
-{
-    if(!(IsNegoServer(sptr) && parc > 1))
-    {
-        if(IsPerson(sptr))
-            return 0;
-        return exit_client(sptr, sptr, sptr, "Not negotiating now");
-    }
-#ifdef HAVE_ENCRYPTION_ON
-    if(mycmp(parv[1], "START") == 0)
-    {
-        char keybuf[1024];
-
-        if(parc != 2)
-            return exit_client(sptr, sptr, sptr, "DKEY START failure");
-
-        if(sptr->serv->sessioninfo_in != NULL &&
-           sptr->serv->sessioninfo_out != NULL)
-            return exit_client(sptr, sptr, sptr, "DKEY START duplicate?!");
-
-        sptr->serv->sessioninfo_in = dh_start_session();
-        sptr->serv->sessioninfo_out = dh_start_session();
-
-        sendto_realops("Initiating diffie-hellman key exchange with %s",
-                       sptr->name);
-
-        dh_get_s_public(keybuf, 1024, sptr->serv->sessioninfo_in);
-        sendto_one(sptr, "DKEY PUB I %s", keybuf);
-
-        dh_get_s_public(keybuf, 1024, sptr->serv->sessioninfo_out);
-        sendto_one(sptr, "DKEY PUB O %s", keybuf);
-        return 0;
-    }
-
-    if(mycmp(parv[1], "PUB") == 0)
-    {
-        unsigned char keybuf[1024];
-        size_t keylen;
-
-        if(parc != 4 || !sptr->serv->sessioninfo_in ||
-           !sptr->serv->sessioninfo_out)
-            return exit_client(sptr, sptr, sptr, "DKEY PUB failure");
-
-        if(mycmp(parv[2], "O") == 0) /* their out is my in! */
-        {
-            if(!dh_generate_shared(sptr->serv->sessioninfo_in, parv[3]))
-                return exit_client(sptr, sptr, sptr, "DKEY PUB O invalid");
-            sptr->serv->dkey_flags |= DKEY_GOTOUT;
-        }
-        else if(mycmp(parv[2], "I") == 0) /* their out is my in! */
-        {
-            if(!dh_generate_shared(sptr->serv->sessioninfo_out, parv[3]))
-                return exit_client(sptr, sptr, sptr, "DKEY PUB I invalid");
-            sptr->serv->dkey_flags |= DKEY_GOTIN;
-        }
-        else
-            return exit_client(sptr, sptr, sptr, "DKEY PUB bad option");
-
-        if(DKEY_DONE(sptr->serv->dkey_flags))
-        {
-            sendto_one(sptr, "DKEY DONE");
-            SetRC4OUT(sptr);
-
-            keylen = 1024;
-            if(!dh_get_s_shared(keybuf, &keylen, sptr->serv->sessioninfo_in))
-                return exit_client(sptr, sptr, sptr,
-                                   "Could not setup encrypted session");
-            sptr->serv->rc4_in = rc4_initstate(keybuf, keylen);
-
-            keylen = 1024;
-            if(!dh_get_s_shared(keybuf, &keylen, sptr->serv->sessioninfo_out))
-                return exit_client(sptr, sptr, sptr,
-                                   "Could not setup encrypted session");
-            sptr->serv->rc4_out = rc4_initstate(keybuf, keylen);
-
-            dh_end_session(sptr->serv->sessioninfo_in);
-            dh_end_session(sptr->serv->sessioninfo_out);
-
-            sptr->serv->sessioninfo_in = sptr->serv->sessioninfo_out = NULL;
-            return 0;
-        }
-
-        return 0;
-    }
-
-
-    if(mycmp(parv[1], "DONE") == 0)
-    {
-        if(!((sptr->serv->sessioninfo_in == NULL &&
-              sptr->serv->sessioninfo_out == NULL) &&
-             (sptr->serv->rc4_in != NULL && sptr->serv->rc4_out != NULL)))
-            return exit_client(sptr, sptr, sptr, "DKEY DONE when not done!");
-        SetRC4IN(sptr);
-        sendto_realops("Diffie-Hellman exchange with %s complete, connection "
-                       "encrypted.", sptr->name);
-        sendto_one(sptr, "DKEY EXIT");
-        return RC4_NEXT_BUFFER;
-    }
-
-    if(mycmp(parv[1], "EXIT") == 0)
-    {
-        if(!(IsRC4IN(sptr) && IsRC4OUT(sptr)))
-            return exit_client(sptr, sptr, sptr, "DKEY EXIT when not in "
-                               "proper stage");
-        ClearNegoServer(sptr);
-        return do_server_estab(sptr);
-    }
-#endif
-    return 0;
-}

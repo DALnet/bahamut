@@ -1,0 +1,16 @@
+option('socketengine',
+  type: 'combo',
+  choices: ['auto', 'epoll', 'kqueue', 'poll', 'select', 'devpoll'],
+  value: 'auto',
+  description: 'I/O event notification mechanism')
+
+option('maxconnections',
+  type: 'integer',
+  value: 32768,
+  min: 20,
+  description: 'Maximum simultaneous connections')
+
+option('hookmodules',
+  type: 'boolean',
+  value: true,
+  description: 'Enable loadable hook modules support')

@@ -28,6 +28,7 @@
 #include "memcount.h"
 #include "hooks.h"
 #include "spamfilter.h"
+#include "cap.h"
 
 int         server_was_split = YES;
 
@@ -52,10 +53,60 @@ int       add_exempt_id(aClient*, aChannel*, char*);
 int       del_exempt_id(aChannel*, char*);
 #endif
 
-static int  add_banid(aClient *, aChannel *, char *);
+/*
+ * sendto_channel_join — send JOIN to local channel members, with
+ * extended-join for clients that have the cap enabled.
+ *
+ * Plain:    :<nick> JOIN :<channel>
+ * Extended: :<nick>!<user>@<host> JOIN <channel> <account> :<realname>
+ */
+static void
+sendto_channel_join(aChannel *chptr, aClient *from, const char *channel_name)
+{
+    chanMember *cm;
+    aClient    *acptr;
+    char        plainbuf[512];
+    char        extbuf[512];
+    int         plainlen = 0, extlen = 0;
+
+    for (cm = chptr->members; cm; cm = cm->next)
+    {
+        if (!MyConnect(acptr = cm->cptr))
+            continue;
+        if ((chptr->mode.mode & MODE_AUDITORIUM) && (acptr != from) &&
+            !is_chan_opvoice(acptr, chptr) && !is_chan_opvoice(from, chptr))
+            continue;
+
+        if (HasCap(acptr, cap_extended_join_bit))
+        {
+            if (!extlen)
+            {
+                const char *acctname = (from->user && from->user->account_name[0])
+                                       ? from->user->account_name : "*";
+                const char *realname = from->info;
+                extlen = ircsnprintf(extbuf, sizeof(extbuf),
+                                     ":%s!%s@%s JOIN %s %s :%s",
+                                     from->name,
+                                     from->user ? from->user->username : "",
+                                     from->user ? (char *)GET_USER_HOST(from) : "",
+                                     channel_name, acctname, realname);
+            }
+            sendto_one(acptr, "%s", extbuf);
+        }
+        else
+        {
+            if (!plainlen)
+                plainlen = ircsnprintf(plainbuf, sizeof(plainbuf),
+                                       ":%s JOIN :%s", from->name, channel_name);
+            sendto_one(acptr, "%s", plainbuf);
+        }
+    }
+}
+
+int         add_banid(aClient *, aChannel *, char *);
 static int  can_join(aClient *, aChannel *, char *);
 static void channel_modes(aClient *, char *, char *, aChannel *);
-static int  del_banid(aChannel *, char *);
+int         del_banid(aChannel *, char *);
 static int  is_banned(aClient *, aChannel *, chanMember *);
 static int  set_mode(aClient *, aClient *, aChannel *, int, 
                      int, char **, char *, char *);
@@ -442,7 +493,7 @@ anInvite* is_invited(aClient* cptr, aChannel* chptr)
 /* Ban functions to work with mode +b */
 /* add_banid - add an id to be banned to the channel  (belongs to cptr) */
 
-static int add_banid(aClient *cptr, aChannel *chptr, char *banid)
+int add_banid(aClient *cptr, aChannel *chptr, char *banid)
 {
     aBan        *ban;
     int          cnt = 0;
@@ -510,7 +561,7 @@ static int add_banid(aClient *cptr, aChannel *chptr, char *banid)
  * del_banid - delete an id belonging to cptr if banid is null,
  * deleteall banids belonging to cptr.
  */
-static int del_banid(aChannel *chptr, char *banid)
+int del_banid(aChannel *chptr, char *banid)
 {
    aBan        **ban;
    aBan         *tmp;
@@ -1736,7 +1787,7 @@ void send_channel_modes(aClient *cptr, aChannel *chptr)
 
 /* m_mode parv[0] - sender parv[1] - channel */
 
-int m_mode(aClient *cptr, aClient *sptr, int parc, char *parv[])
+int m_mode(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     int         mcount = 0, chanop=0;
     aChannel   *chptr;
@@ -1747,7 +1798,7 @@ int m_mode(aClient *cptr, aClient *sptr, int parc, char *parv[])
     {
         chptr = find_channel(parv[1], NullChn);
         if (chptr == NullChn)
-            return m_umode(cptr, sptr, parc, parv);
+            return m_umode(NULL, cptr, sptr, parc, parv);
     }
     else
     {
@@ -1817,6 +1868,7 @@ int m_mode(aClient *cptr, aClient *sptr, int parc, char *parv[])
                 sendto_serv_butone(cptr, ":%s MODE %s %ld %s %s", parv[0],
                                    chptr->chname, chptr->channelts, modebuf,
                                    parabuf);
+                call_hooks(CHOOK_CHANMODE, sptr, chptr, modebuf, parabuf);
         }
     return 0;
 }
@@ -2032,7 +2084,7 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
                     fake_parv[1] = chptr->chname;
                     fake_parv[2] = NULL;
 
-                    m_names(who, who, 2, fake_parv);
+                    m_names(NULL, who, who, 2, fake_parv);
                 }
                 if(chptr->mode.mode & MODE_AUDITORIUM) sendto_channel_butserv_noopvoice(chptr, who, ":%s JOIN :%s", who->name, chptr->chname);
             }
@@ -3173,7 +3225,7 @@ int send_sjr_to_services(aClient *sptr, char *chname, char *key)
  * parv[1] = channel
  * parv[2] = channel password (key)
  */
-int m_join(aClient *cptr, aClient *sptr, int parc, char *parv[])
+int m_join(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     static char jbuf[BUFSIZE];
     Link   *lp;
@@ -3460,9 +3512,12 @@ int m_join(aClient *cptr, aClient *sptr, int parc, char *parv[])
             sendto_serv_butone(cptr, ":%s JOIN :%s", parv[0], name);
 
         /* notify all other users on the new channel */
-        sendto_channel_butserv(chptr, sptr, ":%s JOIN :%s", parv[0], name);
-                
-        if (MyClient(sptr)) 
+        sendto_channel_join(chptr, sptr, name);
+
+        /* Phase 8B: fire post-join hook for ChanServ enforcement */
+        call_hooks(CHOOK_POSTJOIN, sptr, chptr);
+
+        if (MyClient(sptr))
         {
             del_invite(sptr, chptr);
             if (chptr->topic[0] != '\0') 
@@ -3475,7 +3530,7 @@ int m_join(aClient *cptr, aClient *sptr, int parc, char *parv[])
                            chptr->topic_time);
             }
             parv[1] = name;
-            (void) m_names(cptr, sptr, 2, parv);
+            (void) m_names(NULL, cptr, sptr, 2, parv);
             if(chptr->greetmsg)
             {
                 sendto_one(sptr, ":%s!%s@%s PRIVMSG %s :%s", Network_Name, Network_Name, DEFAULT_STAFF_ADDRESS, name, chptr->greetmsg);
@@ -3494,7 +3549,7 @@ int m_join(aClient *cptr, aClient *sptr, int parc, char *parv[])
  * join a channel regardless of modes.
  */
 
-int m_sajoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
+int m_sajoin(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
         aChannel        *chptr;
         char            *name;
@@ -3545,7 +3600,7 @@ int m_sajoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
         add_user_to_channel(chptr, sptr, 0);
         sendto_serv_butone(cptr, CliSJOINFmt, parv[0], chptr->channelts, name);
-        sendto_channel_butserv(chptr, sptr, ":%s JOIN :%s", parv[0], name);
+        sendto_channel_join(chptr, sptr, name);
         if(MyClient(sptr))
         {
             if(chptr->topic[0] != '\0')
@@ -3557,7 +3612,7 @@ int m_sajoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
             }
             parv[1] = name;
             parv[2] = NULL;
-            m_names(cptr, sptr, 2, parv);
+            m_names(NULL, cptr, sptr, 2, parv);
         }
         return 0;
 }
@@ -3568,7 +3623,7 @@ int m_sajoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
  * parv[1] = channel
  * parv[2] = Optional part reason
  */
-int m_part(aClient *cptr, aClient *sptr, int parc, char *parv[])
+int m_part(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     aChannel *chptr;
     char       *p, *name;
@@ -3666,6 +3721,8 @@ int m_part(aClient *cptr, aClient *sptr, int parc, char *parv[])
             sendto_channel_butserv(chptr, sptr, PartFmt2, parv[0], name,
                                    reason);
         }
+        call_hooks(CHOOK_PART, sptr, chptr,
+                   (parc >= 3 && !BadPtr(reason)) ? reason : NULL);
         remove_user_from_channel(sptr, chptr);
         name = strtoken(&p, (char *) NULL, ",");
     }
@@ -3679,7 +3736,7 @@ int m_part(aClient *cptr, aClient *sptr, int parc, char *parv[])
  * parv[2] = client to kick
  * parv[3] = kick comment
  */
-int m_kick(aClient *cptr, aClient *sptr, int parc, char *parv[])
+int m_kick(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     aClient    *who;
     aChannel   *chptr;
@@ -3830,6 +3887,7 @@ int m_kick(aClient *cptr, aClient *sptr, int parc, char *parv[])
                                            name, who->name, comment);
                 sendto_serv_butone(cptr, ":%s KICK %s %s :%s", parv[0], name,
                                    who->name, comment);
+                call_hooks(CHOOK_KICK, sptr, who, chptr, comment);
                 remove_user_from_channel(who, chptr);
             }
             else
@@ -3859,32 +3917,14 @@ void send_topic_burst(aClient *cptr)
     aChannel *chptr;
     aClient *acptr;
     struct FlagList *xflag;
-    char *tmpptr;            /* Temporary pointer to remove the user@host part from tnick for non-NICKIPSTR servers */
-    char tnick[NICKLEN + 1]; /* chptr->topic_nick without the user@host part for non-NICKIPSTR servers */
-    int len;                 /* tnick's length */
 
     if (!(confopts & FLAGS_SERVHUB) || !(cptr->serv->uflags & ULF_NOBTOPIC))
         for (chptr = channel; chptr; chptr = chptr->nextch)
         {
             if(chptr->topic[0] != '\0')
-            {
-                if(cptr->capabilities & CAPAB_NICKIPSTR)
-                    sendto_one(cptr, ":%s TOPIC %s %s %ld :%s", me.name, chptr->chname,
-                               chptr->topic_nick, (long)chptr->topic_time,
-			       chptr->topic);
-                else
-                {
-                    /* This is a non-NICKIPSTR server, we need to remove the user@host part before we send it */
-                    tmpptr = chptr->topic_nick;
-                    len = 0;
-                    while(*tmpptr && *tmpptr!='!')
-                        tnick[len++] = *(tmpptr++);
-                    tnick[len] = '\0';
-                    sendto_one(cptr, ":%s TOPIC %s %s %ld :%s", me.name, chptr->chname,
-                               tnick, (long)chptr->topic_time,
-			       chptr->topic);
-                }
-            }
+                sendto_one(cptr, ":%s TOPIC %s %s %ld :%s", me.name, chptr->chname,
+                           chptr->topic_nick, (long)chptr->topic_time,
+                           chptr->topic);
             if(chptr->xflags & XFLAG_SET)
             {
                 /* Not very optimized but we'll survive... -Kobi. */
@@ -3920,11 +3960,10 @@ void send_topic_burst(aClient *cptr)
  * parv[0] = sender prefix 
  * parv[1] = topic text
  */
-int m_topic(aClient *cptr, aClient *sptr, int parc, char *parv[])
+int m_topic(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     aChannel   *chptr = NullChn;
     char       *topic = NULL, *name, *tnick;
-    char       *tmpptr; /* Temporary pointer to remove the user@host part from tnick for non-NICKIPSTR servers */
     time_t     ts = timeofday;
     int        member;  
 
@@ -4039,17 +4078,13 @@ int m_topic(aClient *cptr, aClient *sptr, int parc, char *parv[])
      * sends with the topic, so I changed everything to work like that.
      * -wd */
 
-    sendto_capab_serv_butone(cptr, CAPAB_NICKIPSTR, 0, ":%s TOPIC %s %s %lu :%s", parv[0],
-                             chptr->chname, chptr->topic_nick,
-                             (unsigned long)chptr->topic_time, chptr->topic);
-    if((tmpptr = strchr(tnick, '!')))
-        *tmpptr = '\0'; /* Remove the user@host part before we send it to non-NICKIPSTR servers */
-    sendto_capab_serv_butone(cptr, 0, CAPAB_NICKIPSTR, ":%s TOPIC %s %s %lu :%s", parv[0],
-                             chptr->chname, tnick,
-                             (unsigned long)chptr->topic_time, chptr->topic);
+    sendto_serv_butone(cptr, ":%s TOPIC %s %s %lu :%s", parv[0],
+                       chptr->chname, chptr->topic_nick,
+                       (unsigned long)chptr->topic_time, chptr->topic);
     sendto_channel_butserv_me(chptr, sptr, ":%s TOPIC %s :%s", parv[0],
                               chptr->chname, chptr->topic);
-        
+    call_hooks(CHOOK_TOPIC, sptr, chptr, chptr->topic);
+
     return 0;
 }
 
@@ -4059,7 +4094,7 @@ int m_topic(aClient *cptr, aClient *sptr, int parc, char *parv[])
  * parv[1] - user to invite 
  * parv[2] - channel name
  */
-int m_invite(aClient *cptr, aClient *sptr, int parc, char *parv[])
+int m_invite(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     aClient    *acptr;
     aChannel   *chptr = NULL;
@@ -4143,6 +4178,7 @@ int m_invite(aClient *cptr, aClient *sptr, int parc, char *parv[])
         }
 
         add_invite(acptr, chptr);
+        call_hooks(CHOOK_INVITE, sptr, acptr, chptr);
 
         if (!is_silenced(sptr, acptr))
             sendto_prefix_one(acptr, sptr, ":%s INVITE %s :%s", parv[0],
@@ -4285,7 +4321,7 @@ void send_list(aClient *cptr, int numsend)
  * parv[0] = sender prefix
  * parv[1] = channel
  */
-int m_list(aClient *cptr, aClient *sptr, int parc, char *parv[])
+int m_list(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     aChannel    *chptr;
     time_t      currenttime = time(NULL);
@@ -4536,7 +4572,7 @@ int m_list(aClient *cptr, aClient *sptr, int parc, char *parv[])
 /* maximum names para to show to opers when abuse occurs */
 #define TRUNCATED_NAMES 64
 
-int m_names(aClient *cptr, aClient *sptr, int parc, char *parv[])
+int m_names(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     int mlen = strlen(me.name) + NICKLEN + 7;
     aChannel *chptr;
@@ -4606,21 +4642,52 @@ int m_names(aClient *cptr, aClient *sptr, int parc, char *parv[])
         acptr = cm->cptr;
         if(IsInvisible(acptr) && !member)
             continue;
-        if(cm->flags & CHFL_CHANOP)
-            buf[idx++] = '@';
+        if (HasCap(sptr, cap_multi_prefix_bit))
+        {
+            if (cm->flags & CHFL_CHANOP)  buf[idx++] = '@';
 #ifdef USE_HALFOPS
-        else if(cm->flags & CHFL_HALFOP)
-            buf[idx++] = '%';
+            if (cm->flags & CHFL_HALFOP)  buf[idx++] = '%';
 #endif
-        else if(cm->flags & CHFL_VOICE)
-            buf[idx++] = '+';
-        else if((chptr->mode.mode & MODE_AUDITORIUM) && (sptr != acptr) && !is_chan_opvoice(sptr, chptr) && !IsAnOper(sptr)) continue;
-        for(s = acptr->name; *s; s++)
-            buf[idx++] = *s;
+            if (cm->flags & CHFL_VOICE)   buf[idx++] = '+';
+            if (!(cm->flags & (CHFL_CHANOP|CHFL_HALFOP|CHFL_VOICE)) &&
+                (chptr->mode.mode & MODE_AUDITORIUM) &&
+                sptr != acptr && !is_chan_opvoice(sptr, chptr) &&
+                !IsAnOper(sptr))
+                continue;
+        }
+        else
+        {
+            if (cm->flags & CHFL_CHANOP)       buf[idx++] = '@';
+#ifdef USE_HALFOPS
+            else if (cm->flags & CHFL_HALFOP)  buf[idx++] = '%';
+#endif
+            else if (cm->flags & CHFL_VOICE)   buf[idx++] = '+';
+            else if ((chptr->mode.mode & MODE_AUDITORIUM) &&
+                     sptr != acptr && !is_chan_opvoice(sptr, chptr) &&
+                     !IsAnOper(sptr))
+                continue;
+        }
+        if (HasCap(sptr, cap_userhost_in_names_bit) && acptr->user)
+        {
+            for(s = acptr->name; *s; s++)
+                buf[idx++] = *s;
+            buf[idx++] = '!';
+            for(s = acptr->user->username; *s; s++)
+                buf[idx++] = *s;
+            buf[idx++] = '@';
+            for(s = acptr->user->host; *s; s++)
+                buf[idx++] = *s;
+        }
+        else
+        {
+            for(s = acptr->name; *s; s++)
+                buf[idx++] = *s;
+        }
         buf[idx++] = ' ';
         buf[idx] = '\0';
         flag = 1;
-        if(mlen + idx + NICKLEN > BUFSIZE - 3)
+        if(mlen + idx + (HasCap(sptr, cap_userhost_in_names_bit)
+                         ? USERHOST_REPLYLEN + 2 : NICKLEN) > BUFSIZE - 3)
         {
             sendto_one(sptr, rpl_str(RPL_NAMREPLY), me.name, parv[0], buf);
             idx = spos;
@@ -4878,7 +4945,7 @@ static inline void sjoin_sendit(aClient *cptr, aClient *sptr,
  * Sent from a server I am directly connected to that is requesting I resend
  * EVERYTHING I know about #channel.
  */
-int m_resynch(aClient *cptr, aClient *sptr, int parc, char *parv[])
+int m_resynch(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     aChannel *chptr;
 
@@ -4936,7 +5003,7 @@ what = x; \
 #define ADD_SJBUF(p) para = p; if(sjbufpos) sjbuf[sjbufpos++] = ' '; \
                      while(*para) sjbuf[sjbufpos++] = *para++; 
         
-int m_sjoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
+int m_sjoin(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     aChannel    *chptr;
     aClient     *acptr;
@@ -5022,12 +5089,14 @@ int m_sjoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
         /* parv[0] is the client that is joining. parv[0] == sptr->name */
 
-        if (!IsMember(sptr, chptr)) 
+        if (!IsMember(sptr, chptr))
         {
             add_user_to_channel(chptr, sptr, 0);
             joinrate_dojoin(chptr, sptr);
-            sendto_channel_butserv(chptr, sptr, ":%s JOIN :%s", parv[0],
-                                   parv[2]);
+            sendto_channel_join(chptr, sptr, parv[2]);
+            /* Fire post-join hook so gossip eventlog emits EVT_CHAN_JOIN
+             * for remote users arriving via client-format SJOIN */
+            call_hooks(CHOOK_POSTJOIN, sptr, chptr);
         }
 
         sendto_serv_butone(cptr, CliSJOINFmt, parv[0], tstosend, parv[2]);
@@ -5436,10 +5505,13 @@ int m_sjoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
         if (acptr->from != cptr)
             continue;
         people++;
-        if (!IsMember(acptr, chptr)) 
+        if (!IsMember(acptr, chptr))
         {
             add_user_to_channel(chptr, acptr, fl);
-            sendto_channel_butserv(chptr, acptr, ":%s JOIN :%s", s, parv[2]);
+            sendto_channel_join(chptr, acptr, parv[2]);
+            /* Fire post-join hook so gossip eventlog emits EVT_CHAN_JOIN
+             * for users arriving via TS5 server SJOIN (reverse bridge) */
+            call_hooks(CHOOK_POSTJOIN, acptr, chptr);
         }
         if (keepnewmodes)
         {
@@ -5528,7 +5600,7 @@ int m_sjoin(aClient *cptr, aClient *sptr, int parc, char *parv[])
  * parv[1] = channel
  * parv[2] = modes
  */
-int m_samode(aClient *cptr, aClient *sptr, int parc, char *parv[])
+int m_samode(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     aChannel *chptr;
 

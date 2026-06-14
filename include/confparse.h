@@ -63,6 +63,12 @@ struct ConfVar
 #define CONFF_PORT                  0x000400
 #define CONFT_MODULES   "MODULES"
 #define CONFF_MODULES               0x000800
+#define CONFT_GOPEER    "GOPEER"
+#define CONFF_GOPEER                0x001000
+#define CONFT_GOSSIP    "GOSSIP"
+#define CONFF_GOSSIP                0x002000
+#define CONFT_SSL       "SSL"
+#define CONFF_SSL                   0x008000
 
 /* subtokens */
 
@@ -114,6 +120,23 @@ struct ConfVar
 #define SCONFF_UFLAGS               0x800000
 
 #define SCONFF_STRING               0x1000000   /* allow freeform strings */
+
+/* gossip-specific subtokens */
+#define SCONFT_SERVER_ID "SERVER_ID"
+#define SCONFF_SERVER_ID            0x2000000
+#define SCONFT_TLS       "TLS"
+#define SCONFF_TLS                  0x4000000
+#define SCONFT_FANOUT    "FANOUT"
+#define SCONFF_FANOUT               0x8000000
+#define SCONFT_SYNC_WINDOW "SYNC_WINDOW"
+#define SCONFF_SYNC_WINDOW          0x10000000
+
+/* SRA block subtoken */
+/* SSL block subtokens */
+#define SCONFT_CERTIFICATE "CERTIFICATE"
+#define SCONFF_CERTIFICATE          0x40000000
+#define SCONFT_KEY         "KEY"
+#define SCONFF_KEY                  0x80000000
 
 /* subtoken aliases */
 
@@ -308,6 +331,26 @@ sConf confopentab[] =
     {(char *) 0, 0, 0}
 };
 
+/* Phase S2: gopeer {} block — one per configured gossip peer */
+sConf confgopeertab[] =
+{
+    {SCONFT_HOST,      SCONFF_HOST,      VARTYPE_NAME},
+    {SCONFT_PORT,      SCONFF_PORT,      VARTYPE_INT},
+    {SCONFT_PASSWD,    SCONFF_PASSWD,    VARTYPE_NAME},
+    {SCONFT_NAME,      SCONFF_NAME,      VARTYPE_NAME},
+    {SCONFT_SERVER_ID, SCONFF_SERVER_ID, VARTYPE_INT},
+    {SCONFT_TLS,       SCONFF_TLS,       VARTYPE_NONE},
+    {(char *) 0, 0, 0}
+};
+
+/* Phase S2: gossip {} block — global gossip configuration */
+sConf confgossiptab[] =
+{
+    {SCONFT_FANOUT,      SCONFF_FANOUT,      VARTYPE_INT},
+    {SCONFT_SYNC_WINDOW, SCONFF_SYNC_WINDOW, VARTYPE_INT},
+    {(char *) 0, 0, 0}
+};
+
 extern int confadd_global(cVar **, int);
 extern int confadd_options(cVar **, int);
 extern int confadd_class(cVar **, int);
@@ -320,8 +363,19 @@ extern int confadd_kill(cVar **, int);
 extern int confadd_admin(cVar **, int);
 extern int confadd_port(cVar **, int);
 extern int confadd_modules(cVar **, int);
+extern int confadd_gopeer(cVar **, int);
+extern int confadd_gossip(cVar **, int);
+extern int confadd_ssl(cVar **, int);
 
-struct TopConf tconftab[] = 
+/* Phase 12: ssl {} block — TLS certificate/key paths */
+sConf confssltab[] =
+{
+    {SCONFT_CERTIFICATE, SCONFF_CERTIFICATE, VARTYPE_NAME},
+    {SCONFT_KEY,         SCONFF_KEY,         VARTYPE_NAME},
+    {(char *) 0, 0, 0}
+};
+
+struct TopConf tconftab[] =
 {
     {CONFT_GLOBAL, CONFF_GLOBAL, CONFF_ADMIN, confglobtab, confadd_global},
     {CONFT_OPTIONS, CONFF_OPTIONS, 0, confopttab, confadd_options},
@@ -335,6 +389,9 @@ struct TopConf tconftab[] =
     {CONFT_SUPER, CONFF_SUPER, 0, confopentab, confadd_super},
     {CONFT_PORT, CONFF_PORT, 0, confporttab, confadd_port},
     {CONFT_MODULES, CONFF_MODULES, 0, confmoduletab, confadd_modules},
+    {CONFT_GOPEER, CONFF_GOPEER, 0, confgopeertab, confadd_gopeer},
+    {CONFT_GOSSIP, CONFF_GOSSIP, 0, confgossiptab, confadd_gossip},
+    {CONFT_SSL, CONFF_SSL, 0, confssltab, confadd_ssl},
     {(char *) 0, 0, 0, 0}
 };
 

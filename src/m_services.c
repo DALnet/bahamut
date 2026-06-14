@@ -29,6 +29,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include "h.h"
+#include "hooks.h"
 #include "userban.h"
 #include "clones.h"
 #include "memcount.h"
@@ -41,6 +42,7 @@ extern Link *find_channel_link(Link *, aChannel *); /* for m_aj */
 extern void add_user_to_channel(aChannel *, aClient *, int); /* for m_aj */
 extern void read_motd(char *); /* defined in s_serv.c */
 extern void read_shortmotd(char *); /* defined in s_serv.c */
+extern AliasInfo *current_alias_info;
 
 int svspanic = 0; /* Services panic */
 int svsnoop = 0; /* Services disabled all o:lines (off by default) */
@@ -84,7 +86,7 @@ my_rand()
 }
 
 /* alias message handler */
-int m_aliased(aClient *cptr, aClient *sptr, int parc, char *parv[], AliasInfo *ai)
+int m_aliased(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     if (parc < 2 || *parv[1] == 0)
     {
@@ -92,11 +94,15 @@ int m_aliased(aClient *cptr, aClient *sptr, int parc, char *parv[], AliasInfo *a
         return -1;
     }
 
+    /* Phase 8A: check local handler first (native services dispatch) */
+    if (current_alias_info->local_handler)
+        return current_alias_info->local_handler(sptr, parv[1]);
+
     /* second check is to avoid message loops when admins get stupid */
-    if (!ai->client || ai->client->from == sptr->from)
+    if (!current_alias_info->client || current_alias_info->client->from == sptr->from)
     {
         sendto_one(sptr, err_str(ERR_SERVICESDOWN), me.name, parv[0],
-                   ai->nick);
+                   current_alias_info->nick);
         return 0;
     }
 
@@ -104,17 +110,17 @@ int m_aliased(aClient *cptr, aClient *sptr, int parc, char *parv[], AliasInfo *a
     {
         if(MyClient(sptr))
             sendto_one(sptr, err_str(ERR_SERVICESDOWN), me.name, parv[0],
-                       ai->nick);
+                       current_alias_info->nick);
         return 0;
     }
 
-    sendto_alias(ai, sptr, "%s", parv[1]);
+    sendto_alias(current_alias_info, sptr, "%s", parv[1]);
 
     return 0;
 }
 
 /* m_services -- see df465+taz */
-int m_services(aClient *cptr, aClient *sptr, int parc, char *parv[])
+int m_services(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     char       *tmps;
     int         aidx = AII_NS;
@@ -146,13 +152,15 @@ int m_services(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	if (*tmps == '#')
         aidx = AII_CS;
     }
-    return m_aliased(cptr, sptr, parc, parv, &aliastab[aidx]);
+    current_alias_info = &aliastab[aidx];
+    return m_aliased(NULL, cptr, sptr, parc, parv);
 }
 
 /* m_identify  df465+taz */
-int m_identify(aClient *cptr, aClient *sptr, int parc, char *parv[])
+int m_identify(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     int aidx = AII_NS;
+    char idbuf[512];
 
     if (parc < 2 || *parv[1] == '\0')
     {
@@ -162,6 +170,13 @@ int m_identify(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
     if (*parv[1] == '#')
         aidx = AII_CS;
+
+    /* Check local handler first (native services dispatch) */
+    if (aliastab[aidx].local_handler)
+    {
+        ircsnprintf(idbuf, sizeof(idbuf), "IDENTIFY %s", parv[1]);
+        return aliastab[aidx].local_handler(sptr, idbuf);
+    }
 
     if (!aliastab[aidx].client)
     {
@@ -182,7 +197,7 @@ int m_identify(aClient *cptr, aClient *sptr, int parc, char *parv[])
  * parv[2] = new nickname
  * parv[3] = timestamp
  */
-int m_svsnick(aClient *cptr, aClient *sptr, int parc, char *parv[])
+int m_svsnick(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     aClient *acptr, *ocptr;
     char newnick[NICKLEN + 1];
@@ -265,7 +280,7 @@ int m_svsnick(aClient *cptr, aClient *sptr, int parc, char *parv[])
  * 2/5/00 lucas
  * preconditions: parc >= 3, sptr is ulined
  */
-int channel_svsmode(aClient *cptr, aClient *sptr, int parc, char *parv[])
+int channel_svsmode(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     aChannel *chptr;
     aClient *acptr = NULL;
@@ -353,7 +368,7 @@ int channel_svsmode(aClient *cptr, aClient *sptr, int parc, char *parv[])
  * parv[3] - mode (or services id if old svs version)
  * parv[4] - optional arguement (services id)
  */
-int m_svsmode(aClient *cptr, aClient *sptr, int parc, char *parv[])
+int m_svsmode(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     int            flag, *s, what, oldumode;
     char          *m, *modes, *optarg;
@@ -364,7 +379,7 @@ int m_svsmode(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	return 0;
 
     if (parv[1][0] == '#')
-	return channel_svsmode(cptr, sptr, parc, parv);
+	return channel_svsmode(NULL, cptr, sptr, parc, parv);
 
     if ((parc >= 4) && ((parv[3][0] == '+') || (parv[3][0] == '-')))
     {
@@ -474,7 +489,7 @@ int m_svsmode(aClient *cptr, aClient *sptr, int parc, char *parv[])
  * parv[2] - duration (0 to remove existing ban)
  * parv[3] - optional reason
  */
-int m_svshold(aClient *cptr, aClient *sptr, int parc, char *parv[])
+int m_svshold(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     struct simBan *ban, *oban;
     char *reason, *mask;
@@ -546,7 +561,7 @@ int m_svshold(aClient *cptr, aClient *sptr, int parc, char *parv[])
 * parv[2] - duration (0 to revert to default limit)
 */
 int
-m_svsclone(aClient *cptr, aClient *sptr, int parc, char *parv[])
+m_svsclone(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     int d;
 
@@ -572,7 +587,7 @@ m_svsclone(aClient *cptr, aClient *sptr, int parc, char *parv[])
  * parv[0] - sender
  * parv[1] - 2/1/0 (0 - all users can use services, 1 - only +r users can use services, 2 - only opers (+o) can use services)
  */
-int m_svspanic(aClient *cptr, aClient *sptr, int parc, char *parv[])
+int m_svspanic(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     if(!IsULine(sptr) || parc < 2)
         return 0;
@@ -592,7 +607,7 @@ int m_svspanic(aClient *cptr, aClient *sptr, int parc, char *parv[])
  * parv[1] - channel
  * parv[2] - kick reason
  */
-int m_chankill(aClient *cptr, aClient *sptr, int parc, char *parv[])
+int m_chankill(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     aChannel *chptr = NULL;
     chanMember *cur = NULL, *next = NULL;
@@ -621,9 +636,11 @@ int m_chankill(aClient *cptr, aClient *sptr, int parc, char *parv[])
 /* m_svshost - Lets services change a user's host.
  * -Kobi_S 30/01/2010
  */
-int m_svshost(aClient *cptr, aClient *sptr, int parc, char *parv[])
+int m_svshost(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     aClient *acptr;
+    char old_user[USERLEN + 1];
+    char old_host[HOSTLEN + 1];
 
     if(!IsServer(sptr) || parc<3 || *parv[2]==0)
         return 0; /* Not a server or not enough parameters */
@@ -639,6 +656,16 @@ int m_svshost(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
     if(strlen(parv[2]) > HOSTLEN)
         return 0; /* The requested host is too long */
+
+    /* Save old visible user@host for CHOOK_CHGHOST */
+    strncpy(old_user, acptr->user->username, USERLEN);
+    old_user[USERLEN] = '\0';
+#ifdef USER_HOSTMASKING
+    strncpy(old_host, acptr->user->mhost, HOSTLEN);
+#else
+    strncpy(old_host, acptr->user->host, HOSTLEN);
+#endif
+    old_host[HOSTLEN] = '\0';
 
 #ifdef USER_HOSTMASKING
     strcpy(acptr->user->mhost, parv[2]); /* Set the requested (masked) host */
@@ -673,6 +700,9 @@ int m_svshost(aClient *cptr, aClient *sptr, int parc, char *parv[])
     /* Pass it to all the other servers */
     sendto_serv_butone(cptr, ":%s SVSHOST %s %s", parv[0], parv[1], parv[2]);
 
+    /* Notify hook subscribers (chghost cap, etc.) */
+    call_hooks(CHOOK_CHGHOST, acptr, old_user, old_host);
+
     return 0;
 }
 
@@ -680,7 +710,7 @@ int m_svshost(aClient *cptr, aClient *sptr, int parc, char *parv[])
  * parv[1] = server name
  * parv[2] = +/-
  */
-int m_svsnoop(aClient *cptr, aClient *sptr, int parc, char *parv[])
+int m_svsnoop(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     if(!IsULine(sptr) || parc<3)
         return 0; /* Not a u:lined server or not enough parameters */
@@ -704,7 +734,7 @@ int m_svsnoop(aClient *cptr, aClient *sptr, int parc, char *parv[])
  * parv[5] = tag line
  * -Kobi_S 23/03/2013
  */
-int m_svstag(aClient *cptr, aClient *sptr, int parc, char *parv[])
+int m_svstag(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     aClient *acptr;
     ServicesTag *servicestag;
@@ -801,7 +831,7 @@ int m_svstag(aClient *cptr, aClient *sptr, int parc, char *parv[])
  * parv[1] - host-masking type (number)
  * parv[2] - optional umode +H status (0=disabled,1=enabled with auto +H on connect,2=enabled with no auto +H)
  */
-int m_svsuhm(aClient *cptr, aClient *sptr, int parc, char *parv[])
+int m_svsuhm(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     if(!IsServer(sptr) || parc < 2)
         return 0;
@@ -886,7 +916,7 @@ struct FlagList xflags_list[] =
  * Special option:
  *   GREETMSG - A message that will be sent when a user joins the channel
  */
-int m_svsxcf(aClient *cptr, aClient *sptr, int parc, char *parv[])
+int m_svsxcf(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     aChannel *chptr;
     char *opt, *value;
@@ -1011,7 +1041,7 @@ int m_svsxcf(aClient *cptr, aClient *sptr, int parc, char *parv[])
  * parv[4] = optional channel TS
  * -Kobi_S 16/07/2005
  */
-int m_aj(aClient *cptr, aClient *sptr, int parc, char *parv[])
+int m_aj(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     aClient *acptr;
     aChannel *chptr;
@@ -1097,7 +1127,7 @@ int m_aj(aClient *cptr, aClient *sptr, int parc, char *parv[])
                 }
                 parv[0] = acptr->name;
                 parv[1] = chptr->chname;
-                m_names(acptr, acptr, 2, parv);
+                m_names(NULL, acptr, acptr, 2, parv);
                 if(chptr->greetmsg)
                 {
                     sendto_one(sptr, ":%s!%s@%s PRIVMSG %s :%s", Network_Name, Network_Name, DEFAULT_STAFF_ADDRESS, chptr->chname, chptr->greetmsg);
@@ -1132,7 +1162,7 @@ int m_aj(aClient *cptr, aClient *sptr, int parc, char *parv[])
 /* m_sjr - Check the join (request) with services (mostly stolen from bahamut-irctoo)
  * -Kobi_S 16/07/2005
  */
-int m_sjr(aClient *cptr, aClient *sptr, int parc, char *parv[], AliasInfo *ai)
+int m_sjr(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     if(MyClient(sptr))
         return 0; /* Don't let local users use it without permission */
@@ -1140,13 +1170,13 @@ int m_sjr(aClient *cptr, aClient *sptr, int parc, char *parv[], AliasInfo *ai)
     if(parc < 3 || *parv[2] == 0)
         return 0;
 
-    if(!ai->client || ai->client->from == sptr->from)
+    if(!current_alias_info->client || current_alias_info->client->from == sptr->from)
         return 0; /* Check to avoid message loops when admins get stupid */
 
     if(parc<4)
-        sendto_one(ai->client->from, ":%s SJR %s %s", sptr->name, parv[1], parv[2]);
+        sendto_one(current_alias_info->client->from, ":%s SJR %s %s", sptr->name, parv[1], parv[2]);
     else
-        sendto_one(ai->client->from, ":%s SJR %s %s :%s", sptr->name, parv[1], parv[2], parv[3]);
+        sendto_one(current_alias_info->client->from, ":%s SJR %s %s :%s", sptr->name, parv[1], parv[2], parv[3]);
 
     return 0;
 }
@@ -1156,7 +1186,7 @@ int m_sjr(aClient *cptr, aClient *sptr, int parc, char *parv[], AliasInfo *ai)
  * parv[1] - setting
  * parv[2] - value
  */
-int m_svsctrl(aClient *cptr, aClient *sptr, int parc, char *parv[])
+int m_svsctrl(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     if(!IsULine(sptr) || parc<4)
         return 0;
