@@ -122,8 +122,6 @@ struct ConfVar
 #define SCONFF_STRING               0x1000000   /* allow freeform strings */
 
 /* gossip-specific subtokens */
-#define SCONFT_SERVER_ID "SERVER_ID"
-#define SCONFF_SERVER_ID            0x2000000
 #define SCONFT_TLS       "TLS"
 #define SCONFF_TLS                  0x4000000
 #define SCONFT_FANOUT    "FANOUT"
@@ -338,7 +336,6 @@ sConf confgopeertab[] =
     {SCONFT_PORT,      SCONFF_PORT,      VARTYPE_INT},
     {SCONFT_PASSWD,    SCONFF_PASSWD,    VARTYPE_NAME},
     {SCONFT_NAME,      SCONFF_NAME,      VARTYPE_NAME},
-    {SCONFT_SERVER_ID, SCONFF_SERVER_ID, VARTYPE_INT},
     {SCONFT_TLS,       SCONFF_TLS,       VARTYPE_NONE},
     {(char *) 0, 0, 0}
 };

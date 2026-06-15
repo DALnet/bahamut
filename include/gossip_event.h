@@ -87,6 +87,11 @@ typedef enum NetEventType {
     EVT_SGLINE   = 34,   /* SGLINE (realname ban) */
     EVT_UNSGLINE = 35,   /* UNSGLINE (remove SGLINE) */
 
+    /* IRCv3 cap relay (delivered cap-aware to remote members) */
+    EVT_SETNAME  = 36,   /* user changes realname (setname cap) */
+    EVT_TAGMSG   = 37,   /* TAGMSG with client-only tags (message-tags) */
+    EVT_INVITE   = 38,   /* INVITE (invite-notify cap) */
+
 } NetEventType;
 
 /* -------------------------------------------------------------------------
@@ -179,7 +184,26 @@ typedef struct EvPayloadChanmsg {
     char channel[CHANNELLEN + 1];
     char text[512];
     int  is_notice;             /* 1 = NOTICE, 0 = PRIVMSG */
+    char tags[256];             /* origin out-tags (server-time;msgid;...) */
 } EvPayloadChanmsg;
+
+/* IRCv3 cap relay payloads */
+typedef struct EvPayloadSetname {
+    char nick[NICKLEN + 1];
+    char realname[REALLEN + 1];
+} EvPayloadSetname;
+
+typedef struct EvPayloadTagmsg {
+    char sender[NICKLEN + 1];
+    char channel[CHANNELLEN + 1];
+    char tags[256];             /* client-only tags, e.g. "+typing=active" */
+} EvPayloadTagmsg;
+
+typedef struct EvPayloadInvite {
+    char inviter[NICKLEN + 1];
+    char target[NICKLEN + 1];
+    char channel[CHANNELLEN + 1];
+} EvPayloadInvite;
 
 /* Network ban payloads */
 typedef struct EvPayloadAkill {
@@ -258,6 +282,9 @@ typedef struct NetworkEvent {
         EvPayloadSessionDestroy session_destroy;
         EvPayloadPrivmsg        privmsg;
         EvPayloadChanmsg        chanmsg;
+        EvPayloadSetname        setname;
+        EvPayloadTagmsg         tagmsg;
+        EvPayloadInvite         invite;
         EvPayloadAkill          akill;
         EvPayloadRakill         rakill;
         EvPayloadSqline         sqline;

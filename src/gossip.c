@@ -30,6 +30,7 @@
 #include "gossip_bridge.h"
 #include "clones.h"
 #include "userban.h"
+#include "hooks.h"
 
 /* Externs for functions not declared in headers */
 extern aChannel *make_channel(char *name);
@@ -184,8 +185,29 @@ serialise_payload(char *buf, size_t buflen, const NetworkEvent *ev)
         case EVT_CHANMSG:
         {
             const EvPayloadChanmsg *p = &ev->payload.chanmsg;
-            ircsnprintf(buf, buflen, "%s %s %d :%s",
-                        p->sender, p->channel, p->is_notice, p->text);
+            ircsnprintf(buf, buflen, "%s %s %d %s :%s",
+                        p->sender, p->channel, p->is_notice,
+                        p->tags[0] ? p->tags : "*", p->text);
+            break;
+        }
+        case EVT_SETNAME:
+        {
+            const EvPayloadSetname *p = &ev->payload.setname;
+            ircsnprintf(buf, buflen, "%s :%s", p->nick, p->realname);
+            break;
+        }
+        case EVT_TAGMSG:
+        {
+            const EvPayloadTagmsg *p = &ev->payload.tagmsg;
+            ircsnprintf(buf, buflen, "%s %s :%s",
+                        p->sender, p->channel, p->tags[0] ? p->tags : "*");
+            break;
+        }
+        case EVT_INVITE:
+        {
+            const EvPayloadInvite *p = &ev->payload.invite;
+            ircsnprintf(buf, buflen, "%s %s :%s",
+                        p->inviter, p->target, p->channel);
             break;
         }
         case EVT_AKILL:
@@ -285,10 +307,12 @@ gossip_event(const NetworkEvent *ev, aClient *exclude_link)
         n_peers++;
     }
 
-    if (n_peers == 0 || fanout <= 0)
+    if (n_peers == 0)
         return;
 
-    if (fanout > n_peers)
+    /* fanout <= 0 means "flood to all peers" (see gossip{} fanout docs).
+     * A larger-than-available fanout is likewise capped to all peers. */
+    if (fanout <= 0 || fanout > n_peers)
         fanout = n_peers;
 
     /*
@@ -565,10 +589,54 @@ gossip_parse_event(NetworkEvent *ev, NetEventType type, const char *payload,
             strncpy(pl->channel, tok, CHANNELLEN);
             tok = strtoken(&p, NULL, " "); if (!tok) return -1;
             pl->is_notice = atoi(tok);
+            tok = strtoken(&p, NULL, " "); if (!tok) return -1;   /* out-tags */
+            if (strcmp(tok, "*") != 0)
+                strncpy(pl->tags, tok, sizeof(pl->tags) - 1);
             tok = strtoken(&p, NULL, "");
             if (tok) {
                 if (*tok == ':') tok++;
                 strncpy(pl->text, tok, sizeof(pl->text) - 1);
+            }
+            break;
+        }
+        case EVT_SETNAME:
+        {
+            EvPayloadSetname *pl = &ev->payload.setname;
+            tok = strtoken(&p, buf, " "); if (!tok) return -1;
+            strncpy(pl->nick, tok, NICKLEN);
+            tok = strtoken(&p, NULL, "");
+            if (tok) {
+                if (*tok == ':') tok++;
+                strncpy(pl->realname, tok, REALLEN);
+            }
+            break;
+        }
+        case EVT_TAGMSG:
+        {
+            EvPayloadTagmsg *pl = &ev->payload.tagmsg;
+            tok = strtoken(&p, buf, " "); if (!tok) return -1;
+            strncpy(pl->sender, tok, NICKLEN);
+            tok = strtoken(&p, NULL, " "); if (!tok) return -1;
+            strncpy(pl->channel, tok, CHANNELLEN);
+            tok = strtoken(&p, NULL, "");
+            if (tok) {
+                if (*tok == ':') tok++;
+                if (strcmp(tok, "*") != 0)
+                    strncpy(pl->tags, tok, sizeof(pl->tags) - 1);
+            }
+            break;
+        }
+        case EVT_INVITE:
+        {
+            EvPayloadInvite *pl = &ev->payload.invite;
+            tok = strtoken(&p, buf, " "); if (!tok) return -1;
+            strncpy(pl->inviter, tok, NICKLEN);
+            tok = strtoken(&p, NULL, " "); if (!tok) return -1;
+            strncpy(pl->target, tok, NICKLEN);
+            tok = strtoken(&p, NULL, "");
+            if (tok) {
+                if (*tok == ':') tok++;
+                strncpy(pl->channel, tok, CHANNELLEN);
             }
             break;
         }
@@ -893,8 +961,9 @@ gossip_apply_chan_join(const EvPayloadChanJoin *p)
 
     add_user_to_channel(chptr, acptr, p->flags);
 
-    sendto_channel_butserv(chptr, acptr, ":%s JOIN :%s",
-                           acptr->name, chptr->chname);
+    /* Notify local members of the (remote) join, honouring extended-join
+     * for cap clients.  acptr carries the materialized realname/account. */
+    sendto_channel_join(chptr, acptr, chptr->chname);
 }
 
 static void
@@ -1197,7 +1266,55 @@ gossip_apply_user_away(const EvPayloadUserAway *p)
                 acptr->user->away = NULL;
             }
         }
+
+        /* away-notify: notify our local cap-enabled common-channel members.
+         * The eventlog CHOOK_AWAY hook guards IsGossipMaterialized, so this
+         * does not re-emit/re-gossip the event. */
+        call_hooks(CHOOK_AWAY, acptr, p->setting,
+                   p->setting ? acptr->user->away : NULL);
     }
+}
+
+/* --- IRCv3 cap relay (setname / tagmsg / invite-notify) ------------------ */
+
+static void
+gossip_apply_setname(const EvPayloadSetname *p)
+{
+    aClient *acptr = find_client(p->nick, NULL);
+    if (!acptr || !IsGossipMaterialized(acptr))
+        return;
+
+    strncpyzt(acptr->info, p->realname, REALLEN + 1);
+
+    /* notify our local setname-cap members; the eventlog CHOOK_SETNAME hook
+     * guards IsGossipMaterialized, so this does not re-emit/re-gossip. */
+    call_hooks(CHOOK_SETNAME, acptr, (const char *)acptr->info);
+}
+
+static void
+gossip_apply_tagmsg(const EvPayloadTagmsg *p)
+{
+    aChannel *chptr  = find_channel(p->channel, NullChn);
+    aClient  *sender = find_client(p->sender, NULL);
+    if (!chptr || !sender)
+        return;
+
+    /* deliver TAGMSG with the origin's client-only tags to our local
+     * message-tags members (handled by the relaxed m_tagmsg hook). */
+    call_hooks(CHOOK_TAGMSG, sender, (void *)chptr, 1, p->tags);
+}
+
+static void
+gossip_apply_invite(const EvPayloadInvite *p)
+{
+    aClient  *inviter = find_client(p->inviter, NULL);
+    aClient  *target  = find_client(p->target, NULL);
+    aChannel *chptr   = find_channel(p->channel, NullChn);
+    if (!inviter || !target || !chptr)
+        return;
+
+    /* notify our local invite-notify members (m_invite_notify hook). */
+    call_hooks(CHOOK_INVITE, inviter, target, chptr);
 }
 
 /* --- S6g: Wire up gossip_apply_event() ---------------------------------- */
@@ -1299,15 +1416,26 @@ gossip_apply_event(const NetworkEvent *ev)
             if (chptr)
             {
                 const char *cmd = p->is_notice ? "NOTICE" : "PRIVMSG";
-                /* Deliver to local channel members only */
-                sendto_channel_butserv(chptr,
-                    sender ? sender : &me,
+                /* Deliver to local members, carrying the origin's IRCv3
+                 * out-tags (server-time, msgid, ...) so cap clients get
+                 * the same tags they would on the originating server. */
+                sendto_channel_butone_tags(sender ? sender : &me,
+                    sender ? sender : &me, chptr, p->tags,
                     ":%s %s %s :%s",
                     sender ? sender->name : p->sender,
                     cmd, chptr->chname, p->text);
             }
             break;
         }
+        case EVT_SETNAME:
+            gossip_apply_setname(&ev->payload.setname);
+            break;
+        case EVT_TAGMSG:
+            gossip_apply_tagmsg(&ev->payload.tagmsg);
+            break;
+        case EVT_INVITE:
+            gossip_apply_invite(&ev->payload.invite);
+            break;
         /* Network-level bans — apply locally using the same functions
          * that the TS5 handlers use. */
         case EVT_AKILL:

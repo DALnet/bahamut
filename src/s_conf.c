@@ -2740,12 +2740,13 @@ memcount_s_conf(MCs_conf *mc)
  * Phase S2: confadd_gopeer() — parse a gopeer {} config block
  *
  * gopeer {
- *     host      = "irc2.example.net";
- *     port      = 6697;
- *     passwd    = "secret";
- *     name      = "irc2.example.net";   # optional friendly name
- *     server_id = 1;                    # mandatory explicit ServerId (0-63)
- *     tls;                              # optional TLS flag
+ *     host   irc2.example.net;   # required: peer address to connect to
+ *     port   6697;               # peer's gossip/IRC port
+ *     passwd secret;             # link password
+ *     name   irc2.example.net;   # optional; defaults to host. The gossip
+ *                                # server id is derived from this name
+ *                                # (FNV-1a) and exchanged via GHELLO.
+ *     tls;                       # optional TLS flag
  * };
  * ---------------------------------------------------------------------- */
 int
@@ -2780,10 +2781,6 @@ confadd_gopeer(cVar *vars[], int lnum)
         {
             DupString(gp->name, tmp->value);
         }
-        else if (tmp->type->flag & SCONFF_SERVER_ID)
-        {
-            gp->server_id = (unsigned char) atoi(tmp->value);
-        }
         else if (tmp->type->flag & SCONFF_TLS)
         {
             gp->tls = 1;
@@ -2815,8 +2812,8 @@ confadd_gopeer(cVar *vars[], int lnum)
  * Phase S2: confadd_gossip() — parse a gossip {} config block
  *
  * gossip {
- *     fanout      = 3;    # number of peers to forward each event to
- *     sync_window = 30;   # seconds to look back during burst
+ *     fanout      0;    # peers to forward each event to; 0 (default) = all
+ *     sync_window 30;   # seconds to look back during burst
  * };
  * ---------------------------------------------------------------------- */
 int
@@ -2833,8 +2830,8 @@ confadd_gossip(cVar *vars[], int lnum)
         if (tmp->type->flag & SCONFF_FANOUT)
         {
             gossip_fanout = atoi(tmp->value);
-            if (gossip_fanout < 1)
-                gossip_fanout = 1;
+            if (gossip_fanout < 0)
+                gossip_fanout = 0;   /* 0 = flood to all peers */
         }
         else if (tmp->type->flag & SCONFF_SYNC_WINDOW)
         {

@@ -40,3 +40,6 @@ __pycache__/
 
 # Meson build
 /build/
+
+# Local/live deployment configs — contain link passwords and tailnet IPs
+/deploy/

@@ -27,7 +27,10 @@ hook_away(aClient *sptr, int setting, char *message)
     aChannel   *chptr;
     chanMember *member;
 
-    if (!MyClient(sptr) || !sptr->user)
+    /* sptr may be a local client (live AWAY) or a gossip-materialized
+     * remote user (AWAY relayed from another server via gossip_apply).
+     * Either way we notify only our LOCAL channel members below. */
+    if (!sptr->user)
         return;
 
     INC_SERIAL

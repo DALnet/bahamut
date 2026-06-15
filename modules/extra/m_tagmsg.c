@@ -72,7 +72,6 @@ m_tagmsg(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr,
 {
     aChannel   *chptr;
     aClient    *target;
-    chanMember *cm;
     const char *tags;
 
     if (!MyClient(sptr) || !sptr->user)
@@ -104,26 +103,8 @@ m_tagmsg(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr,
             return 0;
         }
 
-        INC_SERIAL
-
-        for (cm = chptr->members; cm; cm = cm->next)
-        {
-            aClient *tgt = cm->cptr;
-
-            if (!MyClient(tgt) || tgt == sptr)
-                continue;
-            if (!HasCap(tgt, message_tags_bit))
-                continue;
-            if (sentalong[tgt->fd] == sent_serial)
-                continue;
-            sentalong[tgt->fd] = sent_serial;
-
-            sendto_one_tags(tgt, tags,
-                            ":%s!%s@%s TAGMSG %s",
-                            sptr->name, sptr->user->username,
-                            sptr->user->host, chptr->chname);
-        }
-
+        /* Deliver to cap members (via the hook below) and let the gossip
+         * eventlog relay it to remote servers. */
         call_hooks(CHOOK_TAGMSG, sptr, (void *)chptr, 1, tags);
     }
     else
@@ -150,6 +131,48 @@ m_tagmsg(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr,
     return 0;
 }
 
+/*
+ * hook_tagmsg — deliver a channel TAGMSG to local message-tags members.
+ * src may be local (live TAGMSG) or gossip-materialized (relayed via
+ * gossip_apply_tagmsg); only local targets are notified.  User-target
+ * TAGMSG (is_chan == 0) is delivered inline in m_tagmsg and skipped here.
+ */
+static void
+hook_tagmsg(aClient *src, void *target, int is_chan, const char *tags)
+{
+    aChannel   *chptr;
+    chanMember *cm;
+
+    if (!is_chan || !src->user)
+        return;
+    chptr = (aChannel *)target;
+
+    INC_SERIAL
+
+    for (cm = chptr->members; cm; cm = cm->next)
+    {
+        aClient *tgt = cm->cptr;
+
+        if (!MyClient(tgt) || tgt == src)
+            continue;
+        if (!HasCap(tgt, message_tags_bit))
+            continue;
+        if (sentalong[tgt->fd] == sent_serial)
+            continue;
+        sentalong[tgt->fd] = sent_serial;
+
+        sendto_one_tags(tgt, tags,
+                        ":%s!%s@%s TAGMSG %s",
+                        src->name, src->user->username,
+                        src->user->host, chptr->chname);
+    }
+}
+
+static const struct mapi_hook_av1 tagmsg_hooks[] = {
+    { CHOOK_TAGMSG, hook_tagmsg },
+    { 0, NULL }
+};
+
 static const struct mapi_cmd_av2 tagmsg_cmds[] = {
     { "TAGMSG", 0, {
         { mg_unreg,  0 },   /* HANDLER_UNREG  */
@@ -163,4 +186,4 @@ static const struct mapi_cmd_av2 tagmsg_cmds[] = {
 
 DECLARE_MODULE_CAPS("m_tagmsg", "1.0",
                     "message-tags + TAGMSG IRCv3 extension",
-                    0, tagmsg_cmds, NULL, tagmsg_caps);
+                    0, tagmsg_cmds, tagmsg_hooks, tagmsg_caps);

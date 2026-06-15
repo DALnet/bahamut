@@ -60,7 +60,7 @@ int       del_exempt_id(aChannel*, char*);
  * Plain:    :<nick> JOIN :<channel>
  * Extended: :<nick>!<user>@<host> JOIN <channel> <account> :<realname>
  */
-static void
+void
 sendto_channel_join(aChannel *chptr, aClient *from, const char *channel_name)
 {
     chanMember *cm;
@@ -4190,6 +4190,12 @@ int m_invite(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char
 
         return 0;
     }
+
+    /* Local inviter, remote target: fire CHOOK_INVITE so invite-notify
+     * reaches local cap members and the invite is gossiped network-wide.
+     * (The MyClient(acptr) branch above already covers local targets.) */
+    if (MyClient(sptr) && chptr)
+        call_hooks(CHOOK_INVITE, sptr, acptr, chptr);
 
     sendto_one(acptr, ":%s INVITE %s :%s", parv[0], parv[1], parv[2]);
 

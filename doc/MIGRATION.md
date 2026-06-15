@@ -103,21 +103,22 @@ connect {
 
 # New (3.0)
 gossip {
-    fanout      3;
-    sync_window 30;
+    sync_window 30;   # optional; fanout defaults to 0 = flood all peers
 };
 
 gopeer {
     host      172.16.4.2;
     port      7325;
     name      hub.example.com;
-    server_id 1;
     passwd    secret;
     tls;
 };
 ```
 
-Each server in the cluster needs a unique `server_id` (0-255).
+Each server's gossip id is derived automatically from its name (FNV-1a)
+and exchanged at link time via GHELLO — there is no `server_id` to set.
+Just give every server a unique name (which they already have) and list
+each peer in a `gopeer {}` block.
 
 ### Backwards compatibility
 

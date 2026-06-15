@@ -23,7 +23,6 @@ class BahamutServer:
         ssl_port=None,
         extra_modules=None,
         gopeer_configs=None,
-        server_id=None,
         binary_path=None,
         connect_configs=None,
     ):
@@ -34,7 +33,6 @@ class BahamutServer:
         self.ssl_port = ssl_port
         self.extra_modules = extra_modules
         self.gopeer_configs = gopeer_configs
-        self.server_id = server_id
         self.binary_path = binary_path
         self.connect_configs = connect_configs
         self.process = None
@@ -59,7 +57,6 @@ class BahamutServer:
             ssl_port=self.ssl_port,
             extra_modules=self.extra_modules,
             gopeer_configs=self.gopeer_configs,
-            server_id=self.server_id,
             connect_configs=self.connect_configs,
         )
 

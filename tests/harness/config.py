@@ -146,7 +146,6 @@ def generate_config(
     ssl_port=None,
     extra_modules=None,
     gopeer_configs=None,
-    server_id=None,
     connect_configs=None,
 ):
     """Generate an ircd.conf in tmpdir and set up module symlinks.
@@ -160,8 +159,9 @@ def generate_config(
         ws_port: WebSocket port number (optional)
         ssl_port: SSL port number (optional)
         extra_modules: List of extra module names to autoload (default: all)
-        gopeer_configs: List of dicts with keys: host, port, name, server_id
-        server_id: This server's ID for gossip
+        gopeer_configs: List of dicts with keys: host, port, name (and optional tls).
+            The gossip server ID is derived from the server name (FNV-1a) and
+            exchanged via GHELLO — it is not configured.
 
     Returns:
         Path to the generated ircd.conf
@@ -192,8 +192,7 @@ def generate_config(
                 f"gopeer {{\n"
                 f"    host      {gp['host']};\n"
                 f"    port      {gp['port']};\n"
-                f"    name      {gp['name']};\n"
-                f"    server_id {gp['server_id']};{tls_line}\n"
+                f"    name      {gp['name']};{tls_line}\n"
                 f"}};"
             )
         gopeer_blocks_str = "\n\n".join(gopeer_parts)

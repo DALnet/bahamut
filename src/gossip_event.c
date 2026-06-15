@@ -59,9 +59,10 @@ eventlog_init(void)
     memset(&g_event_log, 0, sizeof(g_event_log));
 
     /*
-     * Derive ServerId.  In production, this is overridden by
-     * "server_id = N;" in the gopeer{} config block.  For development
-     * we use a FNV-1a hash of the server name.
+     * Derive this server's gossip id (0-63) from its name with FNV-1a.
+     * The id is announced to peers during the GHELLO handshake, so it is
+     * never configured by hand.  (Names should be distinct enough not to
+     * collide in the 6-bit space; collisions are not auto-resolved.)
      */
     g_event_log.my_id   = fnv1a_6bit(me.name);
     g_event_log.next_seq = 1;

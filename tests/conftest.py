@@ -47,7 +47,6 @@ def server_factory(build_dir):
         ssl_port=None,
         extra_modules=None,
         gopeer_configs=None,
-        server_id=None,
     ):
         if irc_port is None:
             ports_needed = 1
@@ -72,7 +71,6 @@ def server_factory(build_dir):
             ssl_port=ssl_port,
             extra_modules=extra_modules,
             gopeer_configs=gopeer_configs,
-            server_id=server_id,
         )
         srv.start()
         servers.append(srv)
@@ -149,16 +147,14 @@ def gossip_cluster(build_dir):
         server_name="irc1.test",
         irc_port=irc1,
         ws_port=ws1,
-        gopeer_configs=[{"host": "127.0.0.1", "port": irc2, "name": "irc2.test", "server_id": 2}],
-        server_id=1,
+        gopeer_configs=[{"host": "127.0.0.1", "port": irc2, "name": "irc2.test"}],
     )
     srv2 = BahamutServer(
         build_dir=build_dir,
         server_name="irc2.test",
         irc_port=irc2,
         ws_port=ws2,
-        gopeer_configs=[{"host": "127.0.0.1", "port": irc1, "name": "irc1.test", "server_id": 1}],
-        server_id=2,
+        gopeer_configs=[{"host": "127.0.0.1", "port": irc1, "name": "irc1.test"}],
     )
 
     srv1.start()
@@ -189,10 +185,9 @@ def gossip_triangle(build_dir):
         irc_port=irc1,
         ws_port=ws1,
         gopeer_configs=[
-            {"host": "127.0.0.1", "port": irc2, "name": "irc2.test", "server_id": 2},
-            {"host": "127.0.0.1", "port": irc3, "name": "irc3.test", "server_id": 3},
+            {"host": "127.0.0.1", "port": irc2, "name": "irc2.test"},
+            {"host": "127.0.0.1", "port": irc3, "name": "irc3.test"},
         ],
-        server_id=1,
     )
     srv2 = BahamutServer(
         build_dir=build_dir,
@@ -200,10 +195,9 @@ def gossip_triangle(build_dir):
         irc_port=irc2,
         ws_port=ws2,
         gopeer_configs=[
-            {"host": "127.0.0.1", "port": irc1, "name": "irc1.test", "server_id": 1},
-            {"host": "127.0.0.1", "port": irc3, "name": "irc3.test", "server_id": 3},
+            {"host": "127.0.0.1", "port": irc1, "name": "irc1.test"},
+            {"host": "127.0.0.1", "port": irc3, "name": "irc3.test"},
         ],
-        server_id=2,
     )
     srv3 = BahamutServer(
         build_dir=build_dir,
@@ -211,10 +205,9 @@ def gossip_triangle(build_dir):
         irc_port=irc3,
         ws_port=ws3,
         gopeer_configs=[
-            {"host": "127.0.0.1", "port": irc1, "name": "irc1.test", "server_id": 1},
-            {"host": "127.0.0.1", "port": irc2, "name": "irc2.test", "server_id": 2},
+            {"host": "127.0.0.1", "port": irc1, "name": "irc1.test"},
+            {"host": "127.0.0.1", "port": irc2, "name": "irc2.test"},
         ],
-        server_id=3,
     )
 
     srv1.start()
@@ -250,29 +243,25 @@ def gossip_dual_hub(build_dir):
 
     leaf1 = BahamutServer(
         build_dir=build_dir, server_name="leaf1.test", irc_port=irc_l1, ws_port=ws_l1,
-        gopeer_configs=[{"host": "127.0.0.1", "port": irc_h1, "name": "hub1.test", "server_id": 2}],
-        server_id=1,
+        gopeer_configs=[{"host": "127.0.0.1", "port": irc_h1, "name": "hub1.test"}],
     )
     hub1 = BahamutServer(
         build_dir=build_dir, server_name="hub1.test", irc_port=irc_h1, ws_port=ws_h1,
         gopeer_configs=[
-            {"host": "127.0.0.1", "port": irc_l1, "name": "leaf1.test", "server_id": 1},
-            {"host": "127.0.0.1", "port": irc_h2, "name": "hub2.test", "server_id": 3},
+            {"host": "127.0.0.1", "port": irc_l1, "name": "leaf1.test"},
+            {"host": "127.0.0.1", "port": irc_h2, "name": "hub2.test"},
         ],
-        server_id=2,
     )
     hub2 = BahamutServer(
         build_dir=build_dir, server_name="hub2.test", irc_port=irc_h2, ws_port=ws_h2,
         gopeer_configs=[
-            {"host": "127.0.0.1", "port": irc_h1, "name": "hub1.test", "server_id": 2},
-            {"host": "127.0.0.1", "port": irc_l2, "name": "leaf2.test", "server_id": 4},
+            {"host": "127.0.0.1", "port": irc_h1, "name": "hub1.test"},
+            {"host": "127.0.0.1", "port": irc_l2, "name": "leaf2.test"},
         ],
-        server_id=3,
     )
     leaf2 = BahamutServer(
         build_dir=build_dir, server_name="leaf2.test", irc_port=irc_l2, ws_port=ws_l2,
-        gopeer_configs=[{"host": "127.0.0.1", "port": irc_h2, "name": "hub2.test", "server_id": 3}],
-        server_id=4,
+        gopeer_configs=[{"host": "127.0.0.1", "port": irc_h2, "name": "hub2.test"}],
     )
 
     leaf1.start()
@@ -307,9 +296,7 @@ def gossip_cluster_tls(build_dir):
         irc_port=irc1,
         ssl_port=ssl1,
         ws_port=ws1,
-        gopeer_configs=[{"host": "127.0.0.1", "port": ssl2, "name": "irc2.test",
-                         "server_id": 2, "tls": True}],
-        server_id=1,
+        gopeer_configs=[{"host": "127.0.0.1", "port": ssl2, "name": "irc2.test", "tls": True}],
     )
     srv2 = BahamutServer(
         build_dir=build_dir,
@@ -317,9 +304,7 @@ def gossip_cluster_tls(build_dir):
         irc_port=irc2,
         ssl_port=ssl2,
         ws_port=ws2,
-        gopeer_configs=[{"host": "127.0.0.1", "port": ssl1, "name": "irc1.test",
-                         "server_id": 1, "tls": True}],
-        server_id=2,
+        gopeer_configs=[{"host": "127.0.0.1", "port": ssl1, "name": "irc1.test", "tls": True}],
     )
 
     srv1.start()
@@ -351,16 +336,14 @@ def gossip_with_ts5_bridge(build_dir):
         server_name="irc1.test",
         irc_port=irc1,
         ws_port=ws1,
-        gopeer_configs=[{"host": "127.0.0.1", "port": irc2, "name": "irc2.test", "server_id": 2}],
-        server_id=1,
+        gopeer_configs=[{"host": "127.0.0.1", "port": irc2, "name": "irc2.test"}],
     )
     srv2 = BahamutServer(
         build_dir=build_dir,
         server_name="irc2.test",
         irc_port=irc2,
         ws_port=ws2,
-        gopeer_configs=[{"host": "127.0.0.1", "port": irc1, "name": "irc1.test", "server_id": 1}],
-        server_id=2,
+        gopeer_configs=[{"host": "127.0.0.1", "port": irc1, "name": "irc1.test"}],
         connect_configs=[{
             "name": "irc3.test",
             "host": "127.0.0.1",

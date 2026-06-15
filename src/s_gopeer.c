@@ -41,7 +41,7 @@ extern Link *find_channel_link(Link *, aChannel *);
  * ---------------------------------------------------------------------- */
 
 DLink      *gopeer_list       = NULL;
-int         gossip_fanout     = 3;
+int         gossip_fanout     = 0;   /* 0 = flood to all peers (default) */
 int         gossip_sync_window = 30;
 aGoPeerConf *gopeer_conf_list = NULL;
 
@@ -331,6 +331,10 @@ gopeer_burst_full_state(aClient *peer)
         {
             EvPayloadChanTopic pl;
             memset(&pl, 0, sizeof(pl));
+            /* nick is the leading wire field (see EVT_CHAN_TOPIC serialize):
+             * it MUST be non-empty or strtoken() skips it and every later
+             * field shifts left, dropping the topic on the receiver. */
+            strncpy(pl.nick, me.name, NICKLEN);
             strncpy(pl.channel, chptr->chname, CHANNELLEN);
             strncpy(pl.topic, chptr->topic, TOPICLEN);
             strncpy(pl.setter, chptr->topic_nick, sizeof(pl.setter) - 1);

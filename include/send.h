@@ -55,6 +55,9 @@ extern void sendto_channel_remote_butone(aClient *one, aClient *from,
 extern void sendto_channel_butserv(aChannel *chptr, aClient *from,
 				   char *pattern, ...) ATTRIBUTE_PRINTF(3, 4);
 extern void sendto_channel_butserv_noopvoice(aChannel *chptr, aClient *from, char *pattern, ...) ATTRIBUTE_PRINTF(3, 4);
+/* JOIN to local members with extended-join for cap clients (channel.c) */
+extern void sendto_channel_join(aChannel *chptr, aClient *from,
+				const char *channel_name);
 
 extern void sendto_channel_butserv_me(aChannel *chptr, aClient *from,
 				      char *pattern, ...) ATTRIBUTE_PRINTF(3, 4);

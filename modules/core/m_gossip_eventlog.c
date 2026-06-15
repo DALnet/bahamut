@@ -20,6 +20,7 @@
 #include "channel.h"
 #include "eventlog.h"
 #include "gossip.h"
+#include "send.h"
 
 /* Helper: emit an event and propagate to gossip peers */
 static inline void
@@ -294,9 +295,79 @@ hook_chanmsg(aClient *source, aChannel *chptr, int is_notice, char *text)
     if (text)
         strncpy(p.text, text, sizeof(p.text) - 1);
     p.is_notice = is_notice;
+    /* carry the origin out-tags (server-time, msgid, ...) so remote
+     * cap members get the same tags as local ones (cached per dispatch). */
+    {
+        const char *ot = build_outbound_tags();
+        if (ot && *ot)
+            strncpy(p.tags, ot, sizeof(p.tags) - 1);
+    }
 
     emit_and_gossip(EVT_CHANMSG, &p, sizeof(p));
     return 0;
+}
+
+/* CHOOK_SETNAME → EVT_SETNAME */
+static void
+hook_setname(aClient *sptr, const char *realname)
+{
+    EvPayloadSetname p;
+
+    if (!sptr || !sptr->user || IsGossipMaterialized(sptr))
+        return;
+
+    memset(&p, 0, sizeof(p));
+    strncpy(p.nick, sptr->name, NICKLEN);
+    if (realname)
+        strncpy(p.realname, realname, REALLEN);
+
+    emit_and_gossip(EVT_SETNAME, &p, sizeof(p));
+}
+
+/* CHOOK_TAGMSG → EVT_TAGMSG (channel targets with gossip members) */
+static void
+hook_tagmsg(aClient *src, void *target, int is_chan, const char *tags)
+{
+    EvPayloadTagmsg p;
+    aChannel       *chptr;
+    chanMember     *cm;
+    int             has_gossip = 0;
+
+    if (!is_chan || !src || IsGossipMaterialized(src))
+        return;
+    chptr = (aChannel *)target;
+    if (!chptr)
+        return;
+
+    for (cm = chptr->members; cm; cm = cm->next)
+        if (IsGossipMaterialized(cm->cptr)) { has_gossip = 1; break; }
+    if (!has_gossip)
+        return;
+
+    memset(&p, 0, sizeof(p));
+    strncpy(p.sender, src->name, NICKLEN);
+    strncpy(p.channel, chptr->chname, CHANNELLEN);
+    if (tags)
+        strncpy(p.tags, tags, sizeof(p.tags) - 1);
+
+    emit_and_gossip(EVT_TAGMSG, &p, sizeof(p));
+}
+
+/* CHOOK_INVITE → EVT_INVITE */
+static void
+hook_invite(aClient *inviter, aClient *target, aChannel *chptr)
+{
+    EvPayloadInvite p;
+
+    if (!inviter || !target || !chptr || IsGossipMaterialized(inviter))
+        return;
+
+    memset(&p, 0, sizeof(p));
+    strncpy(p.inviter, inviter->name, NICKLEN);
+    strncpy(p.target, target->name, NICKLEN);
+    strncpy(p.channel, chptr->chname, CHANNELLEN);
+
+    emit_and_gossip(EVT_INVITE, &p, sizeof(p));
 }
 
 /* -------------------------------------------------------------------------
@@ -316,6 +387,9 @@ static const struct mapi_hook_av1 eventlog_hooks[] = {
     { CHOOK_KICK,         hook_kick         },
     { CHOOK_USERMSG,      hook_usermsg      },
     { CHOOK_CHANMSG,      hook_chanmsg      },
+    { CHOOK_SETNAME,      hook_setname      },
+    { CHOOK_TAGMSG,       hook_tagmsg       },
+    { CHOOK_INVITE,       hook_invite       },
     { 0, NULL }
 };
 

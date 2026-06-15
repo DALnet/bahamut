@@ -797,7 +797,6 @@ struct Conf_GossipPeer
     char          *password;     /* authentication password            */
     int            port;         /* TCP port to connect to             */
     int            tls;          /* 1 = require TLS, 0 = plain         */
-    unsigned char  server_id;    /* explicit ServerId (0-63; mandatory) */
     aGoPeerConf   *next;
 };
 

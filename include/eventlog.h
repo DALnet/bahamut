@@ -15,8 +15,8 @@
 /*
  * eventlog_init — initialise the EventLog singleton.
  *
- * Reads server_id from the gossip{} config block if present, otherwise
- * derives a 6-bit FNV-1a hash of me.name as a development fallback.
+ * Derives this server's 6-bit gossip id from a FNV-1a hash of me.name
+ * (announced to peers during the GHELLO handshake; not configured).
  * Must be called after initconf() so me.name is available.
  */
 void eventlog_init(void);
