@@ -45,6 +45,10 @@ extern int gossip_sync_window;
 
 /* Global list of configured (but potentially not yet connected) peers */
 extern aGoPeerConf *gopeer_conf_list;
+/* Staging list filled during config parse; swapped in by merge_gopeers() */
+extern aGoPeerConf *new_gopeer_conf_list;
+extern void free_gopeer_conf_list(aGoPeerConf *gp);
+extern void merge_gopeers(void);
 
 /* Partition detection counters (CODERS-33) */
 extern int gopeer_configured_count;

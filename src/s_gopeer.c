@@ -44,6 +44,10 @@ DLink      *gopeer_list       = NULL;
 int         gossip_fanout     = 0;   /* 0 = flood to all peers (default) */
 int         gossip_sync_window = 30;
 aGoPeerConf *gopeer_conf_list = NULL;
+/* Staging list: config parsing fills this; merge_gopeers() swaps it into
+ * gopeer_conf_list on a successful (re)hash, clear_newconfs() discards it on
+ * a failed one. Mirrors the new_connects/new_allows/... pattern in s_conf.c. */
+aGoPeerConf *new_gopeer_conf_list = NULL;
 
 /* Partition detection (CODERS-33) */
 int         gopeer_configured_count = 0;
@@ -66,6 +70,41 @@ gopeer_count_configured(void)
         count++;
 
     gopeer_configured_count = count;
+}
+
+/*
+ * free_gopeer_conf_list — free an entire gopeer conf chain.
+ */
+void
+free_gopeer_conf_list(aGoPeerConf *gp)
+{
+    aGoPeerConf *next;
+
+    while (gp)
+    {
+        next = gp->next;
+        MyFree(gp->host);
+        MyFree(gp->name);
+        MyFree(gp->password);
+        MyFree(gp);
+        gp = next;
+    }
+}
+
+/*
+ * merge_gopeers — install the freshly-parsed gopeer config (called from
+ * merge_confs() after a successful (re)hash). Live links are tracked by
+ * gopeer_list / GossipPeer (which copy name + id, holding no pointer into
+ * the conf), so freeing the old conf list cannot dangle an active link;
+ * gopeer_try_connect() re-reads the new list on its next CHOOK_10SEC tick.
+ */
+void
+merge_gopeers(void)
+{
+    free_gopeer_conf_list(gopeer_conf_list);
+    gopeer_conf_list     = new_gopeer_conf_list;
+    new_gopeer_conf_list = NULL;
+    gopeer_count_configured();
 }
 
 void

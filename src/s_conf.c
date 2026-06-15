@@ -2239,6 +2239,7 @@ merge_confs()
     merge_opers();
     merge_ports();
     merge_options();
+    merge_gopeers();
     for(i = 0; uservers[i]; i++)
         MyFree(uservers[i]);
     for(i = 0; new_uservers[i]; i++)
@@ -2339,6 +2340,8 @@ clear_newconfs()
         MyFree(new_modules);
         new_modules = NULL;
     }
+    free_gopeer_conf_list(new_gopeer_conf_list);
+    new_gopeer_conf_list = NULL;
     return;
 }
 
@@ -2801,9 +2804,12 @@ confadd_gopeer(cVar *vars[], int lnum)
     if (!gp->name)
         DupString(gp->name, gp->host);
 
-    /* Prepend to gopeer_conf_list */
-    gp->next        = gopeer_conf_list;
-    gopeer_conf_list = gp;
+    /* Prepend to the staging list; merge_gopeers() swaps it into the live
+     * gopeer_conf_list on a successful (re)hash. Prepending straight to the
+     * live list would duplicate every entry (and double-dial every peer) on
+     * each rehash, since nothing ever frees it. */
+    gp->next             = new_gopeer_conf_list;
+    new_gopeer_conf_list = gp;
 
     return 0;
 }

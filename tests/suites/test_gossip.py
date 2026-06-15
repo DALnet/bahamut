@@ -643,3 +643,48 @@ class TestGossipTS5Bridge:
 
         # Note: srv3 (TS5) LINKS check skipped to avoid connection throttle.
         # srv2 seeing all 3 confirms the bridge is working correctly.
+
+
+class TestGossipRehash:
+    """REHASH must not duplicate/leak the gopeer config nor break a live link.
+
+    Regression test for the gopeer_conf_list staging fix: confadd_gopeer()
+    parses into new_gopeer_conf_list and merge_gopeers() frees the old live
+    list and swaps the new one in. A live link is tracked by GossipPeer (which
+    copies name + id, holding no pointer into the conf), so freeing the old
+    conf on rehash must not dangle/break the active connection.
+    """
+
+    def test_rehash_preserves_gopeer_link(self, gossip_cluster, client_factory, unique_nick):
+        """After two REHASHes on srv1, the gossip link still propagates users."""
+        srv1, srv2 = gossip_cluster
+
+        # Oper up on srv1 and rehash twice (the old bug duplicated every
+        # gopeer entry on each rehash; this exercises free-old + swap-new
+        # while the srv1<->srv2 link is live).
+        op = client_factory(port=srv1.irc_port)
+        op.register(unique_nick("rh"))
+        op.collect_lines(duration=0.5)
+        op.send("OPER admin secret")
+        op.collect_lines(duration=1)
+        op.send("REHASH")
+        op.collect_lines(duration=1)
+        op.send("REHASH")
+        op.collect_lines(duration=1)
+        time.sleep(3)
+
+        # The live link must still carry presence: a user on srv1 is WHOIS-able
+        # from srv2.
+        nick = unique_nick("rh")
+        c1 = client_factory(port=srv1.irc_port)
+        c1.register(nick)
+        c1.collect_lines(duration=0.5)
+        time.sleep(3)
+
+        c2 = client_factory(port=srv2.irc_port)
+        c2.register(unique_nick("rh"))
+        c2.collect_lines(duration=0.5)
+        c2.send(f"WHOIS {nick}")
+        lines = c2.collect_lines(duration=2)
+        assert any("311" in l and nick in l for l in lines), \
+            f"gossip link broken after rehash — {nick} not visible on peer"
