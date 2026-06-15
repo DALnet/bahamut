@@ -185,7 +185,11 @@ serialise_payload(char *buf, size_t buflen, const NetworkEvent *ev)
         case EVT_CHANMSG:
         {
             const EvPayloadChanmsg *p = &ev->payload.chanmsg;
-            ircsnprintf(buf, buflen, "%s %s %d %s :%s",
+            /* tags and text both vary in length; tags as a bare positional
+             * field is unsafe (a stray space would desync the parser into the
+             * text field), so put both last separated by a tab — tags never
+             * contains a tab. Mirrors the EVT_SESSION_CREATE pattern. */
+            ircsnprintf(buf, buflen, "%s %s %d :%s\t%s",
                         p->sender, p->channel, p->is_notice,
                         p->tags[0] ? p->tags : "*", p->text);
             break;
@@ -589,13 +593,23 @@ gossip_parse_event(NetworkEvent *ev, NetEventType type, const char *payload,
             strncpy(pl->channel, tok, CHANNELLEN);
             tok = strtoken(&p, NULL, " "); if (!tok) return -1;
             pl->is_notice = atoi(tok);
-            tok = strtoken(&p, NULL, " "); if (!tok) return -1;   /* out-tags */
-            if (strcmp(tok, "*") != 0)
-                strncpy(pl->tags, tok, sizeof(pl->tags) - 1);
-            tok = strtoken(&p, NULL, "");
-            if (tok) {
-                if (*tok == ':') tok++;
-                strncpy(pl->text, tok, sizeof(pl->text) - 1);
+            /* Remainder is :tags\ttext (tags == "*" means none). Split on the
+             * tab so a space inside tags can never bleed into the text. */
+            if (p)
+            {
+                char *tab;
+                while (*p == ' ') p++;
+                if (*p == ':') p++;
+                tab = strchr(p, '\t');
+                if (tab)
+                {
+                    *tab = '\0';
+                    if (strcmp(p, "*") != 0)
+                        strncpy(pl->tags, p, sizeof(pl->tags) - 1);
+                    strncpy(pl->text, tab + 1, sizeof(pl->text) - 1);
+                }
+                else
+                    strncpy(pl->text, p, sizeof(pl->text) - 1);
             }
             break;
         }

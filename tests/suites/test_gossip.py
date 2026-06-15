@@ -393,6 +393,44 @@ class TestGossipPropagation:
         assert any("gossip topic propagation test" in l for l in topic_lines), \
             f"Topic not propagated to srv2: {topic_lines}"
 
+    def test_channel_message_propagates(self, gossip_cluster, client_factory, unique_nick):
+        """A channel PRIVMSG from srv1 reaches a user on srv2 with intact text.
+
+        Exercises the EVT_CHANMSG serialize/parse round-trip — tags and text
+        are packed into the trailing field separated by a tab, so text with
+        spaces must arrive uncorrupted.
+        """
+        srv1, srv2 = gossip_cluster
+        chan = "#msgprop"
+
+        nick1 = unique_nick("mp")
+        c1 = client_factory(port=srv1.irc_port)
+        c1.register(nick1)
+        c1.collect_lines(duration=0.5)
+        c1.send(f"JOIN {chan}")
+        c1.wait_for("366")
+        time.sleep(3)
+
+        # c2 joins on srv2 → becomes a gossip-materialized member on srv1,
+        # which is what makes srv1 emit EVT_CHANMSG for this channel.
+        nick2 = unique_nick("mp")
+        c2 = client_factory(port=srv2.irc_port)
+        c2.register(nick2)
+        c2.collect_lines(duration=0.5)
+        c2.send(f"JOIN {chan}")
+        c2.wait_for("366")
+        time.sleep(3)
+        c2.collect_lines(duration=1)  # drain join noise
+
+        body = "hello across the gossip mesh with spaces"
+        c1.send(f"PRIVMSG {chan} :{body}")
+        time.sleep(2)
+
+        lines = c2.collect_lines(duration=2)
+        msg_lines = [l for l in lines if "PRIVMSG" in l and chan in l]
+        assert any(body in l for l in msg_lines), \
+            f"Channel message not propagated to srv2 intact: {msg_lines}"
+
     def test_channel_modes_propagate(self, gossip_cluster, client_factory, unique_nick):
         """Channel modes (+nt) set on srv1 visible on srv2."""
         srv1, srv2 = gossip_cluster
