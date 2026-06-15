@@ -532,10 +532,24 @@ exit_client(aClient *cptr, aClient *sptr, aClient *from, char *comment)
 
     /* Phase S2: gossip peer disconnect — clean up link, do NOT cascade QUITs.
      * Users reachable via gossip peers are maintained in the event log, not
-     * the spanning tree, so dropping a link does not QUIT their users. */
+     * the spanning tree, so dropping a link does not QUIT their users.
+     *
+     * gopeer_handle_disconnect() does the gossip-specific cleanup (split
+     * events, bridge SQUIT, frees the GossipPeer struct).  We then run the
+     * normal local-socket teardown so the fd, send/recv buffers, local[fd]
+     * slot, SSL object, and the aClient itself are released.  exit_one_client()
+     * does NOT cascade QUITs for a STAT_GOPEER client (it is neither IsServer
+     * nor IsPerson), so materialized users persist as intended. */
     if (IsGoPeer(sptr))
     {
         gopeer_handle_disconnect(sptr);
+        if (MyConnect(sptr))
+        {
+            close_connection(sptr);
+            sptr->sockerr = 0;
+            sptr->flags |= FLAGS_DEADSOCKET;
+        }
+        exit_one_client(cptr, sptr, from, comment);
         return (cptr == sptr) ? FLUSH_BUFFER : 0;
     }
 
