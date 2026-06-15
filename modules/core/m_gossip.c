@@ -136,8 +136,14 @@ ms_gsynced(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr,
     if (!gp)
         return 0;
 
-    gp->burst_complete = 1;
-    gopeer_connected_count++;
+    /* Guard against a duplicate GSYNCED inflating the connected count:
+     * gopeer_connected_count feeds gossip_is_partitioned(), and the
+     * matching decrement in gopeer_handle_disconnect() runs only once. */
+    if (!gp->burst_complete)
+    {
+        gp->burst_complete = 1;
+        gopeer_connected_count++;
+    }
     sendto_realops("Gossip peer %s sync complete", gp->name);
     return 0;
 }

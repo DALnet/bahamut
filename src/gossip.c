@@ -931,8 +931,8 @@ gossip_apply_chan_join(const EvPayloadChanJoin *p)
     aChannel *chptr;
 
     acptr = find_client(p->nick, NULL);
-    if (!acptr || !IsGossipMaterialized(acptr))
-        return;
+    if (!acptr || !IsClient(acptr) || !IsGossipMaterialized(acptr))
+        return;  /* reject materialized servers (no ->user) and non-users */
 
     chptr = find_channel(p->channel, NullChn);
     if (!chptr)
@@ -1296,8 +1296,9 @@ gossip_apply_tagmsg(const EvPayloadTagmsg *p)
 {
     aChannel *chptr  = find_channel(p->channel, NullChn);
     aClient  *sender = find_client(p->sender, NULL);
-    if (!chptr || !sender)
-        return;
+    if (!chptr || !sender || !IsGossipMaterialized(sender))
+        return;  /* only relay for materialized sources; else the eventlog
+                  * hook would re-emit and re-gossip, causing a loop */
 
     /* deliver TAGMSG with the origin's client-only tags to our local
      * message-tags members (handled by the relaxed m_tagmsg hook). */
@@ -1310,8 +1311,9 @@ gossip_apply_invite(const EvPayloadInvite *p)
     aClient  *inviter = find_client(p->inviter, NULL);
     aClient  *target  = find_client(p->target, NULL);
     aChannel *chptr   = find_channel(p->channel, NullChn);
-    if (!inviter || !target || !chptr)
-        return;
+    if (!inviter || !target || !chptr || !IsGossipMaterialized(inviter))
+        return;  /* only relay for materialized sources; else the eventlog
+                  * hook would re-emit and re-gossip, causing a loop */
 
     /* notify our local invite-notify members (m_invite_notify hook). */
     call_hooks(CHOOK_INVITE, inviter, target, chptr);
