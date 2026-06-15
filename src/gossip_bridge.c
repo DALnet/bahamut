@@ -45,18 +45,51 @@
  * Events from OTHER gossip peers are handled by bridge_apply_event().
  * ---------------------------------------------------------------------- */
 
+/*
+ * sanitize_param — defence-in-depth for the TS5 trust boundary.
+ *
+ * Truncate a string at the first space or control byte (incl. CR/LF) so it
+ * is safe to emit as a single positional TS5 parameter.  Gossip payload
+ * identifier fields are already space-free (gossip parse tokenises on ' ')
+ * and CR/LF-free (events arrive as IRC lines, so framing strips line
+ * terminators), so injection via this path is not currently possible.  But
+ * the bridge is the boundary to legacy TS5 servers, and relying on a distant
+ * parse invariant for safety at the wire-emit point is fragile: a future EVT
+ * type or parse change could slip a space/control char into a positional
+ * field, which a TS5 server would read as extra parameters (or, for CR/LF, a
+ * second command).  Only positional slots are sanitised; trailing ":%s"
+ * params (realname, reason, topic) and space-separated MODE params
+ * legitimately contain spaces and are left intact.
+ */
+static void
+sanitize_param(char *s)
+{
+    for (; *s; s++)
+        if ((unsigned char)*s <= ' ')
+        {
+            *s = '\0';
+            break;
+        }
+}
+
 void
 bridge_introduce_server(const char *name)
 {
+    char safe[HOSTLEN + 1];
+    strncpyzt(safe, name, sizeof(safe));
+    sanitize_param(safe);
     sendto_serv_butone(NULL, ":%s SERVER %s 2 :Gossip peer",
-                       me.name, name);
+                       me.name, safe);
 }
 
 void
 bridge_split_server(const char *name)
 {
+    char safe[HOSTLEN + 1];
+    strncpyzt(safe, name, sizeof(safe));
+    sanitize_param(safe);
     sendto_serv_butone(NULL, ":%s SQUIT %s :Gossip peer disconnected",
-                       me.name, name);
+                       me.name, safe);
 }
 
 /* -------------------------------------------------------------------------
@@ -87,108 +120,136 @@ bridge_apply_event(const NetworkEvent *ev)
              * hopcount=2, serviceid=0, ip="0.0.0.0" (NICKIPSTR string format).
              * umode sent as "+" — legacy servers will learn actual modes
              * when EVT_USER_MODE events arrive as MODE commands. */
-            const EvPayloadUserJoin *p = &ev->payload.user_join;
+            EvPayloadUserJoin p = ev->payload.user_join;  /* mutable copy */
+            sanitize_param(p.nick);
+            sanitize_param(p.username);
+            sanitize_param(p.host);
+            sanitize_param(p.server);
             sendto_serv_butone(NULL,
                 "NICK %s 2 %ld + %s %s %s 0 0.0.0.0 :%s",
-                p->nick, (long)p->ts,
-                p->username, p->host, p->server,
-                p->realname);
+                p.nick, (long)p.ts,
+                p.username, p.host, p.server,
+                p.realname);
             break;
         }
         case EVT_USER_QUIT:
         {
-            const EvPayloadUserQuit *p = &ev->payload.user_quit;
-            sendto_serv_butone(NULL, ":%s QUIT :%s", p->nick, p->reason);
+            EvPayloadUserQuit p = ev->payload.user_quit;  /* mutable copy */
+            sanitize_param(p.nick);
+            sendto_serv_butone(NULL, ":%s QUIT :%s", p.nick, p.reason);
             break;
         }
         case EVT_USER_NICK:
         {
-            const EvPayloadUserNick *p = &ev->payload.user_nick;
+            EvPayloadUserNick p = ev->payload.user_nick;  /* mutable copy */
+            sanitize_param(p.oldnick);
+            sanitize_param(p.newnick);
             sendto_serv_butone(NULL, ":%s NICK %s %ld",
-                               p->oldnick, p->newnick, (long)p->ts);
+                               p.oldnick, p.newnick, (long)p.ts);
             break;
         }
         case EVT_USER_AWAY:
         {
-            const EvPayloadUserAway *p = &ev->payload.user_away;
-            if (p->setting)
+            EvPayloadUserAway p = ev->payload.user_away;  /* mutable copy */
+            sanitize_param(p.nick);
+            if (p.setting)
                 sendto_serv_butone(NULL, ":%s AWAY :%s",
-                                   p->nick, p->message);
+                                   p.nick, p.message);
             else
-                sendto_serv_butone(NULL, ":%s AWAY", p->nick);
+                sendto_serv_butone(NULL, ":%s AWAY", p.nick);
             break;
         }
         case EVT_CHAN_JOIN:
         {
-            const EvPayloadChanJoin *p = &ev->payload.chan_join;
+            EvPayloadChanJoin p = ev->payload.chan_join;  /* mutable copy */
             char prefix[3] = {'\0', '\0', '\0'};
-            if (p->flags & CHFL_CHANOP)
+            sanitize_param(p.channel);
+            sanitize_param(p.nick);  /* member token in the SJOIN list */
+            if (p.flags & CHFL_CHANOP)
                 prefix[0] = '@';
-            else if (p->flags & CHFL_HALFOP)
+            else if (p.flags & CHFL_HALFOP)
                 prefix[0] = '%';
-            else if (p->flags & CHFL_VOICE)
+            else if (p.flags & CHFL_VOICE)
                 prefix[0] = '+';
             sendto_serv_butone(NULL,
                 ":%s SJOIN %ld %s + :%s%s",
-                me.name, (long)p->ts, p->channel, prefix, p->nick);
+                me.name, (long)p.ts, p.channel, prefix, p.nick);
             break;
         }
         case EVT_CHAN_PART:
         {
-            const EvPayloadChanPart *p = &ev->payload.chan_part;
+            EvPayloadChanPart p = ev->payload.chan_part;  /* mutable copy */
+            sanitize_param(p.nick);
+            sanitize_param(p.channel);
             sendto_serv_butone(NULL, ":%s PART %s :%s",
-                               p->nick, p->channel, p->reason);
+                               p.nick, p.channel, p.reason);
             break;
         }
         case EVT_CHAN_KICK:
         {
-            const EvPayloadChanKick *p = &ev->payload.chan_kick;
+            EvPayloadChanKick p = ev->payload.chan_kick;  /* mutable copy */
+            sanitize_param(p.kicker);
+            sanitize_param(p.channel);
+            sanitize_param(p.target);
             sendto_serv_butone(NULL, ":%s KICK %s %s :%s",
-                               p->kicker, p->channel,
-                               p->target, p->reason);
+                               p.kicker, p.channel,
+                               p.target, p.reason);
             break;
         }
         case EVT_CHAN_MODE:
         {
-            const EvPayloadChanMode *p = &ev->payload.chan_mode;
-            if (p->parabuf[0])
+            EvPayloadChanMode p = ev->payload.chan_mode;  /* mutable copy */
+            sanitize_param(p.nick);
+            sanitize_param(p.channel);
+            /* modebuf is mode letters; parabuf is space-separated MODE
+             * params (legitimately contains spaces) — left intact. */
+            if (p.parabuf[0])
                 sendto_serv_butone(NULL, ":%s MODE %s %s %s",
-                                   p->nick, p->channel,
-                                   p->modebuf, p->parabuf);
+                                   p.nick, p.channel,
+                                   p.modebuf, p.parabuf);
             else
                 sendto_serv_butone(NULL, ":%s MODE %s %s",
-                                   p->nick, p->channel, p->modebuf);
+                                   p.nick, p.channel, p.modebuf);
             break;
         }
         case EVT_CHAN_TOPIC:
         {
-            const EvPayloadChanTopic *p = &ev->payload.chan_topic;
+            EvPayloadChanTopic p = ev->payload.chan_topic;  /* mutable copy */
+            sanitize_param(p.nick);
+            sanitize_param(p.channel);
+            sanitize_param(p.setter);
             sendto_serv_butone(NULL,
                 ":%s TOPIC %s %s %ld :%s",
-                p->nick, p->channel, p->setter,
-                (long)p->ts, p->topic);
+                p.nick, p.channel, p.setter,
+                (long)p.ts, p.topic);
             break;
         }
         case EVT_AKILL:
         {
-            const EvPayloadAkill *p = &ev->payload.akill;
+            EvPayloadAkill p = ev->payload.akill;  /* mutable copy */
+            sanitize_param(p.host);
+            sanitize_param(p.user);
+            sanitize_param(p.setter);
             sendto_serv_butone(NULL, ":%s AKILL %s %s %ld %s %ld :%s",
-                               me.name, p->host, p->user, (long)p->length,
-                               p->setter, (long)p->timeset, p->reason);
+                               me.name, p.host, p.user, (long)p.length,
+                               p.setter, (long)p.timeset, p.reason);
             break;
         }
         case EVT_RAKILL:
         {
-            const EvPayloadRakill *p = &ev->payload.rakill;
+            EvPayloadRakill p = ev->payload.rakill;  /* mutable copy */
+            sanitize_param(p.host);
+            sanitize_param(p.user);
             sendto_serv_butone(NULL, ":%s RAKILL %s %s",
-                               me.name, p->host, p->user);
+                               me.name, p.host, p.user);
             break;
         }
         case EVT_SQLINE:
         {
-            const EvPayloadSqline *p = &ev->payload.sqline;
+            EvPayloadSqline p = ev->payload.sqline;  /* mutable copy */
+            sanitize_param(p.mask);
             sendto_serv_butone(NULL, ":%s SQLINE %s :%s",
-                               me.name, p->mask, p->reason);
+                               me.name, p.mask, p.reason);
             break;
         }
         case EVT_UNSQLINE:
