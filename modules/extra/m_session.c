@@ -385,7 +385,15 @@ hook_signoff(aClient *sptr)
     if (!MyClient(sptr) || !sptr->user || !IsRegisteredUser(sptr))
         goto cleanup;
 
-    /* Use pre-assigned token if available (cap clients) */
+    /* Only reserve a session (and therefore the nick) for clients that
+     * negotiated the resume cap.  A client without draft/resume-0.5 can
+     * never issue RESUME, so holding its nick for SESSION_TIMEOUT after a
+     * /QUIT would only block an immediate reconnect with the same nick for
+     * no benefit. */
+    if (!HasCap(sptr, cap_resume_bit))
+        goto cleanup;
+
+    /* Use the token pre-assigned at registration, if any */
     if (sptr->fd >= 0 && token_table[sptr->fd])
         preassigned = token_table[sptr->fd];
 
@@ -396,14 +404,6 @@ hook_signoff(aClient *sptr)
                        sptr->name);
         goto cleanup;
     }
-
-    /* For clients WITHOUT the cap: best-effort NOTICE (backward compat) */
-    if (!HasCap(sptr, cap_resume_bit))
-    {
-        sendto_one(sptr, ":%s NOTICE %s :Session token: %s",
-                   me.name, sptr->name, sess->key);
-    }
-    /* Cap clients already have the token — no need to send anything */
 
     /* Gossip EVT_SESSION_CREATE so remote servers can service RESUME */
     gossip_session_create(sess);
