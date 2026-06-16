@@ -2421,6 +2421,7 @@ int rehash(aClient *cptr, aClient *sptr, int sig)
     }
 
     merge_confs();
+    rehash_modules();   /* reconcile loaded modules with the new autoload list */
     build_rplcache();
     nextconnect = 1;    /* reset autoconnects */
 

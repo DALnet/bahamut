@@ -62,10 +62,15 @@ call_hooks(enum c_hooktype hooktype, ...)
     return 0;
 }
 
-int 
+int
 init_modules()
 {
     return 0;
+}
+
+void
+rehash_modules(void)
+{
 }
 
 #else
@@ -107,6 +112,12 @@ typedef struct loaded_module
     void (*module_getinfo) (char **, char **);
     int  (*module_command) (aClient *, int, char **);
     int  (*module_globalcommand) (aClient *, aClient *, int, char **);
+
+    /* 1 if loaded from the config autoload list (boot loop or rehash
+     * reconcile).  0 for core-dir modules (load_module_dir) and modules
+     * loaded manually via MODULE LOAD.  Only autoloaded modules are
+     * unloaded by rehash_modules() when dropped from the config. */
+    int  autoloaded;
 } aModule;
 
 /* Forward decls */
@@ -474,6 +485,7 @@ load_module(aClient *sptr, char *modname)
     tmpmod.version = bircmodule_strdup((ver != NULL) ? ver : "<no version>");
     tmpmod.description = bircmodule_strdup((desc != NULL) ? desc :
                                                             "<no description>");
+    tmpmod.autoloaded = 0;   /* set by the autoload call sites, not here */
     themod = (aModule *) bircmodule_malloc(sizeof(aModule));
     memcpy(themod, &tmpmod, sizeof(aModule));
     add_to_list(&module_list, themod);
@@ -1818,10 +1830,98 @@ int init_modules()
 
     for (i = 0; modules->autoload[i]; i++)
     {
+        aModule *m;
         load_module(NULL, modules->autoload[i]);
+        if ((m = find_module(modules->autoload[i])))
+            m->autoloaded = 1;
         printf("Module %s Loaded Successfully.\n", modules->autoload[i]);
     }
     return 0;
+}
+
+/* Is `name` present in the current (already-applied) modules config? */
+static int
+module_in_conf(const char *name)
+{
+    int i;
+
+    if (!modules)
+        return 0;
+    for (i = 0; modules->autoload[i]; i++)
+        if (!strcmp(modules->autoload[i], name))
+            return 1;
+    for (i = 0; modules->optload[i]; i++)
+        if (!strcmp(modules->optload[i], name))
+            return 1;
+    return 0;
+}
+
+/*
+ * rehash_modules - reconcile the loaded module set with the config after a
+ * rehash.  Called from rehash() AFTER merge_confs() has swapped in the new
+ * `modules` config (success path only).
+ *
+ *   - Unload modules that were loaded from the autoload list but have since
+ *     been removed from it (so commenting a module out + REHASH unloads it).
+ *   - Load autoload entries that are not yet loaded (so adding one + REHASH
+ *     loads it).
+ *
+ * Only config-managed (autoloaded) modules are ever unloaded: core-dir
+ * modules (load_module_dir) and manually MODULE-LOADed modules are left
+ * untouched, and MAPI_CORE modules are skipped as a second safety net.
+ */
+void
+rehash_modules(void)
+{
+    DLink   *lp, *next;
+    int      i, n_unloaded = 0, n_loaded = 0;
+
+    if (!modules)
+        return;
+
+    /* Unload pass: autoloaded, non-core, no longer in the config. */
+    for (lp = module_list; lp; lp = next)
+    {
+        aModule *mod = (aModule *) lp->value.cp;
+
+        next = lp->next;   /* captured before destroy_module() frees lp */
+
+        if (!mod->autoloaded)
+            continue;                       /* core-dir or manually loaded */
+        if (mod->is_mapi && mod->mheader &&
+            (mod->mheader->mod_flags & MAPI_CORE))
+            continue;                       /* never unload a core module */
+        if (module_in_conf(mod->name))
+            continue;                       /* still configured */
+
+        sendto_realops("Rehash: unloading module %s (removed from config)",
+                       mod->name);
+        drop_all_hooks(mod);
+        call_hooks(MHOOK_UNLOAD, mod->name, (void *) mod);
+        destroy_module(mod);
+        n_unloaded++;
+    }
+
+    /* Load pass: autoload entries not currently loaded. */
+    for (i = 0; modules->autoload[i]; i++)
+    {
+        aModule *m;
+
+        if (find_module(modules->autoload[i]))
+            continue;
+        load_module(NULL, modules->autoload[i]);
+        if ((m = find_module(modules->autoload[i])))
+        {
+            m->autoloaded = 1;
+            n_loaded++;
+            sendto_realops("Rehash: loaded module %s (added to config)",
+                           modules->autoload[i]);
+        }
+    }
+
+    if (n_unloaded || n_loaded)
+        sendto_realops("Rehash: modules reconciled (%d loaded, %d unloaded)",
+                       n_loaded, n_unloaded);
 }
 #endif
 

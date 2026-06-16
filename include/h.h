@@ -121,6 +121,7 @@ extern int  	  rehash(aClient *, aClient *, int);
 extern int  	  initconf(char *);
 extern char *finishconf(void);
 extern void       merge_confs(void);
+extern void       rehash_modules(void);
 extern int  	  lock_kline_file(void);
 
 extern void 	  clear_scache_hash_table(void);
