@@ -174,9 +174,18 @@ m_message(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *p
                 continue;
             }
 
-            if (ismine && call_hooks(CHOOK_CHANMSG, sptr, chptr, notice,
-                                     parv[2]) == FLUSH_BUFFER)
-                    return FLUSH_BUFFER;
+            /* Fire CHOOK_CHANMSG for remote clients too, not just local
+             * ones: this is the reverse bridge (legacy TS5 -> gossip).  A
+             * channel message arriving from a TS5 server must be re-emitted
+             * as EVT_CHANMSG so gossip peers (who never see the TS5 PRIVMSG)
+             * receive it.  The hook consumers self-guard: echo-message
+             * no-ops for non-local sources, the gossip eventlog only emits
+             * when the channel holds a gossip-materialized member and skips
+             * gossip-origin sources.  FLUSH_BUFFER (a hook closed the
+             * connection) can only apply to a local client. */
+            if (call_hooks(CHOOK_CHANMSG, sptr, chptr, notice,
+                           parv[2]) == FLUSH_BUFFER && ismine)
+                return FLUSH_BUFFER;
 
 #ifdef SPAMFILTER
             if(!(chptr->mode.mode & MODE_PRIVACY))
