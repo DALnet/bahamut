@@ -109,10 +109,19 @@ extern const char *server_time_tag(void);
 
 /* Outbound tag generator registry */
 typedef const char *(*outbound_tag_fn)(void); /* returns "key=val" or NULL/"" */
-extern void          register_outbound_tag(outbound_tag_fn fn, unsigned long cap_bit);
+/* key: the bare tag name this generator emits ("time", "msgid", "draft/bot", ...).
+ * Stored so filter_tags_for() can gate delivery per-recipient without calling fn(). */
+extern void          register_outbound_tag(outbound_tag_fn fn, unsigned long cap_bit,
+                                           const char *key);
 extern void          unregister_outbound_tag(outbound_tag_fn fn, unsigned long cap_bit);
 extern const char   *build_outbound_tags(void); /* returns "key=val;key2=val2" or "" */
 extern unsigned long tag_delivery_caps;         /* OR of all registered cap bits */
+
+/* Drop registry-known tag tokens whose cap_bit 'to' has NOT negotiated; keep
+ * unknown tokens (label, batch, client tags) untouched.  Returns a static
+ * buffer valid until the next call.  Reads only the stored key — never calls
+ * the generator fn — so it is safe for relayed (gossip) tags too. */
+extern const char   *filter_tags_for(const char *tags, aClient *to);
 
 /* Tagged channel delivery (plain shared buf for plain clients, unshared for tagged) */
 extern void sendto_channel_butone_tags(aClient *one, aClient *from,

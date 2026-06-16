@@ -52,15 +52,22 @@ int  sent_serial;
 
 /* ---------------------------------------------------------------------------
  * Outbound tag generator registry
- * Modules register (fn, cap_bit) pairs via register_outbound_tag().
+ * Modules register (fn, cap_bit, key) triples via register_outbound_tag().
  * build_outbound_tags() calls all registered generators and returns a
  * semicolon-separated "key=val;key2=val2" string (or "" if none active).
- * tag_delivery_caps is the OR of all registered cap bits; used to decide
- * whether any recipient in a channel needs tagged delivery.
+ * tag_delivery_caps is the OR of all registered cap bits; used as a fast
+ * "does this recipient have ANY tag cap?" pre-check before tagged delivery.
+ * The stored key lets filter_tags_for() gate each token per-recipient (and
+ * gate relayed tags from other servers) without re-invoking the generators.
  * ---------------------------------------------------------------------------
  */
-#define MAX_OUTBOUND_TAG_FNS 8
-typedef struct { outbound_tag_fn fn; unsigned long cap_bit; } TagEntry;
+#define MAX_OUTBOUND_TAG_FNS 16
+#define MAX_TAG_KEY_LEN      32
+typedef struct {
+    outbound_tag_fn fn;
+    unsigned long   cap_bit;
+    char            key[MAX_TAG_KEY_LEN]; /* bare tag name, e.g. "time", "draft/bot" */
+} TagEntry;
 static TagEntry    tag_registry[MAX_OUTBOUND_TAG_FNS];
 static int         n_tag_fns = 0;
 unsigned long      tag_delivery_caps = 0;
@@ -68,12 +75,16 @@ unsigned long      tag_delivery_caps = 0;
 /* chantagbuf: static buffer for "@tags plain-message" in channel tagged delivery */
 static char chantagbuf[2304];
 
-void register_outbound_tag(outbound_tag_fn fn, unsigned long cap_bit)
+void register_outbound_tag(outbound_tag_fn fn, unsigned long cap_bit, const char *key)
 {
     if (n_tag_fns < MAX_OUTBOUND_TAG_FNS)
     {
         tag_registry[n_tag_fns].fn      = fn;
         tag_registry[n_tag_fns].cap_bit = cap_bit;
+        if (key)
+            strncpyzt(tag_registry[n_tag_fns].key, key, MAX_TAG_KEY_LEN);
+        else
+            tag_registry[n_tag_fns].key[0] = '\0';
         n_tag_fns++;
         tag_delivery_caps |= cap_bit;
     }
@@ -113,6 +124,65 @@ const char *build_outbound_tags(void)
     }
     tagbuf[pos] = '\0';
     return tagbuf;
+}
+
+/*
+ * filter_tags_for
+ * Given a built/relayed tag string ("key=val;key2;key3=val3") and a recipient,
+ * drop every token whose tag key is registered AND whose cap_bit the recipient
+ * has NOT negotiated.  Tokens whose key is not in the registry (label, batch,
+ * client-only tags, …) are kept untouched.  Reads only the stored registry key
+ * — it never invokes a generator fn — so relayed tags from other servers are
+ * gated correctly without being regenerated locally.
+ *
+ * Returns a static buffer valid until the next call.  Returns the input
+ * unchanged when there is nothing to filter.
+ */
+const char *
+filter_tags_for(const char *tags, aClient *to)
+{
+    static char fbuf[2048];
+    char        scratch[2048];
+    int         pos = 0;
+    char       *tok, *save = NULL;
+
+    if (!tags || !*tags || !to)
+        return tags;
+
+    strncpyzt(scratch, tags, sizeof(scratch));
+
+    for (tok = strtoken(&save, scratch, ";"); tok;
+         tok = strtoken(&save, NULL, ";"))
+    {
+        const char *eq     = strchr(tok, '=');
+        size_t      keylen = eq ? (size_t)(eq - tok) : strlen(tok);
+        int         known = 0, allowed = 1, i, len;
+
+        for (i = 0; i < n_tag_fns; i++)
+        {
+            const char *k = tag_registry[i].key;
+            if (k[0] && strlen(k) == keylen && strncmp(tok, k, keylen) == 0)
+            {
+                known = 1;
+                if (!(to->cap_bits & tag_registry[i].cap_bit))
+                    allowed = 0;
+                break;
+            }
+        }
+
+        if (known && !allowed)
+            continue;   /* recipient lacks the cap — drop this token */
+
+        len = (int)strlen(tok);
+        if (pos + len + 1 >= (int)sizeof(fbuf))
+            break;
+        if (pos > 0)
+            fbuf[pos++] = ';';
+        memcpy(fbuf + pos, tok, len);
+        pos += len;
+    }
+    fbuf[pos] = '\0';
+    return fbuf;
 }
 
 void init_send()
@@ -720,7 +790,7 @@ void sendto_channel_butone_tags(aClient *one, aClient *from, aChannel *chptr,
 {
     chanMember *cm;
     aClient    *acptr;
-    int         i, didlocal = 0, didremote = 0, didtagged = 0;
+    int         i, didlocal = 0, didremote = 0;
     va_list     vl;
     char       *pfix;
     void       *share_bufs[2] = {0, 0};
@@ -756,18 +826,26 @@ void sendto_channel_butone_tags(aClient *one, aClient *from, aChannel *chptr,
 
             if (tags && *tags && (acptr->cap_bits & tag_delivery_caps))
             {
-                /* Build "@tags plain-message" in chantagbuf (once per message) */
-                if (!didtagged)
+                /* Gate framework tags to what THIS member negotiated, then
+                 * build "@tags plain-message" in chantagbuf.  Per-recipient,
+                 * so the set differs between members — cannot be cached. */
+                const char *ftags = filter_tags_for(tags, acptr);
+
+                if (ftags && *ftags)
                 {
-                    int tlen = snprintf(chantagbuf, sizeof(chantagbuf), "@%s ", tags);
+                    int tlen = snprintf(chantagbuf, sizeof(chantagbuf), "@%s ", ftags);
                     int mlen = didlocal;
+                    int dlen;
                     if (tlen + mlen >= (int)sizeof(chantagbuf))
                         mlen = (int)sizeof(chantagbuf) - tlen - 1;
                     memcpy(chantagbuf + tlen, sendbuf, mlen);
-                    didtagged = tlen + mlen;
-                    chantagbuf[didtagged] = '\0';
+                    dlen = tlen + mlen;
+                    chantagbuf[dlen] = '\0';
+                    send_message(acptr, chantagbuf, dlen, NULL);
                 }
-                send_message(acptr, chantagbuf, didtagged, NULL);
+                else
+                    /* nothing this member is entitled to — send plain */
+                    send_message(acptr, sendbuf, didlocal, share_bufs[0]);
             }
             else
                 send_message(acptr, sendbuf, didlocal, share_bufs[0]);
@@ -2323,6 +2401,11 @@ sendto_one_tags(aClient *to, const char *tags, const char *pattern, ...)
 
     if (!to)
         return;
+
+    /* Gate framework tags to what this recipient negotiated, before we
+     * resolve to->from (which may be a server link with no client caps). */
+    if (tags && *tags)
+        tags = filter_tags_for(tags, to);
 
     if (to->from)
         to = to->from;

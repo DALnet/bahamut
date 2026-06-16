@@ -40,7 +40,7 @@ msgid_tag(void)
 static void
 msgid_register(void)
 {
-    register_outbound_tag(msgid_tag, msgid_bit_draft | msgid_bit_std);
+    register_outbound_tag(msgid_tag, msgid_bit_draft | msgid_bit_std, "msgid");
 }
 
 static void

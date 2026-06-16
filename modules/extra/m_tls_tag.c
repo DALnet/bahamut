@@ -40,7 +40,7 @@ tls_tag(void)
 static void
 tls_tag_register(void)
 {
-    register_outbound_tag(tls_tag, tls_tag_bit);
+    register_outbound_tag(tls_tag, tls_tag_bit, "draft/tls");
 }
 
 static void

@@ -42,7 +42,7 @@ account_tag(void)
 static void
 account_tag_register(void)
 {
-    register_outbound_tag(account_tag, account_tag_bit);
+    register_outbound_tag(account_tag, account_tag_bit, "account");
 }
 
 static void

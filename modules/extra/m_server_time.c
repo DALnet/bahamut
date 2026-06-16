@@ -22,7 +22,7 @@ static struct mapi_cap_av1 server_time_caps[] = {
 static void
 server_time_register(void)
 {
-    register_outbound_tag(server_time_tag, server_time_bit);
+    register_outbound_tag(server_time_tag, server_time_bit, "time");
 }
 
 static void

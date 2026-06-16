@@ -40,7 +40,7 @@ bot_tag(void)
 static void
 bot_tag_register(void)
 {
-    register_outbound_tag(bot_tag, bot_tag_bit);
+    register_outbound_tag(bot_tag, bot_tag_bit, "draft/bot");
 }
 
 static void
