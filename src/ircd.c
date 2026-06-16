@@ -148,7 +148,7 @@ static int profiling_state = 1;
 static int profiling_newmsg = 0;
 static char profiling_msg[512];
 
-void s_dumpprof()
+void s_dumpprof(int sig)
 {
     char buf[32];
 
@@ -194,7 +194,7 @@ static void build_version(void)
         sprintf(version, "%s-%d.%d.%d", BASENAME, MAJOR, MINOR, PATCH);
 }
 
-void s_die()
+void s_die(int sig)
 {
     FILE *fp;
     char tmp[PATH_MAX];
@@ -215,7 +215,7 @@ void s_die()
     exit(0);
 }
 
-static  void s_rehash() 
+static  void s_rehash(int sig)
 {
     struct sigaction act;
     dorehash = 1;
@@ -240,7 +240,7 @@ void restart(char *mesg)
     server_reboot();
 }
 
-void s_restart() 
+void s_restart(int sig)
 {
     static int  restarting = 0;
         

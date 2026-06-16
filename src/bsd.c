@@ -40,7 +40,7 @@ extern char *sys_errlist[];
 int writecalls = 0, writeb[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 int readcalls = 0;
 #endif
-void dummy()
+void dummy(int sig)
 {
     struct sigaction act;
     

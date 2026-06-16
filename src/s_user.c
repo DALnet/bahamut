@@ -54,7 +54,7 @@ extern int  send_motd(aClient *, aClient *, int, char **);
 extern void send_topic_burst(aClient *);
 extern void outofmemory(void);  /* defined in list.c */
 #ifdef MAXBUFFERS
-extern void reset_sock_opts();
+extern void reset_sock_opts(int, int);
 extern int send_lusers(aClient *,aClient *,int, char **);
 #endif
 extern int is_xflags_exempted(aClient *sptr, aChannel *chptr); /* for m_message() */
@@ -392,7 +392,6 @@ check_oper_can_mask(aClient *sptr, char *name, char *password, char **onick)
 {
     aOper *aoper;
     char *encr;
-    extern char *crypt();
 
     if(!(aoper = find_oper(name, sptr->user->username, sptr->user->host,
                            sptr->hostip)))
@@ -2969,7 +2968,6 @@ int m_oper(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     aOper       *aoper;
     char        *name, *password, *encr, *oper_ip;
-    extern char *crypt();
 
     name = parc > 1 ? parv[1] : (char *) NULL;
     password = parc > 2 ? parv[2] : (char *) NULL;

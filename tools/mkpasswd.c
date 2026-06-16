@@ -4,18 +4,10 @@
  */
 
 #include "sys.h"
-#define _DEFAULT_SOURCE
 #include <time.h>
 #include <stdlib.h>
 
-extern char *getpass();
-extern char *crypt();
-extern long random();
-extern int srandom(unsigned);
-
-int main(argc, argv)
-int argc;
-char *argv[];
+int main(int argc, char *argv[])
 {
   static char saltChars[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789./";
   char salt[3];

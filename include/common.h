@@ -54,7 +54,6 @@
 char        *malloc(), *calloc();
 void        free();
 #endif
-extern void flush_fdlist_connections();
 extern int  match(char *, char *);
 extern int  mycmp(char *, char *);
 extern int  mycmp_diff(char *, char *);

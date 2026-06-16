@@ -13,5 +13,6 @@ typedef struct fdstruct
 void        addto_fdlist(int a, fdlist * b);
 void        delfrom_fdlist(int a, fdlist * b);
 void        init_fdlist(fdlist * b);
+void        flush_fdlist_connections(fdlist * listp);
 
 #endif /* _IRCD_DOG3_FDLIST */

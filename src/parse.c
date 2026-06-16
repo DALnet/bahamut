@@ -300,24 +300,12 @@ int parse(aClient *cptr, char *buffer, char *bufend)
 
     if (mptr->flags & MF_ALIAS)
     {
-#ifdef __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-non-prototype"
-#endif
-         return mptr->func(cptr, from, i, para, &aliastab[mptr->aliasidx]);
-#ifdef __clang__
-#pragma clang diagnostic pop
-#endif
+        return ((int (*)(aClient *, aClient *, int, char **, AliasInfo *))
+                mptr->func)(cptr, from, i, para, &aliastab[mptr->aliasidx]);
     }
 
-#ifdef __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-non-prototype"
-#endif
-    return (*mptr->func) (cptr, from, i, para);
-#ifdef __clang__
-#pragma clang diagnostic pop
-#endif
+    return ((int (*)(aClient *, aClient *, int, char **))
+            mptr->func)(cptr, from, i, para);
 }
 
 /*

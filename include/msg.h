@@ -266,8 +266,11 @@ AliasInfo aliastab[] =
 #ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wincompatible-function-pointer-types"
+#elif defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wincompatible-pointer-types"
 #endif
-struct Message msgtab[] = 
+struct Message msgtab[] =
 {
     {MSG_PRIVATE,  m_private,  MAXPARA, MF_RIDLE, 0},
     {MSG_NICK,     m_nick,     MAXPARA, MF_UNREG, 0},
@@ -387,6 +390,8 @@ struct Message msgtab[] =
 };
 #ifdef __clang__
 #pragma clang diagnostic pop
+#elif defined(__GNUC__)
+#pragma GCC diagnostic pop
 #endif
 
 MESSAGE_TREE *msg_tree_root;

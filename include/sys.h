@@ -73,7 +73,7 @@
 #include <sys/uio.h>
 #endif
 
-extern void dummy();
+extern void dummy(int sig);
 
 /* Always define these types for compatibility */
 #ifndef u_char
