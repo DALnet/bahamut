@@ -1526,8 +1526,10 @@ int do_client_queue(aClient *cptr)
     while (SBufLength(&cptr->recvQ) && !NoNewLine(cptr) &&
        ((cptr->status < STAT_UNKNOWN) || (cptr->since - timeofday < 10)))
     {
-        /* If it's become registered as a server, just parse the whole block */
-        if (IsServer(cptr))
+        /* If it's a server (or a gossip peer — dispatched as HANDLER_SERVER
+         * and carrying a server-style event stream), parse the whole block
+         * instead of client 512-byte message framing, which mangles bursts. */
+        if (IsServer(cptr) || IsGoPeer(cptr))
         {
 #if defined(MAXBUFFERS)
             dolen = sbuf_get(&cptr->recvQ, readbuf, rcvbufmax * sizeof(char));
@@ -1631,11 +1633,20 @@ int read_packet(aClient * cptr)
         }
     }
 
-    /* 
+    /*
      * For server connections, we process as many as we can without
      * worrying about the time of day or anything :)
+     *
+     * A gossip peer (STAT_GOPEER) is dispatched as HANDLER_SERVER
+     * (parse.c) and carries a server-style event stream (GEVENT bursts
+     * can be large and back-to-back), so it MUST use the server block
+     * path too — not client 512-byte message framing, which mangles /
+     * SBufClear-drops a sync burst.  dopacket is safe here: its only
+     * cptr->serv deref is the zip branch, and gossip never negotiates
+     * ziplinks (FLAGS_ZIPPED_IN is never set on a gopeer).
      */
-    if (IsServer(cptr) || IsConnecting(cptr) || IsHandshake(cptr))
+    if (IsServer(cptr) || IsConnecting(cptr) || IsHandshake(cptr) ||
+        IsGoPeer(cptr))
     {
         if (length > 0)
             if ((done = dopacket(cptr, readbuf, length)))
