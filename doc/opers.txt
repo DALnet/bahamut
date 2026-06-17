@@ -74,7 +74,17 @@ COMMAND         - USAGE and DESCRIPTION
                     i - Shows allow blocks
                   * K - Shows permanent K lines
                   * k - Shows temporary K lines
-                    l - Shows hostname and generic info about [nick]
+                    l - With [nick], shows hostname and generic info about
+                        that client.  With no argument, lists local server
+                        and gossip-peer links, one line per link:
+                        "Name SendQ SendM SendBytes RcveM RcveBytes
+                        :OpenSince Idle <flag>" (SendM/RcveM = messages,
+                        SendBytes/RcveBytes = KB; counters are per
+                        connection, so each peer is its own line).  <flag>
+                        is "TS"/"NoTS" for a TS5 server, or
+                        "gossip/<synced|syncing>/rtt=<n>ms" for a gossip
+                        peer (rtt = GPING/GPONG round-trip; "rtt=?" until
+                        the first reply).
                   * m - Shows commands and their usage
                     n - Shows user connection counters
                     o - Shows oper blocks

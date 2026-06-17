@@ -126,6 +126,32 @@ Legacy `connect {}` blocks still work for linking to Bahamut 2.x servers.
 The `m_legacy_bridge` core module translates between TS5 and gossip events.
 This allows a mixed 2.x/3.0 network during migration.
 
+### Monitoring gossip peers
+
+`/STATS l` lists gossip-peer links alongside any TS5 server links — one
+line per peer, with that peer's own counters:
+
+```
+Name SendQ SendM SendBytes RcveM RcveBytes :OpenSince Idle <flag>
+```
+
+`SendM`/`RcveM` are message counts and `SendBytes`/`RcveBytes` are KB; the
+counters are per connection, so with several peers you see how much each
+one has exchanged.  The `<flag>` column is:
+
+- `gossip/synced/rtt=<n>ms` — a gossip peer that has finished its burst,
+  with the live GPING/GPONG round-trip time;
+- `gossip/syncing/...` — still bursting (not yet caught up);
+- `rtt=?` — connected but no GPING reply measured yet;
+- `TS` / `NoTS` — a legacy TS5 server link.
+
+Example (a hub with one gossip peer and one TS5 leaf):
+
+```
+gossip.example.net      0 35 2 35 2 :127 0 gossip/synced/rtt=160ms
+legacy.example.net      0 16 0 14 0 :14 10 TS
+```
+
 ---
 
 ## TLS
