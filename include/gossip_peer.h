@@ -33,6 +33,8 @@ typedef struct GossipPeer {
     uint8_t    seen_bloom[GOPEER_BLOOM_BYTES]; /* per-link bloom filter  */
     uint32_t   bloom_generation;     /* incremented on bloom reset       */
     time_t     last_ping;            /* time of last GPING sent          */
+    time_t     last_pong;            /* time of last GPONG received      */
+    int        rtt_ms;              /* last GPING/GPONG round-trip (ms); -1 = unmeasured */
     time_t     connected_at;         /* when this link was established   */
 } GossipPeer;
 

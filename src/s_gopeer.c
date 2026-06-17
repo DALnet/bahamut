@@ -149,6 +149,8 @@ gopeer_attach(aClient *cptr, ServerId peer_id, const char *name)
     gp->peer_id      = peer_id;
     gp->connected_at = time(NULL);
     gp->last_ping    = time(NULL);
+    gp->last_pong    = 0;
+    gp->rtt_ms       = -1;          /* unmeasured until first GPONG */
 
     /* Store in cptr->serv — reuses the aServer pointer slot */
     cptr->serv = (aServer *) gp;

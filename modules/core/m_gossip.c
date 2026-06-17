@@ -260,8 +260,55 @@ ms_gpong(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr,
 {
     GossipPeer *gp = (GossipPeer *)cptr->serv;
     if (gp)
-        gp->last_ping = time(NULL);
+    {
+        gp->last_pong = time(NULL);
+        /* The nonce is the millisecond timestamp we stamped into our GPING,
+         * echoed back verbatim — so RTT = now - nonce, both on our clock
+         * (no clock-skew between peers). */
+        if (parc >= 2 && parv[1][0])
+        {
+            struct timeval tv;
+            unsigned long long now_ms, sent_ms;
+            gettimeofday(&tv, NULL);
+            now_ms  = (unsigned long long)tv.tv_sec * 1000ULL + tv.tv_usec / 1000ULL;
+            sent_ms = strtoull(parv[1], NULL, 10);
+            if (sent_ms && now_ms >= sent_ms && (now_ms - sent_ms) < 600000ULL)
+                gp->rtt_ms = (int)(now_ms - sent_ms);
+        }
+    }
     return 0;
+}
+
+/*
+ * gopeer_send_pings — stamp a GPING with our current ms timestamp and send it
+ * to every burst-complete gossip peer.  The peer echoes it in a GPONG, letting
+ * ms_gpong() compute the round-trip time.  Called from the 10s timer.
+ */
+static void
+gopeer_send_pings(void)
+{
+    DLink         *lp;
+    struct timeval tv;
+    char           nonce[32];
+
+    gettimeofday(&tv, NULL);
+    /* NB: standard snprintf, not ircsnprintf — the latter mishandles %llu. */
+    snprintf(nonce, sizeof(nonce), "%llu",
+             (unsigned long long)tv.tv_sec * 1000ULL + tv.tv_usec / 1000ULL);
+
+    for (lp = gopeer_list; lp; lp = lp->next)
+    {
+        aClient    *cptr = lp->value.cptr;
+        GossipPeer *gp   = cptr ? (GossipPeer *)cptr->serv : NULL;
+
+        if (!cptr || !IsGoPeer(cptr) || cptr->fd < 0)
+            continue;
+        if (gp && !gp->burst_complete)
+            continue;                 /* don't ping until the link has synced */
+        if (gp)
+            gp->last_ping = time(NULL);
+        sendto_one(cptr, ":%s GPING :%s", me.name, nonce);
+    }
 }
 
 /* -------------------------------------------------------------------------
@@ -329,6 +376,7 @@ static int
 hook_10sec(int hooktype, void *data)
 {
     gopeer_try_connect();
+    gopeer_send_pings();
     return 0;
 }
 
