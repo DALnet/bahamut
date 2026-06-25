@@ -120,6 +120,31 @@ and exchanged at link time via GHELLO — there is no `server_id` to set.
 Just give every server a unique name (which they already have) and list
 each peer in a `gopeer {}` block.
 
+### Authentication & TLS (required)
+
+Gossip links are **authenticated** and require **TLS**.  This is a breaking
+change from earlier 3.0 previews where the mesh was open:
+
+- Every `gopeer {}` block needs a `passwd` — the shared link secret.  Put the
+  **same secret** in the matching block on **both ends** of a link.
+- The link must be TLS (`tls;` flag + an `ssl {}` block).  The secret is only
+  sent over TLS, and an inbound non-TLS handshake is rejected.
+- An inbound peer that does not match a configured `gopeer {}` block with the
+  correct secret, over TLS, is **rejected** — this is what prevents an
+  arbitrary host from joining the mesh and reading or forging network state.
+- `host` is optional for an **accept-only** block (a node that is always
+  connected *to* and never dials out): give it just a `name` + `passwd`.
+- The dialing side must store the secret in cleartext (it has to send it); the
+  accepting side may store it crypted at rest when `options { crypt_oper_pass }`
+  is enabled, exactly like oper passwords.
+
+Because this changes the wire handshake, a 3.0 node with auth will not link to
+an older auth-less preview — upgrade and reconfigure both ends together.
+
+> Defense-in-depth still to come: mutual proof (the dialer authenticating the
+> listener) and pinning the peer's TLS certificate fingerprint.  Until then,
+> keep the S2S port firewalled to known peers.
+
 ### Backwards compatibility
 
 Legacy `connect {}` blocks still work for linking to Bahamut 2.x servers.

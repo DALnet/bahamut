@@ -32,6 +32,37 @@
 #include "gossip_bridge.h"
 #include "hooks.h"
 
+extern char *crypt();   /* libc; see s_user.c oper password check */
+
+/* -------------------------------------------------------------------------
+ * gopeer_secret_ok — verify a peer-supplied link secret against a configured
+ * gopeer{} password.  Honours the crypted-password option (FLAGS_CRYPTPASS):
+ * when set, the stored password is a crypt(3) hash and we crypt the supplied
+ * secret with it (salt = first two chars) before comparing — exactly like the
+ * oper password check in s_user.c.  Empty stored/sent never matches (fail
+ * closed).
+ * ---------------------------------------------------------------------- */
+
+static int
+gopeer_secret_ok(const char *sent, const char *stored)
+{
+    char *encr;
+
+    if (!stored || !*stored || !sent || !*sent)
+        return 0;
+
+    if (confopts & FLAGS_CRYPTPASS)
+    {
+        encr = crypt((char *)sent, (char *)stored);
+        if (!encr)
+            return 0;
+    }
+    else
+        encr = (char *)sent;
+
+    return StrEq(encr, stored);
+}
+
 /* -------------------------------------------------------------------------
  * GHELLO — initial handshake
  *
@@ -61,6 +92,49 @@ ms_ghello(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr,
     {
         /* Already registered — ignore duplicate GHELLO */
         return 0;
+    }
+
+    /* ---- Authentication (fail-closed for inbound peers) ----------------
+     * Distinguish the two handshake directions:
+     *   - We dialed OUT: cptr->name is the configured peer name (set in
+     *     gopeer_try_connect).  This GHELLO is the listener's reply; we have
+     *     already proven ourselves to them and we trust the link (we dialed
+     *     a configured host, over TLS), so no secret is required here.
+     *   - INBOUND peer: cptr->name is empty (add_connection assigns none).
+     *     We MUST authenticate it — require TLS, a matching gopeer{} block
+     *     with a passwd, and a correct shared secret (parv[4]).  Anything
+     *     else is rejected, which is what closes the open-mesh hole.
+     */
+    if (!(cptr->name[0] && gopeer_find_conf(cptr->name)))
+    {
+        aGoPeerConf *conf;
+        const char  *secret = (parc >= 5 && parv[4]) ? parv[4] : "";
+
+        if (!IsSSL(cptr))
+        {
+            sendto_realops("Gossip: rejected peer %s [%s] — TLS required",
+                           peer_name, cptr->sockhost);
+            sendto_one(cptr, "ERROR :gossip link requires TLS");
+            return exit_client(cptr, cptr, &me, "Gossip requires TLS");
+        }
+
+        conf = gopeer_find_conf(peer_name);
+        if (!conf || !conf->password || !conf->password[0])
+        {
+            sendto_realops("Gossip: rejected unauthorized peer %s [%s] "
+                           "(no matching gopeer{} block)",
+                           peer_name, cptr->sockhost);
+            sendto_one(cptr, "ERROR :unauthorized gossip peer");
+            return exit_client(cptr, cptr, &me, "Unauthorized gossip peer");
+        }
+
+        if (!gopeer_secret_ok(secret, conf->password))
+        {
+            sendto_realops("Gossip: rejected peer %s [%s] — bad link password",
+                           peer_name, cptr->sockhost);
+            sendto_one(cptr, "ERROR :bad gossip link password");
+            return exit_client(cptr, cptr, &me, "Bad gossip link password");
+        }
     }
 
     /* Reject if we already have a connection to this peer (prevents

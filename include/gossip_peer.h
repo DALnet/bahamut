@@ -104,6 +104,13 @@ aGoPeerConf *gopeer_find_conf(const char *name);
 void gopeer_try_connect(void);
 
 /*
+ * gopeer_send_ghello — send our authenticated GHELLO to an outbound peer.
+ * Appends the shared link secret (only over TLS).  Called from s_bsd.c once
+ * the outbound connection (and TLS handshake, if any) completes.
+ */
+void gopeer_send_ghello(aClient *cptr);
+
+/*
  * gopeer_count_configured — count gopeer_conf_list entries.
  * Called after config parse to set gopeer_configured_count.
  */

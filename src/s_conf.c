@@ -2791,9 +2791,13 @@ confadd_gopeer(cVar *vars[], int lnum)
         }
     }
 
-    if (!gp->host || !gp->host[0])
+    /* A block needs a host (to dial out) or a name (to accept inbound from
+     * that peer).  A host-less block is "accept-only": gopeer_try_connect
+     * skips it, but it still authorises an inbound peer of that name. */
+    if ((!gp->host || !gp->host[0]) && (!gp->name || !gp->name[0]))
     {
-        confparse_error("gopeer block missing host", lnum);
+        confparse_error("gopeer block needs a host (to dial out) or a name "
+                        "(to accept inbound)", lnum);
         if (gp->host) MyFree(gp->host);
         if (gp->name) MyFree(gp->name);
         if (gp->password) MyFree(gp->password);
@@ -2801,9 +2805,16 @@ confadd_gopeer(cVar *vars[], int lnum)
         return -1;
     }
 
-    /* Default name to host if not set */
-    if (!gp->name)
+    /* Default name to host when only a host was given (dial-out block). */
+    if (!gp->name || !gp->name[0])
         DupString(gp->name, gp->host);
+
+    /* Gossip links now authenticate with a shared secret; a block without a
+     * passwd cannot link (inbound is rejected, outbound sends no secret).
+     * Warn rather than abort so a rehash isn't bricked by one stale block. */
+    if (!gp->password || !gp->password[0])
+        confparse_error("gopeer block has no passwd; gossip auth will reject "
+                        "this link", lnum);
 
     /* Prepend to the staging list; merge_gopeers() swaps it into the live
      * gopeer_conf_list on a successful (re)hash. Prepending straight to the

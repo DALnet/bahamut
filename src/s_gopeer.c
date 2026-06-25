@@ -466,6 +466,34 @@ gopeer_is_connected(const char *name)
     return 0;
 }
 
+/*
+ * gopeer_send_ghello — send our GHELLO to a freshly connected outbound peer.
+ *
+ * Carries the shared link secret from the matching gopeer{} block as the
+ * trailing parameter so the listener can authenticate us.  The secret is put
+ * on the wire ONLY over a TLS link; on a plaintext link we refuse to send it
+ * (the listener then rejects the handshake — fail-safe, no cleartext leak).
+ *
+ * Called from completed_connection() (plaintext) and readwrite_client()
+ * (TLS) in s_bsd.c — one helper so the two sites cannot drift.
+ */
+void
+gopeer_send_ghello(aClient *cptr)
+{
+    aGoPeerConf *conf   = gopeer_find_conf(cptr->name);
+    const char  *secret = (conf && conf->password) ? conf->password : "";
+
+    if (*secret && !IsSSL(cptr))
+    {
+        sendto_realops("Gossip: refusing to send link secret to %s over a "
+                       "non-TLS link", cptr->name);
+        secret = "";
+    }
+
+    sendto_one(cptr, "GHELLO %s %u 1 :%s",
+               me.name, (unsigned)g_event_log.my_id, secret);
+}
+
 void
 gopeer_try_connect(void)
 {

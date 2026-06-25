@@ -894,8 +894,7 @@ int completed_connection(aClient * cptr)
         unset_fd_flags(cptr->fd, FDF_WANTREAD);
         SetUnknown(cptr);
         set_fd_flags(cptr->fd, FDF_WANTREAD);
-        sendto_one(cptr, "GHELLO %s %u 1",
-                   me.name, (unsigned)g_event_log.my_id);
+        gopeer_send_ghello(cptr);
         sendto_realops("Gossip: sent GHELLO to %s (outbound%s)",
                        cptr->name, IsSSL(cptr) ? " TLS" : "");
         return 0;
@@ -1874,8 +1873,7 @@ int readwrite_client(aClient *cptr, int isread, int iswrite)
         {
             SetUnknown(cptr);
             set_fd_flags(cptr->fd, FDF_WANTREAD);
-            sendto_one(cptr, "GHELLO %s %u 1",
-                       me.name, (unsigned)g_event_log.my_id);
+            gopeer_send_ghello(cptr);
             sendto_realops("Gossip: sent GHELLO to %s (outbound TLS)",
                            cptr->name);
         }
