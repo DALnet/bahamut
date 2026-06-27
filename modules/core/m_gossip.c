@@ -85,7 +85,8 @@ gopeer_secret_ok(const char *sent, const char *stored)
 /* -------------------------------------------------------------------------
  * GHELLO — initial handshake
  *
- * Server-to-server: :<name> GHELLO <server-name> <server-id> <version>
+ * Server-to-server: GHELLO <server-name> <version> [:<secret>]
+ * (the server NAME is the identity — no numeric server-id on the wire, #260)
  *
  * On receipt, if we accept the peer:
  *   1. Send our own GHELLO

@@ -736,7 +736,7 @@ gossip_parse_event(NetworkEvent *ev, NetEventType type, const char *payload,
 /* --- S6c: Server materialization ---------------------------------------- */
 
 static aClient *
-gossip_materialize_server(const char *name, int id)
+gossip_materialize_server(const char *name)
 {
     aClient *acptr;
 
@@ -845,7 +845,7 @@ gossip_materialize_user(const EvPayloadUserJoin *p)
     /* Ensure server exists */
     server = find_server((char *)p->server, NULL);
     if (!server)
-        server = gossip_materialize_server(p->server, 0);
+        server = gossip_materialize_server(p->server);
 
     /* Create the user (remote allocation — from != NULL) */
     acptr = make_client(server, NULL);
@@ -1347,7 +1347,7 @@ gossip_apply_event(const NetworkEvent *ev)
         {
             const EvPayloadServerLink *p = &ev->payload.server_link;
             if (mycmp(p->name, me.name) != 0)
-                gossip_materialize_server(p->name, 0);  /* id unused */
+                gossip_materialize_server(p->name);
             break;
         }
         case EVT_SERVER_SPLIT:
