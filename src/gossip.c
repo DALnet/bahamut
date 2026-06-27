@@ -22,6 +22,7 @@
 #include "send.h"
 #include "channel.h"
 #include "gossip_event.h"
+#include "gossip_idmap.h"
 #include "eventlog.h"
 #include "gossip_peer.h"
 #include "gossip_dedup.h"
@@ -61,7 +62,7 @@ extern int add_to_channel_hash_table(char *, aChannel *);
  *   EVT_CHAN_KICK:   kicker target channel :reason
  *   EVT_CHAN_MODE:   nick channel modebuf :parabuf
  *   EVT_CHAN_TOPIC:  nick channel setter ts :topic
- *   EVT_SERVER_LINK:    name server_id
+ *   EVT_SERVER_LINK:    name
  *   EVT_SERVER_SPLIT:   name
  *   EVT_SESSION_CREATE: key nick username host realname umode ts :away_msg
  *   EVT_SESSION_DESTROY:key
@@ -149,7 +150,7 @@ serialise_payload(char *buf, size_t buflen, const NetworkEvent *ev)
         case EVT_SERVER_LINK:
         {
             const EvPayloadServerLink *p = &ev->payload.server_link;
-            ircsnprintf(buf, buflen, "%s %u", p->name, (unsigned)p->id);
+            ircsnprintf(buf, buflen, "%s", p->name);
             break;
         }
         case EVT_SERVER_SPLIT:
@@ -274,8 +275,8 @@ gossip_send_event(aClient *peer, const NetworkEvent *ev)
     serialise_payload(payload, sizeof(payload), ev);
 
     sendto_one(peer,
-               "@gossip-id=%u:%llu;gossip-clock=%s :%s GEVENT %d :%s",
-               (unsigned)ev->id.server,
+               "@gossip-id=%s:%llu;gossip-clock=%s :%s GEVENT %d :%s",
+               srvidx_name(ev->id.server),
                (unsigned long long)ev->id.seq,
                sclock,
                me.name,
@@ -283,7 +284,7 @@ gossip_send_event(aClient *peer, const NetworkEvent *ev)
                payload);
 
     /* Update our sent clock for this peer */
-    if (gp)
+    if (gp && ev->id.server < MAX_GOSSIP_SERVERS)
         gp->sent_clock.slot[ev->id.server] = ev->id.seq;
 }
 
@@ -523,8 +524,6 @@ gossip_parse_event(NetworkEvent *ev, NetEventType type, const char *payload,
             EvPayloadServerLink *pl = &ev->payload.server_link;
             tok = strtoken(&p, buf, " "); if (!tok) return -1;
             strncpy(pl->name, tok, HOSTLEN);
-            tok = strtoken(&p, NULL, " ");
-            if (tok) pl->id = (ServerId)atoi(tok);
             break;
         }
         case EVT_SESSION_CREATE:
@@ -1348,7 +1347,7 @@ gossip_apply_event(const NetworkEvent *ev)
         {
             const EvPayloadServerLink *p = &ev->payload.server_link;
             if (mycmp(p->name, me.name) != 0)
-                gossip_materialize_server(p->name, p->id);
+                gossip_materialize_server(p->name, 0);  /* id unused */
             break;
         }
         case EVT_SERVER_SPLIT:

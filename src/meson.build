@@ -58,6 +58,7 @@ ircd_sources = [
   'batch.c',
   'bitncmp.c',
   'gossip_event.c',
+  'gossip_idmap.c',
   'gossip.c',
   'gossip_dedup.c',
   'gossip_bridge.c',

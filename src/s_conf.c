@@ -87,6 +87,7 @@ char        *new_uservers[MAXUSERVS+1];    /* null terminated array */
 Conf_Modules *new_modules       = NULL;
 
 extern void confparse_error(char *, int);
+extern void confparse_warn(char *, int);
 extern int klinestore_init(int);
 
 /* initclass()
@@ -2813,8 +2814,16 @@ confadd_gopeer(cVar *vars[], int lnum)
      * passwd cannot link (inbound is rejected, outbound sends no secret).
      * Warn rather than abort so a rehash isn't bricked by one stale block. */
     if (!gp->password || !gp->password[0])
-        confparse_error("gopeer block has no passwd; gossip auth will reject "
-                        "this link", lnum);
+        confparse_warn("gopeer block has no passwd; gossip auth will reject "
+                       "this link", lnum);
+
+    /* Gossip auth requires TLS — the secret is only sent over a TLS link.  A
+     * dial-out block (has host) without tls will refuse to send its secret and
+     * the link can never authenticate; warn at parse time so the cause is
+     * obvious rather than a silent flap. */
+    else if (gp->host && gp->host[0] && !gp->tls)
+        confparse_warn("gopeer block has a host but no tls; the link cannot "
+                       "authenticate (the secret is only sent over TLS)", lnum);
 
     /* Prepend to the staging list; merge_gopeers() swaps it into the live
      * gopeer_conf_list on a successful (re)hash. Prepending straight to the

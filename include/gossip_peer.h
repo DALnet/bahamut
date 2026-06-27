@@ -64,7 +64,7 @@ extern int gopeer_connected_count;
  * gopeer_attach — attach a GossipPeer to a freshly negotiated aClient.
  * Allocates GossipPeer, sets cptr->serv = (aServer *)gp, adds to gopeer_list.
  */
-GossipPeer *gopeer_attach(aClient *cptr, ServerId peer_id, const char *name);
+GossipPeer *gopeer_attach(aClient *cptr, const char *name);
 
 /*
  * gopeer_handle_disconnect — clean up when a gopeer link drops.
@@ -109,6 +109,15 @@ void gopeer_try_connect(void);
  * the outbound connection (and TLS handshake, if any) completes.
  */
 void gopeer_send_ghello(aClient *cptr);
+
+/*
+ * Outbound-dial marker (fd-indexed) — distinguishes a peer WE dialed from an
+ * inbound connection for the ms_ghello auth gate.  Set at dial time, cleared
+ * by close_connection() on teardown.  See src/s_gopeer.c.
+ */
+void gopeer_mark_outbound(int fd);
+int  gopeer_is_outbound(int fd);
+void gopeer_clear_outbound(int fd);
 
 /*
  * gopeer_count_configured — count gopeer_conf_list entries.

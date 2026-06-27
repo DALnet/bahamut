@@ -54,29 +54,15 @@ int get_events_since(const EventClock *clock, NetworkEvent **out, int max_out);
 void clock_advance(const EventClock *remote);
 
 /*
- * clock_encode_b64 / clock_decode_b64 — compact base-64 serialisation.
+ * clock_encode_sparse / clock_decode_sparse — sparse, name-keyed encoding.
  *
- * Each slot is 8 bytes; 64 slots = 512 bytes raw → ~684 chars base64.
- * buf must be at least EVENTCLOCK_B64_LEN bytes.
- *
- * WARNING: base64 encoding exceeds BUFSIZE (512).  Use the sparse
- * encoding below for data transmitted over the IRC protocol.
+ * Only non-zero slots are emitted: "name:seq,name:seq,...".
+ * An all-zero clock is encoded as "0".  Each entry carries the server NAME
+ * (issue #260) rather than a numeric index, so the buffer must allow for the
+ * name length.  In practice the clock is sparse (a handful of slots); a clock
+ * dense enough to exceed the IRC line limit is the concern of issue #261.
  */
-#define EVENTCLOCK_B64_LEN  700   /* safe upper bound */
-
-void clock_encode_b64(const EventClock *clock, char *buf, int buflen);
-int  clock_decode_b64(EventClock *clock, const char *buf);
-
-/*
- * clock_encode_sparse / clock_decode_sparse — sparse decimal encoding.
- *
- * Only non-zero slots are emitted: "slot.seq,slot.seq,...".
- * An all-zero clock is encoded as "0".
- *
- * This fits comfortably within BUFSIZE for typical cluster sizes
- * (up to ~15 active servers).
- */
-#define EVENTCLOCK_SPARSE_LEN  400  /* safe upper bound for ~15 servers */
+#define EVENTCLOCK_SPARSE_LEN  2048  /* name-keyed entries are larger */
 
 void clock_encode_sparse(const EventClock *clock, char *buf, int buflen);
 int  clock_decode_sparse(EventClock *clock, const char *buf);

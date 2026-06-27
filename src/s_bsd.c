@@ -1023,6 +1023,7 @@ void close_connection(aClient *cptr)
         if(!IsDead(cptr))
         dump_connections(cptr->fd);
         local[cptr->fd] = NULL;
+        gopeer_clear_outbound(cptr->fd);   /* reused fd must start un-trusted */
         if(IsSSL(cptr) && cptr->ssl)
         {
             SSL_set_shutdown(cptr->ssl, SSL_RECEIVED_SHUTDOWN);

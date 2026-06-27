@@ -22,16 +22,26 @@
  * Identifier types
  * ---------------------------------------------------------------------- */
 
-/* ServerId: 0-63.  Assigned explicitly in gopeer{} config.
- * 6 bits is sufficient for 64 servers; the FNV-1a hash is a dev fallback. */
-typedef uint8_t  ServerId;
+/* ServerId: a DENSE LOCAL index into the EventClock / dedup tables, NOT a
+ * wire value.  The canonical server identity on the wire is the server NAME
+ * (unique on IRC); each name is mapped to a local index by the registry in
+ * gossip_idmap.c.  Indices never leave the process, so two servers can never
+ * "collide" the way the old 6-bit FNV-1a hash did (issue #260). */
+typedef uint16_t ServerId;
+
+/* Max distinct servers we can track at once (dense index space).  This bounds
+ * the EventClock and the index registry; exhausting it fails LOUDLY (a
+ * snotice), never silently — unlike a hash collision. */
+#define MAX_GOSSIP_SERVERS 256
+#define VC_SLOTS           MAX_GOSSIP_SERVERS   /* back-compat alias */
+#define SRVIDX_NONE        ((ServerId)0xFFFF)   /* "no/overflow index" sentinel */
 
 /* LocalSeq: monotonically increasing per-server event counter. */
 typedef uint64_t LocalSeq;
 
 /* EventId: globally unique event identifier. */
 typedef struct EventId {
-    ServerId server;   /* which server originated this event */
+    ServerId server;   /* local index of the originating server (see above) */
     LocalSeq seq;      /* sequence number on that server     */
 } EventId;
 
@@ -39,13 +49,12 @@ typedef struct EventId {
  * Vector clock
  * ---------------------------------------------------------------------- */
 
-#define VC_SLOTS 64   /* must equal max number of servers */
-
 /* EventClock: causal vector clock.
- * slot[i] = highest LocalSeq from server i that we have processed.
- * 64 × 8 = 512 bytes — fits two cache lines. */
+ * slot[i] = highest LocalSeq from the server at local index i.
+ * Indexed by the dense local ServerId; the wire form is name-keyed and
+ * sparse (see clock_encode_sparse). */
 typedef struct EventClock {
-    LocalSeq slot[VC_SLOTS];
+    LocalSeq slot[MAX_GOSSIP_SERVERS];
 } EventClock;
 
 /* -------------------------------------------------------------------------
@@ -168,8 +177,7 @@ typedef struct EvPayloadChanTopic {
 } EvPayloadChanTopic;
 
 typedef struct EvPayloadServerLink {
-    char name[HOSTLEN + 1];
-    ServerId id;
+    char name[HOSTLEN + 1];   /* server name IS the identity (see issue #260) */
 } EvPayloadServerLink;
 
 typedef struct EvPayloadPrivmsg {

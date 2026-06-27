@@ -9,8 +9,8 @@
  * regular clients.
  *
  * Wire format:
- *   GHELLO   <server-name> <server-id> <version>
- *   GSYNCING <server-name> <clock-b64>
+ *   GHELLO   <server-name> <version> [:<secret>]   (name IS the identity)
+ *   GSYNCING <server-name> <clock-sparse>
  *   GSYNCED  <server-name>
  *   GEVENT   <type> :<payload>    (tagged: @gossip-id=S:seq;gossip-clock=b64)
  *   GACK     <server> <seq>
@@ -25,6 +25,7 @@
 #include "mapi.h"
 #include "send.h"
 #include "gossip_event.h"
+#include "gossip_idmap.h"
 #include "eventlog.h"
 #include "gossip_peer.h"
 #include "gossip_dedup.h"
@@ -34,33 +35,51 @@
 
 extern char *crypt();   /* libc; see s_user.c oper password check */
 
+/* ct_streq — constant-time string equality, so the cleartext-secret compare
+ * doesn't leak the secret prefix via strcmp's early-exit timing.  Length
+ * mismatch fails without scanning the longer string. */
+static int
+ct_streq(const char *a, const char *b)
+{
+    size_t la = strlen(a), lb = strlen(b), n = (la < lb) ? la : lb, i;
+    volatile unsigned char diff = (la == lb) ? 0 : 1;
+
+    for (i = 0; i < n; i++)
+        diff |= (unsigned char)(a[i] ^ b[i]);
+    return diff == 0;
+}
+
 /* -------------------------------------------------------------------------
  * gopeer_secret_ok — verify a peer-supplied link secret against a configured
- * gopeer{} password.  Honours the crypted-password option (FLAGS_CRYPTPASS):
- * when set, the stored password is a crypt(3) hash and we crypt the supplied
- * secret with it (salt = first two chars) before comparing — exactly like the
- * oper password check in s_user.c.  Empty stored/sent never matches (fail
- * closed).
+ * gopeer{} password.
+ *
+ * The secret always travels in cleartext (over TLS); FLAGS_CRYPTPASS only
+ * governs how it is stored AT REST.  So accept either form transparently:
+ *   1. cleartext-at-rest  → direct constant-time compare;
+ *   2. crypt(3)-at-rest   → crypt the supplied secret with the stored hash
+ *                           (salt = first two chars) and compare, as the oper
+ *                           password check does (s_user.c).
+ * Trying the cleartext compare FIRST means enabling crypt_oper_pass for opers
+ * never silently breaks a link whose gopeer secret is stored in cleartext (the
+ * dialing side must store it plain — it has to send it).  Empty never matches.
  * ---------------------------------------------------------------------- */
 
 static int
 gopeer_secret_ok(const char *sent, const char *stored)
 {
-    char *encr;
-
     if (!stored || !*stored || !sent || !*sent)
         return 0;
 
+    if (ct_streq(sent, stored))
+        return 1;                         /* cleartext-at-rest */
+
     if (confopts & FLAGS_CRYPTPASS)
     {
-        encr = crypt((char *)sent, (char *)stored);
-        if (!encr)
-            return 0;
+        char *encr = crypt((char *)sent, (char *)stored);
+        if (encr && ct_streq(encr, stored))
+            return 1;                     /* crypt(3)-at-rest */
     }
-    else
-        encr = (char *)sent;
-
-    return StrEq(encr, stored);
+    return 0;
 }
 
 /* -------------------------------------------------------------------------
@@ -78,15 +97,9 @@ static int
 ms_ghello(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr,
           int parc, char *parv[])
 {
-    const char *peer_name    = parv[1];
-    int         peer_id_raw  = atoi(parv[2]);
-    /* parv[3] is version string — ignore for now */
-
-    if (peer_id_raw < 0 || peer_id_raw > 63)
-    {
-        sendto_one(cptr, "ERROR :Invalid server_id %d (must be 0-63)", peer_id_raw);
-        return exit_client(cptr, cptr, &me, "Invalid server_id");
-    }
+    const char *peer_name = parv[1];
+    /* parv[2] is the version string — ignored.  There is no numeric server id
+     * on the wire any more: the NAME is the identity (issue #260). */
 
     if (IsGoPeer(cptr))
     {
@@ -95,20 +108,24 @@ ms_ghello(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr,
     }
 
     /* ---- Authentication (fail-closed for inbound peers) ----------------
-     * Distinguish the two handshake directions:
-     *   - We dialed OUT: cptr->name is the configured peer name (set in
-     *     gopeer_try_connect).  This GHELLO is the listener's reply; we have
-     *     already proven ourselves to them and we trust the link (we dialed
-     *     a configured host, over TLS), so no secret is required here.
-     *   - INBOUND peer: cptr->name is empty (add_connection assigns none).
-     *     We MUST authenticate it — require TLS, a matching gopeer{} block
-     *     with a passwd, and a correct shared secret (parv[4]).  Anything
-     *     else is rejected, which is what closes the open-mesh hole.
+     * Distinguish the two handshake directions by a server-controlled fact —
+     * whether WE dialed this connection out (gopeer_is_outbound, an fd-indexed
+     * flag set in gopeer_try_connect).  This must NOT key on cptr->name: an
+     * unregistered inbound client can pre-set its name via NICK and would
+     * otherwise be mistaken for a trusted dialer, bypassing the whole check.
+     *   - We dialed OUT (gopeer_is_outbound): this GHELLO is the listener's
+     *     reply; we already proved ourselves and trust the link (we chose the
+     *     host, over TLS), so no secret is required here.
+     *   - INBOUND (not our dial): we MUST authenticate it — require TLS, a
+     *     matching gopeer{} block with a passwd, and a correct shared secret
+     *     (parv[3]).  This is what closes the open-mesh hole; it also forces a
+     *     legacy TS5 link that happens to share a gopeer{} name to present the
+     *     gossip secret before it can join the mesh.
      */
-    if (!(cptr->name[0] && gopeer_find_conf(cptr->name)))
+    if (!gopeer_is_outbound(cptr->fd))
     {
         aGoPeerConf *conf;
-        const char  *secret = (parc >= 5 && parv[4]) ? parv[4] : "";
+        const char  *secret = (parc >= 4 && parv[3]) ? parv[3] : "";
 
         if (!IsSSL(cptr))
         {
@@ -147,10 +164,10 @@ ms_ghello(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr,
 
     /* Accept the peer */
     SetGoPeer(cptr);
-    gopeer_attach(cptr, (ServerId)peer_id_raw, peer_name);
+    gopeer_attach(cptr, peer_name);
     cptr->capabilities |= CAPAB_GOSSIP;
 
-    sendto_realops("Gossip peer %s (id=%d) established", peer_name, peer_id_raw);
+    sendto_realops("Gossip peer %s established", peer_name);
 
     /* Phase S3: introduce this gossip peer to any connected legacy servers */
     bridge_introduce_server(peer_name);
@@ -160,15 +177,12 @@ ms_ghello(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr,
         EvPayloadServerLink pl;
         memset(&pl, 0, sizeof(pl));
         strncpy(pl.name, peer_name, HOSTLEN);
-        pl.id = (ServerId)peer_id_raw;
         emit_event(EVT_SERVER_LINK, &pl, sizeof(pl));
     }
 
     /* Send our GHELLO back if this was an inbound connection */
     if (MyConnect(cptr) && cptr->fd >= 0)
-        sendto_one(cptr, ":%s GHELLO %s %u 1",
-                   me.name, me.name,
-                   (unsigned)g_event_log.my_id);
+        sendto_one(cptr, ":%s GHELLO %s 1", me.name, me.name);
 
     /* Start burst */
     gopeer_start_burst(cptr);
@@ -253,18 +267,25 @@ ms_gevent(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr,
 
     if (id_tag)
     {
-        /* Parse "server:seq" */
-        char  idbuf[64];
+        /* Parse "name:seq" — the origin is a server NAME (issue #260), mapped
+         * to a local index via the registry.  Names contain no ':'. */
+        char  idbuf[HOSTLEN + 32];
         char *colon;
         strncpy(idbuf, id_tag, sizeof(idbuf) - 1);
+        idbuf[sizeof(idbuf) - 1] = '\0';
         colon = strchr(idbuf, ':');
         if (colon)
         {
             *colon     = '\0';
-            origin_id  = (ServerId)atoi(idbuf);
+            origin_id  = srvidx_get(idbuf);
             origin_seq = (LocalSeq)strtoull(colon + 1, NULL, 10);
         }
     }
+
+    /* If the index table is full we cannot dedup/track this origin safely —
+     * drop the event rather than alias it onto another server's slot. */
+    if (origin_id == SRVIDX_NONE)
+        return 0;
 
     if (clock_tag)
         clock_decode_sparse(&clock, clock_tag);
@@ -296,6 +317,9 @@ ms_gevent(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr,
 
 /* -------------------------------------------------------------------------
  * GACK — acknowledge receipt of events up to <seq>
+ *
+ * Wire: GACK <server-name> <seq> (the server is identified by name, mapped
+ * to a local index — issue #260).
  * ---------------------------------------------------------------------- */
 
 static int
@@ -303,13 +327,13 @@ ms_gack(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr,
         int parc, char *parv[])
 {
     GossipPeer *gp      = (GossipPeer *)cptr->serv;
-    ServerId    server  = (ServerId)atoi(parv[1]);
+    ServerId    server  = srvidx_find(parv[1]);
     LocalSeq    seq     = (LocalSeq)strtoull(parv[2], NULL, 10);
 
     if (!gp)
         return 0;
 
-    if (server < VC_SLOTS && seq > gp->peer_clock.slot[server])
+    if (server < MAX_GOSSIP_SERVERS && seq > gp->peer_clock.slot[server])
         gp->peer_clock.slot[server] = seq;
 
     return 0;

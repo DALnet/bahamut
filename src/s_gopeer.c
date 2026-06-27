@@ -25,6 +25,7 @@
 #include "h.h"
 #include "send.h"
 #include "gossip_event.h"
+#include "gossip_idmap.h"
 #include "eventlog.h"
 #include "gossip_peer.h"
 #include "gossip_dedup.h"
@@ -55,6 +56,38 @@ int         gopeer_connected_count  = 0;
 
 #define GOSSIP_GRACE_SECONDS 60
 static time_t gossip_start_time = 0;
+
+/* -------------------------------------------------------------------------
+ * Outbound-dial marker (security)
+ *
+ * The auth gate in ms_ghello must tell a peer WE dialed (trusted: we chose
+ * the host and the TLS link) from an INBOUND connection (must authenticate).
+ * Keying that on cptr->name is forgeable — an unregistered client can pre-set
+ * its name via NICK.  This fd-indexed flag is a server-controlled fact the
+ * client cannot influence: set when we create an outbound gossip socket,
+ * cleared by close_connection() on teardown (so a reused fd starts clean).
+ * ---------------------------------------------------------------------- */
+static char gopeer_outbound_fd[MAXCONNECTIONS];
+
+void
+gopeer_mark_outbound(int fd)
+{
+    if (fd >= 0 && fd < MAXCONNECTIONS)
+        gopeer_outbound_fd[fd] = 1;
+}
+
+int
+gopeer_is_outbound(int fd)
+{
+    return (fd >= 0 && fd < MAXCONNECTIONS) ? gopeer_outbound_fd[fd] : 0;
+}
+
+void
+gopeer_clear_outbound(int fd)
+{
+    if (fd >= 0 && fd < MAXCONNECTIONS)
+        gopeer_outbound_fd[fd] = 0;
+}
 
 /* -------------------------------------------------------------------------
  * Partition detection (CODERS-33)
@@ -138,7 +171,7 @@ gossip_is_partitioned(void)
  * ---------------------------------------------------------------------- */
 
 GossipPeer *
-gopeer_attach(aClient *cptr, ServerId peer_id, const char *name)
+gopeer_attach(aClient *cptr, const char *name)
 {
     GossipPeer *gp;
 
@@ -146,7 +179,7 @@ gopeer_attach(aClient *cptr, ServerId peer_id, const char *name)
     memset(gp, 0, sizeof(*gp));
 
     strncpy(gp->name, name, HOSTLEN);
-    gp->peer_id      = peer_id;
+    gp->peer_id      = srvidx_get(name);   /* local index for this peer name */
     gp->connected_at = time(NULL);
     gp->last_ping    = time(NULL);
     gp->last_pong    = 0;
@@ -180,7 +213,6 @@ gopeer_handle_disconnect(aClient *cptr)
         EvPayloadServerLink pl;
         memset(&pl, 0, sizeof(pl));
         strncpy(pl.name, gp->name, HOSTLEN);
-        pl.id = gp->peer_id;
         emit_event(EVT_SERVER_SPLIT, &pl, sizeof(pl));
     }
 
@@ -236,7 +268,6 @@ gopeer_burst_full_state(aClient *peer)
         EvPayloadServerLink pl;
         memset(&pl, 0, sizeof(pl));
         strncpy(pl.name, me.name, HOSTLEN);
-        pl.id = g_event_log.my_id;
         burst_send_event(peer, EVT_SERVER_LINK, &pl, sizeof(pl));
     }
 
@@ -490,8 +521,9 @@ gopeer_send_ghello(aClient *cptr)
         secret = "";
     }
 
-    sendto_one(cptr, "GHELLO %s %u 1 :%s",
-               me.name, (unsigned)g_event_log.my_id, secret);
+    /* No numeric server id on the wire any more — the NAME is the identity
+     * (issue #260).  Format: GHELLO <name> <version> :<secret> */
+    sendto_one(cptr, "GHELLO %s 1 :%s", me.name, secret);
 }
 
 void
@@ -561,6 +593,7 @@ gopeer_try_connect(void)
 
         cptr->status = STAT_CONNECTING;
         local[fd] = cptr;
+        gopeer_mark_outbound(fd);   /* trusted outbound dial — see ms_ghello */
         add_client_to_list(cptr);
         add_fd(fd, FDT_CLIENT, cptr);
         if (fd > highest_fd)

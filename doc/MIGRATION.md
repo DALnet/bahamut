@@ -115,10 +115,11 @@ gopeer {
 };
 ```
 
-Each server's gossip id is derived automatically from its name (FNV-1a)
-and exchanged at link time via GHELLO — there is no `server_id` to set.
-Just give every server a unique name (which they already have) and list
-each peer in a `gopeer {}` block.
+A server's gossip identity **is** its name — there is no `server_id` to set.
+Names are already unique on IRC, so just give every server a unique name
+(which they already have) and list each peer in a `gopeer {}` block.  The
+name is what travels on the wire; internally each server keeps a small
+local index table (so identities can never collide).
 
 ### Authentication & TLS (required)
 
