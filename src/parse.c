@@ -227,6 +227,22 @@ void cmd_del(const char *cmd)
 }
 
 /*
+ * is_gossip_command — true if cmd is one of the gossip S2S commands that may
+ * legitimately exceed the 512-byte line limit (#261).  Used to gate oversized
+ * gopeer lines so they can only reach the (bounded) gossip handlers, never a
+ * TS5 server handler that assumes a <=512 parameter.
+ */
+static int is_gossip_command(struct Message *mptr)
+{
+    const char *c = mptr->cmd;
+    return c && c[0] == 'G' &&
+           (!strcmp(c, "GEVENT")   || !strcmp(c, "GHELLO") ||
+            !strcmp(c, "GSYNCING") || !strcmp(c, "GSYNCED") ||
+            !strcmp(c, "GACK")     || !strcmp(c, "GPING")  ||
+            !strcmp(c, "GPONG"));
+}
+
+/*
  * parse a buffer.
  *
  * NOTE: parse() should not be called recursively by any other functions!
@@ -375,6 +391,19 @@ int parse(aClient *cptr, char *buffer, char *bufend)
 		"Unknown command '%s' from %s[%s]", ch,
 		from->name, get_client_name(cptr, FALSE));
 	    ircstp->is_unco++;
+	    return -1;
+	}
+
+	/* #261 safety gate: a gopeer line longer than the normal 512-byte limit
+	 * may ONLY be a gossip command.  Otherwise an oversized parameter could
+	 * reach a TS5 server handler that assumes <=512 and overflow a fixed
+	 * scratch buffer (the buffer was widened to GOSSIP_LINESIZE for gopeers).
+	 * Drop the line loudly rather than risk it. */
+	if (IsGoPeer(cptr) && (bufend - buffer) > BUFSIZE && !is_gossip_command(mptr))
+	{
+	    sendto_realops("Gossip: dropped oversized non-gossip command '%s' "
+			   "from %s (%d bytes)", mptr->cmd, cptr->name,
+			   (int)(bufend - buffer));
 	    return -1;
 	}
 

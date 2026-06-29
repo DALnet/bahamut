@@ -24,6 +24,13 @@
  * prevented by the exact dedup hash. */
 #define GOPEER_BLOOM_BYTES  8192
 
+/* #261: gossip lines (GEVENT with payload + name-keyed clock tag) routinely
+ * exceed the 512-byte client line limit.  A gopeer therefore assembles its
+ * inbound lines in this larger per-link buffer (in dopacket) instead of the
+ * 512-byte aClient.buffer, so large events aren't silently truncated.  The
+ * sender (gossip_send_event) budgets every line to stay within this. */
+#define GOSSIP_LINESIZE  2048
+
 typedef struct GossipPeer {
     char       name[HOSTLEN + 1];    /* remote server name               */
     ServerId   peer_id;              /* remote server's ServerId         */
@@ -36,6 +43,8 @@ typedef struct GossipPeer {
     time_t     last_pong;            /* time of last GPONG received      */
     int        rtt_ms;              /* last GPING/GPONG round-trip (ms); -1 = unmeasured */
     time_t     connected_at;         /* when this link was established   */
+    char       linebuf[GOSSIP_LINESIZE]; /* #261: inbound line assembly (dopacket) */
+    int        linecount;            /* partial-line length in linebuf   */
 } GossipPeer;
 
 /* Global list of active gossip peer connections */

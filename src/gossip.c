@@ -269,14 +269,41 @@ gossip_send_event(aClient *peer, const NetworkEvent *ev)
 {
     char sclock[EVENTCLOCK_SPARSE_LEN];
     char payload[1024];
-    GossipPeer *gp = (GossipPeer *)peer->serv;
+    GossipPeer *gp     = (GossipPeer *)peer->serv;
+    const char *origin = srvidx_name(ev->id.server);
+    int         clock_budget, expected;
 
-    clock_encode_sparse(&ev->clock, sclock, sizeof(sclock));
     serialise_payload(payload, sizeof(payload), ev);
+
+    /* #261: budget the clock so the whole GEVENT line fits GOSSIP_LINESIZE (the
+     * receiver assembles it in a GOSSIP_LINESIZE buffer).  The clock is the only
+     * unbounded part — it grows with cluster size — and clock_encode_sparse
+     * truncates it at name:seq boundaries, which is SAFE: a short clock only
+     * makes get_events_since over-send (dedup absorbs it), never under-send. */
+    clock_budget = (int)GOSSIP_LINESIZE - 4
+                 - (int)strlen(origin) - (int)strlen(me.name)
+                 - (int)strlen(payload) - 64;   /* literals + seq + type + colons */
+    if (clock_budget < 2)
+        clock_budget = 2;                        /* room for the "0" sentinel */
+    if (clock_budget > (int)sizeof(sclock))
+        clock_budget = (int)sizeof(sclock);
+    clock_encode_sparse(&ev->clock, sclock, clock_budget);
+
+    /* Tripwire — never silently truncate on the wire (#261).  With the clock
+     * budgeted above this should never fire; if it does, the math is wrong. */
+    expected = (int)strlen(origin) + (int)strlen(sclock) + (int)strlen(me.name)
+             + (int)strlen(payload) + 64;
+    if (expected > (int)GOSSIP_LINESIZE - 4)
+    {
+        sendto_realops("Gossip: dropping oversized GEVENT to %s (~%d bytes, "
+                       "type %d) rather than truncate", peer->name, expected,
+                       (int)ev->type);
+        return;
+    }
 
     sendto_one(peer,
                "@gossip-id=%s:%llu;gossip-clock=%s :%s GEVENT %d :%s",
-               srvidx_name(ev->id.server),
+               origin,
                (unsigned long long)ev->id.seq,
                sclock,
                me.name,
