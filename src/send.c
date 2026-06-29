@@ -28,6 +28,7 @@
 #include "fds.h"
 #include "memcount.h"
 #include "websocket.h"
+#include "gossip_peer.h"   /* GOSSIP_LINESIZE — #261 large gopeer lines */
 
 /*
  * STOP_SENDING_ON_SHORT_SEND:
@@ -288,20 +289,43 @@ static int send_message(aClient *to, char *msg, int len, void* sbuf)
 
     if (flag == 1)
     {
-        if(IsServer(to))
+        if(IsGoPeer(to))
         {
-            if(len>510) 
+            /* #261: gossip events legitimately exceed 512; the peer assembles
+             * them in a GOSSIP_LINESIZE line buffer.  Do NOT clip at 512 — cap
+             * at GOSSIP_LINESIZE-4 (room for CRLF + NUL in sendbuf).  The sender
+             * (gossip_send_event) already budgets lines to fit, so this only
+             * appends CRLF in practice. */
+            int gmax = GOSSIP_LINESIZE - 4;
+            if(len > gmax)
+            {
+                msg[gmax]   = '\r';
+                msg[gmax+1] = '\n';
+                msg[gmax+2] = '\0';
+                len = gmax + 2;
+            }
+            else
+            {
+                msg[len]   = '\r';
+                msg[len+1] = '\n';
+                msg[len+2] = '\0';
+                len += 2;
+            }
+        }
+        else if(IsServer(to))
+        {
+            if(len>510)
             {
                 msg[511]='\n';
                 msg[512]='\0';
                 len=512;
             }
-            else 
+            else
             {
                 msg[len] = '\n';
                 msg[len+1] = '\0';
                 len++;
-            }   
+            }
         }
         else
         {

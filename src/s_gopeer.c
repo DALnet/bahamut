@@ -429,10 +429,16 @@ gopeer_start_burst(aClient *cptr)
     if (!gp)
         return;
 
-    /* Send GSYNCING to signal start of burst */
+    /* Send GSYNCING to signal start of burst.  Bound the clock so the whole
+     * line stays well within GOSSIP_LINESIZE (and never overflows the 2048-byte
+     * sendbuf) — leave room for ":<me> GSYNCING <me> " framing.  A truncated
+     * burst clock is safe: it only makes the peer over-send (dedup absorbs). */
     {
         char sclock[EVENTCLOCK_SPARSE_LEN];
-        clock_encode_sparse(&g_event_log.local_clock, sclock, sizeof(sclock));
+        int  cmax = GOSSIP_LINESIZE - 2 * (int)strlen(me.name) - 32;
+        if (cmax > (int)sizeof(sclock)) cmax = (int)sizeof(sclock);
+        if (cmax < 2) cmax = 2;
+        clock_encode_sparse(&g_event_log.local_clock, sclock, cmax);
         sendto_one(cptr, ":%s GSYNCING %s %s",
                    me.name, me.name, sclock);
     }
