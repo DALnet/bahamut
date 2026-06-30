@@ -271,7 +271,8 @@ typedef struct EvPayloadSessionDestroy {
 
 typedef struct NetworkEvent {
     EventId      id;
-    EventClock   clock;
+    /* #262: no per-event vector clock — the receiver point-updates its
+     * local_clock from id.server (see gossip_apply_event / clock_mark). */
     time_t       wall_time;
     NetEventType type;
     union {

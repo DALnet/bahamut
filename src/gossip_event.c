@@ -70,8 +70,8 @@ emit_event(NetEventType type, const void *payload, size_t payload_size)
     /* Advance our own slot in the vector clock */
     el->local_clock.slot[el->my_id] = ev->id.seq;
 
-    /* #262: no per-event clock snapshot any more (ev->clock is unused; the
-     * field stays for now and is removed in a follow-up). */
+    /* #262: no per-event clock — the NetworkEvent.clock field is gone; the
+     * receiver point-updates its local_clock from the origin (clock_mark). */
 
     ev->wall_time = time(NULL);
     ev->type      = type;
