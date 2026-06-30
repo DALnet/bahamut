@@ -38,8 +38,7 @@ void gossip_send_event(aClient *peer, const NetworkEvent *ev);
  * Returns 0 on success, -1 on parse error.
  */
 int gossip_parse_event(NetworkEvent *ev, NetEventType type, const char *payload,
-                       ServerId origin_id, LocalSeq origin_seq,
-                       const EventClock *clock);
+                       ServerId origin_id, LocalSeq origin_seq);
 
 /*
  * gossip_apply_event — apply a received event to local state.

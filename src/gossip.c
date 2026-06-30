@@ -267,32 +267,19 @@ serialise_payload(char *buf, size_t buflen, const NetworkEvent *ev)
 void
 gossip_send_event(aClient *peer, const NetworkEvent *ev)
 {
-    char sclock[EVENTCLOCK_SPARSE_LEN];
-    char payload[1024];
-    GossipPeer *gp     = (GossipPeer *)peer->serv;
+    char        payload[1024];
     const char *origin = srvidx_name(ev->id.server);
-    int         clock_budget, expected;
+    int         expected;
 
     serialise_payload(payload, sizeof(payload), ev);
 
-    /* #261: budget the clock so the whole GEVENT line fits GOSSIP_LINESIZE (the
-     * receiver assembles it in a GOSSIP_LINESIZE buffer).  The clock is the only
-     * unbounded part — it grows with cluster size — and clock_encode_sparse
-     * truncates it at name:seq boundaries, which is SAFE: a short clock only
-     * makes get_events_since over-send (dedup absorbs it), never under-send. */
-    clock_budget = (int)GOSSIP_LINESIZE - 4
-                 - (int)strlen(origin) - (int)strlen(me.name)
-                 - (int)strlen(payload) - 64;   /* literals + seq + type + colons */
-    if (clock_budget < 2)
-        clock_budget = 2;                        /* room for the "0" sentinel */
-    if (clock_budget > (int)sizeof(sclock))
-        clock_budget = (int)sizeof(sclock);
-    clock_encode_sparse(&ev->clock, sclock, clock_budget);
-
-    /* Tripwire — never silently truncate on the wire (#261).  With the clock
-     * budgeted above this should never fire; if it does, the math is wrong. */
-    expected = (int)strlen(origin) + (int)strlen(sclock) + (int)strlen(me.name)
-             + (int)strlen(payload) + 64;
+    /* #262: the per-event vector clock is no longer shipped — the receiver
+     * point-updates its local clock from the gossip-id origin.  The line is now
+     * just gossip-id + payload + framing (cluster-size-independent), bounded by
+     * the payload (<=1024).  Tripwire keeps the #261 "never silently truncate"
+     * guarantee; with the clock gone it should effectively never fire. */
+    expected = (int)strlen(origin) + (int)strlen(me.name)
+             + (int)strlen(payload) + 48;   /* @gossip-id= :me GEVENT type : */
     if (expected > (int)GOSSIP_LINESIZE - 4)
     {
         sendto_realops("Gossip: dropping oversized GEVENT to %s (~%d bytes, "
@@ -302,17 +289,12 @@ gossip_send_event(aClient *peer, const NetworkEvent *ev)
     }
 
     sendto_one(peer,
-               "@gossip-id=%s:%llu;gossip-clock=%s :%s GEVENT %d :%s",
+               "@gossip-id=%s:%llu :%s GEVENT %d :%s",
                origin,
                (unsigned long long)ev->id.seq,
-               sclock,
                me.name,
                (int)ev->type,
                payload);
-
-    /* Update our sent clock for this peer */
-    if (gp && ev->id.server < MAX_GOSSIP_SERVERS)
-        gp->sent_clock.slot[ev->id.server] = ev->id.seq;
 }
 
 /* -------------------------------------------------------------------------
@@ -388,15 +370,15 @@ gossip_event(const NetworkEvent *ev, aClient *exclude_link)
 
 int
 gossip_parse_event(NetworkEvent *ev, NetEventType type, const char *payload,
-                   ServerId origin_id, LocalSeq origin_seq,
-                   const EventClock *clock)
+                   ServerId origin_id, LocalSeq origin_seq)
 {
     ev->id.server  = origin_id;
     ev->id.seq     = origin_seq;
     ev->wall_time  = time(NULL);
     ev->type       = type;
     ev->next       = NULL;
-    memcpy(&ev->clock, clock, sizeof(EventClock));
+    /* #262: no per-event clock is carried any more (see gossip_apply_event,
+     * which point-updates local_clock from the origin instead). */
     memset(&ev->payload, 0, sizeof(ev->payload));
 
     /* Payload is a strtoken-friendly space-delimited string.
@@ -1364,8 +1346,11 @@ gossip_apply_invite(const EvPayloadInvite *p)
 void
 gossip_apply_event(const NetworkEvent *ev)
 {
-    /* Record in event log (advance clock). */
-    clock_advance(&ev->clock);
+    /* #262: point-update our local clock from this event's origin (no full
+     * per-event clock is carried any more).  In a flood mesh every event
+     * reaches us directly, so marking each (origin,seq) converges local_clock
+     * — and that's all get_events_since needs at burst. */
+    clock_mark(ev->id.server, ev->id.seq);
     emit_event(ev->type, &ev->payload, sizeof(ev->payload));
 
     switch (ev->type)

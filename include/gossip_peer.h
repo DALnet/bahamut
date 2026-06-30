@@ -35,7 +35,6 @@ typedef struct GossipPeer {
     char       name[HOSTLEN + 1];    /* remote server name               */
     ServerId   peer_id;              /* remote server's ServerId         */
     EventClock peer_clock;           /* last clock ACKed by this peer    */
-    EventClock sent_clock;           /* clock of events we have sent     */
     int        burst_complete;       /* 1 after GSYNCED received         */
     uint8_t    seen_bloom[GOPEER_BLOOM_BYTES]; /* per-link bloom filter  */
     uint32_t   bloom_generation;     /* incremented on bloom reset       */

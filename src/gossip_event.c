@@ -70,8 +70,8 @@ emit_event(NetEventType type, const void *payload, size_t payload_size)
     /* Advance our own slot in the vector clock */
     el->local_clock.slot[el->my_id] = ev->id.seq;
 
-    /* Snapshot the clock into the event */
-    memcpy(&ev->clock, &el->local_clock, sizeof(EventClock));
+    /* #262: no per-event clock snapshot any more (ev->clock is unused; the
+     * field stays for now and is removed in a follow-up). */
 
     ev->wall_time = time(NULL);
     ev->type      = type;
@@ -122,17 +122,19 @@ get_events_since(const EventClock *clock, NetworkEvent **out, int max_out)
     return n;
 }
 
+/*
+ * clock_mark — #262 point-update of our local clock for a single origin.
+ * Records that we have processed (server, seq); the high-water per origin is
+ * all get_events_since needs at burst.  Replaces the old full-clock merge
+ * (clock_advance) now that events no longer carry a per-event vector clock.
+ */
 void
-clock_advance(const EventClock *remote)
+clock_mark(ServerId server, LocalSeq seq)
 {
     EventClock *local = &g_event_log.local_clock;
-    int i;
 
-    for (i = 0; i < VC_SLOTS; i++)
-    {
-        if (remote->slot[i] > local->slot[i])
-            local->slot[i] = remote->slot[i];
-    }
+    if (server < MAX_GOSSIP_SERVERS && seq > local->slot[server])
+        local->slot[server] = seq;
 }
 
 /* -------------------------------------------------------------------------

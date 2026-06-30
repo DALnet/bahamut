@@ -46,12 +46,11 @@ NetworkEvent *emit_event(NetEventType type, const void *payload, size_t payload_
 int get_events_since(const EventClock *clock, NetworkEvent **out, int max_out);
 
 /*
- * clock_advance — merge a remote clock into our local clock.
- *
- * For each slot i, sets local_clock.slot[i] = max(local, remote).
- * Call this when receiving a GACK or GSYNCED message.
+ * clock_mark — #262 point-update: record the high-water seq for one origin
+ * (local_clock.slot[server] = max(local, seq)).  Replaces clock_advance now
+ * that events carry no per-event vector clock; call on applying each event.
  */
-void clock_advance(const EventClock *remote);
+void clock_mark(ServerId server, LocalSeq seq);
 
 /*
  * clock_encode_sparse / clock_decode_sparse — sparse, name-keyed encoding.

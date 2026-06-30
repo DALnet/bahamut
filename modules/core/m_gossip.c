@@ -12,7 +12,7 @@
  *   GHELLO   <server-name> <version> [:<secret>]   (name IS the identity)
  *   GSYNCING <server-name> <clock-sparse>
  *   GSYNCED  <server-name>
- *   GEVENT   <type> :<payload>    (tagged: @gossip-id=S:seq;gossip-clock=b64)
+ *   GEVENT   <type> :<payload>    (tagged: @gossip-id=name:seq)
  *   GACK     <server> <seq>
  *   GPING    :<nonce>
  *   GPONG    :<nonce>
@@ -240,7 +240,7 @@ ms_gsynced(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr,
 /* -------------------------------------------------------------------------
  * GEVENT — receive a gossip event
  *
- * @gossip-id=<server>:<seq>;gossip-clock=<b64> :<origin> GEVENT <type> :<payload>
+ * @gossip-id=<name>:<seq> :<origin> GEVENT <type> :<payload>
  * ---------------------------------------------------------------------- */
 
 static int
@@ -252,19 +252,18 @@ ms_gevent(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr,
     NetEventType type;
     ServerId     origin_id  = g_event_log.my_id;
     LocalSeq     origin_seq = 0;
-    EventClock   clock;
     NetworkEvent ev;
-    const char  *id_tag, *clock_tag, *ver_tag;
+    const char  *id_tag, *ver_tag;
 
     type = (NetEventType)atoi(type_str);
     if (type <= 0)
         return 0;
 
-    /* Extract @gossip-id, @gossip-clock, and @gossip-ver from MsgBuf tags */
-    memset(&clock, 0, sizeof(clock));
-    id_tag    = msgbuf ? msgbuf_get_tag(msgbuf, "gossip-id")    : NULL;
-    clock_tag = msgbuf ? msgbuf_get_tag(msgbuf, "gossip-clock") : NULL;
-    ver_tag   = msgbuf ? msgbuf_get_tag(msgbuf, "gossip-ver")   : NULL;
+    /* Extract @gossip-id and @gossip-ver from MsgBuf tags.  #262: there is no
+     * @gossip-clock any more — the receiver point-updates its clock from the
+     * origin in @gossip-id (see gossip_apply_event). */
+    id_tag    = msgbuf ? msgbuf_get_tag(msgbuf, "gossip-id")  : NULL;
+    ver_tag   = msgbuf ? msgbuf_get_tag(msgbuf, "gossip-ver") : NULL;
 
     if (id_tag)
     {
@@ -288,9 +287,6 @@ ms_gevent(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr,
     if (origin_id == SRVIDX_NONE)
         return 0;
 
-    if (clock_tag)
-        clock_decode_sparse(&clock, clock_tag);
-
     /* Dedup check */
     if (dedup_check_and_set(origin_id, origin_seq))
         return 0;   /* already seen */
@@ -301,7 +297,7 @@ ms_gevent(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr,
         ev.record_version = (uint64_t)strtoull(ver_tag, NULL, 10);
 
     /* Parse payload */
-    if (gossip_parse_event(&ev, type, payload, origin_id, origin_seq, &clock) < 0)
+    if (gossip_parse_event(&ev, type, payload, origin_id, origin_seq) < 0)
         return 0;
 
     /* Apply event to local state */
