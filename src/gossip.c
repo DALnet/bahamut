@@ -806,6 +806,16 @@ gossip_split_server(const char *name)
 
 /* --- S6d: User materialization ------------------------------------------ */
 
+/* Kill the loser of a nick collision (a local client or a materialized one). */
+static void
+gossip_kill_collider(aClient *acptr)
+{
+    if (IsGossipMaterialized(acptr))
+        gossip_remove_user(acptr, "Nick collision (gossip)");
+    else
+        exit_client(acptr, acptr, &me, "Nick collision (gossip)");
+}
+
 static aClient *
 gossip_materialize_user(const EvPayloadUserJoin *p)
 {
@@ -827,27 +837,39 @@ gossip_materialize_user(const EvPayloadUserJoin *p)
             acptr->tsinfo == p->ts)
             return acptr;
 
-        if (!p->ts || !acptr->tsinfo || p->ts == acptr->tsinfo)
+        if (!p->ts || !acptr->tsinfo)
         {
-            /* Equal or missing TS — kill both */
-            if (IsGossipMaterialized(acptr))
-                gossip_remove_user(acptr, "Nick collision (gossip)");
-            else
-                exit_client(acptr, acptr, &me, "Nick collision (gossip)");
+            /* Missing TS — can't compare; kill both (TS5 behaviour). */
+            gossip_kill_collider(acptr);
             return NULL;
+        }
+        else if (p->ts == acptr->tsinfo)
+        {
+            /* #264 Tier 2: equal TS — instead of killing BOTH, tiebreak
+             * deterministically on the server NAME (the lexicographically
+             * smaller name wins).  Every node computes the same winner from the
+             * global name order, so one survivor converges everywhere — never
+             * the local dense index, which differs per process (#260). */
+            int c = (acptr->user && acptr->user->server)
+                    ? mycmp(acptr->user->server, (char *)p->server) : 0;
+            if (c < 0)
+                return NULL;                 /* existing's server wins; drop incoming */
+            if (c == 0)                       /* same/unknown server — fall back to kill-both */
+            {
+                gossip_kill_collider(acptr);
+                return NULL;
+            }
+            gossip_kill_collider(acptr);     /* incoming's server wins; kill existing */
         }
         else if (p->ts > acptr->tsinfo)
         {
-            /* Incoming is newer — drop it */
+            /* Incoming is newer — older existing wins, drop incoming */
             return NULL;
         }
         else
         {
-            /* Incoming is older — kill existing */
-            if (IsGossipMaterialized(acptr))
-                gossip_remove_user(acptr, "Nick collision (gossip)");
-            else
-                exit_client(acptr, acptr, &me, "Nick collision (gossip)");
+            /* Incoming is older — it wins, kill existing */
+            gossip_kill_collider(acptr);
         }
     }
 
@@ -1190,6 +1212,15 @@ gossip_apply_chan_topic(const EvPayloadChanTopic *p)
 
     chptr = find_channel(p->channel, NullChn);
     if (!chptr)
+        return;
+
+    /* #264 Tier 3: TS-resolve the topic so two nodes that saw the two topic
+     * changes in different orders converge — the newer topic_time wins; an
+     * equal time tiebreaks deterministically on the topic string (the greater
+     * wins).  Otherwise we keep ours and drop the incoming (no apply, no echo). */
+    if (p->ts < chptr->topic_time)
+        return;
+    if (p->ts == chptr->topic_time && strcmp(p->topic, chptr->topic) <= 0)
         return;
 
     strncpyzt(chptr->topic, p->topic, TOPICLEN + 1);
