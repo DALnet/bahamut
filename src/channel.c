@@ -2847,7 +2847,7 @@ static int can_join(aClient *sptr, aChannel *chptr, char *key)
         r = "+l";
         error = ERR_CHANNELISFULL;
     }
-    else if (chptr->mode.mode & MODE_SSLONLY && !IsSSL(sptr))
+    else if (chptr->mode.mode & MODE_SSLONLY && !IsSecureConn(sptr))
     {
         r = "+S";
         error = ERR_NOSSL;

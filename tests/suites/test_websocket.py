@@ -114,6 +114,111 @@ class TestWebSocket:
         finally:
             sock.close()
 
+    # ---- IRCv3 WebSocket subprotocol negotiation -------------------------
+
+    def test_ws_subproto_text(self, single_server, unique_nick):
+        """text.ircv3.net is accepted and echoed; registration works."""
+        ws = WebSocketIRCClient(port=single_server.ws_port,
+                                subprotocols=["text.ircv3.net"])
+        ws.connect()
+        assert ws.negotiated_subprotocol == "text.ircv3.net"
+        assert "001" in ws.register(unique_nick("ws"))
+        ws.disconnect()
+
+    def test_ws_subproto_binary(self, single_server, unique_nick):
+        """binary.ircv3.net is echoed; client using BINARY frames registers."""
+        ws = WebSocketIRCClient(port=single_server.ws_port,
+                                subprotocols=["binary.ircv3.net"], binary=True)
+        ws.connect()
+        assert ws.negotiated_subprotocol == "binary.ircv3.net"
+        assert "001" in ws.register(unique_nick("ws"))
+        ws.disconnect()
+
+    def test_ws_subproto_legacy_irc(self, single_server, unique_nick):
+        """Legacy 'irc' subprotocol still negotiates (back-compat)."""
+        ws = WebSocketIRCClient(port=single_server.ws_port, subprotocols=["irc"])
+        ws.connect()
+        assert ws.negotiated_subprotocol == "irc"
+        assert "001" in ws.register(unique_nick("ws"))
+        ws.disconnect()
+
+    def test_ws_subproto_preference_order(self, single_server, unique_nick):
+        """Server honors the client's preference order, not its own.
+
+        Both clients offer the same two subprotocols in opposite order; each
+        must get its own first choice.  ws1 is registered before ws2 connects
+        so the per-IP accept throttle (which counts every connection and is
+        only cleared on registration under a NOTHROTTLE allow block) doesn't
+        drop the second connection.
+        """
+        ws1 = WebSocketIRCClient(
+            port=single_server.ws_port,
+            subprotocols=["binary.ircv3.net", "text.ircv3.net"], binary=True)
+        ws1.connect()
+        assert ws1.negotiated_subprotocol == "binary.ircv3.net"
+        ws1.register(unique_nick("ws"))
+
+        ws2 = WebSocketIRCClient(
+            port=single_server.ws_port,
+            subprotocols=["text.ircv3.net", "binary.ircv3.net"])
+        ws2.connect()
+        assert ws2.negotiated_subprotocol == "text.ircv3.net"
+        ws2.register(unique_nick("ws"))
+
+        ws1.disconnect()
+        ws2.disconnect()
+
+    def test_ws_subproto_unknown_omitted(self, single_server, unique_nick):
+        """An unsupported-only offer → no Sec-WebSocket-Protocol echoed, but
+        the connection still upgrades and works (spec MAY continue)."""
+        ws = WebSocketIRCClient(port=single_server.ws_port,
+                                subprotocols=["chat.example.com"])
+        ws.connect()
+        assert ws.negotiated_subprotocol is None
+        assert "001" in ws.register(unique_nick("ws"))
+        ws.disconnect()
+
+    def test_ws_text_utf8_scrub(self, single_server, unique_nick):
+        """Server MUST NOT relay non-UTF-8 to a text client: invalid bytes are
+        scrubbed to U+FFFD (EF BF BD), never passed raw."""
+        a = WebSocketIRCClient(port=single_server.ws_port,
+                               subprotocols=["text.ircv3.net"])
+        a.connect()
+        a.register(unique_nick("wsa"))
+
+        b = WebSocketIRCClient(port=single_server.ws_port,
+                               subprotocols=["binary.ircv3.net"], binary=True)
+        b.connect()
+        b.register(unique_nick("wsb"))
+
+        _ws_collect(a, 0.5)
+        _ws_collect(b, 0.5)
+        a.send("JOIN #scrub"); a.wait_for("366")
+        b.send("JOIN #scrub"); b.wait_for("366")
+        _ws_collect(a, 0.3)
+
+        # B injects a channel message containing raw non-UTF-8 bytes via a
+        # BINARY frame (the server accepts binary input as line data).
+        b.send_raw_frame(b"PRIVMSG #scrub :bad\xff\xfebytes")
+
+        # A (text client) must receive it as valid UTF-8 with U+FFFD in place
+        # of the invalid bytes.
+        deadline = time.monotonic() + 5
+        payload = None
+        while time.monotonic() < deadline:
+            p = a.recv_data_raw(timeout=deadline - time.monotonic())
+            if p is not None and b"PRIVMSG" in p and b"#scrub" in p:
+                payload = p
+                break
+        assert payload is not None, "text client never received the message"
+        assert b"\xff" not in payload and b"\xfe" not in payload, \
+            "raw non-UTF-8 bytes were relayed to a text client"
+        assert b"\xef\xbf\xbd" in payload, "invalid bytes were not scrubbed to U+FFFD"
+        payload.decode("utf-8")  # must not raise
+
+        a.disconnect()
+        b.disconnect()
+
 
 def _ws_collect(ws, duration):
     """Collect lines from a WS client for a duration."""

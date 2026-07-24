@@ -25,6 +25,7 @@ class BahamutServer:
         gopeer_configs=None,
         binary_path=None,
         connect_configs=None,
+        webirc=None,
     ):
         self.build_dir = build_dir
         self.server_name = server_name
@@ -35,6 +36,7 @@ class BahamutServer:
         self.gopeer_configs = gopeer_configs
         self.binary_path = binary_path
         self.connect_configs = connect_configs
+        self.webirc = webirc
         self.process = None
         self.tmpdir = None
         self._tmpdir_obj = None
@@ -58,6 +60,7 @@ class BahamutServer:
             extra_modules=self.extra_modules,
             gopeer_configs=self.gopeer_configs,
             connect_configs=self.connect_configs,
+            webirc=self.webirc,
         )
 
         ircd_bin = self.binary_path or os.path.join(self.build_dir, "src", "ircd")

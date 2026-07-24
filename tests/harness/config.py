@@ -66,7 +66,7 @@ class {{
     maxsendq 500000;
 }};
 
-allow {{
+{webirc_blocks}allow {{
     host  *@*;
     flags CFT;
     class users;
@@ -147,6 +147,7 @@ def generate_config(
     extra_modules=None,
     gopeer_configs=None,
     connect_configs=None,
+    webirc=None,
 ):
     """Generate an ircd.conf in tmpdir and set up module symlinks.
 
@@ -175,6 +176,32 @@ def generate_config(
         port_blocks.append(_port_block(ws_port, "Wni"))
     if ssl_port is not None:
         port_blocks.append(_port_block(ssl_port, "Sni"))
+
+    # Optional WEBIRC gateway: dedicated plain + TLS ports, each with a
+    # port-restricted "webirc.<secret>" allow block that matches the gateway
+    # (127.0.0.1).  After the gateway spoofs the client to a different IP the
+    # client re-attaches the default *@* allow at registration.  These blocks
+    # are emitted BEFORE the default allow so they win on their ports.
+    webirc_blocks = ""
+    if webirc is not None:
+        port_blocks.append(_port_block(webirc["port"], "ni"))
+        port_blocks.append(_port_block(webirc["tls_port"], "Sni"))
+
+        def _wi_allow(p):
+            return (
+                "allow {\n"
+                "    ipmask *@127.0.0.1;\n"
+                f"    port   {p};\n"
+                f"    passwd webirc.{webirc['secret']};\n"
+                "    flags  CFT;\n"
+                "    class  users;\n"
+                "};"
+            )
+
+        webirc_blocks = (
+            _wi_allow(webirc["port"]) + "\n\n"
+            + _wi_allow(webirc["tls_port"]) + "\n\n"
+        )
 
     # Build autoload lines
     autoload_lines = "\n".join(f"    autoload {m};" for m in extra_modules)
@@ -241,6 +268,7 @@ def generate_config(
         gossip_block=gossip_block,
         gopeer_blocks=gopeer_blocks_str,
         connect_blocks=connect_blocks_str,
+        webirc_blocks=webirc_blocks,
     )
 
     conf_path = os.path.join(tmpdir, "ircd.conf")

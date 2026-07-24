@@ -3,7 +3,16 @@
  *   Copyright (C) 2026 Bahamut development team
  *
  *   WebSocket transport (RFC 6455) for browser-based IRC clients.
- *   Implements the "irc" subprotocol per IRCv3 WebSocket spec.
+ *   Implements the IRCv3 WebSocket spec: negotiates the "text.ircv3.net"
+ *   and "binary.ircv3.net" subprotocols (respecting the client's preference
+ *   order) and accepts legacy "irc" as an alias for text.  Text clients are
+ *   guaranteed valid UTF-8 (invalid bytes are scrubbed to U+FFFD); binary
+ *   clients receive raw bytes.  Each frame carries exactly one IRC line with
+ *   no trailing CRLF.
+ *
+ *   Known limitation: message fragmentation (WS_OP_CONTINUATION) is not
+ *   supported — one frame per IRC line.  IRC lines are small, so real clients
+ *   do not fragment.
  *
  *   Layering: SSL(WebSocket(IRC)) — each layer wraps the next.
  *   WS handshake happens after any SSL handshake completes.
@@ -158,6 +167,44 @@ ws_header_contains(const char *hdr_start, const char *token)
     return 0;
 }
 
+/*
+ * Ordered subprotocol negotiation (IRCv3 WebSocket spec).
+ *
+ * Walks the client's Sec-WebSocket-Protocol list left-to-right — the client
+ * lists them in preference order, most-preferred first — and returns the
+ * first token we support, setting *binary for the chosen mode.  Supported:
+ *   text.ircv3.net    -> text   (*binary = 0)
+ *   binary.ircv3.net  -> binary (*binary = 1)
+ *   irc               -> text   (*binary = 0)   [legacy alias]
+ * Returns the canonical subprotocol string to echo, or NULL if none match.
+ */
+static const char *
+ws_pick_subprotocol(const char *hdr_start, int *binary)
+{
+    char buf[256];
+    char *tok, *save = NULL;
+
+    ws_copy_header_value(hdr_start, buf, sizeof(buf));
+
+    for (tok = strtoken(&save, buf, ","); tok; tok = strtoken(&save, NULL, ","))
+    {
+        int len;
+
+        /* Trim surrounding whitespace */
+        while (*tok == ' ' || *tok == '\t')
+            tok++;
+        len = strlen(tok);
+        while (len > 0 && (tok[len-1] == ' ' || tok[len-1] == '\t'))
+            tok[--len] = '\0';
+
+        /* Subprotocol tokens are case-sensitive (RFC 6455) */
+        if (strcmp(tok, "text.ircv3.net") == 0)   { *binary = 0; return "text.ircv3.net"; }
+        if (strcmp(tok, "binary.ircv3.net") == 0) { *binary = 1; return "binary.ircv3.net"; }
+        if (strcmp(tok, "irc") == 0)              { *binary = 0; return "irc"; }
+    }
+    return NULL;
+}
+
 /* ------------------------------------------------------------------ */
 /* Handshake                                                          */
 /* ------------------------------------------------------------------ */
@@ -237,11 +284,6 @@ ws_do_handshake(aClient *cptr, WSState *ws)
         return -1;
     }
 
-    /* Check Sec-WebSocket-Protocol contains "irc" (optional but recommended) */
-    hdr = ws_get_header(ws->hs_buf, "Sec-WebSocket-Protocol");
-    /* We accept connections even without the subprotocol header —
-     * many web clients don't send it */
-
     /* Extract Sec-WebSocket-Key */
     hdr = ws_get_header(ws->hs_buf, "Sec-WebSocket-Key");
     if (!hdr)
@@ -261,26 +303,30 @@ ws_do_handshake(aClient *cptr, WSState *ws)
     }
     base64_encode(sha1_hash, (int)sha1_len, accept_b64, sizeof(accept_b64));
 
-    /* Build 101 Switching Protocols response */
-    if (hdr && ws_get_header(ws->hs_buf, "Sec-WebSocket-Protocol") &&
-        ws_header_contains(ws_get_header(ws->hs_buf, "Sec-WebSocket-Protocol"), "irc"))
+    /* Negotiate subprotocol in the client's preference order (IRCv3 WS spec).
+     * If the client offered a subprotocol we support, echo the chosen one and
+     * remember text/binary mode; otherwise omit the header and default to text
+     * (spec MAY: continue without Sec-WebSocket-Protocol). */
+    ws->binary = 0;
+    hdr = ws_get_header(ws->hs_buf, "Sec-WebSocket-Protocol");
     {
-        resp_len = snprintf(response, sizeof(response),
-            "HTTP/1.1 101 Switching Protocols\r\n"
-            "Upgrade: websocket\r\n"
-            "Connection: Upgrade\r\n"
-            "Sec-WebSocket-Accept: %s\r\n"
-            "Sec-WebSocket-Protocol: irc\r\n"
-            "\r\n", accept_b64);
-    }
-    else
-    {
-        resp_len = snprintf(response, sizeof(response),
-            "HTTP/1.1 101 Switching Protocols\r\n"
-            "Upgrade: websocket\r\n"
-            "Connection: Upgrade\r\n"
-            "Sec-WebSocket-Accept: %s\r\n"
-            "\r\n", accept_b64);
+        const char *chosen = hdr ? ws_pick_subprotocol(hdr, &ws->binary) : NULL;
+
+        if (chosen)
+            resp_len = snprintf(response, sizeof(response),
+                "HTTP/1.1 101 Switching Protocols\r\n"
+                "Upgrade: websocket\r\n"
+                "Connection: Upgrade\r\n"
+                "Sec-WebSocket-Accept: %s\r\n"
+                "Sec-WebSocket-Protocol: %s\r\n"
+                "\r\n", accept_b64, chosen);
+        else
+            resp_len = snprintf(response, sizeof(response),
+                "HTTP/1.1 101 Switching Protocols\r\n"
+                "Upgrade: websocket\r\n"
+                "Connection: Upgrade\r\n"
+                "Sec-WebSocket-Accept: %s\r\n"
+                "\r\n", accept_b64);
     }
 
     ws_send_raw(cptr, response, resp_len);
@@ -307,42 +353,140 @@ ws_do_handshake(aClient *cptr, WSState *ws)
 /* Frame writer (server→client, no mask)                              */
 /* ------------------------------------------------------------------ */
 
-int
-ws_frame_message(const char *msg, int len, char *outbuf)
+/*
+ * ws_scrub_utf8 — copy src→dst guaranteeing valid UTF-8 output.
+ *
+ * Well-formed UTF-8 sequences (rejecting overlong forms, surrogates and
+ * code points > U+10FFFF) pass through 1:1; every ill-formed byte is replaced
+ * with U+FFFD (EF BF BD).  Never writes a partial character and never exceeds
+ * dstcap: if the next unit wouldn't fit, output stops at the last complete
+ * character.  Returns the number of bytes written.
+ *
+ * Required by the IRCv3 WS spec: servers MUST NOT relay non-UTF-8 content to
+ * text-subprotocol clients (a browser would drop the connection).
+ */
+static int
+ws_scrub_utf8(char *dst, int dstcap, const char *src, int srclen)
 {
-    int pos = 0;
+    int si = 0, di = 0;
 
-    /* Byte 0: FIN=1, opcode=TEXT */
-    outbuf[pos++] = (char)0x81;
-
-    /* Byte 1+: payload length (server→client: MASK bit = 0) */
-    if (len <= 125)
+    while (si < srclen)
     {
-        outbuf[pos++] = (char)len;
+        unsigned char c = (unsigned char)src[si];
+        int seqlen, i;
+        unsigned int cp;
+
+        if (c < 0x80)             { seqlen = 1; cp = c; }
+        else if ((c & 0xE0) == 0xC0) { seqlen = 2; cp = c & 0x1F; }
+        else if ((c & 0xF0) == 0xE0) { seqlen = 3; cp = c & 0x0F; }
+        else if ((c & 0xF8) == 0xF0) { seqlen = 4; cp = c & 0x07; }
+        else                       goto invalid;   /* stray continuation / 0xF8+ */
+
+        if (si + seqlen > srclen)  goto invalid;    /* truncated sequence */
+
+        for (i = 1; i < seqlen; i++)
+        {
+            if (((unsigned char)src[si + i] & 0xC0) != 0x80)
+                goto invalid;                       /* bad continuation byte */
+            cp = (cp << 6) | ((unsigned char)src[si + i] & 0x3F);
+        }
+
+        /* Reject overlong encodings, UTF-16 surrogates, out-of-range */
+        if ((seqlen == 2 && cp < 0x80) ||
+            (seqlen == 3 && cp < 0x800) ||
+            (seqlen == 4 && cp < 0x10000) ||
+            (cp >= 0xD800 && cp <= 0xDFFF) ||
+            cp > 0x10FFFF)
+            goto invalid;
+
+        /* Valid: emit the sequence if it fits, else stop at a char boundary */
+        if (di + seqlen > dstcap)
+            break;
+        for (i = 0; i < seqlen; i++)
+            dst[di++] = src[si + i];
+        si += seqlen;
+        continue;
+
+    invalid:
+        if (di + 3 > dstcap)
+            break;
+        dst[di++] = (char)0xEF;   /* U+FFFD */
+        dst[di++] = (char)0xBF;
+        dst[di++] = (char)0xBD;
+        si += 1;                  /* skip exactly one offending byte */
     }
-    else if (len <= 65535)
+    return di;
+}
+
+int
+ws_frame_message(const char *msg, int len, char *outbuf, int outcap, int binary)
+{
+    /* Scratch payload: sized for the 3× UTF-8 worst case of the largest IRC
+     * message that can reach here (see WS_FRAME_BUFSIZE in websocket.h). */
+    static char payload[WS_FRAME_BUFSIZE];
+    int plen, pos = 0, paycap;
+
+    /* Bound the payload so header (≤10 bytes) + payload always fits outcap. */
+    paycap = outcap - 10;
+    if (paycap <= 0)
+        return 0;
+    if (paycap > (int)sizeof(payload))
+        paycap = (int)sizeof(payload);
+
+    if (binary)
     {
-        outbuf[pos++] = (char)126;
-        outbuf[pos++] = (char)((len >> 8) & 0xFF);
-        outbuf[pos++] = (char)(len & 0xFF);
+        /* binary.ircv3.net: opaque bytes, no scrubbing (bounded copy) */
+        plen = (len < paycap) ? len : paycap;
+        memcpy(payload, msg, plen);
     }
     else
     {
-        /* >64KB IRC messages don't exist, but handle gracefully */
+        /* text.ircv3.net / irc: guarantee valid UTF-8, bounded */
+        plen = ws_scrub_utf8(payload, paycap, msg, len);
+    }
+
+    /* Byte 0: FIN=1, opcode (0x82 binary / 0x81 text) */
+    outbuf[pos++] = (char)(binary ? 0x82 : 0x81);
+
+    /* Byte 1+: payload length (server→client: MASK bit = 0) */
+    if (plen <= 125)
+    {
+        outbuf[pos++] = (char)plen;
+    }
+    else if (plen <= 65535)
+    {
+        outbuf[pos++] = (char)126;
+        outbuf[pos++] = (char)((plen >> 8) & 0xFF);
+        outbuf[pos++] = (char)(plen & 0xFF);
+    }
+    else
+    {
+        /* Unreachable given paycap, but keep the 64-bit form defensively */
         outbuf[pos++] = (char)127;
         outbuf[pos++] = 0; outbuf[pos++] = 0;
         outbuf[pos++] = 0; outbuf[pos++] = 0;
-        outbuf[pos++] = (char)((len >> 24) & 0xFF);
-        outbuf[pos++] = (char)((len >> 16) & 0xFF);
-        outbuf[pos++] = (char)((len >> 8) & 0xFF);
-        outbuf[pos++] = (char)(len & 0xFF);
+        outbuf[pos++] = (char)((plen >> 24) & 0xFF);
+        outbuf[pos++] = (char)((plen >> 16) & 0xFF);
+        outbuf[pos++] = (char)((plen >> 8) & 0xFF);
+        outbuf[pos++] = (char)(plen & 0xFF);
     }
 
-    /* Payload: raw IRC message, no \r\n per IRCv3 WS spec */
-    memcpy(outbuf + pos, msg, len);
-    pos += len;
+    /* Payload: single IRC line, no trailing \r\n per IRCv3 WS spec */
+    memcpy(outbuf + pos, payload, plen);
+    pos += plen;
 
     return pos;
+}
+
+/*
+ * ws_is_binary — did this client negotiate the binary subprotocol?
+ * Keeps send.c ignorant of WSState's layout.
+ */
+int
+ws_is_binary(aClient *cptr)
+{
+    WSState *ws = cptr ? (WSState *)cptr->ws_state : NULL;
+    return ws ? ws->binary : 0;
 }
 
 /* ------------------------------------------------------------------ */
@@ -557,6 +701,10 @@ ws_process_recv(aClient *cptr, char *buf, int len)
 
             switch (ws->opcode)
             {
+                /* A TEXT or BINARY frame each carries one IRC line.  We treat
+                 * them identically on input — the negotiated subprotocol only
+                 * governs our OUTPUT framing, not what we accept. */
+                case WS_OP_BINARY:
                 case WS_OP_TEXT:
                 {
                     /* Queue unmasked payload to recvQ */
@@ -612,13 +760,8 @@ ws_process_recv(aClient *cptr, char *buf, int len)
                     return 0; /* clean close */
                 }
 
-                case WS_OP_BINARY:
-                    /* Binary frames not supported for IRC */
-                    ws_send_close(cptr, 1003, "Binary not supported");
-                    return 0;
-
                 default:
-                    /* Unknown opcode */
+                    /* Unknown opcode (incl. unsupported CONTINUATION) */
                     return -1;
             }
 

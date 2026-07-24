@@ -446,6 +446,15 @@ typedef struct SServicesTag ServicesTag;
 #define IsSSL(x)		((x)->flags & FLAGS_SSL)
 #define SetSSL(x)		((x)->flags |= FLAGS_SSL)
 
+/* IsWebIRC / IsSecureConn — a WEBIRC client's transport FLAGS_SSL reflects the
+ * gateway↔server link, NOT the end user's leg.  Policy/display checks (WHOIS
+ * "secure", umode +S, +S secure-only channels, STATS) use IsSecureConn(), which
+ * for a WEBIRC client honors the spec's `secure` option (webirc_secure) and for
+ * everyone else falls back to the transport flag.  Raw TLS I/O still keys on
+ * IsSSL()+cptr->ssl and must never consult this. */
+#define IsWebIRC(x)		((x)->webirc_ip != NULL)
+#define IsSecureConn(x)	(IsWebIRC(x) ? (x)->webirc_secure : (IsSSL(x) ? 1 : 0))
+
 #define IsWebSocket(x)     ((x)->flags & FLAGS_WEBSOCKET)
 #define SetWebSocket(x)    ((x)->flags |= FLAGS_WEBSOCKET)
 #define IsPendWS(x)        ((x)->flags & FLAGS_PENDWS)
@@ -1085,6 +1094,9 @@ struct Client
 
     char *webirc_username;
     char *webirc_ip;
+    char  webirc_secure;        /* WEBIRC 'secure' option honored (end-user leg
+                                 * secure AND gateway link TLS) — policy flag,
+                                 * distinct from transport FLAGS_SSL */
 
     /* IRCv3 capability negotiation (local clients only) */
     unsigned long cap_bits;      /* enabled capability bitmask */

@@ -49,12 +49,50 @@ static const struct mapi_cmd_av2 webirc_cmds[] = {
 DECLARE_MODULE("m_webirc", "3.0", "WebIRC gateway", 0, webirc_cmds, NULL);
 
 /*
+ * webirc_parse_options — parse the IRCv3 WEBIRC options parameter: a
+ * space-separated set of name[=value] tokens.  Handles the one option that
+ * carries a security guarantee:
+ *   secure   the end-user leg is TLS (honored only if the gateway↔server link
+ *            is ALSO TLS, per spec)
+ * Everything else (remote-port, local-port, certfp-*, and any future option)
+ * is ignored, which is exactly the spec's MUST-tolerate-unknown-options rule.
+ *
+ * certfp-* is deliberately NOT consumed: a gateway can assert any fingerprint,
+ * so honoring it would let a compromised/malicious gateway spoof a client
+ * certificate.  It is optional in the spec and only `secure` is a MUST.  If a
+ * certfp-based identity path is ever added, revisit this with proper gating.
+ */
+static void
+webirc_parse_options(aClient *cptr, char *opts)
+{
+    char *tok, *save = NULL;
+    int   secure_requested = 0;
+
+    for (tok = strtoken(&save, opts, " "); tok; tok = strtoken(&save, NULL, " "))
+    {
+        char *eq = strchr(tok, '=');
+
+        if (eq)
+            *eq = '\0';                     /* split name / value */
+
+        if (!strcasecmp(tok, "secure"))
+            secure_requested = 1;
+        /* anything else → ignore (MUST tolerate unknown options) */
+    }
+
+    /* Spec MUST: treat as secure ONLY if `secure` was sent AND the gateway's
+     * own link to us is TLS.  Otherwise the end user is not secure. */
+    cptr->webirc_secure = (secure_requested && IsSSL(cptr)) ? 1 : 0;
+}
+
+/*
  * webirc_cmd
  * parv[0] = sender prefix
  * parv[1] = password that authenticates the WEBIRC command from this client
- * parv[2] = username of client requesting spoof (cgiirc defaults to cgiirc)
+ * parv[2] = username/gateway of client requesting spoof (cgiirc defaults to cgiirc)
  * parv[3] = hostname of user
  * parv[4] = IP address of user
+ * parv[5] = options (optional, IRCv3): space-separated name[=value] tokens
  */
 static int
 webirc_cmd(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[])
@@ -151,6 +189,12 @@ webirc_cmd(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *
     else
 	get_sockhost(cptr, parv[3]); /* host */
     cptr->hostp = NULL;
+
+    /* IRCv3 WEBIRC options (parv[5]): `secure`, `certfp-sha-256`, etc.
+     * Absent options leave the client non-secure. */
+    cptr->webirc_secure = 0;
+    if (parc >= 6 && parv[5] && *parv[5])
+	webirc_parse_options(cptr, parv[5]);
 
     /*
      * Acknowledge that WEBIRC was accepted, and flush the client's send queue

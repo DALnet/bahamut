@@ -16,7 +16,8 @@ _WS_GUID = "258EAFA5-E914-47DA-95CA-5AB5DC085B6A"
 class WebSocketIRCClient:
     """IRC client over WebSocket (RFC 6455 TEXT frames)."""
 
-    def __init__(self, host="127.0.0.1", port=8080, timeout=5):
+    def __init__(self, host="127.0.0.1", port=8080, timeout=5,
+                 subprotocols=None, binary=False):
         self.host = host
         self.port = port
         self.timeout = timeout
@@ -25,6 +26,13 @@ class WebSocketIRCClient:
         self.line_buf = ""
         self.all_lines = []
         self._key = None
+        # Subprotocols to offer, in client preference order (most preferred
+        # first).  Default keeps the legacy "irc" alias for back-compat.
+        self.subprotocols = subprotocols if subprotocols is not None else ["irc"]
+        # Frame opcode for outbound data: TEXT (0x1) unless binary negotiated.
+        self.binary = binary
+        # Populated from the 101 response's Sec-WebSocket-Protocol header.
+        self.negotiated_subprotocol = None
 
     def connect(self):
         """Perform TCP connect + WebSocket upgrade handshake."""
@@ -42,9 +50,10 @@ class WebSocketIRCClient:
             f"Connection: Upgrade\r\n"
             f"Sec-WebSocket-Key: {self._key}\r\n"
             f"Sec-WebSocket-Version: 13\r\n"
-            f"Sec-WebSocket-Protocol: irc\r\n"
-            f"\r\n"
         )
+        if self.subprotocols:
+            request += f"Sec-WebSocket-Protocol: {', '.join(self.subprotocols)}\r\n"
+        request += "\r\n"
         self.sock.sendall(request.encode())
 
         # Read HTTP response
@@ -58,6 +67,12 @@ class WebSocketIRCClient:
         ).decode()
         if expected_accept not in response:
             raise ConnectionError("Invalid Sec-WebSocket-Accept")
+
+        # Capture the negotiated subprotocol (if the server echoed one)
+        for hline in response.split("\r\n"):
+            if hline.lower().startswith("sec-websocket-protocol:"):
+                self.negotiated_subprotocol = hline.split(":", 1)[1].strip()
+                break
 
         return response
 
@@ -89,7 +104,35 @@ class WebSocketIRCClient:
         without \\r\\n — the server appends \\r\\n for the IRC parser.
         """
         line = line.rstrip("\r\n")
-        self._send_frame(0x1, line.encode("utf-8"))
+        self._send_frame(0x2 if self.binary else 0x1, line.encode("utf-8"))
+
+    def send_raw_frame(self, payload, opcode=None):
+        """Send a data frame with arbitrary bytes (bypasses UTF-8 encoding).
+
+        Used to inject non-UTF-8 content into server state so the server's
+        outbound UTF-8 scrubbing for text clients can be exercised.
+        """
+        if opcode is None:
+            opcode = 0x2 if self.binary else 0x1
+        self._send_frame(opcode, bytes(payload))
+
+    def recv_data_raw(self, timeout=None):
+        """Return the raw (undecoded) payload bytes of the next TEXT/BINARY
+        data frame, auto-handling WS PING. Returns bytes, or None on timeout.
+        """
+        deadline = time.monotonic() + (timeout or self.timeout)
+        while time.monotonic() < deadline:
+            frame = self._recv_frame(timeout=deadline - time.monotonic())
+            if frame is None:
+                continue
+            opcode, payload = frame
+            if opcode in (0x1, 0x2):
+                return payload
+            if opcode == 0x9:
+                self._send_frame(0xA, payload)
+            elif opcode == 0x8:
+                return None
+        return None
 
     def send_ws_ping(self, data=b"ping"):
         """Send a WebSocket PING frame."""
@@ -120,7 +163,7 @@ class WebSocketIRCClient:
                 continue
             opcode, payload = frame
 
-            if opcode == 0x1:  # TEXT
+            if opcode in (0x1, 0x2):  # TEXT or BINARY (both carry IRC lines)
                 # Server sends IRC lines without \r\n in WS frames;
                 # append \r\n so line_buf parsing finds complete lines
                 text = payload.decode("utf-8", errors="replace")

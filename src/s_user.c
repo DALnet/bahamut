@@ -1012,7 +1012,7 @@ register_user(aClient *cptr, aClient *sptr, char *nick, char *username,
 
         sendto_realops_lev(CCONN_LEV, "Client connecting: %s (%s@%s) [%s] {%s}%s",
                            nick, user->username, user->host, sptr->hostip,
-                           sptr->class->name, IsSSL(sptr) ? " SSL" : "");
+                           sptr->class->name, IsSecureConn(sptr) ? " SSL" : "");
 
         send_lusers(NULL, sptr, sptr, 1, parv);
 
@@ -1643,7 +1643,7 @@ do_user(char *nick, aClient *cptr, aClient *sptr, char *username, char *host,
 #ifndef NO_DEFAULT_INVISIBLE
         sptr->umode |= UMODE_i;
 #endif
-        if(IsSSL(sptr))
+        if(IsSecureConn(sptr))
             sptr->umode |= UMODE_S;
 #ifdef NO_USER_SERVERKILLS
         sptr->umode &= ~UMODE_k;

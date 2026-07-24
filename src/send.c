@@ -254,7 +254,10 @@ static int send_message(aClient *to, char *msg, int len, void* sbuf)
     /* WebSocket clients: frame the IRC message without \r\n */
     if (IsWebSocket(to))
     {
-        static char ws_outbuf[2048 + 14];
+        /* Sized (via the shared WS_FRAME_BUFSIZE) for the worst case: the
+         * largest IRC message that reaches here, every byte scrubbing to a
+         * 3-byte U+FFFD, plus the frame header. */
+        static char ws_outbuf[WS_FRAME_BUFSIZE];
         int ws_len;
 
         if (IsMe(to) || IsDead(to))
@@ -265,7 +268,8 @@ static int send_message(aClient *to, char *msg, int len, void* sbuf)
             return dead_link(to, "Max Sendq exceeded for %s, closing link", 0);
         }
 
-        ws_len = ws_frame_message(msg, len, ws_outbuf);
+        ws_len = ws_frame_message(msg, len, ws_outbuf, sizeof(ws_outbuf),
+                                  ws_is_binary(to));
 
         to->sendM++;
         me.sendM++;
