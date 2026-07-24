@@ -55,6 +55,9 @@ extern void sendto_channel_remote_butone(aClient *one, aClient *from,
 extern void sendto_channel_butserv(aChannel *chptr, aClient *from,
 				   char *pattern, ...) ATTRIBUTE_PRINTF(3, 4);
 extern void sendto_channel_butserv_noopvoice(aChannel *chptr, aClient *from, char *pattern, ...) ATTRIBUTE_PRINTF(3, 4);
+/* JOIN to local members with extended-join for cap clients (channel.c) */
+extern void sendto_channel_join(aChannel *chptr, aClient *from,
+				const char *channel_name);
 
 extern void sendto_channel_butserv_me(aChannel *chptr, aClient *from,
 				      char *pattern, ...) ATTRIBUTE_PRINTF(3, 4);
@@ -79,7 +82,6 @@ extern void sendto_realops(char *pattern, ...) ATTRIBUTE_PRINTF(1, 2);
 extern void sendto_non_noquit_servs_butone(aClient *one, char *pattern, ...) ATTRIBUTE_PRINTF(2, 3);
 extern void sendto_serv_butone(aClient *one, char *pattern, ...) ATTRIBUTE_PRINTF(2, 3);
 extern void sendto_serv_butone_nickipstr(aClient *one, int flag, char *pattern, ...) ATTRIBUTE_PRINTF(3, 4);
-extern void sendto_capab_serv_butone(aClient *one, int include, int exclude, char *pattern, ...) ATTRIBUTE_PRINTF(4, 5);
 extern void sendto_serv_butone_super(aClient *one, int flag, char *pattern, ...) ATTRIBUTE_PRINTF(3, 4);
 extern void sendto_wallops_butone(aClient *one, aClient *from,
 				  char *pattern, ...) ATTRIBUTE_PRINTF(3, 4);
@@ -97,4 +99,45 @@ extern void flush_connections(int fd);
 extern void dump_connections(int fd);
 extern void free_fluders(aClient *cptr, aChannel *chptr);
 extern void free_fludees(aClient *cptr);
+
+/* IRCv3 tagged point-to-point send */
+extern void sendto_one_tags(aClient *to, const char *tags,
+                            const char *pattern, ...) ATTRIBUTE_PRINTF(3, 4);
+
+/* Returns a static "time=YYYY-MM-DDTHH:MM:SS.sssZ" string (cached per dispatch_serial) */
+extern const char *server_time_tag(void);
+
+/* Outbound tag generator registry */
+typedef const char *(*outbound_tag_fn)(void); /* returns "key=val" or NULL/"" */
+/* key: the bare tag name this generator emits ("time", "msgid", "draft/bot", ...).
+ * Stored so filter_tags_for() can gate delivery per-recipient without calling fn(). */
+extern void          register_outbound_tag(outbound_tag_fn fn, unsigned long cap_bit,
+                                           const char *key);
+extern void          unregister_outbound_tag(outbound_tag_fn fn, unsigned long cap_bit);
+extern const char   *build_outbound_tags(void); /* returns "key=val;key2=val2" or "" */
+extern unsigned long tag_delivery_caps;         /* OR of all registered cap bits */
+
+/* Drop registry-known tag tokens whose cap_bit 'to' has NOT negotiated; keep
+ * unknown tokens (label, batch, client tags) untouched.  Returns a static
+ * buffer valid until the next call.  Reads only the stored key — never calls
+ * the generator fn — so it is safe for relayed (gossip) tags too. */
+extern const char   *filter_tags_for(const char *tags, aClient *to);
+
+/* Tagged channel delivery (plain shared buf for plain clients, unshared for tagged) */
+extern void sendto_channel_butone_tags(aClient *one, aClient *from,
+                                       aChannel *chptr, const char *tags,
+                                       char *pattern, ...) ATTRIBUTE_PRINTF(5, 6);
+
+/* Dedup helpers — also used by modules */
+extern int  sent_serial;
+extern int  sentalong[];    /* size MAXCONNECTIONS */
+#include <limits.h>
+#define INC_SERIAL do { \
+    if (sent_serial == INT_MAX) { \
+        memset(sentalong, 0, sizeof(int) * MAXCONNECTIONS); \
+        sent_serial = 0; \
+    } \
+    sent_serial++; \
+} while (0);
+
 #endif

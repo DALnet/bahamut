@@ -7,12 +7,19 @@
 /* define this if you intend to use ircsnprintf or ircvsnprintf */
 /* It's not used, and sNprintf functions are not in all libraries */
 #define WANT_SNPRINTF
-#define ircsprintf sprintf
-#define ircvsprintf vsprintf
+/*
+ * These were historically macros aliasing ircsprintf→sprintf etc., but that
+ * caused ircsprintf.c to define symbols named sprintf/vsprintf/snprintf/
+ * vsnprintf — shadowing libc and creating infinite recursion when
+ * irc_printf's fallback called vsprintf().  Now the irc* functions are
+ * real functions declared below; callers use them explicitly.
+ */
+int ircsprintf(char *str, const char *format, ...);
+int ircvsprintf(char *str, const char *format, va_list ap);
 
 #ifdef WANT_SNPRINTF
-#define ircvsnprintf vsnprintf
-#define ircsnprintf snprintf
+int ircsnprintf(char *str, size_t size, const char *format, ...);
+int ircvsnprintf(char *str, size_t size, const char *format, va_list ap);
 #endif
 /* This code contributed by Rossi 'vejeta' Marcello <vjt@users.sourceforge.net>
  * Originally in va_copy.h, however there wasnt much there, so i stuck it in

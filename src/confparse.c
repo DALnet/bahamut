@@ -111,6 +111,25 @@ confparse_error(char *problem, int line)
     return;
 }
 
+/* warning handler — same as confparse_error but labelled non-fatal, for
+ * tolerated config problems that don't abort the (re)hash. */
+void
+confparse_warn(char *problem, int line)
+{
+    if(!forked)
+        printf("WARNING:  %s near line %d of %s\n", problem, line, current_file);
+    else
+    {
+        sendto_realops("Conf Warning:  %s near line %d of %s", problem, line,
+                        current_file);
+#ifdef USE_SYSLOG
+        syslog(LOG_WARNING, "Conf Warning:  %s near line %d of %s", problem,
+                         line, current_file);
+#endif
+    }
+    return;
+}
+
 /* check_quote
  * this routine skips over any ignored items inside our file
  */

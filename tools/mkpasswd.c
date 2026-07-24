@@ -3,15 +3,18 @@
  * You can use this code as long as my name stays with it.
  */
 
-#include "sys.h"
+/* Must precede every system header (sys.h pulls in <stdlib.h>) so glibc
+ * exposes random()/srandom(); FreeBSD declares them unconditionally. With the
+ * declarations visible from <stdlib.h>, we must NOT redeclare them ourselves:
+ * the old K&R `extern int srandom(unsigned)` conflicts with FreeBSD's
+ * `void srandom(unsigned int)` and breaks the build under clang. */
 #define _DEFAULT_SOURCE
+#include "sys.h"
 #include <time.h>
 #include <stdlib.h>
 
 extern char *getpass();
 extern char *crypt();
-extern long random();
-extern int srandom(unsigned);
 
 int main(argc, argv)
 int argc;

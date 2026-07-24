@@ -26,6 +26,9 @@
 #include "numeric.h"
 #include "msg.h"
 #include "sbuf.h"
+#include "cap.h"
+#include "eventlog.h"
+#include "gossip.h"
 
 /* Suppress sbrk deprecation warning - used for memory debugging */
 #ifdef __clang__
@@ -55,8 +58,6 @@ extern void *sbrk(intptr_t increment);
 #include "inet.h"
 #include "h.h"
 #include "patchlevel.h"
-#include "dh.h"
-
 #include "throttle.h"
 #include "userban.h"
 #include "clones.h"
@@ -410,7 +411,7 @@ static time_t check_pings(time_t currenttime)
             continue;
         }
 
-        if (IsRegistered(cptr))
+        if (IsRegistered(cptr) && cptr->class)
             ping = cptr->class->pingfreq;
         else
             ping = CONNECTTIMEOUT;
@@ -821,14 +822,6 @@ main(int argc, char *argv[])
 
     init_globals();
 
-#ifdef HAVE_ENCRYPTION_ON
-    printf("Initializing Encryption...");
-    if(dh_init() == -1)
-    {
-        printf("\n\nEncryption Init failed!\n\n");
-        return 0;
-    }
-#endif
     
     motd = (aMotd *) NULL;
     helpfile = (aMotd *) NULL;
@@ -893,6 +886,15 @@ main(int argc, char *argv[])
 
     /* init the modules, load default modules! */
     init_modules();
+
+    /* Register built-in IRCv3 capabilities (multi-prefix, cap-notify) */
+    cap_init();
+
+    /* Initialise gossip event log (Phase S1) */
+    eventlog_init();
+
+    /* Initialise gossip multi-uplink subsystem (Phase S2) */
+    gossip_init();
 
     me.flags = FLAGS_LISTEN;
     me.fd = -1;

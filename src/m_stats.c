@@ -37,6 +37,7 @@
 #include "sbuf.h"
 #include "clones.h"
 #include "memcount.h"
+#include "gossip_peer.h"   /* GossipPeer — STATS L gopeer link details */
 
 #if defined(DEBUGMODE) && defined(HAVE_GETRUSAGE)
 #include <sys/time.h>
@@ -53,7 +54,7 @@ extern char *oflagtotext(int oflags); /* For stats o */
 extern char *cflagtotext(int cflags, int uflags); /* For stats c */
 extern char *iflagtotext(int iflags); /* For stats i */
 extern char *pflagtotext(int pflags); /* For stats P */
-extern int report_spamfilters(aClient *cptr, aClient *sptr, int parc, char *parv[]); /* For stats S */
+extern int report_spamfilters(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[]); /* For stats S */
 
 /* internal function defines */
 
@@ -311,9 +312,6 @@ serv_info(aClient *cptr, char *name)
                     IsServer(acptr) ? (DoesTS(acptr) ? "TS" : "NoTS") : "-");
 
 
-        if(RC4EncLink(acptr))
-            sendto_one(cptr, ":%s %d %s : - RC4 encrypted", me.name, 
-                        RPL_STATSDEBUG, name);
         if(IsSSL(acptr))
             sendto_one(cptr, ":%s %d %s : - TLS encrypted", me.name,
                         RPL_STATSDEBUG, name);
@@ -477,7 +475,7 @@ tstats(aClient *cptr, char *name)
  *      parv[2] = server name (current server defaulted, if omitted)
  */
 
-int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
+int m_stats(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     static char Lformat[] = ":%s %d %s %s %u %u %u %u %u :%u %u %s";
     static char Sformat[] = ":%s %d %s Name SendQ SendM SendBytes RcveM "
@@ -591,26 +589,51 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
             }
             else for (i = 0; i <= highest_fd; i++)
             {
+                char        gpbuf[64];
+                const char *lname, *lflag;
                 if (!(acptr = local[i]))
                     continue;
-                if(!IsServer(acptr))
-                    continue; /* nothing but servers */
+                if(!IsServer(acptr) && !IsGoPeer(acptr))
+                    continue; /* servers and gossip peers only */
 #ifdef HIDEULINEDSERVS
                 if(IsULine(acptr) && !IsAnOper(sptr))
                     continue;
 #endif
-                sincetime = (acptr->since > timeofday) ? 0 : 
+                sincetime = (acptr->since > timeofday) ? 0 :
                              timeofday - acptr->since;
+                if (IsGoPeer(acptr))
+                {
+                    /* gopeers have no cptr->name; show the gossip peer name and
+                     * a flag column carrying sync state + last GPING/GPONG RTT. */
+                    GossipPeer *gp = (GossipPeer *)acptr->serv;
+                    lname = (gp && gp->name[0]) ? gp->name
+                                                : get_client_name(acptr, HIDEME);
+                    if (gp && gp->rtt_ms >= 0)
+                        ircsnprintf(gpbuf, sizeof(gpbuf), "gossip/%s/rtt=%dms",
+                                    gp->burst_complete ? "synced" : "syncing",
+                                    gp->rtt_ms);
+                    else
+                        ircsnprintf(gpbuf, sizeof(gpbuf), "gossip/%s/rtt=?",
+                                    (gp && gp->burst_complete) ? "synced"
+                                                               : "syncing");
+                    lflag = gpbuf;
+                }
+                else
+                {
+                    lname = (MyClient(sptr) && IsAdmin(sptr))
+                              ? get_client_name(acptr, FALSE)
+                              : get_client_name(acptr, HIDEME);
+                    lflag = DoesTS(acptr) ? "TS" : "NoTS";
+                }
+                /* ircvsprintf's %u reads an unsigned long; cast to match so the
+                 * upper 32 bits aren't garbage (an int arg leaves them undefined). */
                 sendto_one(sptr, Lformat, me.name, RPL_STATSLINKINFO, parv[0],
-                        ( (MyClient(sptr) && IsAdmin(sptr))
-                          ? get_client_name(acptr, FALSE)
-                          : get_client_name(acptr, HIDEME) ),
-                        (int) SBufLength(&acptr->sendQ),
-                        (int) acptr->sendM, (int) acptr->sendK,
-                        (int) acptr->receiveM, (int) acptr->receiveK,
+                        lname,
+                        (unsigned long) SBufLength(&acptr->sendQ),
+                        (unsigned long) acptr->sendM, (unsigned long) acptr->sendK,
+                        (unsigned long) acptr->receiveM, (unsigned long) acptr->receiveK,
                         timeofday - acptr->firsttime, sincetime,
-                        IsServer(acptr) ? (DoesTS(acptr) ?
-                        "TS" : "NoTS") : "-");
+                        lflag);
             }
         }
         break;
@@ -885,7 +908,7 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
         case 'S':
             if (IsAnOper(sptr))
-                report_spamfilters(cptr, sptr, parc, parv);
+                report_spamfilters(NULL, cptr, sptr, parc, parv);
             else
                 sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name,  parv[0]);
             break;

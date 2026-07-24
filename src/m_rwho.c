@@ -1331,7 +1331,7 @@ static void rwho_reply(aClient *cptr, aClient *ac, char *buf, chanMember *cm)
  * parv[1] - flags
  * parv[2] - arguments
  */
-int m_rwho(aClient *cptr, aClient *sptr, int parc, char *parv[])
+int m_rwho(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     chanMember *cm;
     aClient    *ac;

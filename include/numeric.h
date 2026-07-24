@@ -87,6 +87,7 @@
 #define RPL_ENDOFSILELIST    272
 
 #define RPL_USINGSSL         275
+#define RPL_WHOISCERTFP      276
 
 #define	RPL_NONE             300
 #define RPL_AWAY             301
@@ -136,6 +137,7 @@
 #define RPL_WHOREPLY         352
 #define RPL_NAMREPLY         353
 #define RPL_RWHOREPLY        354
+#define RPL_WHOSPCRPL        354  /* WHOX extended WHO reply */
 
 #define RPL_KILLDONE         361
 #define	RPL_CLOSING          362
@@ -271,5 +273,26 @@
 #define RPL_DCCLIST          618
 #define RPL_ENDOFDCCLIST     619
 #define RPL_DCCINFO          620
+
+/* MONITOR numerics (IRCv3) */
+#define RPL_MONONLINE        730
+#define RPL_MONOFFLINE       731
+#define RPL_MONLIST          732
+#define RPL_ENDOFMONLIST     733
+#define ERR_MONLISTFULL      734
+
+/* STARTTLS numerics (IRCv3) */
+#define RPL_STARTTLS         670
+#define ERR_STARTTLS         691
+
+/* SASL numerics (IRCv3) */
+#define RPL_LOGGEDIN         900
+#define RPL_LOGGEDOUT        901
+#define RPL_SASLSUCCESS      903
+#define ERR_SASLFAIL         904
+#define ERR_SASLTOOLONG      905
+#define ERR_SASLABORTED      906
+#define ERR_SASLALREADY      907
+#define RPL_SASLMECHS        908
 
 #define ERR_NUMERIC_ERR      999

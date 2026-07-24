@@ -30,4 +30,9 @@
 #define	MAXMODEPARAMS	(MAXPARA-4) /* parv[0] .. parv[3] */
 #define	MAXTSMODEPARAMS	(MAXPARA-5) /* parv[0] .. parv[4] */
 #define MAXMODEPARAMSUSER 6
+
+/* Ban list management — used by gossip mode materialization */
+extern int add_banid(aClient *, aChannel *, char *);
+extern int del_banid(aChannel *, char *);
+
 #endif

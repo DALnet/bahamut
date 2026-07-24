@@ -1,11 +1,11 @@
-/* m_webirc.c
+/* modules/extra/m_webirc.c
  *
  *   Copyright (C) 2012 Ned T. Crigler
  *
  *   See file AUTHORS in IRC package for additional names of
  *   the programmers.
  *
- *   This program is free softwmare; you can redistribute it and/or modify
+ *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU General Public License as published by
  *   the Free Software Foundation; either version 1, or (at your option)
  *   any later version.
@@ -27,20 +27,75 @@
 #include "h.h"
 #include "throttle.h"
 #include "userban.h"
+#include "mapi.h"
 
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
 
+static int webirc_cmd(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[]);
+
+static const struct mapi_cmd_av2 webirc_cmds[] = {
+    { "WEBIRC", 0, {               /* accessible before registration */
+        { webirc_cmd, 0 },         /* HANDLER_UNREG   */
+        { webirc_cmd, 0 },         /* HANDLER_CLIENT  */
+        { webirc_cmd, 0 },         /* HANDLER_REMOTE  */
+        { webirc_cmd, 0 },         /* HANDLER_SERVER  */
+        { webirc_cmd, 0 },         /* HANDLER_OPER    */
+    }},
+    { NULL }
+};
+
+DECLARE_MODULE("m_webirc", "3.0", "WebIRC gateway", 0, webirc_cmds, NULL);
+
 /*
- * m_webirc
+ * webirc_parse_options — parse the IRCv3 WEBIRC options parameter: a
+ * space-separated set of name[=value] tokens.  Handles the one option that
+ * carries a security guarantee:
+ *   secure   the end-user leg is TLS (honored only if the gateway↔server link
+ *            is ALSO TLS, per spec)
+ * Everything else (remote-port, local-port, certfp-*, and any future option)
+ * is ignored, which is exactly the spec's MUST-tolerate-unknown-options rule.
+ *
+ * certfp-* is deliberately NOT consumed: a gateway can assert any fingerprint,
+ * so honoring it would let a compromised/malicious gateway spoof a client
+ * certificate.  It is optional in the spec and only `secure` is a MUST.  If a
+ * certfp-based identity path is ever added, revisit this with proper gating.
+ */
+static void
+webirc_parse_options(aClient *cptr, char *opts)
+{
+    char *tok, *save = NULL;
+    int   secure_requested = 0;
+
+    for (tok = strtoken(&save, opts, " "); tok; tok = strtoken(&save, NULL, " "))
+    {
+        char *eq = strchr(tok, '=');
+
+        if (eq)
+            *eq = '\0';                     /* split name / value */
+
+        if (!strcasecmp(tok, "secure"))
+            secure_requested = 1;
+        /* anything else → ignore (MUST tolerate unknown options) */
+    }
+
+    /* Spec MUST: treat as secure ONLY if `secure` was sent AND the gateway's
+     * own link to us is TLS.  Otherwise the end user is not secure. */
+    cptr->webirc_secure = (secure_requested && IsSSL(cptr)) ? 1 : 0;
+}
+
+/*
+ * webirc_cmd
  * parv[0] = sender prefix
  * parv[1] = password that authenticates the WEBIRC command from this client
- * parv[2] = username or client requesting spoof (cgiirc defaults to cgiirc)
+ * parv[2] = username/gateway of client requesting spoof (cgiirc defaults to cgiirc)
  * parv[3] = hostname of user
  * parv[4] = IP address of user
+ * parv[5] = options (optional, IRCv3): space-separated name[=value] tokens
  */
-int m_webirc(aClient *cptr, aClient *sptr, int parc, char *parv[])
+static int
+webirc_cmd(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     char oldusername[USERLEN + 1];
     struct userBan *ban;
@@ -49,7 +104,8 @@ int m_webirc(aClient *cptr, aClient *sptr, int parc, char *parv[])
     if (parc < 5 || *parv[1] == '\0' || *parv[2] == '\0' ||
 	*parv[3] == '\0' || *parv[4] == '\0')
     {
-	sendto_one(sptr, err_str(ERR_NEEDMOREPARAMS), me.name, parv[0], "WEBIRC");
+	sendto_one(sptr, err_str(ERR_NEEDMOREPARAMS), me.name, parv[0],
+		   "WEBIRC");
 	return 0;
     }
     if (!MyConnect(sptr) || !IsUnknown(cptr) || cptr->receiveM != 1)
@@ -99,12 +155,18 @@ int m_webirc(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	return 0;
     }
 
-    /* Don't allow WEBIRC to use 0.0.0.*, 127.0.0.* or Staff_Address -Kobi_S. */
-    if(!strncmp(parv[3],"0.0.0.",6) || !strncmp(parv[3],"127.0.0.",8) || !strcasecmp(parv[3],Staff_Address) || !strcasecmp(parv[3],DEFAULT_STAFF_ADDRESS) || (!strchr(parv[3],'.') && !strchr(parv[3],':')) || !strncmp(parv[4],"0.0.0.",6) || !strncmp(parv[4],"127.",4))
+    /* Don't allow WEBIRC to spoof loopback, unspecified, or staff addresses */
+    if (!strncmp(parv[3], "0.0.0.", 6) ||
+	!strncmp(parv[3], "127.0.0.", 8) ||
+	!strcasecmp(parv[3], Staff_Address) ||
+	!strcasecmp(parv[3], DEFAULT_STAFF_ADDRESS) ||
+	(!strchr(parv[3], '.') && !strchr(parv[3], ':')) ||
+	!strncmp(parv[4], "0.0.0.", 6) ||
+	!strncmp(parv[4], "127.", 4))
     {
-        sendto_realops_lev(SPY_LEV, "WEBIRC: %s@%s tried to spoof %s (%s)",
-                           oldusername, sptr->sockhost,
-                           parv[3], parv[4]);
+	sendto_realops_lev(SPY_LEV,
+			   "WEBIRC: %s@%s tried to spoof %s (%s)",
+			   oldusername, sptr->sockhost, parv[3], parv[4]);
 	sendto_one(sptr, "NOTICE * :Invalid IP");
 	return 0;
     }
@@ -122,11 +184,17 @@ int m_webirc(aClient *cptr, aClient *sptr, int parc, char *parv[])
     cptr->webirc_ip = MyMalloc(strlen(cptr->sockhost) + 1);
     strcpy(cptr->webirc_ip, cptr->sockhost);
 
-    if(strlen(parv[3]) > HOSTLEN)
-        get_sockhost(cptr, parv[4]); /* IP (because host is too long) */
+    if (strlen(parv[3]) > HOSTLEN)
+	get_sockhost(cptr, parv[4]); /* IP (because host is too long) */
     else
-        get_sockhost(cptr, parv[3]); /* host */
+	get_sockhost(cptr, parv[3]); /* host */
     cptr->hostp = NULL;
+
+    /* IRCv3 WEBIRC options (parv[5]): `secure`, `certfp-sha-256`, etc.
+     * Absent options leave the client non-secure. */
+    cptr->webirc_secure = 0;
+    if (parc >= 6 && parv[5] && *parv[5])
+	webirc_parse_options(cptr, parv[5]);
 
     /*
      * Acknowledge that WEBIRC was accepted, and flush the client's send queue
@@ -136,18 +204,17 @@ int m_webirc(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	       me.name, cptr->sockhost, parv[4]);
     dump_connections(cptr->fd);
 
-    /* if they are throttled, drop them silently. */
+    /* If they are throttled, drop them silently. */
     if (throttle_check(parv[4], cptr->fd, NOW) == 0)
     {
 	cptr->flags |= FLAGS_DEADSOCKET;
-
 	ircstp->is_ref++;
 	ircstp->is_throt++;
 	return exit_client(cptr, sptr, &me, "Client throttled");
     }
 
-    ban = check_userbanned(cptr, UBAN_IP|UBAN_CIDR4|UBAN_WILDUSER, 0);
-    if(ban)
+    ban = check_userbanned(cptr, UBAN_IP | UBAN_CIDR4 | UBAN_WILDUSER, 0);
+    if (ban)
     {
 	int loc = (ban->flags & UBAN_LOCAL) ? 1 : 0;
 

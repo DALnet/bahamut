@@ -731,7 +731,7 @@ static inline char *first_visible_channel(aClient *cptr, aClient *sptr)
 #else
 #define WHO_HOST(s, a) ((wsopts.ip_show) ? (a)->hostip : (a)->user->host)
 #endif
-int m_who(aClient *cptr, aClient *sptr, int parc, char *parv[])
+int m_who(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     aClient *ac;
     chanMember *cm;

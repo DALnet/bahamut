@@ -28,6 +28,9 @@
 #include "userban.h"
 #include "confparse.h"
 #include "throttle.h"
+#include "gossip_peer.h"
+#include "gossip.h"
+#include "eventlog.h"
 #include "memcount.h"
 
 /* This entire file has basically been rewritten from scratch with the
@@ -39,6 +42,10 @@ extern int  rehashed;
 extern int  forked;
 extern tConf tconftab[];
 extern sConf sconftab[];
+
+/* Phase 12: configurable TLS cert/key paths */
+char ssl_cert_path[256] = "ircd.crt";
+char ssl_key_path[256]  = "ircd.key";
 
 /* internally defined functions  */
 
@@ -80,6 +87,7 @@ char        *new_uservers[MAXUSERVS+1];    /* null terminated array */
 Conf_Modules *new_modules       = NULL;
 
 extern void confparse_error(char *, int);
+extern void confparse_warn(char *, int);
 extern int klinestore_init(int);
 
 /* initclass()
@@ -771,7 +779,6 @@ confadd_oper(cVar *vars[], int lnum)
 static int server_info[] =
 {
     CONN_ZIP, 'Z',
-    CONN_DKEY, 'E',
     CONN_HUB, 'H',
     CONN_TLS, 'S',
     0, 0
@@ -926,14 +933,6 @@ confadd_connect(cVar *vars[], int lnum)
             tmp->type = NULL;
             DupString(x->class_name, tmp->value);
         }
-    }
-    
-    /* Check for conflicting encryption flags */
-    if((x->flags & CONN_DKEY) && (x->flags & CONN_TLS))
-    {
-        confparse_error("Conflicting encryption flags: E (Diffie-Hellman) and S (TLS) cannot be used together", lnum);
-        free_connect(x);
-        return -1;
     }
     
     if(!x->name)
@@ -1339,6 +1338,7 @@ confadd_port(cVar *vars[], int lnum)
                 switch (*s++)
                 {
                     case 'S': x->flags |= CONF_FLAGS_P_SSL; break;
+                    case 'W': x->flags |= CONF_FLAGS_P_WEBSOCKET; break;
                     case 'n': x->flags |= CONF_FLAGS_P_NODNS; break;
                     case 'i': x->flags |= CONF_FLAGS_P_NOIDENT; break;
                     default:
@@ -2328,6 +2328,7 @@ merge_confs()
     merge_opers();
     merge_ports();
     merge_options();
+    merge_gopeers();
     for(i = 0; uservers[i]; i++)
         MyFree(uservers[i]);
     for(i = 0; new_uservers[i]; i++)
@@ -2350,6 +2351,7 @@ merge_confs()
     }
     modules = new_modules;
     new_modules = NULL;
+
     return;
 }
 
@@ -2427,6 +2429,8 @@ clear_newconfs()
         MyFree(new_modules);
         new_modules = NULL;
     }
+    free_gopeer_conf_list(new_gopeer_conf_list);
+    new_gopeer_conf_list = NULL;
     return;
 }
 
@@ -2506,6 +2510,7 @@ int rehash(aClient *cptr, aClient *sptr, int sig)
     }
 
     merge_confs();
+    rehash_modules();   /* reconcile loaded modules with the new autoload list */
     build_rplcache();
     nextconnect = 1;    /* reset autoconnects */
 
@@ -2822,4 +2827,173 @@ memcount_s_conf(MCs_conf *mc)
     mc->total.m += mc->me.m;
 
     return mc->total.m;
+}
+
+/* -------------------------------------------------------------------------
+ * Phase S2: confadd_gopeer() — parse a gopeer {} config block
+ *
+ * gopeer {
+ *     host   irc2.example.net;   # required: peer address to connect to
+ *     port   6697;               # peer's gossip/IRC port
+ *     passwd secret;             # link password
+ *     name   irc2.example.net;   # optional; defaults to host. The gossip
+ *                                # server id is derived from this name
+ *                                # (FNV-1a) and exchanged via GHELLO.
+ *     tls;                       # optional TLS flag
+ * };
+ * ---------------------------------------------------------------------- */
+int
+confadd_gopeer(cVar *vars[], int lnum)
+{
+    cVar        *tmp;
+    int          c = 0;
+    aGoPeerConf *gp;
+
+    gp = (aGoPeerConf *) MyMalloc(sizeof(aGoPeerConf));
+    memset(gp, 0, sizeof(*gp));
+    gp->port = 6667;   /* default port */
+
+    for (tmp = vars[c]; tmp; tmp = vars[++c])
+    {
+        if (!tmp->type)
+            continue;
+
+        if (tmp->type->flag & SCONFF_HOST)
+        {
+            DupString(gp->host, tmp->value);
+        }
+        else if (tmp->type->flag & SCONFF_PORT)
+        {
+            gp->port = atoi(tmp->value);
+        }
+        else if (tmp->type->flag & SCONFF_PASSWD)
+        {
+            DupString(gp->password, tmp->value);
+        }
+        else if (tmp->type->flag & SCONFF_NAME)
+        {
+            DupString(gp->name, tmp->value);
+        }
+        else if (tmp->type->flag & SCONFF_TLS)
+        {
+            gp->tls = 1;
+        }
+    }
+
+    /* A block needs a host (to dial out) or a name (to accept inbound from
+     * that peer).  A host-less block is "accept-only": gopeer_try_connect
+     * skips it, but it still authorises an inbound peer of that name. */
+    if ((!gp->host || !gp->host[0]) && (!gp->name || !gp->name[0]))
+    {
+        confparse_error("gopeer block needs a host (to dial out) or a name "
+                        "(to accept inbound)", lnum);
+        if (gp->host) MyFree(gp->host);
+        if (gp->name) MyFree(gp->name);
+        if (gp->password) MyFree(gp->password);
+        MyFree(gp);
+        return -1;
+    }
+
+    /* Default name to host when only a host was given (dial-out block). */
+    if (!gp->name || !gp->name[0])
+        DupString(gp->name, gp->host);
+
+    /* Gossip links now authenticate with a shared secret; a block without a
+     * passwd cannot link (inbound is rejected, outbound sends no secret).
+     * Warn rather than abort so a rehash isn't bricked by one stale block. */
+    if (!gp->password || !gp->password[0])
+        confparse_warn("gopeer block has no passwd; gossip auth will reject "
+                       "this link", lnum);
+
+    /* Gossip auth requires TLS — the secret is only sent over a TLS link.  A
+     * dial-out block (has host) without tls will refuse to send its secret and
+     * the link can never authenticate; warn at parse time so the cause is
+     * obvious rather than a silent flap. */
+    else if (gp->host && gp->host[0] && !gp->tls)
+        confparse_warn("gopeer block has a host but no tls; the link cannot "
+                       "authenticate (the secret is only sent over TLS)", lnum);
+
+    /* Prepend to the staging list; merge_gopeers() swaps it into the live
+     * gopeer_conf_list on a successful (re)hash. Prepending straight to the
+     * live list would duplicate every entry (and double-dial every peer) on
+     * each rehash, since nothing ever frees it. */
+    gp->next             = new_gopeer_conf_list;
+    new_gopeer_conf_list = gp;
+
+    return 0;
+}
+
+/* -------------------------------------------------------------------------
+ * Phase S2: confadd_gossip() — parse a gossip {} config block
+ *
+ * gossip {
+ *     fanout      0;    # peers to forward each event to; 0 (default) = all
+ *     sync_window 30;   # seconds to look back during burst
+ * };
+ * ---------------------------------------------------------------------- */
+int
+confadd_gossip(cVar *vars[], int lnum)
+{
+    cVar *tmp;
+    int   c = 0;
+
+    for (tmp = vars[c]; tmp; tmp = vars[++c])
+    {
+        if (!tmp->type)
+            continue;
+
+        if (tmp->type->flag & SCONFF_FANOUT)
+        {
+            gossip_fanout = atoi(tmp->value);
+            if (gossip_fanout < 0)
+                gossip_fanout = 0;   /* 0 = flood to all peers */
+        }
+        else if (tmp->type->flag & SCONFF_SYNC_WINDOW)
+        {
+            gossip_sync_window = atoi(tmp->value);
+            if (gossip_sync_window < 0)
+                gossip_sync_window = 0;
+        }
+    }
+
+    return 0;
+}
+
+/* -------------------------------------------------------------------------
+ * Phase 10A: confadd_sra() — parse an sra {} config block
+ *
+ * sra {
+ *     account <name>;
+ * };
+ * ---------------------------------------------------------------------- */
+/* -------------------------------------------------------------------------
+ * Phase 12: confadd_ssl() — parse an ssl {} config block
+ *
+ * ssl {
+ *     certificate = "ircd.crt";
+ *     key         = "ircd.key";
+ * };
+ * ---------------------------------------------------------------------- */
+int
+confadd_ssl(cVar *vars[], int lnum)
+{
+    cVar *tmp;
+    int   c = 0;
+
+    for (tmp = vars[c]; tmp; tmp = vars[++c])
+    {
+        if (!tmp->type)
+            continue;
+
+        if (tmp->type->flag & SCONFF_CERTIFICATE)
+        {
+            strncpyzt(ssl_cert_path, tmp->value, sizeof(ssl_cert_path));
+        }
+        else if (tmp->type->flag & SCONFF_KEY)
+        {
+            strncpyzt(ssl_key_path, tmp->value, sizeof(ssl_key_path));
+        }
+    }
+
+    return 0;
 }

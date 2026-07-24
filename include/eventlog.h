@@ -1,0 +1,69 @@
+/*
+ * IRC - Internet Relay Chat, include/eventlog.h
+ * Copyright (C) 2024 Bahamut IRC Server Project
+ *
+ * Phase S1: Event Foundation — EventLog API.
+ *
+ * All functions are defined in src/gossip_event.c.
+ */
+
+#ifndef EVENTLOG_H
+#define EVENTLOG_H
+
+#include "gossip_event.h"
+
+/*
+ * eventlog_init — initialise the EventLog singleton.
+ *
+ * Derives this server's 6-bit gossip id from a FNV-1a hash of me.name
+ * (announced to peers during the GHELLO handshake; not configured).
+ * Must be called after initconf() so me.name is available.
+ */
+void eventlog_init(void);
+
+/*
+ * emit_event — record an event in the ring buffer.
+ *
+ * Assigns the next (server, seq) EventId, advances the local vector clock,
+ * and writes the event into the ring.  If the ring is full the oldest
+ * entry is overwritten (head wraps).
+ *
+ * Returns a pointer to the stored event (valid until overwritten).
+ * The pointer MUST NOT be stored persistently; it is only valid until the
+ * next call that would wrap the ring past this slot.
+ */
+NetworkEvent *emit_event(NetEventType type, const void *payload, size_t payload_size);
+
+/*
+ * get_events_since — retrieve events newer than the given clock.
+ *
+ * Fills 'out' with up to 'max_out' pointers to events in the ring whose
+ * id.seq is greater than clock->slot[id.server].  Events are returned
+ * in ascending seq order.  Returns the number of events written.
+ *
+ * This is used during gossip burst to re-send missing events to a peer.
+ */
+int get_events_since(const EventClock *clock, NetworkEvent **out, int max_out);
+
+/*
+ * clock_mark — #262 point-update: record the high-water seq for one origin
+ * (local_clock.slot[server] = max(local, seq)).  Replaces clock_advance now
+ * that events carry no per-event vector clock; call on applying each event.
+ */
+void clock_mark(ServerId server, LocalSeq seq);
+
+/*
+ * clock_encode_sparse / clock_decode_sparse — sparse, name-keyed encoding.
+ *
+ * Only non-zero slots are emitted: "name:seq,name:seq,...".
+ * An all-zero clock is encoded as "0".  Each entry carries the server NAME
+ * (issue #260) rather than a numeric index, so the buffer must allow for the
+ * name length.  In practice the clock is sparse (a handful of slots); a clock
+ * dense enough to exceed the IRC line limit is the concern of issue #261.
+ */
+#define EVENTCLOCK_SPARSE_LEN  2048  /* name-keyed entries are larger */
+
+void clock_encode_sparse(const EventClock *clock, char *buf, int buflen);
+int  clock_decode_sparse(EventClock *clock, const char *buf);
+
+#endif /* EVENTLOG_H */

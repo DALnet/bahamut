@@ -2193,7 +2193,7 @@ void flush_cache()
 	rem_cache(cp);
 }
 
-int m_dns(aClient *cptr, aClient *sptr, int parc, char *parv[])
+int m_dns(struct MsgBuf *msgbuf, aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     aCache *cp;
     int     i;

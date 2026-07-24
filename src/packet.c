@@ -23,8 +23,8 @@
 #include "sys.h"
 #include "msg.h"
 #include "h.h"
-#include "dh.h"
 #include "zlink.h"
+#include "gossip_peer.h"   /* GossipPeer.linebuf — #261 large gopeer lines */
 
 /*
  * * dopacket 
@@ -42,15 +42,18 @@ int dopacket(aClient *cptr, char *buffer, int length)
 {
     char   *ch1;
     char   *ch2;
-    char *cptrbuf = cptr->buffer;
+    /* #261: a gopeer assembles its (often >512-byte) gossip lines in the larger
+     * GossipPeer.linebuf; TS5 servers keep the 512-byte cptr->buffer.  dopacket
+     * only ever runs once IsGoPeer is already set — the GHELLO that flips it is
+     * processed on the client path (client_dopacket) — so the choice is stable
+     * for the whole call; no per-line re-selection is needed. */
+    GossipPeer *gp = (IsGoPeer(cptr) && cptr->serv) ? (GossipPeer *)cptr->serv : NULL;
+    char   *cptrbuf = gp ? gp->linebuf          : cptr->buffer;
+    int    *countp  = gp ? &gp->linecount       : &cptr->count;
+    size_t  bufsz   = gp ? sizeof(gp->linebuf)  : sizeof(cptr->buffer);
     aListener    *lptr = cptr->lstn;
     char *nbuf = NULL;
     int nlen;
-    
-#ifdef HAVE_ENCRYPTION_ON
-    if(IsRC4IN(cptr))
-	rc4_process_stream(cptr->serv->rc4_in, buffer, length);
-#endif
     
     me.receiveB += length;	   /* Update bytes received */
     cptr->receiveB += length;
@@ -77,8 +80,8 @@ int dopacket(aClient *cptr, char *buffer, int length)
     }
     
 zcontinue:
-    ch1 = cptrbuf + cptr->count;
-    ch2 = buffer;   
+    ch1 = cptrbuf + *countp;
+    ch2 = buffer;
     
     if(ZipIn(cptr))
     {
@@ -113,12 +116,12 @@ zcontinue:
 	    cptr->receiveM += 1;
 	    if (lptr)
 		lptr->receiveM += 1;
-	    cptr->count = 0;	/*
+	    *countp = 0;	/*
 				 * ...just in case parse returns with
 				 * FLUSH_BUFFER without removing the
-				 * structure pointed by cptr... --msa 
+				 * structure pointed by cptr... --msa
 				 */
-	    switch (parse(cptr, cptr->buffer, ch1))
+	    switch (parse(cptr, cptrbuf, ch1))
 	    {
 	    case FLUSH_BUFFER:
 		return FLUSH_BUFFER;
@@ -140,13 +143,6 @@ zcontinue:
 		}
 		break;
 
-#ifdef HAVE_ENCRYPTION_ON
-	    case RC4_NEXT_BUFFER:
-		if(length)
-		    rc4_process_stream(cptr->serv->rc4_in, ch2, length);
-		break;
-#endif
-
 	    default:
 		break;
 	    }
@@ -161,10 +157,10 @@ zcontinue:
 				   "SendQ exceeded" : "Dead socket");
 	    ch1 = cptrbuf;
 	}
-	else if (ch1 < cptrbuf + (sizeof(cptr->buffer) - 1))
+	else if (ch1 < cptrbuf + (bufsz - 1))
 	    ch1++;			/* There is always room for the null */
     }
-    cptr->count = ch1 - cptrbuf;
+    *countp = ch1 - cptrbuf;
     
     if(nbuf)
     {
