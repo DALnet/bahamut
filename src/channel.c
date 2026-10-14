@@ -3859,32 +3859,14 @@ void send_topic_burst(aClient *cptr)
     aChannel *chptr;
     aClient *acptr;
     struct FlagList *xflag;
-    char *tmpptr;            /* Temporary pointer to remove the user@host part from tnick for non-NICKIPSTR servers */
-    char tnick[NICKLEN + 1]; /* chptr->topic_nick without the user@host part for non-NICKIPSTR servers */
-    int len;                 /* tnick's length */
 
     if (!(confopts & FLAGS_SERVHUB) || !(cptr->serv->uflags & ULF_NOBTOPIC))
         for (chptr = channel; chptr; chptr = chptr->nextch)
         {
             if(chptr->topic[0] != '\0')
-            {
-                if(cptr->capabilities & CAPAB_NICKIPSTR)
-                    sendto_one(cptr, ":%s TOPIC %s %s %ld :%s", me.name, chptr->chname,
-                               chptr->topic_nick, (long)chptr->topic_time,
-			       chptr->topic);
-                else
-                {
-                    /* This is a non-NICKIPSTR server, we need to remove the user@host part before we send it */
-                    tmpptr = chptr->topic_nick;
-                    len = 0;
-                    while(*tmpptr && *tmpptr!='!')
-                        tnick[len++] = *(tmpptr++);
-                    tnick[len] = '\0';
-                    sendto_one(cptr, ":%s TOPIC %s %s %ld :%s", me.name, chptr->chname,
-                               tnick, (long)chptr->topic_time,
-			       chptr->topic);
-                }
-            }
+                sendto_one(cptr, ":%s TOPIC %s %s %ld :%s", me.name, chptr->chname,
+                           chptr->topic_nick, (long)chptr->topic_time,
+                           chptr->topic);
             if(chptr->xflags & XFLAG_SET)
             {
                 /* Not very optimized but we'll survive... -Kobi. */
@@ -3924,7 +3906,6 @@ int m_topic(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     aChannel   *chptr = NullChn;
     char       *topic = NULL, *name, *tnick;
-    char       *tmpptr; /* Temporary pointer to remove the user@host part from tnick for non-NICKIPSTR servers */
     time_t     ts = timeofday;
     int        member;  
 
@@ -4039,14 +4020,9 @@ int m_topic(aClient *cptr, aClient *sptr, int parc, char *parv[])
      * sends with the topic, so I changed everything to work like that.
      * -wd */
 
-    sendto_capab_serv_butone(cptr, CAPAB_NICKIPSTR, 0, ":%s TOPIC %s %s %lu :%s", parv[0],
-                             chptr->chname, chptr->topic_nick,
-                             (unsigned long)chptr->topic_time, chptr->topic);
-    if((tmpptr = strchr(tnick, '!')))
-        *tmpptr = '\0'; /* Remove the user@host part before we send it to non-NICKIPSTR servers */
-    sendto_capab_serv_butone(cptr, 0, CAPAB_NICKIPSTR, ":%s TOPIC %s %s %lu :%s", parv[0],
-                             chptr->chname, tnick,
-                             (unsigned long)chptr->topic_time, chptr->topic);
+    sendto_serv_butone(cptr, ":%s TOPIC %s %s %lu :%s", parv[0],
+                       chptr->chname, chptr->topic_nick,
+                       (unsigned long)chptr->topic_time, chptr->topic);
     sendto_channel_butserv_me(chptr, sptr, ":%s TOPIC %s :%s", parv[0],
                               chptr->chname, chptr->topic);
         

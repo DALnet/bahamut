@@ -275,15 +275,6 @@ m_squit(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
     /* fallthrough: downstream */
 
-    if(!(IsUnconnect(acptr->from))) /* downstream not unconnect capable */
-    {
-        sendto_realops_lev(DEBUG_LEV,
-                    "Exiting server %s due to non-unconnect server %s [%s]",
-                    acptr->name, acptr->from->name, comment);
-        return exit_client(&me, acptr, sptr, comment);
-    }
-
-
     sendto_realops_lev(DEBUG_LEV, "Passing along SQUIT for %s by %s [%s]",
                        acptr->name, sptr->name, comment);
     sendto_one(acptr->from, ":%s SQUIT %s :%s", parv[0], acptr->name, comment);
@@ -368,16 +359,13 @@ int
 m_burst(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
 
-    if (!IsServer(sptr) || sptr != cptr || parc > 2 || !IsBurst(sptr))
+    if (!IsServer(sptr) || sptr != cptr || parc > 2)
         return 0;
     if (parc == 2) { /* This is an EOB */
         sptr->flags &= ~(FLAGS_EOBRECV);
         if (sptr->flags & (FLAGS_SOBSENT|FLAGS_BURST)) return 0;
 
-        /* we've already sent our EOB.. we synched first
-         * no need to check IsBurst because we shouldn't receive a BURST if
-         * they're not BURST capab
-         */
+        /* we've already sent our EOB.. we synched first */
 
         sendto_gnotice("from %s: synch to %s in %ld %s at %s sendq", me.name,
                        *parv, (long)(timeofday-sptr->firsttime),
@@ -2473,51 +2461,6 @@ m_die(aClient *cptr, aClient *sptr, int parc, char *parv[])
                        me.name, get_client_name(sptr, TRUE));
     }
     s_die();
-    return 0;
-}
-
-/*
- * m_capab
- * Communicate what I can do to another server
- * This has to be able to be sent and understood while
- * the client is UNREGISTERED. Therefore, we
- * absolutely positively must not check to see if
- * this is a server or a client. It's probably an unknown!
- */
-int
-m_capab(aClient *cptr, aClient *sptr, int parc, char *parv[])
-{
-    int         i;
-
-    /* If it's not local, or it has already set capabilities,
-     * silently ignore it.
-     * Dont ignore clients where we have set some capabilities already
-     * that would suck for connecting TO servers.
-     */
-
-    if(cptr != sptr)
-        return 0;
-
-    for (i = 1; i < parc; i++)
-    {
-        if (strcmp(parv[i], "BURST") == 0)
-            SetBurst(sptr);
-        else if (strcmp(parv[i], "UNCONNECT") == 0)
-            SetUnconnect(cptr);
-        else if (strcmp(parv[i], "DKEY") == 0)
-            SetDKEY(cptr);
-        else if (strcmp(parv[i], "TLS") == 0)
-            SetTLS(cptr);
-        else if (strcmp(parv[i], "ZIP") == 0)
-            SetZipCapable(cptr);
-#ifdef NOQUIT
-        else if (strcmp(parv[i], "NOQUIT") == 0)
-            SetNoquit(cptr);
-#endif
-	else if (strcmp(parv[i], "NICKIPSTR") == 0)
-	    SetNickIPStr(cptr);
-    }
-
     return 0;
 }
 

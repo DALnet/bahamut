@@ -247,51 +247,12 @@ typedef struct SServicesTag ServicesTag;
 #define FLAGS_SSL          0x10000000 /* client is using SSL */
 #define FLAGS_SPOOFED      0x20000000 /* User's host was spoofed (via SVSHOST) */
 
-/* Capabilities of the ircd or clients */
+/* Link-local server connection options */
 
-#define CAPAB_DKEY    0x0001 /* server supports dh-key exchange */
-#define CAPAB_ZIP     0x0002 /* server supports gz'd links */
 #define CAPAB_DOZIP   0x0004 /* output to this link shall be gzipped */
-#define CAPAB_DODKEY  0x0008 /* do I do dkey with this link? */
-#define CAPAB_BURST   0x0010 /* server supports BURST command */
-#define CAPAB_UNCONN  0x0020 /* server supports UNCONNECT */
-#ifdef NOQUIT
-#define CAPAB_NOQUIT  0x0040 /* noquit support */
-#endif
-#define CAPAB_NICKIPSTR 0x0080 /* Nick IP as a string support */
-#define CAPAB_DOTLS     0x0100 /* server supports TLS encryption */
 
-
-#define SetDKEY(x)	((x)->capabilities |= CAPAB_DKEY)
-#define CanDoDKEY(x)    ((x)->capabilities & CAPAB_DKEY)
-/* N: line, flag E */
-#define SetWantDKEY(x) ((x)->capabilities |= CAPAB_DODKEY)
-#define WantDKEY(x)	((x)->capabilities & CAPAB_DODKEY) 
-
-/* N: line, flag S */
-#define SetTLS(x)    ((x)->capabilities |= CAPAB_DOTLS)
-#define CanDoTLS(x)  ((x)->capabilities & CAPAB_DOTLS)
-#define SetWantTLS(x) ((x)->capabilities |= CAPAB_DOTLS)
-#define WantTLS(x)    ((x)->capabilities & CAPAB_DOTLS)
-
-#define SetZipCapable(x) ((x)->capabilities |= CAPAB_ZIP)
-#define IsZipCapable(x)	((x)->capabilities & CAPAB_ZIP)
-/* this is set in N: line, flag Z */
+/* set from the connect block, flag Z */
 #define DoZipThis(x) 	((x)->capabilities & CAPAB_DOZIP) 
-
-#define SetBurst(x)     ((x)->capabilities |= CAPAB_BURST)
-#define IsBurst(x)      ((x)->capabilities & CAPAB_BURST)
-
-#define SetUnconnect(x) ((x)->capabilities |= CAPAB_UNCONN)
-#define IsUnconnect(x)  ((x)->capabilities & CAPAB_UNCONN)
-
-#ifdef NOQUIT
-#define SetNoquit(x)    ((x)->capabilities |= CAPAB_NOQUIT)
-#define IsNoquit(x)     ((x)->capabilities & CAPAB_NOQUIT)
-#endif
-
-#define SetNickIPStr(x)	((x)->capabilities |= CAPAB_NICKIPSTR)
-#define IsNickIPStr(x)	((x)->capabilities & CAPAB_NICKIPSTR)
 
 /* flag macros. */
 #define IsULine(x) ((x)->flags & FLAGS_ULINE)
@@ -704,7 +665,6 @@ typedef struct Whowas
 /* flags for connects */
 
 #define CONN_ZIP 	0x001	/* zippable    */
-#define CONN_DKEY	0x010	/* cryptable   */
 #define CONN_HUB	0x100	/* hubbable!   */
 #define CONN_TLS	0x200	/* tlsable!    */
 
