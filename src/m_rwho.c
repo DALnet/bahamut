@@ -32,7 +32,7 @@
 
 #include "pcre.h"
 
-extern int user_modes[];
+extern long user_modes[];
 extern Link *find_channel_link(Link *, aChannel *);
 
 /* max capturing submatches to allow in all fields combined */
@@ -178,7 +178,7 @@ static struct {
     aChannel *chptr;            /* search in channel */
     char     *host_pat[2];      /* wildcard host pattern */
     int      (*host_func[2])(char *, char *); /* host match function */
-    int       umodes[2];        /* usermodes */
+    long      umodes[2];        /* usermodes */
     unsigned  stype;            /* services type */
     unsigned  ip_family[2];	/* CIDR family to match */
     int       ip_cidr_bits[2];	/* CIDR bits to match */

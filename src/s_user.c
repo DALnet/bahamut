@@ -68,7 +68,7 @@ extern int uhm_type;
 extern int uhm_umodeh;
 
 static char buf[BUFSIZE], buf2[BUFSIZE];
-int  user_modes[] =
+long user_modes[] =
 {
     UMODE_o, 'o',
     UMODE_O, 'O',
@@ -2937,7 +2937,7 @@ m_pong(aClient *cptr, aClient *sptr, int parc, char *parv[])
  * -Dianora
  */
 static inline void
-send_umode_out(aClient *cptr, aClient *sptr, int old)
+send_umode_out(aClient *cptr, aClient *sptr, long old)
 {
     aClient *acptr;
     DLink *lp;
@@ -3039,7 +3039,7 @@ int m_oper(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
     if (StrEq(encr, aoper->passwd))
     {
-        int old = (sptr->umode & ALL_UMODES);
+        long old = (sptr->umode & ALL_UMODES);
 
         if(svsnoop)
         {
@@ -3282,7 +3282,8 @@ m_ison(aClient *cptr, aClient *sptr, int parc, char *parv[])
 int
 m_umode(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
-    int     flag, *s, setflags, what = MODE_ADD, badflag = NO;
+    long    flag, *s, setflags;
+    int     what = MODE_ADD, badflag = NO;
     char  **p, *m;
     aClient    *acptr;
 
@@ -3542,7 +3543,8 @@ m_umode(aClient *cptr, aClient *sptr, int parc, char *parv[])
 void
 send_umode(aClient *cptr, aClient *sptr, long old, long sendmask, char *umode_buf, int bufsize)
 {
-    int *s, flag, what = MODE_NULL;
+    long *s, flag;
+    int what = MODE_NULL;
     char *m;
     int len;
 
