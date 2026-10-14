@@ -76,10 +76,7 @@ extern void sendto_prefix_one(aClient *to, aClient *from, char *pattern, ...) AT
 
 extern void sendto_realops_lev(int lev, char *pattern, ...) ATTRIBUTE_PRINTF(2, 3);
 extern void sendto_realops(char *pattern, ...) ATTRIBUTE_PRINTF(1, 2);
-extern void sendto_non_noquit_servs_butone(aClient *one, char *pattern, ...) ATTRIBUTE_PRINTF(2, 3);
 extern void sendto_serv_butone(aClient *one, char *pattern, ...) ATTRIBUTE_PRINTF(2, 3);
-extern void sendto_serv_butone_nickipstr(aClient *one, int flag, char *pattern, ...) ATTRIBUTE_PRINTF(3, 4);
-extern void sendto_capab_serv_butone(aClient *one, int include, int exclude, char *pattern, ...) ATTRIBUTE_PRINTF(4, 5);
 extern void sendto_serv_butone_super(aClient *one, int flag, char *pattern, ...) ATTRIBUTE_PRINTF(3, 4);
 extern void sendto_wallops_butone(aClient *one, aClient *from,
 				  char *pattern, ...) ATTRIBUTE_PRINTF(3, 4);

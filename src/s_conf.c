@@ -771,7 +771,6 @@ confadd_oper(cVar *vars[], int lnum)
 static int server_info[] =
 {
     CONN_ZIP, 'Z',
-    CONN_DKEY, 'E',
     CONN_HUB, 'H',
     CONN_TLS, 'S',
     0, 0
@@ -926,14 +925,6 @@ confadd_connect(cVar *vars[], int lnum)
             tmp->type = NULL;
             DupString(x->class_name, tmp->value);
         }
-    }
-    
-    /* Check for conflicting encryption flags */
-    if((x->flags & CONN_DKEY) && (x->flags & CONN_TLS))
-    {
-        confparse_error("Conflicting encryption flags: E (Diffie-Hellman) and S (TLS) cannot be used together", lnum);
-        free_connect(x);
-        return -1;
     }
     
     if(!x->name)

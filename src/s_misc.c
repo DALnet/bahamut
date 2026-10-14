@@ -348,10 +348,6 @@ exit_one_client_in_split(aClient *cptr, aClient *dead, char *reason)
      * will never be called. - lucas
      */
 
-#ifdef NOQUIT
-    sendto_non_noquit_servs_butone(dead, ":%s QUIT :%s", cptr->name, reason);
-#endif
-
     sendto_common_channels(cptr, ":%s QUIT :%s", cptr->name, reason);
     
     while ((lp = cptr->user->channel))
@@ -448,15 +444,7 @@ exit_one_server(aClient *cptr, aClient *dead, aClient *from,
             acptr == dead || acptr == lcptr)
             continue;
 
-        /* if the server is noquit, we only want to send it
-         *  information about 'dead'
-         * if it's not, this server gets split information for ALL
-         * dead servers.
-         */
-
-#ifdef NOQUIT
-        if(IsNoquit(acptr))
-#endif
+        /* servers only need split information about 'dead' */
         if(cptr != dead)
             continue;
 
