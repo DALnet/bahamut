@@ -31,6 +31,7 @@
 #include "h.h"
 #include "userban.h"
 #include "hooks.h"
+#include "caps.h"
 
 extern int do_user(char *, aClient *, aClient *, char *, char *, char *,
 		   unsigned long, char *, char *);
@@ -639,7 +640,7 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	
 	strcpy(sptr->name, nick);
 	sptr->tsinfo = timeofday;
-	if (sptr->user)
+	if (sptr->user && !IsCapNegotiating(sptr))
 	{
 	    /* USER already received, now we have NICK */
        

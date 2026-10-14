@@ -37,6 +37,7 @@
 #endif /* FLUD */
 #include "userban.h"
 #include "hooks.h"
+#include "caps.h"
 #include "memcount.h"
 #include "inet.h"
 #include "spamfilter.h"
@@ -2418,7 +2419,8 @@ do_user(char *nick, aClient *cptr, aClient *sptr, char *username, char *host,
     }
     if(MyConnect(sptr))
         sptr->oflag=0;
-    if (sptr->name[0])          /* NICK already received, now I have USER... */
+    if (sptr->name[0] && !IsCapNegotiating(sptr))
+        /* NICK already received, now I have USER... */
         return register_user(cptr, sptr, sptr->name, username, ip);
     else
         strncpyzt(sptr->user->username, username, USERLEN + 1);

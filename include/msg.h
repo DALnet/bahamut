@@ -131,6 +131,7 @@
 #define MSG_POST     "POST"         /* POST */
 #define MSG_CHECK    "CHECK"        /* CHECK */
 
+#define MSG_CAP      "CAP"          /* IRCv3 capability negotiation */
 #define MSG_WEBIRC   "WEBIRC"       /* WEBIRC */
 
 #define MAXPARA      15
@@ -233,6 +234,7 @@ extern int  m_put(aClient *, aClient *, int, char **);
 extern int  m_post(aClient *, aClient *, int, char **);
 extern int  m_check(aClient *, aClient *, int, char **);
 extern int  m_webirc(aClient *, aClient *, int, char **);
+extern int  m_cap(aClient *, aClient *, int, char **);
 extern int m_spamops(aClient *, aClient *, int, char **);
 extern int m_sf(aClient *, aClient *, int, char **);
 extern int m_aj(aClient *, aClient *, int, char **);
@@ -383,6 +385,7 @@ struct Message msgtab[] =
     {"AJ",         m_aj,       MAXPARA, 0,        0},
     {"SJR",        m_sjr,      MAXPARA, MF_ALIAS, AII_NS},
     {MSG_WEBIRC,   m_webirc,   MAXPARA, MF_UNREG, 0},
+    {MSG_CAP,      m_cap,      MAXPARA, MF_UNREG, 0},
     { 0 }
 };
 #ifdef __clang__

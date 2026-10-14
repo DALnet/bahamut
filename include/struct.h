@@ -1057,6 +1057,9 @@ struct Client
     int sockerr;                /* what was the last error returned for
 				 * this socket? */
     int capabilities;           /* what this server/client supports */
+    unsigned int caps;          /* IRCv3 capabilities enabled (CAP_*) */
+    int cap_version;            /* CAP LS version, e.g. 302 */
+    char cap_negotiating;       /* registration held until CAP END */
     aClass  *class;             /* our current effective class */
 
 #ifdef MSG_TARGET_LIMIT

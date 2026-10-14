@@ -182,6 +182,7 @@
 #define ERR_NOTOPLEVEL       413
 #define ERR_WILDTOPLEVEL     414
 
+#define ERR_INVALIDCAPCMD    410
 #define ERR_UNKNOWNCOMMAND   421
 #define	ERR_NOMOTD           422
 #define	ERR_NOADMININFO      423
