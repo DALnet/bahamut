@@ -41,7 +41,7 @@ extern int del_dccallow(aClient *, aClient *, int);
 extern int is_xflags_exempted(aClient *sptr, aChannel *chptr);
 extern int verbose_to_relaychan(aClient *sptr, aChannel *chptr, char *cmd, char *reason);
 
-extern int user_modes[];
+extern long user_modes[];
 
 /*
  * * 'do_nick_name' ensures that the given parameter (nick) is * really
@@ -412,7 +412,7 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	(void) add_to_client_hash_table(nick, sptr);
 	if (parc >= 10)
 	{
-	    int *s, flag;
+	    long *s, flag;
 	    char *m;
        
 	    /* parse the usermodes -orabidoo */
@@ -531,7 +531,7 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		/* If it changed nicks, -r it */
 		if ((sptr->umode & UMODE_r) && (mycmp(parv[0], nick) != 0))
 		{
-		    unsigned int oldumode;
+		    long oldumode;
 		    char mbuf[BUFSIZE];
 
 		    oldumode = sptr->umode;

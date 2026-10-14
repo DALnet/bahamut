@@ -37,7 +37,7 @@ int build_searchopts(aClient *, int, char **);
 int chk_who(aClient *, aClient *, int);
 
 /* Externally defined stuffs */
-extern int user_modes[];
+extern long user_modes[];
 
 extern Link *find_channel_link(Link *, aChannel *);
 

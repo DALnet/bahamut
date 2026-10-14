@@ -34,7 +34,7 @@
 #include "memcount.h"
 
 /* Externally defined stuffs */
-extern int user_modes[];
+extern long user_modes[];
 extern int check_channelname(aClient *, unsigned char *); /* for m_aj */
 extern aChannel *get_channel(aClient *, char *, int, int *); /* for m_aj */
 extern Link *find_channel_link(Link *, aChannel *); /* for m_aj */
@@ -224,7 +224,7 @@ int m_svsnick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
     if(acptr->umode & UMODE_r)
     {
-	unsigned int oldumode;
+	long oldumode;
 	char mbuf[BUFSIZE];
 
 	oldumode = acptr->umode;
@@ -355,7 +355,8 @@ int channel_svsmode(aClient *cptr, aClient *sptr, int parc, char *parv[])
  */
 int m_svsmode(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
-    int            flag, *s, what, oldumode;
+    long           flag, *s, oldumode;
+    int            what;
     char          *m, *modes, *optarg;
     aClient       *acptr;
     ts_val         ts = 0;
@@ -708,7 +709,7 @@ int m_svstag(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
     aClient *acptr;
     ServicesTag *servicestag;
-    int *s, flag;
+    long *s, flag;
     char *m;
     long ts;
 

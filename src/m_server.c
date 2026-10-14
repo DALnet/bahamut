@@ -34,7 +34,7 @@ extern void fakeserver_sendserver(aClient *);
 extern void fakelusers_sendlock(aClient *);
 extern void reset_sock_opts(int, int);
 extern void spamfilter_sendserver(aClient *acptr);
-extern int user_modes[];
+extern long user_modes[];
 extern int uhm_type;
 extern int uhm_umodeh;
 
@@ -44,7 +44,8 @@ static void sendnick_TS(aClient *cptr, aClient *acptr)
 {
     ServicesTag *servicestag;
     static char ubuf[54];
-    int *s, flag, i;
+    long *s, flag;
+    int i;
 
     if (IsPerson(acptr))
     {
