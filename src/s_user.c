@@ -106,6 +106,7 @@ long user_modes[] =
 #ifdef SPAMFILTER
     UMODE_P, 'P',
 #endif
+    UMODE_p, 'p',
     0, 0
 };
 
@@ -2155,6 +2156,9 @@ m_whois(aClient *cptr, aClient *sptr, int parc, char *parv[])
         for (len = 0, *buf = '\0', lp = user->channel; lp; lp = lp->next)
         {
             chptr = lp->value.chptr;
+            if (IsUmodep(acptr) && !IsAnOper(sptr) && sptr != acptr &&
+                !IsMember(sptr, chptr))
+                continue;
             showchan=ShowChannel(sptr,chptr);
             if (showchan || IsAdmin(sptr))
             {
@@ -2213,6 +2217,9 @@ m_whois(aClient *cptr, aClient *sptr, int parc, char *parv[])
                        user->away);
         if(IsUmodeS(acptr))
             sendto_one(sptr, rpl_str(RPL_USINGSSL), me.name, parv[0], name);
+        if(IsUmodep(acptr))
+            sendto_one(sptr, rpl_str(RPL_WHOISPRIVACY),
+                       me.name, parv[0], name);
 
         buf[0] = '\0';
         if (IsAnOper(acptr))
@@ -2265,7 +2272,8 @@ m_whois(aClient *cptr, aClient *sptr, int parc, char *parv[])
         }
 
         /* don't give away that this oper is on this server if they're hidden! */
-        if (acptr->user && MyConnect(acptr) && ((sptr == acptr) ||
+        if ((!IsUmodep(acptr) || IsAnOper(sptr) || sptr == acptr) &&
+            acptr->user && MyConnect(acptr) && ((sptr == acptr) ||
                 !IsUmodeI(acptr) || (parc > 2) || IsAnOper(sptr)))
             sendto_one(sptr, rpl_str(RPL_WHOISIDLE), me.name, parv[0], name,
                        timeofday - user->last, acptr->firsttime);

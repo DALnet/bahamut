@@ -704,7 +704,9 @@ static inline char *first_visible_channel(aClient *cptr, aClient *sptr)
 	{
 	    for(lp = cptr->user->channel; lp; lp = lp->next)
 	    {
-		if(ShowChannel(sptr, lp->value.chptr))
+		if(ShowChannel(sptr, lp->value.chptr) &&
+		   (!IsUmodep(cptr) || IsAnOper(sptr) || sptr == cptr ||
+		    IsMember(sptr, lp->value.chptr)))
 		    break;
 	    }
 	    if(lp)
