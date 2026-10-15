@@ -4,6 +4,7 @@ The following outlines features and commands available on the Bahamut server
 - 02-Oct-2004  - Quension (quension@dal.net)
 - 25-Aug-2018  - Visigoth (visigoth@dal.net)
 - 30-Sep-2018  - Holbrook (holbrook@dal.net)
+- 15-Oct-2026  - Jazzzzz (dreamhealer@hotmail.co.uk)
 
 Original ircd-hybrid opers.txt written by ThemBones (kraemer@u.washington.edu)
 
