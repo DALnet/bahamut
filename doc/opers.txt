@@ -4,6 +4,7 @@ The following outlines features and commands available on the Bahamut server
 - 02-Oct-2004  - Quension (quension@dal.net)
 - 25-Aug-2018  - Visigoth (visigoth@dal.net)
 - 30-Sep-2018  - Holbrook (holbrook@dal.net)
+- 15-Oct-2026  - Jazzzzz (dreamhealer@hotmail.co.uk)
 
 Original ircd-hybrid opers.txt written by ThemBones (kraemer@u.washington.edu)
 
@@ -22,6 +23,7 @@ Usermodes: (* designates that the umode is oper only)
   +S     -  Is connected using a secure connection (SSL).
   +H     -  When enabled, masks a client's hostname.
   +P     -  When enabled, opt's out of server side spam filter protection.
+  +p     -  Hides non-shared channels in WHO/WHOIS and WHOIS idle/signon.
  *+a     -  Designates the oper as being a Services Administrator.
  *+b     -  Can see chatops messages.
  *+c     -  Can see client connections and exits.
@@ -41,6 +43,10 @@ Usermodes: (* designates that the umode is oper only)
  *+K     -  Can see U:lined kill messages.
  *+O     -  Is a local IRC Operator.
  *+I     -  When enabled, allows 'hidden' opers. (unlisted in /stats p, etc.)
+
+         +p keeps shared channels visible and does not hide membership from
+         NAMES or WHO #channel. Opers and the user themselves retain full
+         WHOIS visibility.
 
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 

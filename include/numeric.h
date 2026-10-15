@@ -108,6 +108,7 @@
 #define RPL_WHOISIDLE        317
 #define RPL_ENDOFWHOIS       318
 #define RPL_WHOISCHANNELS    319
+#define RPL_WHOISPRIVACY     320
 
 #define RPL_LISTSTART        321
 #define RPL_LIST             322
