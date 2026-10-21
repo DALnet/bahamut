@@ -18,6 +18,12 @@
 #include "numeric.h"
 #include "h.h"
 
+#ifdef XFLAG_EXEMPT_LISTS
+#define XFLAG_EXEMPT_CHANMODE "X"
+#else
+#define XFLAG_EXEMPT_CHANMODE ""
+#endif
+
 static char *replies[] = 
 {
     /* 000 */	NULL,
@@ -27,8 +33,8 @@ static char *replies[] =
                                 "version %s",
     /* 003 RPL_CREATED */	":%s 003 %s :This server was created %s",
     /* 004 RPL_MYINFO */	":%s 004 %s %s %s aAbcCdefFghHiIjkKmnoOPrRsSwxXy "
-                                "AbceiIjklLmMnoOpPrRsStv "
-                                "beIjklov",
+                                "AbceiI" XFLAG_EXEMPT_CHANMODE "jklLmMnoOpPrRsStv "
+                                "beI" XFLAG_EXEMPT_CHANMODE "jklov",
     /* 005 RPL_ISUPPORT */      ":%s 005 %s %s :are available on this server",
     /* 006 */	                NULL,
     /* 007 */	                NULL,
@@ -395,8 +401,13 @@ static char *replies[] =
     /* 352 RPL_WHOREPLY */	":%s 352 %s %s %s %s %s %s %s :%d %s",
     /* 353 RPL_NAMREPLY */	":%s 353 %s %s",
     /* 354 RPL_RWHOREPLY */ ":%s 354 %s",   /* also used for Undernet's WHOX */
-    /* 355 */	                NULL,
-    /* 356 */	                NULL,
+#ifdef XFLAG_EXEMPT_LISTS
+    /* 355 RPL_XFLAGEXEMPTLIST */ ":%s 355 %s %s %s %s %lu",
+    /* 356 RPL_ENDOFXFLAGEXEMPTLIST */ ":%s 356 %s %s :End of Channel XFLAG Exempt List",
+#else
+    /* 355 */                   NULL,
+    /* 356 */                   NULL,
+#endif
     /* 357 */	                NULL,
     /* 358 */	                NULL,
     /* 359 */	                NULL,

@@ -577,6 +577,11 @@
 #define EXEMPT_LISTS
 #define INVITE_LISTS
 
+/* XFLAG_EXEMPT_LISTS
+ * Added by Jazzzzz, Oct.2026
+ */
+#define XFLAG_EXEMPT_LISTS
+
 /*
  * USE_SSL - Add SSL support for users
  */

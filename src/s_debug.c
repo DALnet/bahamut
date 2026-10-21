@@ -103,6 +103,9 @@ void build_rplcache(void)
 #ifdef INVITE_LISTS
     *s++ = 'I';
 #endif
+#ifdef XFLAG_EXEMPT_LISTS
+    *s++ = 'X';
+#endif
     s += ircsprintf(s, ",k,jl,ci");
 #ifdef USE_CHANMODE_L
     *s++ = 'L';
@@ -116,6 +119,9 @@ void build_rplcache(void)
 #endif
 #ifdef INVITE_LISTS
     s += ircsprintf(s, ",I:%i", MAXINVITELIST);
+#endif
+#ifdef XFLAG_EXEMPT_LISTS
+    s += ircsprintf(s, ",X:%i", MAXXFLAGEXEMPTLIST);
 #endif
     s += ircsprintf(s, " TARGMAX=DCCALLOW:,JOIN:,KICK:4,KILL:20,NOTICE:%i,"
                     "PART:,PRIVMSG:%i,WHOIS:,WHOWAS:", MAXRECIPIENTS,

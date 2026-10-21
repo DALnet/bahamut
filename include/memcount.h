@@ -85,6 +85,9 @@ typedef struct {
 #ifdef EXEMPT_LISTS
     MemCount exempts;
 #endif
+#ifdef XFLAG_EXEMPT_LISTS
+    MemCount xflag_exempts;
+#endif
 #ifdef INVITE_LISTS
     MemCount invites;
 #endif

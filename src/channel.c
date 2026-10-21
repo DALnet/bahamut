@@ -52,6 +52,13 @@ int       add_exempt_id(aClient*, aChannel*, char*);
 int       del_exempt_id(aChannel*, char*);
 #endif
 
+#ifdef XFLAG_EXEMPT_LISTS
+/* +X list functions */
+int       add_xflag_exempt_id(aClient *, aChannel *, char *);
+int       del_xflag_exempt_id(aChannel *, char *);
+static int is_xflag_mask_exempted(aClient *, aChannel *);
+#endif
+
 static int  add_banid(aClient *, aChannel *, char *);
 static int  can_join(aClient *, aChannel *, char *);
 static void channel_modes(aClient *, char *, char *, aChannel *);
@@ -333,6 +340,136 @@ int del_exempt_id(aChannel* chptr, char* exempt_id)
    return 0;
 }
 
+#endif
+
+#ifdef XFLAG_EXEMPT_LISTS
+/* XFLAG exempt list functions (+X) */
+
+int add_xflag_exempt_id(aClient *cptr, aChannel *chptr, char *exempt_id)
+{
+    aXflagExempt *exempt = NULL;
+    int cnt = 0;
+
+    for (exempt = chptr->xflag_exempt_list; exempt; exempt = exempt->next)
+    {
+        if (MyClient(cptr))
+        {
+            if (++cnt >= MAXXFLAGEXEMPTLIST)
+            {
+                sendto_one(cptr, getreply(ERR_BANLISTFULL), me.name,
+                           cptr->name, chptr->chname, exempt_id,
+                           "XFLAG exempt");
+                return -1;
+            }
+
+            if (!match(exempt->exemptstr, exempt_id))
+            {
+                return -1;
+            }
+        }
+        else if (!mycmp(exempt->exemptstr, exempt_id))
+        {
+            return -1;
+        }
+    }
+
+    exempt = (aXflagExempt *) MyMalloc(sizeof(aXflagExempt));
+    exempt->exemptstr = (char *) MyMalloc(strlen(exempt_id) + 1);
+    strcpy(exempt->exemptstr, exempt_id);
+    exempt->when = timeofday;
+    exempt->next = chptr->xflag_exempt_list;
+    chptr->xflag_exempt_list = exempt;
+
+    if (IsPerson(cptr))
+    {
+        exempt->who = (char *) MyMalloc(strlen(cptr->name) +
+                                        strlen(cptr->user->username) +
+                                        strlen(GET_USER_HOST(cptr)) + 3);
+        (void) ircsprintf(exempt->who, "%s!%s@%s",
+                          cptr->name, cptr->user->username,
+                          GET_USER_HOST(cptr));
+    }
+    else
+    {
+        exempt->who = (char *) MyMalloc(strlen(cptr->name) + 1);
+        (void) strcpy(exempt->who, cptr->name);
+    }
+
+    return 0;
+}
+
+int del_xflag_exempt_id(aChannel *chptr, char *exempt_id)
+{
+    aXflagExempt **exempt;
+    aXflagExempt *tmp;
+
+    if (!exempt_id)
+    {
+        return -1;
+    }
+
+    for (exempt = &chptr->xflag_exempt_list; *exempt;
+         exempt = &((*exempt)->next))
+    {
+        if (mycmp(exempt_id, (*exempt)->exemptstr) == 0)
+        {
+            tmp = *exempt;
+            *exempt = tmp->next;
+
+            MyFree(tmp->exemptstr);
+            MyFree(tmp->who);
+            MyFree(tmp);
+
+            break;
+        }
+    }
+
+    return 0;
+}
+
+static int is_xflag_mask_exempted(aClient *cptr, aChannel *chptr)
+{
+    aXflagExempt *exempt;
+    char hostmask[NICKLEN + USERLEN + HOSTLEN + 6];
+    char ipmask[NICKLEN + USERLEN + HOSTLEN + 6];
+#ifdef USER_HOSTMASKING
+    char maskedhost[NICKLEN + USERLEN + HOSTLEN + 6];
+#endif
+
+    if (!IsPerson(cptr))
+    {
+        return 0;
+    }
+
+    strcpy(hostmask, make_nick_user_host(cptr->name,
+                                         cptr->user->username,
+                                         cptr->user->host));
+
+    strcpy(ipmask, make_nick_user_host(cptr->name,
+                                       cptr->user->username,
+                                       cptr->hostip));
+
+#ifdef USER_HOSTMASKING
+    strcpy(maskedhost, make_nick_user_host(cptr->name,
+                                           cptr->user->username,
+                                           cptr->user->mhost));
+#endif
+
+    for (exempt = chptr->xflag_exempt_list; exempt; exempt = exempt->next)
+    {
+        if (!match(exempt->exemptstr, hostmask) ||
+            !match(exempt->exemptstr, ipmask) ||
+#ifdef USER_HOSTMASKING
+            !match(exempt->exemptstr, maskedhost) ||
+#endif
+            client_matches_cidrstr(cptr, exempt->exemptstr))
+        {
+            return 1;
+        }
+    }
+
+    return 0;
+}
 #endif
 
 #ifdef INVITE_LISTS
@@ -860,6 +997,132 @@ void remove_matching_exempts(aChannel *chptr, aClient *cptr, aClient *from)
 }
 #endif
 
+#ifdef XFLAG_EXEMPT_LISTS
+void remove_matching_xflag_exempts(aChannel *chptr, aClient *cptr,
+                                   aClient *from)
+{
+    aXflagExempt *exempt;
+    aXflagExempt *next;
+    char hostmask[NICKLEN + USERLEN + HOSTLEN + 6];
+    char ipmask[NICKLEN + USERLEN + HOSTLEN + 6];
+#ifdef USER_HOSTMASKING
+    char maskedhost[NICKLEN + USERLEN + HOSTLEN + 6];
+#endif
+    char *m;
+    int count = 0;
+    int send = 0;
+
+    if (!IsPerson(cptr))
+    {
+        return;
+    }
+
+    strcpy(hostmask, make_nick_user_host(cptr->name,
+                                         cptr->user->username,
+                                         cptr->user->host));
+
+    strcpy(ipmask, make_nick_user_host(cptr->name,
+                                       cptr->user->username,
+                                       cptr->hostip));
+
+#ifdef USER_HOSTMASKING
+    strcpy(maskedhost, make_nick_user_host(cptr->name,
+                                           cptr->user->username,
+                                           cptr->user->mhost));
+#endif
+
+    m = modebuf;
+    *m++ = '-';
+    *m = '\0';
+
+    *parabuf = '\0';
+
+    exempt = chptr->xflag_exempt_list;
+
+    while (exempt)
+    {
+        next = exempt->next;
+
+        if (!match(exempt->exemptstr, hostmask) ||
+            !match(exempt->exemptstr, ipmask) ||
+#ifdef USER_HOSTMASKING
+            !match(exempt->exemptstr, maskedhost) ||
+#endif
+            client_matches_cidrstr(cptr, exempt->exemptstr))
+        {
+            if (strlen(parabuf) + strlen(exempt->exemptstr) + 10 <
+                (size_t) MODEBUFLEN)
+            {
+                if (*parabuf)
+                {
+                    strcat(parabuf, " ");
+                }
+
+                strcat(parabuf, exempt->exemptstr);
+                count++;
+                *m++ = 'X';
+                *m = '\0';
+            }
+            else if (*parabuf)
+            {
+                send = 1;
+            }
+
+            if (count == MAXTSMODEPARAMS)
+            {
+                send = 1;
+            }
+
+            if (send)
+            {
+                sendto_channel_butserv_me(chptr, from,
+                                          ":%s MODE %s %s %s",
+                                          from->name, chptr->chname,
+                                          modebuf, parabuf);
+                sendto_serv_butone(from,
+                                   ":%s MODE %s %ld %s %s",
+                                   from->name, chptr->chname,
+                                   chptr->channelts, modebuf, parabuf);
+
+                send = 0;
+                *parabuf = '\0';
+                m = modebuf;
+                *m++ = '-';
+
+                if (count != MAXTSMODEPARAMS)
+                {
+                    strcpy(parabuf, exempt->exemptstr);
+                    *m++ = 'X';
+                    count = 1;
+                }
+                else
+                {
+                    count = 0;
+                }
+
+                *m = '\0';
+            }
+
+            del_xflag_exempt_id(chptr, exempt->exemptstr);
+        }
+
+        exempt = next;
+    }
+
+    if (*parabuf)
+    {
+        sendto_channel_butserv_me(chptr, from,
+                                  ":%s MODE %s %s %s",
+                                  from->name, chptr->chname,
+                                  modebuf, parabuf);
+        sendto_serv_butone(from,
+                           ":%s MODE %s %ld %s %s",
+                           from->name, chptr->chname,
+                           chptr->channelts, modebuf, parabuf);
+    }
+}
+#endif
+
 #ifdef INVITE_LISTS
 void remove_matching_invites(aChannel *chptr, aClient *cptr, aClient *from)
 {
@@ -1309,6 +1572,12 @@ int is_xflags_exempted(aClient *sptr, aChannel *chptr)
     if((chptr->xflags & XFLAG_EXEMPT_REGISTERED) && IsRegNick(sptr)) return 1;
     if((chptr->xflags & XFLAG_EXEMPT_IDENTD) && sptr->user && sptr->user->username[0]!='~') return 1;
     if((chptr->xflags & XFLAG_EXEMPT_WEBIRC) && MyClient(sptr) && sptr->webirc_ip) return 1;
+#ifdef XFLAG_EXEMPT_LISTS
+    if (is_xflag_mask_exempted(sptr, chptr))
+    {
+        return 1;
+    }
+#endif
     return 0;
 }
 
@@ -1524,6 +1793,9 @@ static void send_channel_lists(aClient *cptr, aChannel *chptr)
 #ifdef EXEMPT_LISTS
     aBanExempt *exempt;
 #endif
+#ifdef XFLAG_EXEMPT_LISTS
+    aXflagExempt *xexempt;
+#endif
 #ifdef INVITE_LISTS
     anInvite *inv;
 #endif            
@@ -1608,6 +1880,59 @@ static void send_channel_lists(aClient *cptr, aChannel *chptr)
         }
     }
 #endif    
+#ifdef XFLAG_EXEMPT_LISTS
+    for (xexempt = chptr->xflag_exempt_list; xexempt;
+         xexempt = xexempt->next)
+    {
+        if (strlen(parabuf) + strlen(xexempt->exemptstr) + 20 <
+            (size_t) MODEBUFLEN)
+        {
+            if (*parabuf)
+            {
+                strcat(parabuf, " ");
+            }
+
+            strcat(parabuf, xexempt->exemptstr);
+            count++;
+            *cp++ = 'X';
+            *cp = '\0';
+        }
+        else if (*parabuf)
+        {
+            send = 1;
+        }
+
+        if (count == MAXTSMODEPARAMS)
+        {
+            send = 1;
+        }
+
+        if (send)
+        {
+            sendto_one(cptr, ":%s MODE %s %ld %s %s",
+                       me.name, chptr->chname, chptr->channelts,
+                       modebuf, parabuf);
+
+            send = 0;
+            *parabuf = '\0';
+            cp = modebuf;
+            *cp++ = '+';
+
+            if (count != MAXTSMODEPARAMS)
+            {
+                strcpy(parabuf, xexempt->exemptstr);
+                *cp++ = 'X';
+                count = 1;
+            }
+            else
+            {
+                count = 0;
+            }
+
+            *cp = '\0';
+        }
+    }
+#endif
 #ifdef INVITE_LISTS
     for (inv = chptr->invite_list; inv; inv = inv->next)
     {
@@ -2228,6 +2553,110 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
             break;
 #endif
     
+#ifdef XFLAG_EXEMPT_LISTS
+        case 'X':
+            if (level < 1 && parv[args] != NULL)
+            {
+                errors |= SM_ERR_NOPRIVS;
+                break;
+            }
+            else if (parv[args] == NULL)
+            {
+                aXflagExempt *xexempt;
+
+                if (anylistsent)
+                {
+                    break;
+                }
+
+                if ((chptr->xflags & XFLAG_HIDE_MODE_LISTS) &&
+                    !IsAnOper(sptr) && !is_chan_op(sptr, chptr))
+                {
+                    if (chptr->xflags & XFLAG_USER_VERBOSE)
+                    {
+                        verbose_to_relaychan(sptr, chptr,
+                                             "mode(+X)", NULL);
+                    }
+
+                    if (chptr->xflags & XFLAG_OPER_VERBOSE)
+                    {
+                        verbose_to_opers(sptr, chptr,
+                                         "mode(+X)", NULL);
+                    }
+
+                    sendto_one(sptr,
+                               rpl_str(RPL_ENDOFXFLAGEXEMPTLIST),
+                               me.name, sptr->name, chptr->chname);
+                    anylistsent = 1;
+                    break;
+                }
+
+                for (xexempt = chptr->xflag_exempt_list; xexempt;
+                     xexempt = xexempt->next)
+                {
+                    sendto_one(sptr,
+                               rpl_str(RPL_XFLAGEXEMPTLIST),
+                               me.name, cptr->name, chptr->chname,
+                               xexempt->exemptstr, xexempt->who,
+                               xexempt->when);
+                }
+
+                sendto_one(cptr,
+                           rpl_str(RPL_ENDOFXFLAGEXEMPTLIST),
+                           me.name, cptr->name, chptr->chname);
+                anylistsent = 1;
+                break;
+            }
+
+            if (++nparams > maxparams)
+            {
+                args++;
+                break;
+            }
+
+            if (*parv[args] == ':' || *parv[args] == '\0')
+            {
+                args++;
+                break;
+            }
+
+#ifdef NO_LOCAL_CIDR_CHANNELBANS
+            if (MyClient(sptr) && strchr(parv[args], '/'))
+            {
+                sendto_one(sptr,
+                           ":%s NOTICE %s :*** Notice -- CIDR channel XFLAG exemptions are not supported yet.",
+                           me.name, sptr->name);
+                args++;
+                break;
+            }
+#endif
+
+            strcpy(nuhbuf, collapse(pretty_mask(parv[args])));
+            parv[args] = nuhbuf;
+
+            if ((prelen + (mbuf - morig) + pidx +
+                 strlen(nuhbuf) + 1) > REALMODEBUFLEN)
+            {
+                args++;
+                break;
+            }
+
+            if (!(change == '+' &&
+                  !add_xflag_exempt_id(sptr, chptr, parv[args])) &&
+                !(change == '-' &&
+                  !del_xflag_exempt_id(chptr, parv[args])))
+            {
+                args++;
+                break;
+            }
+
+            *mbuf++ = 'X';
+            ADD_PARA(parv[args])
+            args++;
+            nmodes++;
+            break;
+#endif
+
         case 'b':
             /* if the user has no more arguments, then they just want
              * to see the bans, okay, cool. */
@@ -2777,7 +3206,7 @@ static int can_join(aClient *sptr, aChannel *chptr, char *key)
 
     if (chptr->join_connect_time && (sptr->firsttime + chptr->join_connect_time > NOW) && !is_xflags_exempted(sptr,chptr))
     {
-        r = "+X";
+        r = "JOIN_CONNECT_TIME";
         error = ERR_NEEDTOWAIT;
     }
     else if (chptr->mode.mode & MODE_INVITEONLY)
@@ -4690,6 +5119,9 @@ void kill_ban_list(aClient *cptr, aChannel *chptr)
 #ifdef EXEMPT_LISTS
     aBanExempt  *ep;
 #endif
+#ifdef XFLAG_EXEMPT_LISTS
+    aXflagExempt *xep;
+#endif
 #ifdef INVITE_LISTS
     anInvite   *ip;
 #endif
@@ -4776,6 +5208,59 @@ void kill_ban_list(aClient *cptr, aChannel *chptr)
     }
 #endif
 
+#ifdef XFLAG_EXEMPT_LISTS
+    for (xep = chptr->xflag_exempt_list; xep; xep = xep->next)
+    {
+        if (strlen(parabuf) + strlen(xep->exemptstr) + 10 <
+            (size_t) MODEBUFLEN)
+        {
+            if (*parabuf)
+            {
+                strcat(parabuf, " ");
+            }
+
+            strcat(parabuf, xep->exemptstr);
+            count++;
+            *cp++ = 'X';
+            *cp = '\0';
+        }
+        else if (*parabuf)
+        {
+            send = 1;
+        }
+
+        if (count == MAXMODEPARAMS)
+        {
+            send = 1;
+        }
+
+        if (send)
+        {
+            sendto_channel_butserv_me(chptr, cptr,
+                                      ":%s MODE %s %s %s",
+                                      cptr->name, chptr->chname,
+                                      modebuf, parabuf);
+            send = 0;
+            *parabuf = '\0';
+            cp = modebuf;
+            *cp++ = '-';
+
+            if (count != MAXMODEPARAMS)
+            {
+                strcpy(parabuf, xep->exemptstr);
+                *cp++ = 'X';
+                count = 1;
+            }
+            else
+            {
+                count = 0;
+            }
+
+            *cp = '\0';
+        }
+    }
+#endif
+
 #ifdef INVITE_LISTS
     for (ip = chptr->invite_list; ip; ip = ip->next)
     {
@@ -4844,6 +5329,19 @@ void kill_ban_list(aClient *cptr, aChannel *chptr)
         ep = pnx;
     }
     chptr->banexempt_list = NULL;
+#endif
+
+#ifdef XFLAG_EXEMPT_LISTS
+    xep = chptr->xflag_exempt_list;
+    while (xep)
+    {
+        pnx = xep->next;
+        MyFree(xep->exemptstr);
+        MyFree(xep->who);
+        MyFree(xep);
+        xep = pnx;
+    }
+    chptr->xflag_exempt_list = NULL;
 #endif
 
 #ifdef INVITE_LISTS
@@ -5617,6 +6115,9 @@ memcount_channel(MCchannel *mc)
 #ifdef EXEMPT_LISTS
     aBanExempt  *exempt;
 #endif
+#ifdef XFLAG_EXEMPT_LISTS
+    aXflagExempt *xexempt;
+#endif
 #ifdef INVITE_LISTS
     anInvite    *invite;
 #endif
@@ -5647,6 +6148,16 @@ memcount_channel(MCchannel *mc)
             mc->exempts.m += sizeof(*exempt);
             mc->exempts.m += strlen(exempt->banstr) + 1;
             mc->exempts.m += strlen(exempt->who) + 1;
+        }
+#endif
+#ifdef XFLAG_EXEMPT_LISTS
+        for (xexempt = chptr->xflag_exempt_list; xexempt;
+             xexempt = xexempt->next)
+        {
+            mc->xflag_exempts.c++;
+            mc->xflag_exempts.m += sizeof(*xexempt);
+            mc->xflag_exempts.m += strlen(xexempt->exemptstr) + 1;
+            mc->xflag_exempts.m += strlen(xexempt->who) + 1;
         }
 #endif
 #ifdef INVITE_LISTS
@@ -5691,6 +6202,10 @@ memcount_channel(MCchannel *mc)
 #ifdef EXEMPT_LISTS
     mc->total.c += mc->exempts.c;
     mc->total.m += mc->exempts.m;
+#endif
+#ifdef XFLAG_EXEMPT_LISTS
+    mc->total.c += mc->xflag_exempts.c;
+    mc->total.m += mc->xflag_exempts.m;
 #endif
 #ifdef INVITE_LISTS
     mc->total.c += mc->invites.c;
