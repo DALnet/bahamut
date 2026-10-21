@@ -89,6 +89,7 @@
 #define	MAXBANS	 	    200	/* Maximum bans per channel */
 #define MAXINVITELIST       100	/* Maximum invite list entries */
 #define MAXEXEMPTLIST       100	/* Maximum exempt list entries */
+#define MAXXFLAGEXEMPTLIST   100      /* Maximum XFLAG exempt list entries */
 
 #define REPORT_DO_DNS_	   ":%s NOTICE AUTH :*** Looking up your hostname..."
 #define REPORT_FIN_DNS_	   ":%s NOTICE AUTH :*** Found your hostname"
@@ -124,6 +125,9 @@ typedef struct LInvite anInvite;
 #endif
 #ifdef EXEMPT_LISTS
 typedef struct Exempt aBanExempt;
+#endif
+#ifdef XFLAG_EXEMPT_LISTS
+typedef struct XflagExempt aXflagExempt;
 #endif
 typedef struct ListOptions LOpts;
 typedef struct Listener aListener;
@@ -1206,6 +1210,18 @@ struct Exempt
 };
 #endif
 
+#ifdef XFLAG_EXEMPT_LISTS
+/* channel XFLAG exempt list structure */
+
+struct XflagExempt
+{
+    char *exemptstr;
+    char *who;
+    time_t when;
+    aXflagExempt *next;
+};
+#endif
+
 /* channel member link structure, used for chanmember chains */
 struct ChanLink 
 {
@@ -1270,6 +1286,9 @@ struct Channel
 #endif
 #ifdef EXEMPT_LISTS
     aBanExempt* banexempt_list;
+#endif
+#ifdef XFLAG_EXEMPT_LISTS
+    aXflagExempt *xflag_exempt_list; /* +X list */
 #endif
     ts_val      channelts;
 #ifdef FLUD

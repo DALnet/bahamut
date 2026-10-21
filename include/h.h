@@ -98,6 +98,9 @@ extern void 	 remove_matching_bans(aChannel *, aClient *, aClient *);
 #ifdef EXEMPT_LISTS
 extern void 	 remove_matching_exempts(aChannel *, aClient *, aClient *);
 #endif
+#ifdef XFLAG_EXEMPT_LISTS
+extern void remove_matching_xflag_exempts(aChannel *, aClient *, aClient *);
+#endif
 #ifdef INVITE_LISTS
 extern void 	 remove_matching_invites(aChannel *, aClient *, aClient *);
 #endif

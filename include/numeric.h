@@ -136,6 +136,8 @@
 #define RPL_WHOREPLY         352
 #define RPL_NAMREPLY         353
 #define RPL_RWHOREPLY        354
+#define RPL_XFLAGEXEMPTLIST  355
+#define RPL_ENDOFXFLAGEXEMPTLIST 356
 
 #define RPL_KILLDONE         361
 #define	RPL_CLOSING          362

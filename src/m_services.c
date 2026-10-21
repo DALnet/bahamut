@@ -317,6 +317,16 @@ int channel_svsmode(aClient *cptr, aClient *sptr, int parc, char *parv[])
             break;
 #endif
 
+#ifdef XFLAG_EXEMPT_LISTS
+        case 'X':
+            if (nick && MyClient(acptr) && change == '-')
+            {
+                remove_matching_xflag_exempts(chptr, acptr, &me);
+                sendmsg--;
+            }
+            break;
+#endif
+
 #ifdef INVITE_LISTS
     case 'I':
             if (nick && MyClient(acptr) && change == '-')
