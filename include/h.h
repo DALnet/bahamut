@@ -252,7 +252,6 @@ extern char 	 *get_client_name(aClient *, int);
 extern char 	 *my_name_for_link(char *, aConnect *);
 extern char 	 *myctime(time_t), *date(time_t);
 extern int  	  exit_client(aClient *, aClient *, aClient *, char *);
-extern int        register_user(aClient *, aClient *, char *, char *, char *);
 extern void 	  initstats(void);
 extern char      *make_parv_copy(char *, int, char **);
 extern int        exit_banned_client(aClient *, int, char, char *, int);
@@ -268,6 +267,7 @@ extern void verbose_to_opers(aClient *sptr, aChannel *chptr, char *cmd, char *re
 
 extern int  	  m_umode(aClient *, aClient *, int, char **);
 extern int  	  m_names(aClient *, aClient *, int, char **);
+extern int        register_user(aClient *, aClient *, char *, char *, char *);
 extern void 	  send_umode(aClient *, aClient *, long, long, char *, int);
 extern int 	  del_silence(aClient *, char *);
 
