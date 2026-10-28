@@ -404,6 +404,7 @@ m_server_estab(aClient *cptr)
             sendto_one(cptr, "PASS %s :TS", aconn->cpasswd);
 
         /* Pass my info to the new server */
+        send_capab(cptr);
         sendto_one(cptr, "SERVER %s 1 :%s",
                    my_name_for_link(me.name, aconn),
                    (me.info[0]) ? (me.info) : "IRCers United");

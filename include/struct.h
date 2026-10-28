@@ -247,9 +247,21 @@ typedef struct SServicesTag ServicesTag;
 #define FLAGS_SSL          0x10000000 /* client is using SSL */
 #define FLAGS_SPOOFED      0x20000000 /* User's host was spoofed (via SVSHOST) */
 
-/* Link-local server connection options */
+/*
+ * Server capabilities (CAPAB)
+ *
+ * Every server sends CAPAB before SERVER.  The baseline capabilities
+ * (SSJOIN NOQUIT BURST UNCONNECT ZIP NICKIP NICKIPSTR TSMODE) are always
+ * assumed and are only advertised, never checked.  A new negotiated
+ * capability gets a CAPAB_ bit here plus a row in servcapabs[] (s_serv.c);
+ * m_capab() then sets the bit when the peer advertises it, and the
+ * capability's behavior goes behind IsServCapab()/sendto_capab_serv_butone().
+ */
 
 #define CAPAB_DOZIP   0x0004 /* output to this link shall be gzipped */
+
+#define SetServCapab(x, c)  ((x)->capabilities |= (c))
+#define IsServCapab(x, c)   ((x)->capabilities & (c))
 
 /* set from the connect block, flag Z */
 #define DoZipThis(x) 	((x)->capabilities & CAPAB_DOZIP) 

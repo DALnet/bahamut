@@ -2464,6 +2464,67 @@ m_die(aClient *cptr, aClient *sptr, int parc, char *parv[])
     return 0;
 }
 
+/*
+ * Server capabilities advertised in CAPAB.  Rows with a zero flag are
+ * baseline capabilities every server is assumed to have; they are sent
+ * for compatibility but not tracked.  See the CAPAB_ section of struct.h.
+ */
+static struct
+{
+    char *name;
+    int   flag;
+} servcapabs[] =
+{
+    { "SSJOIN",    0 },
+    { "NOQUIT",    0 },
+    { "BURST",     0 },
+    { "UNCONNECT", 0 },
+    { "ZIP",       0 },
+    { "NICKIP",    0 },
+    { "NICKIPSTR", 0 },
+    { "TSMODE",    0 },
+    { NULL,        0 }
+};
+
+void
+send_capab(aClient *cptr)
+{
+    char buf[BUFSIZE];
+    int i, len;
+
+    len = ircsprintf(buf, "CAPAB");
+    for (i = 0; servcapabs[i].name; i++)
+        len += ircsprintf(buf + len, " %s", servcapabs[i].name);
+    sendto_one(cptr, "%s", buf);
+}
+
+/*
+ * m_capab
+ * Communicate what I can do to another server
+ * This has to be able to be sent and understood while
+ * the client is UNREGISTERED. Therefore, we
+ * absolutely positively must not check to see if
+ * this is a server or a client. It's probably an unknown!
+ */
+int
+m_capab(aClient *cptr, aClient *sptr, int parc, char *parv[])
+{
+    int i, j;
+
+    if(cptr != sptr)
+        return 0;
+
+    for (i = 1; i < parc; i++)
+        for (j = 0; servcapabs[j].name; j++)
+            if (servcapabs[j].flag && strcmp(parv[i], servcapabs[j].name) == 0)
+            {
+                SetServCapab(sptr, servcapabs[j].flag);
+                break;
+            }
+
+    return 0;
+}
+
 /* m_svskill - Just about the same as outta df
  *  - Raistlin
  * parv[0] = servername

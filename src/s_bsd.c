@@ -895,6 +895,9 @@ int completed_connection(aClient * cptr)
     if (!BadPtr(aconn->cpasswd))
         sendto_one(cptr, "PASS %s :TS", aconn->cpasswd);
 
+    /* pass on our capabilities to the server we /connect'd */
+    send_capab(cptr);
+
     if(aconn->flags & CONN_ZIP)
         cptr->capabilities |= CAPAB_DOZIP;
 
