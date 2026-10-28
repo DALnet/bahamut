@@ -36,7 +36,6 @@
 extern int do_user(char *, aClient *, aClient *, char *, char *, char *,
 		   unsigned long, char *, char *);
 
-extern int register_user(aClient *, aClient *, char *, char *, char *);
 extern int del_dccallow(aClient *, aClient *, int);
 
 extern int is_xflags_exempted(aClient *sptr, aChannel *chptr);

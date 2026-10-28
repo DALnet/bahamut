@@ -28,8 +28,6 @@
 #include "h.h"
 #include "caps.h"
 
-extern int register_user(aClient *, aClient *, char *, char *, char *);
-
 /* leave room for ":server CAP nick LS * :" within the 512 byte limit */
 #define CAP_LINELEN 400
 
@@ -59,10 +57,11 @@ cap_nick(aClient *sptr)
 /*
  * send_caps - send the capabilities in mask as CAP <subcmd>, split over
  * several lines if needed.  CAP 302 clients get a "*" continuation
- * marker on all but the last line and name=value pairs.
+ * marker on all but the last line, and name=value pairs if values is set
+ * (only allowed for LS and NEW).
  */
 static void
-send_caps(aClient *sptr, char *subcmd, unsigned int mask)
+send_caps(aClient *sptr, char *subcmd, unsigned int mask, int values)
 {
     char buf[BUFSIZE], tok[BUFSIZE];
     aClientCap *cap;
@@ -75,7 +74,7 @@ send_caps(aClient *sptr, char *subcmd, unsigned int mask)
         if (!(mask & cap->bit))
             continue;
 
-        if (v302 && cap->value)
+        if (v302 && values && cap->value)
             ircsnprintf(tok, sizeof(tok), "%s=%s", cap->name, cap->value);
         else
             strncpyzt(tok, cap->name, sizeof(tok));
@@ -111,14 +110,14 @@ cap_ls(aClient *sptr, int parc, char *parv[])
         sptr->caps |= CAP_CAP_NOTIFY;
     }
 
-    send_caps(sptr, "LS", ~0U);
+    send_caps(sptr, "LS", ~0U, 1);
     return 0;
 }
 
 static int
 cap_list(aClient *sptr)
 {
-    send_caps(sptr, "LIST", sptr->caps);
+    send_caps(sptr, "LIST", sptr->caps, 0);
     return 0;
 }
 
@@ -142,8 +141,28 @@ cap_req(aClient *sptr, int parc, char *parv[])
         return 0;
     }
 
+    for (tok = parv[2]; *tok == ' '; tok++)
+        ;
+    if (!*tok)
+    {
+        sendto_one(sptr, err_str(ERR_NEEDMOREPARAMS), me.name,
+                   cap_nick(sptr), "CAP");
+        return 0;
+    }
+
     if (!IsRegistered(sptr))
         sptr->cap_negotiating = 1;
+
+    /* too long to echo back in a single ACK, reject it unchanged */
+    if (strlen(parv[2]) > CAP_LINELEN)
+    {
+        strncpyzt(reqbuf, parv[2], CAP_LINELEN + 1);
+        if ((tok = strrchr(reqbuf, ' ')))
+            *tok = '\0';
+        sendto_one(sptr, ":%s CAP %s NAK :%s", me.name, cap_nick(sptr),
+                   reqbuf);
+        return 0;
+    }
 
     strncpyzt(reqbuf, parv[2], sizeof(reqbuf));
     for (tok = strtoken(&p, reqbuf, " "); tok; tok = strtoken(&p, NULL, " "))
