@@ -130,7 +130,7 @@ static int
 cap_req(aClient *sptr, int parc, char *parv[])
 {
     char reqbuf[BUFSIZE], *tok, *p = NULL;
-    unsigned int add = 0, del = 0;
+    unsigned int newcaps = sptr->caps;
     aClientCap *cap;
     int neg;
 
@@ -181,18 +181,12 @@ cap_req(aClient *sptr, int parc, char *parv[])
         }
 
         if (neg)
-        {
-            del |= cap->bit;
-            add &= ~cap->bit;
-        }
+            newcaps &= ~cap->bit;
         else
-        {
-            add |= cap->bit;
-            del &= ~cap->bit;
-        }
+            newcaps |= cap->bit;
     }
 
-    sptr->caps = (sptr->caps | add) & ~del;
+    sptr->caps = newcaps;
     sendto_one(sptr, ":%s CAP %s ACK :%s", me.name, cap_nick(sptr), parv[2]);
     return 0;
 }
