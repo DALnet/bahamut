@@ -81,6 +81,28 @@ class CapTest(unittest.TestCase):
         self.assert_not_registered(c)
         self.end_and_register(c)
 
+    def test_list_302_has_no_values(self):
+        c = self.unregistered("CAP LS 302")
+        caps = self.cap_list(c).split(" :", 1)[1].split()
+        self.assertFalse([cap for cap in caps if "=" in cap])
+        self.end_and_register(c)
+
+    def test_req_only_spaces_is_rejected(self):
+        c = self.unregistered("CAP LS")
+        c.send("CAP REQ :   ")
+        c.expect(r" 461 \S+ CAP ")
+        self.assertTrue(self.cap_list(c).endswith("LIST :"))
+        self.end_and_register(c)
+
+    def test_req_too_long_to_ack_is_naked_on_token_boundary(self):
+        c = self.unregistered("CAP LS")
+        c.send("CAP REQ :" + " ".join(["cap-notify"] * 45))
+        line = c.expect(r" CAP \S+ NAK :")
+        self.assertLessEqual(len(line), 510)
+        self.assertEqual({"cap-notify"}, set(line.split(" :", 1)[1].split()))
+        self.assertTrue(self.cap_list(c).endswith("LIST :"))
+        self.end_and_register(c)
+
     def test_invalid_and_missing_subcommand(self):
         c = self.unregistered("CAP LS")
         c.send("CAP FOO")
