@@ -31,11 +31,11 @@
 #include "h.h"
 #include "userban.h"
 #include "hooks.h"
+#include "caps.h"
 
 extern int do_user(char *, aClient *, aClient *, char *, char *, char *,
 		   unsigned long, char *, char *);
 
-extern int register_user(aClient *, aClient *, char *, char *, char *);
 extern int del_dccallow(aClient *, aClient *, int);
 
 extern int is_xflags_exempted(aClient *sptr, aChannel *chptr);
@@ -639,7 +639,7 @@ int m_nick(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	
 	strcpy(sptr->name, nick);
 	sptr->tsinfo = timeofday;
-	if (sptr->user)
+	if (sptr->user && !IsCapNegotiating(sptr))
 	{
 	    /* USER already received, now we have NICK */
        

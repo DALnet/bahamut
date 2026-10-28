@@ -267,6 +267,7 @@ extern void verbose_to_opers(aClient *sptr, aChannel *chptr, char *cmd, char *re
 
 extern int  	  m_umode(aClient *, aClient *, int, char **);
 extern int  	  m_names(aClient *, aClient *, int, char **);
+extern int        register_user(aClient *, aClient *, char *, char *, char *);
 extern void 	  send_umode(aClient *, aClient *, long, long, char *, int);
 extern int 	  del_silence(aClient *, char *);
 
