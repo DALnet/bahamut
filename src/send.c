@@ -392,8 +392,7 @@ int send_queued(aClient *to)
         }
     }
     
-    if ((to->flags & FLAGS_SOBSENT) && IsBurst(to)
-         && SBufLength(&to->sendQ) < 20480) 
+    if ((to->flags & FLAGS_SOBSENT) && SBufLength(&to->sendQ) < 20480) 
     {
         if (!(to->flags & FLAGS_BURST))
         {
@@ -729,71 +728,6 @@ void sendto_serv_butone_super(aClient *one, int flag, char *pattern, ...)
 
         if (one && cptr == one->from)
             continue;
-        send_fdlist.entry[++k] = cptr->fd;
-    }
-    send_fdlist.last_entry = k;
-    if (k)
-        vsendto_fdlist(&send_fdlist, pattern, vl);
-    va_end(vl);
-    return;
-}
-
-#ifdef NOQUIT
-/*
- * sendto_non_noquit_servs_butone
- *
- * Send a message to all non-noquit servs
- */
-void sendto_non_noquit_servs_butone(aClient *one, char *pattern, ...)
-{
-    aClient *cptr;
-    int k = 0;
-    fdlist send_fdlist;
-    va_list vl;
-    DLink *lp;
-
-    va_start(vl, pattern);
-    for(lp = server_list; lp; lp = lp->next)
-    {
-        cptr = lp->value.cptr;
-
-        if (IsNoquit(cptr) || (one == cptr))
-            continue;
-
-        send_fdlist.entry[++k] = cptr->fd;
-    }
-    send_fdlist.last_entry = k;
-    if (k)
-        vsendto_fdlist(&send_fdlist, pattern, vl);
-    va_end(vl);
-    return;
-}
-#endif
-
-/*
- * sendto_server_butone_nickipstr
- *
- * Send a message to all connected servers except the client 'one'. Also select
- * servers that do or do not have the NICKIPSTR capability.
- */
-void sendto_serv_butone_nickipstr(aClient *one, int flag, char *pattern, ...)
-{
-    aClient *cptr;
-    int k = 0;
-    fdlist send_fdlist;
-    va_list vl;
-    DLink *lp;
-
-    va_start(vl, pattern);
-    for(lp = server_list; lp; lp = lp->next)
-    {
-        cptr = lp->value.cptr;
-        if (one && cptr == one->from)
-            continue;
-	if (flag && !IsNickIPStr(cptr))
-	    continue;
-	if (!flag && IsNickIPStr(cptr))
-	    continue;
         send_fdlist.entry[++k] = cptr->fd;
     }
     send_fdlist.last_entry = k;

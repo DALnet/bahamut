@@ -275,15 +275,6 @@ m_squit(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
     /* fallthrough: downstream */
 
-    if(!(IsUnconnect(acptr->from))) /* downstream not unconnect capable */
-    {
-        sendto_realops_lev(DEBUG_LEV,
-                    "Exiting server %s due to non-unconnect server %s [%s]",
-                    acptr->name, acptr->from->name, comment);
-        return exit_client(&me, acptr, sptr, comment);
-    }
-
-
     sendto_realops_lev(DEBUG_LEV, "Passing along SQUIT for %s by %s [%s]",
                        acptr->name, sptr->name, comment);
     sendto_one(acptr->from, ":%s SQUIT %s :%s", parv[0], acptr->name, comment);
@@ -368,16 +359,13 @@ int
 m_burst(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
 
-    if (!IsServer(sptr) || sptr != cptr || parc > 2 || !IsBurst(sptr))
+    if (!IsServer(sptr) || sptr != cptr || parc > 2)
         return 0;
     if (parc == 2) { /* This is an EOB */
         sptr->flags &= ~(FLAGS_EOBRECV);
         if (sptr->flags & (FLAGS_SOBSENT|FLAGS_BURST)) return 0;
 
-        /* we've already sent our EOB.. we synched first
-         * no need to check IsBurst because we shouldn't receive a BURST if
-         * they're not BURST capab
-         */
+        /* we've already sent our EOB.. we synched first */
 
         sendto_gnotice("from %s: synch to %s in %ld %s at %s sendq", me.name,
                        *parv, (long)(timeofday-sptr->firsttime),
@@ -2477,6 +2465,40 @@ m_die(aClient *cptr, aClient *sptr, int parc, char *parv[])
 }
 
 /*
+ * Server capabilities advertised in CAPAB.  Rows with a zero flag are
+ * baseline capabilities every server is assumed to have; they are sent
+ * for compatibility but not tracked.  See the CAPAB_ section of struct.h.
+ */
+static struct
+{
+    char *name;
+    int   flag;
+} servcapabs[] =
+{
+    { "SSJOIN",    0 },
+    { "NOQUIT",    0 },
+    { "BURST",     0 },
+    { "UNCONNECT", 0 },
+    { "ZIP",       0 },
+    { "NICKIP",    0 },
+    { "NICKIPSTR", 0 },
+    { "TSMODE",    0 },
+    { NULL,        0 }
+};
+
+void
+send_capab(aClient *cptr)
+{
+    char buf[BUFSIZE];
+    int i, len;
+
+    len = ircsprintf(buf, "CAPAB");
+    for (i = 0; servcapabs[i].name; i++)
+        len += ircsprintf(buf + len, " %s", servcapabs[i].name);
+    sendto_one(cptr, "%s", buf);
+}
+
+/*
  * m_capab
  * Communicate what I can do to another server
  * This has to be able to be sent and understood while
@@ -2487,36 +2509,18 @@ m_die(aClient *cptr, aClient *sptr, int parc, char *parv[])
 int
 m_capab(aClient *cptr, aClient *sptr, int parc, char *parv[])
 {
-    int         i;
-
-    /* If it's not local, or it has already set capabilities,
-     * silently ignore it.
-     * Dont ignore clients where we have set some capabilities already
-     * that would suck for connecting TO servers.
-     */
+    int i, j;
 
     if(cptr != sptr)
         return 0;
 
     for (i = 1; i < parc; i++)
-    {
-        if (strcmp(parv[i], "BURST") == 0)
-            SetBurst(sptr);
-        else if (strcmp(parv[i], "UNCONNECT") == 0)
-            SetUnconnect(cptr);
-        else if (strcmp(parv[i], "DKEY") == 0)
-            SetDKEY(cptr);
-        else if (strcmp(parv[i], "TLS") == 0)
-            SetTLS(cptr);
-        else if (strcmp(parv[i], "ZIP") == 0)
-            SetZipCapable(cptr);
-#ifdef NOQUIT
-        else if (strcmp(parv[i], "NOQUIT") == 0)
-            SetNoquit(cptr);
-#endif
-	else if (strcmp(parv[i], "NICKIPSTR") == 0)
-	    SetNickIPStr(cptr);
-    }
+        for (j = 0; servcapabs[j].name; j++)
+            if (servcapabs[j].flag && strcmp(parv[i], servcapabs[j].name) == 0)
+            {
+                SetServCapab(sptr, servcapabs[j].flag);
+                break;
+            }
 
     return 0;
 }

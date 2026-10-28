@@ -108,7 +108,6 @@
 #define MSG_DCCALLOW "DCCALLOW"		/* dccallow */
 #define MSG_SGLINE   "SGLINE"           /* sgline */
 #define MSG_UNSGLINE "UNSGLINE"         /* unsgline */
-#define MSG_DKEY     "DKEY"		/* diffie-hellman negotiation */
 #define MSG_NS	     "NS"            	/* NickServ commands */
 #define MSG_CS	     "CS"            	/* ChanServ commands */
 #define MSG_MS	     "MS"            	/* MemoServ commands */
@@ -216,7 +215,6 @@ extern int  m_burst(aClient *, aClient *, int, char **);
 extern int  m_dccallow(aClient *, aClient *, int, char **);
 extern int  m_sgline(aClient *, aClient *, int, char **);
 extern int  m_unsgline(aClient *, aClient *, int, char **);
-extern int  m_dkey(aClient *, aClient *, int, char **);
 extern int  m_resynch(aClient *, aClient *, int, char **);
 extern int  m_luserslock(aClient *, aClient *, int, char **);
 extern int  m_linkscontrol(aClient *, aClient *, int, char **);
@@ -353,7 +351,6 @@ struct Message msgtab[] =
     {MSG_BURST,    m_burst,    MAXPARA, 0,        0},
     {MSG_SGLINE,   m_sgline,   MAXPARA, 0,        0},
     {MSG_UNSGLINE, m_unsgline, MAXPARA, 0,        0},
-    {MSG_DKEY,     m_dkey,     MAXPARA, MF_UNREG, 0},
     {MSG_NS,       m_aliased,        1, MF_ALIAS, AII_NS},
     {MSG_CS,       m_aliased,        1, MF_ALIAS, AII_CS},
     {MSG_MS,       m_aliased,        1, MF_ALIAS, AII_MS},

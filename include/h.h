@@ -252,6 +252,7 @@ extern char 	 *get_client_name(aClient *, int);
 extern char 	 *my_name_for_link(char *, aConnect *);
 extern char 	 *myctime(time_t), *date(time_t);
 extern int  	  exit_client(aClient *, aClient *, aClient *, char *);
+extern void	  send_capab(aClient *);
 extern void 	  initstats(void);
 extern char      *make_parv_copy(char *, int, char **);
 extern int        exit_banned_client(aClient *, int, char, char *, int);
