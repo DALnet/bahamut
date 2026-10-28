@@ -61,7 +61,7 @@ cap_nick(aClient *sptr)
  * (only allowed for LS and NEW).
  */
 static void
-send_caps(aClient *sptr, char *subcmd, unsigned int mask, int values)
+send_caps(aClient *sptr, char *subcmd, uint64_t mask, int values)
 {
     char buf[BUFSIZE], tok[BUFSIZE];
     aClientCap *cap;
@@ -110,7 +110,7 @@ cap_ls(aClient *sptr, int parc, char *parv[])
         sptr->caps |= CAP_CAP_NOTIFY;
     }
 
-    send_caps(sptr, "LS", ~0U, 1);
+    send_caps(sptr, "LS", ~(uint64_t)0, 1);
     return 0;
 }
 
@@ -130,7 +130,7 @@ static int
 cap_req(aClient *sptr, int parc, char *parv[])
 {
     char reqbuf[BUFSIZE], *tok, *p = NULL;
-    unsigned int newcaps = sptr->caps;
+    uint64_t newcaps = sptr->caps;
     aClientCap *cap;
     int neg;
 

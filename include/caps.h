@@ -27,7 +27,7 @@
  * capability changes behavior.
  */
 
-#define CAP_CAP_NOTIFY  0x00000001  /* cap-notify */
+#define CAP_CAP_NOTIFY  (1ULL << 0)  /* cap-notify */
 
 #define CAPF_STICKY_302 0x0001      /* cannot be disabled after CAP LS 302 */
 
@@ -36,7 +36,7 @@ typedef struct ClientCap aClientCap;
 struct ClientCap
 {
     char         *name;
-    unsigned int  bit;
+    uint64_t      bit;
     char         *value;   /* advertised as name=value with CAP LS 302 */
     int           flags;
 };

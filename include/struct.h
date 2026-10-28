@@ -37,6 +37,7 @@
 #include <netdb.h>
 #if defined( HAVE_STDDEF_H )
 #include <stddef.h>
+#include <stdint.h>
 #endif
 #ifdef ORATIMING
 #include <sys/time.h>
@@ -1057,7 +1058,7 @@ struct Client
     int sockerr;                /* what was the last error returned for
 				 * this socket? */
     int capabilities;           /* what this server/client supports */
-    unsigned int caps;          /* IRCv3 capabilities enabled (CAP_*) */
+    uint64_t caps;              /* IRCv3 capabilities enabled (CAP_*) */
     int cap_version;            /* CAP LS version, e.g. 302 */
     char cap_negotiating;       /* registration held until CAP END */
     aClass  *class;             /* our current effective class */
