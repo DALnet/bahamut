@@ -102,7 +102,7 @@ static int
 cap_ls(aClient *sptr, int parc, char *parv[])
 {
     if (!IsRegistered(sptr))
-        sptr->cap_negotiating = 1;
+        SetCapNegotiating(sptr);
 
     if (parc > 2 && atoi(parv[2]) >= 302 && sptr->cap_version < 302)
     {
@@ -151,7 +151,7 @@ cap_req(aClient *sptr, int parc, char *parv[])
     }
 
     if (!IsRegistered(sptr))
-        sptr->cap_negotiating = 1;
+        SetCapNegotiating(sptr);
 
     /* too long to echo back in a single ACK, reject it unchanged */
     if (strlen(parv[2]) > CAP_LINELEN)
@@ -194,10 +194,10 @@ cap_req(aClient *sptr, int parc, char *parv[])
 static int
 cap_end(aClient *cptr, aClient *sptr)
 {
-    if (IsRegistered(sptr) || !sptr->cap_negotiating)
+    if (IsRegistered(sptr) || !IsCapNegotiating(sptr))
         return 0;
 
-    sptr->cap_negotiating = 0;
+    ClearCapNegotiating(sptr);
 
     /* NICK and USER already received, finish registration now */
     if (*sptr->name && sptr->user)

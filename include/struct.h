@@ -230,6 +230,7 @@ typedef struct SServicesTag ServicesTag;
 #define	FLAGS_NONL	   0x002000   /* No \n in buffer */
 #define FLAGS_NORMALEX     0x004000   /* Client exited normally */
 #define FLAGS_SENDQEX      0x008000   /* Sendq exceeded */
+#define FLAGS_CAPNEGO      0x010000   /* registration held until CAP END */
 #define FLAGS_ULINE 	   0x020000   /* client is U-lined */
 #define FLAGS_USERBURST	   0x040000   /* server in nick/channel netburst */
 #define FLAGS_TOPICBURST   0x080000   /* server in topic netburst */
@@ -1060,7 +1061,6 @@ struct Client
     int capabilities;           /* what this server/client supports */
     uint64_t caps;              /* IRCv3 capabilities enabled (CAP_*) */
     int cap_version;            /* CAP LS version, e.g. 302 */
-    char cap_negotiating;       /* registration held until CAP END */
     aClass  *class;             /* our current effective class */
 
 #ifdef MSG_TARGET_LIMIT

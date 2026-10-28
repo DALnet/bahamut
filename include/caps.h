@@ -42,7 +42,9 @@ struct ClientCap
 };
 
 #define HasCap(x, c)          (MyConnect(x) && ((x)->caps & (c)))
-#define IsCapNegotiating(x)   (MyConnect(x) && (x)->cap_negotiating)
+#define IsCapNegotiating(x)     ((x)->flags & FLAGS_CAPNEGO)
+#define SetCapNegotiating(x)    ((x)->flags |= FLAGS_CAPNEGO)
+#define ClearCapNegotiating(x)  ((x)->flags &= ~FLAGS_CAPNEGO)
 
 extern int m_cap(aClient *, aClient *, int, char **);
 
