@@ -270,6 +270,7 @@ void send_fake_lusers(aClient *sptr)
                  me.name, sptr->name, fakelusers.chan_count);
 
     sendto_one(sptr, rpl_str(RPL_LUSERME), me.name, sptr->name,
+               fakelusers.m_client,
 #ifdef HIDEULINEDSERVS
                fakelusers.m_server - fakelusers.m_ulined);
 #else
