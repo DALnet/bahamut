@@ -304,10 +304,11 @@ serv_info(aClient *cptr, char *name)
                     name, ( (MyClient(cptr) && IsAdmin(cptr))
                             ? get_client_name(acptr, FALSE)
                             : get_client_name(acptr, HIDEME) ),
-                    (int) SBufLength(&acptr->sendQ),
-                    (int) acptr->sendM, (int) acptr->sendK,
-                    (int) acptr->receiveM, (int) acptr->receiveK,
-                    timeofday - acptr->firsttime, timeofday - acptr->since,
+                    (unsigned int) SBufLength(&acptr->sendQ),
+                    (unsigned int) acptr->sendM, (unsigned int) acptr->sendK,
+                    (unsigned int) acptr->receiveM, (unsigned int) acptr->receiveK,
+                    (unsigned int) (timeofday - acptr->firsttime),
+                    (unsigned int) (timeofday - acptr->since),
                     IsServer(acptr) ? (DoesTS(acptr) ? "TS" : "NoTS") : "-");
 
 
@@ -576,10 +577,11 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
                                 timeofday - acptr->since;
             sendto_one(sptr, Lformat, me.name, RPL_STATSLINKINFO, parv[0],
                         get_client_name(acptr, (IsUmodeH(acptr) && !IsAnOper(sptr))?HIDEME:TRUE),
-                        (int) SBufLength(&acptr->sendQ),
-                        (int) acptr->sendM, (int) acptr->sendK,
-                        (int) acptr->receiveM, (int) acptr->receiveK,
-                        timeofday - acptr->firsttime, sincetime,
+                        (unsigned int) SBufLength(&acptr->sendQ),
+                        (unsigned int) acptr->sendM, (unsigned int) acptr->sendK,
+                        (unsigned int) acptr->receiveM, (unsigned int) acptr->receiveK,
+                        (unsigned int) (timeofday - acptr->firsttime),
+                        (unsigned int) sincetime,
                         IsServer(acptr) ? (DoesTS(acptr) ?
                         "TS" : "NoTS") : "-");
         }
@@ -605,10 +607,11 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
                         ( (MyClient(sptr) && IsAdmin(sptr))
                           ? get_client_name(acptr, FALSE)
                           : get_client_name(acptr, HIDEME) ),
-                        (int) SBufLength(&acptr->sendQ),
-                        (int) acptr->sendM, (int) acptr->sendK,
-                        (int) acptr->receiveM, (int) acptr->receiveK,
-                        timeofday - acptr->firsttime, sincetime,
+                        (unsigned int) SBufLength(&acptr->sendQ),
+                        (unsigned int) acptr->sendM, (unsigned int) acptr->sendK,
+                        (unsigned int) acptr->receiveM, (unsigned int) acptr->receiveK,
+                        (unsigned int) (timeofday - acptr->firsttime),
+                        (unsigned int) sincetime,
                         IsServer(acptr) ? (DoesTS(acptr) ?
                         "TS" : "NoTS") : "-");
             }
@@ -931,7 +934,8 @@ int m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
 
             now = timeofday - me.since;
             sendto_one(sptr, rpl_str(RPL_STATSUPTIME), me.name, parv[0],
-                now / 86400, (now / 3600) % 24, (now / 60) % 60, now % 60);
+                (int) (now / 86400), (int) ((now / 3600) % 24),
+                (int) ((now / 60) % 60), (int) (now % 60));
             break;
         }
 
