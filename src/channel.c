@@ -1887,6 +1887,7 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
        duplicate checking will have to wait for a protocol change to kill
        desyncs */
     int seenalready = 0;
+    int had_opvoice = 0;  /* member had +o, +h or +v before this change */
 
 
     args=1;
@@ -2001,6 +2002,7 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
 #endif
 
             /* if we have the user, set them +/-[vo] */
+            had_opvoice = (cm->flags & (CHFL_CHANOP|CHFL_HALFOP|CHFL_VOICE)) ? 1 : 0;
             if(change=='+')
             {
                 int resend_nicklist = (chptr->mode.mode & MODE_AUDITORIUM) && MyClient(who) && !((cm->flags & CHFL_CHANOP) || (cm->flags & CHFL_HALFOP) || (cm->flags & CHFL_VOICE));
@@ -2047,6 +2049,22 @@ static int set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
                     case 'v': cm->flags&=~CHFL_VOICE; break;
                 }
                 if(chptr->mode.mode & MODE_AUDITORIUM) sendto_channel_butserv_noopvoice(chptr, who, PartFmt, who->name, chptr->chname);
+                /* A local user who just lost their last of +o/+h/+v can no
+                 * longer see the plain members, and will not be told when
+                 * they leave or change nick. Remove them from the user's
+                 * nick list now, the reverse of the nicklist resend on +v. */
+                if((chptr->mode.mode & MODE_AUDITORIUM) && MyClient(who) && had_opvoice &&
+                   !(cm->flags & (CHFL_CHANOP|CHFL_HALFOP|CHFL_VOICE)))
+                {
+                    chanMember *hm;
+
+                    for(hm = chptr->members; hm; hm = hm->next)
+                    {
+                        if(hm->cptr == who || (hm->flags & (CHFL_CHANOP|CHFL_HALFOP|CHFL_VOICE)))
+                            continue;
+                        sendto_prefix_one(who, hm->cptr, PartFmt, hm->cptr->name, chptr->chname);
+                    }
+                }
             }
             
             /* we've decided their mode was okay, cool */
@@ -4614,7 +4632,12 @@ int m_names(aClient *cptr, aClient *sptr, int parc, char *parv[])
 #endif
         else if(cm->flags & CHFL_VOICE)
             buf[idx++] = '+';
-        else if((chptr->mode.mode & MODE_AUDITORIUM) && (sptr != acptr) && !is_chan_opvoice(sptr, chptr) && !IsAnOper(sptr)) continue;
+        /* Opers may look up the hidden members of an auditorium channel
+         * they are not in. A member who is an oper gets the same view as
+         * any other member: they are not sent JOIN/NICK/QUIT/PART of
+         * hidden members, so listing those here would leave ghosts in
+         * their nick list. */
+        else if((chptr->mode.mode & MODE_AUDITORIUM) && (sptr != acptr) && !is_chan_opvoice(sptr, chptr) && (member || !IsAnOper(sptr))) continue;
         for(s = acptr->name; *s; s++)
             buf[idx++] = *s;
         buf[idx++] = ' ';
